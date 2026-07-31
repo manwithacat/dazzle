@@ -785,6 +785,47 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1537 — search-select: focus open + typeahead row + confirm-hold dismiss.
+    # Mirrors test_behaviour test_search_select_opens_on_focus_and_survives_row_click.
+    Probe(
+        id="search_select.open_typeahead_select_hold",
+        stem="search-select",
+        page="hyperparts/search-select.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Focus opens the typeahead panel; typing filters mock rows; selecting "
+            "a row shows confirm and holds the panel past blur grace; after "
+            "confirm-hold the panel auto-dismisses (not a static markup demo)"
+        ),
+        kind="search_select_typeahead_select",
+        params={
+            "root": (
+                ".search-select, .dz-search-select, "
+                "[data-widget='search_select'], [data-dz-widget='search_select']"
+            ),
+            "input": (
+                "input[type=text].search-select-input, "
+                "input[type=text].dz-search-select-input, "
+                ".search-select input[type=text], .dz-search-select input[type=text]"
+            ),
+            "panel": (
+                ".search-select-results, .dz-search-select-results, "
+                "[role=listbox][aria-label='Suggestions']"
+            ),
+            "row": ".search-result-row, .dz-search-result-row",
+            "query": "auro",
+            "expect_row_text": "Aurora",
+            "expect_confirm_text": "Selected",
+            "debounce_ms": 450,
+            "post_select_ms": 300,
+            "hold_mid_ms": 1000,
+            "hold_rest_ms": 1200,
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2320,6 +2361,179 @@ def _run_tags_seed_add_remove(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_search_select_typeahead_select(page: Any, probe: Probe) -> dict[str, Any]:
+    """Focus → typeahead filter → select row → confirm-hold → auto-dismiss.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_search_select_opens_on_focus_and_survives_row_click for the autonomous
+    gallery_probes catalog (cycle 1537). Gallery MOCK_HTMX serves /mock/typeahead
+    on file://.
+    """
+    params = probe.params
+    root_sel = params.get(
+        "root",
+        (
+            ".search-select, .dz-search-select, "
+            "[data-widget='search_select'], [data-dz-widget='search_select']"
+        ),
+    )
+    input_sel = params.get(
+        "input",
+        (
+            "input[type=text].search-select-input, "
+            "input[type=text].dz-search-select-input, "
+            ".search-select input[type=text], .dz-search-select input[type=text]"
+        ),
+    )
+    panel_sel = params.get(
+        "panel",
+        ".search-select-results, .dz-search-select-results",
+    )
+    row_sel = params.get("row", ".search-result-row, .dz-search-result-row")
+    query = str(params.get("query", "auro"))
+    expect_row = str(params.get("expect_row_text", "Aurora"))
+    expect_confirm = str(params.get("expect_confirm_text", "Selected"))
+    debounce_ms = int(params.get("debounce_ms", 450))
+    post_select_ms = int(params.get("post_select_ms", 300))
+    hold_mid_ms = int(params.get("hold_mid_ms", 1000))
+    hold_rest_ms = int(params.get("hold_rest_ms", 1200))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"search-select root not found ({root_sel})"}
+
+    panel = None
+    for part in panel_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            panel = loc
+            break
+    if panel is None:
+        # fall back to scope (results id may live under root)
+        for part in panel_sel.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            loc = scope.locator(part).first
+            if loc.count() > 0:
+                panel = loc
+                break
+    if panel is None:
+        return {"verdict": "ERROR", "detail": f"results panel not found ({panel_sel})"}
+
+    inp = None
+    for part in input_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            inp = loc
+            break
+    if inp is None:
+        return {"verdict": "ERROR", "detail": f"typeahead input not found ({input_sel})"}
+
+    # Resting: panel hidden (CSS) until focus opens.
+    if panel.is_visible():
+        # Some demos leave prompt visible — only fail if open without focus and has open attr
+        open_attr = root.get_attribute("data-open") or root.get_attribute("data-dz-open")
+        if open_attr is not None:
+            return {
+                "verdict": "FAIL",
+                "detail": "panel already open at rest (data-open set before focus)",
+                "dom_hint": root_sel,
+            }
+
+    inp.focus()
+    page.wait_for_timeout(80)
+    if not panel.is_visible():
+        return {
+            "verdict": "FAIL",
+            "detail": "panel not visible after focus",
+            "dom_hint": panel_sel,
+        }
+
+    inp.fill(query)
+    page.wait_for_timeout(debounce_ms)
+    panel_text = panel.inner_text()
+    if expect_row.lower() not in panel_text.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"typeahead missing {expect_row!r} after query {query!r} "
+                f"(panel text starts {panel_text[:80]!r})"
+            ),
+            "dom_hint": row_sel,
+        }
+    rows = root.locator(row_sel)
+    if rows.count() < 1:
+        rows = scope.locator(row_sel)
+    if rows.count() < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"no result rows after filter ({row_sel})",
+            "dom_hint": row_sel,
+        }
+
+    rows.first.click()
+    page.wait_for_timeout(post_select_ms)
+    panel_text2 = panel.inner_text()
+    if expect_confirm.lower() not in panel_text2.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"select confirm missing {expect_confirm!r} "
+                f"(panel {panel_text2[:80]!r}) — select exchange or blur grace"
+            ),
+            "dom_hint": panel_sel,
+        }
+    if not panel.is_visible():
+        return {
+            "verdict": "FAIL",
+            "detail": "panel hidden immediately after select — confirm-hold broken",
+            "dom_hint": panel_sel,
+        }
+
+    page.wait_for_timeout(hold_mid_ms)
+    if not panel.is_visible():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"panel closed mid-hold (~{hold_mid_ms}ms) — confirm-hold must outlast blur grace"
+            ),
+            "dom_hint": panel_sel,
+        }
+
+    page.wait_for_timeout(hold_rest_ms)
+    if panel.is_visible():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"panel still open after hold (~{hold_mid_ms + hold_rest_ms}ms) — "
+                "auto-dismiss after confirm-hold broken"
+            ),
+            "dom_hint": panel_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (f"focus→filter {query!r}→select confirm {expect_confirm!r}; hold then dismiss"),
+        "query": query,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2340,6 +2554,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "wizard_step_forward": _run_wizard_step_forward,
     "toast_dismiss_and_fire": _run_toast_dismiss_and_fire,
     "tags_seed_add_remove": _run_tags_seed_add_remove,
+    "search_select_typeahead_select": _run_search_select_typeahead_select,
 }
 
 

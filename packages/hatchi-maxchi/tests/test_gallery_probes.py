@@ -58,6 +58,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "wizard.forward_after_valid" in ids
     assert "toast.dismiss_and_client_fire" in ids
     assert "tags.seed_add_and_remove" in ids
+    assert "search_select.open_typeahead_select_hold" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -82,6 +83,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "wizard_step_forward",
             "toast_dismiss_and_fire",
             "tags_seed_add_remove",
+            "search_select_typeahead_select",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -103,6 +105,10 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert tags.kind == "tags_seed_add_remove"
     assert tags.fix_surface == "controller"
     assert tags.page == "hyperparts/tags.html"
+    search_select = next(p for p in PROBES if p.id == "search_select.open_typeahead_select_hold")
+    assert search_select.kind == "search_select_typeahead_select"
+    assert search_select.fix_surface == "controller"
+    assert search_select.page == "hyperparts/search-select.html"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"

@@ -72,13 +72,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1536 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1536 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1537 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1537 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1536 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1537 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1537 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~18 (post-1519) → fall-through **gallery_probes** expand: **ship** `search_select.open_typeahead_select_hold` + `search_select_typeahead_select` runner; catalog **31/31 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction + hyperpart OBSERVE **USED@1537**. budget 1. Explore **93/100**.
 
 > **Cycle 1536 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~17 (post-1519) → fall-through **gallery_probes** expand: **ship** `tags.seed_add_and_remove` + `tags_seed_add_remove` runner; catalog **30/30 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction + hyperpart OBSERVE **USED@1536**. budget 1. Explore **92/100**.
 

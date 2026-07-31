@@ -43,6 +43,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `wizard.forward_after_valid` | `wizard` | exclusive | high | controller | After filling the required field on step 0, clicking the step-1 stepper advances data-step to 1, shows stage 1, and marks step 1 current (forward is validity-gated one step at a time) |
 | `toast.dismiss_and_client_fire` | `toast` | exclusive | high | controller | Dismissing a stack toast removes it after leave motion; dispatching showToast appends a new toast with the detail title (stack host must honor dismiss + client fire — not a static markup demo) |
 | `tags.seed_add_and_remove` | `tags` | exclusive | high | controller | Seeded comma value enhances into chips; Enter adds a new chip and rewrites the native comma-joined value; Remove × drops a chip (chips UI must own submit contract — not a static demo) |
+| `search_select.open_typeahead_select_hold` | `search-select` | exclusive | high | controller | Focus opens the typeahead panel; typing filters mock rows; selecting a row shows confirm and holds the panel past blur grace; after confirm-hold the panel auto-dismisses (not a static markup demo) |
 
 ## Loop (autonomous improve)
 
