@@ -443,7 +443,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         if event_type == PROCESS_EXECUTE or event_type == PROCESS_RESUME:
             run_id = payload.get("run_id")
             if run_id:
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None, self._execute_process_sync, run_id
                 )
         elif event_type == TASK_COMPLETED:
@@ -455,7 +455,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         elif event_type == TASK_TIMEOUT:
             task_id = payload.get("task_id")
             if task_id:
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None, self._handle_task_timeout_sync, task_id
                 )
 
@@ -492,7 +492,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         pending_runs = self._store.list_runs(status=ProcessStatus.PENDING, limit=10)
         for run in pending_runs:
             try:
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None, self._execute_process_sync, run.run_id
                 )
             except Exception as e:
@@ -515,7 +515,7 @@ class EventBusProcessAdapter(ProcessAdapter):
                     TaskStatus.ESCALATED,
                 ):
                     if datetime.now(UTC) > task.due_at:
-                        await asyncio.get_event_loop().run_in_executor(
+                        await asyncio.get_running_loop().run_in_executor(
                             None, self._handle_task_timeout_sync, task_id
                         )
         except Exception as e:

@@ -219,10 +219,14 @@ def preview_command(
     typer.echo()
 
     # Hand off to `dazzle serve` with the override env var set.
+    # argv is fixed (sys.executable + module serve); only the env carries
+    # the theme name, which was validated against discover_themes() above.
     env = {**os.environ, "DAZZLE_OVERRIDE_THEME": name}
-    # Resolve the dazzle entrypoint from sys.executable so we use the
-    # same interpreter (don't trust PATH order — venv awareness).
-    cmd = [sys.executable, "-m", "dazzle", "serve"]
-    # execvpe replaces this process — we don't need to track the child
-    # or proxy signals. Ctrl-C cleans up the server directly.
-    os.execvpe(cmd[0], cmd, env)
+    # execve replaces this process — no child to track; Ctrl-C hits the server.
+    # nosemgrep: env may look "tainted" by the theme name, but argv is not user
+    # controlled and the theme key is registry-gated.
+    os.execve(  # nosemgrep: python.lang.security.audit.dangerous-os-exec-tainted-env-args.dangerous-os-exec-tainted-env-args
+        sys.executable,
+        [sys.executable, "-m", "dazzle", "serve"],
+        env,
+    )

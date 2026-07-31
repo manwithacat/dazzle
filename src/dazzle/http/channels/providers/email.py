@@ -175,7 +175,7 @@ class MailpitDetector(ProviderDetector):
                 logger.debug("ignored exception in email.py:217", exc_info=True)
                 return False
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, _check)
 
 

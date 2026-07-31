@@ -401,7 +401,11 @@ class JWTService:
         except jwt.exceptions.DecodeError:
             raise JWTError("Malformed token header", code="invalid_token")
 
-        result: dict[str, Any] = jwt.decode(token, options={"verify_signature": False})
+        # Intentional: this method is *decode without verification* for
+        # refresh/expired-claim extraction. Signature verification belongs on
+        # the verified decode path. Length + blocked-alg checks still run above.
+        # Keep nosemgrep on the same physical line as jwt.decode — wrap loses it.
+        result: dict[str, Any] = jwt.decode(token, options={"verify_signature": False})  # nosemgrep: python.jwt.security.unverified-jwt-decode.unverified-jwt-decode  # fmt: skip
         return result
 
 

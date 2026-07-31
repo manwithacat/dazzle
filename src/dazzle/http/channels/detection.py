@@ -168,7 +168,7 @@ async def check_port(host: str, port: int, timeout: float = 2.0) -> bool:
         finally:
             sock.close()
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _check)
 
 

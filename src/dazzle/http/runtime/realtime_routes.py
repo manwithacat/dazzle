@@ -217,7 +217,7 @@ async def _validate_token_async(auth_store: AuthStore, token: str) -> dict[str, 
     # AuthStore.get_session_user is sync, wrap it
     import asyncio
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, auth_store.get_session_user, token)  # type: ignore[attr-defined]
 
 

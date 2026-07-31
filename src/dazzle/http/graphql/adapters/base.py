@@ -764,7 +764,7 @@ class BaseExternalAdapter[ConfigT: AdapterConfig](ABC):
         )
 
         # Execute in thread pool
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
 
             def do_request() -> tuple[int, dict[str, str], bytes]:

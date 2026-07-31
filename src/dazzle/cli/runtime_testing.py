@@ -629,5 +629,5 @@ def run_accessibility_checks(
 
         return results
 
-    # Run the async checks
-    return asyncio.get_event_loop().run_until_complete(run_checks())
+    # Run the async checks (sync CLI entry — no running loop expected)
+    return asyncio.run(run_checks())
