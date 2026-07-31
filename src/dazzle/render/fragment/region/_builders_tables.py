@@ -68,6 +68,9 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
     """Humanise a non-title queue column value for the meta line."""
     col_type = str(col.get("type") or "").lower()
     fmt = str(col.get("format") or "").lower()
+    # Color meta uses HTML swatch in the row renderer — not this plain string path.
+    if col_type == "color":
+        return str(raw).strip() if raw is not None else ""
     if col_type in ("currency", "money") or "currency" in fmt:
         try:
             num = float(raw)
@@ -137,9 +140,23 @@ def _queue_row_meta_columns(
         raw = _queue_meta_raw(item, key)
         if raw is None:
             continue
-        # Prefer combined money line when we have a free-standing currency code.
         col_type = str(col.get("type") or "").lower()
         key_l = key.lower()
+        # #1626 R5 — colour chips on brand queues (trusted HTML swatch).
+        if col_type == "color":
+            from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html
+
+            swatch = _render_color_swatch_html(raw)
+            if swatch and swatch != "—":
+                meta.append(
+                    QueueMetaColumn(
+                        label=str(col.get("label") or key),
+                        value=swatch,
+                        html=True,
+                    )
+                )
+            continue
+        # Prefer combined money line when we have a free-standing currency code.
         if currency_code and (
             col_type in ("currency", "money", "number", "decimal", "float", "int")
             or key_l in {"amount", "total", "value", "price", "balance"}

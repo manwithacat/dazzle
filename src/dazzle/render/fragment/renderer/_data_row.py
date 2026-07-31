@@ -205,6 +205,24 @@ def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
     return text[:length] + "…" if len(text) > length else text
 
 
+def _render_color_swatch_html(value: Any) -> str:
+    """#1626 R5 — compact palette swatch + hex for list/queue/card cells."""
+    raw = "" if value is None else str(value).strip()
+    if not raw or raw == "—":
+        return "—"
+    # Accept #RGB / #RRGGBB only; refuse free-text so we never inject CSS.
+    if not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", raw):
+        return _html_mod.escape(raw, quote=False)
+    hex_esc = _html_mod.escape(raw, quote=False)
+    hex_attr = _html_mod.escape(raw, quote=True)
+    return (
+        f'<span class="dz-color-swatch" data-dz-color-swatch '
+        f'style="background-color: {hex_attr}" title="{hex_attr}" '
+        f'aria-label="Colour {hex_attr}"></span>'
+        f'<span class="dz-color-swatch-hex">{hex_esc}</span>'
+    )
+
+
 def _render_cell_display(
     col: dict[str, Any],
     value: Any,
@@ -278,6 +296,9 @@ def _render_cell_display(
     if col_type in ("currency", "money"):
         currency_code = col.get("currency_code") or "GBP"
         return _html_mod.escape(_currency_filter(value, currency_code), quote=False)
+    if col_type == "color":
+        # #1626 R5 / P0-8 — swatch + hex (not bare text) for palette fields.
+        return _render_color_swatch_html(value)
     if col_type == "sensitive":
         raw = "" if value is None else str(value)
         if len(raw) > 4:

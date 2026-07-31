@@ -195,6 +195,12 @@ def _render_typed_value(
 
         return RawHTML(_currency_filter(value))
 
+    if col_type == "color":
+        # #1626 R5 / P0-8 — swatch on brand desk queues/cards (not raw hex).
+        from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html
+
+        return RawHTML(_render_color_swatch_html(value))
+
     if col_type == "ref":
         ref_route = str(col.get("ref_route") or "")
         # Resolve the display label: prefer a sibling ``<key>_display``, then the

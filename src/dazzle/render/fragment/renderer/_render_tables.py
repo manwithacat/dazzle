@@ -921,9 +921,15 @@ class _RenderTablesMixin:
         for row in q.rows:
             badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
             meta_spans = "".join(
-                f'<span class="dz-queue-row-meta">'
-                f"{ctx.escape(m.label)}: {ctx.escape(m.value)}"
-                f"</span>"
+                (
+                    f'<span class="dz-queue-row-meta">'
+                    f"{ctx.escape(m.label)}: {m.value}"
+                    f"</span>"
+                    if getattr(m, "html", False)
+                    else f'<span class="dz-queue-row-meta">'
+                    f"{ctx.escape(m.label)}: {ctx.escape(m.value)}"
+                    f"</span>"
+                )
                 for m in getattr(row, "meta_columns", ()) or ()
             )
             date_spans = "".join(

@@ -126,6 +126,8 @@ def build_surface_columns(
     field_visible_conditions: dict[str, dict[str, Any] | None] = {}
     # #1470 Phase 2: per-field explicit format: override (None when unannotated).
     field_formats: dict[str, Any] = {}
+    # #1626 R5 / P0-8: surface ``widget=color`` → list/queue type ``color`` (swatch).
+    field_widgets: dict[str, str] = {}
     for section in surface_spec.sections:
         _sec_vis = getattr(section, "visible", None)
         _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
@@ -138,6 +140,9 @@ def build_surface_columns(
                     _el_vis.model_dump() if _el_vis else _section_vis_cond
                 )
                 field_formats[fn] = getattr(element, "format", None)
+                opts = getattr(element, "options", None) or {}
+                if isinstance(opts, dict) and opts.get("widget"):
+                    field_widgets[fn] = str(opts["widget"])
 
     if not surface_fields:
         return build_entity_columns(entity_spec, enums)
@@ -182,6 +187,9 @@ def build_surface_columns(
         if kind_val in ("uuid", "has_many", "has_one", "embeds"):
             continue
         col_type = field_kind_to_col_type(f, entity_spec)
+        # #1626 R5: color picker fields must not render as raw hex text on desks.
+        if field_widgets.get(fn) == "color":
+            col_type = "color"
         col_key = f"{f.name}_minor" if kind_val == "money" else f.name
         col: dict[str, Any] = {
             "key": col_key,

@@ -839,10 +839,15 @@ class QueueDateColumn:
 
 @dataclass(frozen=True, slots=True)
 class QueueMetaColumn:
-    """Domain density line on a queue row (amount, supplier, etc.) — #1626."""
+    """Domain density line on a queue row (amount, supplier, etc.) — #1626.
+
+    When ``html`` is True, ``value`` is trusted markup (e.g. colour swatch)
+    and is not escaped at emit time.
+    """
 
     label: str
     value: str
+    html: bool = False
 
 
 @dataclass(frozen=True, slots=True)
