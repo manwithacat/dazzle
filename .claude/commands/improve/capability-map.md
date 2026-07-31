@@ -58,7 +58,7 @@ apply map patches with `{"apply":true}`.
 | `qa-trial` skill | COGNITION | skill | trials | 1424 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1531 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1532 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1523 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1528 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
@@ -72,7 +72,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1531 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1532 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1520 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1530 | USED |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1532 (2026-07-31).** campaign hyperpart queue=0 → fall-through **journey_dogfood** simple_task: bind ST-009/010/012/013/014 narrative→executed_by; prove journey **16/16**. tip CI 1531 in_progress — no push. residual=0 densify=0. journey+hyperpart OBSERVE **USED@1532**. budget 1. Explore **88/100**.
 
 > **Cycle 1531 (2026-07-31).** campaign hyperpart queue=0 → fall-through **journey_dogfood** simple_task: bind ST-006/007/008/011 narrative_only→executed_by (user_create/task_create/task_edit/comment_create); prove journey; SPEC fingerprint. **Also** regenerate acme expected/compliance-auditspec.json (dsl_hash after 1529 densify comment). Pushed held 1529+1530. residual=0 densify=0. journey+hyperpart OBSERVE **USED@1531**. budget 1. Explore **87/100**.
 

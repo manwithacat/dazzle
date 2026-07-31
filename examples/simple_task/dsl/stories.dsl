@@ -36,7 +36,7 @@ story ST-008 "Administrator changes Task from todo to in_progress":
 
 story ST-009 "Administrator changes Task from in_progress to review":
   status: accepted
-  narrative_only: true
+  executed_by: surface.task_edit
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -48,7 +48,7 @@ story ST-009 "Administrator changes Task from in_progress to review":
 
 story ST-010 "Administrator changes Task from in_progress to todo":
   status: accepted
-  narrative_only: true
+  executed_by: surface.task_edit
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -71,6 +71,8 @@ story ST-011 "Administrator creates a new Task Comment":
     - "Administrator sees confirmation message"
 
 story ST-012 "Administrator views all tasks across organization":
+  status: accepted
+  executed_by: surface.task_list
   persona: admin
   trigger: user_click
   entities: [Task]
@@ -81,6 +83,8 @@ story ST-012 "Administrator views all tasks across organization":
     - "Task list is sortable by priority, status, due_date"
 
 story ST-013 "Administrator configures team settings":
+  status: accepted
+  executed_by: surface.user_list
   persona: admin
   trigger: user_click
   entities: [User]
@@ -91,6 +95,8 @@ story ST-013 "Administrator configures team settings":
     - "Administrator can change a Team Member's role or department"
 
 story ST-014 "Administrator views system-wide analytics":
+  status: accepted
+  executed_by: surface.task_list
   persona: admin
   trigger: user_click
   entities: [Task, User]
