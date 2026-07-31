@@ -280,9 +280,9 @@ workspace studio_dashboard "Studio Dashboard":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-# #1626 P0-7: not a visual media gallery (no thumbnails/swatches yet) — honest catalog.
+# #1626 P0-7 / P1: metadata card grid (not a pixel thumbnail gallery).
 workspace asset_catalog "Asset Catalog":
-  purpose: "Browse assets as a card grid and metrics (not a thumbnail media gallery yet)"
+  purpose: "Browse assets as a card grid and metrics (metadata cards; not a pixel media gallery)"
   access: persona(admin, designer, reviewer)
   catalog_metrics:
     source: Asset
@@ -294,10 +294,10 @@ workspace asset_catalog "Asset Catalog":
     tones:
       in_review: warning
       approved: positive
-  # Work-surface utility: recent asset stream by created_at — timeline.
+  # Card catalog aligned with purpose (was timeline pretending to be a grid).
   asset_grid:
     source: Asset
-    display: timeline
+    display: grid
     sort: created_at desc
     limit: 20
     action: asset_detail

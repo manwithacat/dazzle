@@ -847,10 +847,11 @@ workspace person_detail "Person Detail":
     empty: "No salary rows"
 
 
-# #1626 P0-7: honest name — not a true org *tree* until recursive_tree ships.
+# #1626 P0-7 / P1: department hierarchy via display:tree + parent_department.
+# Manager-chain (ManagerLink edges) stays a timeline until edge→node transform.
 workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
-  purpose: "Department roster, job roles, and reporting-line records (not a visual org tree yet)"
+  purpose: "Department tree, job roles, and reporting-line records"
 
   org_pulse:
     source: Department
@@ -862,14 +863,14 @@ workspace org_chart "Departments & Roles":
     tones:
       departments: accent
 
-  # TODO(#hr-hierarchy): recursive tree for self-ref Department / ManagerLink.
-  # Until then: prioritised department roster (queue), not a card grid — opens
-  # department hubs for role/reporting context (story_walk cycle 1492).
+  # Nested org units (Engineering → Frontend/Backend/Platform, etc.).
+  # group_by parent_department matches fieldtest device_tree pattern.
   departments:
     source: Department
-    display: queue
+    display: tree
+    group_by: parent_department
     sort: name asc
-    limit: 25
+    limit: 40
     action: department_detail
     empty: "No departments yet — add one to start the org roster"
 

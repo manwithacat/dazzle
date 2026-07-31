@@ -62,7 +62,7 @@ and that grant is itself an explicit, auditable declaration.
   queue, asset trail, and campaign mix chart.
 - **Review Desk** — reviewer home: review-load metrics, awaiting-review queue,
   recently approved, feedback timeline, pipeline kanban, and status chart.
-- **Asset Catalog** — catalog metrics, asset timeline, review queue, pipeline
+- **Asset Catalog** — catalog metrics, metadata card grid of assets, review queue, pipeline
   kanban, and status mix chart.
 - **Campaigns** — campaign schedule desk with active queue, status board, brand
   context, and load chart.
@@ -123,4 +123,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:aaa35f89044ce1469deef6d2143a031577ebdd4d3494c1121ec68ac4e8a9a61e -->
+<!-- dazzle-spec-brief: sha256:e0a0e7dc08b1b9c49aac0983216bb1fda721991cd405a23d0e6354753db3d0cf -->

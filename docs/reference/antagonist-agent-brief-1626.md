@@ -113,11 +113,19 @@ are the score source — recapture after each residual cluster.
 - [x] Synthetic metric deltas (`800.0%`) when seed noise — omit `delta_pct` when `|pct| > 200`
 - [x] Contact hero emails prefer story domains over `@example.test`
 - [x] Support `manager_ops` recapture (hardened per-persona path + runtime port discovery)
-- Category depth (conversation hub, invoice document hub, org tree) is **P1** (deferred)
 
-**Agent OCR spot-checks (local stills, 2026-07-31):** ops Active Alerts rows / no 500;
-contact story domains; HR no `New Add`; support meta spacing; design brand hex present.
-Human re-score still required before fleet ≥5.5 claim.
+### P1 · Category depth (partial — agent session)
+
+| Item | Status |
+|------|--------|
+| HR **org tree** | **Shipped** — nested Department seeds + `display: tree` / `group_by: parent_department` on Departments & Roles |
+| Design **asset catalog grid** | **Shipped** — `asset_grid` `timeline` → `display: grid` (metadata cards, not pixel gallery) |
+| Invoice document hub | Deferred (clone project_tracker PDF pattern; invoice already ≥5.5 machine-wise) |
+| Support conversation hub | Deferred (queue/activity_feed only — no chat primitive) |
+
+**Agent OCR spot-checks (local stills):** ops Active Alerts rows / no 500;
+contact story domains; HR no `New Add`; support meta mid-dot separators; design brand hex;
+simple_task no 800% after recapture. **Human / antagonist re-score is the bake-off gate.**
 
 ---
 

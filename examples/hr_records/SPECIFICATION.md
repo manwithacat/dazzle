@@ -70,8 +70,8 @@ dedicated screens — fourteen in all, from the staff directory to
   (active / on leave / terminated).
 - **Person Detail** — career desk: employment queue plus salary and reporting
   timelines, employment trail, and salary reason chart.
-- **Departments & Roles** — org pulse, department grid, role queue, reporting
-  trail, and roles-by-level chart (not a visual org tree yet).
+- **Departments & Roles** — org pulse, department tree (nested under parent
+  units), role queue, reporting trail, and roles-by-level chart.
 - **Compensation Review** — finance/HR salary desk: metrics, active salary
   queue, reason chart, and people pull-queue to person hubs.
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
@@ -119,4 +119,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:fc2233e242d29ce9c8b17dd6f174879527abb57854268fc46e82426d1f224378 -->
+<!-- dazzle-spec-brief: sha256:8166f73a8b45f2b329fd5755bf6a3c317e7d5b3104358094870441181578b162 -->
