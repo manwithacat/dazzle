@@ -73,7 +73,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1545 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1553 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
@@ -125,6 +125,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1546 (2026-07-31).** campaign force **framework-ux**: wire **content_measure** end-to-end (PageContext → AppShell → data-dz-measure on main + CSS tokens); layout_kit `measure.shell` L2 pin app≥product; unit emit+dispatch. residual=0 densify=0 dual_lock=0. fitness **USED@1546**. budget 1. Explore **100/100**.
 
+> **Cycle 1553 (2026-07-31).** after explore budget reset: campaign hyperpart_coherence queue=0 lag~14 → fall-through **gallery_probes** expand: **ship** `confirm.intercept_and_accept` + `confirm_intercept_accept` runner; catalog **34/34 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1553**. budget 1. Explore **1/100**.
+>
 > **Cycle 1545 (2026-07-31).** campaign force **hm-convergence gallery_probes**: expand **ship** `app_shell.sidebar_toggle` + runner (live shell hamburger data-sidebar open↔closed); catalog **33/33 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1545**. budget 1. Explore **99/100**.
 
 > **Cycle 1544 (2026-07-31).** campaign force **example-apps story_walk**: dig acme_billing — **product** invoice_list dual open `Invoice via id | Project via project` + membership dual open; ST-007/010 criteria + stem; 9 walks validate+dry-run+**live green** mark-live residual 1→0; SPEC fingerprint; dig receipt PASS live_proven. residual_total=0 densify=0. story_walk+walk+reset-and-load **USED@1544**. budget 1. Explore **98/100**.

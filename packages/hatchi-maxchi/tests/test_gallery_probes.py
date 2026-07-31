@@ -88,6 +88,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "search_select_typeahead_select",
             "money_sync_minor_blur",
             "app_shell_sidebar_toggle",
+            "confirm_intercept_accept",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -121,6 +122,10 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert app_shell.kind == "app_shell_sidebar_toggle"
     assert app_shell.fix_surface == "controller"
     assert app_shell.page == "hyperparts/app-shell-live.html"
+    confirm = next(p for p in PROBES if p.id == "confirm.intercept_and_accept")
+    assert confirm.kind == "confirm_intercept_accept"
+    assert confirm.fix_surface == "controller"
+    assert confirm.page == "hyperparts/confirm.html"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"

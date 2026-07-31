@@ -882,6 +882,43 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1553 — confirm: hx-confirm opens designed dialog; accept issues request.
+    # Mirrors test_behaviour.test_confirm_dialog_intercepts_hx_confirm.
+    Probe(
+        id="confirm.intercept_and_accept",
+        stem="confirm",
+        page="hyperparts/confirm.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking hx-delete[hx-confirm] opens the designed alert-dialog with "
+            "the confirm text; accepting closes the dialog and issues the request "
+            "(MOCK_HTMX toast) — not a silent window.confirm fallback"
+        ),
+        kind="confirm_intercept_accept",
+        params={
+            "trigger": (
+                ".hm-preview [hx-delete][hx-confirm], .hm-preview button[hx-delete][hx-confirm]"
+            ),
+            "dialog": (
+                "dialog.alert-dialog, dialog.dz-alert-dialog, dialog[class*='alert-dialog']"
+            ),
+            "message": (
+                ".alert-dialog__message, .dz-alert-dialog__message, "
+                "dialog.alert-dialog p, dialog.dz-alert-dialog p"
+            ),
+            "accept": (
+                "[data-confirm-accept], [data-dz-confirm-accept], "
+                "dialog.alert-dialog button[data-variant=destructive], "
+                "dialog.dz-alert-dialog button[data-dz-variant=destructive]"
+            ),
+            "toast": ".hm-toast, .toast, .dz-toast",
+            "settle_ms": 150,
+            "scope": "",  # dialog is body-appended; toast may be outside preview
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2795,6 +2832,89 @@ def _run_money_sync_minor_blur(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_confirm_intercept_accept(page: Any, probe: Probe) -> dict[str, Any]:
+    """hx-confirm opens designed dialog; accept issues request (MOCK_HTMX toast).
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_confirm_dialog_intercepts_hx_confirm for the gallery catalog (cycle 1553).
+    """
+    params = probe.params
+    trigger_sel = str(params.get("trigger", "[hx-delete][hx-confirm]"))
+    dialog_sel = str(params.get("dialog", "dialog.alert-dialog, dialog.dz-alert-dialog"))
+    message_sel = str(params.get("message", ".alert-dialog__message, .dz-alert-dialog__message"))
+    accept_sel = str(params.get("accept", "[data-confirm-accept], [data-dz-confirm-accept]"))
+    toast_sel = str(params.get("toast", ".hm-toast, .toast, .dz-toast"))
+    settle = int(params.get("settle_ms", 150))
+
+    # Prefer preview-scoped trigger when present; dialog/toast are body-level.
+    preview = page.locator(".hm-preview").first
+    trigger = None
+    for part in trigger_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = page.locator(part).first
+        if loc.count() > 0:
+            trigger = loc
+            break
+    if trigger is None and preview.count() > 0:
+        trigger = preview.locator("button[hx-delete][hx-confirm], [hx-delete][hx-confirm]").first
+    if trigger is None or trigger.count() == 0:
+        return {"verdict": "ERROR", "detail": f"confirm trigger not found ({trigger_sel})"}
+
+    question = trigger.get_attribute("hx-confirm") or ""
+    if not question.strip():
+        return {"verdict": "ERROR", "detail": "hx-confirm attribute empty"}
+
+    trigger.click()
+    page.wait_for_timeout(settle)
+
+    dialog = page.locator(dialog_sel).first
+    if dialog.count() == 0:
+        return {"verdict": "FAIL", "detail": f"designed dialog not found ({dialog_sel})"}
+    is_open = dialog.evaluate("el => !!el.open")
+    if not is_open:
+        return {"verdict": "FAIL", "detail": "designed dialog did not open"}
+
+    msg = dialog.locator(message_sel).first
+    if msg.count() == 0:
+        msg_text = dialog.inner_text().strip()
+    else:
+        msg_text = msg.inner_text().strip()
+    if question.strip() not in msg_text and msg_text != question.strip():
+        return {
+            "verdict": "FAIL",
+            "detail": f"dialog message {msg_text!r} != hx-confirm {question!r}",
+        }
+
+    accept = dialog.locator(accept_sel).first
+    if accept.count() == 0:
+        accept = page.locator(accept_sel).first
+    if accept.count() == 0:
+        return {"verdict": "ERROR", "detail": f"accept button not found ({accept_sel})"}
+    accept.click()
+    page.wait_for_timeout(settle)
+
+    still_open = dialog.evaluate("el => !!el.open") if dialog.count() > 0 else False
+    if still_open:
+        return {"verdict": "FAIL", "detail": "dialog still open after accept"}
+
+    toast = page.locator(toast_sel).first
+    if toast.count() == 0:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                "no MOCK_HTMX toast after accept — issueRequest may have been dropped "
+                f"({toast_sel})"
+            ),
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"open dialog with {question!r}; accept → toast + closed",
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2818,6 +2938,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "search_select_typeahead_select": _run_search_select_typeahead_select,
     "money_sync_minor_blur": _run_money_sync_minor_blur,
     "app_shell_sidebar_toggle": _run_app_shell_sidebar_toggle,
+    "confirm_intercept_accept": _run_confirm_intercept_accept,
 }
 
 

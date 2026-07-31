@@ -46,6 +46,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `search_select.open_typeahead_select_hold` | `search-select` | exclusive | high | controller | Focus opens the typeahead panel; typing filters mock rows; selecting a row shows confirm and holds the panel past blur grace; after confirm-hold the panel auto-dismisses (not a static markup demo) |
 | `money.sync_minor_and_blur_normalize` | `money` | exclusive | high | controller | Typing a major amount rewrites the hidden minor carrier; blur normalizes display to scale decimals; empty blur clears the carrier (money submit contract is integer minor — not a static demo) |
 | `app_shell.sidebar_toggle` | `app-shell` | exclusive | high | controller | Hamburger sidebar toggle flips data-sidebar open↔closed and aria-expanded on the toggle (live shell chrome — not a static iframe demo) |
+| `confirm.intercept_and_accept` | `confirm` | exclusive | high | controller | Clicking hx-delete[hx-confirm] opens the designed alert-dialog with the confirm text; accepting closes the dialog and issues the request (MOCK_HTMX toast) — not a silent window.confirm fallback |
 
 ## Loop (autonomous improve)
 
