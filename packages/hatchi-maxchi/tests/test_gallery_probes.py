@@ -56,6 +56,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "carousel.advance_next" in ids
     assert "combobox.enhance_and_select" in ids
     assert "wizard.forward_after_valid" in ids
+    assert "toast.dismiss_and_client_fire" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -78,6 +79,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "carousel_advance",
             "combobox_select",
             "wizard_step_forward",
+            "toast_dismiss_and_fire",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -91,6 +93,10 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     wizard = next(p for p in PROBES if p.id == "wizard.forward_after_valid")
     assert wizard.kind == "wizard_step_forward"
     assert wizard.fix_surface == "controller"
+    toast = next(p for p in PROBES if p.id == "toast.dismiss_and_client_fire")
+    assert toast.kind == "toast_dismiss_and_fire"
+    assert toast.fix_surface == "controller"
+    assert toast.page == "hyperparts/toast-live.html"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"

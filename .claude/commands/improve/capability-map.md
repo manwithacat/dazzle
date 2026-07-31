@@ -72,13 +72,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1534 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1534 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1535 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1535 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1520 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1535 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,12 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1535 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~16 (post-1519) → fall-through **gallery_probes** expand: **ship** `toast.dismiss_and_client_fire` + `toast_dismiss_and_fire` runner; catalog **29/29 PASS**; unit pin. Push held 1534 layout_kit + this. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction + hyperpart OBSERVE **USED@1535**. budget 1. Explore **91/100**.
+
+> **Cycle 1534 (2026-07-31).** campaign hyperpart queue=0 → fall-through **framework-ux** layout_kit + fleet list-row gate (L0/L2). tip CI 1533 in_progress — hold push. residual=0 densify=0. fitness/ux **USED@1534**. budget 1. Explore **90/100**.
+
+> **Cycle 1533 (2026-07-31).** residual force **story_walk** simple_task admin ST-012/013/014 live walks + fixtures. residual 1→0. story_walk **USED@1533**. budget 1. Explore **89/100**.
 
 > **Cycle 1532 (2026-07-31).** campaign hyperpart queue=0 → fall-through **journey_dogfood** simple_task: bind ST-009/010/012/013/014 narrative→executed_by; prove journey **16/16**. tip CI 1531 in_progress — no push. residual=0 densify=0. journey+hyperpart OBSERVE **USED@1532**. budget 1. Explore **88/100**.
 

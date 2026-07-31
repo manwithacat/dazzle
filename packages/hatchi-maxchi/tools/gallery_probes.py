@@ -725,6 +725,34 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1535 — toast stack: dismiss seeded toast + client showToast append.
+    # Live page (not iframe host); mirrors test_behaviour toast_stack_host.
+    Probe(
+        id="toast.dismiss_and_client_fire",
+        stem="toast",
+        page="hyperparts/toast-live.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Dismissing a stack toast removes it after leave motion; dispatching "
+            "showToast appends a new toast with the detail title (stack host must "
+            "honor dismiss + client fire — not a static markup demo)"
+        ),
+        kind="toast_dismiss_and_fire",
+        params={
+            "stack": "#toast.toast-stack, #dz-toast.dz-toast-stack",
+            "toast": ".toast, .dz-toast",
+            "dismiss": (
+                ".toast__close[data-toast-dismiss], .dz-toast__close[data-dz-toast-dismiss]"
+            ),
+            "title": ".toast__title, .dz-toast__title",
+            "fire_title": "Host test",
+            "leave_ms": 450,
+            "scope": "",  # whole page — live stage has no .hm-preview
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2000,6 +2028,128 @@ def _run_wizard_step_forward(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_toast_dismiss_and_fire(page: Any, probe: Probe) -> dict[str, Any]:
+    """Dismiss one stack toast, then client-fire showToast and assert append.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_toast_stack_host_pause_dismiss_and_client_fire for the autonomous
+    gallery_probes catalog (cycle 1535). Live page only (toast-live.html).
+    """
+    params = probe.params
+    stack_sel = params.get("stack", "#toast.toast-stack, #dz-toast.dz-toast-stack")
+    toast_sel = params.get("toast", ".toast, .dz-toast")
+    dismiss_sel = params.get(
+        "dismiss",
+        ".toast__close[data-toast-dismiss], .dz-toast__close[data-dz-toast-dismiss]",
+    )
+    title_sel = params.get("title", ".toast__title, .dz-toast__title")
+    fire_title = str(params.get("fire_title", "Host test"))
+    leave_ms = int(params.get("leave_ms", 450))
+    settle = int(params.get("settle_ms", 120))
+
+    scope = _probe_scope(page, params)
+    stack = None
+    for part in stack_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            stack = loc
+            break
+    if stack is None:
+        return {"verdict": "ERROR", "detail": f"toast stack not found ({stack_sel})"}
+
+    initial = scope.locator(toast_sel).count()
+    if initial < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": "demo stack ships no toast to dismiss",
+            "dom_hint": toast_sel,
+        }
+
+    # evaluate click avoids fixed-position intercept flakes (same as behaviour test)
+    removed = page.evaluate(
+        """(sel) => {
+          const close = document.querySelector(sel);
+          if (!close) return false;
+          close.click();
+          return true;
+        }""",
+        dismiss_sel.split(",")[0].strip(),
+    )
+    if not removed:
+        # try full selector list via first match
+        removed = page.evaluate(
+            """(sels) => {
+              for (const sel of sels) {
+                const close = document.querySelector(sel.trim());
+                if (close) { close.click(); return true; }
+              }
+              return false;
+            }""",
+            dismiss_sel.split(","),
+        )
+    if not removed:
+        return {
+            "verdict": "FAIL",
+            "detail": f"dismiss control not found ({dismiss_sel})",
+            "dom_hint": dismiss_sel,
+        }
+
+    page.wait_for_timeout(leave_ms)
+    after_dismiss = scope.locator(toast_sel).count()
+    if after_dismiss != initial - 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"dismiss left {after_dismiss} toasts (was {initial}, expected "
+                f"{initial - 1}) — leave motion or dismiss handler broken"
+            ),
+            "dom_hint": toast_sel,
+        }
+
+    page.evaluate(
+        """(title) => {
+          document.dispatchEvent(new CustomEvent('showToast', {
+            detail: {
+              title: title,
+              message: 'Client-fired toast',
+              type: 'warning',
+              duration: '30s',
+            },
+          }));
+        }""",
+        fire_title,
+    )
+    page.wait_for_timeout(settle)
+    after_fire = scope.locator(toast_sel).count()
+    if after_fire != after_dismiss + 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"showToast left {after_fire} toasts (expected {after_dismiss + 1}) — "
+                "client fire path may be broken"
+            ),
+            "dom_hint": stack_sel,
+        }
+    titled = scope.locator(title_sel).filter(has_text=fire_title).count()
+    if titled < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"fired toast missing title {fire_title!r}",
+            "dom_hint": title_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (f"dismiss {initial}→{after_dismiss}; showToast +1 title={fire_title!r}"),
+        "initial": initial,
+        "after_dismiss": after_dismiss,
+        "after_fire": after_fire,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2018,6 +2168,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "carousel_advance": _run_carousel_advance,
     "combobox_select": _run_combobox_select,
     "wizard_step_forward": _run_wizard_step_forward,
+    "toast_dismiss_and_fire": _run_toast_dismiss_and_fire,
 }
 
 

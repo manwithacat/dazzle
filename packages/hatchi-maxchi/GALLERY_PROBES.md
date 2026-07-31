@@ -41,6 +41,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `carousel.advance_next` | `carousel` | exclusive | high | controller | Clicking Next advances the clamp carousel from slide 1 to 2 (data-carousel-index, active slide, and live status must update) |
 | `combobox.enhance_and_select` | `combobox` | exclusive | high | controller | Native select[data-combobox] enhances on pointerdown; picking High writes select value=high, shows High in the overlay input, and closes the listbox (data-open cleared) |
 | `wizard.forward_after_valid` | `wizard` | exclusive | high | controller | After filling the required field on step 0, clicking the step-1 stepper advances data-step to 1, shows stage 1, and marks step 1 current (forward is validity-gated one step at a time) |
+| `toast.dismiss_and_client_fire` | `toast` | exclusive | high | controller | Dismissing a stack toast removes it after leave motion; dispatching showToast appends a new toast with the detail title (stack host must honor dismiss + client fire — not a static markup demo) |
 
 ## Loop (autonomous improve)
 
