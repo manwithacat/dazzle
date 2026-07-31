@@ -73,12 +73,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1539 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1545 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1539 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1545 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1545 (2026-07-31).** campaign force **hm-convergence gallery_probes**: expand **ship** `app_shell.sidebar_toggle` + runner (live shell hamburger data-sidebar open↔closed); catalog **33/33 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1545**. budget 1. Explore **99/100**.
 
 > **Cycle 1544 (2026-07-31).** campaign force **example-apps story_walk**: dig acme_billing — **product** invoice_list dual open `Invoice via id | Project via project` + membership dual open; ST-007/010 criteria + stem; 9 walks validate+dry-run+**live green** mark-live residual 1→0; SPEC fingerprint; dig receipt PASS live_proven. residual_total=0 densify=0. story_walk+walk+reset-and-load **USED@1544**. budget 1. Explore **98/100**.
 

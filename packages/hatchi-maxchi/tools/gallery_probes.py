@@ -855,6 +855,33 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1545 — app-shell live: hamburger flips data-sidebar open↔closed.
+    # Live page (not iframe host); mirrors test_app_shell_sidebar_toggle.
+    Probe(
+        id="app_shell.sidebar_toggle",
+        stem="app-shell",
+        page="hyperparts/app-shell-live.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Hamburger sidebar toggle flips data-sidebar open↔closed and "
+            "aria-expanded on the toggle (live shell chrome — not a static iframe demo)"
+        ),
+        kind="app_shell_sidebar_toggle",
+        params={
+            "shell": ".app-shell, .dz-app-shell, [data-app-shell], [data-dz-app-shell]",
+            "toggle": (
+                "[data-sidebar-toggle], [data-dz-sidebar-toggle], "
+                "button.app-shell__menu, button.dz-app-shell__menu"
+            ),
+            "attr": "data-sidebar",
+            "open_value": "open",
+            "closed_value": "closed",
+            "scope": "",  # whole live page
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2563,6 +2590,99 @@ def _run_search_select_typeahead_select(page: Any, probe: Probe) -> dict[str, An
     }
 
 
+def _run_app_shell_sidebar_toggle(page: Any, probe: Probe) -> dict[str, Any]:
+    """Hamburger flips data-sidebar open↔closed + aria-expanded on toggle.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_app_shell_sidebar_toggle for gallery catalog (cycle 1545). Live page
+    only (app-shell-live.html — framed gallery page is not the interaction host).
+    """
+    params = probe.params
+    shell_sel = params.get(
+        "shell",
+        ".app-shell, .dz-app-shell, [data-app-shell], [data-dz-app-shell]",
+    )
+    toggle_sel = params.get(
+        "toggle",
+        "[data-sidebar-toggle], [data-dz-sidebar-toggle]",
+    )
+    attr = str(params.get("attr", "data-sidebar"))
+    open_value = str(params.get("open_value", "open"))
+    closed_value = str(params.get("closed_value", "closed"))
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    shell = None
+    for part in shell_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            shell = loc
+            break
+    if shell is None:
+        return {"verdict": "ERROR", "detail": f"app-shell root not found ({shell_sel})"}
+
+    toggle = None
+    for part in toggle_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            toggle = loc
+            break
+    if toggle is None:
+        return {"verdict": "ERROR", "detail": f"sidebar toggle not found ({toggle_sel})"}
+
+    initial = shell.get_attribute(attr)
+    if initial is None:
+        # dual-lock product prefix
+        alt = shell.get_attribute("data-dz-sidebar")
+        if alt is not None:
+            attr = "data-dz-sidebar"
+            initial = alt
+    if initial != open_value:
+        return {
+            "verdict": "FAIL",
+            "detail": f"expected initial {attr}={open_value!r}, got {initial!r}",
+            "dom_hint": shell_sel,
+        }
+
+    toggle.click()
+    page.wait_for_timeout(settle)
+    after_close = shell.get_attribute(attr)
+    if after_close != closed_value:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"toggle close left {attr}={after_close!r} (expected {closed_value!r})"),
+            "dom_hint": toggle_sel,
+        }
+    aria = toggle.get_attribute("aria-expanded")
+    if aria is not None and aria not in ("false", "0"):
+        return {
+            "verdict": "FAIL",
+            "detail": f"aria-expanded after close={aria!r} (expected false)",
+            "dom_hint": toggle_sel,
+        }
+
+    toggle.click()
+    page.wait_for_timeout(settle)
+    after_open = shell.get_attribute(attr)
+    if after_open != open_value:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"toggle open left {attr}={after_open!r} (expected {open_value!r})"),
+            "dom_hint": toggle_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"{attr} {open_value}→{closed_value}→{open_value}; toggle ok",
+    }
+
+
 def _run_money_sync_minor_blur(page: Any, probe: Probe) -> dict[str, Any]:
     """Major input → minor carrier; blur normalize; empty clears carrier.
 
@@ -2697,6 +2817,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "tags_seed_add_remove": _run_tags_seed_add_remove,
     "search_select_typeahead_select": _run_search_select_typeahead_select,
     "money_sync_minor_blur": _run_money_sync_minor_blur,
+    "app_shell_sidebar_toggle": _run_app_shell_sidebar_toggle,
 }
 
 
