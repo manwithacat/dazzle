@@ -13,7 +13,7 @@ story ST-001 "Member browses projects and opens a project hub":
     - "Member has list permission on Project"
   then:
     - "Member sees the project list"
-    - "Row open hops to Project detail with tasks and milestones"
+    - "Row open hops to Project detail with task queue and milestone pull queue (not status cards)"
 
 story ST-002 "Member works the task board with project context hops":
   status: accepted
@@ -48,7 +48,7 @@ story ST-004 "Manager reviews project portfolio":
     - "Manager has list permission on Project"
   then:
     - "Manager sees all projects"
-    - "Opening a project shows related tasks and milestones"
+    - "Opening a project shows related tasks and milestones as pull queues"
 
 story ST-005 "Member follows an assignee hop to a teammate hub":
   status: accepted

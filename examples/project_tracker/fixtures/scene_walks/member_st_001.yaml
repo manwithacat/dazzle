@@ -36,4 +36,6 @@ scenes:
           - Task
           - Milestone
           - Project
-    expects: "Project detail hub shows seed Website relaunch with tasks and milestones"
+          - Tasks
+          - Milestones
+    expects: "Project detail hub shows seed Website relaunch with task and milestone pull queues"

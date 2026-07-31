@@ -10,11 +10,14 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 - member default: `my_tasks` = personal load + assigned queue + board.
 - `project_board` = delivery kanban + unassigned queue + milestones.
 - `milestone_plan` = manager schedule desk (milestones + active projects).
+- Project hub related **tasks** and **milestones** are **pull queues**
+  (milestones: name+status+end) — not status_cards warehouse chrome.
 
 ## Not this
 
 - Persona lands on a bare entity list when the job is triage or delivery.
 - Story `given:` workspace names that disagree with `default_workspace`.
+- Hub milestone roster as status_cards when the job is pull-next delivery.
 
 ## Expressions
 

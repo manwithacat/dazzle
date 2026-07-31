@@ -658,9 +658,11 @@ surface project_detail "Project Detail":
     show: Task
     columns: title, status, priority, assigned_to, due_date
 
+  # Pull-next milestone roster (not status_cards warehouse) — ST-001/004 story_walk dig.
   related milestones "Milestones":
-    display: status_cards
+    display: queue
     show: Milestone
+    columns: name, status, end_date
 
 surface task_list "Tasks":
   uses entity Task
