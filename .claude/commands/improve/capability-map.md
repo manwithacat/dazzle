@@ -75,7 +75,7 @@ apply map patches with `{"apply":true}`.
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1519 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1520 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1523 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1516 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1524 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1520 | USED |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1524 (2026-07-31).** **framework-ux edge_cases** related total/overflow parity: tab count badges use full total; status_cards/file_list/table "Showing N of M" when capped (queue 1516 parity); unit pins. tip CI 1523 still queued — **no push**. residual=0 densify=0. fitness/ux **USED@1524**. budget 1. Explore **81/100**. Next push when tip green; campaign hyperpart/story under aggressive; self-audit@1512 ~1527.
 
 > **Cycle 1523 (2026-07-31).** **example-apps journey_dogfood** dig design_studio ST-001–006 maps stem+stories+SPEC; prove journey 6/6; **product** brand_detail related assets status_cards→**queue** (name+status+type+quality); ST-002/005 criteria + stem; SPEC fingerprint. residual=0 densify=0. journey+prove+process_dig+validate+CodeQL+inbox **USED@1523**. budget 1. Explore **80/100**. Next campaign framework-ux under aggressive residual=0 densify=0; self-audit@1512 ~1527; capability-sweep@1521 next~1541.
 

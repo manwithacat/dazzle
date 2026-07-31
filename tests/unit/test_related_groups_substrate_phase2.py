@@ -248,6 +248,62 @@ def test_queue_mode_overflow_when_total_exceeds_rows() -> None:
     assert "dz-queue-overflow" in html
 
 
+def test_related_tab_count_uses_total_when_capped() -> None:
+    """Cycle 1524 — multi-tab badges show full total, not only fetched rows."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Work",
+        display="queue",
+        tabs=[
+            _tab(tab_id="tasks", label="Tasks", total=12),
+            _tab(tab_id="bugs", label="Bugs", entity_name="Bug", total=5),
+        ],
+    )
+    html = _render(g)
+    assert "dz-related-tab-count" in html
+    assert ">12</span>" in html
+    assert ">5</span>" in html
+
+
+def test_status_cards_overflow_when_total_exceeds_rows() -> None:
+    """Cycle 1524 — status_cards show Showing N of M when fetch is capped."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Milestones",
+        display="status_cards",
+        tabs=[_tab(total=9)],
+    )
+    html = _render(g)
+    assert "Showing 2 of 9" in html
+    assert "dz-related-overflow" in html
+
+
+def test_file_list_overflow_when_total_exceeds_rows() -> None:
+    """Cycle 1524 — file_list overflow parity with queue/table."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Files",
+        display="file_list",
+        tabs=[_tab(total=7)],
+    )
+    html = _render(g)
+    assert "Showing 2 of 7" in html
+    assert "dz-related-overflow" in html
+
+
+def test_table_mode_overflow_when_total_exceeds_rows() -> None:
+    """Cycle 1524 — related table overflow when fetch is capped."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Tasks",
+        display="table",
+        tabs=[_tab(total=11)],
+    )
+    html = _render(g)
+    assert "Showing 2 of 11" in html
+    assert "dz-related-overflow" in html
+
+
 def test_queue_mode_multi_tab_uses_hm_tabs() -> None:
     """Cycle 1505 — multi related-queue strips use HM tabs (not stacked h4s)."""
     g = RelatedGroupContext(

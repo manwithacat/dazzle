@@ -426,6 +426,25 @@ class _RenderTablesMixin:
         )
 
     @staticmethod
+    def _related_tab_count(t: RelatedTab) -> int:
+        """Full related total when fetch is capped; else visible row count.
+
+        Cycle 1524 — tab badges and non-queue overflow use the same rule as
+        related queues (1516): prefer ``total`` when it is ≥ len(rows).
+        """
+        n = len(t.rows)
+        total = int(getattr(t, "total", 0) or 0)
+        return total if total >= n else n
+
+    @staticmethod
+    def _related_overflow_html(t: RelatedTab, _ctx: RenderContext, *, css_class: str) -> str:
+        """\"Showing N of M\" when related fetch is capped (workspace parity)."""
+        count = _RenderTablesMixin._related_tab_count(t)
+        if count <= len(t.rows):
+            return ""
+        return f'<p class="{css_class}">Showing {len(t.rows)} of {count}</p>'
+
+    @staticmethod
     def _related_create_row(t: RelatedTab, ctx: RenderContext) -> str:
         if not t.create_href:
             return ""
@@ -443,7 +462,9 @@ class _RenderTablesMixin:
             f'<button type="button" class="dz-tabs__tab"'
             f"{' aria-current="true"' if i == 0 else ''} "
             f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
-            f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
+            f"{ctx.escape(t.label)}"
+            f'<span class="dz-related-tab-count">'
+            f"{_RenderTablesMixin._related_tab_count(t)}</span>"
             "</button>"
             for i, t in enumerate(tabs)
         )
@@ -490,13 +511,14 @@ class _RenderTablesMixin:
                     f'class="dz-related-table-empty-cell">No {ctx.escape(t.label.lower())} found.'
                     "</td></tr>"
                 )
+            overflow = self._related_overflow_html(t, ctx, css_class="dz-related-overflow")
             parts.append(
                 f'<div{panel_attrs}><div class="dz-related-table-card">'
                 f"{self._related_create_row(t, ctx)}"
                 '<div class="dz-related-table-scroll">'
                 '<table class="dz-related-table">'
                 f"<thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
-                "</div></div></div>"
+                f"</div>{overflow}</div></div>"
             )
         parts.append("</div>")
         return "".join(parts)
@@ -531,6 +553,7 @@ class _RenderTablesMixin:
         if items:
             wrap = "dz-related-file-list" if kind == "files" else "dz-related-status-cards"
             parts.append(f'<div class="{wrap}">{"".join(items)}</div>')
+            parts.append(self._related_overflow_html(t, ctx, css_class="dz-related-overflow"))
         else:
             parts.append(f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>')
         return "".join(parts)
@@ -605,10 +628,8 @@ class _RenderTablesMixin:
                 )
             )
         # Prefer full related total when fetch is capped (parity workspace queues).
-        count = t.total if getattr(t, "total", 0) and t.total >= len(t.rows) else len(t.rows)
-        overflow_html = ""
-        if count > len(t.rows):
-            overflow_html = f'<p class="dz-queue-overflow">Showing {len(t.rows)} of {count}</p>'
+        count = self._related_tab_count(t)
+        overflow_html = self._related_overflow_html(t, ctx, css_class="dz-queue-overflow")
         parts.append(
             f'<div class="dz-queue-region">'
             f'<div class="dz-queue-count-row">'
