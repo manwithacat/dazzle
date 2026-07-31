@@ -1,6 +1,6 @@
 story ST-006 "Administrator creates a new Team Member":
   status: accepted
-  narrative_only: true
+  executed_by: surface.user_create
   persona: admin
   trigger: form_submitted
   entities: [User]
@@ -12,7 +12,7 @@ story ST-006 "Administrator creates a new Team Member":
 
 story ST-007 "Administrator creates a new Task":
   status: accepted
-  narrative_only: true
+  executed_by: surface.task_create
   persona: admin
   trigger: form_submitted
   entities: [Task]
@@ -24,7 +24,7 @@ story ST-007 "Administrator creates a new Task":
 
 story ST-008 "Administrator changes Task from todo to in_progress":
   status: accepted
-  narrative_only: true
+  executed_by: surface.task_edit
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -60,7 +60,7 @@ story ST-010 "Administrator changes Task from in_progress to todo":
 
 story ST-011 "Administrator creates a new Task Comment":
   status: accepted
-  narrative_only: true
+  executed_by: surface.comment_create
   persona: admin
   trigger: form_submitted
   entities: [TaskComment]
