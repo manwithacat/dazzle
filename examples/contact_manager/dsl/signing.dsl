@@ -14,8 +14,8 @@ entity EngagementLetter "Engagement Letter":
   effective_date: date required
   signatory_name: str(200) required pii(category=identity)
   signatory_email: email required pii(category=contact)
-  # Domain residual lifecycle densify (cycle 1475): letters are not
-  # eternally "done" — draft → out for signature → signed, with void.
+  # Lifecycle (cycle 1475): letters are not eternally "done" —
+  # draft → out for signature → signed, with void.
   status: enum[draft,sent,signed,void]=draft
 
   transitions:
@@ -31,13 +31,12 @@ entity EngagementLetter "Engagement Letter":
   fitness:
     repr_fields: [party, effective_date, signatory_name, contact, status]
 
-# Journey open-via densify (cycle 1517 story_walk): letters are not orphan
-# warehouse rows — list hops to letter hub or parent Contact hub.
+# Journey open-via (cycle 1517 story_walk; AUD-007 fix 1528): letters are not
+# orphan warehouse rows — pipe dual hop (parser last-wins if two open: lines).
 surface engagement_letter_list "Engagement letters":
   uses entity EngagementLetter
   mode: list
-  open: EngagementLetter via id
-  open: Contact via contact
+  open: EngagementLetter via id | Contact via contact
   section main:
     field party "Party"
     field status "Status"
