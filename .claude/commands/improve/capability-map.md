@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1565 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1570 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1569 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1565 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1570 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -137,6 +137,8 @@ apply map patches with `{"apply":true}`.
 
 
 
+
+> **Cycle 1570 (2026-08-01).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 36 PASS; **ship** `date_range.change_fires_search` + `date_range_change` runner (From date → MOCK_HTMX /mock/search); catalog **37/37 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1570**. budget 1. Explore **16/100**.
 > **Cycle 1569 (2026-08-01).** campaign force **example-apps story_walk**: dig invoice_ops — **product** dual-open payment_attempt_list `PaymentAttempt via id | Invoice via invoice` (+detail), line_item_list `LineItem via id | Invoice via invoice`, bank list `SupplierBankAccount via id | Supplier via supplier` (+detail); ST-006 + stem + trial; prove journey **6/6** dual hops ST-006; walks 6/6 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1569**. budget 1. Explore **15/100**.
 > **Cycle 1568 (2026-08-01).** campaign force **example-apps journey_dogfood**: dig hr_records — **product** dual-open employment_list `Employment via id | Person via person` (+employment_detail), salary_list `Salary via id | Person via person` (+salary_detail); ST-003/005 + stem + trial; prove journey **5/5** dual hops; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1568**. budget 1. Explore **14/100**.
 > **Cycle 1567 (2026-08-01).** campaign force **example-apps agent_acceptance_panel**: dig fieldtest_hub — **product** dual-open issue_report_list `IssueReport via id | Device via device_id`, test_session_list `TestSession via id | Device via device_id`; ST-037/046 + stem + trial; prove journey **29/29** dual hops ST-046; walks 7/7 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+journey+prove+walk+process_dig **USED@1567**. budget 1. Explore **13/100**.

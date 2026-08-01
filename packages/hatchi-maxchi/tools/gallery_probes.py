@@ -986,6 +986,36 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1570 — date-range: changing From fires hx-get into out slot (MOCK_HTMX search).
+    Probe(
+        id="date_range.change_fires_search",
+        stem="date-range",
+        page="hyperparts/date-range.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Changing the From date input fires the bar's hx-get exchange into "
+            "the out slot (MOCK_HTMX /mock/search results) — date-range is a "
+            "filter Exchange footer, not dead chrome"
+        ),
+        kind="date_range_change",
+        params={
+            "root": (
+                "[data-date-range], [data-dz-date-range], .date-range-picker, "
+                ".date-range-bar, .dz-date-range"
+            ),
+            "from_input": (
+                'input[name="date_from"], input#hm-dr-from, .date-range-input[name="date_from"]'
+            ),
+            "out": ("#hm-dr-out, [data-date-range-out], [data-dz-date-range-out]"),
+            "set_value": "2026-07-15",
+            "expect_out_contains": "result",
+            "settle_ms": 250,
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3207,6 +3237,92 @@ def _run_pagination_page_load(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_date_range_change(page: Any, probe: Probe) -> dict[str, Any]:
+    """Change From date; assert hx-get lands MOCK_HTMX results in out slot."""
+    params = probe.params
+    root_sel = params.get(
+        "root",
+        "[data-date-range], [data-dz-date-range], .date-range-picker, .date-range-bar",
+    )
+    from_sel = params.get(
+        "from_input",
+        'input[name="date_from"], input#hm-dr-from',
+    )
+    out_sel = params.get("out", "#hm-dr-out")
+    set_value = str(params.get("set_value", "2026-07-15"))
+    expect = str(params.get("expect_out_contains", "result"))
+    settle = int(params.get("settle_ms", 250))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"date-range root not found ({root_sel})"}
+
+    inp = None
+    for part in from_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(part).first
+        if cand.count() > 0:
+            inp = cand
+            break
+    if inp is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"from input not found ({from_sel})",
+            "dom_hint": from_sel,
+        }
+
+    # Playwright fill on type=date; then change event for htmx.
+    inp.fill(set_value)
+    inp.dispatch_event("change")
+    page.wait_for_timeout(settle)
+
+    out = None
+    for part in out_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            out = loc
+            break
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            out = loc
+            break
+    if out is None:
+        return {"verdict": "FAIL", "detail": f"out slot not found ({out_sel})"}
+
+    # Unhide may still leave attribute; text content is the exchange signal.
+    got = _norm_label(out.inner_text())
+    if expect.lower() not in got.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"out slot missing {expect!r} after date change "
+                f"(got {got[:120]!r}) — MOCK_HTMX / hx-get filter exchange failed"
+            ),
+            "out_text": got[:200],
+            "set_value": set_value,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"date From={set_value!r} → out contains {expect!r}",
+        "out_snippet": got[:120],
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -3233,6 +3349,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "confirm_intercept_accept": _run_confirm_intercept_accept,
     "master_detail_select": _run_master_detail_select,
     "pagination_page_load": _run_pagination_page_load,
+    "date_range_change": _run_date_range_change,
 }
 
 

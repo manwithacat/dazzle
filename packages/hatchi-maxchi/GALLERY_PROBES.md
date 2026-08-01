@@ -49,6 +49,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `confirm.intercept_and_accept` | `confirm` | exclusive | high | controller | Clicking hx-delete[hx-confirm] opens the designed alert-dialog with the confirm text; accepting closes the dialog and issues the request (MOCK_HTMX toast) — not a silent window.confirm fallback |
 | `master_detail.select_item` | `master-detail` | exclusive | high | controller | Clicking a master-detail list item moves aria-current exclusively to that item and loads its detail card into the sibling pane (INV-002 · Globex via MOCK_HTMX) — selection state is controller-owned |
 | `pagination.page_two_loads_rows` | `pagination` | exclusive | high | controller | Clicking page 2 loads the MOCK_HTMX page-2 row slice into the list body (INV-004 · Umbrella) — pagination is an Exchange footer, not a dead chrome decoration |
+| `date_range.change_fires_search` | `date-range` | exclusive | high | controller | Changing the From date input fires the bar's hx-get exchange into the out slot (MOCK_HTMX /mock/search results) — date-range is a filter Exchange footer, not dead chrome |
 
 ## Loop (autonomous improve)
 

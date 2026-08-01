@@ -63,6 +63,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "app_shell.sidebar_toggle" in ids
     assert "master_detail.select_item" in ids
     assert "pagination.page_two_loads_rows" in ids
+    assert "date_range.change_fires_search" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -93,6 +94,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "confirm_intercept_accept",
             "master_detail_select",
             "pagination_page_load",
+            "date_range_change",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -140,6 +142,11 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert pagination.fix_surface == "controller"
     assert pagination.page == "hyperparts/pagination.html"
     assert pagination.stem == "pagination"
+    date_range = next(p for p in PROBES if p.id == "date_range.change_fires_search")
+    assert date_range.kind == "date_range_change"
+    assert date_range.fix_surface == "controller"
+    assert date_range.page == "hyperparts/date-range.html"
+    assert date_range.stem == "date-range"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
