@@ -528,6 +528,10 @@ class PageContext(BaseModel):
     # ``surface feedback_create`` against its own entity while the framework
     # auto-synthesises one with the same name against FeedbackReport. See #828.
     entity_ref: str = ""
+    # Parent workspace name when rendering a workspace shell (cycle 1560).
+    # Dispatch uses this to infer content_measure=app when measure is unset.
+    # Empty on entity list/form/detail pages.
+    workspace_name: str = ""
 
     # Auth context (populated at render time when auth is enabled)
     is_authenticated: bool = False
