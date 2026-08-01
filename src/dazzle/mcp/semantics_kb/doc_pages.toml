@@ -1629,6 +1629,13 @@ order = 120.9
 handwritten = true
 intro = "Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). Antagonist doctrine 2026-08-01."
 
+[pages.antagonist-rescore-handoff-2026-08-01b]
+title = "Antagonist Re-score Handoff (2026-08-01b)"
+slug = "antagonist-rescore-handoff-2026-08-01b"
+order = 120.95
+handwritten = true
+intro = "Post presentation-process first slice + S1–S5 still recapture handoff for human re-score after fleet ~5.6 pass."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

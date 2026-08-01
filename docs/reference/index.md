@@ -60,6 +60,7 @@
 | [Antagonist Agent Brief (#1626)](antagonist-agent-brief-1626.md) | Agent residual queue R1–R6 for the demo-fleet antagonist bake-off — stills floors, recapture recipe, messaging constraints. |
 | [Antagonist Re-score Handoff (#1626)](antagonist-rescore-handoff-1626.md) | Hand-back pack for human/antagonist re-score after agent R1–R6 + partial P1 drain — hero still paths, OCR spot-check, deferred items. |
 | [Hyperpart Presentation Process](hyperpart-presentation.md) | Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). |
+| [Antagonist Re-score Handoff (2026-08-01b)](antagonist-rescore-handoff-2026-08-01b.md) | Post presentation-process first slice + S1–S5 still recapture handoff for human re-score after fleet ~5. |
 | [Fitness Methodology](fitness-methodology.md) | The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent. |
 | [Fitness Investigator](fitness-investigator.md) | Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals. |
 | [Fitness Triage](fitness-triage.md) | Turning a flat fitness backlog into ranked, actionable clusters for investigation. |
