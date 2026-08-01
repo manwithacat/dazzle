@@ -462,6 +462,57 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert "dz-tr-open-secondary" in html
     assert 'data-dazzle-action="Task.open_context"' in html
     assert 'href="/app/user/u-abc"' in html
+    # Cycle 1571: entity-aware labels + agent attrs
+    assert 'data-dz-open-entity="User"' in html
+    assert 'data-dz-open-context="/app/user/u-abc"' in html
+    assert 'title="Open User"' in html
+    assert 'aria-label="Open User for Ship dual-open"' in html
+
+
+def test_entity_label_from_detail_url() -> None:
+    from dazzle.render.fragment.region._row_links import entity_label_from_detail_url
+
+    assert entity_label_from_detail_url("/app/user/u-9") == "User"
+    assert entity_label_from_detail_url("/app/payment-attempt/x") == "Payment Attempt"
+    assert entity_label_from_detail_url("/app/supplier_bank_account/1") == "Supplier Bank Account"
+    assert entity_label_from_detail_url("") == "Related"
+
+
+def test_data_row_multi_open_emits_all_context_hops() -> None:
+    """open: A|B|C → primary + two labeled context hops (cycle 1571)."""
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {
+        "id": "pa1",
+        "title": "Attempt",
+        "invoice": "inv-1",
+        "supplier": "sup-9",
+    }
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/payment-attempt/{id}",
+        detail_url_candidates=(
+            "/app/payment-attempt/{id}",
+            "/app/invoice/{invoice}",
+            "/app/supplier/{supplier}",
+        ),
+        entity_name="PaymentAttempt",
+        api_endpoint="/api/payment-attempts",
+    )
+    assert 'hx-get="/app/payment-attempt/pa1"' in html
+    assert 'data-dz-open-secondary="/app/invoice/inv-1"' in html
+    assert 'data-dz-open-entity="Invoice"' in html
+    assert 'data-dz-open-entity="Supplier"' in html
+    assert 'title="Open Invoice"' in html
+    assert 'title="Open Supplier"' in html
+    assert html.count("dz-tr-open-secondary") == 2
+    # Only the first extra hop keeps the legacy secondary attr
+    assert html.count("data-dz-open-secondary=") == 2  # anchor + tr mirror
+    assert 'data-dz-open-context="/app/supplier/sup-9"' in html
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:

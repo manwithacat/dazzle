@@ -35,6 +35,7 @@ from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.region._row_links import (
     _resolve_row_links,
     _resolve_row_open_chain,
+    entity_label_from_detail_url,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
@@ -466,24 +467,35 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     secondary_context_html = ""
     if detail_url:
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
-        # Dual-open secondary hop (cycle 1566): when open: A | B both resolve,
-        # primary row drill uses first-non-null; emit second hop as a context
-        # action so parent/assignee hubs stay reachable without orphaning dual
-        # open DSL. Agents/tests can also read data-dz-open-secondary on the tr.
+        # Dual-open context hops (cycle 1566 + 1571): when open: A | B [| C]
+        # all resolve, primary row drill uses first-non-null; emit every
+        # later hop as a labeled context action so parent/assignee hubs stay
+        # reachable. Cycle 1571: entity-aware title/aria + data-dz-open-entity
+        # (from URL slug) so agents/users know *what* related surface opens.
+        # First extra hop keeps data-dz-open-secondary (back-compat discovery).
         if len(open_chain) > 1:
-            secondary = open_chain[1]
-            if secondary and secondary != detail_url:
-                sec_attr = _html_mod.escape(secondary, quote=True)
-                secondary_context_html = (
+            hop_parts: list[str] = []
+            for hop_i, hop_url in enumerate(open_chain[1:]):
+                if not hop_url or hop_url == detail_url:
+                    continue
+                sec_attr = _html_mod.escape(hop_url, quote=True)
+                ent_label = entity_label_from_detail_url(hop_url)
+                ent_attr = _html_mod.escape(ent_label, quote=True)
+                # First context hop retains dual-open secondary attrs (tests + agents).
+                secondary_attr = f'data-dz-open-secondary="{sec_attr}" ' if hop_i == 0 else ""
+                hop_parts.append(
                     f'<a href="{sec_attr}" '  # nosemgrep
                     f'data-dazzle-action="{entity_name_attr}.open_context" '
-                    f'data-dz-open-secondary="{sec_attr}" '
-                    f'aria-label="Open related context for {row_label_attr}" '
-                    f'title="Related context hop" '
+                    f"{secondary_attr}"
+                    f'data-dz-open-context="{sec_attr}" '
+                    f'data-dz-open-entity="{ent_attr}" '
+                    f'aria-label="Open {ent_attr} for {row_label_attr}" '
+                    f'title="Open {ent_attr}" '
                     f'class="dz-tr-action dz-tr-open-secondary" '
                     f'onclick="event.stopPropagation()">'
                     f"{lucide_svg_html('arrow-up-right', cls='dz-tr-action-icon')}</a>"
                 )
+            secondary_context_html = "".join(hop_parts)
         if peek_expand:
             peek_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)
             panel_id = f"peek-{item_id_attr}"

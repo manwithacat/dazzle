@@ -115,6 +115,26 @@ def _try_format_url(tmpl: str, mapping: dict[str, str]) -> str | None:
     return url or None
 
 
+def entity_label_from_detail_url(url: str) -> str:
+    """Human label for a resolved detail path (cycle 1571 dual-open labels).
+
+    ``/app/user/u-9`` → ``User``; ``/app/payment-attempt/x`` → ``Payment attempt``.
+    Used for secondary/context hop ``title`` / ``aria-label`` / ``data-dz-open-entity``.
+    """
+    if not url:
+        return "Related"
+    path = str(url).split("?", 1)[0].strip("/")
+    segs = [s for s in path.split("/") if s]
+    if len(segs) < 2:
+        return "Related"
+    # /app/<slug>/<id> → slug at -2; bare /<slug>/<id> same
+    slug = segs[-2]
+    words = [w for w in slug.replace("_", "-").split("-") if w]
+    if not words:
+        return "Related"
+    return " ".join(w[:1].upper() + w[1:] for w in words)
+
+
 def _resolve_row_open_chain(
     item: dict[str, Any],
     *,
