@@ -61,6 +61,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "search_select.open_typeahead_select_hold" in ids
     assert "money.sync_minor_and_blur_normalize" in ids
     assert "app_shell.sidebar_toggle" in ids
+    assert "master_detail.select_item" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -89,6 +90,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "money_sync_minor_blur",
             "app_shell_sidebar_toggle",
             "confirm_intercept_accept",
+            "master_detail_select",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -126,6 +128,11 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert confirm.kind == "confirm_intercept_accept"
     assert confirm.fix_surface == "controller"
     assert confirm.page == "hyperparts/confirm.html"
+    master_detail = next(p for p in PROBES if p.id == "master_detail.select_item")
+    assert master_detail.kind == "master_detail_select"
+    assert master_detail.fix_surface == "controller"
+    assert master_detail.page == "hyperparts/master-detail.html"
+    assert master_detail.stem == "master-detail"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"

@@ -919,6 +919,41 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1559 — master-detail: list click moves aria-current + MOCK_HTMX detail.
+    # Mirrors test_behaviour.test_master_detail_selection_and_instance_isolation (select half).
+    Probe(
+        id="master_detail.select_item",
+        stem="master-detail",
+        page="hyperparts/master-detail.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking a master-detail list item moves aria-current exclusively to "
+            "that item and loads its detail card into the sibling pane "
+            "(INV-002 · Globex via MOCK_HTMX) — selection state is controller-owned"
+        ),
+        kind="master_detail_select",
+        params={
+            "root": (
+                "[data-dz-master-detail], .dz-master-detail, [data-master-detail], .master-detail"
+            ),
+            "item": (
+                ".dz-master-detail__item, .master-detail__item, "
+                "a.dz-master-detail__item, a.master-detail__item"
+            ),
+            "detail": (
+                ".dz-master-detail__detail, .master-detail__detail, "
+                "[data-dz-master-detail-detail-body], [data-master-detail-detail-body]"
+            ),
+            "activate_hx_suffix": "inv-002",
+            "expect_label_contains": "Globex",
+            "expect_detail_contains": "Globex",
+            "settle_ms": 200,
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2915,6 +2950,132 @@ def _run_confirm_intercept_accept(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_master_detail_select(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a master-detail list item; assert exclusive aria-current + detail.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py::
+    test_master_detail_selection_and_instance_isolation (selection half) for the
+    autonomous gallery_probes catalog (cycle 1559).
+    """
+    params = probe.params
+    root_sel = params["root"]
+    item_sel = params["item"]
+    detail_sel = params.get("detail", ".master-detail__detail, .dz-master-detail__detail")
+    hx_suffix = str(params.get("activate_hx_suffix", "inv-002"))
+    expect_label = str(params.get("expect_label_contains", "Globex"))
+    expect_detail = str(params.get("expect_detail_contains", expect_label))
+    settle = int(params.get("settle_ms", 200))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"master-detail root not found ({root_sel})"}
+
+    # Prefer hx-get suffix match (stable across gallery dialect); fall back to label.
+    target = None
+    for part in item_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(f'{part}[hx-get$="{hx_suffix}"]').first
+        if cand.count() > 0:
+            target = cand
+            break
+        # some builds use full path without trailing-only match if hx is relative
+        cand = root.locator(part).filter(has_text=expect_label).first
+        if cand.count() > 0:
+            target = cand
+            break
+    if target is None:
+        return {
+            "verdict": "ERROR",
+            "detail": (f"list item not found (hx-get$={hx_suffix!r} or label≈{expect_label!r})"),
+            "dom_hint": item_sel,
+        }
+
+    # Snapshot prior current (seed item) so we can prove it cleared.
+    current_sel = ", ".join(
+        f'{p.strip()}[aria-current="true"]' for p in item_sel.split(",") if p.strip()
+    )
+    prior = root.locator(current_sel)
+    prior_n = prior.count()
+    prior_label = _norm_label(prior.first.inner_text()) if prior_n else ""
+
+    target.click()
+    page.wait_for_timeout(settle)
+
+    currents = root.locator(current_sel)
+    n_cur = currents.count()
+    if n_cur != 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"expected exactly 1 aria-current item after click, got {n_cur} "
+                f"(prior={prior_label!r})"
+            ),
+            "dom_hint": item_sel,
+        }
+    got_label = _norm_label(currents.first.inner_text())
+    if expect_label.lower() not in got_label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"aria-current on {got_label!r}, expected ≈{expect_label!r} (prior={prior_label!r})"
+            ),
+            "current_label": got_label,
+        }
+
+    # Detail pane should hold the MOCK_HTMX card for the selected id.
+    detail = None
+    for part in detail_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            detail = loc
+            break
+        # detail may be sibling outside root if scope was item-only — try page
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            detail = loc
+            break
+    if detail is None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"detail pane not found ({detail_sel})",
+            "current_label": got_label,
+        }
+    detail_text = _norm_label(detail.inner_text())
+    if expect_detail.lower() not in detail_text.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"detail pane missing {expect_detail!r} after select "
+                f"(got {detail_text[:120]!r}) — selection ok but MOCK_HTMX/hx-get failed"
+            ),
+            "current_label": got_label,
+            "detail_text": detail_text[:200],
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"current={got_label!r} (was {prior_label!r}); detail contains {expect_detail!r}"
+        ),
+        "current_label": got_label,
+        "prior_label": prior_label,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2939,6 +3100,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "money_sync_minor_blur": _run_money_sync_minor_blur,
     "app_shell_sidebar_toggle": _run_app_shell_sidebar_toggle,
     "confirm_intercept_accept": _run_confirm_intercept_accept,
+    "master_detail_select": _run_master_detail_select,
 }
 
 

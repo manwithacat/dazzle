@@ -81,7 +81,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1545 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1559 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -127,6 +127,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1559 (2026-08-01).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 34 PASS; **ship** `master_detail.select_item` + `master_detail_select` runner (aria-current exclusive + MOCK_HTMX Globex detail); catalog **35/35 PASS**; unit pin. residual=0 densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1559**. budget 1. Explore **6/100**.
 
 > **Cycle 1557 (2026-08-01).** campaign + residual force **example-apps story_walk**: ops_dashboard **ST-011** scene walk (RAG/outlier league → system hub) validate+dry-run+**live green** mark-live residual 1→0; dig receipt PASS live_proven. densify_allowed=0 dual_lock=0. story_walk+walk+reset-and-load+process_dig **USED@1557**. budget 1. Explore **5/100**.
 
