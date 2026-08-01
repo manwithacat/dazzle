@@ -12,6 +12,16 @@
   matrix-only, seam wiring, `how_to_extend` for agent creativity within
   the closed matrix. Money/swatch/badge densities implemented in
   `present()`; kanban person fields route through the matrix.
+- **Presentation residual (`ref_as_repr` / `person_as_text`)** — when
+  hero stills exist and `tesseract` is available, `product_quality`
+  OCR-flags dict/UUID chrome and queue pilot `Assigned To:` prose so
+  residual_total cannot stay green over buyer-chrome leaks (#1626 T2).
+
+### Fixed
+- **Queue meta non-person refs** — never emit `{'id': UUID(...)}` for
+  device/entity FKs. Prefer entity dict when it has display substance
+  (person Avatar + named devices); fall back to `*_display` for id-only
+  joins; format via `_ref_display_name` (#1626 T1 / fieldtest regression).
 
 ### Changed
 - **acme_billing process densify** — durable `invoice_owner_review` process

@@ -384,6 +384,9 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
         or value.get("title")
         or value.get("label")
         or value.get("email")
+        or value.get("code")
+        or value.get("serial_number")
+        or value.get("serial")
     )
     if result:
         return str(result)

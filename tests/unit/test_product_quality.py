@@ -78,9 +78,11 @@ def test_score_project_single_app() -> None:
     assert "demo_fleet" in names
     lines = score_status_lines(report)
     assert any("product_quality residual_total=" in ln for ln in lines)
+    assert any(ln.startswith("presentation residual=") for ln in lines)
     payload = report.to_dict()
     assert "residual_total" in payload
     assert "recommended" in payload
+    assert "presentation" in payload
 
 
 def test_score_project_fleet_scope() -> None:

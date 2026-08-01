@@ -9,6 +9,7 @@ sufficient for commercial demo quality. This package scores:
 * **persona homes** (assignment-aware seed residual)
 * **metric_list** (metrics with current_user vs sibling list seed hits — F10/#1632)
 * still empty-hero byte floors
+* **presentation** (OCR ref_as_repr / person_as_text on hero stills when tesseract available)
 
 MCP: ``product_quality`` tool. CLI: ``dazzle demo quality``.
 """

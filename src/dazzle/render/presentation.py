@@ -319,7 +319,16 @@ def _plain_text(value: Any) -> str:
     if value in (None, ""):
         return ""
     if isinstance(value, dict):
-        return _ref_display_name(value) or str(value.get("id") or "")
+        # Never fall through to str(dict) — nested UUID → UUID('…') in buyer chrome.
+        name = _ref_display_name(value)
+        if name and not (name.startswith("{") and "id" in name):
+            return name
+        rid = value.get("id")
+        return str(rid) if rid is not None else ""
+    from uuid import UUID
+
+    if isinstance(value, UUID):
+        return str(value)
     return str(value)
 
 

@@ -93,7 +93,12 @@ Not: `Assigned To: Support Agent · Created At: …`
 | `author_action` | Product must change display mode / DSL |
 | `matrix_miss` | No matrix row |
 
-Suggested residual ids: `person_as_text`, `host_emit_skew`, `hyperpart_matrix_miss`, `person_in_metrics` (plus existing `label_glue`, `cta_add_double`).
+Suggested residual ids: `person_as_text`, `ref_as_repr`, `host_emit_skew`, `hyperpart_matrix_miss`, `person_in_metrics` (plus existing `label_glue`, `cta_add_double`).
+
+**Machine residual (T2):** `product_quality` OCR-scans present hero stills (when
+`tesseract` is available) for dict/UUID chrome (`ref_as_repr`) and queue pilot
+`Assigned To:` prose (`person_as_text` on `ticket_queue_*`). Floors alone cannot
+catch presentation honesty.
 
 **Never** report full green for person refs while `queue_meta` still stringifies them.
 

@@ -19,7 +19,9 @@ class shell + dispatch tables + `build()`.
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
+from dazzle.render.filters import _ref_display_name
 from dazzle.render.fragment import (
     URL,
     CsvExportButton,
@@ -65,42 +67,90 @@ from dazzle.render.presentation import infer_role, present
 _QUEUE_META_MAX = 3
 
 
+def _ref_dict_has_display_substance(raw: dict[str, Any]) -> bool:
+    """True when an FK dict can yield a human label (not bare id).
+
+    Person Avatar needs name/email on the dict; device/entity refs need
+    name/code/title. Id-only join dicts must fall back to ``*_display``.
+    """
+    for k in (
+        "__display__",
+        "name",
+        "company_name",
+        "title",
+        "label",
+        "email",
+        "code",
+        "serial_number",
+        "serial",
+    ):
+        v = raw.get(k)
+        if v is not None and str(v).strip():
+            return True
+    fn = str(raw.get("first_name") or raw.get("forename") or "").strip()
+    ln = str(raw.get("last_name") or raw.get("surname") or "").strip()
+    return bool(fn or ln)
+
+
+def _human_queue_meta_text(raw: Any) -> str:
+    """Resolve queue meta text without dict/UUID repr (#1626 T1 / ref_as_repr).
+
+    Never ``str(dict)`` — Python prints nested UUID objects as
+    ``UUID('…')`` inside the dict repr, which leaks into buyer chrome.
+    """
+    if raw is None:
+        return ""
+    if isinstance(raw, dict):
+        return _ref_display_name(raw).strip()
+    if isinstance(raw, UUID):
+        return str(raw)
+    return str(raw).strip()
+
+
 def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
     """Humanise a non-title queue column value for the meta line."""
     col_type = str(col.get("type") or "").lower()
     fmt = str(col.get("format") or "").lower()
     # Color meta uses HTML swatch in the row renderer — not this plain string path.
     if col_type == "color":
-        return str(raw).strip() if raw is not None else ""
+        return _human_queue_meta_text(raw)
     if col_type in ("currency", "money") or "currency" in fmt:
         try:
             num = float(raw)
             code = fmt.split(":", 1)[1].upper() if ":" in fmt else ""
             return f"{code} {num:,.2f}".strip() if code else f"{num:,.2f}"
         except (TypeError, ValueError):
-            return str(raw).strip()
+            return _human_queue_meta_text(raw)
     if col_type in ("number", "decimal", "float", "int"):
         try:
             num = float(raw)
             return f"{int(num):,}" if num == int(num) else f"{num:,.2f}"
         except (TypeError, ValueError):
-            return str(raw).strip()
-    text = str(raw).strip()
+            return _human_queue_meta_text(raw)
+    text = _human_queue_meta_text(raw)
     return text[:45] + "…" if len(text) > 48 else text
 
 
 def _queue_meta_raw(item: dict[str, Any], key: str) -> Any:
-    """Prefer resolved FK entity dict, then ``*_display``, then scalar.
+    """Prefer resolved FK entity dict when it has display substance.
 
     Person presentation needs the entity dict for Avatar initials/hue.
-    Preferring ``*_display`` alone forced plain-text queue meta (#1626 process).
+    Preferring *any* dict (including id-only joins) over ``*_display``
+    caused device meta to stringify as ``{'id': UUID(...)}`` (#1626 T1).
     """
     raw = item.get(key)
-    if isinstance(raw, dict) and raw:
-        return raw
     display_attr = f"{key}_display"
     disp = item.get(display_attr) if display_attr in item else None
-    if disp is not None and str(disp).strip():
+    has_disp = disp is not None and str(disp).strip()
+
+    if isinstance(raw, dict) and raw:
+        if _ref_dict_has_display_substance(raw):
+            return raw
+        # Thin / id-only dict: prefer precomputed human label.
+        if has_disp:
+            return disp
+        return raw
+    if has_disp:
         return disp
     if raw is not None and str(raw).strip():
         return raw
@@ -186,7 +236,7 @@ def _queue_row_meta_columns(
                 num = float(raw)
                 value_str = f"{currency_code} {num:,.2f}"
             except (TypeError, ValueError):
-                value_str = f"{currency_code} {raw}".strip()
+                value_str = f"{currency_code} {_human_queue_meta_text(raw)}".strip()
         else:
             value_str = _format_queue_meta_value(raw, col)
         if value_str:

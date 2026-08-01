@@ -22,6 +22,78 @@ def test_format_queue_meta_currency() -> None:
     )
 
 
+def test_format_queue_meta_never_emits_dict_or_uuid_repr() -> None:
+    """#1626 T1 — device/entity FK dicts must not leak Python repr into chrome."""
+    from uuid import UUID
+
+    raw = {"id": UUID("d1000000-0000-4000-8000-000000000001"), "name": "FT-PROBE-A12"}
+    out = _format_queue_meta_value(raw, {"type": "ref", "key": "device_id", "label": "Device"})
+    assert out == "FT-PROBE-A12"
+    assert "UUID(" not in out
+    assert "{'id'" not in out
+    assert '{"id"' not in out
+
+
+def test_format_queue_meta_id_only_dict_is_clean_uuid_string() -> None:
+    from uuid import UUID
+
+    uid = UUID("d1000000-0000-4000-8000-000000000002")
+    out = _format_queue_meta_value(
+        {"id": uid}, {"type": "ref", "key": "device_id", "label": "Device"}
+    )
+    assert out == str(uid)
+    assert "UUID(" not in out
+    assert "{" not in out
+
+
+def test_queue_meta_prefers_display_when_dict_is_id_only() -> None:
+    """Id-only join + device_display must surface story code, not UUID dict."""
+    from uuid import UUID
+
+    from dazzle.render.fragment.region._builders_tables import _queue_row_meta_columns
+
+    item = {
+        "id": "iss-1",
+        "title": "Probe drift",
+        "status": "open",
+        "device_id": {"id": UUID("d1000000-0000-4000-8000-000000000001")},
+        "device_id_display": "FT-PROBE-A12",
+    }
+    cols = [
+        {"key": "title", "label": "Title", "type": "text"},
+        {"key": "status", "label": "Status", "type": "badge"},
+        {"key": "device_id", "label": "Device", "type": "ref", "ref_entity": "Device"},
+    ]
+    meta = _queue_row_meta_columns(item, cols, display_key="title", queue_status_field="status")
+    by_label = {m.label: m.value for m in meta}
+    assert by_label.get("Device") == "FT-PROBE-A12"
+    assert "UUID(" not in str(by_label)
+
+
+def test_queue_meta_named_device_dict_uses_name() -> None:
+    from uuid import UUID
+
+    from dazzle.render.fragment.region._builders_tables import _queue_row_meta_columns
+
+    item = {
+        "id": "iss-1",
+        "title": "Probe drift",
+        "status": "open",
+        "device_id": {
+            "id": UUID("d1000000-0000-4000-8000-000000000001"),
+            "name": "FT-SENSOR-NORTH",
+        },
+    }
+    cols = [
+        {"key": "title", "label": "Title", "type": "text"},
+        {"key": "status", "label": "Status", "type": "badge"},
+        {"key": "device_id", "label": "Device", "type": "ref", "ref_entity": "Device"},
+    ]
+    meta = _queue_row_meta_columns(item, cols, display_key="title", queue_status_field="status")
+    by_label = {m.label: m.value for m in meta}
+    assert by_label.get("Device") == "FT-SENSOR-NORTH"
+
+
 def test_queue_meta_folds_currency_into_amount() -> None:
     """#1626 R1 — Amount + Currency columns must not glue as separate chips."""
     from dazzle.render.fragment.region._builders_tables import _queue_row_meta_columns
