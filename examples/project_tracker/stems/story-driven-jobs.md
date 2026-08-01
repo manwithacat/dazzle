@@ -12,12 +12,16 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 - `milestone_plan` = manager schedule desk (milestones + active projects).
 - Project hub related **tasks** and **milestones** are **pull queues**
   (milestones: name+status+end) — not status_cards warehouse chrome.
+- List dual-open (journey dig): `task_list` → Task|Project; `comment_list` →
+  Comment|Task; `milestone_list` → Milestone|Project; `attachment_list` →
+  Attachment|Task.
 
 ## Not this
 
 - Persona lands on a bare entity list when the job is triage or delivery.
 - Story `given:` workspace names that disagree with `default_workspace`.
 - Hub milestone roster as status_cards when the job is pull-next delivery.
+- Task list hops **only** to parent Project (orphan project-only open).
 
 ## Expressions
 

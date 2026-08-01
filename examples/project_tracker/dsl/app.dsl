@@ -667,8 +667,9 @@ surface project_detail "Project Detail":
 surface task_list "Tasks":
   uses entity Task
   mode: list
-  # Context hop to project hub (not only task warehouse)
-  open: Project via parent_project
+  # Dual open: task hub first (ST-003 discussion/files), project hub second (ST-002).
+  # Journey dig cycle 1563 — not project-only orphan hop.
+  open: Task via id | Project via parent_project
   section main:
     field title "Title"
     field status "Status"
@@ -678,7 +679,7 @@ surface task_list "Tasks":
     field due_date "Due"
     field labels "Labels"
   ux:
-    purpose: "Work across projects — open a row for the project context hub"
+    purpose: "Work across projects — open a row for the task hub or parent project hub"
     sort: due_date asc
     filter: status, priority, assigned_to
     empty: "No tasks yet."
@@ -758,17 +759,30 @@ surface comment_create "Add Comment":
 surface comment_list "Comments":
   uses entity Comment
   mode: list
-  open: Task via task
+  # Dual open: read the note, then hop to the task hub (journey dual-hop).
+  open: Comment via id | Task via task
   section main:
     field task "Task"
     field author "Author"
     field body "Comment"
     field created_at "Date"
   ux:
-    purpose: "Discussion across tasks — open hops to the task hub"
+    purpose: "Discussion across tasks — open a row for the comment or task hub"
     sort: created_at desc
     filter: task, author
     empty: "No comments yet."
+
+# View surface so dual-open Comment via id lands a readable note (not edit maze).
+surface comment_detail "Comment Detail":
+  uses entity Comment
+  mode: view
+  section summary "Comment":
+    field task "Task"
+    field author "Author"
+    field body "Comment"
+    field created_at "Date"
+  ux:
+    purpose: "Read a discussion note in context of the parent Task"
 
 surface comment_edit "Edit Comment":
   uses entity Comment
@@ -790,7 +804,8 @@ surface project_edit "Edit Project":
 surface milestone_list "Milestones":
   uses entity Milestone
   mode: list
-  open: Project via parent_project
+  # Dual open: milestone edit/context + parent project hub.
+  open: Milestone via id | Project via parent_project
   section main:
     field name "Name"
     field status "Status"
@@ -798,7 +813,7 @@ surface milestone_list "Milestones":
     field start_date "Start"
     field end_date "End"
   ux:
-    purpose: "Milestones by project — open hops to the project hub"
+    purpose: "Milestones by project — open a row for the milestone or parent project hub"
 
 surface milestone_edit "Edit Milestone":
   uses entity Milestone
@@ -813,14 +828,15 @@ surface milestone_edit "Edit Milestone":
 surface attachment_list "Attachments":
   uses entity Attachment
   mode: list
-  open: Task via task
+  # Dual open: view file then hop to task hub.
+  open: Attachment via id | Task via task
   section main:
     field task "Task"
     field filename "File"
     field uploaded_by "Uploaded By"
     field created_at "Date"
   ux:
-    purpose: "Files across tasks — open hops to the task hub"
+    purpose: "Files across tasks — open a row for the attachment viewer or task hub"
     sort: created_at desc
     filter: task
     empty: "No attachments uploaded yet."

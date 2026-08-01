@@ -53,7 +53,7 @@ while the company has three named principals.
 """
 
 tasks = [
-    "Land on My Tasks. Open one item from the assigned work queue — does it land a task hub (status, ownership, discussion) rather than a bare edit form?",
+    "Land on My Tasks. Open one item — prefer task hub (status, ownership, discussion); confirm dual hop also offers parent project context.",
     "On that task hub, is Discussion a scannable queue (recent comments body-first) rather than a warehouse table?",
     "From the board or My Tasks, open a teammate hub via an assignee name (or Team Member list).",
     "Does the hub show identity, role strip, assigned work, and owned projects?",
@@ -61,7 +61,7 @@ tasks = [
 ]
 
 adoption_criteria = [
-    "My Tasks queue opens a task hub with status strip and discussion",
+    "My Tasks / task list dual-opens Task hub and Project hub (hub first, project second)",
     "Task hub discussion is readable as a pull queue (not a dead warehouse table)",
     "Assignee hop lands a Team Member Overview without 404",
     "Hub shows assigned work and/or owned projects for that person",
