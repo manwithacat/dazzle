@@ -1549,11 +1549,11 @@ async def _compute_aggregate_metrics(
             pct = (delta_val / prior_val * 100.0) if prior_val else 0.0
             direction = "up" if delta_val > 0 else ("down" if delta_val < 0 else "flat")
             m["delta"] = int(delta_val) if delta_val == int(delta_val) else round(delta_val, 2)
-            # #1626 R6: stock counts vs a thin prior-window (few creations in
-            # [now−2p, now−p)) produce absurd % (800.0%) on demo seeds. Keep
-            # absolute delta + direction; omit implausible percentages.
-            _max_plausible_pct = 200.0
-            if abs(pct) <= _max_plausible_pct:
+            # #1626 R6/S2: stock counts vs a thin prior-window produce seed-noise
+            # percentages (150–800%). Keep absolute delta + direction; omit
+            # percentages at |pct| ≥ 100 (antagonist: 200.0% still looked theater).
+            _max_plausible_pct = 100.0
+            if abs(pct) < _max_plausible_pct:
                 m["delta_pct"] = round(pct, 1)
             m["delta_direction"] = direction
             m["delta_sentiment"] = delta.sentiment

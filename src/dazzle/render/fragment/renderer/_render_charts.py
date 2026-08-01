@@ -442,7 +442,9 @@ class _RenderChartsMixin:
         if not node.children:
             # Leaf: content only — no details, no chevron, no expand hint.
             return f'<div class="dz-tree-leaf">{label_html}</div>'
-        open_attr = " open" if depth == 0 else ""
+        # #1626 S4: open all branch levels so stills show nested labels
+        # (indent + chevron alone still OCR-flattens closed children).
+        open_attr = " open"
         count_html = f'<span class="dz-tree-count">{len(node.children)}</span>'
         # Summary holds content (label + count). Disclosure affordance is CSS.
         summary = f'<summary class="dz-tree-summary">{label_html}{count_html}</summary>'

@@ -88,23 +88,10 @@ class TestTreeBuilder:
     """Tree-building logic produces correct nested structure from flat items."""
 
     def _build_tree(self, items: list[dict], group_by: str) -> list[dict]:
-        """Replicate the tree-building logic from workspace_rendering.py."""
-        items_by_id = {str(item.get("id", "")): item for item in items}
-        children_map: dict[str, list] = {}
-        for item in items:
-            parent_id = str(item.get(group_by, "") or "")
-            children_map.setdefault(parent_id, []).append(item)
+        """Use production compute_tree (resolves nested ref dicts / _id)."""
+        from dazzle.http.runtime.workspace_region_computes import compute_tree
 
-        roots = [item for item in items if str(item.get(group_by, "") or "") not in items_by_id]
-
-        def _build_subtree(node: dict) -> dict:
-            node_id = str(node.get("id", ""))
-            node["_children"] = children_map.get(node_id, [])
-            for child in node["_children"]:
-                _build_subtree(child)
-            return node
-
-        return [_build_subtree(r) for r in roots]
+        return compute_tree(items, group_by)
 
     def test_simple_hierarchy(self) -> None:
         items = [
@@ -162,6 +149,27 @@ class TestTreeBuilder:
         assert len(tree) == 2
         for node in tree:
             assert node["_children"] == []
+
+    def test_nested_dict_parent_ref_resolves_1626(self) -> None:
+        """#1626 S4: ORM-shaped parent {id: …} must nest, not flatten to roots."""
+        items = [
+            {"id": "eng", "name": "Engineering", "parent_department": None},
+            {
+                "id": "fe",
+                "name": "Frontend",
+                "parent_department": {"id": "eng"},
+            },
+            {
+                "id": "be",
+                "name": "Backend",
+                "parent_department_id": "eng",
+            },
+        ]
+        tree = self._build_tree(items, "parent_department")
+        assert len(tree) == 1
+        assert tree[0]["name"] == "Engineering"
+        kids = {c["name"] for c in tree[0]["_children"]}
+        assert kids == {"Frontend", "Backend"}
 
 
 class TestTreeHubDrill1303:

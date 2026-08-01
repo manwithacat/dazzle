@@ -433,12 +433,17 @@ def render_metric_tile(tile: MetricTile) -> str:
             else ("↓" if tile.delta_direction == "down" else "→")
         )
         sign = "+" if tile.delta_direction == "up" else ""
+        # #1626 S2: spaces between value / pct / period so stills never read
+        # as ``↑+2(200.0%)vs prior 30 days`` token glue.
         pct_html = (
-            f'<span class="dz-metric-delta-pct">({tile.delta_pct}%)</span>'
+            f' <span class="dz-metric-delta-pct">({tile.delta_pct}%)</span>'
             if tile.delta_pct
             else ""
         )
-        period_html = f'<span class="dz-metric-delta-period">vs {_html.escape(tile.delta_period_label)}</span>'
+        period_html = (
+            f' <span class="dz-metric-delta-period">'
+            f"vs {_html.escape(tile.delta_period_label)}</span>"
+        )
         delta_html = (
             f'<div class="dz-metric-delta" '
             f'data-dz-delta-tone="{delta_tone}" '

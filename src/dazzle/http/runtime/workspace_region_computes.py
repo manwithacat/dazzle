@@ -324,6 +324,27 @@ def compute_progress(
     }
 
 
+def _tree_parent_id(item: dict[str, Any], parent_field: str) -> str:
+    """Resolve parent FK to a bare id string for tree nesting (#1626 S4).
+
+    Runtime list rows often expose refs as:
+    * bare UUID string (JSONL seeds)
+    * ``{parent_field}_id`` scalar
+    * nested ``{id: ...}`` / ``{uuid: ...}`` dict after ORM serialize
+
+    Without this, ``str(dict)`` never matches ``items_by_id`` and every
+    node becomes a root — flat alphabetical “tree” theater.
+    """
+    val: Any = item.get(parent_field)
+    if val is None or val == "":
+        val = item.get(f"{parent_field}_id")
+    if isinstance(val, dict):
+        val = val.get("id") or val.get("uuid") or val.get("pk")
+    if val is None:
+        return ""
+    return str(val).strip()
+
+
 def compute_tree(
     items: list[dict[str, Any]],
     parent_field: str,
@@ -338,10 +359,10 @@ def compute_tree(
     items_by_id = {str(item.get("id", "")): item for item in items}
     children_map: dict[str, list[dict[str, Any]]] = {}
     for item in items:
-        parent_id = str(item.get(parent_field, "") or "")
+        parent_id = _tree_parent_id(item, parent_field)
         children_map.setdefault(parent_id, []).append(item)
 
-    roots = [item for item in items if str(item.get(parent_field, "") or "") not in items_by_id]
+    roots = [item for item in items if _tree_parent_id(item, parent_field) not in items_by_id]
 
     def _build_subtree(node: dict[str, Any]) -> dict[str, Any]:
         node_id = str(node.get("id", ""))

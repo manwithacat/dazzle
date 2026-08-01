@@ -118,14 +118,24 @@ are the score source — recapture after each residual cluster.
 
 | Item | Status |
 |------|--------|
-| HR **org tree** | **Shipped** — nested Department seeds + `display: tree` / `group_by: parent_department` on Departments & Roles |
-| Design **asset catalog grid** | **Shipped** — `asset_grid` `timeline` → `display: grid` (metadata cards, not pixel gallery) |
-| Invoice document hub | Deferred (clone project_tracker PDF pattern; invoice already ≥5.5 machine-wise) |
-| Support conversation hub | Deferred (queue/activity_feed only — no chat primitive) |
+| HR **org tree** | Nested seeds + `display: tree`; **S4** fixes parent-ref resolve so nesting is real (not flat roots) |
+| Design **asset catalog grid** | Metadata card grid + **S3** type-prefixed titles (`Photo · …`) |
+| Invoice document hub | Deferred |
+| Support conversation hub | Deferred |
 
-**Agent OCR spot-checks (local stills):** ops Active Alerts rows / no 500;
-contact story domains; HR no `New Add`; support meta mid-dot separators; design brand hex;
-simple_task no 800% after recapture. **Human / antagonist re-score is the bake-off gate.**
+### Post-pass queue (01 Aug re-score ~5.6 — toward ~6.2)
+
+| ID | Work | Status |
+|----|------|--------|
+| S1 | HR preferred names story-coherent | **Shipped** (nicknames match legal) |
+| S2 | Metric delta spaces + omit \|pct\|≥100 | **Shipped** |
+| S3 | Design type labels on asset cards | **Shipped** |
+| S4 | Org tree visible nesting (parent ref resolve + open branches) | **Shipped** |
+| S5 | `team_overview` still floor | recapture |
+| S6 | Category depth (conversation / invoice docs) | deferred |
+
+**01 Aug antagonist:** fleet **~5.6** clears 5.5 demo-safe bar. R1–R5 visually proven.
+Do not claim category leadership.
 
 ---
 

@@ -371,6 +371,14 @@ class _BuildersMiscMixin:
             primary = item.get(display_key) if display_key else None
             if primary is None:
                 primary = item.get("name") or item.get("title") or entity_name
+            # #1626 S3: type-ish enum leading the card title so catalog stills
+            # show asset kind without a media thumbnail (Photo · Storefront).
+            type_token = item.get("asset_type") or item.get("type") or item.get("kind")
+            if type_token is not None and str(type_token).strip():
+                type_label = str(type_token).replace("_", " ").strip().title()
+                primary_s = str(primary)
+                if not primary_s.lower().startswith(type_label.lower()):
+                    primary = f"{type_label} · {primary_s}"
             fields: list[tuple[str, object]] = []
             for col in columns:
                 if not isinstance(col, dict):
