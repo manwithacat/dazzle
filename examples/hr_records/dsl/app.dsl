@@ -579,7 +579,8 @@ surface role_create "Add Role":
 surface employment_list "Employment history":
   uses entity Employment
   mode: list
-  open: Person via person
+  # Dual open (journey dig cycle 1568): assignment hub first, person career hub second.
+  open: Employment via id | Person via person
   section main:
     field person "Person"
     field role "Role"
@@ -588,7 +589,23 @@ surface employment_list "Employment history":
     field start_date "Start"
     field end_date "End"
   ux:
-    purpose: "Employment history — open a row for the person career hub"
+    purpose: "Employment history — open a row for the assignment hub or person career hub"
+
+# View surface so dual-open Employment via id lands a readable assignment note.
+surface employment_detail "Employment Detail":
+  uses entity Employment
+  mode: view
+  section summary "Assignment":
+    field person "Person"
+    field role "Role"
+    field department "Department"
+  section tenure "Tenure":
+    layout: strip
+    field status "Status"
+    field start_date "Start"
+    field end_date "End"
+  ux:
+    purpose: "Read one employment assignment with person/role context"
 
 surface employment_create "Start Employment":
   uses entity Employment
@@ -611,7 +628,8 @@ surface employment_edit "End / Update Employment":
 surface salary_list "Salary history":
   uses entity Salary
   mode: list
-  open: Person via person
+  # Dual open: salary band hub first, person career hub second (ST-003 finance path).
+  open: Salary via id | Person via person
   section main:
     field person "Person"
     field amount "Amount"
@@ -619,7 +637,22 @@ surface salary_list "Salary history":
     field effective_to "To"
     field reason "Reason"
   ux:
-    purpose: "Salary history — open a row for the person career hub"
+    purpose: "Salary history — open a row for the band hub or person career hub"
+
+# View surface so dual-open Salary via id lands a readable band note.
+surface salary_detail "Salary Detail":
+  uses entity Salary
+  mode: view
+  section summary "Band":
+    field person "Person"
+    field amount "Amount"
+    field reason "Reason"
+  section effective "Effective":
+    layout: strip
+    field effective_from "From"
+    field effective_to "To"
+  ux:
+    purpose: "Read one salary band with person context"
 
 surface salary_create "New Salary":
   uses entity Salary

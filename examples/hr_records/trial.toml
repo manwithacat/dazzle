@@ -36,7 +36,7 @@ tasks = [
 
 adoption_criteria = [
     "Staff directory shows real person rows when seeded (not empty pilot-breaker)",
-    "Person open is a usable hub (employment/context/status), not a flat field dump",
+    "Employment/salary lists dual-open assignment or band hub plus Person hub; person open is a usable hub",
     "Person hub related employment/compensation/reporting regions are pull queues, not warehouse tables",
     "Staff Directory department/role context and Compensation role catalogue/headcount are pull queues toward hubs",
     "Assignment status (active / on leave / terminated) is visible on employment path",

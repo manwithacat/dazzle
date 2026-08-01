@@ -40,7 +40,7 @@ story ST-003 "Finance reviews compensation then hops to person context":
   then:
     - "Finance sees compensation metrics and active salary rows"
     - "Role catalogue and headcount context are pull queues toward hubs (not inventory lists)"
-    - "Salary row open hops to the Person overview hub via person FK"
+    - "Salary rows dual-open Salary via id | Person via person (band hub first, person career hub second)"
 
 story ST-004 "Employee reviews own career timeline hub":
   status: accepted
@@ -63,6 +63,6 @@ story ST-005 "HR Admin walks employment history back to the person hub":
   given:
     - "HR Admin has list permission on Employment"
   then:
-    - "Employment rows open Person via person (context hub, not orphan warehouse rows)"
+    - "Employment rows dual-open Employment via id | Person via person (assignment hub first, person career hub second)"
     - "Person hub shows related employment and compensation as pull queues (not warehouse tables)"
     - "Employment list and hub show assignment status (active / on leave / terminated)"

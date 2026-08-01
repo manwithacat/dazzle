@@ -12,6 +12,9 @@ HR homes open with headcount/compensation metrics before dense directories.
 - employment_list + person hub related employment show status alongside dates.
 - Temporal/history surfaces stay list/timeline for the teaching gap.
 
+- List dual-open (journey dig): `employment_list` → Employment|Person;
+  `salary_list` → Salary|Person.
+
 ## Not this
 
 - Persona lands on a bare entity list when the job is triage, review, or oversight.
