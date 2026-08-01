@@ -314,9 +314,9 @@ surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment
-  # #1603 — row click opens the assignee (context hop), not the task detail.
-  # Task detail remains available via actions / related on the user detail.
-  open: User via assigned_to
+  # Dual open (story_walk dig cycle 1564): task hub first (status/ownership/discussion),
+  # assignee hub second (ST-015/021 context hop) — not assignee-only orphan hop.
+  open: Task via id | User via assigned_to
 
   section main "Tasks":
     field title "Title"
@@ -326,7 +326,7 @@ surface task_list "Tasks":
     field assigned_to "Assigned To"
 
   ux:
-    purpose: "View and manage all tasks"
+    purpose: "View and manage all tasks — open a row for the task hub or assignee hub"
     sort: created_at desc
     filter: status, priority, assigned_to
     search: title, description
@@ -385,12 +385,12 @@ surface task_detail "Task Detail":
   ux:
     purpose: "Task context — status, ownership, and discussion in one place"
 
-# Task Comment List - open hops to parent task context (not orphan warehouse row)
+# Task Comment List - dual open note + parent task hub (not orphan warehouse row)
 surface task_comments "Task Comments":
   uses entity TaskComment
   mode: list
   render: fragment
-  open: Task via task
+  open: TaskComment via id | Task via task
 
   section main "Comments":
     field author "Author"
@@ -399,7 +399,7 @@ surface task_comments "Task Comments":
     field task "Task"
 
   ux:
-    purpose: "View and add comments on a task"
+    purpose: "View comments — open a row for the note or parent task hub"
     sort: created_at desc
     search: content
     filter: author

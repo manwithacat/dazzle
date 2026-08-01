@@ -40,7 +40,7 @@ adoption_criteria = [
     "At a glance: active tasks visible without hunting a generic empty home",
     "Monday review: can filter/sort or scan work by assignee",
     "Can create a task with title + assignee + due date in a natural form flow",
-    "Status is obvious in the list and can be advanced without a maze of clicks",
+    "Task list dual-opens Task hub and assignee hub; status is obvious and advanceable without a maze",
     "Would pilot this for two weeks as a Notion replacement for a 5-person studio",
 ]
 

@@ -254,7 +254,8 @@
       "when": [],
       "outcomes": [
         "Administrator sees every Task regardless of assignee",
-        "Task list is sortable by priority, status, due_date"
+        "Task list is sortable by priority, status, due_date",
+        "Row dual-opens Task via id | User via assigned_to (task hub first, assignee context second)"
       ]
     },
     {
@@ -288,7 +289,7 @@
       "outcomes": [
         "Team Manager sees every Task assigned within their team",
         "Task list is sortable by priority, status, due_date",
-        "Row open hops to the assignee overview (User via assigned_to)"
+        "Row dual-opens Task via id | User via assigned_to (task hub first, assignee overview second)"
       ]
     },
     {
@@ -299,7 +300,7 @@
       "when": [],
       "outcomes": [
         "Team Manager sees an unassigned queue of Tasks where assigned_to is null",
-        "Team Manager can open a Task from the queue to assign it"
+        "Team Manager can open a Task hub from the queue (Task via id dual-open) to assign it"
       ]
     },
     {
@@ -353,7 +354,7 @@
       "description": null,
       "when": [],
       "outcomes": [
-        "Clicking the row opens the Team Member overview hub",
+        "Task list dual-open secondary hop is User via assigned_to (assignee overview hub)",
         "Hub shows identity, role strip, and related open work"
       ]
     }
