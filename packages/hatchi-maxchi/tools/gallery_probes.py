@@ -954,6 +954,38 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1565 — pagination: page-2 hx-get swaps list body via MOCK_HTMX.
+    # Catalog expand under require_mutation (discover uncovered=0).
+    Probe(
+        id="pagination.page_two_loads_rows",
+        stem="pagination",
+        page="hyperparts/pagination.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking page 2 loads the MOCK_HTMX page-2 row slice into the list "
+            "body (INV-004 · Umbrella) — pagination is an Exchange footer, not a "
+            "dead chrome decoration"
+        ),
+        kind="pagination_page_load",
+        params={
+            "root": ("[data-pagination], [data-dz-pagination], .pagination, .dz-pagination"),
+            "page_btn": (
+                '.pagination-page[hx-get$="/mock/pagination/2"], '
+                '.dz-pagination-page[hx-get$="/mock/pagination/2"], '
+                'button.pagination-page:has-text("2"), '
+                'button.dz-pagination-page:has-text("2")'
+            ),
+            "body": (
+                "#hm-pag-body, .hm-pag-list, [data-pagination-body], [data-dz-pagination-body]"
+            ),
+            "expect_body_contains": "Umbrella",
+            "settle_ms": 200,
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3076,6 +3108,105 @@ def _run_master_detail_select(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_pagination_page_load(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a page-N control; assert list body receives MOCK_HTMX rows.
+
+    Gallery pagination demo swaps only the row body (footer chrome stays);
+    MOCK_HTMX serves ``/mock/pagination/{n}`` fragments (see hatchi-maxchi.js).
+    """
+    params = probe.params
+    root_sel = params.get(
+        "root", "[data-pagination], [data-dz-pagination], .pagination, .dz-pagination"
+    )
+    page_btn_sel = params.get(
+        "page_btn",
+        '.pagination-page[hx-get$="/mock/pagination/2"], button.pagination-page:has-text("2")',
+    )
+    body_sel = params.get("body", "#hm-pag-body, .hm-pag-list")
+    expect = str(params.get("expect_body_contains", "Umbrella"))
+    settle = int(params.get("settle_ms", 200))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"pagination root not found ({root_sel})"}
+
+    btn = None
+    for part in page_btn_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        # Prefer under root, then whole scope (page numbers live in footer).
+        for host in (root, scope):
+            cand = host.locator(part).first
+            if cand.count() > 0:
+                btn = cand
+                break
+        if btn is not None:
+            break
+    if btn is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"page button not found ({page_btn_sel})",
+            "dom_hint": page_btn_sel,
+        }
+
+    prior_body = None
+    for part in body_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            prior_body = loc
+            break
+    prior_text = _norm_label(prior_body.inner_text()) if prior_body is not None else ""
+
+    btn.click()
+    page.wait_for_timeout(settle)
+
+    body = None
+    for part in body_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            body = loc
+            break
+    if body is None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"list body not found after click ({body_sel})",
+        }
+    got = _norm_label(body.inner_text())
+    if expect.lower() not in got.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"body missing {expect!r} after page click "
+                f"(prior={prior_text[:80]!r} got={got[:120]!r}) — "
+                "MOCK_HTMX / hx-get page exchange failed"
+            ),
+            "body_text": got[:200],
+            "prior_text": prior_text[:200],
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"page click → body contains {expect!r} (was {prior_text[:40]!r}…)",
+        "body_snippet": got[:120],
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -3101,6 +3232,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "app_shell_sidebar_toggle": _run_app_shell_sidebar_toggle,
     "confirm_intercept_accept": _run_confirm_intercept_accept,
     "master_detail_select": _run_master_detail_select,
+    "pagination_page_load": _run_pagination_page_load,
 }
 
 

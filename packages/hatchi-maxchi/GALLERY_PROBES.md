@@ -48,6 +48,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `app_shell.sidebar_toggle` | `app-shell` | exclusive | high | controller | Hamburger sidebar toggle flips data-sidebar open↔closed and aria-expanded on the toggle (live shell chrome — not a static iframe demo) |
 | `confirm.intercept_and_accept` | `confirm` | exclusive | high | controller | Clicking hx-delete[hx-confirm] opens the designed alert-dialog with the confirm text; accepting closes the dialog and issues the request (MOCK_HTMX toast) — not a silent window.confirm fallback |
 | `master_detail.select_item` | `master-detail` | exclusive | high | controller | Clicking a master-detail list item moves aria-current exclusively to that item and loads its detail card into the sibling pane (INV-002 · Globex via MOCK_HTMX) — selection state is controller-owned |
+| `pagination.page_two_loads_rows` | `pagination` | exclusive | high | controller | Clicking page 2 loads the MOCK_HTMX page-2 row slice into the list body (INV-004 · Umbrella) — pagination is an Exchange footer, not a dead chrome decoration |
 
 ## Loop (autonomous improve)
 

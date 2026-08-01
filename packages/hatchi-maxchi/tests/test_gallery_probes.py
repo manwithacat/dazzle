@@ -62,6 +62,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "money.sync_minor_and_blur_normalize" in ids
     assert "app_shell.sidebar_toggle" in ids
     assert "master_detail.select_item" in ids
+    assert "pagination.page_two_loads_rows" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -91,6 +92,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "app_shell_sidebar_toggle",
             "confirm_intercept_accept",
             "master_detail_select",
+            "pagination_page_load",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -133,6 +135,11 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert master_detail.fix_surface == "controller"
     assert master_detail.page == "hyperparts/master-detail.html"
     assert master_detail.stem == "master-detail"
+    pagination = next(p for p in PROBES if p.id == "pagination.page_two_loads_rows")
+    assert pagination.kind == "pagination_page_load"
+    assert pagination.fix_surface == "controller"
+    assert pagination.page == "hyperparts/pagination.html"
+    assert pagination.stem == "pagination"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
