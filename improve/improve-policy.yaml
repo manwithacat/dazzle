@@ -98,7 +98,11 @@ campaigns:
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence
         strategy: hyperpart_coherence
-        note: "Investigate or drain Hyperpart visual defects — fix ships"
+        note: >-
+          Investigate or drain Hyperpart visual defects — fix ships.
+          Under require_mutation, skipped when coherence_queue=0 (last sweep clean);
+          force investigate via /improve hm-convergence hyperpart_coherence investigate
+          or delete coherence.json to re-open the investigate path.
       - force_args: "example-apps story_walk"
         lane: example-apps
         strategy: story_walk

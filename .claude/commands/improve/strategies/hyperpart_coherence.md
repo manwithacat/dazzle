@@ -38,6 +38,12 @@ When `/improve` hands off to **hm-convergence**, choose sub-strategy in this ord
    - force `… hyperpart_coherence investigate`
 3. Else fall through: gallery_probes → dual_lock_expand → shadcn_parity → …
 
+**Aggressive campaign (`require_mutation=1`):** when `coherence_queue=0` and
+`coherence.json` exists, `scripts/improve_policy.py` **skips** this strategy in
+the rotation (same class as dual_lock depth 0) so the loop does not thrash on
+empty hyperpart picks. Operator override: force investigate, or remove
+`coherence.json` to mark investigate due.
+
 Driver Step 1 also biases **toward hm-convergence** when queue depth > 0
 (actionable_count includes PENDING `coherence_drain` rows). Force always wins.
 

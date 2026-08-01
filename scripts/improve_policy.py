@@ -170,6 +170,31 @@ def recent_strategy_streak(strategy: str, *, window: int = 8) -> int:
     return streak
 
 
+def hm_coherence_queue_depth() -> int | None:
+    """Return incoherent Hyperpart count from latest coherence sweep.
+
+    ``None`` = no coherence.json (investigate is due). ``0`` = last sweep clean
+    — under ``require_mutation`` campaigns, skip stamp-only hyperpart_coherence
+    so rotation advances to framework-ux / story_walk / panels.
+    """
+    path = REPO / ".dazzle" / "hm-hyperpart-coherence" / "coherence.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if "n_incoherent" in data:
+        try:
+            return int(data["n_incoherent"])
+        except (TypeError, ValueError):
+            return None
+    results = data.get("results") or []
+    if isinstance(results, list):
+        return sum(1 for r in results if isinstance(r, dict) and not r.get("coherent", True))
+    return 0
+
+
 def dual_lock_queue_depth() -> int | None:
     """Return dual-lock promotion queue depth (markdown table preferred).
 
@@ -256,18 +281,36 @@ def qa_smoke_residual() -> tuple[int, str | None]:
     return len(residual), nxt
 
 
+def _is_hyperpart_coherence_entry(ent: dict[str, Any]) -> bool:
+    force = str(ent.get("force_args") or "").lower()
+    strat = str(ent.get("strategy") or "").lower()
+    return "hyperpart_coherence" in force or strat == "hyperpart_coherence"
+
+
 def _entry_eligible(
     ent: dict[str, Any],
     *,
     smoke_n: int,
     dual_depth: int | None,
+    coherence_depth: int | None,
     panel_streak: int,
     max_consecutive_panels: int,
+    require_mutation: bool,
 ) -> bool:
     """Filter rotation entries that would be stamp-only under current signals."""
     if ent.get("require_dual_lock_queue") and dual_depth is not None and dual_depth <= 0:
         return False
     if ent.get("require_smoke_residual") and smoke_n <= 0:
+        return False
+    # Aggressive: empty coherence queue + existing sweep → skip stamp-only hyperpart.
+    # Missing coherence.json (None) keeps the entry (investigate due).
+    if (
+        require_mutation
+        and _is_hyperpart_coherence_entry(ent)
+        and coherence_depth is not None
+        and coherence_depth <= 0
+        and not ent.get("force_investigate")
+    ):
         return False
     if (
         ent.get("is_panel")
@@ -289,8 +332,10 @@ def _pick_rotation(
     """Pick least-recently-used eligible strategy from campaign prefer_rotation."""
     camp = camp or {}
     dual_depth = dual_lock_queue_depth()
+    coherence_depth = hm_coherence_queue_depth()
     max_panels = int(camp.get("max_consecutive_panels") or 0)
     panel_streak = recent_strategy_streak("agent_acceptance_panel") if max_panels else 0
+    require_mutation = bool(camp.get("require_mutation"))
 
     raw = [r for r in rotation if isinstance(r, dict) and r.get("force_args")]
     if not raw:
@@ -303,8 +348,10 @@ def _pick_rotation(
             e,
             smoke_n=smoke_n,
             dual_depth=dual_depth,
+            coherence_depth=coherence_depth,
             panel_streak=panel_streak,
             max_consecutive_panels=max_panels,
+            require_mutation=require_mutation,
         )
     ]
     # If filters emptied the list (e.g. all gated), fall back to non-gated only.
@@ -315,6 +362,12 @@ def _pick_rotation(
             if not e.get("require_dual_lock_queue")
             and not e.get("require_smoke_residual")
             and not e.get("is_panel")
+            and not (
+                require_mutation
+                and _is_hyperpart_coherence_entry(e)
+                and coherence_depth is not None
+                and coherence_depth <= 0
+            )
         ] or raw
 
     best: dict[str, Any] | None = None
@@ -340,6 +393,8 @@ def _pick_rotation(
     reason = f"campaign:{campaign_id} rotation={best.get('strategy') or best.get('force_args')}"
     if dual_depth is not None and best.get("require_dual_lock_queue"):
         reason += f" dual_queue={dual_depth}"
+    if coherence_depth is not None:
+        reason += f" coherence_queue={coherence_depth}"
     if (
         panel_streak
         and best.get("is_panel") is not True
@@ -347,12 +402,20 @@ def _pick_rotation(
         and panel_streak >= max_panels
     ):
         reason += f" panel_streak_break={panel_streak}"
+    if (
+        require_mutation
+        and coherence_depth is not None
+        and coherence_depth <= 0
+        and not _is_hyperpart_coherence_entry(best)
+    ):
+        reason += " skip_drained_hyperpart"
     return {
         "force_args": best.get("force_args"),
         "lane": best.get("lane"),
         "strategy": best.get("strategy"),
         "reason": reason,
         "dual_lock_queue_depth": dual_depth,
+        "coherence_queue_depth": coherence_depth,
         "panel_streak": panel_streak,
     }
 
@@ -490,6 +553,8 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         lines.append("require_mutation=1")
     if d.get("dual_lock_queue_depth") is not None:
         lines.append(f"dual_lock_queue_depth={d.get('dual_lock_queue_depth')}")
+    if d.get("coherence_queue_depth") is not None:
+        lines.append(f"coherence_queue_depth={d.get('coherence_queue_depth')}")
     if d.get("panel_streak"):
         lines.append(f"panel_streak={d.get('panel_streak')}")
     return "\n".join(lines)
