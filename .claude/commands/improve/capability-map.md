@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1560 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1566 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -94,7 +94,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1484 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1566 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -133,6 +133,8 @@ apply map patches with `{"apply":true}`.
 
 
 
+
+> **Cycle 1566 (2026-08-01).** campaign force **framework-ux**: **ship** dual-open secondary context hop — `_resolve_row_open_chain` + row action `data-dz-open-secondary` / `.dz-tr-open-secondary` when open: A|B both resolve (product digs dual-open were first-non-null only on primary). unit pins. residual=0 densify=0 dual_lock=0. fitness/open_via **USED@1566**. budget 1. Explore **12/100**.
 > **Cycle 1565 (2026-08-01).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 35 PASS; **ship** `pagination.page_two_loads_rows` + `pagination_page_load` runner (MOCK_HTMX page-2 Umbrella); catalog **36/36 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1565**. budget 1. Explore **11/100**.
 > **Cycle 1564 (2026-08-01).** campaign force **example-apps story_walk**: dig simple_task — **product** dual-open task_list `Task via id | User via assigned_to`, task_comments `TaskComment via id | Task via task`; ST-012/015/016/021 criteria + stem + trial; prove journey **16/16** dual hops; walks 8/8 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1564**. budget 1. Explore **10/100**.
 > **Cycle 1563 (2026-08-01).** campaign force **example-apps journey_dogfood**: dig project_tracker — **product** dual-open task_list `Task via id | Project via parent_project`, comment_list `Comment via id | Task via task` (+comment_detail view), milestone_list `Milestone via id | Project via parent_project`, attachment_list `Attachment via id | Task via task`; ST-002/003 criteria + stem + trial dual-hop; prove journey **5/5**; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1563**. budget 1. Explore **9/100**.

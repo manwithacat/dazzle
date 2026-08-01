@@ -32,7 +32,10 @@ from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
-from dazzle.render.fragment.region._row_links import _resolve_row_links
+from dazzle.render.fragment.region._row_links import (
+    _resolve_row_links,
+    _resolve_row_open_chain,
+)
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
 
@@ -436,14 +439,22 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     candidates = table.get("detail_url_candidates") or ()
     if isinstance(candidates, str):
         candidates = (candidates,) if candidates else ()
+    open_chain: tuple[str, ...] = ()
     if detail_url_template or candidates:
+        cand_t = tuple(candidates) if candidates else ()
         _links = _resolve_row_links(
             [item],
             str(detail_url_template or ""),
             fallback_template=fallback_tmpl,
-            candidate_templates=tuple(candidates) if candidates else (),
+            candidate_templates=cand_t,
         )
         detail_url = _links[0] if _links else None
+        open_chain = _resolve_row_open_chain(
+            item,
+            candidate_templates=cand_t,
+            detail_url_template=str(detail_url_template or ""),
+            fallback_template=fallback_tmpl,
+        )
     else:
         detail_url = None
     # Last-resort: row id → same-entity path if fallback template given alone
@@ -452,8 +463,27 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             detail_url = fallback_tmpl.format_map({"id": item_id})
         except (KeyError, IndexError, ValueError):
             detail_url = None
+    secondary_context_html = ""
     if detail_url:
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
+        # Dual-open secondary hop (cycle 1566): when open: A | B both resolve,
+        # primary row drill uses first-non-null; emit second hop as a context
+        # action so parent/assignee hubs stay reachable without orphaning dual
+        # open DSL. Agents/tests can also read data-dz-open-secondary on the tr.
+        if len(open_chain) > 1:
+            secondary = open_chain[1]
+            if secondary and secondary != detail_url:
+                sec_attr = _html_mod.escape(secondary, quote=True)
+                secondary_context_html = (
+                    f'<a href="{sec_attr}" '  # nosemgrep
+                    f'data-dazzle-action="{entity_name_attr}.open_context" '
+                    f'data-dz-open-secondary="{sec_attr}" '
+                    f'aria-label="Open related context for {row_label_attr}" '
+                    f'title="Related context hop" '
+                    f'class="dz-tr-action dz-tr-open-secondary" '
+                    f'onclick="event.stopPropagation()">'
+                    f"{lucide_svg_html('arrow-up-right', cls='dz-tr-action-icon')}</a>"
+                )
         if peek_expand:
             peek_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)
             panel_id = f"peek-{item_id_attr}"
@@ -503,6 +533,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 'stroke-linecap="round" stroke-linejoin="round"/></svg></button>'
             )
         drill_attrs = drill_row_attrs(detail_url_attr)
+        if secondary_context_html and "data-dz-open-secondary=" in secondary_context_html:
+            # Mirror secondary hop on the tr for agent discovery (row click stays primary).
+            m_sec = re.search(r'data-dz-open-secondary="([^"]+)"', secondary_context_html)
+            if m_sec:
+                drill_attrs = f'{drill_attrs} data-dz-open-secondary="{m_sec.group(1)}"'
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
@@ -683,7 +718,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()" '
         'hx-disinherit="hx-trigger">'
         f'<div class="dz-tr-actions">{transition_buttons}{peek_toggle_html}'
-        f"{detail_link_html}{edit_link_html}{delete_button}</div>"
+        f"{detail_link_html}{secondary_context_html}{edit_link_html}{delete_button}</div>"
         "</td>"
     )
 

@@ -104,3 +104,48 @@ def _resolve_row_links(
                 url = None
         out.append(url or None)
     return tuple(out)
+
+
+def _try_format_url(tmpl: str, mapping: dict[str, str]) -> str | None:
+    """Format one template; None when a placeholder is missing/null."""
+    try:
+        url = tmpl.format_map(mapping)
+    except (KeyError, IndexError, ValueError):
+        return None
+    return url or None
+
+
+def _resolve_row_open_chain(
+    item: dict[str, Any],
+    *,
+    candidate_templates: tuple[str, ...] | list[str] = (),
+    detail_url_template: str = "",
+    fallback_template: str = "",
+) -> tuple[str, ...]:
+    """All resolvable open-via hops for one row (ordered, deduped).
+
+    First-non-null drill still uses :func:`_resolve_row_links` (primary only).
+    Dual-open product digs (``Task via id | User via assigned_to``) need the
+    **second** hop as a separate affordance — otherwise the secondary target
+    is dead when the primary ``{id}`` always resolves. Cycle 1566 framework-ux:
+    emit every successful candidate so the row can show a context hop.
+    """
+    templates: list[str] = [t for t in (candidate_templates or ()) if t]
+    if not templates and detail_url_template:
+        templates = [detail_url_template]
+    if not templates and not fallback_template:
+        return ()
+
+    mapping = _item_format_map(item)
+    urls: list[str] = []
+    seen: set[str] = set()
+    for tmpl in templates:
+        url = _try_format_url(tmpl, mapping)
+        if url is not None and url not in seen:
+            seen.add(url)
+            urls.append(url)
+    if not urls and fallback_template:
+        url = _try_format_url(fallback_template, mapping)
+        if url is not None:
+            urls.append(url)
+    return tuple(urls)

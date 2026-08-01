@@ -422,6 +422,48 @@ def test_data_row_first_non_null_htmx() -> None:
     assert "{company}" not in html
 
 
+def test_resolve_row_open_chain_dual_hops() -> None:
+    """All resolvable dual-open candidates, not first-only."""
+    from dazzle.render.fragment.region._row_links import _resolve_row_open_chain
+
+    item = {"id": "t1", "assigned_to": "u-9", "title": "Work"}
+    chain = _resolve_row_open_chain(
+        item,
+        candidate_templates=(
+            "/app/task/{id}",
+            "/app/user/{assigned_to}",
+        ),
+    )
+    assert chain == ("/app/task/t1", "/app/user/u-9")
+
+
+def test_data_row_dual_open_emits_secondary_context_hop() -> None:
+    """Dual-open (hub | parent): primary drill + secondary context action (cycle 1566)."""
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {"id": "t1", "title": "Ship dual-open", "assigned_to": "u-abc"}
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/task/{id}",
+        detail_url_candidates=(
+            "/app/task/{id}",
+            "/app/user/{assigned_to}",
+        ),
+        detail_url_fallback_template="/app/task/{id}",
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+    )
+    assert 'hx-get="/app/task/t1"' in html
+    assert 'data-dz-open-secondary="/app/user/u-abc"' in html
+    assert "dz-tr-open-secondary" in html
+    assert 'data-dazzle-action="Task.open_context"' in html
+    assert 'href="/app/user/u-abc"' in html
+
+
 def test_validate_open_via_wrong_mode_errors() -> None:
     from dazzle.core.validation.surfaces import validate_surfaces
 
