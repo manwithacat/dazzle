@@ -1,0 +1,41 @@
+# Story walk ST-011 — Operations Engineer opens a system hub from the RAG or response-time league
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-011 then:
+#   - System RAG and response-time league rows open the System hub
+#   - Operator continues triage without warehouse-only dead ends
+# Cycle 1557 — cover missing_walk residual after cycle 1556 product ship.
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_011
+    story: ST-011
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - System
+          - Error
+          - Response
+          - Health
+          - Alert
+    expects: "Authenticated ops engineer sees RAG/error-rate and response-time league cues on command center"
+
+  - id: open_system_hub_from_league
+    story: ST-011
+    entry: /app/system/61000000-0000-4000-8000-000000000002
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - System
+          - Health
+          - Alert
+          - Status
+          - Response
+    expects: "System hub shows health strip and open-alert path for league-row drill"
