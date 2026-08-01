@@ -121,3 +121,17 @@ story ST-010 "Operations Engineer reviews alert history against system health":
     - "Alert detail shows severity strip and parent System"
     - "Operator reaches the alert hub from the alert list (open Alert via id) or system context"
     - "Operator correlates status-change timestamps with triggering Alerts"
+
+# Cycle 1556 — RAG / outlier league boards drill to system hub (not dead list rows).
+story ST-011 "Operations Engineer opens a system hub from the RAG or response-time league":
+  status: accepted
+  executed_by: surface.system_list
+  persona: ops_engineer
+  trigger: user_click
+  entities: [System]
+  given:
+    - "Operations Engineer is on the command_center workspace"
+    - "Systems show error_rate and response_time_ms for comparison"
+  then:
+    - "System RAG and response-time league rows open the System hub (health strip + open alerts)"
+    - "Operator can continue triage without returning to a warehouse-only list"

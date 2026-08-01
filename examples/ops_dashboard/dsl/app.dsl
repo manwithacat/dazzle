@@ -259,6 +259,9 @@ workspace command_center "Command Center":
     source: System
     display: list
     sort: name asc
+    # Drill to system hub (cycle 1556) — RAG colours alone are not enough; operators
+    # open the row for health strip + related alerts queue.
+    action: system_detail
     rag_on: error_rate
     tone_bands:
       - at: 5
@@ -278,6 +281,7 @@ workspace command_center "Command Center":
     source: System
     display: list
     sort: name asc
+    action: system_detail
     outlier_on: response_time_ms
     outlier_method: iqr
     empty: "No systems registered"
