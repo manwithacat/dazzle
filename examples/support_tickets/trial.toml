@@ -56,6 +56,7 @@ adoption_criteria = [
     "Urgency of open work is visible without spreadsheet mental math",
     "Manager can find unassigned / critical work in under a minute",
     "Reassignment or handoff path is discoverable from the primary workspace",
+    "Ticket queue dual-opens ticket hub and assignee hub (not a dead warehouse row)",
     "Empty or filtered states explain themselves (not a blank wall)",
     "Would run a two-week pilot with Alex on this tool as-is or with minor fixes",
 ]

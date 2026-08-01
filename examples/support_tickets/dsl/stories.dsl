@@ -82,6 +82,7 @@ story ST-019 "Support Agent works the open ticket queue":
     - "Support Agent sees open Tickets in a review queue (status != closed)"
     - "Queue metrics show open, in-progress, and critical counts"
     - "Agent can act on a row (claim / transition / open detail hub)"
+    - "Ticket rows dual-open Ticket via id | User via assigned_to (ticket hub first, assignee hub second)"
 
 story ST-020 "Support Agent picks up a ticket":
   status: accepted
@@ -194,6 +195,7 @@ story ST-028 "Support Manager reassigns a ticket":
   then:
     - "Ticket.assigned_to is updated to the chosen Agent"
     - "Previous assignee is notified of the reassignment"
+    - "From the ticket queue, dual-open can hop assignee User hub before reassignment edit"
 
 story ST-029 "Support Manager escalates a critical ticket":
   status: accepted
