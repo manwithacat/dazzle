@@ -211,6 +211,12 @@ class UXSpec(BaseModel):
         persona_variants: Role-specific adaptations
         bulk_actions: Named field transitions exposed as
             ``POST /api/{plural}/bulk`` endpoints (#785).
+        measure: App-shell content measure token (``app`` | ``product`` |
+            ``wide`` | ``full``). Cycle 1560 — closes the gap where
+            ``pick-a-measure.md`` / ``_resolve_content_measure`` documented
+            ``ux.measure`` but the IR field and UX parser never stored it.
+            Empty/None → mode defaults (list→app, form/detail→product,
+            workspace→app).
     """
 
     purpose: str | None = None
@@ -223,6 +229,7 @@ class UXSpec(BaseModel):
     attention_signals: list[AttentionSignal] = Field(default_factory=list)
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
     bulk_actions: list[BulkActionSpec] = Field(default_factory=list)
+    measure: str | None = None  # app | product | wide | full (shell max-width)
 
     model_config = ConfigDict(frozen=True)
 

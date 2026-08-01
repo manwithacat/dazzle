@@ -3223,6 +3223,7 @@ ir_class: UXSpec
     - bulk_actions: list[BulkActionSpec] = []
     - empty_message: str | EmptyMessages | None = None
     - filter: list[str] = []
+    - measure: str | None = None
     - persona_variants: list[PersonaVariant] = []
     - purpose: str | None = None
     - search: list[str] = []

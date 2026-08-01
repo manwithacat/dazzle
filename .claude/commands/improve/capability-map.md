@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1546 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1560 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1560 (2026-08-01).** campaign force **framework-ux**: **ship** workspace shell `content_measure` default **app** (was full-bleed); IR+DSL `ux.measure`; page_routes thread; dispatch workspace_name infer; unit pins. residual=0 densify=0 dual_lock=0. fitness **USED@1560**. budget 1. Explore **7/100**.
 > **Cycle 1559 (2026-08-01).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 34 PASS; **ship** `master_detail.select_item` + `master_detail_select` runner (aria-current exclusive + MOCK_HTMX Globex detail); catalog **35/35 PASS**; unit pin. residual=0 densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1559**. budget 1. Explore **6/100**.
 
 > **Cycle 1557 (2026-08-01).** campaign + residual force **example-apps story_walk**: ops_dashboard **ST-011** scene walk (RAG/outlier league → system hub) validate+dry-run+**live green** mark-live residual 1→0; dig receipt PASS live_proven. densify_allowed=0 dual_lock=0. story_walk+walk+reset-and-load+process_dig **USED@1557**. budget 1. Explore **5/100**.

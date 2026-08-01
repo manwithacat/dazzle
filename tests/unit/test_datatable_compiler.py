@@ -475,3 +475,127 @@ surface task_list "Tasks":
         surface = fragment.surfaces[0]
         assert surface.ux is not None
         assert surface.ux.search_first is False
+
+
+# ---------------------------------------------------------------------------
+# Tests — DSL parse for ux.measure (cycle 1560 content measure IR)
+# ---------------------------------------------------------------------------
+
+
+class TestContentMeasureParse:
+    """Verify ``ux: measure:`` lands on UXSpec and resolves to shell tokens."""
+
+    def test_parse_measure_app(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.page.converters.template_compiler import _resolve_content_measure
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    measure: app
+    purpose: "Scan work"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.ux is not None
+        assert surface.ux.measure == "app"
+        assert _resolve_content_measure(surface.ux, default="product") == "app"
+
+    def test_parse_measure_full_clears_shell(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.page.converters.template_compiler import _resolve_content_measure
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    measure: full
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.ux is not None
+        assert surface.ux.measure == "full"
+        assert _resolve_content_measure(surface.ux, default="app") == ""
+
+    def test_parse_measure_invalid_rejected(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.errors import ParseError
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    measure: semi
+"""
+        try:
+            parse_dsl(dsl, Path("test.dsl"))
+            raise AssertionError("expected ParseError for invalid measure")
+        except ParseError as exc:
+            assert "measure" in str(exc).lower()
+
+    def test_workspace_context_defaults_app_measure(self) -> None:
+        from dazzle.core import ir
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+        ws = ir.WorkspaceSpec(
+            name="dash",
+            title="Dash",
+            regions=[],
+        )
+        ctx = build_workspace_context(ws)
+        assert ctx.content_measure == "app"
+
+        ws_full = ir.WorkspaceSpec(
+            name="dash",
+            title="Dash",
+            regions=[],
+            ux=ir.UXSpec(measure="full"),
+        )
+        ctx_full = build_workspace_context(ws_full)
+        assert ctx_full.content_measure == ""
+
+        ws_product = ir.WorkspaceSpec(
+            name="dash",
+            title="Dash",
+            regions=[],
+            ux=ir.UXSpec(measure="product"),
+        )
+        ctx_product = build_workspace_context(ws_product)
+        assert ctx_product.content_measure == "product"

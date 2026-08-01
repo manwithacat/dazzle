@@ -645,3 +645,42 @@ class TestApplyPersonaFocus:
         result = apply_persona_focus(ctx, ["user"])
         assert result.fold_count == 6  # _MAX_FOCUS_FOLD
         assert [r.name for r in result.regions][:8] == focus
+
+
+class TestWorkspaceContentMeasure:
+    """Cycle 1560: workspace shells default to app content measure."""
+
+    def test_default_app_measure(self) -> None:
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+        ctx = build_workspace_context(_make_workspace("command_center", 2))
+        assert ctx.content_measure == "app"
+
+    def test_ux_measure_override_product(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+        ux = SimpleNamespace(measure="product", persona_variants=[])
+        ctx = build_workspace_context(_make_workspace("command_center", 2, ux=ux))
+        assert ctx.content_measure == "product"
+
+    def test_ux_measure_full_clears_cap(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import build_workspace_context
+
+        ux = SimpleNamespace(measure="full", persona_variants=[])
+        ctx = build_workspace_context(_make_workspace("command_center", 2, ux=ux))
+        assert ctx.content_measure == ""
+
+    def test_layout_prefs_preserve_measure(self) -> None:
+        from dazzle.page.runtime.workspace_renderer import (
+            apply_layout_preferences,
+            build_workspace_context,
+        )
+
+        ctx = build_workspace_context(_make_workspace("scanner_table", 2))
+        assert ctx.content_measure == "app"
+        result = apply_layout_preferences(ctx, {})
+        assert result.content_measure == "app"

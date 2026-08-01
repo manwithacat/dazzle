@@ -1060,8 +1060,11 @@ def _build_surface(
                 filter=ux_spec.filter,
                 search=ux_spec.search,
                 empty_message=ux_spec.empty_message,
+                search_first=ux_spec.search_first,
                 attention_signals=ux_spec.attention_signals,
                 persona_variants=list(ux_spec.persona_variants) + state.persona_variants,
+                bulk_actions=list(ux_spec.bulk_actions),
+                measure=ux_spec.measure,
             )
 
     return ir.SurfaceSpec(

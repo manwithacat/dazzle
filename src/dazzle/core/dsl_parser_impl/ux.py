@@ -36,13 +36,14 @@ class UXParserMixin:
 
         Refactored to dispatch-table style (follow-on to #1098). 8
         token-keyed (purpose/show/sort/filter/search/empty/search_first/
-        attention/as) + 1 IDENT-text-matched (bulk_actions) + a
-        15-line `_build_ux` builder.
+        attention/as) + IDENT-text-matched (bulk_actions, measure) + a
+        small `_build_ux` builder.
 
         Syntax::
 
             ux:
               purpose: "..."
+              measure: app|product|wide|full   # shell content measure (c1560)
               show: field1, field2
               sort: field1 desc, field2 asc
               filter: field1, field2
@@ -576,6 +577,7 @@ class _UXState:
     attention_signals: list[ir.AttentionSignal] = field(default_factory=list)
     persona_variants: list[ir.PersonaVariant] = field(default_factory=list)
     bulk_actions: list[ir.BulkActionSpec] = field(default_factory=list)
+    measure: str | None = None
 
 
 # ---------- Keyword parsers ---------- #
@@ -668,6 +670,30 @@ def _ux_kw_bulk_actions(parser: Any, state: _UXState) -> None:
     state.bulk_actions = parser.parse_bulk_actions_block()
 
 
+_VALID_CONTENT_MEASURES = frozenset({"app", "product", "wide", "full"})
+
+
+def _ux_kw_measure(parser: Any, state: _UXState) -> None:
+    """``measure: app|product|wide|full`` — app-shell content measure (cycle 1560).
+
+    Documented in ``packages/hatchi-maxchi/docs/agent/pick-a-measure.md`` and
+    consumed by ``_resolve_content_measure`` / workspace shell wiring.
+    """
+    parser.advance()  # consume 'measure' identifier
+    parser.expect(TokenType.COLON)
+    tok = parser.expect_identifier_or_keyword()
+    value = str(tok.value).strip().lower()
+    if value not in _VALID_CONTENT_MEASURES:
+        raise make_parse_error(
+            f"ux.measure must be one of {sorted(_VALID_CONTENT_MEASURES)}, got {value!r}",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
+    state.measure = value
+    parser.skip_newlines()
+
+
 # ---------- Dispatch tables ---------- #
 
 
@@ -686,6 +712,7 @@ _UX_KEYWORDS: dict[TokenType, KeywordParser[_UXState]] = {
 
 _UX_IDENT_KEYWORDS: dict[str, KeywordParser[_UXState]] = {
     "bulk_actions": _ux_kw_bulk_actions,
+    "measure": _ux_kw_measure,
 }
 
 
@@ -701,4 +728,5 @@ def _build_ux(state: _UXState) -> ir.UXSpec:
         attention_signals=state.attention_signals,
         persona_variants=state.persona_variants,
         bulk_actions=state.bulk_actions,
+        measure=state.measure,
     )

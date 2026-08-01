@@ -228,6 +228,11 @@ class WorkspaceContext(BaseModel):
     persona_focus: dict[str, list[str]] = Field(default_factory=dict)
     # Per-persona purpose overrides (same ``ux: as <persona>:`` block).
     persona_purposes: dict[str, str] = Field(default_factory=dict)
+    # Shell content measure for ``data-dz-measure`` on ``.dz-app-main``
+    # (cycle 1560). Defaults to ``app`` (soft ultrawide cap) — workspaces are
+    # multi-region dashboards, not unconstrained full-bleed. Authors may
+    # override via ``ux: measure: product|wide|full`` on the workspace.
+    content_measure: str = "app"
 
 
 # =============================================================================
@@ -728,6 +733,19 @@ def build_workspace_context(
 
     persona_focus, persona_purposes = collect_workspace_persona_overrides(workspace)
 
+    # Content measure (cycle 1560): same vocabulary as surface ``ux.measure``.
+    # Default app so dashboard shells get the soft ultrawide cap instead of
+    # dispatch's full-bleed fallback when PageContext.content_measure is unset.
+    content_measure = "app"
+    _ux = getattr(workspace, "ux", None)
+    _raw_measure = getattr(_ux, "measure", None) if _ux is not None else None
+    if _raw_measure:
+        _value = str(_raw_measure).strip().lower()
+        if _value in ("full", "fluid", "bleed"):
+            content_measure = ""
+        elif _value in ("app", "product", "wide"):
+            content_measure = _value
+
     return WorkspaceContext(
         name=workspace.name,
         title=workspace.title or workspace.name.replace("_", " ").title(),
@@ -745,6 +763,7 @@ def build_workspace_context(
         sse_url="/_ops/sse/events" if getattr(workspace, "live", False) else "",
         persona_focus=persona_focus,
         persona_purposes=persona_purposes,
+        content_measure=content_measure,
     )
 
 

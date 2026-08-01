@@ -138,3 +138,32 @@ def test_dispatch_render_page_threads_content_measure_to_main() -> None:
 
     html_full = dispatch_render_page(_Ctx(""), inner_html="<p>full</p>", chrome=True)
     assert "data-dz-measure" not in html_full
+
+
+def test_dispatch_workspace_infers_app_measure_when_unset() -> None:
+    """Cycle 1560: workspace pages without content_measure default to app.
+
+    Pre-1560, dispatch only inferred list/form/detail and left workspace
+    shells full-bleed (no data-dz-measure). Multi-region dashboards need
+    the soft ultrawide app cap like list surfaces.
+    """
+
+    class _WsCtx(_FakePageContext):
+        def __init__(self) -> None:
+            super().__init__()
+            self.content_measure = None  # unset — must infer from workspace_name
+            self.nav_items = ()
+            self.nav_groups = ()
+            self.view_name = ""
+            self.surface_name = ""
+            self.workspace_name = "ticket_queue"
+            self.page_purpose = ""
+            self.app_prefix = "/app"
+            self.table = None
+            self.form = None
+            self.detail = None
+
+    html = dispatch_render_page(_WsCtx(), inner_html="<div class='ws'>cards</div>", chrome=True)
+    assert 'data-dz-measure="app"' in html
+    main_open = html[html.index("<main") : html.index(">", html.index("<main")) + 1]
+    assert 'data-dz-measure="app"' in main_open

@@ -2682,6 +2682,11 @@ async def _workspace_handler(
         user_email=user_email,
         user_name=user_name,
         user_preferences=user_preferences,
+        # Cycle 1560: workspace shell measure (default app via WorkspaceContext;
+        # ``ux: measure:`` on the workspace overrides). Without this, dispatch
+        # treated workspaces as full-bleed (no table/form/detail on PageContext).
+        workspace_name=getattr(render_ws_ctx, "name", "") or "",
+        content_measure=getattr(render_ws_ctx, "content_measure", "app"),
     )
     _assets = _resolve_chrome_assets(request.app.state)
     html = dispatch_render_page(

@@ -440,7 +440,7 @@ def build_app_chrome_page(
     app_prefix = getattr(ctx, "app_prefix", "") or "/app"
     command_endpoint = f"{app_prefix}/command" if sidebar is not None else ""
     # Content measure: compiler sets PageContext.content_measure from
-    # ux.measure (list→app, form/detail→product). Empty string = full-bleed.
+    # ux.measure (list→app, form/detail→product, workspace→app). Empty = full-bleed.
     raw_measure = getattr(ctx, "content_measure", None)
     if raw_measure is None:
         # Infer when callers skip the compiler (tests / ad-hoc pages).
@@ -448,6 +448,10 @@ def build_app_chrome_page(
             content_measure = "app"
         elif getattr(ctx, "form", None) is not None or getattr(ctx, "detail", None) is not None:
             content_measure = "product"
+        elif getattr(ctx, "workspace_name", None):
+            # Cycle 1560: workspace dashboards are multi-region shells — app
+            # soft cap, not unconstrained full-bleed (previous else branch).
+            content_measure = "app"
         else:
             content_measure = ""
     else:
