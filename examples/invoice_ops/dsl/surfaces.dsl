@@ -95,14 +95,30 @@ surface supplier_detail "Supplier":
 surface payment_attempt_list "Payment Attempts":
   uses entity PaymentAttempt
   mode: list
-  open: Invoice via invoice
+  # Dual open (story_walk dig cycle 1569): attempt hub first, invoice hub second.
+  open: PaymentAttempt via id | Invoice via invoice
   section main:
     field invoice "Invoice"
     field attempt_number "Attempt"
     field status "Status"
     field failure_reason "Failure Reason"
   ux:
-    purpose: "Payment trail — open a row for the parent Invoice hub"
+    purpose: "Payment trail — open a row for the attempt hub or parent Invoice hub"
+
+# View surface so dual-open PaymentAttempt via id lands a readable attempt note.
+surface payment_attempt_detail "Payment Attempt":
+  uses entity PaymentAttempt
+  mode: view
+  section summary "Attempt":
+    field invoice "Invoice"
+    field attempt_number "Attempt"
+    field status "Status"
+  section provider "Provider":
+    layout: strip
+    field provider_reference "Provider reference"
+    field failure_reason "Failure Reason"
+  ux:
+    purpose: "Read one settlement attempt with invoice context"
 
 surface payment_attempt_create "New Payment Attempt":
   uses entity PaymentAttempt
@@ -198,14 +214,15 @@ surface user_detail "User":
 surface line_item_list "Line Items":
   uses entity LineItem
   mode: list
-  open: Invoice via invoice
+  # Dual open: line hub first (lineitem_detail), invoice hub second (ST-005/006).
+  open: LineItem via id | Invoice via invoice
   section main:
     field invoice "Invoice"
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
   ux:
-    purpose: "Line items — open a row for the parent Invoice hub"
+    purpose: "Line items — open a row for the line hub or parent Invoice hub"
 
 # Explicit VIEW so related-table drills and synthetic #1421 detail routes
 # share one authored surface (substrate + sections) instead of an empty shell.
@@ -259,13 +276,24 @@ surface supplier_edit "Edit Supplier":
 surface supplier_bank_account_list "Supplier Bank Accounts":
   uses entity SupplierBankAccount
   mode: list
-  open: Supplier via supplier
+  # Dual open: bank-ref hub first, supplier hub second.
+  open: SupplierBankAccount via id | Supplier via supplier
   section main:
     field supplier "Supplier"
     field bank_account_ref "Bank Ref"
     field account_name "Account Name"
   ux:
-    purpose: "Bank refs — open a row for the parent supplier hub"
+    purpose: "Bank refs — open a row for the bank hub or parent supplier hub"
+
+surface supplier_bank_account_detail "Supplier Bank Account":
+  uses entity SupplierBankAccount
+  mode: view
+  section summary "Account":
+    field supplier "Supplier"
+    field bank_account_ref "Bank Ref"
+    field account_name "Account Name"
+  ux:
+    purpose: "Read one supplier bank reference with supplier context"
 
 surface supplier_bank_account_edit "Edit Supplier Bank Account":
   uses entity SupplierBankAccount

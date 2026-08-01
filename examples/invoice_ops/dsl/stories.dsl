@@ -77,5 +77,5 @@ story ST-006 "Auditor traces payment attempts back to the invoice hub":
     - "Auditor is on the audit_review workspace"
     - "Auditor has list permission on PaymentAttempt"
   then:
-    - "Payment attempt rows open the parent Invoice hub (not an orphan warehouse row)"
+    - "Payment attempt rows dual-open PaymentAttempt via id | Invoice via invoice (attempt hub first, invoice hub second)"
     - "Auditor cannot modify invoices or payments"

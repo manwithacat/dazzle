@@ -14,6 +14,9 @@ not one shared mega-list plus warehouse CRUD.
 - tenant_admin / finance_admin → `finance_ops` (shared ops overview)
 - Stories `given:` match each persona’s `default_workspace`.
 
+- List dual-open (story dig): `payment_attempt_list` → PaymentAttempt|Invoice;
+  `line_item_list` → LineItem|Invoice; bank list → SupplierBankAccount|Supplier.
+
 ## Not this
 
 - Every product persona defaults to the same finance_ops desk.
