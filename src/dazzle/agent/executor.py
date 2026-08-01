@@ -59,6 +59,28 @@ def _search_box_results_selector(target: str) -> str | None:
     return None
 
 
+def _is_list_search_input(target: str) -> bool:
+    """True when TYPE target is workspace list free-text chrome (``?q=`` filter).
+
+    Distinct from FTS ``display:search_box`` (results panel under the input).
+    dual_pane directories use ``#dz-list-q-<region>`` / ``data-dz-list-search-input``
+    so the A–Z list shrinks in place — panels that only know the FTS id pattern
+    miss this affordance and re-file "search broken" after list search works
+    (contact_manager agent_acceptance, cycle 1555).
+    """
+    sel = (target or "").strip()
+    if not sel:
+        return False
+    if "data-dz-list-search-input" in sel or "dz-list-search-input" in sel:
+        return True
+    if sel.startswith("#"):
+        sel = sel[1:]
+    # CSS id only for the dz-list-q-* convention
+    if " " in sel or ">" in sel or "[" in sel:
+        return "dz-list-q-" in (target or "")
+    return sel.startswith("dz-list-q-")
+
+
 # Playwright's TimeoutError is *not* a subclass of builtin TimeoutError
 # (playwright._impl._errors.TimeoutError → Error → Exception). Catching only
 # builtin TimeoutError lets settle/networkidle timeouts abort TYPE as hard
@@ -110,6 +132,71 @@ async def _search_box_results_summary(page: Any, results_sel: str) -> str:
         logger.warning(
             "search_box results summary failed for %s: %s",
             results_sel,
+            exc,
+            exc_info=True,
+        )
+        return ""
+    if not isinstance(summary, str):
+        return ""
+    return summary.strip()[:200]
+
+
+async def _list_search_filter_summary(page: Any, target: str) -> str:
+    """Summarise in-place list filter after TYPE into list-search chrome.
+
+    Counts data rows in the nearest ``[data-dz-region]`` table and samples
+    first-column labels so the agent history shows "list filtered to N rows"
+    instead of guessing from a full unfiltered snapshot race.
+    """
+    try:
+        summary = await page.evaluate(
+            """(target) => {
+                let input = null;
+                const t = (target || '').trim();
+                if (!t) return '';
+                try {
+                    input = document.querySelector(t);
+                } catch (e) {
+                    input = null;
+                }
+                if (!input && t.startsWith('#')) {
+                    input = document.getElementById(t.slice(1));
+                }
+                if (!input) {
+                    input = document.querySelector('[data-dz-list-search-input]');
+                }
+                if (!input) return '';
+                const region = input.closest('[data-dz-region]') || input.closest('.dz-region') || document;
+                const rows = Array.from(
+                    region.querySelectorAll('table tbody tr, [data-dz-list-row], .dz-list-row')
+                ).filter((tr) => {
+                    // skip pure chrome / empty-state rows
+                    if (tr.querySelector && tr.querySelector('[colspan]')) return false;
+                    const txt = (tr.textContent || '').trim();
+                    return txt.length > 0;
+                });
+                const q = (input.value || '').trim();
+                const labels = rows.slice(0, 5).map((tr) => {
+                    const cell = tr.querySelector('td, th, a, [data-dz-cell]');
+                    return ((cell && cell.textContent) || tr.textContent || '')
+                        .trim()
+                        .replace(/\\s+/g, ' ')
+                        .slice(0, 40);
+                }).filter(Boolean);
+                const qBit = q ? `q=${JSON.stringify(q)} ` : '';
+                if (rows.length === 0) {
+                    return qBit + 'list filtered to 0 rows';
+                }
+                const tail = labels.length ? ': ' + labels.join(', ') : '';
+                return qBit + 'list filtered to ' + rows.length + ' row'
+                    + (rows.length === 1 ? '' : 's') + tail;
+            }""",
+            target or "",
+        )
+    except Exception as exc:
+        logger.warning(
+            "list search filter summary failed for %s: %s",
+            target,
             exc,
             exc_info=True,
         )
@@ -221,7 +308,10 @@ class PlaywrightExecutor:
                 # search_box input: networkidle often never settles under
                 # SSE/lazy regions, so a fixed 400ms race still mis-scores
                 # working FTS as broken (cycle 1332 panel).
+                # List free-text chrome (?q= / #dz-list-q-*) reloads the region
+                # so the A–Z list shrinks — same settle race (cycle 1555).
                 results_summary = ""
+                list_search_settled = False
                 try:
                     target_sel = action.target or ""
                     results_sel = _search_box_results_selector(target_sel)
@@ -251,6 +341,45 @@ class PlaywrightExecutor:
                                 target_sel,
                                 exc_info=True,
                             )
+                    elif _is_list_search_input(target_sel):
+                        await self._page.wait_for_timeout(300)  # HTMX debounce
+                        try:
+                            # Region swap replaces the list; wait until the
+                            # input reflects the typed value (re-rendered) or
+                            # a short idle after debounce.
+                            typed = action.value or ""
+                            await self._page.wait_for_function(
+                                """([sel, val]) => {
+                                    let el = null;
+                                    try { el = document.querySelector(sel); } catch (e) {}
+                                    if (!el && sel && sel.startsWith('#')) {
+                                        el = document.getElementById(sel.slice(1));
+                                    }
+                                    if (!el) {
+                                        el = document.querySelector('[data-dz-list-search-input]');
+                                    }
+                                    if (!el) return false;
+                                    const v = (el.value || '').trim();
+                                    return !val || v === val || v.includes(val);
+                                }""",
+                                arg=[target_sel, typed],
+                                timeout=5000,
+                            )
+                            list_search_settled = True
+                            results_summary = await _list_search_filter_summary(
+                                self._page, target_sel
+                            )
+                        except _SETTLE_TIMEOUT_TYPES:
+                            logger.debug(
+                                "list search settle timeout for %s",
+                                target_sel,
+                                exc_info=True,
+                            )
+                            # Still attempt summary after debounce + idle
+                            list_search_settled = True
+                            results_summary = await _list_search_filter_summary(
+                                self._page, target_sel
+                            )
                     else:
                         await self._page.wait_for_timeout(400)
                     await self._page.wait_for_load_state("networkidle", timeout=5000)
@@ -268,6 +397,13 @@ class PlaywrightExecutor:
                     msg += f" — search results panel: {results_summary}"
                 elif search_box_settled:
                     msg += " — search results panel updated (A–Z list stays full by design)"
+                elif list_search_settled and results_summary:
+                    msg += f" — {results_summary}"
+                elif list_search_settled:
+                    msg += " — list search chrome updated (directory filters in place)"
+                if list_search_settled:
+                    # Treat like FTS settle for state_changed below.
+                    search_box_settled = True
                 base = ActionResult(message=msg)
 
             elif action.type == ActionType.SELECT:

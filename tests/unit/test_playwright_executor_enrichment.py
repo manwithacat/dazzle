@@ -252,6 +252,31 @@ class TestStateCapture:
         assert result.error is None
         assert result.state_changed is True
 
+    async def test_type_list_search_enrichment(self) -> None:
+        """TYPE into #dz-list-q-* reports in-place filter summary (cycle 1555)."""
+        page = _make_mock_page(url="http://localhost/app", content="<html>before</html>")
+        locator = MagicMock()
+        locator.fill = AsyncMock()
+        page.locator = MagicMock(return_value=locator)
+        page.wait_for_timeout = AsyncMock()
+        page.wait_for_load_state = AsyncMock()
+        page.wait_for_function = AsyncMock()
+        page.evaluate = AsyncMock(return_value='q="Adams" list filtered to 1 row: Suzanne Adams')
+        page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after filter</html>"])
+        executor = PlaywrightExecutor(page=page)
+        action = AgentAction(
+            type=ActionType.TYPE,
+            target="#dz-list-q-contact_list",
+            value="Adams",
+        )
+        result = await executor.execute(action)
+        assert result.error is None
+        page.wait_for_timeout.assert_awaited()
+        page.wait_for_function.assert_awaited()
+        assert result.state_changed is True
+        assert "list filtered" in (result.message or "")
+        assert "Adams" in (result.message or "")
+
     async def test_type_swallows_playwright_timeout_error(self) -> None:
         """Playwright TimeoutError is not builtin TimeoutError — must not abort TYPE.
 
@@ -302,3 +327,13 @@ def test_search_box_results_selector_helper() -> None:
     )
     assert _search_box_results_selector("button.submit") is None
     assert _search_box_results_selector("#other-input") is None
+
+
+def test_is_list_search_input_helper() -> None:
+    from dazzle.agent.executor import _is_list_search_input
+
+    assert _is_list_search_input("#dz-list-q-contact_list") is True
+    assert _is_list_search_input("dz-list-q-contact_list") is True
+    assert _is_list_search_input("[data-dz-list-search-input]") is True
+    assert _is_list_search_input("#dz-search-results-contact_search-input") is False
+    assert _is_list_search_input("button.submit") is False
