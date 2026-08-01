@@ -32,14 +32,14 @@ feedback without losing brand context. If those three fail, you keep Drive.
 tasks = [
     "Land on Studio Dashboard. Can you see portfolio pressure (assets, in-review, brands, campaigns) without hunting through menus?",
     "Open the brands list or a brand from the dashboard. Does a brand open as a hub (identity + palette + related assets/campaigns), or a flat field dump?",
-    "From Assets, open a row. Do you land on a useful asset hub (production strip + feedback), and can you hop to the parent brand when you need context?",
+    "From Assets, open a row. Prefer the asset hub (production strip + feedback); confirm dual hop also offers parent brand context — not brand-only.",
     "As a designer, can you start a new asset or find how review status is visible without becoming a warehouse admin?",
 ]
 
 adoption_criteria = [
     "Studio dashboard shows portfolio pressure (brands, assets, in-review) without menu archaeology",
     "Brand open is a hub (identity/palette + related assets/campaigns), not a flat field dump",
-    "Asset row opens a useful hub with production/review context and a hop to parent brand",
+    "Asset list dual-opens Asset hub and Brand hub (production/review first, palette context second)",
     "Publish desk surfaces approved/published assets as prioritised queues (not decorative grids only)",
     "Designer can start work (new asset or find review status) without becoming warehouse admin",
     "Would run a two-week pilot replacing Drive+Slack brand context with this tool as-is or with minor fixes",
@@ -81,14 +81,14 @@ tasks = [
     "Land on Review Desk / Asset Catalog. Is review pressure obvious (metrics / queue) without navigating into admin lists?",
     "Open an asset that looks like it needs review. Is the hub usable (status, quality, related feedback)?",
     "Can you leave feedback or update status from the asset context, or are you forced into a generic form maze?",
-    "From feedback list (if you find it), can you hop back to the asset — or are you stuck in a warehouse trail?",
+    "From feedback list (if you find it), can you open the note then hop back to the asset — dual hop, not a dead-end warehouse trail?",
 ]
 
 adoption_criteria = [
     "Review desk / catalog makes in-review pressure obvious without admin lists",
     "Asset open is a hub with status/quality and related feedback, not a spreadsheet row",
     "Reviewer can leave feedback or update status from asset context without a form maze",
-    "Feedback list can hop back to the asset (no dead-end warehouse trail)",
+    "Feedback list dual-opens Feedback note and Asset hub (no dead-end warehouse trail)",
     "Would run Monday reviews here for a two-week pilot as-is or with minor fixes",
 ]
 

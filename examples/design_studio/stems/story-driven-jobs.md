@@ -14,6 +14,8 @@ a shared asset warehouse.
 - Brand hub related **assets** and **campaigns** are **pull queues**
   (assets: name+status+type; campaigns: name+status) — not status_cards/tables.
 - Asset hub feedback is a **pull queue** (rating+comment) — not warehouse tables.
+- List dual-open (acceptance dig): `asset_list` → Asset|Brand; `feedback_list` →
+  Feedback|Asset; `campaign_list` → Campaign|Brand — hub first, parent context second.
 
 ## Not this
 
@@ -21,6 +23,7 @@ a shared asset warehouse.
 - Every persona defaults to the same mega-workspace.
 - Story `given:` workspace names that disagree with `default_workspace`.
 - Hub related rosters as dense tables when the job is pull-next review.
+- Asset/campaign list hops **only** to parent Brand (orphan brand-only open).
 
 ## Expressions
 

@@ -782,7 +782,9 @@ surface brand_detail "Brand Detail":
 surface asset_list "Assets":
   uses entity Asset
   mode: list
-  open: Brand via brand
+  # Dual open: asset hub first (production + feedback), brand hub second (palette/context).
+  # Agent acceptance / ST-004–005 — not brand-only orphan hop.
+  open: Asset via id | Brand via brand
   section main:
     field name "Name"
     field asset_type "Type"
@@ -791,7 +793,7 @@ surface asset_list "Assets":
     field tags "Tags"
     field quality_score "Quality"
   ux:
-    purpose: "Browse assets — open a row for the parent Brand hub"
+    purpose: "Browse assets — open a row for the asset hub or parent brand hub"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -877,7 +879,8 @@ surface feedback_create "Add Feedback":
 surface feedback_list "Feedback":
   uses entity Feedback
   mode: list
-  open: Asset via asset
+  # Dual open: read the note, then hop to the asset hub (ST-006 / reviewer pilot).
+  open: Feedback via id | Asset via asset
   section main:
     field asset "Asset"
     field reviewer "Reviewer"
@@ -885,7 +888,7 @@ surface feedback_list "Feedback":
     field comment "Comment"
     field created_at "Date"
   ux:
-    purpose: "Feedback trail — open a row for the parent Asset hub"
+    purpose: "Feedback trail — open a row for the note or parent Asset hub"
     sort: created_at desc
     filter: asset, reviewer
     empty: "No feedback submitted yet."
@@ -927,7 +930,8 @@ surface brand_edit "Edit Brand":
 surface campaign_list "Campaigns":
   uses entity Campaign
   mode: list
-  open: Brand via brand
+  # Dual open: campaign hub (schedule) + brand context — pilot parity with asset list.
+  open: Campaign via id | Brand via brand
   section main:
     field name "Name"
     field brand "Brand"
@@ -935,7 +939,7 @@ surface campaign_list "Campaigns":
     field start_date "Start"
     field end_date "End"
   ux:
-    purpose: "Browse campaigns — open a row for the parent Brand hub"
+    purpose: "Browse campaigns — open a row for the campaign hub or parent brand hub"
 
 surface campaign_edit "Edit Campaign":
   uses entity Campaign
