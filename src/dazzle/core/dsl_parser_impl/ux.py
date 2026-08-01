@@ -676,8 +676,8 @@ _VALID_CONTENT_MEASURES = frozenset({"app", "product", "wide", "full"})
 def _ux_kw_measure(parser: Any, state: _UXState) -> None:
     """``measure: app|product|wide|full`` — app-shell content measure (cycle 1560).
 
-    Documented in ``packages/hatchi-maxchi/docs/agent/pick-a-measure.md`` and
-    consumed by ``_resolve_content_measure`` / workspace shell wiring.
+    Documented in the content-measure playbook (pick-a-measure) and consumed
+    by ``_resolve_content_measure`` / workspace shell wiring.
     """
     parser.advance()  # consume 'measure' identifier
     parser.expect(TokenType.COLON)

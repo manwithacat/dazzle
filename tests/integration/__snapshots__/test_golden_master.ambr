@@ -1589,6 +1589,7 @@
             'component',
             'status',
           ]),
+          'measure': None,
           'persona_variants': list([
           ]),
           'purpose': None,
@@ -1707,6 +1708,7 @@
           'filter': list([
             'status',
           ]),
+          'measure': None,
           'persona_variants': list([
           ]),
           'purpose': None,

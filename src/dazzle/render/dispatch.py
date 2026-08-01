@@ -393,6 +393,30 @@ def _build_account_trailing(ctx: PageContext) -> object | None:
     )
 
 
+def _shell_content_measure(ctx: PageContext) -> str:
+    """Resolve ``data-dz-measure`` for the app shell.
+
+    Compiler / workspace handler set ``PageContext.content_measure`` from
+    ``ux.measure`` (list→app, form/detail→product, workspace→app). Empty
+    string = full-bleed. When callers omit the field (tests / ad-hoc pages),
+    infer from which body context is populated — including workspace_name
+    (cycle 1560; previously workspaces fell through to full-bleed).
+    """
+    raw_measure = getattr(ctx, "content_measure", None)
+    if raw_measure is not None:
+        content_measure = str(raw_measure).strip().lower()
+        if content_measure not in ("app", "product", "wide", ""):
+            return ""
+        return content_measure
+    if getattr(ctx, "table", None) is not None:
+        return "app"
+    if getattr(ctx, "form", None) is not None or getattr(ctx, "detail", None) is not None:
+        return "product"
+    if getattr(ctx, "workspace_name", None):
+        return "app"
+    return ""
+
+
 def build_app_chrome_page(
     ctx: PageContext,
     inner_html: str,
@@ -439,25 +463,7 @@ def build_app_chrome_page(
     # sidebar (i.e. real navigation). app_prefix defaults to /app.
     app_prefix = getattr(ctx, "app_prefix", "") or "/app"
     command_endpoint = f"{app_prefix}/command" if sidebar is not None else ""
-    # Content measure: compiler sets PageContext.content_measure from
-    # ux.measure (list→app, form/detail→product, workspace→app). Empty = full-bleed.
-    raw_measure = getattr(ctx, "content_measure", None)
-    if raw_measure is None:
-        # Infer when callers skip the compiler (tests / ad-hoc pages).
-        if getattr(ctx, "table", None) is not None:
-            content_measure = "app"
-        elif getattr(ctx, "form", None) is not None or getattr(ctx, "detail", None) is not None:
-            content_measure = "product"
-        elif getattr(ctx, "workspace_name", None):
-            # Cycle 1560: workspace dashboards are multi-region shells — app
-            # soft cap, not unconstrained full-bleed (previous else branch).
-            content_measure = "app"
-        else:
-            content_measure = ""
-    else:
-        content_measure = str(raw_measure).strip().lower()
-        if content_measure not in ("app", "product", "wide", ""):
-            content_measure = ""
+    content_measure = _shell_content_measure(ctx)
     body = AppShell(
         sidebar=sidebar,
         header=topbar,
