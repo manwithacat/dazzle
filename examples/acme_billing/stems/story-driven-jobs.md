@@ -12,6 +12,11 @@ Billing workspace is portfolio metrics + invoice queue before entity lists.
   are **pull queues**, not warehouse tables (ST-006/008/011).
 - Invoice list dual open `Invoice via id | Project via project` (cycle 1544
   story_walk) — inspect the invoice or hop to the project hub.
+- Project list dual open `Project via id | Organization via org` (cycle 1574
+  journey_dogfood) — project hub first; secondary org hub for tenant context
+  (ST-001/003/006).
+- User list dual open `User via id | Organization via org` (cycle 1574
+  journey_dogfood) — user hub first; secondary org hub for roster context.
 
 ## Not this
 

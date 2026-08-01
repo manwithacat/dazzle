@@ -22,6 +22,7 @@ story ST-001 "Org owner manages projects within their organization":
     - "Project is created with org set to Acme"
     - "Org owner can list only projects belonging to Acme"
     - "Org owner cannot see projects belonging to Globex"
+    - "Project rows dual-open Project via id | Organization via org (project hub first, org hub second)"
 
 story ST-002 "Auditor reviews invoices but cannot modify them":
   status: accepted
@@ -59,6 +60,7 @@ story ST-003 "Project member sees only their assigned projects":
   then:
     - "Project Alpha is visible to the project member"
     - "Project Beta is not visible to the project member"
+    - "Project list dual-opens Project via id | Organization via org for tenant context hop"
 
 story ST-004 "External contractor views non-sensitive invoices within their organization":
   status: accepted
@@ -117,6 +119,7 @@ story ST-006 "Org owner browses projects and opens a project hub":
   then:
     - "Org owner sees projects scoped to their organization"
     - "Row open hops to Project detail with related invoices and memberships as pull queues"
+    - "Project rows dual-open Project via id | Organization via org (project hub first, org hub second)"
 
 story ST-007 "Org owner reviews invoices from the portfolio queue into project context":
   status: accepted

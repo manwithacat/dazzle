@@ -61,7 +61,9 @@ surface user_list "Users":
   uses entity User
   mode: list
   render: fragment
-  open: User via id
+  # Dual open (journey_dogfood dig cycle 1574): user hub first; secondary hop
+  # to parent Organization hub for tenant roster context.
+  open: User via id | Organization via org
 
   section main "Users":
     field email "Email"
@@ -70,7 +72,7 @@ surface user_list "Users":
     field created_at "Created"
 
   ux:
-    purpose: "Browse users — open a row for the user hub"
+    purpose: "Browse users — open a row for the user hub or parent Organization hub"
 
 surface user_detail "User":
   uses entity User
@@ -111,7 +113,9 @@ surface project_list "Projects":
   uses entity Project
   mode: list
   render: fragment
-  open: Project via id
+  # Dual open (journey_dogfood dig cycle 1574): project hub first; secondary
+  # hop to parent Organization hub for tenant context (ST-006/003/001).
+  open: Project via id | Organization via org
 
   section main "Projects":
     field name "Name"
@@ -119,7 +123,7 @@ surface project_list "Projects":
     field created_at "Created"
 
   ux:
-    purpose: "Browse projects — open a row for the project hub"
+    purpose: "Browse projects — open a row for the project hub or parent Organization hub"
 
 surface project_detail "Project":
   uses entity Project

@@ -29,6 +29,9 @@
   joins; format via `_ref_display_name` (#1626 T1 / fieldtest regression).
 
 ### Changed
+- **acme_billing dual-open org hubs** — `project_list` / `user_list` dual-open
+  `Project|User via id | Organization via org` (journey dig cycle 1574);
+  compliance auditspec baseline refresh for DSL hash.
 - **acme_billing process densify** — durable `invoice_owner_review` process
   (Invoice created → org_owner human_task) + compliance auditspec baseline
   refresh for DSL hash.
