@@ -926,6 +926,16 @@ class _RenderTablesMixin:
             # still OCR-joins adjacent labels).
             meta_parts: list[str] = []
             for m in getattr(row, "meta_columns", ()) or ():
+                label = getattr(m, "label", "") or ""
+                # Empty label: hyperpart-only segment (person×queue_meta Avatar).
+                if not str(label).strip():
+                    if getattr(m, "html", False):
+                        meta_parts.append(f'<span class="dz-queue-row-meta">{m.value}</span>')
+                    else:
+                        meta_parts.append(
+                            f'<span class="dz-queue-row-meta">{ctx.escape(m.value)}</span>'
+                        )
+                    continue
                 if getattr(m, "html", False):
                     meta_parts.append(
                         f'<span class="dz-queue-row-meta">{ctx.escape(m.label)}: {m.value}</span>'

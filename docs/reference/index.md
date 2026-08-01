@@ -59,6 +59,7 @@
 | [Product Maturity](product-maturity.md) | Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps. |
 | [Antagonist Agent Brief (#1626)](antagonist-agent-brief-1626.md) | Agent residual queue R1–R6 for the demo-fleet antagonist bake-off — stills floors, recapture recipe, messaging constraints. |
 | [Antagonist Re-score Handoff (#1626)](antagonist-rescore-handoff-1626.md) | Hand-back pack for human/antagonist re-score after agent R1–R6 + partial P1 drain — hero still paths, OCR spot-check, deferred items. |
+| [Hyperpart Presentation Process](hyperpart-presentation.md) | Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). |
 | [Fitness Methodology](fitness-methodology.md) | The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent. |
 | [Fitness Investigator](fitness-investigator.md) | Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals. |
 | [Fitness Triage](fitness-triage.md) | Turning a flat fitness backlog into ranked, actionable clusters for investigation. |

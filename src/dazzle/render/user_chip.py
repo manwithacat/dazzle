@@ -157,8 +157,18 @@ def wrap_user_chip_link(chip_html: str, value: Any, col: dict[str, Any] | None =
     return f'<a href="{href}" class="dz-user-chip-link">{chip_html}</a>'
 
 
-def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
+def render_user_chip_html(
+    value: Any,
+    col: dict[str, Any] | None = None,
+    *,
+    density: str = "avatar_name",
+) -> str:
     """HTML for a person ref: ``.dz-user-chip`` wrapping ``.dz-avatar`` + name.
+
+    *density* (presentation matrix):
+
+    * ``avatar_name`` — avatar + visible name (list/detail default)
+    * ``avatar_only`` — avatar with ``title`` / ``aria-label`` only (queue meta)
 
     Returns empty string when *value* is empty; callers should not use this
     for non-person refs (use plain ``_ref_display_name`` instead).
@@ -187,6 +197,14 @@ def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
     name_attr = _html_mod.escape(name, quote=True)
     initials = _html_mod.escape(initials_from_display(name), quote=False)
     avatar = _avatar_markup(name=name, avatar_url=avatar_url, initials=initials)
+    if density == "avatar_only":
+        # Queue meta density: identity *is* the avatar; name via a11y only.
+        return (
+            f'<span class="dz-user-chip dz-user-chip--avatar-only" '
+            f'title="{name_attr}" aria-label="{name_attr}">'
+            f"{avatar}"
+            f"</span>"
+        )
     return (
         f'<span class="dz-user-chip" title="{name_attr}">'
         f"{avatar}"

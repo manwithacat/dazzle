@@ -1622,6 +1622,13 @@ order = 120.8
 handwritten = true
 intro = "Hand-back pack for human/antagonist re-score after agent R1–R6 + partial P1 drain — hero still paths, OCR spot-check, deferred items."
 
+[pages.hyperpart-presentation]
+title = "Hyperpart Presentation Process"
+slug = "hyperpart-presentation"
+order = 120.9
+handwritten = true
+intro = "Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). Antagonist doctrine 2026-08-01."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

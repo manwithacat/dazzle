@@ -70,7 +70,11 @@ class TestScan:
         opps = scan_person_ref_opportunities(_appspec())
         fields = {(o.field, o.hyperpart) for o in opps}
         assert ("assigned_to", "avatar") in fields
-        assert all(o.status == "default_emit" for o in opps if o.field == "assigned_to")
+        assert all(
+            o.status in ("emit_covered", "emit_partial", "default_emit")
+            for o in opps
+            if o.field == "assigned_to"
+        )
         # Client is not person
         assert not any(o.field == "client" for o in opps)
 

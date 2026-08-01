@@ -59,6 +59,7 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
     _render_row_action_button,
 )
+from dazzle.render.presentation import infer_role, present
 
 # Cap queue meta density lines so rows stay scannable (#1626).
 _QUEUE_META_MAX = 3
@@ -89,12 +90,18 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
 
 
 def _queue_meta_raw(item: dict[str, Any], key: str) -> Any:
-    """Prefer FK-resolved ``*_display`` then the raw field."""
-    display_attr = f"{key}_display"
-    raw = item.get(display_attr) if display_attr in item else None
-    if raw is not None and str(raw).strip():
-        return raw
+    """Prefer resolved FK entity dict, then ``*_display``, then scalar.
+
+    Person presentation needs the entity dict for Avatar initials/hue.
+    Preferring ``*_display`` alone forced plain-text queue meta (#1626 process).
+    """
     raw = item.get(key)
+    if isinstance(raw, dict) and raw:
+        return raw
+    display_attr = f"{key}_display"
+    disp = item.get(display_attr) if display_attr in item else None
+    if disp is not None and str(disp).strip():
+        return disp
     if raw is not None and str(raw).strip():
         return raw
     return None
@@ -156,6 +163,20 @@ def _queue_row_meta_columns(
                     )
                 )
             continue
+        # Hyperpart presentation matrix: person × queue_meta → Avatar
+        # (no visible "Assigned To: Name" prose — chip *is* the signal).
+        role = infer_role(raw, col)
+        if role == "person":
+            result = present("person", "queue_meta", raw, col)
+            if result.html and result.html != "—":
+                meta.append(
+                    QueueMetaColumn(
+                        label="" if result.suppress_label else str(col.get("label") or key),
+                        value=result.html,
+                        html=result.is_html,
+                    )
+                )
+                continue
         # Prefer combined money line when we have a free-standing currency code.
         if currency_code and (
             col_type in ("currency", "money", "number", "decimal", "float", "int")

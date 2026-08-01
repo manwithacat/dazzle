@@ -5,12 +5,17 @@
 **Probe:** `python scripts/demo_fleet_bar.py`
 **Umbrella:** GitHub **#1626** (antagonist bake-off)
 **Docs:** `docs/reference/product-maturity.md` (Antagonist demo bar section)
-**Agent residual queue:** `docs/reference/antagonist-agent-brief-1626.md` (R1–R6)
+**Agent residual queue:** `docs/reference/antagonist-agent-brief-1626.md`
+**Presentation doctrine:** `docs/reference/hyperpart-presentation.md`
+  (role×host matrix — use strategy **hyperpart_presentation** when desks
+  narrate person/money as labeled prose instead of Hyperparts)
 
 Agent-first loop for **felt** product quality after structural
 `product_maturity` residual is empty. The probe is necessary but not
 sufficient for commercial bake-off — drain open #1626 residuals with stills +
-seeds. **Human fleet mean ~5.1 (31 Jul); pass ≥5.5 — still short ~0.4.**
+seeds. **Human fleet mean ~5.6 (01 Aug); pass ≥5.5 cleared.** Presentation
+residuals (person×queue_meta Avatar) are a separate force path.
+
 
 ## Machine probe
 

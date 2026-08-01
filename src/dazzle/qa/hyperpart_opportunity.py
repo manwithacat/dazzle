@@ -51,24 +51,28 @@ class HyperpartOpportunity:
     field: str
     surface: str
     location: str  # human path, e.g. surface TaskList.field.assigned_to
-    status: str  # default_emit | author_action | verify
+    status: str
+    # emit_covered | emit_partial | author_action | matrix_miss | verify
+    # (legacy default_emit treated as emit_covered for list/detail only)
     severity: str  # low | medium | high
     description: str
     ownership: str = "framework"  # framework default vs product authoring
     notes: str = ""
+    hosts: str = ""  # comma-separated hosts known to render this field
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
 
     def to_friction(self) -> dict[str, Any]:
         return {
-            "category": "missing" if self.status == "author_action" else "other",
+            "category": "missing" if self.status in ("author_action", "matrix_miss") else "other",
             "severity": self.severity,
             "description": self.description,
             "url": self.location,
             "evidence": (
                 f"hyperpart={self.hyperpart} kind={self.kind} "
-                f"entity={self.entity}.{self.field} status={self.status} {self.notes}"
+                f"entity={self.entity}.{self.field} status={self.status} "
+                f"hosts={self.hosts} {self.notes}"
             ),
             "blocks_pilot": False,
             "ownership": self.ownership,
@@ -137,14 +141,15 @@ def _person_ref_for_field(
         field=fn,
         surface=sname,
         location=f"surface:{sname}.field:{fn}",
-        status="default_emit",
+        status="emit_covered",
         severity="low",
         description=(
             f"{ent_name}.{fn} is a person ref ({ref_ent or 'heuristic'}) — "
-            f"framework emits Avatar chip (dz-avatar) by default in list/detail cells."
+            f"framework emits Avatar on list/detail cells (presentation matrix)."
         ),
         ownership="framework",
-        notes="user_chip default; opt-out via column avatar:false",
+        notes="user_chip / present(); opt-out via column avatar:false",
+        hosts="list_cell,detail_cell",
     )
 
 
@@ -238,18 +243,70 @@ def scan_queue_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
     return out
 
 
+def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: queue`` regions — presentation matrix host.
+
+    Status is ``emit_covered`` when framework ``present(person, queue_meta)``
+    is live (Avatar chip, no Assigned To prose). Host honesty: do not claim
+    full green for person refs that only cover list/detail.
+    """
+    out: list[HyperpartOpportunity] = []
+    entity_by_name = _entity_by_name(appspec)
+    for ws in list(getattr(appspec, "workspaces", None) or []):
+        wname = str(getattr(ws, "name", "") or "")
+        for region in list(getattr(ws, "regions", None) or []):
+            if _region_display(region) != "queue":
+                continue
+            rname = str(getattr(region, "name", "") or "")
+            ent_name = str(getattr(region, "source", None) or getattr(region, "entity", "") or "")
+            entity = entity_by_name.get(ent_name)
+            if not entity:
+                continue
+            field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
+            for fn, fspec in field_map.items():
+                ft = getattr(fspec, "type", None)
+                if _field_type_kind(ft) not in _REF_KINDS:
+                    continue
+                ref_ent = _ref_entity(ft)
+                if not _is_person_ref(fn, ref_ent):
+                    continue
+                out.append(
+                    HyperpartOpportunity(
+                        hyperpart="avatar",
+                        kind="person_ref_queue_meta",
+                        entity=ent_name,
+                        field=fn,
+                        surface=wname,
+                        location=f"workspace:{wname}.region:{rname}.field:{fn}",
+                        status="emit_covered",
+                        severity="low",
+                        description=(
+                            f"{ent_name}.{fn} on queue {wname}/{rname} — "
+                            f"presentation matrix emits Avatar (queue_meta), "
+                            f"not 'Assigned To: <text>' prose."
+                        ),
+                        ownership="framework",
+                        notes="present(person, queue_meta) → avatar_only",
+                        hosts="queue_meta",
+                    )
+                )
+    return out
+
+
 def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     """All static hyperpart opportunities for one app."""
     rows = scan_person_ref_opportunities(appspec)
+    rows.extend(scan_person_queue_meta_opportunities(appspec))
     rows.extend(scan_queue_opportunities(appspec))
     return rows
 
 
 _GUIDANCE = {
     "avatar": (
-        "If displaying a reference to a real person who is a system user "
-        "(or Contact/assignee-like entity), use the Avatar hyperpart chip. "
-        "Framework default: list/detail ref cells emit .dz-avatar + name."
+        "Role person → Avatar via presentation matrix (list/detail + queue_meta). "
+        "Doctrine: docs/reference/hyperpart-presentation.md. "
+        "Statuses: emit_covered (all listed hosts), emit_partial (some hosts), "
+        "never treat list-only chip as full green while queue_meta stringifies."
     ),
     "queue": "Urgency-ordered work of the same type → display: queue, not a plain list.",
     "badge": "Lifecycle / status enums already map to badge cells by default.",

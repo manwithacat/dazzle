@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Added
+- **Hyperpart presentation process** — closed role×host matrix +
+  `dazzle.render.presentation.present()`; person×`queue_meta` emits
+  Avatar (`avatar_only`) without visible `Assigned To:` prose. Doctrine
+  `docs/reference/hyperpart-presentation.md`; improve strategy
+  `hyperpart_presentation`. Opportunity scan statuses `emit_covered` /
+  host-honest queue coverage. #1626 antagonist presentation process.
+
 ### Changed
 - **acme_billing process densify** — durable `invoice_owner_review` process
   (Invoice created → org_owner human_task) + compliance auditspec baseline

@@ -13826,7 +13826,7 @@
       "_apply_derived_to_bucket_rows": 8,
       "_bucket_key_label": 9,
       "_build_aggregate_filters": 20,
-      "_compute_aggregate_metrics": 39,
+      "_compute_aggregate_metrics": 40,
       "_compute_box_plot_stats": 19,
       "_compute_bucketed_aggregates": 42,
       "_compute_histogram_bins": 11,
@@ -13927,6 +13927,7 @@
       "_resolve_via_link_direction": 4,
       "_retarget_scope_predicate_to_alias": 3,
       "_strip_scope_predicate": 3,
+      "_tree_parent_id": 7,
       "apply_attention_signals": 10,
       "build_comparison_inputs": 11,
       "build_comparison_rows": 15,
@@ -13947,7 +13948,7 @@
       "compute_profile_card": 12,
       "compute_progress": 9,
       "compute_queue": 6,
-      "compute_tree": 8
+      "compute_tree": 6
     },
     "mi_rank": "C"
   },
@@ -18041,6 +18042,7 @@
       "build_opportunity_report": 7,
       "run_hyperpart_opportunities": 8,
       "scan_appspec": 1,
+      "scan_person_queue_meta_opportunities": 16,
       "scan_person_ref_opportunities": 14,
       "scan_queue_opportunities": 8
     },
@@ -19318,10 +19320,10 @@
   },
   "dazzle/render/fragment/region/_builders_misc.py": {
     "functions": {
-      "_BuildersMiscMixin": 19,
+      "_BuildersMiscMixin": 20,
       "_BuildersMiscMixin._build_confirm_action_panel": 27,
       "_BuildersMiscMixin._build_detail": 13,
-      "_BuildersMiscMixin._build_grid": 27,
+      "_BuildersMiscMixin._build_grid": 32,
       "_BuildersMiscMixin._build_search_box": 10,
       "_BuildersMiscMixin._build_tree": 12,
       "_pick_label": 7,
@@ -19338,8 +19340,8 @@
       "_BuildersTablesMixin._build_tabbed_list": 34,
       "_format_queue_meta_value": 14,
       "_outlier_badge": 2,
-      "_queue_meta_raw": 6,
-      "_queue_row_meta_columns": 36,
+      "_queue_meta_raw": 8,
+      "_queue_row_meta_columns": 41,
       "_rag_badge": 1
     },
     "mi_rank": "C"
@@ -19485,7 +19487,7 @@
       "_RenderChartsMixin._emit_time_series": 16,
       "_RenderChartsMixin._emit_timeline": 11,
       "_RenderChartsMixin._emit_tree": 3,
-      "_RenderChartsMixin._emit_tree_node": 5,
+      "_RenderChartsMixin._emit_tree_node": 4,
       "_RenderChartsMixin._kanban_board_root_attrs": 9,
       "_RenderChartsMixin._kanban_card_fields_html": 3
     },
@@ -19624,7 +19626,7 @@
       "_RenderTablesMixin._emit_pivot_table": 4,
       "_RenderTablesMixin._emit_pivot_table_region": 11,
       "_RenderTablesMixin._emit_profile_card": 1,
-      "_RenderTablesMixin._emit_queue_region": 14,
+      "_RenderTablesMixin._emit_queue_region": 17,
       "_RenderTablesMixin._emit_related_cards": 1,
       "_RenderTablesMixin._emit_related_cards_or_files": 4,
       "_RenderTablesMixin._emit_related_cards_or_files_body": 10,
@@ -19730,6 +19732,16 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/presentation.py": {
+    "functions": {
+      "PresentResult": 1,
+      "_plain_text": 5,
+      "infer_role": 12,
+      "matrix_density": 1,
+      "present": 17
+    },
+    "mi_rank": "A"
+  },
   "dazzle/render/subtype_panel.py": {
     "functions": {
       "resolve_subtype_panel_surface": 5
@@ -19773,7 +19785,7 @@
       "initials_from_display": 7,
       "looks_like_person_ref": 9,
       "ref_route_url": 7,
-      "render_user_chip_html": 9,
+      "render_user_chip_html": 10,
       "render_user_chip_linked_html": 1,
       "wrap_user_chip_link": 4
     },
