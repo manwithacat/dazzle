@@ -15,6 +15,9 @@ and fleet metrics for engineer/manager; personal queues for testers.
 - Device hub related issues/sessions and tester hub activity/assignments are
   **pull queues** (ST-045/047), not warehouse tables.
 
+- List dual-open (acceptance dig): `issue_report_list` → IssueReport|Device;
+  `test_session_list` → TestSession|Device.
+
 ## Not this
 
 - Landing managers only on density demos (map/tree) without pressure metrics.

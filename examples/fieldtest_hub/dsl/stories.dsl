@@ -213,7 +213,7 @@ story ST-037 "Engineer triages recent issue reports":
     - "IssueReports exist with status open"
   then:
     - "Engineer sees open reports in the triage_queue sorted by severity desc"
-    - "Issue board row open hops to the Device hub via device_id"
+    - "Issue board dual-opens IssueReport via id | Device via device_id (issue hub first, device context second)"
     - "Engineer can transition a report from open to triaged"
 
 story ST-038 "Engineer links firmware release to a device batch":
@@ -323,7 +323,7 @@ story ST-046 "Engineer opens issue then hops to device context":
   given:
     - "Engineer has list permission on IssueReport"
   then:
-    - "Issue list open hops to Device via device_id"
+    - "Issue list dual-opens IssueReport via id | Device via device_id (issue hub first; secondary context hop to Device)"
     - "Device hub shows related IssueReports for the batch"
 
 story ST-047 "Manager opens tester hub for assignments and activity":

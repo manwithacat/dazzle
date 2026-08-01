@@ -41,7 +41,7 @@ adoption_criteria = [
     "Manager home shows fleet shape (devices / issues / activity) without spreadsheet mental math",
     "Failed or troubled devices are findable in under a minute from the primary workspace",
     "Tester activity or check-in pressure is visible without exporting to a sheet",
-    "Issue or device open is a usable hub (status + next action), not a flat CRUD dump",
+    "Issue list dual-opens issue hub and Device hub; opens are usable hubs not flat CRUD dumps",
     "Would run a two-week pilot replacing the Google Sheet as-is or with minor fixes",
 ]
 

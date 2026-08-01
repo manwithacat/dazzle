@@ -673,7 +673,9 @@ surface issue_report_list "Issues":
   uses entity IssueReport
   mode: list
   render: fragment
-  open: Device via device_id
+  # Dual open (acceptance dig cycle 1567): issue hub first (ST-046 triage),
+  # device hub second (fleet context) — not device-only orphan hop.
+  open: IssueReport via id | Device via device_id
 
   section main "Issue Reports":
     field device_id "Device"
@@ -684,7 +686,7 @@ surface issue_report_list "Issues":
     field reported_at "Reported"
 
   ux:
-    purpose: "Triage field issues — open a row for the parent Device hub"
+    purpose: "Triage field issues — open a row for the issue hub or parent Device hub"
     sort: severity desc, reported_at desc
     filter: category, severity, status, firmware_version, device_id
     search: description, steps_to_reproduce
@@ -805,7 +807,8 @@ surface test_session_list "Test Sessions":
   uses entity TestSession
   mode: list
   render: fragment
-  open: Device via device_id
+  # Dual open: session hub first, device hub second (fleet context).
+  open: TestSession via id | Device via device_id
 
   section main "Test Sessions":
     field device_id "Device"
@@ -816,7 +819,7 @@ surface test_session_list "Test Sessions":
     field logged_at "Logged At"
 
   ux:
-    purpose: "Track field testing sessions and usage patterns"
+    purpose: "Track field testing sessions — open a row for the session hub or parent Device hub"
     sort: logged_at desc
     filter: device_id, tester_id, environment
     search: notes
