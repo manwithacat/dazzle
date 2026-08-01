@@ -59,7 +59,7 @@ apply map patches with `{"apply":true}`.
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1555 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1555 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1556 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1557 | USED |
@@ -75,10 +75,10 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1553 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1556 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1559 | USED |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1543 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1541 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1541 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1561 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1561 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -128,6 +128,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+
+> **Cycle 1561 (2026-08-01).** **capability-sweep** (cadence ≥20 since 1541) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=18** **HYGIENE_STALE_eff=35**. Flipped lag≥20 USED→STALE: 3. DRIVER CodeQL+inbox **USED@1561**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1): **example-apps agent_acceptance_panel|story_walk|journey_dogfood** dig+ship / **framework-ux edge** / domain re-touch / product_quality+demo quality re-touch — **not** dual_lock/smoke stamp/WI densify. Metered vision STALE → subscription substitutes only. Semgrep hygiene never-exercised. budget 0. Explore **7/100**.
 > **Cycle 1560 (2026-08-01).** campaign force **framework-ux**: **ship** workspace shell `content_measure` default **app** (was full-bleed); IR+DSL `ux.measure`; page_routes thread; dispatch workspace_name infer; unit pins. residual=0 densify=0 dual_lock=0. fitness **USED@1560**. budget 1. Explore **7/100**.
 > **Cycle 1559 (2026-08-01).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 34 PASS; **ship** `master_detail.select_item` + `master_detail_select` runner (aria-current exclusive + MOCK_HTMX Globex detail); catalog **35/35 PASS**; unit pin. residual=0 densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1559**. budget 1. Explore **6/100**.
 
