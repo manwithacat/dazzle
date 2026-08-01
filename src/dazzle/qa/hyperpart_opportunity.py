@@ -319,6 +319,8 @@ def build_opportunity_report(
     app: str,
     opportunities: list[HyperpartOpportunity],
 ) -> dict[str, Any]:
+    from dazzle.render.presentation import cognition_snapshot
+
     frictions = [normalize_friction_entry(o.to_friction()) for o in opportunities]
     # Only author_action product rows seed improve PENDING.
     auto_seed = [
@@ -327,18 +329,36 @@ def build_opportunity_report(
         if o.status == "author_action" and is_auto_seed_eligible(f)
     ]
     by_hp: dict[str, int] = {}
+    by_status: dict[str, int] = {}
     for o in opportunities:
         by_hp[o.hyperpart] = by_hp.get(o.hyperpart, 0) + 1
+        by_status[o.status] = by_status.get(o.status, 0) + 1
+    cog = cognition_snapshot()
+    # Agent cognition: all-green on scanned hosts is not fleet presentation done.
+    all_scanned_green = bool(opportunities) and all(
+        o.status == "emit_covered" for o in opportunities if o.kind.startswith("person")
+    )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "mode": "hyperpart_opportunity",
         "app": app,
         "count": len(opportunities),
         "by_hyperpart": by_hp,
+        "by_status": by_status,
         "opportunities": [o.to_json() for o in opportunities],
         "friction": frictions,
         "auto_seed": auto_seed,
         "guidance": dict(_GUIDANCE),
+        "presentation_cognition": {
+            **cog,
+            "person_rows_all_emit_covered": all_scanned_green,
+            "caveat": (
+                "emit_covered applies only to hosts_audited_by_scanner. "
+                "hosts_not_yet_audited may still stringify on stills — open hero PNG."
+                if all_scanned_green
+                else "Drain author_action / emit_partial / matrix_miss first; then stills."
+            ),
+        },
     }
 
 

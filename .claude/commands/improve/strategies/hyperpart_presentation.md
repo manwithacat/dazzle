@@ -62,9 +62,25 @@ pytest tests/unit/test_presentation_matrix_1626.py -q
 
 Matrix rows + still paths. Never claim fleet bake-off pass from residual alone.
 
+## Cognition snapshot (always read)
+
+```bash
+# JSON includes presentation_cognition — hosts audited vs matrix-only
+cd examples/<app> && dazzle qa hyperpart-opportunities --stdout | head -c 4000
+python -c "from dazzle.render.presentation import cognition_snapshot; import json; print(json.dumps(cognition_snapshot(), indent=2))"
+```
+
+If `person_rows_all_emit_covered` and caveat says un-audited hosts remain → **still open the PNG**.
+
+## Creativity (closed)
+
+Select matrix densities only. To add capability: matrix row → `present()` → test → recapture.
+Do not invent assignee formats. Proposal-quality creativity = good role mapping + justified matrix extension with still evidence.
+
 ## Hard rules
 
 * No second avatar CSS class outside dual-lock
 * No scanner-only PR without still mtime change when emit changed
 * Mid-dot separators (R1) stay; they do not replace Avatar
 * Catalogue/HM pick-a-surface is authoring — orthogonal to this emit process
+* Do not grow the matrix without a still that proves the host gap

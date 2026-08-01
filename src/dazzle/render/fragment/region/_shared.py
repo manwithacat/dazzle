@@ -32,7 +32,7 @@ from dazzle.render.fragment import (
     Surface,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
-from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
+from dazzle.render.user_chip import looks_like_person_ref
 
 # Defensive ISO / Postgres timestamptz leak detector (parity with _data_row.py).
 _ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
@@ -215,19 +215,20 @@ def _render_typed_value(
                 display = value
         display_str = str(display if display is not None else "")
 
-        # Person-like refs: Avatar hyperpart chip (parity with entity list rows).
-        # Link wrap when ref_route present — shared seam with list/detail (user_chip).
+        # Person-like refs: presentation matrix (list_cell → avatar_name).
         chip_probe = value if isinstance(value, dict) else {"name": display_str}
         if looks_like_person_ref(chip_probe if chip_probe is not None else {}, col):
+            from dazzle.render.presentation import present
+
             if isinstance(value, dict):
                 chip_val: Any = value
             elif display_str:
                 chip_val = {"name": display_str, "id": value}
             else:
                 chip_val = value
-            chip_html = render_user_chip_linked_html(chip_val, col)
-            if chip_html and chip_html != "—":
-                return RawHTML(chip_html)
+            result = present("person", "list_cell", chip_val, col)
+            if result.is_html and result.html and result.html != "—":
+                return RawHTML(result.html)
 
         if ref_route:
             # Resolve the FK id. After repo.list(fk_display_only=True)

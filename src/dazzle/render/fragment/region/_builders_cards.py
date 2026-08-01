@@ -202,9 +202,30 @@ class _BuildersCardsMixin:
                         date_val = item.get(str(col.get("key") or ""))
                         date_str = _timeago_filter(date_val) if date_val else ""
                         fields.append((label, RawHTML(date_str)))
-                    else:
-                        # KANBAN renders badges with size='sm' per legacy.
-                        fields.append((label, _render_typed_value(item, col, badge_size="sm")))
+                        continue
+                    # Presentation matrix: person × kanban_field → Avatar chip.
+                    key = str(col.get("key") or "")
+                    raw = item.get(key)
+                    from dazzle.render.presentation import infer_role, present
+
+                    if infer_role(raw if raw is not None else item.get(f"{key}_display"), col) == (
+                        "person"
+                    ):
+                        chip_val = raw if isinstance(raw, dict) else None
+                        if chip_val is None and item.get(f"{key}_display"):
+                            chip_val = {
+                                "name": item.get(f"{key}_display"),
+                                "id": raw,
+                            }
+                        if chip_val is None and raw is not None:
+                            chip_val = {"name": str(raw), "id": raw}
+                        if chip_val is not None:
+                            pr = present("person", "kanban_field", chip_val, col)
+                            if pr.is_html and pr.html:
+                                fields.append((label, RawHTML(pr.html)))
+                                continue
+                    # KANBAN renders badges with size='sm' per legacy.
+                    fields.append((label, _render_typed_value(item, col, badge_size="sm")))
                 attn_raw = item.get("_attention") if hasattr(item, "get") else None
                 attn_level = ""
                 attn_message = ""

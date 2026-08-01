@@ -122,6 +122,46 @@ Suggested residual ids: `person_as_text`, `host_emit_skew`, `hyperpart_matrix_mi
 CLI:
 
 ```bash
-dazzle qa hyperpart-opportunities --app support_tickets --table
+# From example app dir (cwd = examples/<app>):
+dazzle qa hyperpart-opportunities --table
+# JSON includes presentation_cognition (hosts audited vs matrix-only).
 .venv/bin/python scripts/recapture_demo_fleet_1626.py --apps support_tickets
 ```
+
+---
+
+## Agent cognition (how to read the scan)
+
+Opportunity reports are **schema_version 2** with `presentation_cognition`:
+
+| Field | Meaning |
+|-------|---------|
+| `hosts_audited_by_scanner` | Static scan actually walks these hosts |
+| `hosts_not_yet_audited` | Matrix rows exist; scan does not residual them yet |
+| `hosts_wired_to_seam` | Emit calls `present()` or equivalent chip path |
+| `person_rows_all_emit_covered` | True only for **audited** person rows |
+| `caveat` | Do not treat all-green as fleet presentation done |
+| `how_to_extend` | Legal creativity path for new matrix rows |
+
+**Rule:** Open the hero still. Machine green + un-audited hosts → still read stills.
+
+---
+
+## Agent creativity (within the closed system)
+
+Creativity is **not** inventing a fourth assignee widget.
+
+| Allowed | Forbidden |
+|---------|-----------|
+| Map domain fields → roles; propose matrix row with still evidence | One-app HTML/CSS for person/money |
+| Implement `present()` density + unit test + recapture | Second avatar class outside dual-lock |
+| Extend scanner to a host once wired | Claiming `default_emit` / all-green while queue stringifies |
+| Pick region **mode** via work_surface_utility | Bypassing matrix for “taste” |
+
+Extension recipe (when stills show a gap):
+
+1. Residual id `hyperpart_matrix_miss` (or host incompleteness note).
+2. Add `PRESENTATION_MATRIX[(role, host)] = density`.
+3. Implement density in `present()`.
+4. Unit test + recapture hero still.
+5. Optionally add host to `HOSTS_AUDITED_BY_SCANNER` when static residual exists.

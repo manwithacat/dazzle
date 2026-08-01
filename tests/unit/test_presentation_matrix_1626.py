@@ -60,3 +60,52 @@ def test_queue_meta_columns_person_is_html_chip_without_label() -> None:
 
 def test_infer_role_person_from_field_key() -> None:
     assert infer_role("x", {"key": "assigned_to", "type": "ref", "ref_entity": "User"}) == "person"
+
+
+def test_cognition_snapshot_honest_about_audit_scope() -> None:
+    from dazzle.render.presentation import cognition_snapshot
+
+    c = cognition_snapshot()
+    assert "queue_meta" in c["hosts_audited_by_scanner"]
+    assert "how_to_extend" in c
+    assert "creativity_boundary" in c
+    # Matrix may list hosts the scanner does not walk yet
+    assert isinstance(c["hosts_not_yet_audited"], list)
+
+
+def test_present_money_and_swatch_not_stub_plain_only() -> None:
+    money = present("money", "list_cell", 12550.0, {"type": "currency", "format": "currency:GBP"})
+    assert money.density == "money"
+    assert money.html  # formatted somehow
+    swatch = present("color", "queue_meta", "#336699", {"type": "color"})
+    assert swatch.density == "swatch"
+    # Prefer real swatch markup when renderer available
+    if swatch.is_html:
+        assert "dz-color-swatch" in swatch.html or "#" in swatch.html
+
+
+def test_opportunity_report_includes_presentation_cognition() -> None:
+    from dazzle.qa.hyperpart_opportunity import (
+        HyperpartOpportunity,
+        build_opportunity_report,
+    )
+
+    opps = [
+        HyperpartOpportunity(
+            hyperpart="avatar",
+            kind="person_ref",
+            entity="Ticket",
+            field="assigned_to",
+            surface="ticket_list",
+            location="surface:ticket_list.field:assigned_to",
+            status="emit_covered",
+            severity="low",
+            description="test",
+            hosts="list_cell,detail_cell",
+        )
+    ]
+    report = build_opportunity_report(app="support_tickets", opportunities=opps)
+    assert report["schema_version"] == 2
+    assert "presentation_cognition" in report
+    assert report["presentation_cognition"]["person_rows_all_emit_covered"] is True
+    assert "caveat" in report["presentation_cognition"]

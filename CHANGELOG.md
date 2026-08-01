@@ -7,6 +7,11 @@
   `docs/reference/hyperpart-presentation.md`; improve strategy
   `hyperpart_presentation`. Opportunity scan statuses `emit_covered` /
   host-honest queue coverage. #1626 antagonist presentation process.
+- **Presentation cognition** — `cognition_snapshot()` + opportunity
+  report `presentation_cognition` (schema v2): hosts audited vs
+  matrix-only, seam wiring, `how_to_extend` for agent creativity within
+  the closed matrix. Money/swatch/badge densities implemented in
+  `present()`; kanban person fields route through the matrix.
 
 ### Changed
 - **acme_billing process densify** — durable `invoice_owner_review` process
