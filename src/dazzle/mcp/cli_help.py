@@ -1340,10 +1340,61 @@ entity Task "Task":
             ],
             "next_steps": [
                 "If desk empty with residual 0: check as: tokens and STABLE ids",
-                "knowledge counter_prior empty_desk_false_green / metric_current_user_lie",
+                "knowledge counter_prior empty_desk_false_green / metric_current_user_lie / ref_as_repr",
                 "Prefer same-field OR or split regions for filters",
                 "status.mcp version_cognition for pin decisions (not banner alone)",
                 "Default path: domain extract → gaps → promote → DSL (not bootstrap)",
+                "If stills show dict/UUID chrome: presentation(operation=residual) + force framework-ux hyperpart_presentation",
+            ],
+        },
+        "hyperpart_presentation": {
+            "name": "Hyperpart presentation process",
+            "description": (
+                "Closed role×host → density matrix with present(). Person on "
+                "queue_meta = Avatar; never str(dict) for device/entity refs. "
+                "Stills beat residual claims."
+            ),
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Read cognition",
+                    "mcp_tool": "presentation(operation='cognition')",
+                    "notes": "hosts audited vs wired; how_to_extend",
+                },
+                {
+                    "step": 2,
+                    "action": "Score felt quality",
+                    "mcp_tool": "product_quality(operation='score')",
+                    "command": "dazzle demo quality -p <app>",
+                    "notes": "presentation residual folds into residual_total",
+                },
+                {
+                    "step": 3,
+                    "action": "Scan opportunities",
+                    "mcp_tool": "presentation(operation='opportunities', app='…')",
+                    "command": "dazzle qa hyperpart-opportunities --table",
+                },
+                {
+                    "step": 4,
+                    "action": "OCR residual on stills",
+                    "mcp_tool": "presentation(operation='residual', app='…')",
+                    "notes": "ref_as_repr / person_as_text; needs tesseract + stills",
+                },
+                {
+                    "step": 5,
+                    "action": "Implement via present() matrix",
+                    "notes": "framework emit only; force /improve framework-ux hyperpart_presentation",
+                },
+                {
+                    "step": 6,
+                    "action": "Recapture + open PNG",
+                    "command": ".venv/bin/python scripts/recapture_demo_fleet_1626.py --apps <app>",
+                },
+            ],
+            "next_steps": [
+                "knowledge counter_prior ref_as_repr",
+                "docs/reference/hyperpart-presentation.md",
+                "Never claim fleet presentation done from residual alone",
             ],
         },
     }

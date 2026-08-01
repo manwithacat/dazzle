@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 38 tools, 173 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 39 tools, 176 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -37,6 +37,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`perf`](#perf) | 3 | Local OpenTelemetry trace findings for the current project (read-only) |
 | [`pitch`](#pitch) | 1 | Pitch deck operations: get |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
+| [`presentation`](#presentation) | 3 | Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam |
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
 | [`product_quality`](#product_quality) | 1 | Felt product/demo quality for commercial showcase apps (#1626) |
 | [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
@@ -434,6 +435,20 @@ Policy analysis operations for RBAC access control. Operations: analyze (find en
 
 ---
 
+### `presentation`
+
+Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam. Operations: cognition (matrix hosts audited vs wired; how_to_extend), opportunities (static person/queue scan + presentation_cognition; CLI: dazzle qa hyperpart-opportunities), residual (OCR hero stills for ref_as_repr dict/UUID chrome and person_as_text Assigned To: prose when tesseract available). Doctrine: docs/reference/hyperpart-presentation.md. Force: /improve framework-ux hyperpart_presentation. Prefer before claiming person/refs 'done' from residual floors alone. Complements product_quality(score) which folds presentation residual into residual_total.
+
+**Operations (3):** `cognition`, `opportunities`, `residual`
+
+**Parameters:**
+
+- `app` *(string)* — Showcase app name when project_path is examples/ (or monorepo root with examples/<app>).
+- `project_root` *(string)* — Path to one example app (dazzle.toml) or examples/ root. Defaults to the active MCP project.
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
+
+---
+
 ### `process`
 
 Process operations: list, inspect, list_runs, get_run, coverage
@@ -454,7 +469,7 @@ Process operations: list, inspect, list_runs, get_run, coverage
 
 ### `product_quality`
 
-Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), metric_list residual when metrics aggregates use current_user while sibling list/queue regions have seed hits (F10 / #1632 / metric_current_user_lie; trust lists/stills over KPI tiles), and empty-hero still byte floors into one residual_total + next force path. Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk theater. CLI: dazzle demo quality.
+Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), metric_list residual when metrics aggregates use current_user while sibling list/queue regions have seed hits (F10 / #1632 / metric_current_user_lie; trust lists/stills over KPI tiles), empty-hero still byte floors, and presentation residual (ref_as_repr / person_as_text OCR on hero stills when tesseract available) into one residual_total + next force path (hyperpart_presentation when presentation residual > 0). Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk or dict-repr theater. CLI: dazzle demo quality. Related MCP: presentation (cognition/opportunities/residual).
 
 **Operations (1):** `score`
 

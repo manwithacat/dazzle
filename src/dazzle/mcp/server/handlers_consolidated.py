@@ -1396,6 +1396,13 @@ def handle_representation(arguments: dict[str, Any]) -> str:
     return _handle(arguments)
 
 
+def handle_presentation(arguments: dict[str, Any]) -> str:
+    """#1626 hyperpart presentation cognition / opportunities / residual."""
+    from .handlers.presentation import handle_presentation as _handle
+
+    return _handle(arguments)
+
+
 # Map of consolidated tool names to their handlers
 CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
@@ -1436,6 +1443,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "perf": handle_perf,
     "agent": handle_agent,
     "representation": handle_representation,
+    "presentation": handle_presentation,
 }
 
 

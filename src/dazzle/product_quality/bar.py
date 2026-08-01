@@ -287,9 +287,15 @@ def _recommend(
         rec = (
             f"Presentation residual={presentation_residual} — ref_as_repr / person_as_text "
             "on hero still OCR (never dict/UUID chrome; queue person = Avatar). "
-            "Fix present()/queue_meta display then recapture."
+            "Fix present()/queue_meta display then recapture. "
+            "MCP: presentation(operation=residual|opportunities|cognition)."
         )
-        return None, "hyperpart_presentation", "example-apps hyperpart_presentation", [rec]
+        return (
+            None,
+            "hyperpart_presentation",
+            "framework-ux hyperpart_presentation",
+            [rec],
+        )
 
     demo = _first_probe(probes, "demo_fleet")
     if demo is not None:

@@ -16,6 +16,11 @@
   hero stills exist and `tesseract` is available, `product_quality`
   OCR-flags dict/UUID chrome and queue pilot `Assigned To:` prose so
   residual_total cannot stay green over buyer-chrome leaks (#1626 T2).
+- **MCP `presentation` tool** — operations `cognition`, `opportunities`,
+  `residual` for monorepo `/improve` and downstream Dazzle consumers.
+  Force path `framework-ux hyperpart_presentation`; counter-prior
+  `ref_as_repr` seeded into the knowledge graph (SEED_SCHEMA_VERSION 33);
+  CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
 ### Fixed
 - **Queue meta non-person refs** — never emit `{'id': UUID(...)}` for

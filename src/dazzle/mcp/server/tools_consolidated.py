@@ -1351,6 +1351,52 @@ def _tool_fitness() -> Tool:
     )
 
 
+def _tool_presentation() -> Tool:
+    """#1626 hyperpart presentation process (role×host → density)."""
+    return Tool(
+        name="presentation",
+        description=(
+            "Hyperpart presentation process (#1626): closed role×host → density "
+            "matrix + present() seam. Operations: cognition (matrix hosts audited "
+            "vs wired; how_to_extend), opportunities (static person/queue scan + "
+            "presentation_cognition; CLI: dazzle qa hyperpart-opportunities), "
+            "residual (OCR hero stills for ref_as_repr dict/UUID chrome and "
+            "person_as_text Assigned To: prose when tesseract available). "
+            "Doctrine: docs/reference/hyperpart-presentation.md. Force: "
+            "/improve framework-ux hyperpart_presentation. Prefer before "
+            "claiming person/refs 'done' from residual floors alone. Complements "
+            "product_quality(score) which folds presentation residual into "
+            "residual_total."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["cognition", "opportunities", "residual"],
+                    "description": "Operation to perform",
+                },
+                "app": {
+                    "type": "string",
+                    "description": (
+                        "Showcase app name when project_path is examples/ "
+                        "(or monorepo root with examples/<app>)."
+                    ),
+                },
+                "project_root": {
+                    "type": "string",
+                    "description": (
+                        "Path to one example app (dazzle.toml) or examples/ root. "
+                        "Defaults to the active MCP project."
+                    ),
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def _tool_product_quality() -> Tool:
     """Felt product / demo quality bar (#1626)."""
     return Tool(
@@ -1363,10 +1409,13 @@ def _tool_product_quality() -> Tool:
             "metric_list residual when metrics aggregates use current_user "
             "while sibling list/queue regions have seed hits (F10 / #1632 / "
             "metric_current_user_lie; trust lists/stills over KPI tiles), "
-            "and empty-hero still byte floors into one residual_total + next "
-            "force path. Prefer this over running probe scripts alone when "
-            "judging whether a sales demo is empty-desk theater. CLI: "
-            "dazzle demo quality."
+            "empty-hero still byte floors, and presentation residual "
+            "(ref_as_repr / person_as_text OCR on hero stills when tesseract "
+            "available) into one residual_total + next force path "
+            "(hyperpart_presentation when presentation residual > 0). Prefer "
+            "this over running probe scripts alone when judging whether a "
+            "sales demo is empty-desk or dict-repr theater. CLI: dazzle demo "
+            "quality. Related MCP: presentation (cognition/opportunities/residual)."
         ),
         inputSchema={
             "type": "object",
@@ -1919,6 +1968,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_bootstrap(),
         _tool_agent(),
         _tool_representation(),
+        _tool_presentation(),
         _tool_domain(),
         _tool_spec_analyze(),
         _tool_graph(),

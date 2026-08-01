@@ -125,7 +125,7 @@ example fleet:
 Pass line for “keep watching a sales demo” = **7.0** commercial; P0 fleet target
 = **≥ 5.5**. Tracking: GitHub **#1626**.
 
-**Agent residual queue (R1–R6, hero stills, messaging):**  
+**Agent residual queue (R1–R6, hero stills, messaging):**
 [`docs/reference/antagonist-agent-brief-1626.md`](./antagonist-agent-brief-1626.md)
 
 | P0 | Failure | Owner altitude |
@@ -174,7 +174,12 @@ dazzle demo quality -p examples --app support_tickets --json
 `scripts/improve_example_probes.py` folds `product_quality` into OBSERVE so
 `residual_total` is not falsely 0 when persona homes or empty-hero stills remain.
 
-Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → story_walk → trial_verdict / agent_acceptance → Tier 1**.
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality, including presentation residual) → story_walk → trial_verdict / agent_acceptance → Tier 1**.
+
+When felt residual is **presentation** (`ref_as_repr` / `person_as_text`), force
+**`framework-ux hyperpart_presentation`** (not `demo_fleet`). MCP:
+`presentation(operation=cognition|opportunities|residual)`; doctrine
+`hyperpart-presentation.md`; counter-prior `ref_as_repr`.
 
 **Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify
 explore. Prefer **story_walk** residual, then `agent_acceptance_panel`, then

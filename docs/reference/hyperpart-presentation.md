@@ -111,8 +111,36 @@ catch presentation honesty.
 | HM pick-a-surface / work_surface_utility | Authoring region **mode** |
 | `user_chip` + `present()` | Product **emit** |
 | `qa hyperpart-opportunities` | Observe host coverage |
-| `demo_fleet` / `product_quality` | Empty-hero floors; orthogonal to cell presentation |
+| `demo_fleet` / `product_quality` | Floors + **presentation residual** (OCR stills) |
+| MCP `presentation` | cognition / opportunities / residual for agents |
+| counter-prior `ref_as_repr` | KG inoculation vs dict/UUID chrome |
 | Mid-dot R1 separators | Between segments; not a substitute for Avatar |
+
+---
+
+## Agent surfaces (find and apply)
+
+Downstream Dazzle consumers and monorepo agents should **not** invent a second
+presentation process. Use the published surfaces:
+
+| Surface | How to find / invoke | What it answers |
+|---------|----------------------|-----------------|
+| Doctrine | `docs/reference/hyperpart-presentation.md` · KG doc page `hyperpart-presentation` | Rules + matrix |
+| Improve strategy | `/improve framework-ux hyperpart_presentation` · playbook `improve/strategies/hyperpart_presentation.md` | OBSERVE→PROVE loop |
+| Felt bar | CLI `dazzle demo quality` · MCP `product_quality(operation=score)` | residual_total + force path |
+| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|residual)` | Matrix honesty + still OCR residual |
+| Opportunity scan | CLI `dazzle qa hyperpart-opportunities` · MCP `presentation(opportunities)` | Host emit coverage |
+| Counter-prior | MCP `knowledge(operation=counter_prior, id=ref_as_repr)` | Wrong vs right shape |
+| Recapture | `scripts/recapture_demo_fleet_1626.py --apps <app>` | Still proof after emit |
+
+**Force routing:** when `product_quality` reports presentation residual, next force is
+`framework-ux hyperpart_presentation` (framework emit fix). Use `example-apps
+hyperpart_presentation` only for recapture/prove after emit is fixed.
+
+**MCP + knowledge graph:** both support this goal. MCP exposes machine-checkable
+ops for OBSERVE; the KG seeds the counter-prior + doc page so `knowledge` /
+`graph` queries surface the doctrine without grepping the monorepo. Agents that
+only have MCP (downstream apps) get the same ops as the monorepo improve loop.
 
 ---
 

@@ -235,19 +235,31 @@ def main(argv: list[str] | None = None) -> int:
     preferred_next: str | None = None
     preferred_probe: str | None = None
     preferred_strategy: str | None = None
+    preferred_force: str | None = None
     for name, _line, nxt, n in results:
         if n and n > 0 and nxt:
             preferred_next = nxt
             preferred_probe = name
             if name == "process_dig" and process_strategy:
                 preferred_strategy = process_strategy
+                preferred_force = f"example-apps {process_strategy}"
+            elif name == "product_quality" and pq_force:
+                # Honour presentation residual force (framework-ux hyperpart_presentation)
+                # over the generic product_quality → demo_fleet mapping.
+                parts = pq_force.split()
+                preferred_strategy = parts[-1] if parts else "demo_fleet"
+                preferred_force = pq_force
             else:
                 preferred_strategy = STRATEGY_FOR.get(name, name)
+                preferred_force = (
+                    f"example-apps {preferred_strategy}" if preferred_strategy else None
+                )
             break
     if preferred_strategy is None and pq_force:
-        # force like "example-apps demo_fleet"
+        # force like "framework-ux hyperpart_presentation" or "example-apps demo_fleet"
         parts = pq_force.split()
         preferred_strategy = parts[-1] if parts else "demo_fleet"
+        preferred_force = pq_force
 
     if args.next:
         print(preferred_next or "")
@@ -278,7 +290,8 @@ def main(argv: list[str] | None = None) -> int:
                     "next": preferred_next,
                     "next_probe": preferred_probe,
                     "next_strategy": preferred_strategy,
-                    "force": (f"example-apps {preferred_strategy}" if preferred_strategy else None),
+                    "force": preferred_force
+                    or (f"example-apps {preferred_strategy}" if preferred_strategy else None),
                 },
                 indent=2,
             )
@@ -302,7 +315,10 @@ def main(argv: list[str] | None = None) -> int:
         if wi_line:
             print(wi_line)
         total = sum(max(n, 0) for _a, _b, _c, n in results)
-        force = f" force=example-apps {preferred_strategy}" if preferred_strategy else ""
+        force_label = preferred_force or (
+            f"example-apps {preferred_strategy}" if preferred_strategy else ""
+        )
+        force = f" force={force_label}" if force_label else ""
         print(f"example_probes residual_total={total} next={preferred_next or '-'}{force}")
 
     if args.strict:

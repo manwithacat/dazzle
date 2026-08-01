@@ -28,6 +28,20 @@ Dazzle framework's UI templates, contracts, fitness walks. **Not** example-app D
 
 Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`, `IN_PROGRESS`, `READY_FOR_QA`} **OR** `qa: PENDING` **OR** `contract: DRAFT`.
 
+## Force sub-strategies
+
+| Arguments | Playbook |
+|-----------|----------|
+| `framework-ux hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` — role×host matrix + `present()`; residual `ref_as_repr` / `person_as_text` |
+
+**Probe / MCP (presentation residual from product_quality or presentation tool):**
+
+```bash
+dazzle demo quality -p examples --json
+# MCP: product_quality(score) · presentation(cognition|opportunities|residual)
+# Force when presentation residual > 0: /improve framework-ux hyperpart_presentation
+```
+
 ## Playbook
 
 ### 1. OBSERVE

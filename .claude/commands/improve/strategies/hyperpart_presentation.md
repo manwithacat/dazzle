@@ -2,7 +2,10 @@
 
 **Lane:** framework-ux (default) / example-apps when prove needs recapture
 **Force path:** `/improve framework-ux hyperpart_presentation`
+**Also:** `/improve example-apps hyperpart_presentation` (recapture / seed only)
 **Probe:** `dazzle qa hyperpart-opportunities --app <app> --table`
+**MCP:** `presentation` (cognition \| opportunities \| residual) · `product_quality` (score folds presentation residual)
+**KG:** `knowledge(operation=counter_prior, id=ref_as_repr)` · doctrine page `hyperpart-presentation`
 **Doctrine:** `docs/reference/hyperpart-presentation.md`
 **Umbrella:** #1626 presentation process (antagonist 2026-08-01)
 
@@ -11,7 +14,9 @@ ad-hoc “browse the gallery and maybe use Avatar” polish. **Stills beat claim
 
 ## When to pick
 
+* `product_quality` / `dazzle demo quality` shows **presentation residual** (`ref_as_repr` / `person_as_text`)
 * Hero stills show person as labeled prose on queues (`Assigned To: Name`)
+* Hero stills show entity refs as dict/UUID (`Device: {'id': UUID(...)}`)
 * Opportunity scan shows list chips but queue still stringifies (host incompleteness)
 * Force path above
 
@@ -25,8 +30,13 @@ Skip when:
 ### 1. OBSERVE
 
 ```bash
-dazzle demo quality -p examples/<app>   # or product_quality MCP
+dazzle demo quality -p examples/<app>   # residual_total includes presentation
 dazzle qa hyperpart-opportunities --app <app> --table
+# MCP (preferred for downstream consumers):
+#   product_quality(operation=score, project_root=examples/<app>)
+#   presentation(operation=cognition)
+#   presentation(operation=opportunities, app=<app>)
+#   presentation(operation=residual, app=<app>)
 # open hero still under examples/<app>/.dazzle/qa/screenshots/
 ```
 

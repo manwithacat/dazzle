@@ -46,6 +46,7 @@ naively importing human critique of AI code as ground truth) is
 - [faker-seed-over-story-spine](faker-seed-over-story-spine.md) — *(agent-era)* Generated `.dazzle/demo_data` faker CSVs shadow assignment-aware `dsl/seeds/demo_data` story jsonl → empty persona homes. #1626.
 - [bootstrap-pollution](bootstrap-pollution.md) — *(agent-era)* Bootstrap / analyze-spec invents chrome entities from SPEC markdown. Prefer hand-author + validate; distrust bootstrap as SSOT. #1629 G4.
 - [metric-current-user-lie](metric-current-user-lie.md) — *(agent-era)* Metric tiles with `current_user` read 0 while sibling lists have rows (F10). Trust lists/stills first. #1629 G5.
+- [ref-as-repr](ref-as-repr.md) — *(agent-era)* Queue/card meta shows `{'id': UUID(...)}` or person-as-text while residual floors stay green. Use `present()` / `_ref_display_name` + MCP `presentation` residual. #1626 T1/T2.
 - [version-pin-distrust](version-pin-distrust.md) — *(agent-era)* Banner vs package vs `framework_version` pin. Use version_cognition triple; init stamps installed minor. #1629 G7.
 
 ## Adding a new entry

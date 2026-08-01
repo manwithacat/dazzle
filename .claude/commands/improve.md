@@ -42,6 +42,23 @@ when residual remains: product → demo → journey):
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `scripts/trial_verdict_bar.py` + live `qa trial` |
 | `example-apps agent_qa_smoke` | `improve/strategies/agent_qa_smoke.md` | `scripts/qa_smoke_bar.py` + `dazzle qa smoke-dig` |
 | `example-apps domain_lifecycle_priors` | `improve/strategies/domain_lifecycle_priors.md` | `scripts/domain_cognition_bar.py` (+ lifecycle/process priors) |
+| `example-apps hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | recapture prove only; emit fix is framework-ux |
+| `framework-ux hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | MCP `presentation` + `product_quality` presentation residual |
+
+**Presentation residual** (`ref_as_repr` / `person_as_text` on hero still OCR) is folded
+into `product_quality` / `dazzle demo quality` residual_total. When it fires, probes
+force **`framework-ux hyperpart_presentation`** (not demo_fleet). Agent surfaces:
+
+```bash
+# OBSERVE
+dazzle demo quality -p examples --json          # presentation residual in residual_total
+dazzle qa hyperpart-opportunities --app support_tickets --table
+# MCP (downstream + monorepo agents)
+#   product_quality(operation=score, project_root=examples)
+#   presentation(operation=cognition|opportunities|residual, app=…)
+# KG: knowledge(operation=counter_prior, id=ref_as_repr)
+# Doctrine: docs/reference/hyperpart-presentation.md
+```
 
 Unified OBSERVE for every example-apps cycle (and for `--status`):
 

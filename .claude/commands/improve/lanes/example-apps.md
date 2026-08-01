@@ -75,6 +75,7 @@ snapshots are not gaps.
 | `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` |
 | `example-apps story_walk` | `improve/strategies/story_walk.md` |
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` |
+| `example-apps hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` (recapture prove; emit fix prefers `framework-ux hyperpart_presentation`) |
 
 ## Playbook
 
