@@ -12,9 +12,11 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 - `milestone_plan` = manager schedule desk (milestones + active projects).
 - Project hub related **tasks** and **milestones** are **pull queues**
   (milestones: name+status+end) — not status_cards warehouse chrome.
-- List dual-open (journey dig): `task_list` → Task|Project; `comment_list` →
-  Comment|Task; `milestone_list` → Milestone|Project; `attachment_list` →
-  Attachment|Task.
+- List dual-open (journey dig): `comment_list` → Comment|Task; `milestone_list` →
+  Milestone|Project; `attachment_list` → Attachment|Task.
+- Task list triple open `Task via id | Project via parent_project | User via
+  assigned_to` (cycle 1586 story_walk) — task hub, parent project, assignee
+  teammate (ST-002/005).
 - Project list dual open `Project via id | User via owner` (cycle 1575
   story_walk) — project hub first; secondary owner teammate hub (ST-001/004).
 

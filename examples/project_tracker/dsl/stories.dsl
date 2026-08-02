@@ -26,7 +26,7 @@ story ST-002 "Member works the task board with project context hops":
     - "Member has list permission on Task"
   then:
     - "Member sees tasks scoped to self (member scope)"
-    - "Row dual-opens Task via id | Project via parent_project (task hub first, project context second — not project-only orphan hop)"
+    - "Row triple-opens Task via id | Project via parent_project | User via assigned_to (task hub first, project then assignee teammate — not project-only orphan hop)"
 
 story ST-003 "Member opens a task hub with discussion and files":
   status: accepted
@@ -38,7 +38,7 @@ story ST-003 "Member opens a task hub with discussion and files":
     - "Task exists and is readable"
   then:
     - "Task hub shows status strip, ownership, discussion, and files"
-    - "From task_list dual-open, the Task via id hop lands this hub (discussion queue + files)"
+    - "From task_list triple-open, the Task via id hop lands this hub (discussion queue + files)"
 
 story ST-004 "Manager reviews project portfolio":
   status: accepted

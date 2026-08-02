@@ -669,9 +669,9 @@ surface project_detail "Project Detail":
 surface task_list "Tasks":
   uses entity Task
   mode: list
-  # Dual open: task hub first (ST-003 discussion/files), project hub second (ST-002).
-  # Journey dig cycle 1563 — not project-only orphan hop.
-  open: Task via id | Project via parent_project
+  # Triple open (cycle 1586 story_walk): task hub, parent project, assignee teammate.
+  # Prior dual Task|Project (1563); assignee hop completes ST-002/005 teammate path.
+  open: Task via id | Project via parent_project | User via assigned_to
   section main:
     field title "Title"
     field status "Status"
@@ -681,7 +681,7 @@ surface task_list "Tasks":
     field due_date "Due"
     field labels "Labels"
   ux:
-    purpose: "Work across projects — open a row for the task hub or parent project hub"
+    purpose: "Work across projects — open task hub, parent project, or assignee teammate"
     sort: due_date asc
     filter: status, priority, assigned_to
     empty: "No tasks yet."

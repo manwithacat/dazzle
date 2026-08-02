@@ -22,7 +22,8 @@ scenes:
           - Project
           - Assigned
           - Status
-    expects: "Authenticated member sees task board and project context hop cues"
+          - Assignee
+    expects: "Authenticated member sees task board with project and assignee triple-open cues"
   - id: hop_parent_project_hub
     story: ST-002
     entry: /app/project/6a000000-0000-4000-8000-000000000001
