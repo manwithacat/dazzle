@@ -243,7 +243,8 @@
       "when": [],
       "outcomes": [
         "New TaskComment is saved to database",
-        "Administrator sees confirmation message"
+        "Administrator sees confirmation message",
+        "Task comments list triple-opens TaskComment via id | Task via task | User via author (note hub, parent task, author overview)"
       ]
     },
     {

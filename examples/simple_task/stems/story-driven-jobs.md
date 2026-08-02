@@ -12,7 +12,7 @@ personas, not only kanban + list CRUD.
 - Member: `my_work` = personal metrics + WIP/todo queues; completed stays list.
 - Prefer `display: queue` for open work; keep kanban on `task_board`.
 - List triple-open (acceptance dig): `task_list` → Task|User(assignee)|User(created_by);
-  dual-open `task_comments` → TaskComment|Task.
+  triple-open `task_comments` → TaskComment|Task|User(author).
 
 ## Not this
 

@@ -222,6 +222,30 @@ def test_simple_task_parses_open_via() -> None:
     assert tmpl == "/app/task/{id}"
 
 
+def test_simple_task_comments_triple_open() -> None:
+    """task_comments triple-open: note hub, parent Task, author User (cycle 1607)."""
+    appspec = load_project_appspec(SIMPLE)
+    comments = next(s for s in appspec.surfaces if s.name == "task_comments")
+    assert comments.open_via == "id"
+    assert comments.open_entity == "TaskComment"
+    assert [(t.entity, t.via) for t in (comments.open_via_targets or [])] == [
+        ("TaskComment", "id"),
+        ("Task", "task"),
+        ("User", "author"),
+    ]
+    entity = appspec.get_entity("TaskComment")
+    tmpl = resolve_list_detail_url_template(comments, entity)
+    assert tmpl == "/app/taskcomment/{id}"
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    cands = resolve_list_detail_url_candidates(comments, entity)
+    assert cands == [
+        "/app/taskcomment/{id}",
+        "/app/task/{task}",
+        "/app/user/{author}",
+    ]
+
+
 def test_support_tickets_comment_list_triple_open() -> None:
     """comment_list triple-open: Comment hub, Ticket, author User (cycle 1604)."""
     appspec = load_project_appspec(SUPPORT)

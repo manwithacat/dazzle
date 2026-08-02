@@ -69,6 +69,7 @@ story ST-011 "Administrator creates a new Task Comment":
   then:
     - "New TaskComment is saved to database"
     - "Administrator sees confirmation message"
+    - "Task comments list triple-opens TaskComment via id | Task via task | User via author (note hub, parent task, author overview)"
 
 story ST-012 "Administrator views all tasks across organization":
   status: accepted

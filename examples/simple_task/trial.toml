@@ -41,6 +41,7 @@ adoption_criteria = [
     "Monday review: can filter/sort or scan work by assignee",
     "Can create a task with title + assignee + due date in a natural form flow",
     "Task list triple-opens Task hub, assignee hub, and creator hub; status is obvious and advanceable without a maze",
+    "Task comments triple-open note hub, parent task hub, and author overview (not orphan warehouse rows)",
     "Would pilot this for two weeks as a Notion replacement for a 5-person studio",
 ]
 

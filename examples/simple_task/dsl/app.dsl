@@ -386,12 +386,12 @@ surface task_detail "Task Detail":
   ux:
     purpose: "Task context — status, ownership, and discussion in one place"
 
-# Task Comment List - dual open note + parent task hub (not orphan warehouse row)
+# Task Comment List - triple open note + parent task + author hub
 surface task_comments "Task Comments":
   uses entity TaskComment
   mode: list
   render: fragment
-  open: TaskComment via id | Task via task
+  open: TaskComment via id | Task via task | User via author
 
   section main "Comments":
     field author "Author"
@@ -400,7 +400,7 @@ surface task_comments "Task Comments":
     field task "Task"
 
   ux:
-    purpose: "View comments — open a row for the note or parent task hub"
+    purpose: "View comments — open a row for the note, parent task hub, or author overview"
     sort: created_at desc
     search: content
     filter: author
