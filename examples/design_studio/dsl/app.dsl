@@ -798,18 +798,18 @@ surface user_detail "Team member":
 surface asset_list "Assets":
   uses entity Asset
   mode: list
-  # Dual open: asset hub first (production + feedback), brand hub second (palette/context).
-  # Agent acceptance / ST-004–005 — not brand-only orphan hop.
-  open: Asset via id | Brand via brand
+  # Triple open (journey dig cycle 1596): asset hub, brand palette, creator teammate.
+  open: Asset via id | Brand via brand | User via created_by
   section main:
     field name "Name"
     field asset_type "Type"
     field status "Status"
     field brand "Brand"
+    field created_by "Created By"
     field tags "Tags"
     field quality_score "Quality"
   ux:
-    purpose: "Browse assets — open a row for the asset hub or parent brand hub"
+    purpose: "Browse assets — open a row for the asset, brand, or creator hub"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -895,8 +895,8 @@ surface feedback_create "Add Feedback":
 surface feedback_list "Feedback":
   uses entity Feedback
   mode: list
-  # Dual open: read the note, then hop to the asset hub (ST-006 / reviewer pilot).
-  open: Feedback via id | Asset via asset
+  # Triple open (journey dig cycle 1596): note hub, asset hub, reviewer teammate.
+  open: Feedback via id | Asset via asset | User via reviewer
   section main:
     field asset "Asset"
     field reviewer "Reviewer"
@@ -904,7 +904,7 @@ surface feedback_list "Feedback":
     field comment "Comment"
     field created_at "Date"
   ux:
-    purpose: "Feedback trail — open a row for the note or parent Asset hub"
+    purpose: "Feedback trail — open a row for the note, asset, or reviewer hub"
     sort: created_at desc
     filter: asset, reviewer
     empty: "No feedback submitted yet."
@@ -946,16 +946,17 @@ surface brand_edit "Edit Brand":
 surface campaign_list "Campaigns":
   uses entity Campaign
   mode: list
-  # Dual open: campaign hub (schedule) + brand context — pilot parity with asset list.
-  open: Campaign via id | Brand via brand
+  # Triple open (journey dig cycle 1596): campaign hub, brand context, creator teammate.
+  open: Campaign via id | Brand via brand | User via created_by
   section main:
     field name "Name"
     field brand "Brand"
+    field created_by "Created By"
     field status "Status"
     field start_date "Start"
     field end_date "End"
   ux:
-    purpose: "Browse campaigns — open a row for the campaign hub or parent brand hub"
+    purpose: "Browse campaigns — open a row for the campaign, brand, or creator hub"
 
 surface campaign_edit "Edit Campaign":
   uses entity Campaign

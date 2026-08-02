@@ -62,7 +62,7 @@ story ST-005 "Designer hops from asset list to brand context":
   given:
     - "Designer has list permission on Asset"
   then:
-    - "Asset rows dual-open Asset via id | Brand via brand (asset hub first, brand context second — not brand-only orphan hop)"
+    - "Asset rows triple-open Asset via id | Brand via brand | User via created_by (asset hub first, brand then creator)"
     - "Brand hub shows related assets as a pull queue for the batch"
 
 story ST-006 "Designer traces feedback back to the asset hub":
@@ -74,5 +74,6 @@ story ST-006 "Designer traces feedback back to the asset hub":
   given:
     - "Designer has list permission on Feedback"
   then:
-    - "Feedback rows dual-open Feedback via id | Asset via asset (read note then hop to asset hub)"
+    - "Feedback rows triple-open Feedback via id | Asset via asset | User via reviewer (note hub first, asset then reviewer)"
     - "Asset hub shows related Feedback as a pull queue (not a warehouse table)"
+    - "Campaign list triple-opens Campaign via id | Brand via brand | User via created_by (schedule hub first, brand then creator)"

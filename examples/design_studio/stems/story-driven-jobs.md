@@ -14,8 +14,9 @@ a shared asset warehouse.
 - Brand hub related **assets** and **campaigns** are **pull queues**
   (assets: name+status+type; campaigns: name+status) — not status_cards/tables.
 - Asset hub feedback is a **pull queue** (rating+comment) — not warehouse tables.
-- List dual-open (acceptance dig): `asset_list` → Asset|Brand; `feedback_list` →
-  Feedback|Asset; `campaign_list` → Campaign|Brand — hub first, parent context second.
+- List triple-open (journey dig cycle 1596): `asset_list` → Asset|Brand|User(created_by);
+  `feedback_list` → Feedback|Asset|User(reviewer); `campaign_list` →
+  Campaign|Brand|User(created_by) — hub first, parent then teammate context.
 - List dual-open (acceptance dig): `brand_list` → Brand|User via `created_by`
   (brand hub first, creator context second).
 
