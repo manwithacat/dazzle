@@ -70,6 +70,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "dialog.open_and_close_via_submit" in ids
     assert "drawer.expand_restore_toggles_width" in ids
     assert "kanban.keyboard_move_updates_column" in ids
+    assert "grid.inline_edit_commits_and_refreshes" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -83,6 +84,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "native_dialog_close_submit",
             "drawer_expand_restore",
             "kanban_keyboard_move",
+            "grid_inline_edit",
             "css_tooltip_hover",
             "css_tooltip_force_open",
             "data_open_escape",

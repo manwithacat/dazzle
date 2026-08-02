@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1605 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1611 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1602 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1605 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1611 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1610 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1610 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1610 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1611 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1611 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1611 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 43 PASS; **Ship** `grid.inline_edit_commits_and_refreshes` + `grid_inline_edit` runner (dblclick Escape cancel + Enter PUT/refresh Renamed); catalog **44/44 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1611**. budget 1. Explore **52/100**.
 > **Cycle 1610 (2026-08-02).** probe residual process_dig hr_records (contract_incomplete walk counts≠exit 0) outranked campaign gallery; **rewrite dig receipt** walk_validate=0 walk_dry_run=0 PASS; **product** person related reporting columns + ManagerLink fitness.repr_fields + display_field; prove 5/5 walks 5/5 dry-run; process residual 1→0. residual_total=0 densify=0. story_walk+process_dig+prove **USED@1610**. budget 1. Explore **51/100**.
 > **Cycle 1609 (2026-08-02).** campaign force **example-apps story_walk**: dig hr_records — **product** managerlink_list+detail triple-open `ManagerLink via id | Person via report | Person via manager`; ST-002 then + stem + trial; prove journey **5/5**; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1609**. budget 1. Explore **50/100**.
 > **Cycle 1608 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig invoice_ops — **product** line_item_list triple-open `LineItem via id | Invoice via invoice | Tenant via tenant_id` + supplier_bank_account_list `SupplierBankAccount via id | Supplier via supplier | Tenant via tenant_id`; ST-005 then + stem + trial; prove journey **6/6**; walks 6/6 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1608**. budget 1. Explore **49/100**.

@@ -1205,6 +1205,38 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1611 — grid-edit: dblclick cell → Escape cancel; Enter commit PUT+refresh.
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_grid_inline_edit_commits_via_put_and_refreshes.
+    Probe(
+        id="grid.inline_edit_commits_and_refreshes",
+        stem="grid",
+        page="hyperparts/grid.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Dblclick a grid editable cell opens an in-cell editor; Escape cancels "
+            "without commit; Enter commits a single-field PUT to data-grid-edit-url "
+            "and the refreshed cell shows the new value (MOCK /mock/grid) — inline "
+            "edit is live controller work, not a static display span demo"
+        ),
+        kind="grid_inline_edit",
+        params={
+            "body": "[data-grid-body], [data-dz-grid-body]",
+            "edit_span": (
+                '[data-grid-body] [data-grid-edit="first"], '
+                '[data-dz-grid-body] [data-dz-grid-edit="first"]'
+            ),
+            "editor": "[data-grid-editor], [data-dz-grid-editor]",
+            "commit_value": "Renamed",
+            "scope": ".hm-preview",
+            "hydrate_ms": 3000,
+            "open_settle_ms": 100,
+            "commit_settle_ms": 400,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -4026,6 +4058,102 @@ def _run_kanban_keyboard_move(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_grid_inline_edit(page: Any, probe: Probe) -> dict[str, Any]:
+    """Hydrate grid; Escape cancel; Enter commit PUT + refresh shows new text.
+
+    Mirrors test_behaviour.test_grid_inline_edit_commits_via_put_and_refreshes
+    (cycle 1611 catalog pin). Gallery MOCK serves /mock/grid rows + PUT.
+    """
+    params = probe.params
+    body_sel = params.get("body", "[data-grid-body], [data-dz-grid-body]")
+    span_sel = params.get(
+        "edit_span",
+        (
+            '[data-grid-body] [data-grid-edit="first"], '
+            '[data-dz-grid-body] [data-dz-grid-edit="first"]'
+        ),
+    )
+    editor_sel = params.get("editor", "[data-grid-editor], [data-dz-grid-editor]")
+    commit_value = str(params.get("commit_value", "Renamed"))
+    hydrate_ms = int(params.get("hydrate_ms", 3000))
+    open_settle = int(params.get("open_settle_ms", 100))
+    commit_settle = int(params.get("commit_settle_ms", 400))
+
+    scope = _probe_scope(page, params)
+    body = scope.locator(body_sel).first
+    if body.count() == 0:
+        body = page.locator(body_sel).first
+    if body.count() == 0:
+        return {"verdict": "ERROR", "detail": f"grid body not found ({body_sel})"}
+
+    try:
+        page.wait_for_selector(
+            f"{body_sel.split(',')[0].strip()} tr[id], "
+            f"{body_sel.split(',')[0].strip()} tr[data-grid-row-id], "
+            f"{body_sel.split(',')[0].strip()} tr[data-dz-grid-row-id]",
+            timeout=hydrate_ms,
+        )
+    except Exception:  # noqa: BLE001
+        # Fallback: any non-skeleton row id after hydrate timeout
+        page.wait_for_timeout(min(hydrate_ms, 800))
+
+    span = scope.locator(span_sel).first
+    if span.count() == 0:
+        span = page.locator(span_sel).first
+    if span.count() == 0:
+        return {
+            "verdict": "ERROR",
+            "detail": f"editable cell span not found after hydrate ({span_sel})",
+        }
+
+    # Escape cancels
+    span.dblclick()
+    page.wait_for_timeout(open_settle)
+    editor = page.locator(editor_sel).first
+    if editor.count() == 0:
+        return {"verdict": "FAIL", "detail": "dblclick did not open in-cell editor"}
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(open_settle)
+    if page.locator(editor_sel).count() > 0:
+        return {"verdict": "FAIL", "detail": "Escape must close the editor without commit"}
+
+    # Enter commits
+    span = page.locator(span_sel).first
+    if span.count() == 0:
+        return {"verdict": "ERROR", "detail": "edit span missing after Escape cancel"}
+    span.dblclick()
+    page.wait_for_timeout(open_settle)
+    editor = page.locator(editor_sel).first
+    if editor.count() == 0:
+        return {"verdict": "FAIL", "detail": "dblclick did not re-open editor for commit"}
+    editor.fill(commit_value)
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(commit_settle)
+    if page.locator(editor_sel).count() > 0:
+        return {
+            "verdict": "FAIL",
+            "detail": "Enter commit must close the editor (PUT may have failed)",
+        }
+
+    texts = page.locator(span_sel).all_inner_texts()
+    joined = " | ".join(t.strip() for t in texts)
+    if commit_value not in joined:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"committed {commit_value!r} not in refreshed cells ({joined[:160]!r}) "
+                "— PUT/refresh or MOCK /mock/grid failed"
+            ),
+            "cells": joined[:200],
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"Escape cancel + Enter commit → cells show {commit_value!r}",
+        "commit_value": commit_value,
+    }
+
+
 def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
     """Open via data-dialog-open; close via method=dialog submit (✕).
 
@@ -4238,6 +4366,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "native_dialog_close_submit": _run_native_dialog_close_submit,
     "drawer_expand_restore": _run_drawer_expand_restore,
     "kanban_keyboard_move": _run_kanban_keyboard_move,
+    "grid_inline_edit": _run_grid_inline_edit,
 }
 
 
