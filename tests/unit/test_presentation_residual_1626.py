@@ -21,6 +21,14 @@ def test_find_ref_as_repr_uuid_dict_patterns() -> None:
     assert _find_ref_as_repr("FT-PROBE-A12 · open") is None
 
 
+def test_find_delta_theater_absurd_pct_and_glue() -> None:
+    from dazzle.product_quality.presentation import _find_delta_theater
+
+    assert _find_delta_theater("↑+3(150.0%)vs prior 30 days")
+    assert _find_delta_theater("4+3(200%) vs prior")
+    assert _find_delta_theater("+4 vs prior 30 days") is None
+
+
 def test_score_presentation_skips_absent_shots(tmp_path: Path) -> None:
     # No screenshots dir → empty
     assert score_presentation(tmp_path, "fieldtest_hub") == []

@@ -490,50 +490,46 @@ def bar_chart_root_attrs(_c: BarChart) -> str:
     return "data-dz-bar-chart"
 
 
+def _render_metric_delta_html(tile: MetricTile) -> str:
+    """Delta strip under a metric value (#1626 S2/F1 spacing + abs-pct omit)."""
+    if not tile.delta_direction:
+        return ""
+    is_good = (tile.delta_direction == "up" and tile.delta_sentiment == "positive_up") or (
+        tile.delta_direction == "down" and tile.delta_sentiment == "positive_down"
+    )
+    is_bad = (tile.delta_direction == "down" and tile.delta_sentiment == "positive_up") or (
+        tile.delta_direction == "up" and tile.delta_sentiment == "positive_down"
+    )
+    delta_tone = "positive" if is_good else ("destructive" if is_bad else "neutral")
+    arrow = {"up": "↑", "down": "↓"}.get(tile.delta_direction, "→")
+    sign = "+" if tile.delta_direction == "up" else ""
+    # Omit |pct| ≥ 100 (seed-noise theater); spaces avoid OCR glue.
+    pct = float(tile.delta_pct or 0)
+    pct_html = (
+        f' <span class="dz-metric-delta-pct">({pct:g}%)</span>' if pct and abs(pct) < 100.0 else ""
+    )
+    period_html = (
+        f' <span class="dz-metric-delta-period">vs {_html.escape(tile.delta_period_label)}</span>'
+    )
+    return (
+        f'<div class="dz-metric-delta" '
+        f'data-dz-delta-tone="{delta_tone}" '
+        f'data-dz-delta-direction="{_html.escape(tile.delta_direction, quote=True)}" '
+        f'data-dz-delta-sentiment="{_html.escape(tile.delta_sentiment, quote=True)}">'
+        f'<span aria-hidden="true">{arrow}</span>'
+        f'<span class="dz-metric-delta-value">{sign}{_html.escape(tile.delta_value)}</span>'
+        f"{pct_html}"
+        f"{period_html}"
+        f"</div>"
+    )
+
+
 def render_metric_tile(tile: MetricTile) -> str:
     """Model → one metric tile (matches HM contracts/metrics.py)."""
     label = _html.escape(tile.label)
     value = _html.escape(tile.value)
     root_attrs = metric_tile_root_attrs(tile)
-
-    delta_html = ""
-    if tile.delta_direction:
-        is_good = (tile.delta_direction == "up" and tile.delta_sentiment == "positive_up") or (
-            tile.delta_direction == "down" and tile.delta_sentiment == "positive_down"
-        )
-        is_bad = (tile.delta_direction == "down" and tile.delta_sentiment == "positive_up") or (
-            tile.delta_direction == "up" and tile.delta_sentiment == "positive_down"
-        )
-        delta_tone = "positive" if is_good else ("destructive" if is_bad else "neutral")
-        arrow = (
-            "↑"
-            if tile.delta_direction == "up"
-            else ("↓" if tile.delta_direction == "down" else "→")
-        )
-        sign = "+" if tile.delta_direction == "up" else ""
-        # #1626 S2: spaces between value / pct / period so stills never read
-        # as ``↑+2(200.0%)vs prior 30 days`` token glue.
-        pct_html = (
-            f' <span class="dz-metric-delta-pct">({tile.delta_pct}%)</span>'
-            if tile.delta_pct
-            else ""
-        )
-        period_html = (
-            f' <span class="dz-metric-delta-period">'
-            f"vs {_html.escape(tile.delta_period_label)}</span>"
-        )
-        delta_html = (
-            f'<div class="dz-metric-delta" '
-            f'data-dz-delta-tone="{delta_tone}" '
-            f'data-dz-delta-direction="{_html.escape(tile.delta_direction, quote=True)}" '
-            f'data-dz-delta-sentiment="{_html.escape(tile.delta_sentiment, quote=True)}">'
-            f'<span aria-hidden="true">{arrow}</span>'
-            f'<span class="dz-metric-delta-value">{sign}{_html.escape(tile.delta_value)}</span>'
-            f"{pct_html}"
-            f"{period_html}"
-            f"</div>"
-        )
-
+    delta_html = _render_metric_delta_html(tile)
     return (
         f'<div class="dz-metric-tile" {root_attrs}>'
         f'<div class="dz-metric-label">{label}</div>'

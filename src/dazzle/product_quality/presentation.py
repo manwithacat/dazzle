@@ -25,6 +25,12 @@ _REF_AS_REPR_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"dict_values\s*\(", re.IGNORECASE),
 )
 
+# #1626 F1 / S2 — metric delta seed-noise theater on hero stills.
+_DELTA_THEATER_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\(\s*\d{3,}(?:\.\d+)?\s*%\s*\)"),  # (150.0%) / (200%)
+    re.compile(r"%\s*\)\s*vs", re.IGNORECASE),  # glued %)vs prior
+)
+
 # Queue pilot: person should be Avatar, not "Assigned To: Name" prose.
 # Only checked on stills listed in PERSON_AS_TEXT_STILLS.
 _PERSON_AS_TEXT_PATTERN = re.compile(r"Assigned\s+To\s*:", re.IGNORECASE)
@@ -75,6 +81,17 @@ def _find_ref_as_repr(text: str) -> str | None:
     return None
 
 
+def _find_delta_theater(text: str) -> str | None:
+    """Detect absurd metric % or glued %)vs on hero still OCR (#1626 F1)."""
+    for pat in _DELTA_THEATER_PATTERNS:
+        m = pat.search(text)
+        if m:
+            start = max(0, m.start() - 20)
+            end = min(len(text), m.end() + 40)
+            return " ".join(text[start:end].split())
+    return None
+
+
 def score_presentation(app_dir: Path, app_name: str) -> list[PresentationScore]:
     """OCR-score hero stills for presentation honesty residuals."""
     shots = _shot_dir(app_dir)
@@ -110,6 +127,20 @@ def score_presentation(app_dir: Path, app_name: str) -> list[PresentationScore]:
                     kind="ref_as_repr",
                     reason=f"ref_as_repr:{name}",
                     snippet=leak[:120],
+                )
+            )
+            continue
+
+        theater = _find_delta_theater(text)
+        if theater:
+            out.append(
+                PresentationScore(
+                    name=name,
+                    path=str(path),
+                    residual=True,
+                    kind="delta_theater",
+                    reason=f"delta_theater:{name}",
+                    snippet=theater[:120],
                 )
             )
             continue

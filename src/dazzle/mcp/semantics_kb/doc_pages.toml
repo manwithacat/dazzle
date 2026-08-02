@@ -1636,6 +1636,20 @@ order = 120.95
 handwritten = true
 intro = "Post presentation-process first slice + S1–S5 still recapture handoff for human re-score after fleet ~5.6 pass."
 
+[pages.antagonist-investigation-2026-08-02]
+title = "Antagonist Investigation (2026-08-02)"
+slug = "antagonist-investigation-2026-08-02"
+order = 120.96
+handwritten = true
+intro = "Agent response to still-freeze investigation — dual-open not bake-off proof; F1 project board recapture."
+
+[pages.antagonist-rescore-handoff-2026-08-02]
+title = "Antagonist Re-score Handoff (2026-08-02 F1)"
+slug = "antagonist-rescore-handoff-2026-08-02"
+order = 120.97
+handwritten = true
+intro = "F1 project_tracker board recapture — no 150% delta theater; dual-open still unproven for fleet score."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

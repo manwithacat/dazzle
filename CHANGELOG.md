@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Fixed
+- **#1626 F1 project board delta theater** — recapture after omit
+  `|delta_pct| ≥ 100` (aggregation + emit belt-and-braces); presentation
+  OCR residual also flags `delta_theater` (`(150%)` / glued `%)vs`).
+  Antagonist investigation 2026-08-02: stills were frozen; dual-open is not
+  bake-off proof.
+
 ### Added
 - **Hyperpart presentation process** — closed role×host matrix +
   `dazzle.render.presentation.present()`; person×`queue_meta` emits
