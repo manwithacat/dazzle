@@ -15,6 +15,8 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 - List dual-open (journey dig): `task_list` → Task|Project; `comment_list` →
   Comment|Task; `milestone_list` → Milestone|Project; `attachment_list` →
   Attachment|Task.
+- Project list dual open `Project via id | User via owner` (cycle 1575
+  story_walk) — project hub first; secondary owner teammate hub (ST-001/004).
 
 ## Not this
 

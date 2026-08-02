@@ -29,6 +29,9 @@
   joins; format via `_ref_display_name` (#1626 T1 / fieldtest regression).
 
 ### Changed
+- **project_tracker dual-open owner hub** — `project_list` dual-open
+  `Project via id | User via owner` (story_walk dig cycle 1575); ST-001/004
+  criteria + stem.
 - **acme_billing dual-open org hubs** — `project_list` / `user_list` dual-open
   `Project|User via id | Organization via org` (journey dig cycle 1574);
   compliance auditspec baseline refresh for DSL hash.

@@ -2,6 +2,7 @@
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
 #   - Manager sees all projects
 #   - Opening a project shows related tasks and milestones
+#   - Dual-open Project via id | User via owner (cycle 1575)
 # Deepened cycle 1345: land dashboard → open seed project hub.
 
 persona: manager

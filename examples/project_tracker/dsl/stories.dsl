@@ -8,12 +8,13 @@ story ST-001 "Member browses projects and opens a project hub":
   executed_by: surface.project_list
   persona: member
   trigger: user_click
-  entities: [Project]
+  entities: [Project, User]
   given:
     - "Member has list permission on Project"
   then:
     - "Member sees the project list"
     - "Row open hops to Project detail with task queue and milestone pull queue (not status cards)"
+    - "Project rows dual-open Project via id | User via owner (project hub first, owner teammate hub second)"
 
 story ST-002 "Member works the task board with project context hops":
   status: accepted
@@ -44,12 +45,13 @@ story ST-004 "Manager reviews project portfolio":
   executed_by: surface.project_list
   persona: manager
   trigger: user_click
-  entities: [Project]
+  entities: [Project, User]
   given:
     - "Manager has list permission on Project"
   then:
     - "Manager sees all projects"
     - "Opening a project shows related tasks and milestones as pull queues"
+    - "Project rows dual-open Project via id | User via owner (project hub first, owner teammate hub second)"
 
 story ST-005 "Member follows an assignee hop to a teammate hub":
   status: accepted

@@ -618,14 +618,16 @@ workspace people_desk "People":
 surface project_list "Projects":
   uses entity Project
   mode: list
-  open: Project via id
+  # Dual open (story_walk dig cycle 1575): project hub first; secondary hop
+  # to owner User hub for teammate context (ST-001/004 + ST-005 path).
+  open: Project via id | User via owner
   section main:
     field name "Name"
     field owner "Owner"
     field status "Status"
     field target_date "Target Date"
   ux:
-    purpose: "Browse projects — open a project for tasks and milestones"
+    purpose: "Browse projects — open a row for the project hub or owner teammate hub"
     empty: "No projects yet."
 
 surface project_create "New Project":
