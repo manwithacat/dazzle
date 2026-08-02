@@ -172,6 +172,19 @@
   letter-spacing: 0.01em;
 }
 
+/* Goal B media — logo/preview thumbs on brand/asset queues. */
+.dz-media-thumb {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--colour-border, #e5e7eb);
+  vertical-align: middle;
+  background: var(--colour-surface-muted, #f3f4f6);
+  flex-shrink: 0;
+}
+
 .dz-queue-row-actions {
   display: flex;
   gap: 0.25rem;

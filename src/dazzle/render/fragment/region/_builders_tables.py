@@ -189,7 +189,18 @@ def _queue_row_meta_columns(
                 currency_code = str(raw).strip().upper()
                 currency_keys.add(str(col.get("key") or ""))
 
-    for col in col_list:
+    # Prefer visual media (image thumbs, then palette swatches) so brand/asset
+    # desks show Goal B media above fold within _QUEUE_META_MAX (not prose tail).
+    def _meta_rank(c: dict[str, Any]) -> int:
+        t = str(c.get("type") or "").lower()
+        if t == "image":
+            return 0
+        if t == "color":
+            return 1
+        return 2
+
+    ranked_cols = sorted(col_list, key=_meta_rank)
+    for col in ranked_cols:
         if len(meta) >= _QUEUE_META_MAX:
             break
         key = str(col.get("key") or "")
@@ -204,6 +215,20 @@ def _queue_row_meta_columns(
             continue
         col_type = str(col.get("type") or "").lower()
         key_l = key.lower()
+        # Goal B media — logo/preview thumbs first on brand/asset queues.
+        if col_type == "image":
+            from dazzle.render.fragment.renderer._data_row import _render_media_thumb_html
+
+            thumb = _render_media_thumb_html(raw, alt=str(col.get("label") or key))
+            if thumb and thumb != "—":
+                meta.append(
+                    QueueMetaColumn(
+                        label="",
+                        value=thumb,
+                        html=True,
+                    )
+                )
+            continue
         # #1626 R5 — colour chips on brand queues (trusted HTML swatch).
         if col_type == "color":
             from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html

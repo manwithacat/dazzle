@@ -201,6 +201,14 @@ def _render_typed_value(
 
         return RawHTML(_render_color_swatch_html(value))
 
+    if col_type == "image":
+        # Goal B media — logo/preview thumbs on grids/queues.
+        from dazzle.render.fragment.renderer._data_row import _render_media_thumb_html
+
+        return RawHTML(
+            _render_media_thumb_html(value, alt=str(col.get("label") or col.get("key") or ""))
+        )
+
     if col_type == "ref":
         ref_route = str(col.get("ref_route") or "")
         # Resolve the display label: prefer a sibling ``<key>_display``, then the

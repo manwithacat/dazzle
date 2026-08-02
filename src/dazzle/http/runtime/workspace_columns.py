@@ -76,6 +76,47 @@ _KIND_TO_COL_TYPE: dict[str, str] = {
 }
 
 
+# Post-5.8 media depth: palette + image URL names render as visual chrome
+# (swatches / thumbs) even on entity-fallback workspace columns.
+_COLOR_FIELD_KEYS = frozenset(
+    {
+        "primary_color",
+        "secondary_color",
+        "accent_color",
+        "color",
+        "colour",
+        "bg_color",
+        "background_color",
+        "text_color",
+        "fill_color",
+    }
+)
+_IMAGE_FIELD_KEYS = frozenset(
+    {
+        "logo_url",
+        "preview_url",
+        "image_url",
+        "avatar_url",
+        "thumbnail_url",
+        "thumb_url",
+        "cover_url",
+        "photo_url",
+    }
+)
+
+
+def _media_col_type_for_field_name(name: str) -> str | None:
+    """Heuristic presentation type from field name (Goal B media / palette)."""
+    key = (name or "").strip().lower()
+    if not key:
+        return None
+    if key in _COLOR_FIELD_KEYS or key.endswith("_color") or key.endswith("_colour"):
+        return "color"
+    if key in _IMAGE_FIELD_KEYS or key.endswith("_image_url") or key.endswith("_thumb_url"):
+        return "image"
+    return None
+
+
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
 
@@ -100,6 +141,11 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         sm = entity.state_machine
         if sm and sm.status_field == field.name:
             return "badge"
+    # URL-typed media keys → image thumbs; palette names → color swatches
+    # (entity-fallback desks otherwise showed raw hex / bare URLs).
+    media = _media_col_type_for_field_name(str(getattr(field, "name", "") or ""))
+    if media is not None:
+        return media
     return "text"
 
 

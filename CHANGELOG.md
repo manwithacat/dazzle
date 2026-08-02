@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B media depth (design_studio)** — framework `image` column type +
+  safe HTTPS media thumbs (`dz-media-thumb`) for logo/preview URLs; palette
+  names map to color swatches on entity-fallback desks. Asset Catalog is a
+  media shelf (brand logos + palette + `preview_url` grid); Brand Desk is
+  logo + swatch identity. Seeds carry placehold.co previews; heroes recaptured.
 - **Post-5.8 interesting SaaS doctrine** — Goal A harness vs Goal B depth.
   Doctrine: `docs/reference/interesting-saas-context.md`; improve strategy
   `example-apps interesting_product` (depth menu + four prompts + same-cycle

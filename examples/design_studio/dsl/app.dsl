@@ -89,10 +89,11 @@ entity Brand "Brand":
   id: uuid pk
   name: str(200) required
   description: text
+  # Goal B media: logo first in declaration so economy + queue meta prefer pixels.
+  logo_url: url
   primary_color: str(7)
   secondary_color: str(7)
   accent_color: str(7)
-  logo_url: str(500)
   created_by: ref User
   created_at: datetime auto_add
   updated_at: datetime auto_update
@@ -124,6 +125,8 @@ entity Asset "Design Asset":
   description: text
   asset_type: enum[logo,icon_glyph,illustration,photo,pattern,typography]=logo
   status: enum[draft,review,approved,published,archived]=draft
+  # Goal B media: HTTPS preview thumb on catalog cards (file binary stays optional).
+  preview_url: url
   file: file
   tags: str(500)
   quality_score: int
@@ -280,28 +283,27 @@ workspace studio_dashboard "Studio Dashboard":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-# #1626 P0-7 / P1: metadata card grid (not a pixel thumbnail gallery).
+# Goal B media: catalog is a visual media shelf (preview thumbs + type labels),
+# not a metadata-only warehouse. Brand palette strip anchors identity above fold.
 workspace asset_catalog "Asset Catalog":
-  purpose: "Browse assets as a card grid and metrics (metadata cards; not a pixel media gallery)"
+  purpose: "Media shelf — brand logos + palette, then asset preview thumbs (no metric delta theater)"
   access: persona(admin, designer, reviewer)
-  catalog_metrics:
-    source: Asset
-    display: metrics
-    aggregate:
-      draft: count(Asset where status = draft)
-      in_review: count(Asset where status = review)
-      approved: count(Asset where status = approved)
-    tones:
-      in_review: warning
-      approved: positive
-  # Card catalog aligned with purpose (was timeline pretending to be a grid).
-  asset_grid:
+  # Brand identity strip first: logos + palette swatches (framework image/color).
+  brand_palette:
+    source: Brand
+    display: queue
+    sort: name asc
+    limit: 8
+    action: brand_detail
+    empty: "No brands yet"
+  # Visual media grid — preview_url thumbs + type · name titles.
+  media_grid:
     source: Asset
     display: grid
     sort: created_at desc
     limit: 20
     action: asset_detail
-    empty: "No assets yet"
+    empty: "No assets yet — upload or seed previews"
   review_queue:
     source: Asset
     filter: status = review
@@ -325,21 +327,13 @@ workspace asset_catalog "Asset Catalog":
       count: count(Asset)
     empty: "No assets yet"
 
-# Product maturity: extra job desks lower warehouse density (7 lists / 2 ws).
+# Goal B media: brand desk is logo + palette identity, then campaigns/assets.
 workspace brand_desk "Brand Desk":
-  purpose: "Brand portfolio — identity first, then assets and campaigns"
+  purpose: "Brand media identity — logos and palette swatches above fold, then work queues"
   access: persona(admin, designer)
-  brand_metrics:
-    source: Brand
-    display: metrics
-    aggregate:
-      brands: count(Brand)
-      assets: count(Asset)
-      campaigns: count(Campaign)
-    tones:
-      brands: accent
-  # Work-surface utility (cycle 1483 journey): brand desk portfolio → queue to hubs.
-  brand_grid:
+  # Logo + primary/secondary/accent swatches on each row (media depth).
+  # Metrics omitted on purpose: seed-noise period deltas are presentation residual.
+  brand_media:
     source: Brand
     display: queue
     sort: name asc
@@ -732,13 +726,14 @@ surface brand_list "Brands":
   open: Brand via id | User via created_by
   section main:
     field name "Name"
+    field logo_url "Logo"
     # #1626 P0-8: color widgets render as swatches in list (not raw hex text)
     field primary_color "Primary" widget=color
     field secondary_color "Secondary" widget=color
     field accent_color "Accent" widget=color
     field created_by "Creator"
   ux:
-    purpose: "Browse brands with palette swatches — open brand hub or hop to creator"
+    purpose: "Browse brands with logo thumbs and palette swatches — open brand hub or hop to creator"
 
 surface brand_create "New Brand":
   uses entity Brand
@@ -757,6 +752,7 @@ surface brand_detail "Brand Detail":
   section identity "Identity":
     field name "Name"
     field description "Description"
+    field logo_url "Logo"
     field created_by "Creator"
   section palette "Palette":
     layout: strip
@@ -776,6 +772,8 @@ surface brand_detail "Brand Detail":
     display: queue
     show: Campaign
     columns: name, status, start_date
+  ux:
+    purpose: "Brand hub — logo, palette strip, asset queue, and campaign queue"
 
 # Creator hub for brand_list dual-open (Brand|User via created_by) — ST-001 acceptance dig.
 surface user_detail "Team member":
@@ -790,10 +788,10 @@ surface user_detail "Team member":
   related brands "Brands authored":
     display: queue
     show: Brand
-    columns: name, primary_color
+    columns: name, logo_url, primary_color
 
   ux:
-    purpose: "Brand hub — identity, palette strip, asset queue, and campaign queue"
+    purpose: "Team member — brands authored with logo and palette chips"
 
 surface asset_list "Assets":
   uses entity Asset
@@ -802,6 +800,7 @@ surface asset_list "Assets":
   open: Asset via id | Brand via brand | User via created_by
   section main:
     field name "Name"
+    field preview_url "Preview"
     field asset_type "Type"
     field status "Status"
     field brand "Brand"
@@ -809,7 +808,7 @@ surface asset_list "Assets":
     field tags "Tags"
     field quality_score "Quality"
   ux:
-    purpose: "Browse assets — open a row for the asset, brand, or creator hub"
+    purpose: "Browse assets with preview thumbs — open a row for the asset, brand, or creator hub"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -831,6 +830,7 @@ surface asset_detail "Asset Detail":
     field name "Name"
     field description "Description"
     field brand "Brand"
+    field preview_url "Preview"
   section production "Production":
     layout: strip
     field asset_type "Type"

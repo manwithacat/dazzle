@@ -371,8 +371,8 @@ class _BuildersMiscMixin:
             primary = item.get(display_key) if display_key else None
             if primary is None:
                 primary = item.get("name") or item.get("title") or entity_name
-            # #1626 S3: type-ish enum leading the card title so catalog stills
-            # show asset kind without a media thumbnail (Photo · Storefront).
+            # #1626 S3 + Goal B media: type-ish enum leading the card title
+            # (Photo · Storefront) while image columns supply real thumbs.
             type_token = item.get("asset_type") or item.get("type") or item.get("kind")
             if type_token is not None and str(type_token).strip():
                 type_label = str(type_token).replace("_", " ").strip().title()
@@ -380,9 +380,14 @@ class _BuildersMiscMixin:
                 if not primary_s.lower().startswith(type_label.lower()):
                     primary = f"{type_label} · {primary_s}"
             fields: list[tuple[str, object]] = []
-            for col in columns:
-                if not isinstance(col, dict):
-                    continue
+            # Image thumbs first so media grids read as pixels, not meta.
+            ordered_cols = sorted(
+                [c for c in columns if isinstance(c, dict)],
+                key=lambda c: 0
+                if str(c.get("type") or "") == "image"
+                else (1 if str(c.get("type") or "") == "color" else 2),
+            )
+            for col in ordered_cols:
                 key = str(col.get("key") or "")
                 if not key or key == display_key:
                     continue

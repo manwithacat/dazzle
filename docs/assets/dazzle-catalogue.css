@@ -7191,6 +7191,19 @@ input.dz-switch:checked::before {
   margin: 0;
 }
 
+/* Goal B media thumbs inside grid cards (logo/preview fields). */
+.dz-grid-cell-field .dz-media-thumb {
+  display: block;
+  width: 100%;
+  max-width: 7rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--colour-border, #e5e7eb);
+  background: var(--colour-surface-muted, #f3f4f6);
+  margin-block: 0.15rem 0.35rem;
+}
+
 .dz-grid-cell-field-label {
   font-size: var(--text-xs);
 }
@@ -10924,6 +10937,19 @@ dz-onboarding-step {
   font-size: var(--text-xs, 0.75rem);
   color: var(--colour-text-muted);
   letter-spacing: 0.01em;
+}
+
+/* Goal B media — logo/preview thumbs on brand/asset queues. */
+.dz-media-thumb {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--colour-border, #e5e7eb);
+  vertical-align: middle;
+  background: var(--colour-surface-muted, #f3f4f6);
+  flex-shrink: 0;
 }
 
 .dz-queue-row-actions {

@@ -71,7 +71,9 @@ _TIMESTAMP_KEYS = frozenset({"created_at", "updated_at", "created", "updated", "
 # Column render-type → base salience. Badges (status) and refs are the scannable
 # signal; plain text is the floor. (Keys from `field_kind_to_col_type`.)
 _TYPE_SALIENCE: dict[str, int] = {
+    "image": 85,  # Goal B media thumbs (logo/preview) beat status chrome
     "badge": 80,
+    "color": 75,  # palette swatches on brand desks
     "currency": 70,
     "ref": 60,
     "bool": 50,
