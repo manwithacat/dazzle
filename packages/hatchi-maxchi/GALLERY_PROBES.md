@@ -54,6 +54,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `confirm_panel.required_gate_arms_primary` | `confirm-panel` | exclusive | high | controller | Checking all required consent boxes arms the primary action (drops aria-disabled, promotes data-confirm-href → href); optional boxes alone never arm; unchecking a required box re-disarms — irreversible-action gate is state-in-DOM, not a JS counter |
 | `code.copy_plain_source` | `code` | exclusive | high | controller | Code Hyperpart copy control writes plain textContent to the clipboard (not highlighted HTML spans) and sets data-copied feedback — docs paste must be source text, not token markup |
 | `dialog.open_and_close_via_submit` | `dialog` | exclusive | high | controller | Clicking data-dialog-open opens the modal; the method=dialog close control (✕) closes it without extra JS — discoverable dismiss for pointer users, complementary to Escape |
+| `drawer.expand_restore_toggles_width` | `drawer` | exclusive | high | controller | Open record drawer Expand control flips data-width md↔xl and aria-pressed with Expand/Restore labels — width chrome toggle, not full-page navigation |
 
 ## Loop (autonomous improve)
 

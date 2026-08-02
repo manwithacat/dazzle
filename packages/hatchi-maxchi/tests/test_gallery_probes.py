@@ -68,6 +68,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "confirm_panel.required_gate_arms_primary" in ids
     assert "code.copy_plain_source" in ids
     assert "dialog.open_and_close_via_submit" in ids
+    assert "drawer.expand_restore_toggles_width" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -79,6 +80,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "details_escape_dismiss",
             "native_dialog_escape",
             "native_dialog_close_submit",
+            "drawer_expand_restore",
             "css_tooltip_hover",
             "css_tooltip_force_open",
             "data_open_escape",

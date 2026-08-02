@@ -1144,6 +1144,36 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1598 — drawer Expand/Restore chrome toggle (not full-page nav).
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_drawer_expand_restore_toggles_width_without_navigation.
+    Probe(
+        id="drawer.expand_restore_toggles_width",
+        stem="drawer",
+        page="hyperparts/drawer.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Open record drawer Expand control flips data-width md↔xl and "
+            "aria-pressed with Expand/Restore labels — width chrome toggle, "
+            "not full-page navigation"
+        ),
+        kind="drawer_expand_restore",
+        params={
+            "open_trigger": (
+                '[data-dialog-open="hm-drawer-lazy"], [data-dz-dialog-open="hm-drawer-lazy"]'
+            ),
+            "dialog": "#hm-drawer-lazy, dialog.drawer#hm-drawer-lazy",
+            "expand_btn": ("[data-drawer-expand], [data-dz-drawer-expand]"),
+            "rest_width": "md",
+            "expanded_width": "xl",
+            "scope": ".hm-preview",
+            "open_settle_ms": 200,
+            "toggle_settle_ms": 350,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3708,6 +3738,139 @@ def _run_confirm_panel_required_gate(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_drawer_expand_restore(page: Any, probe: Probe) -> dict[str, Any]:
+    """Open drawer; Expand flips data-width + aria-pressed; Restore reverses.
+
+    Mirrors test_behaviour.test_drawer_expand_restore_toggles_width_without_navigation
+    (cycle 1598). Uses attr settlement (data-width) rather than pixel flakiness.
+    """
+    params = probe.params
+    open_sel = params["open_trigger"]
+    dialog_sel = params["dialog"]
+    expand_sel = params.get(
+        "expand_btn",
+        "[data-drawer-expand], [data-dz-drawer-expand]",
+    )
+    rest_w = str(params.get("rest_width", "md"))
+    expanded_w = str(params.get("expanded_width", "xl"))
+    open_settle = int(params.get("open_settle_ms", 200))
+    toggle_settle = int(params.get("toggle_settle_ms", 350))
+
+    try:
+        page.set_viewport_size({"width": 1280, "height": 800})
+    except Exception:  # noqa: BLE001
+        pass
+
+    scope = _probe_scope(page, params)
+    open_btn = scope.locator(open_sel).first
+    if open_btn.count() == 0:
+        open_btn = page.locator(open_sel).first
+    if open_btn.count() == 0:
+        return {"verdict": "ERROR", "detail": f"open trigger not found ({open_sel})"}
+
+    open_btn.click()
+    page.wait_for_timeout(open_settle)
+
+    dlg = page.locator(dialog_sel.split(",")[0].strip()).first
+    if dlg.count() == 0:
+        for part in dialog_sel.split(","):
+            cand = page.locator(part.strip()).first
+            if cand.count() > 0:
+                dlg = cand
+                break
+    if dlg.count() == 0:
+        return {"verdict": "ERROR", "detail": f"drawer dialog not found ({dialog_sel})"}
+
+    is_open = page.evaluate(
+        """(sel) => {
+          const d = document.querySelector(sel.split(',')[0].trim())
+            || document.querySelector(sel);
+          return !!(d && d.open);
+        }""",
+        dialog_sel,
+    )
+    if not is_open:
+        return {
+            "verdict": "ERROR",
+            "detail": f"drawer did not open after trigger ({dialog_sel})",
+        }
+
+    btn = dlg.locator(expand_sel.split(",")[0].strip()).first
+    if btn.count() == 0:
+        for part in expand_sel.split(","):
+            cand = dlg.locator(part.strip()).first
+            if cand.count() > 0:
+                btn = cand
+                break
+    if btn.count() == 0:
+        return {"verdict": "ERROR", "detail": f"expand control not found ({expand_sel})"}
+
+    def _width() -> str:
+        w = dlg.get_attribute("data-width") or dlg.get_attribute("data-dz-width")
+        return (w or rest_w).strip()
+
+    def _pressed() -> str:
+        return (btn.get_attribute("aria-pressed") or "false").strip()
+
+    def _label() -> str:
+        return (btn.inner_text() or "").strip().lower()
+
+    if _width() not in (rest_w, ""):
+        # allow default missing attr as rest
+        if _width() not in (rest_w, "md"):
+            return {
+                "verdict": "FAIL",
+                "detail": f"expected rest width {rest_w!r}, got {_width()!r}",
+            }
+    if "expand" not in _label():
+        return {
+            "verdict": "FAIL",
+            "detail": f"resting label should contain Expand, got {_label()!r}",
+        }
+
+    btn.click()
+    page.wait_for_timeout(toggle_settle)
+    if _width() != expanded_w:
+        return {
+            "verdict": "FAIL",
+            "detail": f"Expand must set data-width={expanded_w!r}, got {_width()!r}",
+            "aria_pressed": _pressed(),
+        }
+    if _pressed() != "true":
+        return {
+            "verdict": "FAIL",
+            "detail": f"Expand must set aria-pressed=true, got {_pressed()!r}",
+        }
+    if "restore" not in _label():
+        return {
+            "verdict": "FAIL",
+            "detail": f"expanded label should contain Restore, got {_label()!r}",
+        }
+
+    btn.click()
+    page.wait_for_timeout(toggle_settle)
+    if _width() not in (rest_w, "md"):
+        return {
+            "verdict": "FAIL",
+            "detail": f"Restore must set data-width={rest_w!r}, got {_width()!r}",
+        }
+    if _pressed() not in ("false", ""):
+        return {
+            "verdict": "FAIL",
+            "detail": f"Restore must clear aria-pressed, got {_pressed()!r}",
+        }
+    if "expand" not in _label():
+        return {
+            "verdict": "FAIL",
+            "detail": f"after restore label should contain Expand, got {_label()!r}",
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"Expand {rest_w}→{expanded_w} + Restore; labels Expand/Restore",
+    }
+
+
 def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
     """Open via data-dialog-open; close via method=dialog submit (✕).
 
@@ -3918,6 +4081,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "confirm_panel_required_gate": _run_confirm_panel_required_gate,
     "code_copy_plain_source": _run_code_copy_plain_source,
     "native_dialog_close_submit": _run_native_dialog_close_submit,
+    "drawer_expand_restore": _run_drawer_expand_restore,
 }
 
 

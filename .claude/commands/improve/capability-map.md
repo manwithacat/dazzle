@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1593 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1598 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1597 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1593 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1598 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1598 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover multi-details uncovered=0; prior 41 PASS; **Ship** `drawer.expand_restore_toggles_width` + `drawer_expand_restore` runner (md↔xl data-width + Expand/Restore labels); catalog **42/42 PASS**; unit pin. densify=0. gallery_probes **USED@1598**. budget 1. Explore **41/100**.
 > **Cycle 1597 (2026-08-02).** campaign force **example-apps story_walk**: dig invoice_ops — **product** invoice_list triple-open `Invoice via id | Supplier via supplier | User via submitted_by` + payment_attempt_list `PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id`; ST-001/006 + stem + trial; prove journey **6/6**; walks 6/6; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1597**. budget 1. Explore **40/100**.
 > **Cycle 1596 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig design_studio — **product** asset_list triple-open `Asset via id | Brand via brand | User via created_by` + feedback_list `Feedback via id | Asset via asset | User via reviewer` + campaign_list `Campaign via id | Brand via brand | User via created_by`; ST-005/006 + stem + trial; prove journey **6/6**; walks 6/6; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1596**. budget 1. Explore **39/100**.
 > **Cycle 1595 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig project_tracker — **product** comment_list triple-open `Comment via id | Task via task | User via author` + attachment_list `Attachment via id | Task via task | User via uploaded_by`; ST-003 + stem + trial; prove journey **5/5**; walks 5/5; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+journey+prove+walk+process_dig **USED@1595**. budget 1. Explore **38/100**.
