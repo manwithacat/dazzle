@@ -13,7 +13,8 @@ HR homes open with headcount/compensation metrics before dense directories.
 - Temporal/history surfaces stay list/timeline for the teaching gap.
 
 - List dual-open (journey dig): `employment_list` → Employment|Person;
-  `salary_list` → Salary|Person.
+  `salary_list` → Salary|Person; `role_list` → Role|Department (ST-001/003);
+  `department_list` → Department|parent_department (org tree context).
 
 ## Not this
 

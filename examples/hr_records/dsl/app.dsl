@@ -503,12 +503,13 @@ surface person_edit "Edit Person":
 surface department_list "Departments":
   uses entity Department
   mode: list
-  open: Department via id
+  # Dual open: unit hub first, parent org unit second (tree context for ST-001 path).
+  open: Department via id | Department via parent_department
   section main:
     field name "Name"
     field parent_department "Parent"
   ux:
-    purpose: "Org units — open a row for the department hub"
+    purpose: "Org units — open unit hub or hop to parent department"
 
 surface department_detail "Department":
   uses entity Department
@@ -533,13 +534,14 @@ surface department_create "Add Department":
 surface role_list "Roles":
   uses entity Role
   mode: list
-  open: Role via id
+  # Dual open: role hub first, owning department second (catalogue ST-003 path).
+  open: Role via id | Department via department
   section main:
     field title "Title"
     field level "Level"
     field department "Department"
   ux:
-    purpose: "Job roles — open a row for the role hub"
+    purpose: "Job roles — open role hub or hop to owning department"
 
 surface role_detail "Role":
   uses entity Role

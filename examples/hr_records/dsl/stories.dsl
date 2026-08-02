@@ -15,6 +15,8 @@ story ST-001 "HR Admin browses staff directory and opens a person hub":
     - "HR Admin sees headcount metrics and the staff list"
     - "Department and role context on Staff Directory are pull queues toward hubs (not inventory lists)"
     - "Row open hops to the Person detail hub with employment and salary history"
+    - "Department list dual-hops Department via id | parent via parent_department (unit hub first, parent tree second)"
+    - "Role catalogue dual-hops Role via id | Department via department (role hub first, unit context second)"
 
 story ST-002 "Line Manager opens a report career hub":
   status: accepted
@@ -40,6 +42,7 @@ story ST-003 "Finance reviews compensation then hops to person context":
   then:
     - "Finance sees compensation metrics and active salary rows"
     - "Role catalogue and headcount context are pull queues toward hubs (not inventory lists)"
+    - "Role catalogue dual-opens Role via id | Department via department (title hub first, unit context second)"
     - "Salary rows dual-open Salary via id | Person via person (band hub first, person career hub second)"
 
 story ST-004 "Employee reviews own career timeline hub":

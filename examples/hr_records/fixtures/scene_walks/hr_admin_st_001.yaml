@@ -1,5 +1,6 @@
 # Story walk ST-001 — HR Admin browses staff directory and opens a person hub
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+# Dual-open (cycle 1579): role_list Role|Department; department_list unit|parent.
 
 persona: hr_admin
 home_workspace: staff_directory
