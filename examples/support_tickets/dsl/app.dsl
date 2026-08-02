@@ -452,7 +452,9 @@ surface comment_edit "Edit Comment":
 #   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
 
 workspace ticket_queue "Ticket Queue":
-  purpose: "Agent workspace for managing incoming support tickets"
+  # Goal B conversation depth (improve cycle): peer support tools show the
+  # live customer↔agent thread on the triage home — not only ticket rows.
+  purpose: "Triage open work and the live conversation trail — reply where the thread already is"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
 
@@ -465,9 +467,21 @@ workspace ticket_queue "Ticket Queue":
       total_open: count(Ticket where status = open)
       in_progress: count(Ticket where status = in_progress)
       critical: count(Ticket where priority = critical and status != closed)
+      conversation: count(Comment)
     tones:
       critical: destructive
       in_progress: accent
+      conversation: accent
+
+  # Goal B conversation spine — newest notes as pull-to-open queue above the
+  # ticket worklist so buyer stills show real thread copy (not empty timeline).
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — customer and agent notes appear here as the case moves"
 
   # ST-019 worklist — review queue with inline status transitions, not a CRUD table.
   # date_range: fleet dogfood for the date-range Hyperpart (filters created_at).
@@ -511,6 +525,10 @@ workspace ticket_queue "Ticket Queue":
   queue_readiness:
     display: status_list
     entries:
+      - title: "Live conversation"
+        caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
+        icon: "message-square"
+        state: accent
       - title: "Open queue"
         caption: "Work highest priority first — critical surfaces above the board"
         icon: "inbox"
@@ -605,9 +623,9 @@ workspace manager_ops "Manager Ops":
   # thrash under trial scroll without adding reassignment clarity.
 
 workspace agent_dashboard "Agent Dashboard":
-  # Personal agent view (assigned work + activity). Manager team home is
+  # Personal agent view (assigned work + conversation). Manager team home is
   # manager_ops; agents keep this for "my WIP" after claiming from the queue.
-  purpose: "Personal dashboard for support agents"
+  purpose: "Personal WIP board with the conversation trail on your assigned cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
@@ -625,6 +643,15 @@ workspace agent_dashboard "Agent Dashboard":
     group_by: status
     action: ticket_edit
     empty: "No tickets assigned to you"
+
+  # Conversation on my plate — queue of recent notes (Goal B conversation depth).
+  my_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No notes on the trail yet — replies land here as customers write back"
 
   # Resolved-only close-out — urgency/next-action, not multi-stage ceremony.
   pending_resolution:

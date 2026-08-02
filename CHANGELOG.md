@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B conversation depth (support_tickets)** — Ticket Queue is no longer
+  metrics+ticket-rows only: `Comment.jsonl` seeds 12 domain-true customer↔agent
+  notes (login reset, refund, SLA, PDF CDN, 2FA SMS, webhooks); `live_conversation`
+  queue + Conversation metric sit above the open worklist; agent dashboard gets
+  `my_conversation`. Hero stills recaptured (ticket_queue_agent shows thread copy).
 - **Agent acceptance: campaign hub creatives (design_studio)** — optional
   `Asset.campaign` assignment; campaign_detail is a real hub (schedule strip +
   brand + pull-queue of assigned assets), not a field dump. Seeds wire story-spine
