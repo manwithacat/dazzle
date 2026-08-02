@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B empty_region_honesty (design_studio)** — Campaign Desk no longer ships
+  multi-panel empty theater: explicit `Campaign.jsonl` seeds (planning/active/
+  completed/cancelled across brands) so Active Queue, status kanban, metrics,
+  and mix chart fill above fold. Root cause: demo_data jsonl mode skips faker
+  for entities without `.jsonl`, so Campaign was silently unseeded.
 - **Goal B command_density (ops_dashboard)** — Command Center is multi-panel ops
   attention: `systems_attention` queue (non-healthy systems) + capped active
   alert feed (limit 8) + persona focus so ≥2 attention regions sit above fold.

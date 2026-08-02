@@ -64,7 +64,7 @@ and that grant is itself an explicit, auditable declaration.
   recently approved, feedback timeline, pipeline kanban, and status chart.
 - **Asset Catalog** — catalog metrics, metadata card grid of assets, review queue, pipeline
   kanban, and status mix chart.
-- **Campaigns** — campaign schedule desk with active queue, status board, brand
+- **Campaigns** — campaign schedule desk with seeded active queue, status board, brand
   context, and load chart.
 - **Feedback** — feedback trail with notes queue, assets-in-review grid,
   note timeline, and asset status chart.
@@ -123,4 +123,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:e2ab8731221f517f830eff96e59b1404b828d959fafc38019627be14755f5676 -->
+<!-- dazzle-spec-brief: sha256:0d4ba9772f4184c02173ffc3dacb35c7de99c75e89a927b7c758d89de3867dc0 -->

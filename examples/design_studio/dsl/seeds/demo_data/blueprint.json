@@ -256,8 +256,8 @@
       },
       {
         "name": "Campaign",
-        "row_count_default": 3,
-        "notes": null,
+        "row_count_default": 8,
+        "notes": "Explicit Campaign.jsonl is source of truth (Goal B empty_region_honesty): named campaigns across planning/active/completed/cancelled so Campaign Desk is not empty theater when demo_data jsonl mode skips faker.",
         "tenant_scoped": false,
         "field_patterns": [
           {

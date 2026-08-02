@@ -413,8 +413,10 @@ workspace review_desk "Review Desk":
     empty: "No assets yet"
 
 # Fifth product workspace: campaign desk vs bare campaign list.
+# Goal B empty_region_honesty: desk must show live schedule pressure (active
+# queue + status board + mix), not multi-panel empty theater when seeds load.
 workspace campaign_desk "Campaigns":
-  purpose: "Campaign schedule desk — active briefs and brand context"
+  purpose: "Campaign schedule desk — active briefs, status board, brand context"
   access: persona(admin, designer, reviewer)
 
   campaign_pulse:
@@ -431,8 +433,9 @@ workspace campaign_desk "Campaigns":
     source: Campaign
     filter: status = active
     sort: name asc
-    limit: 20
+    limit: 12
     display: queue
+    action: campaign_detail
     empty: "No active campaigns"
 
   all_campaigns:
@@ -441,6 +444,7 @@ workspace campaign_desk "Campaigns":
     limit: 25
     display: kanban
     group_by: status
+    action: campaign_detail
     empty: "No campaigns yet"
 
   # Work-surface utility (cycle 1483 journey): brand context is pull-to-open, not grid.
@@ -448,7 +452,7 @@ workspace campaign_desk "Campaigns":
     source: Brand
     sort: name asc
     display: queue
-    limit: 20
+    limit: 12
     action: brand_detail
     empty: "No brands"
 
@@ -666,6 +670,7 @@ workspace review_pipeline "Review Pipeline":
       count: count(Asset)
     empty: "No review assets to chart"
 
+# Goal B empty_region_honesty: live-campaign desk shares Campaign.jsonl seeds.
 workspace active_campaigns "Active Campaigns":
   purpose: "Live-campaign pressure — active campaigns without warehouse CRUD"
   access: persona(admin, designer, reviewer)
