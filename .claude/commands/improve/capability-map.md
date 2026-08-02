@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1599 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1606 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -94,7 +94,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1599 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1606 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1604 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1605 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1605 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1606 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1606 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1606 (2026-08-02).** campaign force **framework-ux**: **ship** queue drill dual-open discovery — title link + row `data-dz-open-*` (entity/role/hop/via/label + single-hop chain) via `render_queue_row`; unit pins. tip CI in_progress may hold push. densify=0. fitness/open_via/queue emit **USED@1606**. budget 1. Explore **47/100**.
 > **Cycle 1605 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover multi-details uncovered=0; prior 42 PASS; **Ship** `kanban.keyboard_move_updates_column` + `kanban_keyboard_move` runner (Move select → PUT/GET; card from-state matches target column via MOCK_HTMX); catalog **43/43 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1605**. budget 1. Explore **46/100**.
 > **Cycle 1604 (2026-08-02).** campaign force **example-apps story_walk**: dig support_tickets — **product** comment_list triple-open `Comment via id | Ticket via ticket | User via author`; ST-018 then + unit pin; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1604**. budget 1. Explore **45/100**.
 > **Cycle 1602 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig fieldtest_hub — **product** task_list triple-open `Task via id | Tester via assigned_to_id | Tester via created_by_id` (+ Created By column); ST-040/048 + stem + trial; prove journey **30/30** (open_hop created_by); walks 8/8 validate+dry-run; engineer_st_048 **live green**; dig receipt PASS. residual=0 densify=0. journey+story_walk+prove+walk+process_dig **USED@1602**. tip CI in_progress hold push if still red. budget 1. Explore **44/100**.

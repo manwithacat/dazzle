@@ -57,6 +57,10 @@ from dazzle.render.fragment.ingest.models import (
     TimeSeries,
     Tree,
 )
+from dazzle.render.fragment.region._row_links import (
+    entity_label_from_detail_url,
+    open_hop_label,
+)
 
 _BULLET_BAND_COLORS: dict[str, str] = {
     "target": "var(--colour-brand)",
@@ -289,6 +293,39 @@ def queue_row_root_attrs(row: QueueRow) -> str:
     return base
 
 
+def _queue_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
+    """Primary dual-open attrs for a queue drill (link attrs, row chain attrs).
+
+    Cycle 1606 — parity with list-row dual-open discovery so agents reading
+    hub/related queues get ``data-dz-open-*`` without scraping the title only.
+    Queue drills are same-entity VIEW hubs (via ``id``) today.
+    """
+    href = _html.escape(drill_url, quote=True)
+    ent = entity_label_from_detail_url(drill_url)
+    ent_attr = _html.escape(ent, quote=True)
+    phrase = open_hop_label(ent, "id")
+    phrase_attr = _html.escape(phrase, quote=True)
+    aria = _html.escape(phrase, quote=True)
+    link_attrs = (
+        f'data-dz-open-via="id" '
+        f'data-dz-open-entity="{ent_attr}" '
+        f'data-dz-open-role="primary" '
+        f'data-dz-open-hop="0" '
+        f'data-dz-open-label="{phrase_attr}" '
+        f'aria-label="{aria}" '
+        f'title="{phrase_attr}" '
+    )
+    # Row-level chain (single hop) mirrors table multi-hop chain attrs.
+    row_attrs = (
+        f' data-dz-open-chain="{href}"'
+        f' data-dz-open-chain-via="id"'
+        f' data-dz-open-hops="1"'
+        f' data-dz-open-chain-label="{phrase_attr}"'
+        f' data-dz-open-chain-entity="{ent_attr}"'
+    )
+    return link_attrs, row_attrs
+
+
 def render_status_list_entry(entry: StatusListEntry) -> str:
     """Model → one status-list ``<li>`` (matches HM contracts/status_list.py)."""
     title = _html.escape(entry.title)
@@ -318,9 +355,14 @@ def render_status_list_entry(entry: StatusListEntry) -> str:
 def render_queue_row(row: QueueRow) -> str:
     """Model → one queue row (matches HM contracts/queue.py)."""
     title = _html.escape(row.title)
+    open_row_attrs = ""
     if getattr(row, "drill_url", ""):
         href = _html.escape(row.drill_url, quote=True)
-        title_html = f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
+        link_open, open_row_attrs = _queue_open_discovery_attrs(row.drill_url)
+        title_html = (
+            f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill '
+            f"{link_open}>{title}</a>"
+        )
     else:
         title_html = f'<span class="dz-queue-row-title">{title}</span>'
     attn_class = ""
@@ -333,7 +375,7 @@ def render_queue_row(row: QueueRow) -> str:
             )
     headline_html = f'<div class="dz-queue-row-headline">{title_html}{row.badges_html}</div>'
     row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
-    root_attrs = queue_row_root_attrs(row)
+    root_attrs = queue_row_root_attrs(row) + open_row_attrs
     return (
         f'<div class="{row_open_class}" {root_attrs}>'
         f'<div class="dz-queue-row-main ">'

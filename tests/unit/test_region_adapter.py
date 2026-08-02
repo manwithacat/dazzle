@@ -1945,6 +1945,10 @@ def test_queue_emits_app_shell_drill_for_hub() -> None:
     assert "data-dz-queue-drill" in html
     assert "/tickets/" not in html
     assert "Double charged" in html
+    # Cycle 1606: dual-open discovery on queue drill (table-row parity)
+    assert 'data-dz-open-entity="Ticket"' in html
+    assert 'data-dz-open-role="primary"' in html
+    assert f'data-dz-open-chain="/app/ticket/{tid}"' in html
 
 
 def test_queue_title_uses_display_field_without_fk_display_suffix() -> None:
