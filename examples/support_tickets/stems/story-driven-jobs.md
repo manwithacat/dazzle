@@ -22,9 +22,9 @@ ST-013–018 own surfaces.
   (dated events), not inventory list — same work-surface utility as simple_task.
 - Comment list dual open `Comment via id | Ticket via ticket` (cycle 1543
   journey_dogfood) — inspect the note or hop to the parent ticket hub.
-- Ticket list dual open `Ticket via id | User via assigned_to` (cycle 1572
-  agent_acceptance) — ticket hub first; secondary assignee hub for load /
-  reassignment context (ST-019/028).
+- Ticket list triple open `Ticket via id | User via assigned_to | User via created_by`
+  (cycle 1591 journey_dogfood) — ticket hub first; assignee hub for load /
+  reassignment; creator hub for customer context (ST-019/028).
 - Prefer queue/metrics/kanban/timeline over bare list for open-work and event streams.
 - Keep story `given:` workspace names aligned with persona defaults.
 

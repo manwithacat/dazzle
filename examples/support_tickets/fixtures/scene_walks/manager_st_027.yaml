@@ -1,5 +1,6 @@
 # Story walk ST-027 — Support Manager reviews team performance
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-027 then:
+# Triple-open Ticket via id | User via assigned_to | User via created_by (cycle 1591).
 
 persona: manager
 home_workspace: manager_ops

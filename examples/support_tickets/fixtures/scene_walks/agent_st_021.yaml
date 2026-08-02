@@ -1,5 +1,6 @@
 # Story walk ST-021 — Support Agent views full ticket detail with comment history
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-021 then:
+# Triple-open Ticket via id | User via assigned_to | User via created_by (cycle 1591).
 
 persona: agent
 home_workspace: ticket_queue

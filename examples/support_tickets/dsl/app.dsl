@@ -283,16 +283,16 @@ surface ticket_list "Tickets":
   uses entity Ticket
   mode: list
   render: fragment
-  # Dual open (agent_acceptance dig cycle 1572): ticket hub first for triage;
-  # secondary hop to assignee User hub for reassignment / teammate load (ST-019/028).
-  open: Ticket via id | User via assigned_to
+  # Triple open (journey_dogfood dig cycle 1591): ticket hub first for triage;
+  # assignee hub for reassignment / load; creator hub for customer/context (ST-019/028).
+  open: Ticket via id | User via assigned_to | User via created_by
   # Row peek opens the ticket in a slide-over drawer (HM drawer
   # Hyperpart) instead of the default inline expand — the queue keeps
   # its scan position while an agent glances at a ticket.
   peek: slide_over
 
   ux:
-    purpose: "Triage and resolve incoming support tickets — open a row for the ticket hub or assignee hub"
+    purpose: "Triage and resolve incoming support tickets — open a row for the ticket, assignee, or creator hub"
     sort: created_at desc
     filter: status, priority, category
     search: ticket_number, title
@@ -305,6 +305,7 @@ surface ticket_list "Tickets":
     field priority "Priority"
     field category "Category"
     field assigned_to "Assigned To"
+    field created_by "Created By"
     field created_at "Created"
 
 surface ticket_detail "Ticket Detail":
