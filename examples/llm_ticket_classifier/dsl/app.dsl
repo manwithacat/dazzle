@@ -154,6 +154,7 @@ entity Ticket "Support Ticket":
   updated_at: datetime auto_update
 
 entity TicketClassification "Ticket Classification":
+  display_field: category
   id: uuid pk
   ticket: ref Ticket required
   category: enum[billing, technical, feature_request, account, other]
@@ -163,6 +164,9 @@ entity TicketClassification "Ticket Classification":
   suggested_response: text
   classified_at: datetime auto_add
   llm_job_id: str(100)  # Reference to LLM job for auditability
+
+  fitness:
+    repr_fields: [ticket, category, priority, sentiment, confidence, classified_at]
 
 entity PriorityAssessment "Priority Assessment Result":
   id: uuid pk

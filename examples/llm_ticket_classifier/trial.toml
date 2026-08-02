@@ -34,6 +34,13 @@ tasks = [
     "Create a new ticket or edit status on an existing one. Does the flow feel like support work, or CRUD admin?",
 ]
 
+adoption_criteria = [
+    "Open ticket work is queue-first, not warehouse list-first",
+    "Ticket hub shows lifecycle strip and related AI classifications as a pull queue",
+    "Classification list dual-opens AI run hub and parent Ticket hub (not orphan AI rows)",
+    "Would pilot AI-assisted triage here instead of inbox+spreadsheet for two weeks",
+]
+
 stop_when = """
 Stop when you've formed an opinion on whether Jordan would prefer this to
 inbox+spreadsheet for AI-assisted triage. Call submit_verdict with a

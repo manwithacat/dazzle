@@ -19,6 +19,7 @@ SUPPORT = REPO / "examples" / "support_tickets"
 INVOICE_OPS = REPO / "examples" / "invoice_ops"
 HR = REPO / "examples" / "hr_records"
 OPS = REPO / "examples" / "ops_dashboard"
+LLM = REPO / "examples" / "llm_ticket_classifier"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -351,6 +352,25 @@ def test_ops_dashboard_alert_list_dual_open() -> None:
         "/app/system/{system}",
     ]
     assert getattr(entity, "display_field", None) == "message"
+
+
+def test_llm_classification_list_dual_open() -> None:
+    """classification_list dual-open: AI run hub + parent Ticket (cycle 1614 journey)."""
+    appspec = load_project_appspec(LLM)
+    surf = next(s for s in appspec.surfaces if s.name == "classification_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("TicketClassification", "id"),
+        ("Ticket", "ticket"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("TicketClassification")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/ticketclassification/{id}",
+        "/app/ticket/{ticket}",
+    ]
+    assert getattr(entity, "display_field", None) == "category"
 
 
 def test_resolve_first_non_null_candidates() -> None:

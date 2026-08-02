@@ -40,7 +40,7 @@ story ST-003 "Supervisor reviews classification trail":
     - "TicketClassifications exist from LLM runs"
   then:
     - "Supervisor sees classifications sorted by classified_at"
-    - "Opening a classification row can hop to the classification hub (id) or parent Ticket hub via ticket"
+    - "Classification list dual-opens TicketClassification via id | Ticket via ticket (AI run hub first, parent ticket hub second)"
 
 story ST-004 "Support agent captures a new ticket for auto-classify":
   status: accepted
