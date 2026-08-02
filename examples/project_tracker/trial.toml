@@ -61,7 +61,7 @@ tasks = [
 ]
 
 adoption_criteria = [
-    "My Tasks / task list dual-opens Task hub and Project hub (hub first, project second)",
+    "My Tasks / task list triple-opens Task hub, Project hub, and assignee hub; comment/attachment lists triple-open note|task|author and file|task|uploader",
     "Task hub discussion is readable as a pull queue (not a dead warehouse table)",
     "Assignee hop lands a Team Member Overview without 404",
     "Hub shows assigned work and/or owned projects for that person",

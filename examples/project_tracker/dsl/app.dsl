@@ -761,15 +761,15 @@ surface comment_create "Add Comment":
 surface comment_list "Comments":
   uses entity Comment
   mode: list
-  # Dual open: read the note, then hop to the task hub (journey dual-hop).
-  open: Comment via id | Task via task
+  # Triple open (agent_acceptance dig cycle 1595): note hub, parent task, author teammate.
+  open: Comment via id | Task via task | User via author
   section main:
     field task "Task"
     field author "Author"
     field body "Comment"
     field created_at "Date"
   ux:
-    purpose: "Discussion across tasks — open a row for the comment or task hub"
+    purpose: "Discussion across tasks — open a row for the comment, task, or author hub"
     sort: created_at desc
     filter: task, author
     empty: "No comments yet."
@@ -830,15 +830,15 @@ surface milestone_edit "Edit Milestone":
 surface attachment_list "Attachments":
   uses entity Attachment
   mode: list
-  # Dual open: view file then hop to task hub.
-  open: Attachment via id | Task via task
+  # Triple open (agent_acceptance dig cycle 1595): file hub, parent task, uploader teammate.
+  open: Attachment via id | Task via task | User via uploaded_by
   section main:
     field task "Task"
     field filename "File"
     field uploaded_by "Uploaded By"
     field created_at "Date"
   ux:
-    purpose: "Files across tasks — open a row for the attachment viewer or task hub"
+    purpose: "Files across tasks — open a row for the attachment, task, or uploader hub"
     sort: created_at desc
     filter: task
     empty: "No attachments uploaded yet."

@@ -1,5 +1,6 @@
 # Story walk ST-003 — Member opens a task hub with discussion and files
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+# Triple-open Comment|Task|author and Attachment|Task|uploaded_by (cycle 1595).
 #   - Task hub shows status strip, ownership, discussion, and files
 # Deepened cycle 1345: land my_tasks → open seed task detail hub.
 

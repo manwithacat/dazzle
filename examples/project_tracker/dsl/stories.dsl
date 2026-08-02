@@ -39,6 +39,8 @@ story ST-003 "Member opens a task hub with discussion and files":
   then:
     - "Task hub shows status strip, ownership, discussion, and files"
     - "From task_list triple-open, the Task via id hop lands this hub (discussion queue + files)"
+    - "Comment list triple-opens Comment via id | Task via task | User via author (note hub first, task then author)"
+    - "Attachment list triple-opens Attachment via id | Task via task | User via uploaded_by (file hub first, task then uploader)"
 
 story ST-004 "Manager reviews project portfolio":
   status: accepted
