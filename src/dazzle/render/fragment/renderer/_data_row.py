@@ -36,6 +36,7 @@ from dazzle.render.fragment.region._row_links import (
     _resolve_row_links,
     _resolve_row_open_chain,
     entity_label_from_detail_url,
+    open_hop_label,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
@@ -440,7 +441,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     candidates = table.get("detail_url_candidates") or ()
     if isinstance(candidates, str):
         candidates = (candidates,) if candidates else ()
-    open_chain: tuple[str, ...] = ()
+    # (url, via_field) pairs — cycle 1577 retains via for relation-aware labels.
+    open_chain: tuple[tuple[str, str], ...] = ()
     if detail_url_template or candidates:
         cand_t = tuple(candidates) if candidates else ()
         _links = _resolve_row_links(
@@ -467,20 +469,32 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     secondary_context_html = ""
     if detail_url:
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
-        # Dual-open context hops (cycle 1566 + 1571): when open: A | B [| C]
+        # Dual-open context hops (cycle 1566 + 1571 + 1577): when open: A | B [| C]
         # all resolve, primary row drill uses first-non-null; emit every
         # later hop as a labeled context action so parent/assignee hubs stay
         # reachable. Cycle 1571: entity-aware title/aria + data-dz-open-entity
-        # (from URL slug) so agents/users know *what* related surface opens.
+        # (from URL slug). Cycle 1577: via-field in title + data-dz-open-via +
+        # full-chain data-dz-open-chain on the row for multi-hop agent discovery.
         # First extra hop keeps data-dz-open-secondary (back-compat discovery).
         if len(open_chain) > 1:
             hop_parts: list[str] = []
-            for hop_i, hop_url in enumerate(open_chain[1:]):
+            for hop_i, (hop_url, hop_via) in enumerate(open_chain[1:]):
                 if not hop_url or hop_url == detail_url:
                     continue
                 sec_attr = _html_mod.escape(hop_url, quote=True)
                 ent_label = entity_label_from_detail_url(hop_url)
                 ent_attr = _html_mod.escape(ent_label, quote=True)
+                hop_phrase = open_hop_label(ent_label, hop_via)
+                hop_title = _html_mod.escape(hop_phrase, quote=True)
+                hop_aria = _html_mod.escape(
+                    f"{hop_phrase} for {raw_label or ''}".strip(),
+                    quote=True,
+                )
+                via_attr = (
+                    f'data-dz-open-via="{_html_mod.escape(hop_via, quote=True)}" '
+                    if hop_via
+                    else ""
+                )
                 # First context hop retains dual-open secondary attrs (tests + agents).
                 secondary_attr = f'data-dz-open-secondary="{sec_attr}" ' if hop_i == 0 else ""
                 hop_parts.append(
@@ -489,8 +503,9 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                     f"{secondary_attr}"
                     f'data-dz-open-context="{sec_attr}" '
                     f'data-dz-open-entity="{ent_attr}" '
-                    f'aria-label="Open {ent_attr} for {row_label_attr}" '
-                    f'title="Open {ent_attr}" '
+                    f"{via_attr}"
+                    f'aria-label="{hop_aria}" '
+                    f'title="{hop_title}" '
                     f'class="dz-tr-action dz-tr-open-secondary" '
                     f'onclick="event.stopPropagation()">'
                     f"{lucide_svg_html('arrow-up-right', cls='dz-tr-action-icon')}</a>"
@@ -550,6 +565,12 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             m_sec = re.search(r'data-dz-open-secondary="([^"]+)"', secondary_context_html)
             if m_sec:
                 drill_attrs = f'{drill_attrs} data-dz-open-secondary="{m_sec.group(1)}"'
+        # Full ordered hop chain (primary + context) for multi-hop agents (cycle 1577).
+        if len(open_chain) > 1:
+            chain_urls = [u for u, _via in open_chain if u]
+            if chain_urls:
+                chain_attr = _html_mod.escape(" ".join(chain_urls), quote=True)
+                drill_attrs = f'{drill_attrs} data-dz-open-chain="{chain_attr}"'
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '

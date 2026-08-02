@@ -135,20 +135,70 @@ def entity_label_from_detail_url(url: str) -> str:
     return " ".join(w[:1].upper() + w[1:] for w in words)
 
 
+def via_field_from_template(tmpl: str) -> str:
+    """Extract the open-via placeholder from a detail URL template.
+
+    ``/app/user/{assigned_to}`` → ``assigned_to``; ``/app/task/{id}`` → ``id``.
+    Empty when the template has no named placeholder (cycle 1577).
+    """
+    if not tmpl or "{" not in tmpl:
+        return ""
+    start = tmpl.find("{")
+    end = tmpl.find("}", start + 1)
+    if start < 0 or end < 0:
+        return ""
+    return tmpl[start + 1 : end].strip()
+
+
+def field_label_from_via(via: str) -> str:
+    """Humanize an open-via field name: ``assigned_to`` → ``Assigned to``."""
+    if not via:
+        return ""
+    words = [w for w in str(via).replace("-", "_").split("_") if w]
+    if not words:
+        return ""
+    # Sentence case: first word capital, rest lower (relation phrases).
+    head, *rest = words
+    return " ".join([head[:1].upper() + head[1:].lower(), *[w.lower() for w in rest]])
+
+
+def open_hop_label(entity_label: str, via_field: str = "") -> str:
+    """User-facing hop phrase for dual-open actions (cycle 1577).
+
+    Same-entity ``via id`` stays ``Open Task``; FK hops become
+    ``Open User via assigned to`` so agents/users see the relation, not only
+    the target entity slug from the URL.
+    """
+    ent = (entity_label or "Related").strip() or "Related"
+    via = (via_field or "").strip()
+    if not via or via == "id":
+        return f"Open {ent}"
+    words = [w for w in via.replace("-", "_").split("_") if w]
+    if not words:
+        return f"Open {ent}"
+    field_phrase = " ".join(w.lower() for w in words)
+    # Avoid "Open User via user" when via name matches entity
+    if field_phrase.casefold() == ent.casefold():
+        return f"Open {ent}"
+    return f"Open {ent} via {field_phrase}"
+
+
 def _resolve_row_open_chain(
     item: dict[str, Any],
     *,
     candidate_templates: tuple[str, ...] | list[str] = (),
     detail_url_template: str = "",
     fallback_template: str = "",
-) -> tuple[str, ...]:
+) -> tuple[tuple[str, str], ...]:
     """All resolvable open-via hops for one row (ordered, deduped).
 
-    First-non-null drill still uses :func:`_resolve_row_links` (primary only).
-    Dual-open product digs (``Task via id | User via assigned_to``) need the
-    **second** hop as a separate affordance — otherwise the secondary target
-    is dead when the primary ``{id}`` always resolves. Cycle 1566 framework-ux:
-    emit every successful candidate so the row can show a context hop.
+    Returns ``(url, via_field)`` pairs. First-non-null drill still uses
+    :func:`_resolve_row_links` (primary only). Dual-open product digs
+    (``Task via id | User via assigned_to``) need the **second** hop as a
+    separate affordance — otherwise the secondary target is dead when the
+    primary ``{id}`` always resolves. Cycle 1566 framework-ux: emit every
+    successful candidate so the row can show a context hop. Cycle 1577:
+    retain the template placeholder so hop labels can name the relation.
     """
     templates: list[str] = [t for t in (candidate_templates or ()) if t]
     if not templates and detail_url_template:
@@ -157,15 +207,15 @@ def _resolve_row_open_chain(
         return ()
 
     mapping = _item_format_map(item)
-    urls: list[str] = []
+    hops: list[tuple[str, str]] = []
     seen: set[str] = set()
     for tmpl in templates:
         url = _try_format_url(tmpl, mapping)
         if url is not None and url not in seen:
             seen.add(url)
-            urls.append(url)
-    if not urls and fallback_template:
+            hops.append((url, via_field_from_template(tmpl)))
+    if not hops and fallback_template:
         url = _try_format_url(fallback_template, mapping)
         if url is not None:
-            urls.append(url)
-    return tuple(urls)
+            hops.append((url, via_field_from_template(fallback_template) or "id"))
+    return tuple(hops)

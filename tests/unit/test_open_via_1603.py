@@ -423,7 +423,7 @@ def test_data_row_first_non_null_htmx() -> None:
 
 
 def test_resolve_row_open_chain_dual_hops() -> None:
-    """All resolvable dual-open candidates, not first-only."""
+    """All resolvable dual-open candidates, not first-only (url, via) pairs."""
     from dazzle.render.fragment.region._row_links import _resolve_row_open_chain
 
     item = {"id": "t1", "assigned_to": "u-9", "title": "Work"}
@@ -434,7 +434,7 @@ def test_resolve_row_open_chain_dual_hops() -> None:
             "/app/user/{assigned_to}",
         ),
     )
-    assert chain == ("/app/task/t1", "/app/user/u-9")
+    assert chain == (("/app/task/t1", "id"), ("/app/user/u-9", "assigned_to"))
 
 
 def test_data_row_dual_open_emits_secondary_context_hop() -> None:
@@ -465,21 +465,35 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     # Cycle 1571: entity-aware labels + agent attrs
     assert 'data-dz-open-entity="User"' in html
     assert 'data-dz-open-context="/app/user/u-abc"' in html
-    assert 'title="Open User"' in html
-    assert 'aria-label="Open User for Ship dual-open"' in html
+    # Cycle 1577: via-field relation labels + open-chain discovery
+    assert 'data-dz-open-via="assigned_to"' in html
+    assert 'title="Open User via assigned to"' in html
+    assert 'aria-label="Open User via assigned to for Ship dual-open"' in html
+    assert 'data-dz-open-chain="/app/task/t1 /app/user/u-abc"' in html
 
 
 def test_entity_label_from_detail_url() -> None:
-    from dazzle.render.fragment.region._row_links import entity_label_from_detail_url
+    from dazzle.render.fragment.region._row_links import (
+        entity_label_from_detail_url,
+        field_label_from_via,
+        open_hop_label,
+        via_field_from_template,
+    )
 
     assert entity_label_from_detail_url("/app/user/u-9") == "User"
     assert entity_label_from_detail_url("/app/payment-attempt/x") == "Payment Attempt"
     assert entity_label_from_detail_url("/app/supplier_bank_account/1") == "Supplier Bank Account"
     assert entity_label_from_detail_url("") == "Related"
+    assert via_field_from_template("/app/user/{assigned_to}") == "assigned_to"
+    assert via_field_from_template("/app/task/{id}") == "id"
+    assert field_label_from_via("assigned_to") == "Assigned to"
+    assert open_hop_label("User", "assigned_to") == "Open User via assigned to"
+    assert open_hop_label("Task", "id") == "Open Task"
+    assert open_hop_label("Company", "company") == "Open Company"
 
 
 def test_data_row_multi_open_emits_all_context_hops() -> None:
-    """open: A|B|C → primary + two labeled context hops (cycle 1571)."""
+    """open: A|B|C → primary + two labeled context hops (cycle 1571/1577)."""
     from dazzle.render.fragment.primitives import RowCapabilities
     from dazzle.render.fragment.renderer._data_row import render_data_row
 
@@ -507,12 +521,19 @@ def test_data_row_multi_open_emits_all_context_hops() -> None:
     assert 'data-dz-open-secondary="/app/invoice/inv-1"' in html
     assert 'data-dz-open-entity="Invoice"' in html
     assert 'data-dz-open-entity="Supplier"' in html
+    assert 'data-dz-open-via="invoice"' in html
+    assert 'data-dz-open-via="supplier"' in html
+    # via name matches entity slug → title stays "Open Invoice" (no redundant via)
     assert 'title="Open Invoice"' in html
     assert 'title="Open Supplier"' in html
     assert html.count("dz-tr-open-secondary") == 2
     # Only the first extra hop keeps the legacy secondary attr
     assert html.count("data-dz-open-secondary=") == 2  # anchor + tr mirror
     assert 'data-dz-open-context="/app/supplier/sup-9"' in html
+    assert (
+        'data-dz-open-chain="/app/payment-attempt/pa1 /app/invoice/inv-1 /app/supplier/sup-9"'
+        in html
+    )
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:

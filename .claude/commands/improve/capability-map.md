@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1571 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1577 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -138,6 +138,7 @@ apply map patches with `{"apply":true}`.
 
 
 
+> **Cycle 1577 (2026-08-02).** campaign force **framework-ux**: **ship** dual-open via-field hop labels — `via_field_from_template` / `open_hop_label` / `data-dz-open-via` + `data-dz-open-chain` multi-hop agent discovery; relation-aware title/aria (`Open User via assigned to`); open_chain returns `(url, via)` pairs. residual=0 densify=0 dual_lock=0. fitness/open_via **USED@1577**. budget 1. Explore **22/100**.
 > **Cycle 1576 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 37 PASS; **ship** `search_box.type_fires_results` + `search_box_type_results` runner (type substation → MOCK_HTMX Aurora); catalog **38/38 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1576**. budget 1. Explore **21/100**.
 > **Cycle 1575 (2026-08-02).** campaign force **example-apps story_walk**: dig project_tracker — **product** dual-open project_list `Project via id | User via owner`; ST-001/004 + stem; prove journey **5/5** dual hops (id→Project + owner→User); walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1575**. budget 1. Explore **20/100**.
 > **Cycle 1574 (2026-08-01).** campaign force **example-apps journey_dogfood**: dig acme_billing — **product** dual-open project_list `Project via id | Organization via org`, user_list `User via id | Organization via org`; ST-001/003/006 + stem; prove journey dual hops (id→Project + org→Organization); walks 9/9 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1574**. budget 1. Explore **19/100**.
