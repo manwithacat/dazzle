@@ -29,6 +29,14 @@
   `ref_as_repr` seeded into the knowledge graph (SEED_SCHEMA_VERSION 33);
   CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
+### Added
+- **simple_task Discussion conversation spine** — 12 domain-true
+  `TaskComment` demo seeds + Discussion purpose copy so the manager
+  comments desk still shows a live thread (brand guidelines, kickoff,
+  a11y) instead of empty trail theater. Post-5.8 Goal B `conversation`
+  depth; hero still recaptured; empty-hero floor for
+  `comments_desk_manager` + calibrated team_overview above-fold floor.
+
 ### Fixed
 - **Smoke dig dead-crawl residual** — `smoke-dig` no longer PASS when
   report `counts.ok=0` and `fail>0` (e.g. `ERR_CONNECTION_REFUSED` after

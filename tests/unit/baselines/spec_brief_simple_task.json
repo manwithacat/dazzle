@@ -431,7 +431,7 @@
       "name": "comments_desk",
       "title": "Discussion",
       "kind": "workspace",
-      "purpose": "Recent task discussion across the team",
+      "purpose": "Recent task discussion across the team — threads, decisions, and open questions on live work",
       "personas": [
         "admin",
         "manager",

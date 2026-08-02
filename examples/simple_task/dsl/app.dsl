@@ -875,7 +875,7 @@ workspace my_work "My Work":
 # Fourth product workspace: discussion desk so list surfaces
 # no longer dominate vs job shells (comments as collaboration, not CRUD dump).
 workspace comments_desk "Discussion":
-  purpose: "Recent task discussion across the team"
+  purpose: "Recent task discussion across the team — threads, decisions, and open questions on live work"
   access: persona(admin, manager, member)
 
   comment_pulse:
@@ -887,19 +887,21 @@ workspace comments_desk "Discussion":
     tones:
       comments: accent
 
+  # Conversation spine: newest notes as a pull-to-open queue (author + task + body).
   recent:
     source: TaskComment
     sort: created_at desc
     limit: 25
     display: queue
-    empty: "No comments yet"
+    empty: "No comments yet — add a note from a task to start the trail"
 
+  # Time-ordered discussion trail so managers see the thread, not a warehouse.
   comment_trail:
     source: TaskComment
     sort: created_at desc
     limit: 15
     display: timeline
-    empty: "No comments yet"
+    empty: "No comments yet — discussion appears here as the team talks"
 
   # Work-surface utility: in-progress work is a pull queue, not a grid dump.
   active_tasks:

@@ -33,9 +33,12 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         "device_fleet_manager_desktop_light.png": 90000,
     },
     "simple_task": {
-        "team_overview_manager_desktop_light.png": 80000,
+        # Above-fold recapture is ~900px; 80k was calibrated on taller composites.
+        "team_overview_manager_desktop_light.png": 65000,
         "task_board_manager_desktop_light.png": 90000,
         "my_work_member_desktop_light.png": 60000,
+        # Post-5.8 Goal B: Discussion desk must stay conversation-dense (not empty trail).
+        "comments_desk_manager_desktop_light.png": 100000,
     },
     "support_tickets": {
         "manager_ops_manager_desktop_light.png": 80000,
