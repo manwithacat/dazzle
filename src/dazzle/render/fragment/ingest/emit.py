@@ -327,6 +327,37 @@ def _hub_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
     return link_attrs, host_attrs
 
 
+def drill_open_discovery_attrs(drill_url: str) -> str:
+    """Single-anchor open discovery (link + chain) for dashboard drills.
+
+    Cycle 1617 — task-inbox / cohort-strip / day-timeline wrap the whole
+    cell in ``<a href=drill>`` (no separate host root). Agents need the same
+    ``data-dz-open-*`` attrs as queue/kanban without scraping titles.
+    """
+    link_attrs, host_attrs = _hub_open_discovery_attrs(drill_url)
+    return (link_attrs + host_attrs).strip()
+
+
+def drill_anchor_open_attrs(drill_url: str, *, kind: str) -> str:
+    """Open discovery + drill marker for a dashboard ``<a href=drill>``.
+
+    Sole-emitter for ``data-dz-*-drill`` markers (cycle 1617). ``kind`` is one
+    of ``task_inbox`` / ``cohort`` / ``day_timeline``.
+    """
+    markers = {
+        "task_inbox": "data-dz-task-inbox-drill",
+        "cohort": "data-dz-cohort-drill",
+        "day_timeline": "data-dz-day-timeline-drill",
+    }
+    try:
+        marker = markers[kind]
+    except KeyError as exc:
+        raise ValueError(
+            f"drill_anchor_open_attrs kind must be one of {sorted(markers)}, got {kind!r}"
+        ) from exc
+    return f"{marker} {drill_open_discovery_attrs(drill_url)}"
+
+
 # Back-compat alias (cycle 1606 queue call sites / tests).
 _queue_open_discovery_attrs = _hub_open_discovery_attrs
 

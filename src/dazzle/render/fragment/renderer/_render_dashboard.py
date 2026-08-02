@@ -34,6 +34,7 @@ from dazzle.render.fragment.ingest import (
     render_entity_card,
     render_task_inbox,
 )
+from dazzle.render.fragment.ingest.emit import drill_anchor_open_attrs
 from dazzle.render.fragment.primitives import (
     CohortStripRegion,
     DashboardCard,
@@ -300,9 +301,11 @@ class _RenderDashboardMixin:
                     f"{action_block}"
                 )
                 if cell.drill_url:
+                    open_attrs = drill_anchor_open_attrs(str(cell.drill_url), kind="cohort")
                     cell_parts.append(
                         f'<a class="dz-cohort-strip-cell" '
                         f'href="{ctx.escape_attr(cell.drill_url)}" '
+                        f"{open_attrs} "
                         f'data-member-id="{ctx.escape_attr(cell.member_id)}">'
                         f"{inner}"
                         f"</a>"
@@ -354,10 +357,12 @@ class _RenderDashboardMixin:
                 if slot.action_html:
                     inner += f'<div class="dz-day-timeline-slot-action">{slot.action_html}</div>'
                 if slot.drill_url:
+                    open_attrs = drill_anchor_open_attrs(str(slot.drill_url), kind="day_timeline")
                     slot_parts.append(
                         f'<a class="{cls}" '
                         f'data-dz-position="{ctx.escape_attr(pos)}" '
                         f'data-slot-id="{ctx.escape_attr(slot.slot_id)}" '
+                        f"{open_attrs} "
                         f'href="{ctx.escape_attr(slot.drill_url)}">'
                         f"{inner}"
                         f"</a>"
@@ -445,9 +450,11 @@ class _RenderDashboardMixin:
                 f'<span class="dz-task-inbox-chip-label">{ctx.escape(chip.label)}</span>'
             )
             if chip.drill_url:
+                open_attrs = drill_anchor_open_attrs(str(chip.drill_url), kind="task_inbox")
                 chip_parts.append(
                     f'<a class="dz-task-inbox-chip" '
                     f'href="{ctx.escape_attr(chip.drill_url)}" '
+                    f"{open_attrs} "
                     f'data-dz-chip-id="{ctx.escape_attr(chip.chip_id)}">'
                     f"{inner}"
                     f"</a>"
@@ -482,12 +489,14 @@ class _RenderDashboardMixin:
                 f"</div>"
             )
             if item.drill_url:
+                open_attrs = drill_anchor_open_attrs(str(item.drill_url), kind="task_inbox")
                 item_parts.append(
                     f'<li class="dz-task-inbox-item" '
                     f'data-dz-urgency="{ctx.escape_attr(urgency)}" '
                     f'data-dz-item-id="{ctx.escape_attr(item.item_id)}">'
                     f'<a class="dz-task-inbox-item-link" '
-                    f'href="{ctx.escape_attr(item.drill_url)}">'
+                    f'href="{ctx.escape_attr(item.drill_url)}" '
+                    f"{open_attrs}>"
                     f"{inner}"
                     f"</a></li>"
                 )

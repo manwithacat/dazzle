@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1612 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1617 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -94,7 +94,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1612 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1617 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1617 (2026-08-02).** campaign force **framework-ux**: **ship** dashboard drill open discovery — task-inbox / cohort-strip / day-timeline single-anchor `data-dz-open-*` via ingest `drill_anchor_open_attrs` (sole-emitter); unit pins. densify=0. fitness/open_via/dashboard emit **USED@1617**. budget 1. Explore **58/100**.
 > **Cycle 1616 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 44 PASS; **Ship** `grid.column_visibility_toggle_and_reset` + `grid_column_visibility` runner (hide plan via Columns menu; Show-all reset); catalog **45/45 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1616**. budget 1. Explore **57/100**.
 > **Cycle 1615 (2026-08-02).** campaign force **example-apps story_walk**: dig contact_manager — **product** EngagementLetter display_field=party; home open_engagement_letters queue (draft|sent); related status column; ST-009 dual-open wording; trial criterion; unit pin engagement_letter_list; prove **7/7**; walks 5/5; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1615**. budget 1. Explore **56/100**.
 > **Cycle 1614 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig llm_ticket_classifier — **product** TicketClassification display_field=category + fitness.repr_fields; ST-003 dual-open wording; trial adoption_criteria; unit pin classification_list; prove **6/6**; walks 4/4; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1614**. budget 1. Explore **55/100**.
