@@ -13,7 +13,7 @@ story ST-001 "Approver works the awaiting-approval queue":
     - "Invoices exist with status submitted"
   then:
     - "Approver sees submitted invoices in the awaiting_approval queue sorted by amount"
-    - "Row open hops to the Invoice detail hub"
+    - "Row open dual-hops Invoice via id | Supplier via supplier (invoice hub first, vendor context second)"
     - "Approval load metrics show awaiting / approved / rejected counts"
 
 story ST-002 "Approver opens invoice hub before approve or reject":
@@ -39,7 +39,7 @@ story ST-003 "Finance settles invoices from the ready-to-pay queue":
     - "Invoices exist with status approved"
   then:
     - "Finance sees approved invoices in the ready_to_pay queue"
-    - "Opening a row lands on the Invoice hub with payment attempts as a pull queue"
+    - "Opening a row dual-hops Invoice via id | Supplier via supplier; Invoice hub shows payment attempts as a pull queue"
 
 story ST-004 "Finance works the open dispute queue":
   status: accepted

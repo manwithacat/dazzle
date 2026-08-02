@@ -15,7 +15,9 @@ not one shared mega-list plus warehouse CRUD.
 - Stories `given:` match each persona’s `default_workspace`.
 
 - List dual-open (story dig): `payment_attempt_list` → PaymentAttempt|Invoice;
-  `line_item_list` → LineItem|Invoice; bank list → SupplierBankAccount|Supplier.
+  `line_item_list` → LineItem|Invoice; bank list → SupplierBankAccount|Supplier;
+  `invoice_list` → Invoice|Supplier (ST-001/003); `supplier_list` / `user_list`
+  → Tenant via tenant_id (admin roster context).
 
 ## Not this
 

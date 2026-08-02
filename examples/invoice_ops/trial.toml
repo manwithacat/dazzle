@@ -26,6 +26,7 @@ tasks = [
     "Open one submitted invoice hub. Is status, supplier, amount, and line-item queue legible?",
     "On the invoice hub, are Line items and Payment attempts pull queues (not dense tables)?",
     "If you visit Line Items / Payment Attempts, dual-open line/attempt hub plus Invoice hub?",
+    "On invoice queues, can you dual-open Invoice hub plus Supplier vendor context?",
     "Decide whether you would pilot this desk with your AP clerk.",
 ]
 
@@ -45,6 +46,7 @@ adoption_criteria = [
     "Invoice hub related line items and payment attempts are pull queues (not warehouse tables)",
     "Line-item composition desk uses a pull queue into invoice hubs (not a decorative grid)",
     "Payment attempt and line lists dual-open attempt/line hub plus Invoice hub",
+    "Invoice list dual-opens Invoice hub plus Supplier vendor context",
     "Would run a two-week pilot as-is or with minor fixes",
 ]
 

@@ -9,14 +9,15 @@ use invoice_ops.entities
 surface invoice_list "Invoices":
   uses entity Invoice
   mode: list
-  open: Invoice via id
+  # Dual open: invoice hub first (approve/pay), supplier hub second (vendor context).
+  open: Invoice via id | Supplier via supplier
   section main:
     field invoice_number "Number"
     field amount "Amount" format: currency:GBP
     field currency "Currency"
     field status "Status"
   ux:
-    purpose: "Browse invoices — open a row for the invoice hub"
+    purpose: "Browse invoices — open invoice hub or hop to supplier context"
 
 surface invoice_detail "Invoice":
   uses entity Invoice
@@ -63,13 +64,14 @@ surface invoice_create "New Invoice":
 surface supplier_list "Suppliers":
   uses entity Supplier
   mode: list
-  open: Supplier via id
+  # Dual open: supplier hub first, tenant root second (multi-tenant AP admin).
+  open: Supplier via id | Tenant via tenant_id
   section main:
     field name "Name"
     field contact_email "Contact"
     field region "Region"
   ux:
-    purpose: "Browse suppliers — open a row for the supplier hub"
+    purpose: "Browse suppliers — open supplier hub or hop to tenant root"
 
 surface supplier_detail "Supplier":
   uses entity Supplier
@@ -183,13 +185,14 @@ surface tenant_detail "Tenant":
 surface user_list "Users":
   uses entity User
   mode: list
-  open: User via id
+  # Dual open: person hub first, tenant root second (admin roster context).
+  open: User via id | Tenant via tenant_id
   section main:
     field email "Email"
     field name "Name"
     field tenant_id "Tenant"
   ux:
-    purpose: "Team roster — open a row for the person hub"
+    purpose: "Team roster — open person hub or hop to tenant root"
 
 surface user_detail "User":
   uses entity User

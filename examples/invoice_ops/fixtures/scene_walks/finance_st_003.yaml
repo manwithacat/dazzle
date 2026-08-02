@@ -1,5 +1,6 @@
 # Story walk ST-003 — Finance settles invoices from the ready-to-pay queue
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+# Dual-open (cycle 1578): Invoice via id | Supplier via supplier on invoice_list.
 
 persona: finance
 home_workspace: pay_desk
