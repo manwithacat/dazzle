@@ -66,6 +66,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "date_range.change_fires_search" in ids
     assert "search_box.type_fires_results" in ids
     assert "confirm_panel.required_gate_arms_primary" in ids
+    assert "code.copy_plain_source" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -99,6 +100,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "date_range_change",
             "search_box_type_results",
             "confirm_panel_required_gate",
+            "code_copy_plain_source",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"

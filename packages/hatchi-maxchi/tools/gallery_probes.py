@@ -1086,6 +1086,34 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1587 — code: copy control writes plain textContent + data-copied feedback.
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_code_copy_uses_source_text.
+    Probe(
+        id="code.copy_plain_source",
+        stem="code",
+        page="hyperparts/code.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Code Hyperpart copy control writes plain textContent to the clipboard "
+            "(not highlighted HTML spans) and sets data-copied feedback — docs "
+            "paste must be source text, not token markup"
+        ),
+        kind="code_copy_plain_source",
+        params={
+            "root": ("[data-code], [data-dz-code], figure.code, figure.dz-code"),
+            "copy_btn": (
+                "[data-code-copy], [data-dz-code-copy], button.code__copy, button.dz-code__copy"
+            ),
+            "expect_contains": "def greet",
+            "forbid_contains": "<span",
+            "scope": ".hm-preview",
+            "settle_ms": 150,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3650,6 +3678,101 @@ def _run_confirm_panel_required_gate(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_code_copy_plain_source(page: Any, probe: Probe) -> dict[str, Any]:
+    """Copy button writes plain source text + data-copied feedback.
+
+    Stubs clipboard.writeText (file:// / sandbox often denies real Clipboard).
+    Mirrors test_behaviour.test_code_copy_uses_source_text (cycle 1587).
+    """
+    params = probe.params
+    root_sel = params.get("root", "[data-code], figure.code")
+    btn_sel = params.get("copy_btn", "[data-code-copy], button.code__copy")
+    expect = str(params.get("expect_contains", "def greet"))
+    forbid = str(params.get("forbid_contains", "<span"))
+    settle = int(params.get("settle_ms", 150))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"code root not found ({root_sel})"}
+
+    btn = None
+    for part in btn_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(part).first
+        if cand.count() > 0:
+            btn = cand
+            break
+    if btn is None:
+        return {"verdict": "ERROR", "detail": f"copy button not found ({btn_sel})"}
+
+    page.evaluate(
+        """() => {
+          window.__hmCopied = null;
+          if (!navigator.clipboard) {
+            Object.defineProperty(navigator, 'clipboard', {
+              value: {}, configurable: true
+            });
+          }
+          navigator.clipboard.writeText = (t) => {
+            window.__hmCopied = t;
+            return Promise.resolve();
+          };
+        }"""
+    )
+    btn.click()
+    page.wait_for_timeout(settle)
+    copied = page.evaluate("window.__hmCopied")
+    if copied is None:
+        return {
+            "verdict": "FAIL",
+            "detail": "copy control did not call clipboard.writeText",
+        }
+    text = str(copied)
+    if expect not in text:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"clipboard missing {expect!r} (got {text[:120]!r}) — "
+                "copy must write source textContent"
+            ),
+            "clipboard_snippet": text[:200],
+        }
+    if forbid and forbid in text:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"clipboard contains {forbid!r} — must be plain text, not highlighted HTML"),
+            "clipboard_snippet": text[:200],
+        }
+    # Feedback attr on the control
+    if btn.get_attribute("data-copied") is None and btn.get_attribute("data-dz-copied") is None:
+        # Some builds set on parent; accept either
+        host_copied = root.locator(
+            "[data-code-copy][data-copied], [data-dz-code-copy][data-copied]"
+        )
+        if host_copied.count() < 1:
+            return {
+                "verdict": "FAIL",
+                "detail": "copy did not set data-copied feedback on the control",
+            }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"clipboard plain source contains {expect!r}; data-copied set",
+        "clipboard_len": len(text),
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -3679,6 +3802,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "date_range_change": _run_date_range_change,
     "search_box_type_results": _run_search_box_type_results,
     "confirm_panel_required_gate": _run_confirm_panel_required_gate,
+    "code_copy_plain_source": _run_code_copy_plain_source,
 }
 
 
