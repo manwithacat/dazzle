@@ -588,15 +588,22 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             drill_attrs = f'{drill_attrs} data-dz-open-hops="{len(chain_urls)}"'
             # Cycle 1594: ordered human hop phrases (pipe-joined) for agents
             # that read attrs not aria-label (parallel to chain-via / chain URLs).
+            # Cycle 1599: parallel entity display names (pipe-joined) so agents
+            # need not parse chain URLs for hop targets.
             chain_labels: list[str] = []
+            chain_entities: list[str] = []
             for hop_url, hop_via in open_chain:
                 if not hop_url:
                     continue
                 elab = entity_label_from_detail_url(hop_url)
+                chain_entities.append(elab)
                 chain_labels.append(open_hop_label(elab, hop_via or "id"))
             if chain_labels:
                 label_chain_attr = _html_mod.escape(" | ".join(chain_labels), quote=True)
                 drill_attrs = f'{drill_attrs} data-dz-open-chain-label="{label_chain_attr}"'
+            if chain_entities:
+                ent_chain_attr = _html_mod.escape(" | ".join(chain_entities), quote=True)
+                drill_attrs = f'{drill_attrs} data-dz-open-chain-entity="{ent_chain_attr}"'
         # Primary hop: relation-aware label + via/entity attrs (parity with context hops).
         primary_via = ""
         primary_ent_label = ""

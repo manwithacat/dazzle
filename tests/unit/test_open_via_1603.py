@@ -486,6 +486,8 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'data-dz-open-label="Open Task"' in html
     assert 'data-dz-open-label="Open User via assigned to"' in html
     assert 'data-dz-open-chain-label="Open Task | Open User via assigned to"' in html
+    # Cycle 1599: ordered entity display names on the row
+    assert 'data-dz-open-chain-entity="Task | User"' in html
 
 
 def test_entity_label_from_detail_url() -> None:
@@ -561,6 +563,8 @@ def test_data_row_multi_open_emits_all_context_hops() -> None:
     assert 'data-dz-open-label="Open Payment Attempt"' in html
     assert 'data-dz-open-label="Open Invoice"' in html
     assert 'data-dz-open-label="Open Supplier"' in html
+    # Cycle 1599: entity chain (multi-word labels stay pipe-joined)
+    assert 'data-dz-open-chain-entity="Payment Attempt | Invoice | Supplier"' in html
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:
