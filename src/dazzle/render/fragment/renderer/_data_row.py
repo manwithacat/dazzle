@@ -566,15 +566,51 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             if m_sec:
                 drill_attrs = f'{drill_attrs} data-dz-open-secondary="{m_sec.group(1)}"'
         # Full ordered hop chain (primary + context) for multi-hop agents (cycle 1577).
+        # Cycle 1583: parallel data-dz-open-chain-via lists relation fields in hop order
+        # so agents can distinguish id primary vs FK context without parsing URLs.
         if len(open_chain) > 1:
             chain_urls = [u for u, _via in open_chain if u]
             if chain_urls:
                 chain_attr = _html_mod.escape(" ".join(chain_urls), quote=True)
                 drill_attrs = f'{drill_attrs} data-dz-open-chain="{chain_attr}"'
+            chain_vias = [(v or "id") for u, v in open_chain if u]
+            if chain_vias:
+                via_chain_attr = _html_mod.escape(" ".join(chain_vias), quote=True)
+                drill_attrs = f'{drill_attrs} data-dz-open-chain-via="{via_chain_attr}"'
+        # Primary hop: relation-aware label + via/entity attrs (parity with context hops).
+        primary_via = ""
+        primary_ent_label = ""
+        if open_chain:
+            for hop_url, hop_via in open_chain:
+                if hop_url == detail_url:
+                    primary_via = hop_via or "id"
+                    primary_ent_label = entity_label_from_detail_url(hop_url)
+                    break
+        if not primary_ent_label:
+            primary_ent_label = entity_label_from_detail_url(detail_url)
+        primary_phrase = open_hop_label(primary_ent_label, primary_via)
+        primary_title = _html_mod.escape(primary_phrase, quote=True)
+        primary_aria = _html_mod.escape(
+            f"{primary_phrase} for {raw_label or ''}".strip() if raw_label else primary_phrase,
+            quote=True,
+        )
+        primary_via_attr = (
+            f'data-dz-open-via="{_html_mod.escape(primary_via, quote=True)}" '
+            if primary_via
+            else ""
+        )
+        primary_ent_attr = (
+            f'data-dz-open-entity="{_html_mod.escape(primary_ent_label, quote=True)}" '
+            if primary_ent_label
+            else ""
+        )
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
-            f'aria-label="View {row_label_attr}" '
+            f"{primary_via_attr}"
+            f"{primary_ent_attr}"
+            f'aria-label="{primary_aria}" '
+            f'title="{primary_title}" '
             f'class="dz-tr-action">'
             f"{lucide_svg_html('eye', cls='dz-tr-action-icon')}</a>"
         )

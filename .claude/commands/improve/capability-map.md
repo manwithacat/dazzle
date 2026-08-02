@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1577 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1583 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -94,7 +94,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1571 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1583 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1583 (2026-08-02).** campaign force **framework-ux** dual-open polish: primary hop parity (title/aria + data-dz-open-via/entity) + `data-dz-open-chain-via` relation fields for multi-hop agents; open_via unit + char fixtures. tip CI **in_progress** (1582) hold push. densify=0. fitness/open_via **USED@1583**. budget 1. Explore **27/100**.
 > **Cycle 1582 (2026-08-02).** campaign force **hm-convergence gallery_probes**: prior **38/38 PASS** + uncover=0; **Ship** `confirm_panel.required_gate_arms_primary` + `confirm_panel_required_gate` runner (required boxes arm primary; optional alone never; uncheck re-disarms) — mirrors behaviour test; catalog **39/39 PASS**. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1582**. budget 1. Explore **26/100**.
 > **Cycle 1581 (2026-08-02).** **capability-sweep** (cadence ≥20 since 1561) — inventory reconcile vs tip `d727f2e42`. **UNOWNED=0** **COGNITION_STALE_eff=22** **HYGIENE_STALE_eff=34** rows=76 (COGNITION=29 HYGIENE=40 DRIVER=2 EXEMPT=5). Flipped USED→STALE lag≥20: MCP `presentation` (cognition / opportunities / residual), **hyperpart_presentation** process (`present()` matrix + strategy), `dazzle demo reset-and-load` (#1627 closed-loop seed), `qa-trial` skill. DRIVER CodeQL+inbox **USED@1581**. Tip CI **in_progress** (1580 dual-open) — no product push. Top digs next (aggressive densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1): campaign **gallery_probes** / story_walk|acceptance dual-open ships / framework-ux edge / domain|product_quality re-touch / **semgrep hygiene** never-exercised — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes.
 

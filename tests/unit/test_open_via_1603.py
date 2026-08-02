@@ -470,6 +470,11 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'title="Open User via assigned to"' in html
     assert 'aria-label="Open User via assigned to for Ship dual-open"' in html
     assert 'data-dz-open-chain="/app/task/t1 /app/user/u-abc"' in html
+    # Cycle 1583: chain-via + primary hop parity
+    assert 'data-dz-open-chain-via="id assigned_to"' in html
+    assert 'title="Open Task"' in html  # primary via id
+    assert 'data-dz-open-via="id"' in html
+    assert 'data-dz-open-entity="Task"' in html
 
 
 def test_entity_label_from_detail_url() -> None:
@@ -534,6 +539,9 @@ def test_data_row_multi_open_emits_all_context_hops() -> None:
         'data-dz-open-chain="/app/payment-attempt/pa1 /app/invoice/inv-1 /app/supplier/sup-9"'
         in html
     )
+    # Cycle 1583: via fields parallel to chain URLs; primary hop labeled
+    assert 'data-dz-open-chain-via="id invoice supplier"' in html
+    assert 'title="Open Payment Attempt"' in html
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:
