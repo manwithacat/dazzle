@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Added
+- **Goal B command_density (ops_dashboard)** — Command Center is multi-panel ops
+  attention: `systems_attention` queue (non-healthy systems) + capped active
+  alert feed (limit 8) + persona focus so ≥2 attention regions sit above fold.
+  Peer read: PagerDuty/Datadog multi-signal walls, not a single limit:20 queue.
+
 ### Fixed
 - **CI preflight after media depth** — extract `dazzle.render.cell_chrome` leaf (swatch + media thumbs) to clear deferred-import + complexity ratchets; rebuild HM dist/site after `dz-media-thumb` CSS.
 

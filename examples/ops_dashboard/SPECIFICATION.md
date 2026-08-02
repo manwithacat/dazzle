@@ -26,7 +26,7 @@ Around these, the product provides the full working surface: engineers can brows
 
 ## Where work happens
 
-**Command Center** is the heart of the product: real-time operations monitoring and incident response, built for the Operations Engineer. It presents the estate from every useful angle — a severity-sorted active alert **queue**, full alert **timeline**, ack queue, and task inbox of Alerts; Systems as a kanban board, grid, lists, and a metrics panel; and a rich analytical layer over Alerts including bar charts, an insight summary, a comparison view, a cross-tabulated breakdown, a heatmap, line, area, and sparkline trends, and a day timeline. Systems get their own statistical views — histogram, radar, box plot, bullet and bar-track gauges, profile cards, and a cohort strip.
+**Command Center** is the heart of the product: real-time multi-panel operations attention for the Operations Engineer. Above the fold it pairs a **systems needing attention** queue (degraded / critical / offline estate) with a capped severity-sorted **active alert** feed — two attention panels, not a single long queue. Below that it still presents the full analytical layer — alert timeline, ack queue, task inbox; Systems as kanban, grid, lists, and metrics; bar charts, insight summary, comparison, heatmap, line/area/sparkline trends, day timeline; and System statistical views (histogram, radar, box plot, bullet/bar-track, profile cards, cohort strip).
 
 **Incident Review** serves the same engineers for side-by-side pairs in change-management review: Alert metrics beside an Alert list, System metrics, and a confirm-action panel for the Integration connection.
 
@@ -63,4 +63,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:1b707cc793d37e9564c7fb569e8bc1ec4002f332c6de0775de3d6c870981509e -->
+<!-- dazzle-spec-brief: sha256:9afa8285f1c8f9106432ac0a00153f821c5dc95cb400d38a8d7359b07487b5f3 -->

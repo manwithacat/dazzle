@@ -206,22 +206,38 @@ nav ops_nav:
 # =============================================================================
 
 workspace command_center "Command Center":
-  purpose: "Real-time operations monitoring and incident response"
+  # Goal B command_density (interesting_product): peer ops tools (PagerDuty /
+  # Datadog) show ≥2 attention panels above the fold — fleet systems in
+  # trouble *and* the active alert feed — not a single limit:20 queue that
+  # pushes every other signal below the viewport.
+  purpose: "Multi-panel ops attention — systems in trouble + active alert feed"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
+  # Fleet attention — non-healthy systems first (degraded / critical / offline).
+  # Domain-true second panel for command density; operators act on boxes
+  # before scrolling a long alert list.
+  systems_attention:
+    source: System
+    filter: status != healthy
+    sort: error_rate desc, response_time_ms desc
+    limit: 6
+    display: queue
+    action: system_detail
+    empty: "All systems healthy"
+    refresh: every 30s
+
   # Alert Feed - active alerts as an urgency queue (severity-sorted), not a
-  # multi-field admin list. Live-refreshes (#1391) so the on-call engineer
-  # sees new alerts without reloading — the region's HTMX card re-fetches
-  # every 30s. work_surface_utility: queue fits shared pool + attention_rank.
+  # multi-field admin list. Live-refreshes (#1391). Cap at 8 so systems
+  # attention stays above fold with fold_count=3 (command_center stage).
   active_alerts:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at desc
-    limit: 20
+    limit: 8
     display: queue
     refresh: every 30s
 
@@ -632,7 +648,11 @@ workspace command_center "Command Center":
   ux:
     as ops_engineer:
       scope: all
-      purpose: "Full visibility into all systems and alerts"
+      purpose: "Systems needing attention and the active alert feed at a glance"
+      focus: systems_attention, active_alerts, ops_readiness
+    as admin:
+      purpose: "Full fleet command — attention panels first"
+      focus: systems_attention, active_alerts, ops_readiness
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
