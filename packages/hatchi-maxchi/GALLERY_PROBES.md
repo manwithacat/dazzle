@@ -57,6 +57,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `drawer.expand_restore_toggles_width` | `drawer` | exclusive | high | controller | Open record drawer Expand control flips data-width md↔xl and aria-pressed with Expand/Restore labels — width chrome toggle, not full-page navigation |
 | `kanban.keyboard_move_updates_column` | `kanban` | exclusive | high | controller | Selecting a Move-to option on a rearrange-capable kanban card fires PUT then board refresh so the card's data-from-state matches the chosen column (MOCK_HTMX /mock/kanban) — keyboard parity for Linear-class rearrange, not a static column mock |
 | `grid.inline_edit_commits_and_refreshes` | `grid` | exclusive | high | controller | Dblclick a grid editable cell opens an in-cell editor; Escape cancels without commit; Enter commits a single-field PUT to data-grid-edit-url and the refreshed cell shows the new value (MOCK /mock/grid) — inline edit is live controller work, not a static display span demo |
+| `grid.column_visibility_toggle_and_reset` | `grid` | exclusive | high | controller | Unchecking a Columns-menu toggle hides every cell of that column; Show all columns reset reveals them and re-checks the box (dz-grid-cols) — column chrome is live controller state, not a static table-layout demo |
 
 ## Loop (autonomous improve)
 

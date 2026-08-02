@@ -1237,6 +1237,39 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1616 — grid-cols extension: hide column via menu checkbox; Show-all reset.
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_grid_column_visibility_menu_toggles_and_persists +
+    # test_grid_column_visibility_reset_shows_all_and_clears (hide+reset only).
+    Probe(
+        id="grid.column_visibility_toggle_and_reset",
+        stem="grid",
+        page="hyperparts/grid.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Unchecking a Columns-menu toggle hides every cell of that column; "
+            "Show all columns reset reveals them and re-checks the box "
+            "(dz-grid-cols) — column chrome is live controller state, not a "
+            "static table-layout demo"
+        ),
+        kind="grid_column_visibility",
+        params={
+            "body": "[data-grid-body], [data-dz-grid-body]",
+            "root": "[data-grid], [data-dz-grid]",
+            "toggle": ('[data-grid-col-toggle="plan"], [data-dz-grid-col-toggle="plan"]'),
+            "cells": (
+                '[data-grid] [data-col="plan"], [data-grid] [data-dz-col="plan"], '
+                '[data-dz-grid] [data-col="plan"], [data-dz-grid] [data-dz-col="plan"]'
+            ),
+            "reset": "[data-grid-cols-reset], [data-dz-grid-cols-reset]",
+            "scope": ".hm-preview",
+            "hydrate_ms": 3000,
+            "settle_ms": 100,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -4154,6 +4187,183 @@ def _run_grid_inline_edit(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_grid_column_visibility(page: Any, probe: Probe) -> dict[str, Any]:
+    """Hide a grid column via Columns menu checkbox; Show-all reset restores.
+
+    Mirrors test_behaviour grid column visibility toggle + reset (cycle 1616).
+    """
+    params = probe.params
+    body_sel = params.get("body", "[data-grid-body], [data-dz-grid-body]")
+    toggle_sel = params.get(
+        "toggle",
+        '[data-grid-col-toggle="plan"], [data-dz-grid-col-toggle="plan"]',
+    )
+    cells_sel = params.get(
+        "cells",
+        (
+            '[data-grid] [data-col="plan"], [data-grid] [data-dz-col="plan"], '
+            '[data-dz-grid] [data-col="plan"], [data-dz-grid] [data-dz-col="plan"]'
+        ),
+    )
+    reset_sel = params.get(
+        "reset",
+        "[data-grid-cols-reset], [data-dz-grid-cols-reset]",
+    )
+    hydrate_ms = int(params.get("hydrate_ms", 3000))
+    settle = int(params.get("settle_ms", 100))
+
+    def _visible_count(sel: str) -> int:
+        return int(
+            page.evaluate(
+                """(sel) => {
+                  const seen = new Set();
+                  let n = 0;
+                  for (const part of sel.split(',')) {
+                    for (const e of document.querySelectorAll(part.trim())) {
+                      if (seen.has(e)) continue;
+                      seen.add(e);
+                      if (getComputedStyle(e).display !== 'none') n++;
+                    }
+                  }
+                  return n;
+                }""",
+                sel,
+            )
+        )
+
+    scope = _probe_scope(page, params)
+    body = scope.locator(body_sel).first
+    if body.count() == 0:
+        body = page.locator(body_sel).first
+    if body.count() == 0:
+        return {"verdict": "ERROR", "detail": f"grid body not found ({body_sel})"}
+
+    try:
+        first_body = body_sel.split(",")[0].strip()
+        page.wait_for_selector(
+            f"{first_body} tr[id], {first_body} tr[data-grid-row-id], "
+            f"{first_body} tr[data-dz-grid-row-id]",
+            timeout=hydrate_ms,
+        )
+    except Exception:  # noqa: BLE001
+        page.wait_for_timeout(min(hydrate_ms, 800))
+
+    toggle = scope.locator(toggle_sel).first
+    if toggle.count() == 0:
+        toggle = page.locator(toggle_sel).first
+    if toggle.count() == 0:
+        return {
+            "verdict": "ERROR",
+            "detail": f"column toggle not found ({toggle_sel}) — Columns menu missing?",
+        }
+
+    n_before = int(
+        page.evaluate(
+            """(sel) => {
+              const seen = new Set();
+              for (const part of sel.split(',')) {
+                for (const e of document.querySelectorAll(part.trim())) seen.add(e);
+              }
+              return seen.size;
+            }""",
+            cells_sel,
+        )
+    )
+    if n_before < 1:
+        return {
+            "verdict": "ERROR",
+            "detail": f"no plan column cells after hydrate ({cells_sel})",
+        }
+
+    # Uncheck via change event (menu need not be open — matches behaviour test).
+    ok_hide = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const t = document.querySelector(part.trim());
+            if (!t) continue;
+            t.checked = false;
+            t.dispatchEvent(new Event('change', {bubbles: true}));
+            return true;
+          }
+          return false;
+        }""",
+        toggle_sel,
+    )
+    if not ok_hide:
+        return {"verdict": "ERROR", "detail": f"could not drive toggle ({toggle_sel})"}
+    page.wait_for_timeout(settle)
+
+    visible_count = _visible_count(cells_sel)
+    if visible_count != 0:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"unchecking plan toggle left {visible_count} plan cells visible "
+                "(expected 0) — grid-cols controller not applied"
+            ),
+            "visible_after_hide": visible_count,
+            "cells_total": n_before,
+        }
+
+    reset = scope.locator(reset_sel).first
+    if reset.count() == 0:
+        reset = page.locator(reset_sel).first
+    if reset.count() == 0:
+        return {
+            "verdict": "FAIL",
+            "detail": f"Show-all reset control not found ({reset_sel})",
+        }
+
+    page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const b = document.querySelector(part.trim());
+            if (b) { b.click(); return true; }
+          }
+          return false;
+        }""",
+        reset_sel,
+    )
+    page.wait_for_timeout(settle)
+
+    visible_after_reset = _visible_count(cells_sel)
+    if visible_after_reset < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                "Show-all reset left plan column hidden "
+                f"(visible={visible_after_reset}) — reset must reveal columns"
+            ),
+            "visible_after_reset": visible_after_reset,
+        }
+
+    checked_after_reset = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const t = document.querySelector(part.trim());
+            if (t) return !!t.checked;
+          }
+          return null;
+        }""",
+        toggle_sel,
+    )
+    if checked_after_reset is not True:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"reset must re-check plan toggle (got checked={checked_after_reset!r})"),
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"hide plan ({n_before} cells) → visible=0; reset → "
+            f"visible={visible_after_reset}, toggle checked"
+        ),
+        "cells_total": n_before,
+        "visible_after_reset": visible_after_reset,
+    }
+
+
 def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
     """Open via data-dialog-open; close via method=dialog submit (✕).
 
@@ -4367,6 +4577,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "drawer_expand_restore": _run_drawer_expand_restore,
     "kanban_keyboard_move": _run_kanban_keyboard_move,
     "grid_inline_edit": _run_grid_inline_edit,
+    "grid_column_visibility": _run_grid_column_visibility,
 }
 
 

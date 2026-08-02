@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1611 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1616 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1602 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1611 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1616 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1616 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 44 PASS; **Ship** `grid.column_visibility_toggle_and_reset` + `grid_column_visibility` runner (hide plan via Columns menu; Show-all reset); catalog **45/45 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1616**. budget 1. Explore **57/100**.
 > **Cycle 1615 (2026-08-02).** campaign force **example-apps story_walk**: dig contact_manager — **product** EngagementLetter display_field=party; home open_engagement_letters queue (draft|sent); related status column; ST-009 dual-open wording; trial criterion; unit pin engagement_letter_list; prove **7/7**; walks 5/5; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1615**. budget 1. Explore **56/100**.
 > **Cycle 1614 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig llm_ticket_classifier — **product** TicketClassification display_field=category + fitness.repr_fields; ST-003 dual-open wording; trial adoption_criteria; unit pin classification_list; prove **6/6**; walks 4/4; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1614**. budget 1. Explore **55/100**.
 > **Cycle 1613 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig ops_dashboard — **product** Alert display_field=message; ST-008 dual-open wording; trial criterion; unit pin alert_list dual-open; prove **11/11**; walks 6/6 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+prove+walk+process_dig **USED@1613**. budget 1. Explore **54/100**.
