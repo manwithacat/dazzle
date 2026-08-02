@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1583 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1589 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1589 (2026-08-02).** campaign force **framework-ux** dual-open polish: `data-dz-open-role`/`data-dz-open-hop` on primary+context + `data-dz-open-hops` count; open_via+char green. tip CI in_progress hold push. densify=0. fitness/open_via **USED@1589**. budget 1. Explore **32/100**.
 > **Cycle 1587 (2026-08-02).** campaign force **hm-convergence gallery_probes**: prior 39 PASS + uncover=0; **Ship** `code.copy_plain_source` + `code_copy_plain_source` runner (plain textContent clipboard + data-copied); catalog **40/40 PASS**. tip CI in_progress hold push. densify=0. gallery_probes **USED@1587**. budget 1. Explore **31/100**.
 > **Cycle 1586 (2026-08-02).** campaign force **example-apps story_walk**: dig project_tracker — **product** task_list triple-open `Task via id | Project via parent_project | User via assigned_to`; ST-002/003 + stem; prove journey **5/5**; walks 5/5; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1586**. budget 1. Explore **30/100**.
 > **Cycle 1585 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig acme_billing — **product** membership_list triple-open `Membership via id | User via user | Project via project`; ST-006 + stem; prove journey **10/11**; walks 9/9; dig receipt PASS live_unproven. tip CI in_progress hold push. residual=0 densify=0. journey+prove+walk+process_dig **USED@1585**. budget 1. Explore **29/100**.

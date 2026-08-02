@@ -475,6 +475,12 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'title="Open Task"' in html  # primary via id
     assert 'data-dz-open-via="id"' in html
     assert 'data-dz-open-entity="Task"' in html
+    # Cycle 1589: hop role/index + row hop count
+    assert 'data-dz-open-role="primary"' in html
+    assert 'data-dz-open-hop="0"' in html
+    assert 'data-dz-open-role="context"' in html
+    assert 'data-dz-open-hop="1"' in html
+    assert 'data-dz-open-hops="2"' in html
 
 
 def test_entity_label_from_detail_url() -> None:
@@ -542,6 +548,9 @@ def test_data_row_multi_open_emits_all_context_hops() -> None:
     # Cycle 1583: via fields parallel to chain URLs; primary hop labeled
     assert 'data-dz-open-chain-via="id invoice supplier"' in html
     assert 'title="Open Payment Attempt"' in html
+    # Cycle 1589: three hops → indices 0/1/2 + hops count
+    assert 'data-dz-open-hops="3"' in html
+    assert 'data-dz-open-hop="2"' in html
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:

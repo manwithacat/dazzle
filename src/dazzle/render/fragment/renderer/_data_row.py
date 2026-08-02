@@ -497,12 +497,16 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 )
                 # First context hop retains dual-open secondary attrs (tests + agents).
                 secondary_attr = f'data-dz-open-secondary="{sec_attr}" ' if hop_i == 0 else ""
+                # Cycle 1589: hop index/role for multi-hop agent discovery (0=primary).
+                hop_idx = hop_i + 1
                 hop_parts.append(
                     f'<a href="{sec_attr}" '  # nosemgrep
                     f'data-dazzle-action="{entity_name_attr}.open_context" '
                     f"{secondary_attr}"
                     f'data-dz-open-context="{sec_attr}" '
                     f'data-dz-open-entity="{ent_attr}" '
+                    f'data-dz-open-role="context" '
+                    f'data-dz-open-hop="{hop_idx}" '
                     f"{via_attr}"
                     f'aria-label="{hop_aria}" '
                     f'title="{hop_title}" '
@@ -577,6 +581,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             if chain_vias:
                 via_chain_attr = _html_mod.escape(" ".join(chain_vias), quote=True)
                 drill_attrs = f'{drill_attrs} data-dz-open-chain-via="{via_chain_attr}"'
+            # Cycle 1589: hop count on the row for multi-hop agents.
+            drill_attrs = f'{drill_attrs} data-dz-open-hops="{len(chain_urls)}"'
         # Primary hop: relation-aware label + via/entity attrs (parity with context hops).
         primary_via = ""
         primary_ent_label = ""
@@ -604,11 +610,14 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             if primary_ent_label
             else ""
         )
+        # Cycle 1589: primary hop role/index (context hops use 1..n).
+        primary_role_attrs = 'data-dz-open-role="primary" data-dz-open-hop="0" '
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
             f"{primary_via_attr}"
             f"{primary_ent_attr}"
+            f"{primary_role_attrs}"
             f'aria-label="{primary_aria}" '
             f'title="{primary_title}" '
             f'class="dz-tr-action">'
