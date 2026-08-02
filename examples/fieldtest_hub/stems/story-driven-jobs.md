@@ -15,8 +15,9 @@ and fleet metrics for engineer/manager; personal queues for testers.
 - Device hub related issues/sessions and tester hub activity/assignments are
   **pull queues** (ST-045/047), not warehouse tables.
 
-- List dual-open (acceptance dig): `issue_report_list` → IssueReport|Device;
-  `test_session_list` → TestSession|Device.
+- List triple-open (story_walk dig cycle 1592): `issue_report_list` →
+  IssueReport|Device|Tester(reported_by); `test_session_list` →
+  TestSession|Device|Tester.
 - List dual-open (story_walk dig): `device_list` → Device|Tester via
   `assigned_tester_id`; `task_list` → Task|Tester via `assigned_to_id`.
 

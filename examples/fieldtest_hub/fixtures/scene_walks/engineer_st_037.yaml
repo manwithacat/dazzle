@@ -1,5 +1,6 @@
 # Story walk ST-037 — Engineer triages open issue reports on engineering_dashboard
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-037 then:
+# Triple-open IssueReport|Device|Tester (reported_by) cycle 1592.
 
 persona: engineer
 home_workspace: engineering_dashboard

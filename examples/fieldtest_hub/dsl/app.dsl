@@ -675,12 +675,13 @@ surface issue_report_list "Issues":
   uses entity IssueReport
   mode: list
   render: fragment
-  # Dual open (acceptance dig cycle 1567): issue hub first (ST-046 triage),
-  # device hub second (fleet context) — not device-only orphan hop.
-  open: IssueReport via id | Device via device_id
+  # Triple open (story_walk dig cycle 1592): issue hub first (ST-037/046 triage),
+  # device hub second (fleet), reporter Tester third (who filed).
+  open: IssueReport via id | Device via device_id | Tester via reported_by_id
 
   section main "Issue Reports":
     field device_id "Device"
+    field reported_by_id "Reported By"
     field category "Category"
     field severity "Severity"
     field status "Status"
@@ -688,7 +689,7 @@ surface issue_report_list "Issues":
     field reported_at "Reported"
 
   ux:
-    purpose: "Triage field issues — open a row for the issue hub or parent Device hub"
+    purpose: "Triage field issues — open a row for the issue, Device, or reporter hub"
     sort: severity desc, reported_at desc
     filter: category, severity, status, firmware_version, device_id
     search: description, steps_to_reproduce
@@ -809,8 +810,9 @@ surface test_session_list "Test Sessions":
   uses entity TestSession
   mode: list
   render: fragment
-  # Dual open: session hub first, device hub second (fleet context).
-  open: TestSession via id | Device via device_id
+  # Triple open (story_walk dig cycle 1592): session hub first, device second,
+  # tester third (who ran the session — ST-043 path).
+  open: TestSession via id | Device via device_id | Tester via tester_id
 
   section main "Test Sessions":
     field device_id "Device"
@@ -821,7 +823,7 @@ surface test_session_list "Test Sessions":
     field logged_at "Logged At"
 
   ux:
-    purpose: "Track field testing sessions — open a row for the session hub or parent Device hub"
+    purpose: "Track field testing sessions — open a row for the session, Device, or Tester hub"
     sort: logged_at desc
     filter: device_id, tester_id, environment
     search: notes

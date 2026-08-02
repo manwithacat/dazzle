@@ -1,5 +1,6 @@
 # Story walk ST-046 — Engineer opens issue context then hops toward device
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-046 then:
+# Triple-open IssueReport|Device|Tester (reported_by) cycle 1592.
 
 persona: engineer
 home_workspace: engineering_dashboard
