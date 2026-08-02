@@ -67,7 +67,8 @@ dedicated screens — fourteen in all, from the staff directory to
 
 - **Staff Directory** — shared entry: headcount metrics, staff queue, department
   context, people cards, employment-by-department chart, and assignment-status mix
-  (active / on leave / terminated).
+  (active / on leave / terminated). Employment history triple-opens assignment hub,
+  person career hub, and role catalogue (`Employment|Person|Role`).
 - **Person Detail** — career desk: employment queue plus salary and reporting
   timelines, employment trail, and salary reason chart.
 - **Departments & Roles** — org pulse, department tree (nested under parent
@@ -119,4 +120,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:b20f47e87622b634048faa28f704d3f65eb3427424b6f7082a30fffac7a5a164 -->
+<!-- dazzle-spec-brief: sha256:89918628761425fbcf19db7603698c07c1e1c29ef5abdd18193f3189cd9a34f4 -->

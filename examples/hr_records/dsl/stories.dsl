@@ -62,10 +62,10 @@ story ST-005 "HR Admin walks employment history back to the person hub":
   executed_by: surface.employment_list
   persona: hr_admin
   trigger: user_click
-  entities: [Employment, Person]
+  entities: [Employment, Person, Role]
   given:
     - "HR Admin has list permission on Employment"
   then:
-    - "Employment rows dual-open Employment via id | Person via person (assignment hub first, person career hub second)"
+    - "Employment rows triple-open Employment via id | Person via person | Role via role (assignment hub first, person career then role catalogue)"
     - "Person hub shows related employment and compensation as pull queues (not warehouse tables)"
     - "Employment list and hub show assignment status (active / on leave / terminated)"

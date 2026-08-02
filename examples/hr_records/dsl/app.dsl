@@ -581,8 +581,8 @@ surface role_create "Add Role":
 surface employment_list "Employment history":
   uses entity Employment
   mode: list
-  # Dual open (journey dig cycle 1568): assignment hub first, person career hub second.
-  open: Employment via id | Person via person
+  # Triple open (acceptance dig cycle 1600): assignment hub, person career, role catalogue.
+  open: Employment via id | Person via person | Role via role
   section main:
     field person "Person"
     field role "Role"
@@ -591,9 +591,9 @@ surface employment_list "Employment history":
     field start_date "Start"
     field end_date "End"
   ux:
-    purpose: "Employment history — open a row for the assignment hub or person career hub"
+    purpose: "Employment history — open assignment hub, person career hub, or role catalogue"
 
-# View surface so dual-open Employment via id lands a readable assignment note.
+# View surface so open Employment via id lands a readable assignment note.
 surface employment_detail "Employment Detail":
   uses entity Employment
   mode: view

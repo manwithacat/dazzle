@@ -1,6 +1,7 @@
 # Story walk ST-005 — HR Admin walks employment history back to the person hub
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:, SPECIFICATION.md
 # Employment lifecycle (active → on_leave → terminated).
+# Triple-open: Employment via id | Person via person | Role via role (cycle 1600).
 
 persona: hr_admin
 home_workspace: staff_directory
