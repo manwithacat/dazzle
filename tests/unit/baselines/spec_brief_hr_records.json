@@ -403,16 +403,16 @@
       "name": "org_chart",
       "title": "Departments & Roles",
       "kind": "workspace",
-      "purpose": "Department tree, job roles, and reporting-line records",
+      "purpose": "Who reports to whom, nested departments, and job roles — org hierarchy people can parse",
       "personas": [
         "hr_admin",
         "manager"
       ],
       "contents": [
         "metrics of Department",
+        "queue of ManagerLink",
         "tree of Department",
         "queue of Role",
-        "timeline of ManagerLink",
         "bar_chart of Role"
       ]
     },
@@ -490,7 +490,7 @@
       "name": "reporting_desk",
       "title": "Reporting",
       "kind": "workspace",
-      "purpose": "ManagerLink trail — who reports to whom across the org",
+      "purpose": "People reporting lines — who reports to whom across the org (not only department units)",
       "personas": [
         "hr_admin",
         "manager"

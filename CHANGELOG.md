@@ -30,6 +30,11 @@
   CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
 ### Added
+- **hr_records org_structure people-first** — Departments & Roles desk
+  surfaces Reporting Lines as an above-fold people queue (report→manager
+  names/avatars) before the department tree; reporting desk queue gets
+  sort + detail action. Post-5.8 Goal B `org_structure` depth; stills
+  recaptured for hr_admin/manager.
 - **simple_task Discussion conversation spine** — 12 domain-true
   `TaskComment` demo seeds + Discussion purpose copy so the manager
   comments desk still shows a live thread (brand guidelines, kickoff,

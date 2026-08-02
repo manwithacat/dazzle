@@ -915,10 +915,12 @@ workspace person_detail "Person Detail":
 
 
 # #1626 P0-7 / P1: department hierarchy via display:tree + parent_department.
-# Manager-chain (ManagerLink edges) stays a timeline until edge→node transform.
+# Post-5.8 Goal B org_structure: people reporting lines above the fold (queue
+# of report→manager), not only dept units. Full recursive tree remains a
+# pattern gap (TODO #hr-hierarchy); queue + person hubs is buyer-true.
 workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
-  purpose: "Department tree, job roles, and reporting-line records"
+  purpose: "Who reports to whom, nested departments, and job roles — org hierarchy people can parse"
 
   org_pulse:
     source: Department
@@ -929,6 +931,17 @@ workspace org_chart "Departments & Roles":
       reporting_lines: count(ManagerLink)
     tones:
       departments: accent
+      reporting_lines: positive
+
+  # People first (Goal B org_structure): report/manager names + avatars in a
+  # pull-to-open queue, not an edge timeline buried below depts.
+  reporting_lines:
+    source: ManagerLink
+    sort: start_date desc
+    limit: 20
+    display: queue
+    action: managerlink_detail
+    empty: "No reporting lines yet — assign a manager to a person"
 
   # Nested org units (Engineering → Frontend/Backend/Platform, etc.).
   # group_by parent_department matches fieldtest device_tree pattern.
@@ -951,16 +964,6 @@ workspace org_chart "Departments & Roles":
     limit: 25
     action: role_detail
     empty: "No roles"
-
-  # TODO(#hr-hierarchy) + (#hr-temporal): manager chain visualisation.
-  # The manager hierarchy is a temporal self-ref — drawing it requires
-  # filtering ManagerLink to currently-active rows AND following the
-  # `manager` FK recursively. Two pattern gaps compounded.
-  reporting_lines:
-    source: ManagerLink
-    display: timeline
-    limit: 20
-    empty: "No reporting lines"
 
   role_level_mix:
     source: Role
@@ -1231,7 +1234,7 @@ workspace starters_desk "New Starters":
 
 # Eighth product workspace: reporting-line desk.
 workspace reporting_desk "Reporting":
-  purpose: "ManagerLink trail — who reports to whom across the org"
+  purpose: "People reporting lines — who reports to whom across the org (not only department units)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1246,9 +1249,11 @@ workspace reporting_desk "Reporting":
 
   active_links:
     source: ManagerLink
+    sort: start_date desc
     display: queue
     limit: 25
-    empty: "No reporting lines yet"
+    action: managerlink_detail
+    empty: "No reporting lines yet — assign a manager to a person"
 
   # Work-surface utility: reporting desk people are open-person queue, not inventory grid.
   people_cards:
