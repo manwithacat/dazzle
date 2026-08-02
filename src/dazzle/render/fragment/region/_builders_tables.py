@@ -21,6 +21,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from dazzle.render.cell_chrome import (
+    _render_color_swatch_html,
+    _render_media_thumb_html,
+)
 from dazzle.render.filters import _ref_display_name
 from dazzle.render.fragment import (
     URL,
@@ -217,8 +221,6 @@ def _queue_row_meta_columns(
         key_l = key.lower()
         # Goal B media — logo/preview thumbs first on brand/asset queues.
         if col_type == "image":
-            from dazzle.render.fragment.renderer._data_row import _render_media_thumb_html
-
             thumb = _render_media_thumb_html(raw, alt=str(col.get("label") or key))
             if thumb and thumb != "—":
                 meta.append(
@@ -231,8 +233,6 @@ def _queue_row_meta_columns(
             continue
         # #1626 R5 — colour chips on brand queues (trusted HTML swatch).
         if col_type == "color":
-            from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html
-
             swatch = _render_color_swatch_html(raw)
             if swatch and swatch != "—":
                 meta.append(

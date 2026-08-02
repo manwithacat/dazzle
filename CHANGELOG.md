@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Fixed
+- **CI preflight after media depth** — extract `dazzle.render.cell_chrome` leaf (swatch + media thumbs) to clear deferred-import + complexity ratchets; rebuild HM dist/site after `dz-media-thumb` CSS.
+
 ### Added
 - **Goal B media depth (design_studio)** — framework `image` column type +
   safe HTTPS media thumbs (`dz-media-thumb`) for logo/preview URLs; palette

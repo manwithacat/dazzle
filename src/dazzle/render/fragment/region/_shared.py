@@ -22,6 +22,10 @@ from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
+from dazzle.render.cell_chrome import (
+    _render_color_swatch_html,
+    _render_media_thumb_html,
+)
 from dazzle.render.fragment import (
     URL,
     Fragment,
@@ -197,14 +201,10 @@ def _render_typed_value(
 
     if col_type == "color":
         # #1626 R5 / P0-8 — swatch on brand desk queues/cards (not raw hex).
-        from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html
-
         return RawHTML(_render_color_swatch_html(value))
 
     if col_type == "image":
         # Goal B media — logo/preview thumbs on grids/queues.
-        from dazzle.render.fragment.renderer._data_row import _render_media_thumb_html
-
         return RawHTML(
             _render_media_thumb_html(value, alt=str(col.get("label") or col.get("key") or ""))
         )

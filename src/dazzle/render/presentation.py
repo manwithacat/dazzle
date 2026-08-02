@@ -268,7 +268,7 @@ def _present_money(
 
 
 def _present_swatch(value: Any, role: Role, host: Host, plain_fallback: str) -> PresentResult:
-    from dazzle.render.fragment.renderer._data_row import _render_color_swatch_html
+    from dazzle.render.cell_chrome import _render_color_swatch_html
 
     swatch = _render_color_swatch_html(value)
     if swatch and swatch != "—":

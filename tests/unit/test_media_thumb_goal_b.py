@@ -10,7 +10,7 @@ from dazzle.http.runtime.workspace_columns import (
     build_entity_columns,
     field_kind_to_col_type,
 )
-from dazzle.render.fragment.renderer._data_row import (
+from dazzle.render.cell_chrome import (
     _render_media_thumb_html,
     _safe_media_image_url,
 )

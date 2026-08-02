@@ -18,6 +18,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
+from dazzle.render.cell_chrome import (
+    _render_color_swatch_html,
+    _render_media_thumb_html,
+)
 from dazzle.render.filters import (
     _basename_or_url_filter,
     _bool_icon_filter,
@@ -208,80 +212,6 @@ def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
     else:
         text = str(value)
     return text[:length] + "…" if len(text) > length else text
-
-
-def _render_color_swatch_html(value: Any) -> str:
-    """#1626 R5 — compact palette swatch + hex for list/queue/card cells."""
-    raw = "" if value is None else str(value).strip()
-    if not raw or raw == "—":
-        return "—"
-    # Accept #RGB / #RRGGBB only; refuse free-text so we never inject CSS.
-    if not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", raw):
-        return _html_mod.escape(raw, quote=False)
-    hex_esc = _html_mod.escape(raw, quote=False)
-    hex_attr = _html_mod.escape(raw, quote=True)
-    return (
-        f'<span class="dz-color-swatch" data-dz-color-swatch '
-        f'style="background-color: {hex_attr}" title="{hex_attr}" '
-        f'aria-label="Colour {hex_attr}"></span>'
-        f'<span class="dz-color-swatch-hex">{hex_esc}</span>'
-    )
-
-
-# Goal B media: allow only https image-like URLs (no javascript:/data:).
-_MEDIA_THUMB_HOST_ALLOW = frozenset(
-    {
-        "placehold.co",
-        "images.unsplash.com",
-        "cdn.dazzle.dev",
-        "raw.githubusercontent.com",
-    }
-)
-_MEDIA_THUMB_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif")
-
-
-def _safe_media_image_url(value: Any) -> str | None:
-    """Return a sanitised https image URL or None if unsafe/non-image."""
-    raw = "" if value is None else str(value).strip()
-    if not raw or raw == "—":
-        return None
-    if len(raw) > 500 or any(c in raw for c in (" ", "\n", "\r", "\t", '"', "'", "<", ">")):
-        return None
-    lower = raw.lower()
-    if not lower.startswith("https://"):
-        return None
-    # Parse host + path without full urllib (avoid weird schemes after https).
-    rest = raw[8:]
-    host, _, path_q = rest.partition("/")
-    host = host.split("@")[-1].split(":")[0].lower()
-    if not host or ".." in path_q or "\\" in path_q:
-        return None
-    path_only = path_q.split("?", 1)[0].lower()
-    ext_ok = path_only.endswith(_MEDIA_THUMB_EXT) or "/png" in path_only or "/jpeg" in path_only
-    host_ok = host in _MEDIA_THUMB_HOST_ALLOW or host.endswith(".placehold.co")
-    # placehold.co paths often end /png without .png extension
-    if host.endswith("placehold.co") or host == "placehold.co":
-        host_ok = True
-        ext_ok = True
-    if not (host_ok and ext_ok):
-        return None
-    return raw
-
-
-def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
-    """Post-5.8 media depth — compact image thumb for logo/preview URL cells."""
-    url = _safe_media_image_url(value)
-    if not url:
-        raw = "" if value is None else str(value).strip()
-        if not raw or raw == "—":
-            return "—"
-        return _html_mod.escape(raw, quote=False)
-    src = _html_mod.escape(url, quote=True)
-    alt_esc = _html_mod.escape(alt or "Preview", quote=True)
-    return (
-        f'<img class="dz-media-thumb" data-dz-media-thumb src="{src}" '
-        f'alt="{alt_esc}" loading="lazy" decoding="async" width="48" height="48" />'
-    )
 
 
 def _render_cell_display(

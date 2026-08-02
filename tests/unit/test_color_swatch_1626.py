@@ -6,10 +6,8 @@ from pathlib import Path
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.http.runtime.workspace_columns import build_surface_columns
-from dazzle.render.fragment.renderer._data_row import (
-    _render_cell_display,
-    _render_color_swatch_html,
-)
+from dazzle.render.cell_chrome import _render_color_swatch_html
+from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
 
 def test_color_swatch_html_for_hex() -> None:

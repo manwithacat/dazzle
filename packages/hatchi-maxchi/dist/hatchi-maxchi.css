@@ -8972,6 +8972,19 @@ a.action-card:hover {
   letter-spacing: 0.01em;
 }
 
+/* Goal B media — logo/preview thumbs on brand/asset queues. */
+.media-thumb {
+  display: inline-block;
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--colour-border, #e5e7eb);
+  vertical-align: middle;
+  background: var(--colour-surface-muted, #f3f4f6);
+  flex-shrink: 0;
+}
+
 .queue-row-actions {
   display: flex;
   gap: 0.25rem;
@@ -10864,6 +10877,19 @@ a.action-card:hover {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   margin: 0;
+}
+
+/* Goal B media thumbs inside grid cards (logo/preview fields). */
+.grid-cell-field .media-thumb {
+  display: block;
+  width: 100%;
+  max-width: 7rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--colour-border, #e5e7eb);
+  background: var(--colour-surface-muted, #f3f4f6);
+  margin-block: 0.15rem 0.35rem;
 }
 
 .grid-cell-field-label {
