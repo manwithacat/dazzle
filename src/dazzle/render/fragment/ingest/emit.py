@@ -293,12 +293,13 @@ def queue_row_root_attrs(row: QueueRow) -> str:
     return base
 
 
-def _queue_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
-    """Primary dual-open attrs for a queue drill (link attrs, row chain attrs).
+def _hub_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
+    """Primary dual-open attrs for a hub drill (link attrs, host chain attrs).
 
-    Cycle 1606 — parity with list-row dual-open discovery so agents reading
-    hub/related queues get ``data-dz-open-*`` without scraping the title only.
-    Queue drills are same-entity VIEW hubs (via ``id``) today.
+    Cycle 1606 — queue parity with list-row dual-open discovery.
+    Cycle 1612 — same attrs on kanban / activity / timeline / tree drills so
+    agents attr-read open hops without scraping titles only. Hub drills are
+    same-entity VIEW paths (via ``id``) today.
     """
     href = _html.escape(drill_url, quote=True)
     ent = entity_label_from_detail_url(drill_url)
@@ -315,15 +316,19 @@ def _queue_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
         f'aria-label="{aria}" '
         f'title="{phrase_attr}" '
     )
-    # Row-level chain (single hop) mirrors table multi-hop chain attrs.
-    row_attrs = (
+    # Host-level chain (single hop) mirrors table multi-hop chain attrs.
+    host_attrs = (
         f' data-dz-open-chain="{href}"'
         f' data-dz-open-chain-via="id"'
         f' data-dz-open-hops="1"'
         f' data-dz-open-chain-label="{phrase_attr}"'
         f' data-dz-open-chain-entity="{ent_attr}"'
     )
-    return link_attrs, row_attrs
+    return link_attrs, host_attrs
+
+
+# Back-compat alias (cycle 1606 queue call sites / tests).
+_queue_open_discovery_attrs = _hub_open_discovery_attrs
 
 
 def render_status_list_entry(entry: StatusListEntry) -> str:
@@ -511,11 +516,13 @@ def render_kanban_card(card: KanbanCard) -> str:
     """Model → one kanban card (matches HM contracts/kanban.py)."""
     title = _html.escape(card.title)
     drill = getattr(card, "drill_url", "") or ""
+    open_host_attrs = ""
     if drill:
         href = _html.escape(str(drill), quote=True)
+        link_open, open_host_attrs = _hub_open_discovery_attrs(str(drill))
         title_html = (
             f'<h4 class="dz-kanban-card-title">'
-            f'<a href="{href}" data-dz-kanban-drill>{title}</a>'
+            f'<a href="{href}" data-dz-kanban-drill {link_open}>{title}</a>'
             f"</h4>"
         )
     else:
@@ -543,7 +550,7 @@ def render_kanban_card(card: KanbanCard) -> str:
             f"</select></label>"
             f"</div>"
         )
-    root_attrs = kanban_card_root_attrs(card)
+    root_attrs = kanban_card_root_attrs(card) + open_host_attrs
     id_attr = ""
     if row_id:
         id_attr = f' id="dz-kanban-card-{_html.escape(str(row_id), quote=True)}"'
@@ -583,12 +590,14 @@ def render_activity_row(row: ActivityRow) -> str:
         actor_html = f'<span class="dz-activity-actor">{_html.escape(row.actor)}</span> '
     desc = _html.escape(row.description)
     drill = getattr(row, "drill_url", "") or ""
+    open_host_attrs = ""
     if drill:
         href = _html.escape(drill, quote=True)
-        desc_html = f'<a href="{href}" data-dz-activity-drill>{desc}</a>'
+        link_open, open_host_attrs = _hub_open_discovery_attrs(drill)
+        desc_html = f'<a href="{href}" data-dz-activity-drill {link_open}>{desc}</a>'
     else:
         desc_html = desc
-    root_attrs = activity_row_root_attrs(row)
+    root_attrs = activity_row_root_attrs(row) + open_host_attrs
     return (
         f'<li class="dz-activity-row" {root_attrs}>'
         f'<span class="dz-activity-dot">{_ACTIVITY_DOT_SVG}</span>'
@@ -606,16 +615,19 @@ def render_timeline_event(evt: TimelineEvent) -> str:
     """Model → one timeline item (matches HM contracts/timeline.py)."""
     title = _html.escape(evt.title)
     drill = getattr(evt, "drill_url", "") or ""
+    open_host_attrs = ""
     if drill:
         href = _html.escape(drill, quote=True)
+        link_open, open_host_attrs = _hub_open_discovery_attrs(drill)
         title_html = (
-            f'<p class="dz-timeline-title"><a href="{href}" data-dz-timeline-drill>{title}</a></p>'
+            f'<p class="dz-timeline-title">'
+            f'<a href="{href}" data-dz-timeline-drill {link_open}>{title}</a></p>'
         )
     else:
         title_html = f'<p class="dz-timeline-title">{title}</p>'
     date = _html.escape(evt.date_label)
     bullet = evt.bullet_html.strip() or _TIMELINE_DEFAULT_BULLET
-    root_attrs = timeline_item_root_attrs(evt)
+    root_attrs = timeline_item_root_attrs(evt) + open_host_attrs
     return (
         f'<li class="dz-timeline-item" {root_attrs}>'
         f'<span class="dz-timeline-bullet-wrap">{bullet}</span>'
@@ -1167,8 +1179,10 @@ def render_tree_node_label(label: str, drill_url: str = "") -> str:
     if not drill_url:
         return f'<span class="dz-tree-label">{label_esc}</span>'
     href = _html.escape(str(drill_url), quote=True)
+    link_open, _host = _hub_open_discovery_attrs(str(drill_url))
     return (
         f'<a class="dz-tree-label" href="{href}" data-dz-tree-drill '
+        f"{link_open}"
         f'onclick="event.stopPropagation()">{label_esc}</a>'
     )
 

@@ -71,7 +71,7 @@ apply map patches with `{"apply":true}`.
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1610 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1602 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1610 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1612 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -85,7 +85,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1606 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1612 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -94,7 +94,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1606 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1612 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1610 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1611 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1611 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1612 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1612 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1612 (2026-08-02).** campaign force **framework-ux**: **ship** hub open discovery on kanban/activity/timeline/tree drills (`_hub_open_discovery_attrs` shared with queue); dig receipt story_walk accepts walk counts>0 or exit 0. densify=0. fitness/open_via/queue emit **USED@1612**. budget 1. Explore **53/100**.
 > **Cycle 1611 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 43 PASS; **Ship** `grid.inline_edit_commits_and_refreshes` + `grid_inline_edit` runner (dblclick Escape cancel + Enter PUT/refresh Renamed); catalog **44/44 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1611**. budget 1. Explore **52/100**.
 > **Cycle 1610 (2026-08-02).** probe residual process_dig hr_records (contract_incomplete walk counts≠exit 0) outranked campaign gallery; **rewrite dig receipt** walk_validate=0 walk_dry_run=0 PASS; **product** person related reporting columns + ManagerLink fitness.repr_fields + display_field; prove 5/5 walks 5/5 dry-run; process residual 1→0. residual_total=0 densify=0. story_walk+process_dig+prove **USED@1610**. budget 1. Explore **51/100**.
 > **Cycle 1609 (2026-08-02).** campaign force **example-apps story_walk**: dig hr_records — **product** managerlink_list+detail triple-open `ManagerLink via id | Person via report | Person via manager`; ST-002 then + stem + trial; prove journey **5/5**; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1609**. budget 1. Explore **50/100**.

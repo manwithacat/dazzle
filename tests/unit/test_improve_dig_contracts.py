@@ -140,6 +140,22 @@ class TestReceipts:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["outcome"] == "contract_incomplete"
 
+    def test_story_walk_accepts_walk_counts_or_exit_zero(self, receipt_mod) -> None:
+        """Cycle 1612 — digs may log exit 0 or successful walk counts (>0)."""
+        base = {
+            "app": "x",
+            "strategy": "story_walk",
+            "stories": ["ST-1"],
+            "maps_cited": [{"path": "s.md", "kind": "stem"}],
+            "outcome": "PASS",
+        }
+        r0 = receipt_mod.DigReceipt(**base, actuators={"walk_validate": 0, "walk_dry_run": 0})
+        assert r0.contract_ok()
+        r_n = receipt_mod.DigReceipt(**base, actuators={"walk_validate": 5, "walk_dry_run": 5})
+        assert r_n.contract_ok()
+        r_bad = receipt_mod.DigReceipt(**base, actuators={"walk_validate": -1, "walk_dry_run": 0})
+        assert not r_bad.contract_ok()
+
     def test_process_residual(self, receipt_mod, monkeypatch, tmp_path: Path) -> None:
         d = tmp_path / "digs3"
         d.mkdir()

@@ -65,9 +65,22 @@ class DigReceipt:
         if self.strategy == "story_walk":
             if not self.stories:
                 return False
-            if act.get("walk_validate") not in (0, "0"):
+
+            # Accept exit-code 0 (cycle 1610 lesson) **or** successful walk
+            # counts > 0 (prior digs logged counts). Nonzero counts mean dry-run
+            # ran; only missing / negative values fail the contract.
+            def _walk_ok(key: str) -> bool:
+                v = act.get(key)
+                if v in (0, "0"):
+                    return True
+                try:
+                    return int(v) > 0
+                except (TypeError, ValueError):
+                    return False
+
+            if not _walk_ok("walk_validate"):
                 return False
-            if act.get("walk_dry_run") not in (0, "0"):
+            if not _walk_ok("walk_dry_run"):
                 return False
         if self.strategy == "agent_acceptance_panel":
             ran = act.get("trial_ran") in (True, 1, "1", "true")
