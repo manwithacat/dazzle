@@ -482,6 +482,10 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'data-dz-open-role="context"' in html
     assert 'data-dz-open-hop="1"' in html
     assert 'data-dz-open-hops="2"' in html
+    # Cycle 1594: hop phrases as data attrs (attr-first agents)
+    assert 'data-dz-open-label="Open Task"' in html
+    assert 'data-dz-open-label="Open User via assigned to"' in html
+    assert 'data-dz-open-chain-label="Open Task | Open User via assigned to"' in html
 
 
 def test_entity_label_from_detail_url() -> None:
@@ -552,6 +556,11 @@ def test_data_row_multi_open_emits_all_context_hops() -> None:
     # Cycle 1589: three hops → indices 0/1/2 + hops count
     assert 'data-dz-open-hops="3"' in html
     assert 'data-dz-open-hop="2"' in html
+    # Cycle 1594: ordered hop phrases on the row
+    assert 'data-dz-open-chain-label="Open Payment Attempt | Open Invoice | Open Supplier"' in html
+    assert 'data-dz-open-label="Open Payment Attempt"' in html
+    assert 'data-dz-open-label="Open Invoice"' in html
+    assert 'data-dz-open-label="Open Supplier"' in html
 
 
 def test_validate_open_via_wrong_mode_errors() -> None:

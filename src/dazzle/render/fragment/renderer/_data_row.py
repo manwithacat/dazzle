@@ -495,6 +495,8 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                     if hop_via
                     else ""
                 )
+                # Cycle 1594: machine-readable hop phrase (parity with title/aria).
+                label_attr = f'data-dz-open-label="{_html_mod.escape(hop_phrase, quote=True)}" '
                 # First context hop retains dual-open secondary attrs (tests + agents).
                 secondary_attr = f'data-dz-open-secondary="{sec_attr}" ' if hop_i == 0 else ""
                 # Cycle 1589: hop index/role for multi-hop agent discovery (0=primary).
@@ -508,6 +510,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                     f'data-dz-open-role="context" '
                     f'data-dz-open-hop="{hop_idx}" '
                     f"{via_attr}"
+                    f"{label_attr}"
                     f'aria-label="{hop_aria}" '
                     f'title="{hop_title}" '
                     f'class="dz-tr-action dz-tr-open-secondary" '
@@ -583,6 +586,17 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 drill_attrs = f'{drill_attrs} data-dz-open-chain-via="{via_chain_attr}"'
             # Cycle 1589: hop count on the row for multi-hop agents.
             drill_attrs = f'{drill_attrs} data-dz-open-hops="{len(chain_urls)}"'
+            # Cycle 1594: ordered human hop phrases (pipe-joined) for agents
+            # that read attrs not aria-label (parallel to chain-via / chain URLs).
+            chain_labels: list[str] = []
+            for hop_url, hop_via in open_chain:
+                if not hop_url:
+                    continue
+                elab = entity_label_from_detail_url(hop_url)
+                chain_labels.append(open_hop_label(elab, hop_via or "id"))
+            if chain_labels:
+                label_chain_attr = _html_mod.escape(" | ".join(chain_labels), quote=True)
+                drill_attrs = f'{drill_attrs} data-dz-open-chain-label="{label_chain_attr}"'
         # Primary hop: relation-aware label + via/entity attrs (parity with context hops).
         primary_via = ""
         primary_ent_label = ""
@@ -611,7 +625,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             else ""
         )
         # Cycle 1589: primary hop role/index (context hops use 1..n).
-        primary_role_attrs = 'data-dz-open-role="primary" data-dz-open-hop="0" '
+        # Cycle 1594: data-dz-open-label mirrors title for attr-first agents.
+        primary_role_attrs = (
+            'data-dz-open-role="primary" data-dz-open-hop="0" '
+            f'data-dz-open-label="{_html_mod.escape(primary_phrase, quote=True)}" '
+        )
         detail_link_html = (
             f'<a href="{detail_url_attr}" '  # nosemgrep
             f'data-dazzle-action="{entity_name_attr}.view" '
