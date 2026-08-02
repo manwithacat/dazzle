@@ -383,9 +383,11 @@ class _BuildersMiscMixin:
             # Image thumbs first so media grids read as pixels, not meta.
             ordered_cols = sorted(
                 [c for c in columns if isinstance(c, dict)],
-                key=lambda c: 0
-                if str(c.get("type") or "") == "image"
-                else (1 if str(c.get("type") or "") == "color" else 2),
+                key=lambda c: (
+                    0
+                    if str(c.get("type") or "") == "image"
+                    else (1 if str(c.get("type") or "") == "color" else 2)
+                ),
             )
             for col in ordered_cols:
                 key = str(col.get("key") or "")
