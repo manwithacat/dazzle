@@ -1016,6 +1016,40 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1576 — search-box: typing fires debounced hx-get into results (MOCK_HTMX).
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_search_box_coaching_hides_on_type_via_pure_css exchange half.
+    Probe(
+        id="search_box.type_fires_results",
+        stem="search-box",
+        page="hyperparts/search-box.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Typing a query into the search-box input fires the debounced hx-get "
+            "into the results slot (MOCK_HTMX /mock/search → Aurora) — FTS search "
+            "is a live Exchange, not a static empty coaching panel"
+        ),
+        kind="search_box_type_results",
+        params={
+            "root": (
+                "[data-search-box], [data-dz-search-box], .search-box-region, "
+                ".dz-search-box-region, .search-box, .dz-search-box"
+            ),
+            "input": (
+                "input[type=search].search-box-input, "
+                "input[type=search].dz-search-box-input, "
+                "input[type=search][name=q], input#hm-search-input"
+            ),
+            "results": ("#hm-search-results, .search-box-results, .dz-search-box-results"),
+            "query": "substation",
+            "expect_results_contains": "Aurora",
+            "debounce_ms": 400,
+            "scope": ".hm-preview",
+        },
+        fix_surface="partial",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3323,6 +3357,106 @@ def _run_date_range_change(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_search_box_type_results(page: Any, probe: Probe) -> dict[str, Any]:
+    """Type into search-box; assert debounced hx-get lands MOCK_HTMX results.
+
+    Gallery search-box demo: input hx-get=/mock/search with delay:250ms →
+    #hm-search-results. MOCK_HTMX returns Aurora/Beacon substation rows.
+    Mirrors test_behaviour.test_search_box_coaching_hides_on_type_via_pure_css
+    (exchange half) for autonomous catalog (cycle 1576).
+    """
+    params = probe.params
+    root_sel = params.get(
+        "root",
+        ("[data-search-box], [data-dz-search-box], .search-box-region, .dz-search-box-region"),
+    )
+    input_sel = params.get(
+        "input",
+        "input[type=search], input.search-box-input, input.dz-search-box-input",
+    )
+    results_sel = params.get(
+        "results",
+        "#hm-search-results, .search-box-results, .dz-search-box-results",
+    )
+    query = str(params.get("query", "substation"))
+    expect = str(params.get("expect_results_contains", "Aurora"))
+    debounce = int(params.get("debounce_ms", 400))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"search-box root not found ({root_sel})"}
+
+    inp = None
+    for part in input_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(part).first
+        if cand.count() > 0:
+            inp = cand
+            break
+    if inp is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"search input not found ({input_sel})",
+            "dom_hint": input_sel,
+        }
+
+    results = None
+    for part in results_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        for host in (root, scope):
+            loc = host.locator(part).first
+            if loc.count() > 0:
+                results = loc
+                break
+        if results is not None:
+            break
+    if results is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"results slot not found ({results_sel})",
+            "dom_hint": results_sel,
+        }
+
+    prior = _norm_label(results.inner_text())
+    # fill triggers input; htmx listens on input changed delay:250ms + search.
+    inp.fill(query)
+    inp.dispatch_event("input")
+    page.wait_for_timeout(debounce)
+
+    got = _norm_label(results.inner_text())
+    if expect.lower() not in got.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"results missing {expect!r} after query {query!r} "
+                f"(prior={prior[:60]!r} got={got[:120]!r}) — "
+                "MOCK_HTMX / debounced hx-get FTS exchange failed"
+            ),
+            "results_text": got[:200],
+            "prior_text": prior[:200],
+            "query": query,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"query {query!r} → results contain {expect!r}",
+        "results_snippet": got[:120],
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -3350,6 +3484,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "master_detail_select": _run_master_detail_select,
     "pagination_page_load": _run_pagination_page_load,
     "date_range_change": _run_date_range_change,
+    "search_box_type_results": _run_search_box_type_results,
 }
 
 
