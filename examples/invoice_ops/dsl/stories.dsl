@@ -66,6 +66,7 @@ story ST-005 "Requester reviews own invoices and line items via hub":
   then:
     - "Requester opens Invoice hub with related line items as a pull queue"
     - "Requester can add line items and submit draft invoices"
+    - "Line item list triple-opens LineItem via id | Invoice via invoice | Tenant via tenant_id (line hub, parent invoice, tenant root)"
 
 story ST-006 "Auditor traces payment attempts back to the invoice hub":
   status: accepted

@@ -25,7 +25,7 @@ tasks = [
     "Skim the awaiting-approval queue. Can you see invoice numbers and amounts without a spreadsheet?",
     "Open one submitted invoice hub. Is status, supplier, amount, and line-item queue legible?",
     "On the invoice hub, are Line items and Payment attempts pull queues (not dense tables)?",
-    "If you visit Line Items / Payment Attempts, dual-open line/attempt hub plus Invoice hub?",
+    "If you visit Line Items / Payment Attempts, triple-open line/attempt hubs with Invoice and Tenant context?",
     "On invoice queues, can you dual-open Invoice hub plus Supplier vendor context?",
     "Decide whether you would pilot this desk with your AP clerk.",
 ]
@@ -45,7 +45,8 @@ adoption_criteria = [
     "Approve/reject path is discoverable from the desk",
     "Invoice hub related line items and payment attempts are pull queues (not warehouse tables)",
     "Line-item composition desk uses a pull queue into invoice hubs (not a decorative grid)",
-    "Payment attempt list triple-opens attempt hub, Invoice hub, and Tenant hub; line list dual-opens line+Invoice",
+    "Payment attempt list triple-opens attempt hub, Invoice hub, and Tenant hub; line list triple-opens line+Invoice+Tenant",
+    "Supplier bank list triple-opens bank hub, Supplier hub, and Tenant hub",
     "Invoice list triple-opens Invoice hub, Supplier vendor context, and submitter User hub",
     "Would run a two-week pilot as-is or with minor fixes",
 ]

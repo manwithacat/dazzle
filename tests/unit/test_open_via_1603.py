@@ -16,6 +16,7 @@ pytestmark = pytest.mark.gate
 REPO = Path(__file__).resolve().parents[2]
 SIMPLE = REPO / "examples" / "simple_task"
 SUPPORT = REPO / "examples" / "support_tickets"
+INVOICE_OPS = REPO / "examples" / "invoice_ops"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -267,6 +268,46 @@ def test_support_tickets_comment_list_triple_open() -> None:
         "/app/comment/{id}",
         "/app/ticket/{ticket}",
         "/app/user/{author}",
+    ]
+
+
+def test_invoice_ops_line_item_list_triple_open() -> None:
+    """line_item_list triple-open: line hub, Invoice, Tenant (cycle 1608)."""
+    appspec = load_project_appspec(INVOICE_OPS)
+    surf = next(s for s in appspec.surfaces if s.name == "line_item_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("LineItem", "id"),
+        ("Invoice", "invoice"),
+        ("Tenant", "tenant_id"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("LineItem")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/lineitem/{id}",
+        "/app/invoice/{invoice}",
+        "/app/tenant/{tenant_id}",
+    ]
+
+
+def test_invoice_ops_bank_list_triple_open() -> None:
+    """supplier_bank_account_list triple-open: bank hub, Supplier, Tenant (cycle 1608)."""
+    appspec = load_project_appspec(INVOICE_OPS)
+    surf = next(s for s in appspec.surfaces if s.name == "supplier_bank_account_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("SupplierBankAccount", "id"),
+        ("Supplier", "supplier"),
+        ("Tenant", "tenant_id"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("SupplierBankAccount")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/supplierbankaccount/{id}",
+        "/app/supplier/{supplier}",
+        "/app/tenant/{tenant_id}",
     ]
 
 

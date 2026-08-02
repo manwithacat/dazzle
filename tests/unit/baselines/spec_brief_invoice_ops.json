@@ -1,0 +1,1121 @@
+{
+  "app_name": "invoice_ops",
+  "app_title": "Invoice Ops",
+  "domain": [
+    {
+      "name": "Tenant",
+      "title": "Tenant",
+      "intent": "Tenant root — a customer company processing supplier invoices",
+      "lifecycle_states": [
+        "active",
+        "suspended"
+      ],
+      "relationships": []
+    },
+    {
+      "name": "User",
+      "title": "User",
+      "intent": "Domain user — carries tenant_id for current_user.tenant_id resolution",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Supplier",
+      "title": "Supplier",
+      "intent": "A supplier that bills a tenant",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "SupplierBankAccount",
+      "title": "Supplier Bank Account",
+      "intent": "Banking details for a supplier — isolated for stricter access control",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "supplier",
+          "target": "Supplier",
+          "target_title": "Supplier",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "title": "Invoice",
+      "intent": "Supplier invoice moving through an approval + payment lifecycle",
+      "lifecycle_states": [
+        "draft",
+        "submitted",
+        "approved",
+        "partially_paid",
+        "rejected",
+        "disputed",
+        "paid"
+      ],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "supplier",
+          "target": "Supplier",
+          "target_title": "Supplier",
+          "required": true
+        },
+        {
+          "field": "submitted_by",
+          "target": "User",
+          "target_title": "User",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "LineItem",
+      "title": "Line Item",
+      "intent": "A single line on an invoice",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "invoice",
+          "target": "Invoice",
+          "target_title": "Invoice",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "PaymentAttempt",
+      "title": "Payment Attempt",
+      "intent": "One attempt to settle an approved invoice via the payment provider",
+      "lifecycle_states": [
+        "pending",
+        "succeeded",
+        "failed"
+      ],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "invoice",
+          "target": "Invoice",
+          "target_title": "Invoice",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "requester",
+      "label": "Requester",
+      "description": "Maker — creates and submits supplier invoices",
+      "goals": [
+        "Raise invoices",
+        "Submit for approval"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "My Invoices",
+        "Line Items"
+      ]
+    },
+    {
+      "id": "approver",
+      "label": "Approver",
+      "description": "Checker — approves or rejects submitted invoices",
+      "goals": [
+        "Review submitted invoices",
+        "Approve or reject"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "Approval Desk",
+        "Suppliers"
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance Operator",
+      "description": "Records payment, handles disputes",
+      "goals": [
+        "Settle approved invoices",
+        "Resolve disputes"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "Pay Desk",
+        "Suppliers",
+        "Payments",
+        "Line Items"
+      ]
+    },
+    {
+      "id": "auditor",
+      "label": "Auditor",
+      "description": "Read-only reviewer with audit-export access",
+      "goals": [
+        "Review the invoice trail",
+        "Export audit evidence"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "Audit Review",
+        "Team",
+        "Payments",
+        "Line Items"
+      ]
+    },
+    {
+      "id": "tenant_admin",
+      "label": "Tenant Administrator",
+      "description": "Manages users, suppliers and per-tenant config within one tenant",
+      "goals": [
+        "Manage tenant users and suppliers",
+        "Set approval thresholds"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "Audit Review",
+        "Suppliers",
+        "Team"
+      ]
+    },
+    {
+      "id": "finance_admin",
+      "label": "Finance Administrator",
+      "description": "Cross-cutting finance oversight — an override role above finance",
+      "goals": [
+        "Override blocked payments",
+        "Audit financial records"
+      ],
+      "workspaces": [
+        "Finance Operations",
+        "Approval Desk",
+        "Pay Desk",
+        "Audit Review",
+        "Suppliers",
+        "Team",
+        "Payments",
+        "Line Items"
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "invoice_list",
+      "title": "Invoices",
+      "entity": "Invoice",
+      "mode": "list"
+    },
+    {
+      "name": "invoice_detail",
+      "title": "Invoice",
+      "entity": "Invoice",
+      "mode": "view"
+    },
+    {
+      "name": "invoice_create",
+      "title": "New Invoice",
+      "entity": "Invoice",
+      "mode": "create"
+    },
+    {
+      "name": "supplier_list",
+      "title": "Suppliers",
+      "entity": "Supplier",
+      "mode": "list"
+    },
+    {
+      "name": "supplier_detail",
+      "title": "Supplier",
+      "entity": "Supplier",
+      "mode": "view"
+    },
+    {
+      "name": "payment_attempt_list",
+      "title": "Payment Attempts",
+      "entity": "PaymentAttempt",
+      "mode": "list"
+    },
+    {
+      "name": "payment_attempt_detail",
+      "title": "Payment Attempt",
+      "entity": "PaymentAttempt",
+      "mode": "view"
+    },
+    {
+      "name": "payment_attempt_create",
+      "title": "New Payment Attempt",
+      "entity": "PaymentAttempt",
+      "mode": "create"
+    },
+    {
+      "name": "tenant_list",
+      "title": "Tenants",
+      "entity": "Tenant",
+      "mode": "list"
+    },
+    {
+      "name": "tenant_detail",
+      "title": "Tenant",
+      "entity": "Tenant",
+      "mode": "view"
+    },
+    {
+      "name": "user_list",
+      "title": "Users",
+      "entity": "User",
+      "mode": "list"
+    },
+    {
+      "name": "user_detail",
+      "title": "User",
+      "entity": "User",
+      "mode": "view"
+    },
+    {
+      "name": "line_item_list",
+      "title": "Line Items",
+      "entity": "LineItem",
+      "mode": "list"
+    },
+    {
+      "name": "lineitem_detail",
+      "title": "Line Item",
+      "entity": "LineItem",
+      "mode": "view"
+    },
+    {
+      "name": "invoice_edit",
+      "title": "Edit Invoice",
+      "entity": "Invoice",
+      "mode": "edit"
+    },
+    {
+      "name": "supplier_create",
+      "title": "New Supplier",
+      "entity": "Supplier",
+      "mode": "create"
+    },
+    {
+      "name": "supplier_edit",
+      "title": "Edit Supplier",
+      "entity": "Supplier",
+      "mode": "edit"
+    },
+    {
+      "name": "supplier_bank_account_list",
+      "title": "Supplier Bank Accounts",
+      "entity": "SupplierBankAccount",
+      "mode": "list"
+    },
+    {
+      "name": "supplier_bank_account_detail",
+      "title": "Supplier Bank Account",
+      "entity": "SupplierBankAccount",
+      "mode": "view"
+    },
+    {
+      "name": "supplier_bank_account_edit",
+      "title": "Edit Supplier Bank Account",
+      "entity": "SupplierBankAccount",
+      "mode": "edit"
+    },
+    {
+      "name": "user_create",
+      "title": "New User",
+      "entity": "User",
+      "mode": "create"
+    },
+    {
+      "name": "user_edit",
+      "title": "Edit User",
+      "entity": "User",
+      "mode": "edit"
+    },
+    {
+      "name": "lineitem_create",
+      "title": "New Line Item",
+      "entity": "LineItem",
+      "mode": "create"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "ST-001",
+      "title": "Approver works the awaiting-approval queue",
+      "actor": "approver",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Approver sees submitted invoices in the awaiting_approval queue sorted by amount",
+        "Row open triple-hops Invoice via id | Supplier via supplier | User via submitted_by (invoice hub first, vendor then submitter)",
+        "Approval load metrics show awaiting / approved / rejected counts"
+      ]
+    },
+    {
+      "id": "ST-002",
+      "title": "Approver opens invoice hub before approve or reject",
+      "actor": "approver",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Invoice hub shows status strip, supplier, amount, and related line items as a pull queue",
+        "Approver can transition to approved or rejected with reason"
+      ]
+    },
+    {
+      "id": "ST-003",
+      "title": "Finance settles invoices from the ready-to-pay queue",
+      "actor": "finance",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Finance sees approved invoices in the ready_to_pay queue",
+        "Opening a row triple-hops Invoice via id | Supplier via supplier | User via submitted_by; Invoice hub shows payment attempts as a pull queue"
+      ]
+    },
+    {
+      "id": "ST-004",
+      "title": "Finance works the open dispute queue",
+      "actor": "finance",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Disputed queue surfaces invoices needing resolution",
+        "Invoice hub shows dispute_reason and payment trail"
+      ]
+    },
+    {
+      "id": "ST-005",
+      "title": "Requester reviews own invoices and line items via hub",
+      "actor": "requester",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Requester opens Invoice hub with related line items as a pull queue",
+        "Requester can add line items and submit draft invoices",
+        "Line item list triple-opens LineItem via id | Invoice via invoice | Tenant via tenant_id (line hub, parent invoice, tenant root)"
+      ]
+    },
+    {
+      "id": "ST-006",
+      "title": "Auditor traces payment attempts back to the invoice hub",
+      "actor": "auditor",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Payment attempt rows triple-open PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id (attempt hub first, invoice then tenant)",
+        "Auditor cannot modify invoices or payments"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "finance_ops",
+      "title": "Finance Operations",
+      "kind": "workspace",
+      "purpose": "Day-to-day invoice throughput — pipeline, payment health, and the queues that need a person",
+      "personas": [
+        "requester",
+        "approver",
+        "finance",
+        "finance_admin",
+        "auditor",
+        "tenant_admin"
+      ],
+      "contents": [
+        "metrics of Invoice",
+        "funnel_chart of Invoice",
+        "queue of Invoice",
+        "queue of Invoice",
+        "bar_chart of PaymentAttempt",
+        "queue of Invoice",
+        "kanban of Invoice",
+        "timeline of Invoice"
+      ]
+    },
+    {
+      "name": "my_invoices",
+      "title": "My Invoices",
+      "kind": "workspace",
+      "purpose": "Requester desk — drafts, submissions, and line-item work on my invoices",
+      "personas": [
+        "requester"
+      ],
+      "contents": [
+        "metrics of Invoice",
+        "queue of Invoice",
+        "queue of Invoice",
+        "kanban of Invoice",
+        "queue of Supplier",
+        "timeline of Invoice",
+        "bar_chart of Invoice"
+      ]
+    },
+    {
+      "name": "approval_desk",
+      "title": "Approval Desk",
+      "kind": "workspace",
+      "purpose": "Approver job — clear the awaiting-approval queue, open the invoice hub",
+      "personas": [
+        "approver",
+        "finance_admin"
+      ],
+      "contents": [
+        "metrics of Invoice",
+        "queue of Invoice",
+        "kanban of Invoice",
+        "timeline of Invoice",
+        "queue of Supplier"
+      ]
+    },
+    {
+      "name": "pay_desk",
+      "title": "Pay Desk",
+      "kind": "workspace",
+      "purpose": "Finance job — settle approved invoices and resolve open disputes",
+      "personas": [
+        "finance",
+        "finance_admin"
+      ],
+      "contents": [
+        "metrics of Invoice",
+        "queue of Invoice",
+        "queue of Invoice",
+        "kanban of Invoice",
+        "bar_chart of PaymentAttempt",
+        "timeline of Invoice"
+      ]
+    },
+    {
+      "name": "audit_review",
+      "title": "Audit Review",
+      "kind": "workspace",
+      "purpose": "Auditor job — payment trail and invoice evidence without warehouse CRUD",
+      "personas": [
+        "auditor",
+        "finance_admin",
+        "tenant_admin"
+      ],
+      "contents": [
+        "metrics of Invoice",
+        "timeline of PaymentAttempt",
+        "timeline of Invoice",
+        "bar_chart of Invoice",
+        "queue of Invoice",
+        "kanban of Invoice"
+      ]
+    },
+    {
+      "name": "suppliers_desk",
+      "title": "Suppliers",
+      "kind": "workspace",
+      "purpose": "Vendor desk — supplier roster, bank refs, and recent invoices",
+      "personas": [
+        "finance",
+        "tenant_admin",
+        "finance_admin",
+        "approver"
+      ],
+      "contents": [
+        "metrics of Supplier",
+        "queue of Supplier",
+        "queue of SupplierBankAccount",
+        "queue of Invoice",
+        "timeline of Invoice",
+        "bar_chart of Invoice"
+      ]
+    },
+    {
+      "name": "team_desk",
+      "title": "Team",
+      "kind": "workspace",
+      "purpose": "Tenant admin desk — people and tenant context",
+      "personas": [
+        "tenant_admin",
+        "finance_admin",
+        "auditor"
+      ],
+      "contents": [
+        "metrics of User",
+        "queue of User",
+        "queue of Supplier",
+        "bar_chart of Tenant",
+        "timeline of Invoice",
+        "queue of Invoice"
+      ]
+    },
+    {
+      "name": "payments_trail",
+      "title": "Payments",
+      "kind": "workspace",
+      "purpose": "Payment attempt trail — health metrics and recent attempts",
+      "personas": [
+        "finance",
+        "finance_admin",
+        "auditor"
+      ],
+      "contents": [
+        "metrics of PaymentAttempt",
+        "queue of PaymentAttempt",
+        "timeline of Invoice",
+        "queue of Invoice",
+        "kanban of Invoice",
+        "bar_chart of PaymentAttempt"
+      ]
+    },
+    {
+      "name": "line_items_desk",
+      "title": "Line Items",
+      "kind": "workspace",
+      "purpose": "Line-item composition desk — what is on open invoices without warehouse CRUD",
+      "personas": [
+        "requester",
+        "finance",
+        "finance_admin",
+        "auditor"
+      ],
+      "contents": [
+        "metrics of LineItem",
+        "queue of LineItem",
+        "queue of Invoice",
+        "timeline of Invoice",
+        "bar_chart of Invoice"
+      ]
+    }
+  ],
+  "automation": [
+    {
+      "kind": "process",
+      "name": "settle_invoice",
+      "title": "Settle Approved Invoice",
+      "description": null,
+      "detail": "runs when a Invoice changes"
+    },
+    {
+      "kind": "approval",
+      "name": "StandardApproval",
+      "title": "Standard Invoice Approval",
+      "description": null,
+      "detail": "changes on Invoice require 1 approval from approver"
+    },
+    {
+      "kind": "approval",
+      "name": "HighValueApproval",
+      "title": "High-Value Invoice Approval",
+      "description": null,
+      "detail": "changes on Invoice require 2 approvals from approver"
+    }
+  ],
+  "security": {
+    "has_row_level_security": true,
+    "scoped_entities": [
+      "Tenant",
+      "User",
+      "Supplier",
+      "SupplierBankAccount",
+      "Invoice",
+      "LineItem",
+      "PaymentAttempt"
+    ],
+    "persona_count": 6,
+    "scope_rules": [
+      {
+        "entity": "Tenant",
+        "operation": "create",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Tenant",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its id is the user's tenant"
+      },
+      {
+        "entity": "Tenant",
+        "operation": "update",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its id is the user's tenant"
+      },
+      {
+        "entity": "Tenant",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its id is the user's tenant"
+      },
+      {
+        "entity": "Tenant",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its id is the user's tenant"
+      },
+      {
+        "entity": "User",
+        "operation": "create",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "User",
+        "operation": "read",
+        "personas": [
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "User",
+        "operation": "update",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "User",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "User",
+        "operation": "list",
+        "personas": [
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Supplier",
+        "operation": "create",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Supplier",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Supplier",
+        "operation": "update",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Supplier",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Supplier",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "SupplierBankAccount",
+        "operation": "create",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "SupplierBankAccount",
+        "operation": "read",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "SupplierBankAccount",
+        "operation": "update",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "SupplierBankAccount",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "SupplierBankAccount",
+        "operation": "list",
+        "personas": [
+          "finance",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Invoice",
+        "operation": "create",
+        "personas": [
+          "requester"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Invoice",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Invoice",
+        "operation": "update",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Invoice",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "Invoice",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "LineItem",
+        "operation": "create",
+        "personas": [
+          "requester"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "LineItem",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "LineItem",
+        "operation": "update",
+        "personas": [
+          "requester"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "LineItem",
+        "operation": "delete",
+        "personas": [
+          "requester"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "LineItem",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "PaymentAttempt",
+        "operation": "create",
+        "personas": [
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "PaymentAttempt",
+        "operation": "read",
+        "personas": [
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "PaymentAttempt",
+        "operation": "update",
+        "personas": [
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "PaymentAttempt",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "PaymentAttempt",
+        "operation": "list",
+        "personas": [
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      }
+    ]
+  },
+  "activated_claims": [
+    {
+      "id": "scope_filtering",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Access-controlled records are filtered to what each user is permitted\nto see. The rule is declared once in the model and applied automatically to every\nquery the framework runs, instead of being re-implemented — and re-checked — on\neach screen.",
+      "evidence": "dazzle rbac report"
+    },
+    {
+      "id": "database_rls",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Because the system shares tables across tenants, the per-tenant\nboundary is enforced inside PostgreSQL itself through row-level security policies.\nThe database refuses to return another tenant's rows even if the application code\nhas a bug, because the rule lives in the data layer, not the app.",
+      "evidence": "dazzle db verify"
+    },
+    {
+      "id": "provable_rbac",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Every role's permissions, for every entity and operation, are declared\nas machine-readable policy. They compile on demand into an auditable access\nmatrix — so permission review is something you run and diff, not something you\neyeball — and the row-visibility rules can additionally be submitted to an SMT\nsolver for formal verification.",
+      "evidence": "dazzle rbac prove"
+    },
+    {
+      "id": "multi_tenant",
+      "group": "security",
+      "audience": "founder",
+      "claim": "The system is multi-tenant: each customer's data is isolated from every\nother customer's at the data layer, so one organisation cannot see another\norganisation's records.",
+      "evidence": "dazzle tenant list"
+    },
+    {
+      "id": "postgres_backed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "All data is stored in PostgreSQL — a mature, widely-trusted relational\ndatabase. There is no bespoke or experimental datastore to operate, secure, or\nreason about.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "schema_managed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "In production, every change to the data model is applied through\nversioned, reversible migrations. The live schema is never edited by hand, so\nupgrades are repeatable and fully auditable.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "server_rendered",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "The interface is rendered on the server and progressively enhanced.\nThere is no heavy single-page JavaScript application to maintain, which keeps the\nproduct fast, accessible, and simple to operate.",
+      "evidence": "dazzle validate"
+    },
+    {
+      "id": "event_semantics",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "Significant business moments are modelled as first-class events with\nformally-defined semantics, giving the system a precise, auditable record of what\nhappened and when.",
+      "evidence": "dazzle specs asyncapi"
+    },
+    {
+      "id": "background_execution",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "Long-running and scheduled work is executed by a built-in background\nengine coordinated through the database itself — there is no separate queue\ninfrastructure to deploy or operate, and an interrupted run is picked up rather\nthan lost.",
+      "evidence": "dazzle process list"
+    },
+    {
+      "id": "approval_controls",
+      "group": "security",
+      "audience": "founder",
+      "claim": "Sensitive changes require explicit sign-off: approval rules with named\napprover roles and quorums are part of the model itself, not an informal process\nthat depends on people remembering to ask.",
+      "evidence": "dazzle validate"
+    }
+  ],
+  "skeleton": [
+    {
+      "section": "executive_summary",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "what_it_does",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "who_uses_it",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "where_work_happens",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "how_work_flows",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "automation_and_controls",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "technical_foundation",
+      "populated": true,
+      "claim_ids": [
+        "scope_filtering",
+        "database_rls",
+        "provable_rbac",
+        "multi_tenant",
+        "postgres_backed",
+        "schema_managed",
+        "server_rendered",
+        "event_semantics",
+        "background_execution",
+        "approval_controls"
+      ]
+    },
+    {
+      "section": "compliance_posture",
+      "populated": false,
+      "claim_ids": []
+    }
+  ]
+}

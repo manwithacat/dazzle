@@ -219,15 +219,15 @@ surface user_detail "User":
 surface line_item_list "Line Items":
   uses entity LineItem
   mode: list
-  # Dual open: line hub first (lineitem_detail), invoice hub second (ST-005/006).
-  open: LineItem via id | Invoice via invoice
+  # Triple open: line hub, parent invoice, tenant root (ST-005 path + multi-tenant AP).
+  open: LineItem via id | Invoice via invoice | Tenant via tenant_id
   section main:
     field invoice "Invoice"
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
   ux:
-    purpose: "Line items — open a row for the line hub or parent Invoice hub"
+    purpose: "Line items — open a row for the line hub, parent Invoice hub, or tenant root"
 
 # Explicit VIEW so related-table drills and synthetic #1421 detail routes
 # share one authored surface (substrate + sections) instead of an empty shell.
@@ -281,14 +281,14 @@ surface supplier_edit "Edit Supplier":
 surface supplier_bank_account_list "Supplier Bank Accounts":
   uses entity SupplierBankAccount
   mode: list
-  # Dual open: bank-ref hub first, supplier hub second.
-  open: SupplierBankAccount via id | Supplier via supplier
+  # Triple open: bank-ref hub, supplier hub, tenant root (finance isolation path).
+  open: SupplierBankAccount via id | Supplier via supplier | Tenant via tenant_id
   section main:
     field supplier "Supplier"
     field bank_account_ref "Bank Ref"
     field account_name "Account Name"
   ux:
-    purpose: "Bank refs — open a row for the bank hub or parent supplier hub"
+    purpose: "Bank refs — open a row for the bank hub, parent supplier hub, or tenant root"
 
 surface supplier_bank_account_detail "Supplier Bank Account":
   uses entity SupplierBankAccount
