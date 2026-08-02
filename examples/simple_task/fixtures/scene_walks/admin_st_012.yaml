@@ -1,6 +1,7 @@
 # Story walk ST-012 — Administrator views all tasks across organization
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-012 then:
 # Admin dashboard = metrics + urgent/overdue queues (not bare CRUD only).
+# Triple-open Task via id | User via assigned_to | User via created_by (cycle 1590).
 
 persona: admin
 home_workspace: admin_dashboard

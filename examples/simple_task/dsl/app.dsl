@@ -314,9 +314,9 @@ surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment
-  # Dual open (story_walk dig cycle 1564): task hub first (status/ownership/discussion),
-  # assignee hub second (ST-015/021 context hop) — not assignee-only orphan hop.
-  open: Task via id | User via assigned_to
+  # Triple open (agent_acceptance dig cycle 1590): task hub first, assignee second,
+  # creator third (Monday-review who owns vs who filed — ST-012/015/021).
+  open: Task via id | User via assigned_to | User via created_by
 
   section main "Tasks":
     field title "Title"
@@ -324,9 +324,10 @@ surface task_list "Tasks":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
+    field created_by "Created By"
 
   ux:
-    purpose: "View and manage all tasks — open a row for the task hub or assignee hub"
+    purpose: "View and manage all tasks — open a row for the task hub, assignee, or creator hub"
     sort: created_at desc
     filter: status, priority, assigned_to
     search: title, description

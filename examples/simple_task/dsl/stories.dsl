@@ -81,7 +81,7 @@ story ST-012 "Administrator views all tasks across organization":
   then:
     - "Administrator sees every Task regardless of assignee"
     - "Task list is sortable by priority, status, due_date"
-    - "Row dual-opens Task via id | User via assigned_to (task hub first, assignee context second)"
+    - "Row triple-opens Task via id | User via assigned_to | User via created_by (task hub first, assignee then creator context)"
 
 story ST-013 "Administrator configures team settings":
   status: accepted
@@ -118,7 +118,7 @@ story ST-015 "Team Manager views all tasks for team":
   then:
     - "Team Manager sees every Task assigned within their team"
     - "Task list is sortable by priority, status, due_date"
-    - "Row dual-opens Task via id | User via assigned_to (task hub first, assignee overview second)"
+    - "Row triple-opens Task via id | User via assigned_to | User via created_by (task hub first, assignee then creator overview)"
 
 story ST-016 "Team Manager views unassigned tasks":
   status: accepted
@@ -130,7 +130,7 @@ story ST-016 "Team Manager views unassigned tasks":
     - "Team Manager is on the team_overview workspace"
   then:
     - "Team Manager sees an unassigned queue of Tasks where assigned_to is null"
-    - "Team Manager can open a Task hub from the queue (Task via id dual-open) to assign it"
+    - "Team Manager can open a Task hub from the queue (Task via id triple-open primary) to assign it"
 
 story ST-017 "Team Manager assigns a task to a Team Member":
   persona: manager
@@ -193,5 +193,5 @@ story ST-021 "Team Manager opens assignee overview from the task board":
     - "Team Manager is on the task list"
     - "A Task has assigned_to set"
   then:
-    - "Task list dual-open secondary hop is User via assigned_to (assignee overview hub)"
+    - "Task list triple-open hops: User via assigned_to (assignee overview) and User via created_by (creator overview)"
     - "Hub shows identity, role strip, and related open work"

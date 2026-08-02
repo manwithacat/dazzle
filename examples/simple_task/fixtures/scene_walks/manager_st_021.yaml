@@ -1,5 +1,6 @@
 # Story walk ST-021 — Team Manager opens assignee overview from the task board
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-021 then:
+# Triple-open secondary/tertiary hops: assigned_to + created_by User hubs (cycle 1590).
 
 persona: manager
 home_workspace: team_overview

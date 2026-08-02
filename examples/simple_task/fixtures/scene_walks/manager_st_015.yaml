@@ -1,5 +1,6 @@
 # Story walk ST-015 — Team Manager views all tasks for team
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-015 then:
+# Triple-open Task via id | User via assigned_to | User via created_by (cycle 1590).
 
 persona: manager
 home_workspace: team_overview

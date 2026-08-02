@@ -206,7 +206,7 @@ def test_delete_button_pins_hx_trigger_click() -> None:
 
 
 def test_simple_task_parses_open_via() -> None:
-    """task_list dual-open: Task hub first, assignee User second (cycle 1564)."""
+    """task_list triple-open: Task hub, assignee, creator (cycle 1590)."""
     appspec = load_project_appspec(SIMPLE)
     task_list = next(s for s in appspec.surfaces if s.name == "task_list")
     assert task_list.open_via == "id"
@@ -214,6 +214,7 @@ def test_simple_task_parses_open_via() -> None:
     assert [(t.entity, t.via) for t in (task_list.open_via_targets or [])] == [
         ("Task", "id"),
         ("User", "assigned_to"),
+        ("User", "created_by"),
     ]
     entity = appspec.get_entity("Task")
     tmpl = resolve_list_detail_url_template(task_list, entity)
