@@ -44,10 +44,20 @@ when residual remains: product → demo → journey):
 | `example-apps domain_lifecycle_priors` | `improve/strategies/domain_lifecycle_priors.md` | `scripts/domain_cognition_bar.py` (+ lifecycle/process priors) |
 | `example-apps hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | recapture prove only; emit fix is framework-ux |
 | `framework-ux hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | MCP `presentation` + `product_quality` presentation residual |
+| `example-apps interesting_product` | `improve/strategies/interesting_product.md` | post-5.8 Goal B depth menu + still proof |
+| `example-apps depth` | `improve/strategies/interesting_product.md` | alias of interesting_product |
 
-**Presentation residual** (`ref_as_repr` / `person_as_text` on hero still OCR) is folded
-into `product_quality` / `dazzle demo quality` residual_total. When it fires, probes
-force **`framework-ux hyperpart_presentation`** (not demo_fleet). Agent surfaces:
+**Post-5.8 (interesting SaaS):** when `residual_total=0` and open-hop / dual-open
+cycles hit the policy cap (`max_consecutive_open_hop`, default 5), force
+**`example-apps interesting_product`** — one closed depth id + hero recapture.
+Doctrine: `docs/reference/interesting-saas-context.md`. Dual-open without recapture
+is **harness_only** (Goal A); do not claim bake-off lift. Presentation OCR residual
+stays the immune system when residual > 0.
+
+**Presentation residual** (`ref_as_repr` / `person_as_text` / `delta_theater` on hero
+still OCR) is folded into `product_quality` / `dazzle demo quality` residual_total.
+When it fires, probes force **`framework-ux hyperpart_presentation`** (not demo_fleet).
+Agent surfaces:
 
 ```bash
 # OBSERVE

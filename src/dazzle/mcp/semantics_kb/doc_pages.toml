@@ -1650,6 +1650,20 @@ order = 120.97
 handwritten = true
 intro = "F1 project_tracker board recapture — no 150% delta theater; dual-open still unproven for fleet score."
 
+[pages.interesting-saas-context]
+title = "Interesting SaaS Context (Post-5.8)"
+slug = "interesting-saas-context"
+order = 120.98
+handwritten = true
+intro = "Goal A harness vs Goal B interesting product; depth menu + still proof when residual=0. Antagonist doctrine 2026-08-02."
+
+[pages.antagonist-report-post-5-8]
+title = "Antagonist Report Post-5.8"
+slug = "antagonist-report-post-5-8"
+order = 120.99
+handwritten = true
+intro = "Short handoff: demote residual farming; force interesting_product depth pack under residual=0."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

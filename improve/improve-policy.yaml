@@ -45,6 +45,11 @@ steady_state:
     # elsewhere (acceptance, dual-lock, story_walk, framework-ux).
     hard_stop_when_floor: true
 
+  # Post-5.8 doctrine (interesting-saas-context.md): after this many consecutive
+  # open-hop / dual-open dig cycles while residual_total=0, force
+  # example-apps interesting_product (Goal B depth + still proof).
+  max_consecutive_open_hop: 5
+
 campaigns:
   land-l25-smoke:
     title: "Land L2.5 smoke digs on showcase examples"
@@ -80,17 +85,29 @@ campaigns:
     # After this many consecutive acceptance panels without a product/framework
     # ship, rotate hard to framework-ux / hyperpart (breaks harness re-panel thrash).
     max_consecutive_panels: 2
+    # Post-5.8: open-hop monoculture under residual=0 → interesting_product.
+    max_consecutive_open_hop: 5
+    interesting_product_when_green: true
     success_criteria:
       - "Most dig cycles ship product or framework code (or seed actionable PENDING)"
       - "Friction found in digs is fixed in-cycle or next cycle — not re-logged forever"
       - "Drained queues (dual_lock depth 0) are skipped, not re-stamped as PASS"
       - "No isomorphic *_ops densify while densify_allowed=0 (#1637)"
+      - "When residual=0, Goal B depth (interesting_product) after open-hop cap — still proof"
     prefer:
       lane: framework-ux
       strategy: explore
       force_args: "framework-ux"
     prefer_rotation:
-      # Mutation-first order (picker still LRU among eligible entries).
+      # Goal B first when residual green (also forced by open_hop cap in pick()).
+      - force_args: "example-apps interesting_product"
+        lane: example-apps
+        strategy: interesting_product
+        note: >-
+          Post-5.8 Goal B: one depth-menu slice + hero recapture when residual=0.
+          See docs/reference/interesting-saas-context.md
+      # Mutation-first harness order (LRU among eligible). residual=0 walks are
+      # harness_only unless still plan — do not claim bake-off lift.
       - force_args: "framework-ux"
         lane: framework-ux
         strategy: framework-ux
@@ -106,7 +123,7 @@ campaigns:
       - force_args: "example-apps story_walk"
         lane: example-apps
         strategy: story_walk
-        note: "Live walk contracts; failing walks → ship product/story fixes"
+        note: "Live walk contracts; failing walks → ship product/story fixes (harness_only if residual=0)"
       - force_args: "example-apps agent_acceptance_panel"
         lane: example-apps
         strategy: agent_acceptance_panel
@@ -115,7 +132,7 @@ campaigns:
       - force_args: "example-apps journey_dogfood"
         lane: example-apps
         strategy: journey_dogfood
-        note: "Journey maturity residual — ship journey/story gaps"
+        note: "Journey maturity residual — ship journey/story gaps (harness_only if residual=0)"
       - force_args: "hm-convergence gallery_probes"
         lane: hm-convergence
         strategy: gallery_probes
@@ -140,8 +157,8 @@ campaigns:
     max_cycles: 80
     notes: >
       Operator: more aggressive change. Prefer framework-ux and hyperpart ships
-      over clean dual-lock deferrals and harness-only re-panels. When a dig finds
-      product or framework friction, fix it in the same cycle (or seed PENDING and
-      claim next). densify_allowed=0 remains hard stop for warehouse desk clones —
-      aggression is depth and real ships, not sprawl. Skip dual_lock when queue
+      over clean dual-lock deferrals and harness-only re-panels. When residual=0
+      and open-hop streak hits max_consecutive_open_hop, force interesting_product
+      (Goal B depth + still recapture) — not another dual-open. densify_allowed=0
+      remains hard stop for warehouse desk clones. Skip dual_lock when queue
       depth is 0; skip smoke when residual is 0.

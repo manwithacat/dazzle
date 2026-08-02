@@ -170,6 +170,98 @@ def recent_strategy_streak(strategy: str, *, window: int = 8) -> int:
     return streak
 
 
+# Cadence / Goal-B digs — do not count toward harness monoculture streak.
+_CADENCE_OR_GOAL_B_MARKERS: frozenset[str] = frozenset(
+    {
+        "self-audit",
+        "self_audit",
+        "capability-sweep",
+        "capability_sweep",
+        "interesting_product",
+        "housekeeping",
+        "cimonitor",
+        "codeql",
+        "hyperpart_presentation",
+    }
+)
+
+# Explicit open-hop / dual-open language (strong Goal A thrash signal).
+_OPEN_HOP_STRATEGY_MARKERS: frozenset[str] = frozenset(
+    {
+        "story_walk",
+        "journey_dogfood",
+        "agent_acceptance_panel",
+        "gallery_probes",
+        "dual-open",
+        "triple-open",
+        "dual_open",
+        "triple_open",
+        "open discovery",
+        "hop label",
+        "chain-entity",
+        "chain-via",
+        "framework-ux",
+        "edge_cases",
+        "edge /",
+    }
+)
+
+
+def consecutive_open_hop_streak(*, window: int = 16) -> int:
+    """Count tipward digs that are Goal A harness farming under residual green.
+
+    Post-5.8 doctrine: after K such cycles while residual_total=0, force
+    ``interesting_product`` (Goal B depth + still proof). Cadence and Goal B
+    cycles are transparent (do not break or count).
+    """
+    if not LOG_PATH.is_file():
+        return 0
+    try:
+        text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0
+    blocks = _cycle_blocks(text)
+    if not blocks:
+        return 0
+    streak = 0
+    for _num, chunk in reversed(blocks[-window:]):
+        lower = chunk.lower()
+        # Match only on lane/strategy lines (body always mentions github/codeql).
+        lane_m = re.search(r"\*\*lane:\*\*\s*([^\n]+)", lower)
+        strat_m = re.search(r"\*\*strategy:\*\*\s*([^\n]+)", lower)
+        lane_s = (lane_m.group(1) if lane_m else "").strip()
+        strat_s = (strat_m.group(1) if strat_m else "").strip()
+        head = f"{lane_s} {strat_s}"
+        if any(m in head for m in _CADENCE_OR_GOAL_B_MARKERS):
+            continue
+        summary_m = re.search(r"\*\*summary:\*\*\s*([^\n]+)", lower)
+        blob = f"{strat_s} {(summary_m.group(1) if summary_m else '')} {lower[:600]}"
+        if any(marker in blob for marker in _OPEN_HOP_STRATEGY_MARKERS):
+            streak += 1
+            continue
+        # Unknown dig still counts as non-Goal-B thrash when residual is green.
+        if strat_s or lane_s:
+            streak += 1
+            continue
+        break
+    return streak
+
+
+def product_residual_total() -> int:
+    """Felt+structural residual heat (0 when demo-safe residual era is green).
+
+    Uses product_quality residual_total when importable; otherwise 0 so policy
+    can still fire interesting_product on open-hop cap alone.
+    """
+    try:
+        from dazzle.product_quality import score_project
+
+        report = score_project(REPO / "examples")
+        return int(report.residual_total or 0)
+    except Exception:  # noqa: BLE001 — policy isolation
+        return 0
+
+
 def hm_coherence_queue_depth() -> int | None:
     """Return incoherent Hyperpart count from latest coherence sweep.
 
@@ -426,11 +518,23 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     active = policy.get("active_campaign")
     smoke_n, smoke_next = qa_smoke_residual()
     cur = current_cycle_hint() or 0
+    residual = product_residual_total()
+    open_hop = consecutive_open_hop_streak()
+    # Post-5.8: after K open-hop digs under residual=0, force Goal B depth pack.
+    max_open_hop = int((policy.get("steady_state") or {}).get("max_consecutive_open_hop") or 5)
+    campaigns = policy.get("campaigns") or {}
+    if active and active in campaigns:
+        camp_for_cap = campaigns[active] or {}
+        if camp_for_cap.get("max_consecutive_open_hop") is not None:
+            max_open_hop = int(camp_for_cap["max_consecutive_open_hop"])
 
     decision: dict[str, Any] = {
         "active_campaign": active,
         "qa_smoke_residual": smoke_n,
         "qa_smoke_next": smoke_next,
+        "product_residual_total": residual,
+        "open_hop_streak": open_hop,
+        "max_consecutive_open_hop": max_open_hop,
         "current_cycle_hint": cur or None,
         "force_args": None,
         "lane": None,
@@ -464,6 +568,26 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                 decision["strategy"] = prefer.get("strategy") or "agent_qa_smoke"
             return decision
 
+        # Post-5.8 Goal B: residual green + open-hop monoculture → interesting depth.
+        if (
+            residual <= 0
+            and open_hop >= max_open_hop
+            and camp.get("interesting_product_when_green", True)
+        ):
+            decision.update(
+                {
+                    "force_args": "example-apps interesting_product",
+                    "lane": "example-apps",
+                    "strategy": "interesting_product",
+                    "reason": (
+                        f"campaign:{active} interesting_product residual=0 "
+                        f"open_hop_streak={open_hop}>={max_open_hop}"
+                    ),
+                    "require_mutation": bool(camp.get("require_mutation")),
+                }
+            )
+            return decision
+
         # Aggressive / multi-strategy campaigns: rotate high-leverage digs.
         rotation = camp.get("prefer_rotation") or []
         if rotation:
@@ -478,6 +602,17 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                 decision.update(rot)
                 if camp.get("require_mutation"):
                     decision["require_mutation"] = True
+                # Label harness walks when residual green (doctrine messaging).
+                if residual <= 0 and rot.get("strategy") in {
+                    "story_walk",
+                    "journey_dogfood",
+                    "agent_acceptance_panel",
+                    "gallery_probes",
+                }:
+                    decision["harness_only"] = True
+                    decision["reason"] = (
+                        f"{decision.get('reason') or ''} residual=0_harness_ok"
+                    ).strip()
                 return decision
 
         # Legacy single-prefer campaigns (e.g. land-l25-smoke always digs smoke).
@@ -557,6 +692,14 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         lines.append(f"coherence_queue_depth={d.get('coherence_queue_depth')}")
     if d.get("panel_streak"):
         lines.append(f"panel_streak={d.get('panel_streak')}")
+    if d.get("product_residual_total") is not None:
+        lines.append(f"product_residual_total={d.get('product_residual_total')}")
+    if d.get("open_hop_streak") is not None:
+        lines.append(
+            f"open_hop_streak={d.get('open_hop_streak')}/{d.get('max_consecutive_open_hop') or 5}"
+        )
+    if d.get("harness_only"):
+        lines.append("harness_only=1")
     return "\n".join(lines)
 
 

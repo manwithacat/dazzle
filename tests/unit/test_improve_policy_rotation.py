@@ -93,3 +93,71 @@ def test_missing_coherence_keeps_hyperpart_eligible() -> None:
         )
     assert picked is not None
     assert "hyperpart_coherence" in str(picked["force_args"])
+
+
+def test_interesting_product_when_residual_green_and_open_hop_cap() -> None:
+    """Post-5.8: residual=0 + open-hop streak ≥ cap → Goal B depth pack."""
+    import scripts.improve_policy as pol
+
+    policy = {
+        "active_campaign": "aggressive-change",
+        "steady_state": {"max_consecutive_open_hop": 5},
+        "campaigns": {
+            "aggressive-change": {
+                "require_mutation": True,
+                "interesting_product_when_green": True,
+                "max_consecutive_open_hop": 5,
+                "prefer_rotation": [
+                    {
+                        "force_args": "example-apps story_walk",
+                        "lane": "example-apps",
+                        "strategy": "story_walk",
+                    }
+                ],
+            }
+        },
+    }
+    with (
+        patch.object(pol, "qa_smoke_residual", return_value=(0, None)),
+        patch.object(pol, "product_residual_total", return_value=0),
+        patch.object(pol, "consecutive_open_hop_streak", return_value=6),
+        patch.object(pol, "current_cycle_hint", return_value=1600),
+    ):
+        d = pol.pick(policy)
+    assert d["strategy"] == "interesting_product"
+    assert "interesting_product" in (d["force_args"] or "")
+    assert "open_hop_streak=6" in (d["reason"] or "")
+
+
+def test_no_interesting_product_when_residual_hot() -> None:
+    import scripts.improve_policy as pol
+
+    policy = {
+        "active_campaign": "aggressive-change",
+        "steady_state": {"max_consecutive_open_hop": 5},
+        "campaigns": {
+            "aggressive-change": {
+                "require_mutation": True,
+                "interesting_product_when_green": True,
+                "prefer_rotation": [
+                    {
+                        "force_args": "example-apps story_walk",
+                        "lane": "example-apps",
+                        "strategy": "story_walk",
+                    }
+                ],
+            }
+        },
+    }
+    with (
+        patch.object(pol, "qa_smoke_residual", return_value=(0, None)),
+        patch.object(pol, "product_residual_total", return_value=3),
+        patch.object(pol, "consecutive_open_hop_streak", return_value=10),
+        patch.object(pol, "current_cycle_hint", return_value=1600),
+        patch.object(pol, "dual_lock_queue_depth", return_value=0),
+        patch.object(pol, "hm_coherence_queue_depth", return_value=0),
+        patch.object(pol, "last_strategy_cycle", return_value=100),
+        patch.object(pol, "recent_strategy_streak", return_value=0),
+    ):
+        d = pol.pick(policy)
+    assert d["strategy"] != "interesting_product"

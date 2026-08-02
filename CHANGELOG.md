@@ -1,13 +1,13 @@
 ## [Unreleased]
 
-### Fixed
-- **#1626 F1 project board delta theater** — recapture after omit
-  `|delta_pct| ≥ 100` (aggregation + emit belt-and-braces); presentation
-  OCR residual also flags `delta_theater` (`(150%)` / glued `%)vs`).
-  Antagonist investigation 2026-08-02: stills were frozen; dual-open is not
-  bake-off proof.
-
 ### Added
+- **Post-5.8 interesting SaaS doctrine** — Goal A harness vs Goal B depth.
+  Doctrine: `docs/reference/interesting-saas-context.md`; improve strategy
+  `example-apps interesting_product` (depth menu + four prompts + same-cycle
+  recapture). Policy: when residual_total=0 and open-hop streak ≥ 5, force
+  interesting_product; residual=0 walk cycles labeled `harness_only`.
+  Antagonist `POST_5.8_DOCTRINE_INTERESTING_SAAS.md` / #1626 residual demote.
+
 - **Hyperpart presentation process** — closed role×host matrix +
   `dazzle.render.presentation.present()`; person×`queue_meta` emits
   Avatar (`avatar_only`) without visible `Assigned To:` prose. Doctrine
@@ -30,6 +30,11 @@
   CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
 ### Fixed
+- **#1626 F1 project board delta theater** — recapture after omit
+  `|delta_pct| ≥ 100` (aggregation + emit belt-and-braces); presentation
+  OCR residual also flags `delta_theater` (`(150%)` / glued `%)vs`).
+  Antagonist investigation 2026-08-02: stills were frozen; dual-open is not
+  bake-off proof.
 - **Queue meta non-person refs** — never emit `{'id': UUID(...)}` for
   device/entity FKs. Prefer entity dict when it has display substance
   (person Avatar + named devices); fall back to `*_display` for id-only
