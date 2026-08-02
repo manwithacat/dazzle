@@ -671,6 +671,33 @@ surface salary_edit "Close Salary":
   section main:
     field effective_to "Effective to (set to close)"
 
+surface managerlink_list "Reporting lines":
+  uses entity ManagerLink
+  mode: list
+  # Triple open (story dig cycle 1609): link hub, report person, manager person.
+  open: ManagerLink via id | Person via report | Person via manager
+  section main:
+    field report "Report"
+    field manager "Manager"
+    field start_date "From"
+    field end_date "To"
+  ux:
+    purpose: "Reporting lines — open link hub, report career hub, or manager hub"
+
+# View surface so open ManagerLink via id lands a readable edge note.
+surface managerlink_detail "Reporting Line":
+  uses entity ManagerLink
+  mode: view
+  section summary "Line":
+    field report "Report"
+    field manager "Manager"
+  section effective "Effective":
+    layout: strip
+    field start_date "From"
+    field end_date "To"
+  ux:
+    purpose: "Read one reporting line with report and manager person context"
+
 surface managerlink_create "Assign Manager":
   uses entity ManagerLink
   mode: create

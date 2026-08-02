@@ -23,13 +23,14 @@ story ST-002 "Line Manager opens a report career hub":
   executed_by: surface.person_detail
   persona: manager
   trigger: user_click
-  entities: [Person, Employment]
+  entities: [Person, Employment, ManagerLink]
   given:
     - "Manager lands on the my_team desk (reports pulse + employment)"
     - "Manager has list permission on Person for their reports"
   then:
     - "Person hub shows identity, tenure strip, and related employment as a pull queue"
     - "Manager sees only people in their reporting scope"
+    - "Reporting lines list triple-opens ManagerLink via id | Person via report | Person via manager (link hub, report career, manager hub)"
 
 story ST-003 "Finance reviews compensation then hops to person context":
   status: accepted

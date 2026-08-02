@@ -17,6 +17,7 @@ REPO = Path(__file__).resolve().parents[2]
 SIMPLE = REPO / "examples" / "simple_task"
 SUPPORT = REPO / "examples" / "support_tickets"
 INVOICE_OPS = REPO / "examples" / "invoice_ops"
+HR = REPO / "examples" / "hr_records"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -309,6 +310,27 @@ def test_invoice_ops_bank_list_triple_open() -> None:
         "/app/supplier/{supplier}",
         "/app/tenant/{tenant_id}",
     ]
+
+
+def test_hr_managerlink_list_triple_open() -> None:
+    """managerlink_list triple-open: link hub, report Person, manager Person (cycle 1609)."""
+    appspec = load_project_appspec(HR)
+    surf = next(s for s in appspec.surfaces if s.name == "managerlink_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("ManagerLink", "id"),
+        ("Person", "report"),
+        ("Person", "manager"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("ManagerLink")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/managerlink/{id}",
+        "/app/person/{report}",
+        "/app/person/{manager}",
+    ]
+    assert any(s.name == "managerlink_detail" and s.mode.value == "view" for s in appspec.surfaces)
 
 
 def test_resolve_first_non_null_candidates() -> None:

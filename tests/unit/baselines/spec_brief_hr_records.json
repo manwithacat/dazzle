@@ -1,0 +1,1011 @@
+{
+  "app_name": "hr_records",
+  "app_title": "HR Records",
+  "domain": [
+    {
+      "name": "Department",
+      "title": "Department",
+      "intent": "Org unit. Self-referencing parent_department forms a tree.",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "parent_department",
+          "target": "Department",
+          "target_title": "Department",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "Role",
+      "title": "Role",
+      "intent": "Catalogue of job titles. People hold roles via Employment rows.",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "department",
+          "target": "Department",
+          "target_title": "Department",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Person",
+      "title": "Person",
+      "intent": "Staff member, past or present. Identity record with temporal lifecycle (started_at → ended_at). Per-period facts (role, salary, manager) are in Employment/Salary/ManagerLink.",
+      "lifecycle_states": [],
+      "relationships": []
+    },
+    {
+      "name": "Employment",
+      "title": "Employment",
+      "intent": "Effective-dated record of role/department assignment. NULL end_date = currently active.",
+      "lifecycle_states": [
+        "active",
+        "on_leave",
+        "terminated"
+      ],
+      "relationships": [
+        {
+          "field": "person",
+          "target": "Person",
+          "target_title": "Person",
+          "required": true
+        },
+        {
+          "field": "role",
+          "target": "Role",
+          "target_title": "Role",
+          "required": true
+        },
+        {
+          "field": "department",
+          "target": "Department",
+          "target_title": "Department",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "Salary",
+      "title": "Salary",
+      "intent": "Effective-dated compensation record. NULL effective_to = currently active.",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "person",
+          "target": "Person",
+          "target_title": "Person",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "ManagerLink",
+      "title": "Manager Link",
+      "intent": "Effective-dated reporting line. NULL end_date = current.",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "report",
+          "target": "Person",
+          "target_title": "Person",
+          "required": true
+        },
+        {
+          "field": "manager",
+          "target": "Person",
+          "target_title": "Person",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "hr_admin",
+      "label": "HR Admin",
+      "description": "Full CRUD across all entities and history. Thinks in events.",
+      "goals": [],
+      "workspaces": [
+        "Staff Directory",
+        "Person Detail",
+        "Departments & Roles",
+        "Compensation Review",
+        "Time Machine",
+        "My Team",
+        "New Starters",
+        "Reporting",
+        "Active Staff"
+      ]
+    },
+    {
+      "id": "manager",
+      "label": "Line Manager",
+      "description": "Read own direct reports (current and historical). No salary access.",
+      "goals": [],
+      "workspaces": [
+        "Staff Directory",
+        "Person Detail",
+        "Departments & Roles",
+        "My Team",
+        "Reporting",
+        "Active Staff"
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "description": "Read all salary data + employment history. No manager hierarchy.",
+      "goals": [],
+      "workspaces": [
+        "Staff Directory",
+        "Person Detail",
+        "Compensation Review",
+        "Active Staff"
+      ]
+    },
+    {
+      "id": "employee",
+      "label": "Employee",
+      "description": "Read self only — own employment + salary history + current manager.",
+      "goals": [],
+      "workspaces": [
+        "Staff Directory",
+        "Person Detail"
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "person_list",
+      "title": "People",
+      "entity": "Person",
+      "mode": "list"
+    },
+    {
+      "name": "person_detail",
+      "title": "Person",
+      "entity": "Person",
+      "mode": "view"
+    },
+    {
+      "name": "person_create",
+      "title": "Add Person",
+      "entity": "Person",
+      "mode": "create"
+    },
+    {
+      "name": "person_edit",
+      "title": "Edit Person",
+      "entity": "Person",
+      "mode": "edit"
+    },
+    {
+      "name": "department_list",
+      "title": "Departments",
+      "entity": "Department",
+      "mode": "list"
+    },
+    {
+      "name": "department_detail",
+      "title": "Department",
+      "entity": "Department",
+      "mode": "view"
+    },
+    {
+      "name": "department_create",
+      "title": "Add Department",
+      "entity": "Department",
+      "mode": "create"
+    },
+    {
+      "name": "role_list",
+      "title": "Roles",
+      "entity": "Role",
+      "mode": "list"
+    },
+    {
+      "name": "role_detail",
+      "title": "Role",
+      "entity": "Role",
+      "mode": "view"
+    },
+    {
+      "name": "role_create",
+      "title": "Add Role",
+      "entity": "Role",
+      "mode": "create"
+    },
+    {
+      "name": "employment_list",
+      "title": "Employment history",
+      "entity": "Employment",
+      "mode": "list"
+    },
+    {
+      "name": "employment_detail",
+      "title": "Employment Detail",
+      "entity": "Employment",
+      "mode": "view"
+    },
+    {
+      "name": "employment_create",
+      "title": "Start Employment",
+      "entity": "Employment",
+      "mode": "create"
+    },
+    {
+      "name": "employment_edit",
+      "title": "End / Update Employment",
+      "entity": "Employment",
+      "mode": "edit"
+    },
+    {
+      "name": "salary_list",
+      "title": "Salary history",
+      "entity": "Salary",
+      "mode": "list"
+    },
+    {
+      "name": "salary_detail",
+      "title": "Salary Detail",
+      "entity": "Salary",
+      "mode": "view"
+    },
+    {
+      "name": "salary_create",
+      "title": "New Salary",
+      "entity": "Salary",
+      "mode": "create"
+    },
+    {
+      "name": "salary_edit",
+      "title": "Close Salary",
+      "entity": "Salary",
+      "mode": "edit"
+    },
+    {
+      "name": "managerlink_list",
+      "title": "Reporting lines",
+      "entity": "ManagerLink",
+      "mode": "list"
+    },
+    {
+      "name": "managerlink_detail",
+      "title": "Reporting Line",
+      "entity": "ManagerLink",
+      "mode": "view"
+    },
+    {
+      "name": "managerlink_create",
+      "title": "Assign Manager",
+      "entity": "ManagerLink",
+      "mode": "create"
+    },
+    {
+      "name": "managerlink_edit",
+      "title": "End Reporting Line",
+      "entity": "ManagerLink",
+      "mode": "edit"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "ST-001",
+      "title": "HR Admin browses staff directory and opens a person hub",
+      "actor": "hr_admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "HR Admin sees headcount metrics and the staff list",
+        "Department and role context on Staff Directory are pull queues toward hubs (not inventory lists)",
+        "Row open hops to the Person detail hub with employment and salary history",
+        "Department list dual-hops Department via id | parent via parent_department (unit hub first, parent tree second)",
+        "Role catalogue dual-hops Role via id | Department via department (role hub first, unit context second)"
+      ]
+    },
+    {
+      "id": "ST-002",
+      "title": "Line Manager opens a report career hub",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Person hub shows identity, tenure strip, and related employment as a pull queue",
+        "Manager sees only people in their reporting scope",
+        "Reporting lines list triple-opens ManagerLink via id | Person via report | Person via manager (link hub, report career, manager hub)"
+      ]
+    },
+    {
+      "id": "ST-003",
+      "title": "Finance reviews compensation then hops to person context",
+      "actor": "finance",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Finance sees compensation metrics and active salary rows",
+        "Role catalogue and headcount context are pull queues toward hubs (not inventory lists)",
+        "Role catalogue dual-opens Role via id | Department via department (title hub first, unit context second)",
+        "Salary rows dual-open Salary via id | Person via person (band hub first, person career hub second)"
+      ]
+    },
+    {
+      "id": "ST-004",
+      "title": "Employee reviews own career timeline hub",
+      "actor": "employee",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Employee sees own identity, employment history, and salary history on the hub",
+        "Employee cannot see other people"
+      ]
+    },
+    {
+      "id": "ST-005",
+      "title": "HR Admin walks employment history back to the person hub",
+      "actor": "hr_admin",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Employment rows triple-open Employment via id | Person via person | Role via role (assignment hub first, person career then role catalogue)",
+        "Person hub shows related employment and compensation as pull queues (not warehouse tables)",
+        "Employment list and hub show assignment status (active / on leave / terminated)"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "staff_directory",
+      "title": "Staff Directory",
+      "kind": "workspace",
+      "purpose": "Current employees, filterable by department + level",
+      "personas": [
+        "hr_admin",
+        "manager",
+        "finance",
+        "employee"
+      ],
+      "contents": [
+        "metrics of Person",
+        "queue of Person",
+        "queue of Person",
+        "queue of Department",
+        "queue of Role",
+        "queue of Person",
+        "bar_chart of Employment",
+        "bar_chart of Employment"
+      ]
+    },
+    {
+      "name": "person_detail",
+      "title": "Person Detail",
+      "kind": "workspace",
+      "purpose": "Career timeline — employment + salary history side-by-side",
+      "personas": [
+        "hr_admin",
+        "manager",
+        "finance",
+        "employee"
+      ],
+      "contents": [
+        "metrics of Employment",
+        "timeline of Employment",
+        "timeline of Salary",
+        "timeline of ManagerLink",
+        "queue of Department",
+        "timeline of Employment",
+        "bar_chart of Salary"
+      ]
+    },
+    {
+      "name": "org_chart",
+      "title": "Departments & Roles",
+      "kind": "workspace",
+      "purpose": "Department tree, job roles, and reporting-line records",
+      "personas": [
+        "hr_admin",
+        "manager"
+      ],
+      "contents": [
+        "metrics of Department",
+        "tree of Department",
+        "queue of Role",
+        "timeline of ManagerLink",
+        "bar_chart of Role"
+      ]
+    },
+    {
+      "name": "compensation_review",
+      "title": "Compensation Review",
+      "kind": "workspace",
+      "purpose": "Salary band analysis — by department, by role level",
+      "personas": [
+        "hr_admin",
+        "finance"
+      ],
+      "contents": [
+        "metrics of Salary",
+        "queue of Salary",
+        "timeline of Salary",
+        "queue of Role",
+        "queue of Person",
+        "bar_chart of Salary",
+        "queue of Person"
+      ]
+    },
+    {
+      "name": "time_machine",
+      "title": "Time Machine",
+      "kind": "workspace",
+      "purpose": "Historical snapshot — append ?as_of=YYYY-MM-DD to re-project every region",
+      "personas": [
+        "hr_admin"
+      ],
+      "contents": [
+        "metrics of Employment",
+        "queue of Employment",
+        "timeline of Salary",
+        "timeline of ManagerLink",
+        "bar_chart of Employment"
+      ]
+    },
+    {
+      "name": "my_team",
+      "title": "My Team",
+      "kind": "workspace",
+      "purpose": "Line manager desk — direct reports, roles, and reporting lines",
+      "personas": [
+        "manager",
+        "hr_admin"
+      ],
+      "contents": [
+        "metrics of Person",
+        "queue of Person",
+        "timeline of Employment",
+        "timeline of ManagerLink",
+        "queue of Role",
+        "queue of Person",
+        "bar_chart of Role"
+      ]
+    },
+    {
+      "name": "starters_desk",
+      "title": "New Starters",
+      "kind": "workspace",
+      "purpose": "HR desk for recent joiners — headcount pulse and onboarding queue",
+      "personas": [
+        "hr_admin"
+      ],
+      "contents": [
+        "metrics of Person",
+        "queue of Person",
+        "queue of Person",
+        "timeline of Employment",
+        "bar_chart of Salary"
+      ]
+    },
+    {
+      "name": "reporting_desk",
+      "title": "Reporting",
+      "kind": "workspace",
+      "purpose": "ManagerLink trail — who reports to whom across the org",
+      "personas": [
+        "hr_admin",
+        "manager"
+      ],
+      "contents": [
+        "metrics of ManagerLink",
+        "queue of ManagerLink",
+        "queue of Person",
+        "timeline of ManagerLink",
+        "bar_chart of Department"
+      ]
+    },
+    {
+      "name": "active_staff",
+      "title": "Active Staff",
+      "kind": "workspace",
+      "purpose": "Headcount pressure — currently employed people without warehouse CRUD",
+      "personas": [
+        "hr_admin",
+        "manager",
+        "finance"
+      ],
+      "contents": [
+        "metrics of Person",
+        "queue of Person",
+        "queue of Person",
+        "timeline of Person",
+        "bar_chart of Role"
+      ]
+    }
+  ],
+  "automation": [
+    {
+      "kind": "process",
+      "name": "employment_manager_assignment",
+      "title": "Manager acknowledges new employment",
+      "description": null,
+      "detail": "runs when a Employment changes"
+    }
+  ],
+  "security": {
+    "has_row_level_security": true,
+    "scoped_entities": [
+      "Department",
+      "Role",
+      "Person",
+      "Employment",
+      "Salary",
+      "ManagerLink"
+    ],
+    "persona_count": 4,
+    "scope_rules": [
+      {
+        "entity": "Department",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Department",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Department",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Department",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Department",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Role",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Role",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Role",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Role",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Role",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Person",
+        "operation": "read",
+        "personas": [
+          "manager"
+        ],
+        "rule": "a manager link record links it to the user"
+      },
+      {
+        "entity": "Person",
+        "operation": "list",
+        "personas": [
+          "manager"
+        ],
+        "rule": "a manager link record links it to the user"
+      },
+      {
+        "entity": "Person",
+        "operation": "read",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its id is the user's person"
+      },
+      {
+        "entity": "Person",
+        "operation": "list",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its id is the user's person"
+      },
+      {
+        "entity": "Employment",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Employment",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Employment",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Employment",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Employment",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Employment",
+        "operation": "read",
+        "personas": [
+          "manager"
+        ],
+        "rule": "a manager link record links it to the user"
+      },
+      {
+        "entity": "Employment",
+        "operation": "list",
+        "personas": [
+          "manager"
+        ],
+        "rule": "a manager link record links it to the user"
+      },
+      {
+        "entity": "Employment",
+        "operation": "read",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its person is the user's person"
+      },
+      {
+        "entity": "Employment",
+        "operation": "list",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its person is the user's person"
+      },
+      {
+        "entity": "Salary",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Salary",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Salary",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Salary",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Salary",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "finance"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "Salary",
+        "operation": "read",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its person is the user's person"
+      },
+      {
+        "entity": "Salary",
+        "operation": "list",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its person is the user's person"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "create",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "read",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "update",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "list",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "read",
+        "personas": [
+          "manager"
+        ],
+        "rule": "(its manager is the user's person or its report is the user's person)"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "list",
+        "personas": [
+          "manager"
+        ],
+        "rule": "(its manager is the user's person or its report is the user's person)"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "read",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its report is the user's person"
+      },
+      {
+        "entity": "ManagerLink",
+        "operation": "list",
+        "personas": [
+          "employee"
+        ],
+        "rule": "its report is the user's person"
+      }
+    ]
+  },
+  "activated_claims": [
+    {
+      "id": "scope_filtering",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Access-controlled records are filtered to what each user is permitted\nto see. The rule is declared once in the model and applied automatically to every\nquery the framework runs, instead of being re-implemented — and re-checked — on\neach screen.",
+      "evidence": "dazzle rbac report"
+    },
+    {
+      "id": "provable_rbac",
+      "group": "security",
+      "audience": "investor",
+      "claim": "Every role's permissions, for every entity and operation, are declared\nas machine-readable policy. They compile on demand into an auditable access\nmatrix — so permission review is something you run and diff, not something you\neyeball — and the row-visibility rules can additionally be submitted to an SMT\nsolver for formal verification.",
+      "evidence": "dazzle rbac prove"
+    },
+    {
+      "id": "postgres_backed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "All data is stored in PostgreSQL — a mature, widely-trusted relational\ndatabase. There is no bespoke or experimental datastore to operate, secure, or\nreason about.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "schema_managed",
+      "group": "data",
+      "audience": "technical",
+      "claim": "In production, every change to the data model is applied through\nversioned, reversible migrations. The live schema is never edited by hand, so\nupgrades are repeatable and fully auditable.",
+      "evidence": "dazzle db status"
+    },
+    {
+      "id": "server_rendered",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "The interface is rendered on the server and progressively enhanced.\nThere is no heavy single-page JavaScript application to maintain, which keeps the\nproduct fast, accessible, and simple to operate.",
+      "evidence": "dazzle validate"
+    },
+    {
+      "id": "background_execution",
+      "group": "architecture",
+      "audience": "technical",
+      "claim": "Long-running and scheduled work is executed by a built-in background\nengine coordinated through the database itself — there is no separate queue\ninfrastructure to deploy or operate, and an interrupted run is picked up rather\nthan lost.",
+      "evidence": "dazzle process list"
+    }
+  ],
+  "skeleton": [
+    {
+      "section": "executive_summary",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "what_it_does",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "who_uses_it",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "where_work_happens",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "how_work_flows",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "automation_and_controls",
+      "populated": true,
+      "claim_ids": []
+    },
+    {
+      "section": "technical_foundation",
+      "populated": true,
+      "claim_ids": [
+        "scope_filtering",
+        "provable_rbac",
+        "postgres_backed",
+        "schema_managed",
+        "server_rendered",
+        "background_execution"
+      ]
+    },
+    {
+      "section": "compliance_posture",
+      "populated": false,
+      "claim_ids": []
+    }
+  ]
+}
