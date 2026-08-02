@@ -385,12 +385,12 @@ surface comment_list "Comment List":
   uses entity Comment
   mode: list
   render: fragment
-  # Dual open (cycle 1543 journey_dogfood): primary = comment detail for
-  # inspect note body; secondary = parent Ticket hub (ST-021/022 trail).
-  open: Comment via id | Ticket via ticket
+  # Triple open (cycle 1604 story_walk): note hub + parent Ticket + author
+  # User (ST-018/021/022 trail — agent sees who wrote the note).
+  open: Comment via id | Ticket via ticket | User via author
 
   ux:
-    purpose: "Scan recent comment activity — open hops to the comment detail or parent ticket hub"
+    purpose: "Scan recent comment activity — open hops to the note, parent ticket, or author"
     sort: created_at desc
     filter: is_internal
     search: content

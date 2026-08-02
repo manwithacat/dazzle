@@ -15,6 +15,7 @@ pytestmark = pytest.mark.gate
 
 REPO = Path(__file__).resolve().parents[2]
 SIMPLE = REPO / "examples" / "simple_task"
+SUPPORT = REPO / "examples" / "support_tickets"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -219,6 +220,30 @@ def test_simple_task_parses_open_via() -> None:
     entity = appspec.get_entity("Task")
     tmpl = resolve_list_detail_url_template(task_list, entity)
     assert tmpl == "/app/task/{id}"
+
+
+def test_support_tickets_comment_list_triple_open() -> None:
+    """comment_list triple-open: Comment hub, Ticket, author User (cycle 1604)."""
+    appspec = load_project_appspec(SUPPORT)
+    comment_list = next(s for s in appspec.surfaces if s.name == "comment_list")
+    assert comment_list.open_via == "id"
+    assert comment_list.open_entity == "Comment"
+    assert [(t.entity, t.via) for t in (comment_list.open_via_targets or [])] == [
+        ("Comment", "id"),
+        ("Ticket", "ticket"),
+        ("User", "author"),
+    ]
+    entity = appspec.get_entity("Comment")
+    tmpl = resolve_list_detail_url_template(comment_list, entity)
+    assert tmpl == "/app/comment/{id}"
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    cands = resolve_list_detail_url_candidates(comment_list, entity)
+    assert cands == [
+        "/app/comment/{id}",
+        "/app/ticket/{ticket}",
+        "/app/user/{author}",
+    ]
 
 
 def test_resolve_first_non_null_candidates() -> None:

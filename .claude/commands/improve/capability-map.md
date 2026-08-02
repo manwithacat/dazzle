@@ -69,9 +69,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1602 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1604 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1602 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1602 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1604 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -113,7 +113,7 @@ apply map patches with `{"apply":true}`.
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | STALE |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1602 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1604 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1601 | USED |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1604 (2026-08-02).** campaign force **example-apps story_walk**: dig support_tickets — **product** comment_list triple-open `Comment via id | Ticket via ticket | User via author`; ST-018 then + unit pin; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1604**. budget 1. Explore **45/100**.
 > **Cycle 1602 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig fieldtest_hub — **product** task_list triple-open `Task via id | Tester via assigned_to_id | Tester via created_by_id` (+ Created By column); ST-040/048 + stem + trial; prove journey **30/30** (open_hop created_by); walks 8/8 validate+dry-run; engineer_st_048 **live green**; dig receipt PASS. residual=0 densify=0. journey+story_walk+prove+walk+process_dig **USED@1602**. tip CI in_progress hold push if still red. budget 1. Explore **44/100**.
 > **Cycle 1601 (2026-08-02).** **capability-sweep** cadence lag≥20 since 1581: inventory reconcile; UNOWNED=0; COGNITION_STALE_eff / HYGIENE_STALE_eff recomputed; DRIVER CodeQL+inbox **USED@1601**; flip USED→STALE lag≥20 as listed in artifact. Top digs (aggressive densify=0 dual_lock=0): campaign journey/story/framework multi-hop ships; semgrep never-exercised; gallery when residual clear. budget 0. Explore **43/100**.
 > **Cycle 1600 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig hr_records — **product** employment_list triple-open `Employment via id | Person via person | Role via role`; ST-005 + stem + trial + SPEC; prove journey **5/5** (open_hop role); walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+journey+prove+walk+process_dig **USED@1600**. budget 1. Explore **43/100**.
