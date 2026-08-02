@@ -27,6 +27,8 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         "pay_desk_finance_desktop_light.png": 70000,
         "approval_desk_approver_desktop_light.png": 80000,
         "finance_ops_finance_desktop_light.png": 70000,
+        # Post-5.8 Goal B document: composition desk stays line-dense with INV numbers.
+        "line_items_desk_finance_desktop_light.png": 100000,
     },
     "fieldtest_hub": {
         "issue_triage_manager_desktop_light.png": 90000,

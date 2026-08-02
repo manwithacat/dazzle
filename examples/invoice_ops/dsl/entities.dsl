@@ -217,7 +217,9 @@ entity Invoice "Invoice":
 # =============================================================================
 
 entity LineItem "Line Item":
-  intent: "A single line on an invoice"
+  intent: "A single line on an invoice document — description + qty × unit amount"
+  # Goal B document depth: queue title is the line description, not a UUID shell.
+  display_field: description
 
   id: uuid pk
   tenant_id: ref Tenant required

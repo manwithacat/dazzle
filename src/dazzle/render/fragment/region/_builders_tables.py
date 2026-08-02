@@ -81,6 +81,11 @@ def _ref_dict_has_display_substance(raw: dict[str, Any]) -> bool:
         "label",
         "email",
         "code",
+        # Document identifiers (invoice / PO / doc hubs — not bare id dicts)
+        "invoice_number",
+        "document_number",
+        "number",
+        "po_number",
         "serial_number",
         "serial",
     ):

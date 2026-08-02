@@ -30,6 +30,12 @@
   CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
 ### Added
+- **invoice_ops document composition depth** — Line Items desk is an
+  invoice-document composition surface (composition queue above open
+  documents); LineItem `display_field: description`; multi-qty demo
+  lines; `invoice_number`/`number`/`po_number` in ref display substance.
+  Post-5.8 Goal B `document` depth; still floor for
+  `line_items_desk_finance`.
 - **hr_records org_structure people-first** — Departments & Roles desk
   surfaces Reporting Lines as an above-fold people queue (report→manager
   names/avatars) before the department tree; reporting desk queue gets

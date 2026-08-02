@@ -97,7 +97,7 @@
     {
       "name": "LineItem",
       "title": "Line Item",
-      "intent": "A single line on an invoice",
+      "intent": "A single line on an invoice document — description + qty × unit amount",
       "lifecycle_states": [],
       "relationships": [
         {
@@ -604,7 +604,7 @@
       "name": "line_items_desk",
       "title": "Line Items",
       "kind": "workspace",
-      "purpose": "Line-item composition desk — what is on open invoices without warehouse CRUD",
+      "purpose": "Invoice document composition — line descriptions, qty × unit, open docs (not warehouse CRUD)",
       "personas": [
         "requester",
         "finance",

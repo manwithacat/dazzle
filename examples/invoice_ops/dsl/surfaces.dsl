@@ -27,7 +27,7 @@ surface invoice_detail "Invoice":
   section summary "Summary":
     field invoice_number "Number"
     field supplier "Supplier"
-    field amount "Amount"
+    field amount "Amount" format: currency:GBP
     field currency "Currency"
   section status "Status":
     layout: strip
@@ -37,8 +37,9 @@ surface invoice_detail "Invoice":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
     field submitted_by "Submitted By"
-  # Hub related as pull queues (not warehouse tables) — ST-002/003/005
-  # acceptance path: scan composition + settlement trail, hop into detail.
+  # Document composition (Goal B): line items are the invoice body, not a
+  # warehouse table — ST-002/003/005 acceptance path scans composition then
+  # settlement trail.
   related lines "Line items":
     display: queue
     show: LineItem
@@ -48,7 +49,7 @@ surface invoice_detail "Invoice":
     show: PaymentAttempt
     columns: attempt_number, status, failure_reason, created_at
   ux:
-    purpose: "Invoice hub — status, line-item pull queue, and payment attempt queue"
+    purpose: "Invoice document — header, line composition, and payment trail"
 
 surface invoice_create "New Invoice":
   uses entity Invoice
@@ -225,9 +226,9 @@ surface line_item_list "Line Items":
     field invoice "Invoice"
     field description "Description"
     field quantity "Qty"
-    field unit_amount "Unit Amount"
+    field unit_amount "Unit Amount" format: currency:GBP
   ux:
-    purpose: "Line items — open a row for the line hub, parent Invoice hub, or tenant root"
+    purpose: "Document lines — open a row for the line, parent invoice document, or tenant root"
 
 # Explicit VIEW so related-table drills and synthetic #1421 detail routes
 # share one authored surface (substrate + sections) instead of an empty shell.
@@ -238,9 +239,9 @@ surface lineitem_detail "Line Item":
     field invoice "Invoice"
     field description "Description"
     field quantity "Qty"
-    field unit_amount "Unit Amount"
+    field unit_amount "Unit Amount" format: currency:GBP
   ux:
-    purpose: "Single line on an invoice — hop to the parent invoice for settlement"
+    purpose: "One line on an invoice document — hop to the parent invoice for composition + settlement"
 
 # =============================================================================
 # INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine
@@ -838,9 +839,11 @@ workspace payments_trail "Payments":
       count: count(PaymentAttempt)
     empty: "No payment attempts"
 
-# Ninth product workspace: line-item composition desk vs bare list.
+# Ninth product workspace: invoice document composition desk (Goal B document).
+# Peer tools (Bill.com / Tipalti) show line composition with invoice numbers —
+# not UUID shells or bare CRUD lists.
 workspace line_items_desk "Line Items":
-  purpose: "Line-item composition desk — what is on open invoices without warehouse CRUD"
+  purpose: "Invoice document composition — line descriptions, qty × unit, open docs (not warehouse CRUD)"
   access: persona(requester, finance, finance_admin, auditor)
 
   line_pulse:
@@ -854,24 +857,26 @@ workspace line_items_desk "Line Items":
       open_invoices: accent
       lines: positive
 
-  # Work-surface utility (cycle 1487 acceptance): composition lines are a pull
-  # queue into the parent invoice hub — not a decorative card grid.
-  recent_lines:
+  # Document body first (Goal B): composition lines pull open the parent
+  # invoice document hub — description as title, invoice number + qty × unit
+  # as meta (framework ref display resolves invoice_number).
+  composition:
     source: LineItem
-    sort: id desc
+    sort: created_at desc
     limit: 25
     display: queue
     action: invoice_detail
-    empty: "No line items yet"
+    empty: "No line items yet — add lines to a draft invoice"
 
-  draft_invoices:
+  # Open invoice documents still in flight (header roster under composition).
+  open_documents:
     source: Invoice
-    filter: status = draft or status = submitted
+    filter: status = draft or status = submitted or status = approved
     sort: updated_at desc
     limit: 15
     display: queue
     action: invoice_detail
-    empty: "No draft or submitted invoices"
+    empty: "No open invoice documents"
 
   invoice_trail:
     source: Invoice
