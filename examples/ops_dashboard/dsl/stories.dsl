@@ -95,7 +95,7 @@ story ST-008 "Operations Engineer triages alerts by severity then opens system c
     - "Open Alerts exist across systems"
   then:
     - "Severity breakdown charts and the ack queue surface critical/high first"
-    - "Alert rows open the Alert hub (id) or hop to the System overview hub via system FK"
+    - "Alert list dual-opens Alert via id | System via system (alert hub first, parent System overview second)"
 
 story ST-009 "Operations Engineer drills into a degraded system hub":
   status: accepted

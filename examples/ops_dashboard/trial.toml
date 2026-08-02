@@ -37,6 +37,7 @@ adoption_criteria = [
     "Critical / unacknowledged work is visible at a glance without hunting entity lists",
     "Acknowledge path is discoverable in few steps under on-call pressure",
     "System health (degraded/critical) is scannable from the home desk",
+    "Alert list dual-opens Alert hub and parent System hub (not warehouse-only rows)",
     "Would trust this for a two-week on-call pilot as-is or with minor fixes",
 ]
 

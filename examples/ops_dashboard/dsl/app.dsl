@@ -77,6 +77,7 @@ entity Alert "Alert":
   intent: "Record a time-bound operational incident on a monitored System until acknowledged"
   domain: operations
   patterns: event_log, audit_trail
+  display_field: message
   id: uuid pk
   system: ref System required
   severity: enum[low,medium,high,critical]=low

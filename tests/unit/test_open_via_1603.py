@@ -18,6 +18,7 @@ SIMPLE = REPO / "examples" / "simple_task"
 SUPPORT = REPO / "examples" / "support_tickets"
 INVOICE_OPS = REPO / "examples" / "invoice_ops"
 HR = REPO / "examples" / "hr_records"
+OPS = REPO / "examples" / "ops_dashboard"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -331,6 +332,25 @@ def test_hr_managerlink_list_triple_open() -> None:
         "/app/person/{manager}",
     ]
     assert any(s.name == "managerlink_detail" and s.mode.value == "view" for s in appspec.surfaces)
+
+
+def test_ops_dashboard_alert_list_dual_open() -> None:
+    """alert_list dual-open: Alert hub + System parent (cycle 1613 acceptance)."""
+    appspec = load_project_appspec(OPS)
+    surf = next(s for s in appspec.surfaces if s.name == "alert_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("Alert", "id"),
+        ("System", "system"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("Alert")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/alert/{id}",
+        "/app/system/{system}",
+    ]
+    assert getattr(entity, "display_field", None) == "message"
 
 
 def test_resolve_first_non_null_candidates() -> None:
