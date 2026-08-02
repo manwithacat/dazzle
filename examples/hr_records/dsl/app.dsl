@@ -380,6 +380,7 @@ entity Salary "Salary":
 
 entity ManagerLink "Manager Link":
   intent: "Effective-dated reporting line. NULL end_date = current."
+  display_field: report
 
   id: uuid pk
   report: ref Person required
@@ -436,6 +437,9 @@ entity ManagerLink "Manager Link":
 
   audit: all
 
+  fitness:
+    repr_fields: [report, manager, start_date, end_date]
+
 
 # =============================================================================
 # SURFACES — minimal CRUD coverage. Only what the workspaces below need to
@@ -479,8 +483,9 @@ surface person_detail "Person":
   related reporting "Reporting lines":
     display: queue
     show: ManagerLink
+    columns: report, manager, start_date, end_date
   ux:
-    purpose: "Person hub — identity, tenure strip, employment and salary pull queues"
+    purpose: "Person hub — identity, tenure strip, employment, salary, and reporting-line pull queues"
 
 surface person_create "Add Person":
   uses entity Person
