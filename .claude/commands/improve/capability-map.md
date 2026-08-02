@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1576 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1582 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1579 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1576 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1582 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1582 (2026-08-02).** campaign force **hm-convergence gallery_probes**: prior **38/38 PASS** + uncover=0; **Ship** `confirm_panel.required_gate_arms_primary` + `confirm_panel_required_gate` runner (required boxes arm primary; optional alone never; uncheck re-disarms) — mirrors behaviour test; catalog **39/39 PASS**. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1582**. budget 1. Explore **26/100**.
 > **Cycle 1581 (2026-08-02).** **capability-sweep** (cadence ≥20 since 1561) — inventory reconcile vs tip `d727f2e42`. **UNOWNED=0** **COGNITION_STALE_eff=22** **HYGIENE_STALE_eff=34** rows=76 (COGNITION=29 HYGIENE=40 DRIVER=2 EXEMPT=5). Flipped USED→STALE lag≥20: MCP `presentation` (cognition / opportunities / residual), **hyperpart_presentation** process (`present()` matrix + strategy), `dazzle demo reset-and-load` (#1627 closed-loop seed), `qa-trial` skill. DRIVER CodeQL+inbox **USED@1581**. Tip CI **in_progress** (1580 dual-open) — no product push. Top digs next (aggressive densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1): campaign **gallery_probes** / story_walk|acceptance dual-open ships / framework-ux edge / domain|product_quality re-touch / **semgrep hygiene** never-exercised — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes.
 
 > **Cycle 1580 (2026-08-02).** campaign force **example-apps story_walk**: dig fieldtest_hub — **product** dual-open `device_list` `Device via id | Tester via assigned_tester_id` + `task_list` `Task via id | Tester via assigned_to_id`; ST-040/044 + stem + trial criteria; prove journey **29/29** dual hops; walks 7/7 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1580**. budget 1. Explore **25/100**.

@@ -51,6 +51,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `pagination.page_two_loads_rows` | `pagination` | exclusive | high | controller | Clicking page 2 loads the MOCK_HTMX page-2 row slice into the list body (INV-004 · Umbrella) — pagination is an Exchange footer, not a dead chrome decoration |
 | `date_range.change_fires_search` | `date-range` | exclusive | high | controller | Changing the From date input fires the bar's hx-get exchange into the out slot (MOCK_HTMX /mock/search results) — date-range is a filter Exchange footer, not dead chrome |
 | `search_box.type_fires_results` | `search-box` | exclusive | high | partial | Typing a query into the search-box input fires the debounced hx-get into the results slot (MOCK_HTMX /mock/search → Aurora) — FTS search is a live Exchange, not a static empty coaching panel |
+| `confirm_panel.required_gate_arms_primary` | `confirm-panel` | exclusive | high | controller | Checking all required consent boxes arms the primary action (drops aria-disabled, promotes data-confirm-href → href); optional boxes alone never arm; unchecking a required box re-disarms — irreversible-action gate is state-in-DOM, not a JS counter |
 
 ## Loop (autonomous improve)
 

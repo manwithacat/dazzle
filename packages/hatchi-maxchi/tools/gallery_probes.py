@@ -1050,6 +1050,42 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="partial",
         intent="exclusive",
     ),
+    # Cycle 1582 — confirm-panel: required checklist arms primary (optional does not).
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_confirm_gate_arms_primary_only_when_required_boxes_checked.
+    Probe(
+        id="confirm_panel.required_gate_arms_primary",
+        stem="confirm-panel",
+        page="hyperparts/confirm-panel.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Checking all required consent boxes arms the primary action "
+            "(drops aria-disabled, promotes data-confirm-href → href); optional "
+            "boxes alone never arm; unchecking a required box re-disarms — "
+            "irreversible-action gate is state-in-DOM, not a JS counter"
+        ),
+        kind="confirm_panel_required_gate",
+        params={
+            "root": (
+                "[data-confirm-gate], [data-dz-confirm-gate], "
+                "ul.confirm-checklist, .confirm-checklist"
+            ),
+            "primary": (".confirm-primary, a.confirm-primary, [data-confirm-href]"),
+            "required_input": (
+                "input[data-required='true'], input[data-dz-required='true'], "
+                "input.confirm-checkbox[data-required='true']"
+            ),
+            "optional_input": (
+                "li[data-required='false'] input[type=checkbox], "
+                "input.confirm-checkbox:not([data-required='true'])"
+            ),
+            "expect_href": "#go-live",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3457,6 +3493,163 @@ def _run_search_box_type_results(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_confirm_panel_required_gate(page: Any, probe: Probe) -> dict[str, Any]:
+    """Arm confirm-panel primary only when all required boxes are checked.
+
+    Gallery confirm-panel: primary ships aria-disabled with destination in
+    data-confirm-href; controller promotes href when required count is met.
+    Optional boxes must not arm. Unchecking a required box re-disarms.
+    Mirrors test_behaviour.test_confirm_gate_arms_primary_only_when_required_boxes_checked
+    (cycle 1582 catalog expand).
+    """
+    params = probe.params
+    root_sel = params.get(
+        "root",
+        "[data-confirm-gate], [data-dz-confirm-gate], ul.confirm-checklist",
+    )
+    primary_sel = params.get("primary", ".confirm-primary, a.confirm-primary")
+    required_sel = params.get(
+        "required_input",
+        "input[data-required='true'], input[data-dz-required='true']",
+    )
+    optional_sel = params.get(
+        "optional_input",
+        "li[data-required='false'] input[type=checkbox]",
+    )
+    expect_href = str(params.get("expect_href", "#go-live"))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"confirm-gate root not found ({root_sel})"}
+
+    primary = None
+    for part in primary_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(part).first
+        if cand.count() > 0:
+            primary = cand
+            break
+    if primary is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"confirm primary not found ({primary_sel})",
+            "dom_hint": primary_sel,
+        }
+
+    def _armed() -> tuple[bool, str | None]:
+        disabled = primary.get_attribute("aria-disabled")
+        href = primary.get_attribute("href")
+        # Armed when aria-disabled is absent/false and href is the parked destination.
+        is_disabled = disabled in ("true", "True", "")
+        if disabled is None:
+            is_disabled = False
+        return (not is_disabled and href == expect_href), href
+
+    # Initial: disarmed
+    armed0, href0 = _armed()
+    if armed0 or primary.get_attribute("aria-disabled") != "true":
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"primary should start disarmed (aria-disabled=true, no href); "
+                f"got aria-disabled={primary.get_attribute('aria-disabled')!r} href={href0!r}"
+            ),
+        }
+
+    # Optional alone must not arm
+    opt = None
+    for part in optional_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(part).first
+        if cand.count() > 0:
+            opt = cand
+            break
+    if opt is not None:
+        opt.check()
+        page.wait_for_timeout(50)
+        armed_opt, href_opt = _armed()
+        if armed_opt:
+            return {
+                "verdict": "FAIL",
+                "detail": (
+                    f"optional box alone armed primary (href={href_opt!r}) — "
+                    "only data-required=true boxes may gate"
+                ),
+            }
+
+    required = root.locator(required_sel)
+    n_req = required.count()
+    if n_req < 2:
+        return {
+            "verdict": "ERROR",
+            "detail": f"expected ≥2 required inputs, found {n_req} ({required_sel})",
+        }
+
+    # One of two still disarmed
+    required.nth(0).check()
+    page.wait_for_timeout(50)
+    armed1, href1 = _armed()
+    if armed1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"one of {n_req} required boxes armed primary (href={href1!r}) — "
+                "gate must wait for full required count"
+            ),
+        }
+
+    # All required → armed
+    for i in range(1, n_req):
+        required.nth(i).check()
+    page.wait_for_timeout(80)
+    armed_all, href_all = _armed()
+    if not armed_all:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"all {n_req} required checked but primary not armed "
+                f"(aria-disabled={primary.get_attribute('aria-disabled')!r} "
+                f"href={href_all!r} expect={expect_href!r})"
+            ),
+        }
+
+    # Uncheck first required → re-disarm
+    required.nth(0).uncheck()
+    page.wait_for_timeout(80)
+    armed_back, href_back = _armed()
+    if armed_back or primary.get_attribute("aria-disabled") != "true":
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"unchecking a required box did not re-disarm "
+                f"(aria-disabled={primary.get_attribute('aria-disabled')!r} href={href_back!r})"
+            ),
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"optional alone disarmed; {n_req}/{n_req} required → href={expect_href!r}; "
+            "uncheck re-disarms"
+        ),
+        "required_count": n_req,
+        "href": href_all,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -3485,6 +3678,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "pagination_page_load": _run_pagination_page_load,
     "date_range_change": _run_date_range_change,
     "search_box_type_results": _run_search_box_type_results,
+    "confirm_panel_required_gate": _run_confirm_panel_required_gate,
 }
 
 
