@@ -1114,6 +1114,36 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1593 — dialog open trigger + method=dialog close (not only Escape).
+    # Catalog expand under require_mutation (discover uncovered=0). Mirrors
+    # test_behaviour.test_dialog_opens_and_closes_natively.
+    Probe(
+        id="dialog.open_and_close_via_submit",
+        stem="dialog",
+        page="hyperparts/dialog.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking data-dialog-open opens the modal; the method=dialog close "
+            "control (✕) closes it without extra JS — discoverable dismiss for "
+            "pointer users, complementary to Escape"
+        ),
+        kind="native_dialog_close_submit",
+        params={
+            "open_trigger": "[data-dialog-open], [data-dz-dialog-open]",
+            "dialog": "dialog.dialog, dialog.dz-dialog",
+            "close_btn": (
+                "button.dialog__close, button.dz-dialog__close, "
+                "form[method='dialog'] button[type='submit'].dialog__close, "
+                "form[method='dialog'] button[type='submit'].dz-dialog__close"
+            ),
+            "scope": ".hm-preview",
+            "open_settle_ms": 150,
+            "close_settle_ms": 120,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3678,6 +3708,90 @@ def _run_confirm_panel_required_gate(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
+    """Open via data-dialog-open; close via method=dialog submit (✕).
+
+    Mirrors test_behaviour.test_dialog_opens_and_closes_natively (cycle 1593).
+    Complements native_dialog_escape (keyboard path).
+    """
+    params = probe.params
+    open_sel = params["open_trigger"]
+    dialog_sel = params["dialog"]
+    close_sel = params.get(
+        "close_btn",
+        "button.dialog__close, button.dz-dialog__close",
+    )
+    open_settle = int(params.get("open_settle_ms", 150))
+    close_settle = int(params.get("close_settle_ms", 120))
+
+    scope = _probe_scope(page, params)
+    open_btn = scope.locator(open_sel).first
+    if open_btn.count() == 0:
+        open_btn = page.locator(open_sel).first
+    if open_btn.count() == 0:
+        return {"verdict": "ERROR", "detail": f"open trigger not found ({open_sel})"}
+
+    open_btn.click()
+    page.wait_for_timeout(open_settle)
+
+    is_open = page.evaluate(
+        """(sel) => {
+          const scoped = document.querySelector('.hm-preview');
+          const root = scoped || document;
+          const d = root.querySelector(sel) || document.querySelector(sel);
+          return !!(d && d.open);
+        }""",
+        dialog_sel,
+    )
+    if not is_open:
+        return {
+            "verdict": "ERROR",
+            "detail": f"dialog did not open after trigger click ({dialog_sel})",
+        }
+
+    # Prefer close control inside the open dialog
+    close_btn = page.locator(
+        f"{dialog_sel.split(',')[0].strip()}[open] {close_sel.split(',')[0].strip()}"
+    ).first
+    if close_btn.count() == 0:
+        for part in close_sel.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            cand = page.locator(f"dialog[open] {part}").first
+            if cand.count() > 0:
+                close_btn = cand
+                break
+    if close_btn.count() == 0:
+        return {"verdict": "ERROR", "detail": f"close control not found ({close_sel})"}
+
+    close_btn.click()
+    page.wait_for_timeout(close_settle)
+
+    still_open = page.evaluate(
+        """(sel) => {
+          const scoped = document.querySelector('.hm-preview');
+          const root = scoped || document;
+          const d = root.querySelector(sel) || document.querySelector(sel);
+          return !!(d && d.open);
+        }""",
+        dialog_sel,
+    )
+    if still_open:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"method=dialog close left dialog open ({dialog_sel}) — "
+                "✕ must close without extra JS"
+            ),
+            "dom_hint": dialog_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": f"open trigger + method=dialog close closed {dialog_sel}",
+    }
+
+
 def _run_code_copy_plain_source(page: Any, probe: Probe) -> dict[str, Any]:
     """Copy button writes plain source text + data-copied feedback.
 
@@ -3803,6 +3917,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "search_box_type_results": _run_search_box_type_results,
     "confirm_panel_required_gate": _run_confirm_panel_required_gate,
     "code_copy_plain_source": _run_code_copy_plain_source,
+    "native_dialog_close_submit": _run_native_dialog_close_submit,
 }
 
 

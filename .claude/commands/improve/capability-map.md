@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1587 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1593 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1592 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1587 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1593 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1593 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover multi-details uncovered=0; prior catalog 40 PASS; **Ship** `dialog.open_and_close_via_submit` + `native_dialog_close_submit` runner (data-dialog-open + method=dialog ✕); catalog **41/41 PASS**; unit pin. densify=0. gallery_probes **USED@1593**. budget 1. Explore **36/100**.
 > **Cycle 1592 (2026-08-02).** campaign force **example-apps story_walk**: dig fieldtest_hub — **product** issue_report_list triple-open `IssueReport via id | Device via device_id | Tester via reported_by_id` + test_session_list `TestSession via id | Device via device_id | Tester via tester_id`; ST-037/046 + stem + trial; prove journey **29/29**; walks 7/7; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1592**. budget 1. Explore **35/100**.
 > **Cycle 1591 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig support_tickets — **product** ticket_list triple-open `Ticket via id | User via assigned_to | User via created_by` (+ Created By column); ST-019/028 + stem + trial; prove journey **18/18** triple hops; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. tip CI in_progress hold push. residual=0 densify=0. journey+prove+walk+process_dig **USED@1591**. budget 1. Explore **34/100**.
 > **Cycle 1590 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig simple_task — **product** task_list triple-open `Task via id | User via assigned_to | User via created_by` (+ created_by column); ST-012/015/021 + stem + trial; prove journey **16/16** triple hops; walks 8/8 validate+dry-run; dig receipt PASS live_unproven (trial skip product_first). residual=0 densify=0. acceptance+journey+prove+walk+process_dig **USED@1590**. budget 1. Explore **33/100**.
