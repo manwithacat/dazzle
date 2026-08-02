@@ -232,7 +232,12 @@ def test_renderer_drill_url_wraps_item_in_anchor() -> None:
         items=(TaskInboxItem(item_id="i", icon="x", title="t", drill_url="/s/123"),),
     )
     html = _render(region)
-    assert '<a class="dz-task-inbox-item-link" href="/s/123">' in html
+    # Anchor carries open-discovery attrs after href (cycle 1617 dual-open);
+    # assert class + href + marker rather than a bare `href="…">` substring.
+    assert 'class="dz-task-inbox-item-link"' in html
+    assert 'href="/s/123"' in html
+    assert "data-dz-task-inbox-drill" in html
+    assert "data-dz-open-via" in html
 
 
 def test_renderer_omits_anchor_when_no_drill_url() -> None:
