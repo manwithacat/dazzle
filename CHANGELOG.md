@@ -30,6 +30,10 @@
   CLI workflow `knowledge(workflow=hyperpart_presentation)`.
 
 ### Fixed
+- **Smoke dig dead-crawl residual** — `smoke-dig` no longer PASS when
+  report `counts.ok=0` and `fail>0` (e.g. `ERR_CONNECTION_REFUSED` after
+  the app dies mid-crawl). `qa_smoke_bar` keeps those reports in residual
+  as `smoke_dead_crawl` so stale-clear thrash cannot hide dig debt.
 - **#1626 F1 project board delta theater** — recapture after omit
   `|delta_pct| ≥ 100` (aggregation + emit belt-and-braces); presentation
   OCR residual also flags `delta_theater` (`(150%)` / glued `%)vs`).

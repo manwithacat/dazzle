@@ -284,6 +284,23 @@ def _auto_seed_count(path: Path | None) -> int:
     return len(seed) if isinstance(seed, list) else 0
 
 
+def _report_counts(path: Path | None) -> dict[str, int] | None:
+    """Return ``counts`` from a smoke report, or None if missing/unreadable."""
+    if path is None or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    raw = data.get("counts")
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return {"ok": int(raw.get("ok") or 0), "fail": int(raw.get("fail") or 0)}
+    except (TypeError, ValueError):
+        return None
+
+
 def dig_one(
     app: str,
     *,
@@ -352,6 +369,7 @@ def dig_one(
     report = _newest_report(app_dir / "dev_docs", "qa-smoke-*.json")
     result.report_path = str(report) if report else ""
     result.smoke_auto_seed = _auto_seed_count(report)
+    counts = _report_counts(report)
     if smoke.returncode != 0:
         result.ok = False
         result.detail = (
@@ -360,6 +378,13 @@ def dig_one(
     elif result.smoke_auto_seed:
         result.ok = False
         result.detail = f"auto_seed remaining smoke={result.smoke_auto_seed}"
+    elif counts is not None and counts.get("ok", 0) == 0 and counts.get("fail", 0) > 0:
+        # Crawl process exited 0 but every hit failed (e.g. ERR_CONNECTION_REFUSED
+        # after the app died mid-run). Do not treat as dig PASS / residual clear.
+        result.ok = False
+        result.detail = (
+            f"dead crawl counts ok=0 fail={counts.get('fail')} (server down or no successful hits)"
+        )
     else:
         result.detail = "ok"
         # Prefer stdout summary line

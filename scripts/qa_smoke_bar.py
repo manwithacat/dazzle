@@ -76,6 +76,30 @@ def _auto_seed_count(path: Path | None) -> int:
     return len(seed) if isinstance(seed, list) else 0
 
 
+def _is_dead_crawl(path: Path | None) -> bool:
+    """True when report has zero successful hits and at least one failure.
+
+    Covers harness-class total outages (ERR_CONNECTION_REFUSED after the app
+    dies mid-crawl) that previously cleared residual because auto_seed stayed
+    empty and age was fresh — stamp thrash that hid real dig debt.
+    """
+    if path is None or not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    counts = data.get("counts")
+    if not isinstance(counts, dict):
+        return False
+    try:
+        ok = int(counts.get("ok") or 0)
+        fail = int(counts.get("fail") or 0)
+    except (TypeError, ValueError):
+        return False
+    return ok == 0 and fail > 0
+
+
 def score_app(app: str, *, stale_days: float = DEFAULT_STALE_DAYS) -> AppSmokeBar:
     app_dir = EXAMPLES / app
     dev = app_dir / "dev_docs"
@@ -91,6 +115,8 @@ def score_app(app: str, *, stale_days: float = DEFAULT_STALE_DAYS) -> AppSmokeBa
         row.smoke_age_days = round(age, 2)
         if row.smoke_auto_seed:
             row.reasons.append(f"smoke_auto_seed={row.smoke_auto_seed}")
+        if _is_dead_crawl(smoke):
+            row.reasons.append("smoke_dead_crawl")
         if age > stale_days:
             row.stale = True
             row.reasons.append(f"smoke_stale_days={row.smoke_age_days}>{stale_days}")
