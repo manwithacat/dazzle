@@ -995,17 +995,19 @@ surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment
-  # Dual open: task hub first, assignee tester second (ST-040 work queue path).
-  open: Task via id | Tester via assigned_to_id
+  # Triple open (journey_dogfood dig cycle 1602): task hub first (ST-040 work
+  # queue), assignee second, creator third (who filed the remediation).
+  open: Task via id | Tester via assigned_to_id | Tester via created_by_id
 
   section main "Tasks":
     field type "Type"
     field status "Status"
     field assigned_to_id "Assigned To"
+    field created_by_id "Created By"
     field created_at "Created"
 
   ux:
-    purpose: "Track debugging tasks — open task hub or hop to assigned tester"
+    purpose: "Track debugging tasks — open task hub, assignee, or creator tester"
     sort: status asc, created_at desc
     filter: type, status, assigned_to_id
     search: notes

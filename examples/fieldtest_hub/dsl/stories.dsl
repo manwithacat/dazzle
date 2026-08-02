@@ -254,7 +254,7 @@ story ST-040 "Manager reviews team workload":
     - "Manager sees open Tasks in a work queue"
     - "Opening a device hops to the Device hub with issues and sessions"
     - "Device list dual-hops Device via id | Tester via assigned_tester_id (device hub first, assignee context second)"
-    - "Task work queue dual-hops Task via id | Tester via assigned_to_id (task hub first, assignee second)"
+    - "Task work queue triple-opens Task via id | Tester via assigned_to_id | Tester via created_by_id (task hub first, assignee then creator)"
 
 story ST-041 "Manager tracks release progress":
   status: accepted
@@ -339,3 +339,15 @@ story ST-047 "Manager opens tester hub for assignments and activity":
     - "Manager has list permission on Tester"
   then:
     - "Tester hub shows related testing activity and device/task assignments as pull queues"
+
+story ST-048 "Engineer works the remediation task queue with multi-hop opens":
+  status: accepted
+  executed_by: surface.task_list
+  persona: engineer
+  trigger: user_click
+  entities: [Task, Tester]
+  given:
+    - "Engineer has list permission on Task"
+  then:
+    - "Task list triple-opens Task via id | Tester via assigned_to_id | Tester via created_by_id (task hub first, assignee then creator)"
+    - "Assignee and creator hops land on Tester hubs (not warehouse CRUD dumps)"

@@ -18,8 +18,9 @@ and fleet metrics for engineer/manager; personal queues for testers.
 - List triple-open (story_walk dig cycle 1592): `issue_report_list` →
   IssueReport|Device|Tester(reported_by); `test_session_list` →
   TestSession|Device|Tester.
-- List dual-open (story_walk dig): `device_list` → Device|Tester via
-  `assigned_tester_id`; `task_list` → Task|Tester via `assigned_to_id`.
+- List multi-open (journey dig): `device_list` → Device|Tester via
+  `assigned_tester_id`; `task_list` → Task|assignee|creator via
+  `assigned_to_id` + `created_by_id`.
 
 ## Not this
 

@@ -61,23 +61,23 @@ apply map patches with `{"apply":true}`.
 | `qa-trial` skill | COGNITION | skill | trials | 1555 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1600 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1601 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1602 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1602 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1600 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1597 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1600 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1600 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1602 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1602 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1602 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1598 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1600 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1602 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -113,7 +113,7 @@ apply map patches with `{"apply":true}`.
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | STALE |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1600 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1602 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1601 | USED |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1602 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig fieldtest_hub — **product** task_list triple-open `Task via id | Tester via assigned_to_id | Tester via created_by_id` (+ Created By column); ST-040/048 + stem + trial; prove journey **30/30** (open_hop created_by); walks 8/8 validate+dry-run; engineer_st_048 **live green**; dig receipt PASS. residual=0 densify=0. journey+story_walk+prove+walk+process_dig **USED@1602**. tip CI in_progress hold push if still red. budget 1. Explore **44/100**.
 > **Cycle 1601 (2026-08-02).** **capability-sweep** cadence lag≥20 since 1581: inventory reconcile; UNOWNED=0; COGNITION_STALE_eff / HYGIENE_STALE_eff recomputed; DRIVER CodeQL+inbox **USED@1601**; flip USED→STALE lag≥20 as listed in artifact. Top digs (aggressive densify=0 dual_lock=0): campaign journey/story/framework multi-hop ships; semgrep never-exercised; gallery when residual clear. budget 0. Explore **43/100**.
 > **Cycle 1600 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig hr_records — **product** employment_list triple-open `Employment via id | Person via person | Role via role`; ST-005 + stem + trial + SPEC; prove journey **5/5** (open_hop role); walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+journey+prove+walk+process_dig **USED@1600**. budget 1. Explore **43/100**.
 > **Cycle 1599 (2026-08-02).** campaign force **framework-ux** dual-open polish: row `data-dz-open-chain-entity` (pipe-joined entity display names parallel to chain-via/chain-label); open_via+char green. densify=0. fitness/open_via **USED@1599**. budget 1. Explore **42/100**.

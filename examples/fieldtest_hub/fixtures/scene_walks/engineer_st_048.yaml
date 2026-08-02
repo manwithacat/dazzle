@@ -1,0 +1,22 @@
+# Story walk ST-048 — Engineer remediation task queue multi-hop opens
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-048, dsl/app.dsl task_list
+
+persona: engineer
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_048
+    story: ST-048
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Device
+          - Assigned
+          - Issue
+          - Status
+    expects: "Authenticated engineer sees task queue path with multi-open assignee/creator cues"
