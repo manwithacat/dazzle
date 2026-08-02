@@ -253,6 +253,8 @@ story ST-040 "Manager reviews team workload":
     - "Manager sees fleet metrics and a non-active device attention queue"
     - "Manager sees open Tasks in a work queue"
     - "Opening a device hops to the Device hub with issues and sessions"
+    - "Device list dual-hops Device via id | Tester via assigned_tester_id (device hub first, assignee context second)"
+    - "Task work queue dual-hops Task via id | Tester via assigned_to_id (task hub first, assignee second)"
 
 story ST-041 "Manager tracks release progress":
   status: accepted
@@ -302,6 +304,7 @@ story ST-044 "Field Tester views devices assigned to them":
   then:
     - "Field Tester sees only Devices where assigned_tester_id = self"
     - "Row open hops to Device hub to log a session or report an issue"
+    - "Device list dual-hops Device via id | Tester via assigned_tester_id (device hub first; secondary self/tester context hop)"
 
 story ST-045 "Engineer opens device hub with issues and sessions":
   status: accepted

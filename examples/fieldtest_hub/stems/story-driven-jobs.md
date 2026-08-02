@@ -17,6 +17,8 @@ and fleet metrics for engineer/manager; personal queues for testers.
 
 - List dual-open (acceptance dig): `issue_report_list` → IssueReport|Device;
   `test_session_list` → TestSession|Device.
+- List dual-open (story_walk dig): `device_list` → Device|Tester via
+  `assigned_tester_id`; `task_list` → Task|Tester via `assigned_to_id`.
 
 ## Not this
 

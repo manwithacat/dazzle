@@ -42,6 +42,7 @@ adoption_criteria = [
     "Failed or troubled devices are findable in under a minute from the primary workspace",
     "Tester activity or check-in pressure is visible without exporting to a sheet",
     "Issue list dual-opens issue hub and Device hub; opens are usable hubs not flat CRUD dumps",
+    "Device list dual-opens Device hub and assigned Tester; task queue dual-opens Task|Tester",
     "Would run a two-week pilot replacing the Google Sheet as-is or with minor fixes",
 ]
 

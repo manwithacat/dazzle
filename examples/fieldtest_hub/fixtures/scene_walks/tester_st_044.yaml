@@ -19,4 +19,5 @@ scenes:
           - Task
           - Session
           - Assigned
-    expects: "Authenticated tester sees personal device assignment and issue cues"
+          - Tester
+    expects: "Authenticated tester sees personal device assignment, dual-open tester hop cues, and issue queues"

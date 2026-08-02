@@ -19,4 +19,5 @@ scenes:
           - Fleet
           - Attention
           - Issue
-    expects: "Authenticated manager sees fleet metrics and open work queue cues"
+          - Tester
+    expects: "Authenticated manager sees fleet metrics, dual-open assignee cues, and open work queue"

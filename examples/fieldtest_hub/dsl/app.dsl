@@ -425,7 +425,8 @@ surface device_list "Device Dashboard":
   uses entity Device
   mode: list
   render: fragment
-  open: Device via id
+  # Dual open: device hub first, assigned tester second (ST-040/044 path).
+  open: Device via id | Tester via assigned_tester_id
 
   section main "Devices":
     field name "Name"
@@ -434,9 +435,10 @@ surface device_list "Device Dashboard":
     field firmware_version "Firmware"
     field status "Status"
     field serial_number "Serial"
+    field assigned_tester_id "Assigned Tester"
 
   ux:
-    purpose: "Monitor field devices — open a row for the device hub"
+    purpose: "Monitor field devices — open device hub or hop to assigned tester"
     sort: batch_number asc, status asc
     filter: batch_number, firmware_version, status, assigned_tester_id
     search: name, model, serial_number
@@ -991,7 +993,8 @@ surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment
-  open: Task via id
+  # Dual open: task hub first, assignee tester second (ST-040 work queue path).
+  open: Task via id | Tester via assigned_to_id
 
   section main "Tasks":
     field type "Type"
@@ -1000,7 +1003,7 @@ surface task_list "Tasks":
     field created_at "Created"
 
   ux:
-    purpose: "Track debugging tasks — open a row for the task hub"
+    purpose: "Track debugging tasks — open task hub or hop to assigned tester"
     sort: status asc, created_at desc
     filter: type, status, assigned_to_id
     search: notes
