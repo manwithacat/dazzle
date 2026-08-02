@@ -13,7 +13,7 @@ story ST-001 "Approver works the awaiting-approval queue":
     - "Invoices exist with status submitted"
   then:
     - "Approver sees submitted invoices in the awaiting_approval queue sorted by amount"
-    - "Row open dual-hops Invoice via id | Supplier via supplier (invoice hub first, vendor context second)"
+    - "Row open triple-hops Invoice via id | Supplier via supplier | User via submitted_by (invoice hub first, vendor then submitter)"
     - "Approval load metrics show awaiting / approved / rejected counts"
 
 story ST-002 "Approver opens invoice hub before approve or reject":
@@ -39,7 +39,7 @@ story ST-003 "Finance settles invoices from the ready-to-pay queue":
     - "Invoices exist with status approved"
   then:
     - "Finance sees approved invoices in the ready_to_pay queue"
-    - "Opening a row dual-hops Invoice via id | Supplier via supplier; Invoice hub shows payment attempts as a pull queue"
+    - "Opening a row triple-hops Invoice via id | Supplier via supplier | User via submitted_by; Invoice hub shows payment attempts as a pull queue"
 
 story ST-004 "Finance works the open dispute queue":
   status: accepted
@@ -77,5 +77,5 @@ story ST-006 "Auditor traces payment attempts back to the invoice hub":
     - "Auditor is on the audit_review workspace"
     - "Auditor has list permission on PaymentAttempt"
   then:
-    - "Payment attempt rows dual-open PaymentAttempt via id | Invoice via invoice (attempt hub first, invoice hub second)"
+    - "Payment attempt rows triple-open PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id (attempt hub first, invoice then tenant)"
     - "Auditor cannot modify invoices or payments"

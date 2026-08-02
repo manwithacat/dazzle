@@ -9,15 +9,17 @@ use invoice_ops.entities
 surface invoice_list "Invoices":
   uses entity Invoice
   mode: list
-  # Dual open: invoice hub first (approve/pay), supplier hub second (vendor context).
-  open: Invoice via id | Supplier via supplier
+  # Triple open (story_walk dig cycle 1597): invoice hub, supplier vendor,
+  # submitter teammate (when submitted_by is set).
+  open: Invoice via id | Supplier via supplier | User via submitted_by
   section main:
     field invoice_number "Number"
     field amount "Amount" format: currency:GBP
     field currency "Currency"
     field status "Status"
+    field submitted_by "Submitted By"
   ux:
-    purpose: "Browse invoices — open invoice hub or hop to supplier context"
+    purpose: "Browse invoices — open invoice hub, supplier context, or submitter hub"
 
 surface invoice_detail "Invoice":
   uses entity Invoice
@@ -97,15 +99,15 @@ surface supplier_detail "Supplier":
 surface payment_attempt_list "Payment Attempts":
   uses entity PaymentAttempt
   mode: list
-  # Dual open (story_walk dig cycle 1569): attempt hub first, invoice hub second.
-  open: PaymentAttempt via id | Invoice via invoice
+  # Triple open (story_walk dig cycle 1597): attempt hub, parent invoice, tenant root.
+  open: PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id
   section main:
     field invoice "Invoice"
     field attempt_number "Attempt"
     field status "Status"
     field failure_reason "Failure Reason"
   ux:
-    purpose: "Payment trail — open a row for the attempt hub or parent Invoice hub"
+    purpose: "Payment trail — open a row for the attempt, invoice, or tenant hub"
 
 # View surface so dual-open PaymentAttempt via id lands a readable attempt note.
 surface payment_attempt_detail "Payment Attempt":

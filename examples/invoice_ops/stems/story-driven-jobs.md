@@ -14,10 +14,12 @@ not one shared mega-list plus warehouse CRUD.
 - tenant_admin / finance_admin → `finance_ops` (shared ops overview)
 - Stories `given:` match each persona’s `default_workspace`.
 
-- List dual-open (story dig): `payment_attempt_list` → PaymentAttempt|Invoice;
-  `line_item_list` → LineItem|Invoice; bank list → SupplierBankAccount|Supplier;
-  `invoice_list` → Invoice|Supplier (ST-001/003); `supplier_list` / `user_list`
-  → Tenant via tenant_id (admin roster context).
+- List triple-open (story dig cycle 1597): `invoice_list` →
+  Invoice|Supplier|User(submitted_by); `payment_attempt_list` →
+  PaymentAttempt|Invoice|Tenant.
+- List dual-open (story dig): `line_item_list` → LineItem|Invoice; bank list →
+  SupplierBankAccount|Supplier; `supplier_list` / `user_list` → Tenant via
+  tenant_id (admin roster context).
 
 ## Not this
 

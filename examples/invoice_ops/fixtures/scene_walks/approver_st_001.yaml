@@ -1,5 +1,6 @@
 # Story walk ST-001 — Approver works the awaiting-approval queue
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+# Triple-open Invoice|Supplier|submitted_by and PaymentAttempt|Invoice|Tenant (cycle 1597).
 # Dual-open (cycle 1578): Invoice via id | Supplier via supplier on invoice_list.
 
 persona: approver

@@ -45,8 +45,8 @@ adoption_criteria = [
     "Approve/reject path is discoverable from the desk",
     "Invoice hub related line items and payment attempts are pull queues (not warehouse tables)",
     "Line-item composition desk uses a pull queue into invoice hubs (not a decorative grid)",
-    "Payment attempt and line lists dual-open attempt/line hub plus Invoice hub",
-    "Invoice list dual-opens Invoice hub plus Supplier vendor context",
+    "Payment attempt list triple-opens attempt hub, Invoice hub, and Tenant hub; line list dual-opens line+Invoice",
+    "Invoice list triple-opens Invoice hub, Supplier vendor context, and submitter User hub",
     "Would run a two-week pilot as-is or with minor fixes",
 ]
 
