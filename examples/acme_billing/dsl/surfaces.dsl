@@ -249,15 +249,15 @@ surface membership_list "Memberships":
   uses entity Membership
   mode: list
   render: fragment
-  # Dual open (cycle 1544): membership detail or parent Project hub.
-  open: Membership via id | Project via project
+  # Triple open (cycle 1585 journey): membership hub, member User, parent Project.
+  open: Membership via id | User via user | Project via project
 
   section main "Memberships":
     field user "User"
     field project "Project"
 
   ux:
-    purpose: "Memberships — open a row for membership detail or the parent Project hub"
+    purpose: "Memberships — open membership hub, hop to member User, or parent Project hub"
 
 surface membership_detail "Membership":
   uses entity Membership

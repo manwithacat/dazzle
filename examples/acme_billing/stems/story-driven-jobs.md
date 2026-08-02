@@ -17,6 +17,9 @@ Billing workspace is portfolio metrics + invoice queue before entity lists.
   (ST-001/003/006).
 - User list dual open `User via id | Organization via org` (cycle 1574
   journey_dogfood) — user hub first; secondary org hub for roster context.
+- Membership list triple open `Membership via id | User via user | Project via
+  project` (cycle 1585 journey_dogfood) — membership hub, member context,
+  parent project hub.
 
 ## Not this
 

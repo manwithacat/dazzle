@@ -19,4 +19,5 @@ scenes:
           - Organization
           - Billing
           - queue
-    expects: "Org owner lands on billing portfolio before project hub queue hop"
+          - Membership
+    expects: "Org owner lands on billing portfolio with membership triple-open cues"

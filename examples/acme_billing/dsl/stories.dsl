@@ -120,6 +120,7 @@ story ST-006 "Org owner browses projects and opens a project hub":
     - "Org owner sees projects scoped to their organization"
     - "Row open hops to Project detail with related invoices and memberships as pull queues"
     - "Project rows dual-open Project via id | Organization via org (project hub first, org hub second)"
+    - "Membership roster triple-opens Membership via id | User via user | Project via project (membership hub, member context, parent project)"
 
 story ST-007 "Org owner reviews invoices from the portfolio queue into project context":
   status: accepted
