@@ -930,7 +930,7 @@ class TestSeedPreflightAndCircuitBreaker:
             lambda _entities: ["Manuscript"],
         )
         monkeypatch.setattr(
-            "dazzle.cli.demo._find_data_dir",
+            "dazzle.demo_data.test_mode_load.find_demo_data_dir",
             lambda _p: data_dir,
         )
 
@@ -969,6 +969,85 @@ class TestSeedPreflightAndCircuitBreaker:
         assert "Seed aborted" in out.err
         assert "10 consecutive failures" in out.err
         assert "dazzle demo verify" in out.err
+
+    def test_prefers_story_spine_jsonl_over_blueprint_only_dazzle_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Blueprint-only ``.dazzle/demo_data`` must not force faker regen when
+        ``dsl/seeds/demo_data/*.jsonl`` exists (Feedback.reviewer FK / acceptance
+        panel --fresh-db)."""
+        from dazzle.cli import qa as qa_cli
+
+        dazzle_demo = tmp_path / ".dazzle" / "demo_data"
+        dazzle_demo.mkdir(parents=True)
+        (dazzle_demo / "blueprint.json").write_text("{}")
+
+        spine = tmp_path / "dsl" / "seeds" / "demo_data"
+        spine.mkdir(parents=True)
+        (spine / "blueprint.json").write_text("{}")
+        (spine / "Brand.jsonl").write_text(
+            '{"id": "4d000000-0000-4000-8000-000000000001", "name": "Northwind"}\n'
+        )
+
+        class _FakeEntity:
+            def __init__(self, name: str) -> None:
+                self.name = name
+                self.fields = []
+
+        class _FakeDomain:
+            entities = [_FakeEntity("Brand")]
+
+        class _FakeAppSpec:
+            domain = _FakeDomain()
+
+        monkeypatch.setattr(
+            "dazzle.cli.utils.load_project_appspec",
+            lambda _p: _FakeAppSpec(),
+        )
+        monkeypatch.setattr(
+            "dazzle.demo_data.loader.topological_sort_entities",
+            lambda _entities: ["Brand"],
+        )
+
+        posted: list[dict[str, Any]] = []
+
+        class _FakeResp:
+            status_code = 200
+            text = "{}"
+
+            def json(self) -> dict[str, Any]:
+                return {"created": {"Brand": 1}}
+
+        class _FakeClient:
+            def __init__(self, *_a: Any, **_k: Any) -> None:
+                pass
+
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_a: Any) -> None:
+                return None
+
+            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
+                body = _k.get("json") or {}
+                for fx in body.get("fixtures") or []:
+                    posted.append(fx)
+                return _FakeResp()
+
+        monkeypatch.setattr("httpx.Client", _FakeClient)
+
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise AssertionError("must not regenerate faker when story-spine jsonl exists")
+
+        import dazzle.mcp.server.handlers.demo_data as _demo_mod
+
+        monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
+
+        ok = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        assert ok is True
+        assert len(posted) == 1
+        assert posted[0]["entity"] == "Brand"
+        assert posted[0]["id"] == "4d000000-0000-4000-8000-000000000001"
 
 
 # ---------------------------------------------------------------------------

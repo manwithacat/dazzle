@@ -19,6 +19,9 @@ a shared asset warehouse.
   Campaign|Brand|User(created_by) — hub first, parent then teammate context.
 - List dual-open (acceptance dig): `brand_list` → Brand|User via `created_by`
   (brand hub first, creator context second).
+- Campaign desk (`campaign_desk`) shows schedule pressure; opening a campaign
+  lands a **hub** with schedule strip + brand + **assigned creative queue**
+  (`Asset.campaign` optional FK) — ST-007 acceptance dig (not field dump only).
 
 ## Not this
 

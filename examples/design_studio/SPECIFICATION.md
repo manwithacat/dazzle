@@ -33,7 +33,9 @@ always knows exactly where a piece of work stands.
 
 **Campaigns.** A Campaign also belongs to a Brand and records who created it,
 moving through its own life from planning to active to completed (or
-cancelled).
+cancelled). Design assets may be assigned to a campaign; opening a campaign
+shows a schedule strip, brand context, and a pull-queue of those creatives —
+not a bare field dump.
 
 **Feedback.** Design Feedback is always tied to the specific Design Asset it
 concerns and to the User who reviewed it, so critique is never detached from
@@ -65,7 +67,7 @@ and that grant is itself an explicit, auditable declaration.
 - **Asset Catalog** — catalog metrics, metadata card grid of assets, review queue, pipeline
   kanban, and status mix chart.
 - **Campaigns** — campaign schedule desk with seeded active queue, status board, brand
-  context, and load chart.
+  context, and load chart; campaign detail hubs list assigned creatives.
 - **Feedback** — feedback trail with notes queue, assets-in-review grid,
   note timeline, and asset status chart.
 
@@ -123,4 +125,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:0d4ba9772f4184c02173ffc3dacb35c7de99c75e89a927b7c758d89de3867dc0 -->
+<!-- dazzle-spec-brief: sha256:cce04d512b059ce234e408959abe7d63c98cac71206ebf94b6efaca73cdb53f8 -->

@@ -33,6 +33,7 @@ tasks = [
     "Land on Studio Dashboard. Can you see portfolio pressure (assets, in-review, brands, campaigns) without hunting through menus?",
     "Open the brands list or a brand from the dashboard. Does a brand open as a hub (identity + palette + related assets/campaigns), or a flat field dump?",
     "From Assets, open a row. Prefer the asset hub (production strip + feedback); confirm dual hop also offers parent brand context — not brand-only.",
+    "Open Campaigns / Campaign Desk. Is schedule pressure visible (active briefs, status board)? Open one campaign — is it a hub with schedule + assigned creatives, or a flat field dump?",
     "As a designer, can you start a new asset or find how review status is visible without becoming a warehouse admin?",
 ]
 
@@ -41,6 +42,8 @@ adoption_criteria = [
     "Brand open is a hub (identity/palette + related assets/campaigns), not a flat field dump",
     "Brand list dual-opens Brand hub and creator User hub (palette hub first, ownership context second)",
     "Asset list triple-opens Asset hub, Brand hub, and creator User hub (production/review first)",
+    "Campaign desk shows schedule pressure (active queue / status board) without warehouse CRUD",
+    "Campaign open is a hub (schedule strip + brand + assigned creative queue), not a flat field dump",
     "Publish desk surfaces approved/published assets as prioritised queues (not decorative grids only)",
     "Designer can start work (new asset or find review status) without becoming warehouse admin",
     "Would run a two-week pilot replacing Drive+Slack brand context with this tool as-is or with minor fixes",

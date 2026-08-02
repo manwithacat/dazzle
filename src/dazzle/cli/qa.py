@@ -191,13 +191,17 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
 
     import httpx
 
-    from dazzle.cli.demo import _find_data_dir
     from dazzle.cli.utils import load_project_appspec
     from dazzle.demo_data.loader import topological_sort_entities
+    from dazzle.demo_data.test_mode_load import find_demo_data_dir
     from dazzle.mcp.server.handlers.demo_data import demo_generate_impl
 
     blueprint = project_dir / "dsl" / "seeds" / "demo_data" / "blueprint.json"
-    existing_data = _find_data_dir(project_dir)
+    # Prefer assignment-aware story-spine jsonl (dsl/seeds/demo_data) over a
+    # blueprint-only `.dazzle/demo_data/` dir that would force faker regenerate
+    # with random User ids — Feedback.reviewer then 400s and the pilot desk is
+    # empty (acceptance panel / --fresh-db; align with reset-and-load #1626).
+    existing_data = find_demo_data_dir(project_dir)
 
     if not blueprint.exists() and existing_data is None:
         return True  # nothing to seed — harmless skip

@@ -1,0 +1,24 @@
+# Story walk ST-007 — designer path campaign desk → campaign hub with creatives
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-007 then:
+# Land-and-see on campaign_desk; live dig can deepen into campaign_detail URL.
+
+persona: designer
+home_workspace: campaign_desk
+
+scenes:
+  - id: land_st_007
+    story: ST-007
+    entry: /app/workspaces/campaign_desk
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Campaign
+          - Active
+          - Northwind
+          - Contoso
+          - Schedule
+          - Brand
+    expects: "Authenticated designer sees campaign schedule pressure (named briefs / status) before hub creative-queue hop"

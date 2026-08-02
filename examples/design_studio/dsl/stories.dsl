@@ -77,3 +77,17 @@ story ST-006 "Designer traces feedback back to the asset hub":
     - "Feedback rows triple-open Feedback via id | Asset via asset | User via reviewer (note hub first, asset then reviewer)"
     - "Asset hub shows related Feedback as a pull queue (not a warehouse table)"
     - "Campaign list triple-opens Campaign via id | Brand via brand | User via created_by (schedule hub first, brand then creator)"
+
+story ST-007 "Designer works campaign desk then opens a campaign hub":
+  status: accepted
+  executed_by: surface.campaign_detail
+  persona: designer
+  trigger: user_click
+  entities: [Campaign, Asset, Brand]
+  given:
+    - "Designer is on the campaign_desk workspace"
+    - "Campaigns exist with status mix and assigned assets"
+  then:
+    - "Campaign desk shows schedule pressure (pulse, active queue, status board) without warehouse CRUD"
+    - "Opening a campaign lands a hub with schedule strip, brand context, and assigned creative queue"
+    - "Campaign assets are pull-next work (name+status+type), not a bare field dump"

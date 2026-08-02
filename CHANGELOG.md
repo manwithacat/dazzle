@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **Agent acceptance: campaign hub creatives (design_studio)** — optional
+  `Asset.campaign` assignment; campaign_detail is a real hub (schedule strip +
+  brand + pull-queue of assigned assets), not a field dump. Seeds wire story-spine
+  assets to campaigns; ST-007 + trial adoption criteria cover desk → hub path.
 - **Goal B empty_region_honesty (design_studio)** — Campaign Desk no longer ships
   multi-panel empty theater: explicit `Campaign.jsonl` seeds (planning/active/
   completed/cancelled across brands) so Active Queue, status kanban, metrics,

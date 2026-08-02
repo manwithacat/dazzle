@@ -121,6 +121,8 @@ entity Asset "Design Asset":
   display_field: name
   id: uuid pk
   brand: ref Brand required
+  # Optional campaign assignment — campaign hub pulls creatives (acceptance dig).
+  campaign: ref Campaign
   name: str(200) required
   description: text
   asset_type: enum[logo,icon_glyph,illustration,photo,pattern,typography]=logo
@@ -822,6 +824,7 @@ surface asset_create "New Asset":
     field name "Asset Name"
     field description "Description" widget=rich_text
     field brand "Brand" widget=combobox
+    field campaign "Campaign" widget=combobox
     field asset_type "Type"
   section metadata:
     field tags "Tags" widget=tags
@@ -835,6 +838,7 @@ surface asset_detail "Asset Detail":
     field name "Name"
     field description "Description"
     field brand "Brand"
+    field campaign "Campaign"
     field preview_url "Preview"
   section production "Production":
     layout: strip
@@ -858,6 +862,7 @@ surface asset_edit "Edit Asset":
   section details:
     field name "Name"
     field description "Description" widget=rich_text
+    field campaign "Campaign" widget=combobox
     field tags "Tags" widget=tags
     field quality_score "Quality" widget=slider
     field status "Status"
@@ -881,14 +886,23 @@ surface campaign_detail "Campaign Detail":
     field name "Name"
     field description "Brief"
     field brand "Brand"
+    field created_by "Owner"
   section schedule "Schedule":
     layout: strip
     field status "Status"
     field start_date "Start"
     field end_date "End"
     field budget "Budget"
+
+  # Pull-next creatives assigned to this brief (not warehouse table) —
+  # agent acceptance: campaign desk → hub with assets, not field dump only.
+  related assets "Campaign assets":
+    display: queue
+    show: Asset
+    columns: name, status, asset_type, quality_score
+
   ux:
-    purpose: "Campaign hub — brand context and schedule strip"
+    purpose: "Campaign hub — schedule strip, brand context, and assigned creative queue"
 
 surface feedback_create "Add Feedback":
   uses entity Feedback
