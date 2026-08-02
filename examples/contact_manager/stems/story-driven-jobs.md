@@ -8,8 +8,10 @@ Home and Contacts use favourites queues and directory metrics, not list-only CRM
 
 - User default: home = metrics + favourites queue + sample list.
 - Contacts: search + favourites queue + dual-pane list/detail.
-- Engagement letters: list with open-via to letter hub **and** parent Contact;
-  contact hub related letters are a **pull queue**.
+- Engagement letters: list dual-opens letter hub **and** parent Contact
+  (`EngagementLetter via id | Contact via contact`); display_field=party;
+  Home open-letters queue (draft|sent) + contact hub related letters are
+  **pull queues** with status scannable.
 
 ## Not this
 

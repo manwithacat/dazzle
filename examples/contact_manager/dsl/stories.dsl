@@ -87,6 +87,6 @@ story ST-009 "User browses engagement letters into contact or letter hub":
   given:
     - "Engagement letters exist for contacts in the directory"
   then:
-    - "Letter rows open EngagementLetter via id (letter hub with lifecycle strip)"
-    - "Contact field open hops to Contact via contact (parent hub, not a dead FK cell)"
+    - "Letter list dual-opens EngagementLetter via id | Contact via contact (letter hub first, parent Contact hub second)"
+    - "Home open-letters queue and contact hub related letters show party + lifecycle status (not UUID-only rows)"
     - "Contact hub related engagement letters remain a pull queue"

@@ -7,6 +7,8 @@ entity EngagementLetter "Engagement Letter":
   domain: crm
   patterns: signing, lifecycle
 
+  # Cycle 1615 story_walk: scan letter queues by party (counterparty), not UUID.
+  display_field: party
   id: uuid pk
   contact: ref Contact required
   party: str(200) required

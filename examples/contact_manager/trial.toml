@@ -45,6 +45,7 @@ adoption_criteria = [
     "Can reach a client's phone number or email in three clicks or fewer from home",
     "Search / find-by-name is discoverable and works on seeded contacts",
     "Add-contact form captures name + at least one reachable channel without clutter",
+    "Engagement letter list dual-opens letter hub and parent Contact hub (not warehouse-only rows)",
     "Would consolidate Outlook+spreadsheet into a two-week pilot on this tool as-is or with minor fixes",
 ]
 

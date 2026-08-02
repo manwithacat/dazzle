@@ -129,10 +129,11 @@ surface contact_detail "Contact Detail":
 
   # Journey deepen: reverse-hop engagement letters (SPEC signing flow) — pull
   # roster queue (RelatedDisplayMode.QUEUE), not a warehouse table (cycle 1498).
+  # Cycle 1615: include status so lifecycle is scannable on the contact hub.
   related engagements "Engagement letters":
     display: queue
     show: EngagementLetter
-    columns: party, effective_date, signatory_name, scope_summary
+    columns: party, status, effective_date, signatory_name, scope_summary
 
   ux:
     purpose: "Contact hub — identity, employment, notes, and engagement letters in one place"
@@ -261,14 +262,25 @@ workspace home "Home":
     # Placeholder must say results-panel (not list filter) — panel agents mis-score search
     empty: "Results appear below as you type (name, company, or email). The directory list stays full until you open a hit."
 
+  # ST-009 / cycle 1615 — open engagement letters as a pull queue on Home
+  # (draft+sent), not only buried under contact hub related.
+  open_engagement_letters:
+    source: EngagementLetter
+    filter: status = draft or status = sent
+    sort: effective_date desc
+    limit: 8
+    display: queue
+    action: engagement_letter_detail
+    empty: "No draft or sent engagement letters — open a contact hub to start one."
+
   ux:
     as user:
       purpose: "See a friendly overview before diving into the full list"
       # Surface search early so pilots discover FTS (panel 1279 missed results panel)
-      focus: directory_stats, find_contact, favourite_contacts, recent_contacts
+      focus: directory_stats, find_contact, favourite_contacts, open_engagement_letters, recent_contacts
     as admin:
       purpose: "Directory overview"
-      focus: directory_stats, find_contact, favourite_contacts, recent_contacts
+      focus: directory_stats, find_contact, favourite_contacts, open_engagement_letters, recent_contacts
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":

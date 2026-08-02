@@ -18,4 +18,6 @@ scenes:
           - Favourite
           - directory
           - Home
-    expects: "User lands on home overview before engagement letter list/hub hops"
+          - engagement
+          - letter
+    expects: "User lands on home overview with open engagement letters path before list/hub hops"

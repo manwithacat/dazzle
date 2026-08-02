@@ -20,6 +20,7 @@ INVOICE_OPS = REPO / "examples" / "invoice_ops"
 HR = REPO / "examples" / "hr_records"
 OPS = REPO / "examples" / "ops_dashboard"
 LLM = REPO / "examples" / "llm_ticket_classifier"
+CONTACT = REPO / "examples" / "contact_manager"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -371,6 +372,28 @@ def test_llm_classification_list_dual_open() -> None:
         "/app/ticket/{ticket}",
     ]
     assert getattr(entity, "display_field", None) == "category"
+
+
+def test_contact_manager_engagement_letter_list_dual_open() -> None:
+    """engagement_letter_list dual-open: letter hub + Contact parent (cycle 1615 story_walk)."""
+    appspec = load_project_appspec(CONTACT)
+    surf = next(s for s in appspec.surfaces if s.name == "engagement_letter_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("EngagementLetter", "id"),
+        ("Contact", "contact"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("EngagementLetter")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/engagementletter/{id}",
+        "/app/contact/{contact}",
+    ]
+    assert getattr(entity, "display_field", None) == "party"
+    # Home open-letters queue (draft|sent) is product path for ST-009.
+    home = next(w for w in appspec.workspaces if w.name == "home")
+    assert any(r.name == "open_engagement_letters" for r in home.regions)
 
 
 def test_resolve_first_non_null_candidates() -> None:

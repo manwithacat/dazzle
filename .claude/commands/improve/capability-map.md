@@ -69,9 +69,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1614 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1602 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1614 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1615 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1615 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1615 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -113,7 +113,7 @@ apply map patches with `{"apply":true}`.
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | STALE |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1614 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1614 | USED |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1615 (2026-08-02).** campaign force **example-apps story_walk**: dig contact_manager — **product** EngagementLetter display_field=party; home open_engagement_letters queue (draft|sent); related status column; ST-009 dual-open wording; trial criterion; unit pin engagement_letter_list; prove **7/7**; walks 5/5; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1615**. budget 1. Explore **56/100**.
 > **Cycle 1614 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig llm_ticket_classifier — **product** TicketClassification display_field=category + fitness.repr_fields; ST-003 dual-open wording; trial adoption_criteria; unit pin classification_list; prove **6/6**; walks 4/4; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1614**. budget 1. Explore **55/100**.
 > **Cycle 1613 (2026-08-02).** campaign force **example-apps agent_acceptance_panel**: dig ops_dashboard — **product** Alert display_field=message; ST-008 dual-open wording; trial criterion; unit pin alert_list dual-open; prove **11/11**; walks 6/6 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+prove+walk+process_dig **USED@1613**. budget 1. Explore **54/100**.
 > **Cycle 1612 (2026-08-02).** campaign force **framework-ux**: **ship** hub open discovery on kanban/activity/timeline/tree drills (`_hub_open_discovery_attrs` shared with queue); dig receipt story_walk accepts walk counts>0 or exit 0. densify=0. fitness/open_via/queue emit **USED@1612**. budget 1. Explore **53/100**.
