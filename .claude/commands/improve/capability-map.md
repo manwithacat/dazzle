@@ -76,12 +76,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1598 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1605 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1602 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1598 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1605 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1604 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1601 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1601 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1605 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1605 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -128,6 +128,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1605 (2026-08-02).** campaign force **hm-convergence gallery_probes**: discover multi-details uncovered=0; prior 42 PASS; **Ship** `kanban.keyboard_move_updates_column` + `kanban_keyboard_move` runner (Move select → PUT/GET; card from-state matches target column via MOCK_HTMX); catalog **43/43 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1605**. budget 1. Explore **46/100**.
 > **Cycle 1604 (2026-08-02).** campaign force **example-apps story_walk**: dig support_tickets — **product** comment_list triple-open `Comment via id | Ticket via ticket | User via author`; ST-018 then + unit pin; walks 5/5 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+prove+walk+process_dig **USED@1604**. budget 1. Explore **45/100**.
 > **Cycle 1602 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig fieldtest_hub — **product** task_list triple-open `Task via id | Tester via assigned_to_id | Tester via created_by_id` (+ Created By column); ST-040/048 + stem + trial; prove journey **30/30** (open_hop created_by); walks 8/8 validate+dry-run; engineer_st_048 **live green**; dig receipt PASS. residual=0 densify=0. journey+story_walk+prove+walk+process_dig **USED@1602**. tip CI in_progress hold push if still red. budget 1. Explore **44/100**.
 > **Cycle 1601 (2026-08-02).** **capability-sweep** cadence lag≥20 since 1581: inventory reconcile; UNOWNED=0; COGNITION_STALE_eff / HYGIENE_STALE_eff recomputed; DRIVER CodeQL+inbox **USED@1601**; flip USED→STALE lag≥20 as listed in artifact. Top digs (aggressive densify=0 dual_lock=0): campaign journey/story/framework multi-hop ships; semgrep never-exercised; gallery when residual clear. budget 0. Explore **43/100**.

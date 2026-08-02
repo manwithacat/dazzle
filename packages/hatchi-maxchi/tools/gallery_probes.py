@@ -1174,6 +1174,37 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1605 — kanban keyboard Move select: PUT-then-GET refresh lands card
+    # in the chosen column. Catalog expand under require_mutation (discover
+    # uncovered=0). Mirrors test_behaviour.test_kanban_rearrange_attrs_and_keyboard_move.
+    Probe(
+        id="kanban.keyboard_move_updates_column",
+        stem="kanban",
+        page="hyperparts/kanban.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Selecting a Move-to option on a rearrange-capable kanban card "
+            "fires PUT then board refresh so the card's data-from-state matches "
+            "the chosen column (MOCK_HTMX /mock/kanban) — keyboard parity for "
+            "Linear-class rearrange, not a static column mock"
+        ),
+        kind="kanban_keyboard_move",
+        params={
+            "board": (
+                "[data-kanban-board][data-kanban-rearrange='status'], "
+                "[data-dz-kanban-board][data-dz-kanban-rearrange='status']"
+            ),
+            "card": (
+                "[data-kanban-card][draggable='true'], [data-dz-kanban-card][draggable='true']"
+            ),
+            "move_select": ("select[data-kanban-move], select[data-dz-kanban-move]"),
+            "scope": ".hm-preview",
+            "settle_ms": 600,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -3871,6 +3902,130 @@ def _run_drawer_expand_restore(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_kanban_keyboard_move(page: Any, probe: Probe) -> dict[str, Any]:
+    """Move select on first draggable card; assert column from-state updates.
+
+    Mirrors test_behaviour.test_kanban_rearrange_attrs_and_keyboard_move
+    (cycle 1605 catalog pin). Gallery MOCK_HTMX serves PUT /mock/kanban/<id>
+    then GET /mock/kanban/board refresh.
+    """
+    params = probe.params
+    board_sel = params.get(
+        "board",
+        (
+            "[data-kanban-board][data-kanban-rearrange='status'], "
+            "[data-dz-kanban-board][data-dz-kanban-rearrange='status']"
+        ),
+    )
+    card_sel = params.get(
+        "card",
+        ("[data-kanban-card][draggable='true'], [data-dz-kanban-card][draggable='true']"),
+    )
+    move_sel = params.get(
+        "move_select",
+        "select[data-kanban-move], select[data-dz-kanban-move]",
+    )
+    settle = int(params.get("settle_ms", 600))
+
+    scope = _probe_scope(page, params)
+    board = scope.locator(board_sel).first
+    if board.count() == 0:
+        board = page.locator(board_sel).first
+    if board.count() == 0:
+        return {"verdict": "ERROR", "detail": f"rearrange board not found ({board_sel})"}
+
+    card = board.locator(card_sel).first
+    if card.count() == 0:
+        return {"verdict": "ERROR", "detail": f"draggable card not found ({card_sel})"}
+
+    entity_id = card.get_attribute("data-entity-id") or card.get_attribute("data-dz-entity-id")
+    if not entity_id:
+        return {"verdict": "ERROR", "detail": "card missing data-entity-id"}
+
+    allowed = card.get_attribute("data-allowed-to") or card.get_attribute("data-dz-allowed-to")
+    if not (allowed or "").strip():
+        return {
+            "verdict": "FAIL",
+            "detail": "card has no data-allowed-to edges — rearrange demo dead",
+            "entity_id": entity_id,
+        }
+
+    before_col = (
+        card.get_attribute("data-from-state") or card.get_attribute("data-dz-from-state") or ""
+    ).strip()
+
+    move = card.locator(move_sel).first
+    if move.count() == 0:
+        return {"verdict": "ERROR", "detail": f"move select not found ({move_sel})"}
+
+    opts = move.locator("option")
+    n_opts = opts.count()
+    if n_opts < 2:
+        return {
+            "verdict": "FAIL",
+            "detail": f"move select needs ≥2 options, got {n_opts}",
+            "entity_id": entity_id,
+        }
+
+    target = (opts.nth(1).get_attribute("value") or "").strip()
+    if not target:
+        return {
+            "verdict": "FAIL",
+            "detail": "first non-placeholder move option has empty value",
+            "entity_id": entity_id,
+        }
+
+    move.select_option(target)
+    page.wait_for_timeout(settle)
+
+    board2 = scope.locator(board_sel).first
+    if board2.count() == 0:
+        board2 = page.locator(board_sel).first
+    if board2.count() == 0:
+        return {
+            "verdict": "FAIL",
+            "detail": "board disappeared after move (refresh may have wiped region)",
+            "entity_id": entity_id,
+            "target": target,
+        }
+
+    moved = board2.locator(
+        f"[data-entity-id='{entity_id}'], [data-dz-entity-id='{entity_id}']"
+    ).first
+    if moved.count() == 0:
+        return {
+            "verdict": "FAIL",
+            "detail": f"card {entity_id!r} missing after board refresh",
+            "entity_id": entity_id,
+            "target": target,
+            "before": before_col,
+        }
+
+    after_col = (
+        moved.get_attribute("data-from-state") or moved.get_attribute("data-dz-from-state") or ""
+    ).strip()
+    if after_col != target:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"expected column {target!r} after keyboard move, got {after_col!r} "
+                f"(was {before_col!r}) — PUT/GET rearrange or MOCK_HTMX failed"
+            ),
+            "entity_id": entity_id,
+            "target": target,
+            "before": before_col,
+            "after": after_col,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"card {entity_id} {before_col}→{after_col} via move select",
+        "entity_id": entity_id,
+        "before": before_col,
+        "after": after_col,
+    }
+
+
 def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
     """Open via data-dialog-open; close via method=dialog submit (✕).
 
@@ -4082,6 +4237,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "code_copy_plain_source": _run_code_copy_plain_source,
     "native_dialog_close_submit": _run_native_dialog_close_submit,
     "drawer_expand_restore": _run_drawer_expand_restore,
+    "kanban_keyboard_move": _run_kanban_keyboard_move,
 }
 
 
