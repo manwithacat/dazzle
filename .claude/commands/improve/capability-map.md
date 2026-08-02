@@ -51,14 +51,14 @@ apply map patches with `{"apply":true}`.
 | **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 1477 | STALE |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list + **presentation residual**) | COGNITION | MCP | **example-apps** + framework-ux | 1403 | STALE |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 1403 | STALE |
-| MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | USED |
-| **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | USED |
+| MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
+| **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | — | STALE |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1557 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1557 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1572 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1555 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1555 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1579 | USED |
@@ -116,8 +116,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1580 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1561 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1561 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1581 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1581 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -127,6 +127,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1581 (2026-08-02).** **capability-sweep** (cadence ≥20 since 1561) — inventory reconcile vs tip `d727f2e42`. **UNOWNED=0** **COGNITION_STALE_eff=22** **HYGIENE_STALE_eff=34** rows=76 (COGNITION=29 HYGIENE=40 DRIVER=2 EXEMPT=5). Flipped USED→STALE lag≥20: MCP `presentation` (cognition / opportunities / residual), **hyperpart_presentation** process (`present()` matrix + strategy), `dazzle demo reset-and-load` (#1627 closed-loop seed), `qa-trial` skill. DRIVER CodeQL+inbox **USED@1581**. Tip CI **in_progress** (1580 dual-open) — no product push. Top digs next (aggressive densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1): campaign **gallery_probes** / story_walk|acceptance dual-open ships / framework-ux edge / domain|product_quality re-touch / **semgrep hygiene** never-exercised — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes.
 
 > **Cycle 1580 (2026-08-02).** campaign force **example-apps story_walk**: dig fieldtest_hub — **product** dual-open `device_list` `Device via id | Tester via assigned_tester_id` + `task_list` `Task via id | Tester via assigned_to_id`; ST-040/044 + stem + trial criteria; prove journey **29/29** dual hops; walks 7/7 validate+dry-run; dig receipt PASS live_unproven. residual=0 densify=0. story_walk+journey+prove+walk+process_dig **USED@1580**. budget 1. Explore **25/100**.
 > **Cycle 1579 (2026-08-02).** campaign force **example-apps journey_dogfood**: dig hr_records — **product** dual-open `role_list` `Role via id | Department via department` + `department_list` `Department via id | parent_department`; ST-001/003 + stem + trial criteria; prove journey **5/5**; walks 5/5 validate; dig receipt PASS live_unproven. residual=0 densify=0. journey+prove+walk+process_dig **USED@1579**. budget 1. Explore **24/100**.
