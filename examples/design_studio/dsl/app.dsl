@@ -728,7 +728,8 @@ workspace active_campaigns "Active Campaigns":
 surface brand_list "Brands":
   uses entity Brand
   mode: list
-  open: Brand via id
+  # Dual open: brand hub first, creator second (ST-001 portfolio path).
+  open: Brand via id | User via created_by
   section main:
     field name "Name"
     # #1626 P0-8: color widgets render as swatches in list (not raw hex text)
@@ -737,7 +738,7 @@ surface brand_list "Brands":
     field accent_color "Accent" widget=color
     field created_by "Creator"
   ux:
-    purpose: "Browse brands with palette swatches — open a row for the brand hub"
+    purpose: "Browse brands with palette swatches — open brand hub or hop to creator"
 
 surface brand_create "New Brand":
   uses entity Brand
@@ -775,6 +776,21 @@ surface brand_detail "Brand Detail":
     display: queue
     show: Campaign
     columns: name, status, start_date
+
+# Creator hub for brand_list dual-open (Brand|User via created_by) — ST-001 acceptance dig.
+surface user_detail "Team member":
+  uses entity User
+  mode: view
+  section identity "Identity":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+  section timeline "Timeline":
+    field created_at "Joined"
+  related brands "Brands authored":
+    display: queue
+    show: Brand
+    columns: name, primary_color
 
   ux:
     purpose: "Brand hub — identity, palette strip, asset queue, and campaign queue"

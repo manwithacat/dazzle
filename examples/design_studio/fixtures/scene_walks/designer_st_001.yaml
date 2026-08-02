@@ -18,4 +18,5 @@ scenes:
           - Asset
           - Studio
           - portfolio
-    expects: "Authenticated designer sees studio portfolio metrics and brand cues"
+          - Creator
+    expects: "Authenticated designer sees studio portfolio metrics, brand dual-open creator cues"

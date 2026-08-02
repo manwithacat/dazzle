@@ -15,6 +15,7 @@ story ST-001 "Designer works portfolio then opens a brand hub":
   then:
     - "Designer sees portfolio metrics before dense lists"
     - "Opening a brand row hops to the Brand detail hub with assets and campaigns"
+    - "Brand list dual-hops Brand via id | User via created_by (brand hub first, creator context second)"
 
 story ST-002 "Designer opens brand hub for assets and campaigns":
   status: accepted

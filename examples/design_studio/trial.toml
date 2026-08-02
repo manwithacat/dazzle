@@ -39,6 +39,7 @@ tasks = [
 adoption_criteria = [
     "Studio dashboard shows portfolio pressure (brands, assets, in-review) without menu archaeology",
     "Brand open is a hub (identity/palette + related assets/campaigns), not a flat field dump",
+    "Brand list dual-opens Brand hub and creator User hub (palette hub first, ownership context second)",
     "Asset list dual-opens Asset hub and Brand hub (production/review first, palette context second)",
     "Publish desk surfaces approved/published assets as prioritised queues (not decorative grids only)",
     "Designer can start work (new asset or find review status) without becoming warehouse admin",

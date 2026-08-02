@@ -16,6 +16,8 @@ a shared asset warehouse.
 - Asset hub feedback is a **pull queue** (rating+comment) — not warehouse tables.
 - List dual-open (acceptance dig): `asset_list` → Asset|Brand; `feedback_list` →
   Feedback|Asset; `campaign_list` → Campaign|Brand — hub first, parent context second.
+- List dual-open (acceptance dig): `brand_list` → Brand|User via `created_by`
+  (brand hub first, creator context second).
 
 ## Not this
 
