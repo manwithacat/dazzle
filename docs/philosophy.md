@@ -135,7 +135,7 @@ Dazzle had three knowledge systems (semantic KB, inference KB, project KG). It n
 | Audit the public API | `docs/api-surface/` (five baselines, drift-tested) |
 | Decide if a change needs an ADR | If it would change a "What we deliberately don't do" answer above: yes |
 | Understand an architectural choice | `docs/adr/INDEX.md` |
-| Run autonomous improvement | `/improve` (driver picks lane) — see `CLAUDE.md` § "Autonomous Improvement Loop" |
+| Run autonomous improvement | `/improve` (driver picks lane) — human map: [Improve exemplar](harness/improve-exemplar.md); runtime: `.claude/commands/improve.md` |
 | Cross-check against industry conventions | This doc + the relevant ADR |
 
 The single most useful habit when contributing: **before writing code, find the IR types involved and read them.** The IR is small, stable, and frozen — it tells you the shape of the world the runtime sees. Most "I don't know how to do this in Dazzle" questions resolve in five minutes once the IR is in your head.

@@ -192,7 +192,7 @@ polices its own coverage (capability-coverage rule + capability-sweep cadence).
 - `.dazzle/improve.lock`, `.dazzle/improve-explore-count` — driver state (cap 100, shared across lanes)
 - `.dazzle/signals/` — cross-loop signal bus (`ux_cycle_signals`); lanes emit `ux-component-shipped`, `trial-friction`, `convergence-clean` etc.
 
-**Files:** driver at `.claude/commands/improve.md`; lanes at `.claude/commands/improve/lanes/*.md`; sub-strategies at `.claude/commands/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`.
+**Files:** driver at `.claude/commands/improve.md`; lanes at `.claude/commands/improve/lanes/*.md`; sub-strategies at `.claude/commands/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`. Human map (structure / portable design, not a substitute for the driver): `docs/harness/improve-exemplar.md`, operator rearm `docs/harness/operator-field-guide.md`.
 
 Operator loop playbooks live in `.claude/commands/` (they are followable by any capable
 harness — see Capability mapping). ANY agent that pushes to `main` must honour the shared

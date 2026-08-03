@@ -12,6 +12,7 @@
     "Project",
     "Invoice",
     "LineItem",
+    "InvoiceNote",
     "Membership",
     "OnboardingState",
     "SystemHealth",
@@ -773,6 +774,156 @@
     {
       "role": "external_contractor",
       "entity": "LineItem",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "InvoiceNote",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "InvoiceNote",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "InvoiceNote",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "InvoiceNote",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "InvoiceNote",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "InvoiceNote",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "InvoiceNote",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "InvoiceNote",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "InvoiceNote",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "InvoiceNote",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "InvoiceNote",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "InvoiceNote",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "InvoiceNote",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "InvoiceNote",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "InvoiceNote",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "InvoiceNote",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "InvoiceNote",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "InvoiceNote",
+      "operation": "create",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "InvoiceNote",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "InvoiceNote",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "InvoiceNote",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "InvoiceNote",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "InvoiceNote",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "InvoiceNote",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "InvoiceNote",
       "operation": "delete",
       "decision": "DENY"
     },

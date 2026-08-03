@@ -372,7 +372,21 @@ When used with Claude Code (via MCP), you get access to a growing set of tools t
 
 The agent framework uses an **observe-decide-act-record** loop to autonomously explore running applications, discover gaps, and propose DSL fixes. Discovery modes include persona-based exploration, CRUD completeness analysis, workflow coherence checks, and headless DSL/KG analysis.
 
-For the live tool-by-tool inventory (operations, parameters, descriptions), see the [MCP Tool Inventory](docs/reference/mcp-tools.md) — generated from the registry every doc build. For the architectural model, see [Architecture: MCP Server](docs/architecture/mcp-server.md). For how the autonomous slash-command harness drives day-to-day development on the framework itself, see [Autonomous Harness](docs/autonomous-harness.md).
+For the live tool-by-tool inventory (operations, parameters, descriptions), see the [MCP Tool Inventory](docs/reference/mcp-tools.md) — generated from the registry every doc build. For the architectural model, see [Architecture: MCP Server](docs/architecture/mcp-server.md).
+
+### Autonomous improve harness (how Dazzle develops itself)
+
+Dazzle’s own development loop (`/improve`) is a **control plane** around agents: one cycle owner, safety gates (main CI → CodeQL → GitHub inbox) before product digs, machine residual probes, dig contracts, self-schedule, and an append-only cycle log. It is agent-first by design; the docs below package that structure for humans who want to understand or adapt the pattern without reading 24 strategy playbooks.
+
+| Doc | Audience |
+|-----|----------|
+| **[Improve harness exemplar](docs/harness/improve-exemplar.md)** | Humans — portable anatomy, preemption stack, glossary, adapt checklist |
+| **[Operator field guide](docs/harness/operator-field-guide.md)** | Operators — status, rearm, force a dig, read the log |
+| **[Strategy catalog](docs/harness/strategy-catalog.md)** | Both — one-line map of playbooks |
+| **[Autonomous Harness](docs/autonomous-harness.md)** | Fleet overview of slash commands |
+| **Runtime runbook** (`.claude/commands/improve.md`) | Executing agents — not a substitute for the exemplar |
+
+Hub: [docs/harness/](docs/harness/index.md) · published docs nav section **Harness**.
 
 ### Claude Code integration
 
@@ -444,7 +458,10 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
 - **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
-- **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
+- **[Harness hub](docs/harness/index.md)** — human map of the autonomous improve loop
+- **[Improve harness exemplar](docs/harness/improve-exemplar.md)** — portable control-plane design (adapt checklist + glossary)
+- **[Autonomous Harness](docs/autonomous-harness.md)** — slash-command fleet overview
+
 - **[Research notes](docs/research/INDEX.md)** — reproducible empirical investigations (agent-era counter-priors, predicting task context from a code graph)
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app

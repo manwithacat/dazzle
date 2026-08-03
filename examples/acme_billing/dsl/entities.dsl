@@ -230,6 +230,60 @@ entity LineItem "Line Item":
 
   audit: all
 
+
+# =============================================================================
+# INVOICE NOTE — conversation trail on an Invoice (Goal B conversation depth)
+# =============================================================================
+
+entity InvoiceNote "Invoice Note":
+  # Goal B conversation: peer billing tools (Bill.com / Stripe Invoicing / NetSuite)
+  # show approval discussion on the billing desk — not composition lines alone.
+  intent: "Discussion on an Invoice — the conversation that drives review, dispute, and pay"
+  domain: billing
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  invoice: ref Invoice required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    create: role(admin) or role(org_owner) or role(project_member)
+    read: role(admin) or role(org_owner) or role(auditor) or role(project_member) or role(external_contractor)
+    update: role(admin) or role(org_owner)
+    delete: role(admin)
+    list: role(admin) or role(org_owner) or role(auditor) or role(project_member) or role(external_contractor)
+
+  scope:
+    create: all
+      as: admin
+    read: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
+    list: all
+      as: admin
+    create: invoice.project.org = current_user.org
+      as: org_owner, project_member
+    update: invoice.project.org = current_user.org
+      as: org_owner
+    list: invoice.project.org = current_user.org
+      as: org_owner, auditor
+    read: invoice.project.org = current_user.org
+      as: org_owner, auditor
+    list: invoice.project.org = current_user.org and invoice.sensitive != true
+      as: project_member, external_contractor
+    read: invoice.project.org = current_user.org and invoice.sensitive != true
+      as: project_member, external_contractor
+
+  fitness:
+    repr_fields: [invoice, author, body]
+
+  audit: all
+
 # =============================================================================
 # MEMBERSHIP — junction table assigning users to projects
 # =============================================================================

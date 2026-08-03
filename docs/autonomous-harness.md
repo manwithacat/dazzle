@@ -1,19 +1,43 @@
 # The Dazzle Autonomous Harness
 
-Dazzle ships with a set of Claude Code **slash commands** that, together, form
-an autonomous development harness. You point Claude Code at the repo, invoke
-one of these commands (often inside a `/loop`), and Claude iterates
-deterministically until there is nothing left to do.
+Dazzle ships with a set of agent **slash commands** that, together, form an
+autonomous development harness. You point an agent host (Claude Code, Grok
+Build, etc.) at the repo, invoke one of these commands (often self-scheduled
+or inside a `/loop`), and the agent iterates under a control plane until gates
+and residual say stop — or the next one-shot is armed.
 
-This document is the methodology behind those commands: what they do, why
-they're shaped that way, and how they compose into a harness that can run for
-hours without human intervention and still leave the tree in a reviewable
-state.
+This document is the **fleet overview**: what the commands are, how they
+compose, and recovery habits. It is **not** the deep package for “how does
+`/improve` work as modern harness design?”
 
-- **What it is:** nine slash commands in `.claude/commands/`, intended to be
-  invoked from Claude Code (terminal CLI or IDE).
-- **What it is not:** a general-purpose agent framework. It is specifically
-  scoped to the Dazzle framework + consumer-app development cycle.
+| If you want… | Read |
+|--------------|------|
+| **Human-intelligible structure of `/improve`** (portable exemplar) | [Harness: Improve exemplar](harness/improve-exemplar.md) |
+| **Operator status / rearm / force** | [Harness: Operator field guide](harness/operator-field-guide.md) |
+| **Strategy one-liners** | [Harness: Strategy catalog](harness/strategy-catalog.md) |
+| **Executable cycle for agents** | `.claude/commands/improve.md` |
+
+- **What it is:** slash commands under `.claude/commands/` and skills under
+  `.agents/skills/`, host-agnostic in intent, exercised on Dazzle + examples.
+- **What it is not:** a general-purpose agent framework. Scoped to Dazzle
+  framework + consumer-app development cycles.
+
+### Currency note (read this)
+
+Some sections below retain historical phrasing (early `/loop`-only runs, “commit
+but never push”). **Current `/improve` behaviour** includes:
+
+- Safety gates every cycle: **main CI badge**, **CodeQL**, **GitHub inbox**
+- **Self-schedule** via `scripts/improve_schedule_next.py` + host one-shots
+  (preferred over fixed tickers); daily watchdog
+- **Product pushes** when tip CI allows, through push_gate / ship discipline
+  (not speculative force-push)
+- **Machine residual** (`improve_example_probes.py`) and **policy force**
+  (`improve_policy.py`), including post-5.8 Goal B when residual is clear
+
+When this page and the runtime runbook disagree, **`.claude/commands/improve.md`
+wins for execution**. Prefer the [exemplar](harness/improve-exemplar.md) for
+structure aimed at humans.
 
 ---
 
@@ -127,43 +151,43 @@ Commands that advance state and may commit.
 
 #### `/improve [lane] [strategy]`
 **Source:** `.claude/commands/improve.md`
+**Human map:** [Harness exemplar](harness/improve-exemplar.md) · [Operator guide](harness/operator-field-guide.md) · [Strategy catalog](harness/strategy-catalog.md)
 
-Single agent-first entrypoint for autonomous investigation, improvement, refactoring, and remediation. Replaced /improve, /ux-cycle, /trial-cycle, /ux-converge in the consolidation of 2026-04-25 — see `dev_docs/2026-04-25-improve-consolidation-design.md`.
+Single agent-first entrypoint for autonomous investigation, improvement,
+refactoring, and remediation. Consolidated former `/ux-cycle`, `/trial-cycle`,
+and `/ux-converge` skills into one driver (2026-04).
 
-The driver picks the highest-leverage **lane** each cycle based on actionable rows + signals, then hands off to that lane's playbook. Cycle shape: lock → preflight (`make test-ux-preflight`) → read signals → pick lane → run lane playbook → log + emit signals + commit → release lock.
+**Cycle shape (current):** lock → local preflight → **CI badge** (repair if
+red) → **CodeQL** (remediate if high/error) → **GitHub inbox** → signals →
+policy/probes → pick lane → playbook → log → release lock → **self-schedule**
+next one-shot.
 
 Lanes (`.claude/commands/improve/lanes/*.md`):
 
 | Lane | Targets | Cycle action |
 |------|---------|--------------|
-| `framework-ux` | Dazzle UI templates, contracts, fitness walks | SPECIFY (ux-architect contract) → REFACTOR → QA (HTTP + fitness-engine) |
-| `example-apps` | Example app DSL gaps (lint, scope, fidelity, conformance, visual) | Pick gap → fix → verify → commit |
-| `trials` | Qualitative persona scenarios via `dazzle qa trial` | Rotate (app, scenario) → trial --fresh-db → triage findings |
-| `ux-converge` | Example apps with nonzero contract failures | Pick app → RUN→CLASSIFY→FIX→RE-RUN to convergence (cap 5 inner iterations) |
+| `framework-ux` | Dazzle UI templates, contracts, fitness walks | Contract / edge / presentation / open-discovery ships |
+| `example-apps` | Example app product/demo/journey residual + Goal B depth | Probe force → dig → prove (stills/receipts) → ship |
+| `trials` | Qualitative persona scenarios via `dazzle qa trial` | Rotate (app, scenario) → trial → triage findings |
+| `ux-converge` | Example apps with nonzero contract failures | RUN→CLASSIFY→FIX→RE-RUN (bounded) |
+| `test-suite` | Test redundancy / collapse tracks | Cluster-driven reduction |
+| `hm-convergence` | HM ownership, dual-lock, hyperpart coherence | Investigate / drain queues |
 
-Sub-strategies for `framework-ux` explore phase: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`. The driver respects `$ARGUMENTS` to force a specific lane and strategy.
+The driver respects `$ARGUMENTS` to force a lane and strategy. Cross-lane
+signals (`ux-component-shipped`, `trial-friction`, `app-fixed`, …) bias picks.
+Explore budget is global (cap 100). Cadence panels: **self-audit** (~15 cycles),
+**capability-sweep** (~20 cycles); optional Grok workflows for parallel fan-out.
 
-Cross-lane signals wired into the driver: `ux-component-shipped` from framework-ux triggers re-verification in example-apps + ux-converge; `trial-friction` from trials biases the driver toward framework-ux next cycle; `app-fixed` from example-apps re-eligible apps for trials.
+**Self-scheduling (preferred):** Step 6 — `scripts/improve_schedule_next.py` →
+host `scheduler_create` with opportunistic CI-aware intervals (poll while tip
+CI in progress; settle after deploy; hot on bugs/red; inbox re-probe when
+quiet). Daily durable watchdog: `scripts/improve_watchdog_prompt.md`.
+Session-bound alternative: `/loop 15–30m /improve`. Read-only: `/improve --status`.
 
-Selection priority: REGRESSION rows first → signal-biased pick → highest actionable_count > 0 → oldest-run lane's explore phase → housekeeping idle if explore budget at cap.
-
-**Self-scheduling (preferred):** each cycle ends with Step 6 —
-`scripts/improve_schedule_next.py` → one-shot `scheduler_create` with
-**opportunistic** intervals (CI-aware: poll ~3m while main is yellow, fire
-soon when green; hot 2–5m when work remains; ~15m inbox re-probe when quiet). A daily
-durable watchdog (`scripts/improve_watchdog_prompt.md`) re-arms the chain if
-it dies. Session-bound alternative: `/loop 30m /improve`. Read-only:
-`/improve --status`.
-
-**GitHub inbox (Step 0c3):** every cycle polls open issues + PRs via
-`scripts/improve_github_inbox.py`. **Consumer bugs** and **owner/pilot bugs**
-(bug-shaped open issues, including CyFuture pilot labels) are first-class work
-(`improve/strategies/consumer_issues.md`) — heat `consumer_bug` / `owner_bug`
-preempts STALE map explore and keeps the self-schedule chain hot. Quiet
-product state still re-schedules ~15m so the loop re-polls GitHub regularly
-rather than waiting multi-hour all-clear gaps. **Dependabot** PRs with green
-checks auto-merge (`improve/strategies/github_prs.md`); human PRs are reviewed
-but not auto-merged.
+**GitHub inbox (Step 0c3):** `scripts/improve_github_inbox.py`. Consumer and
+owner/pilot bugs are first-class (`consumer_issues`). Dependabot green checks
+may auto-merge (`github_prs`). Quiet product still re-arms ~15–30m so inbox is
+not left multi-hour cold.
 
 #### `/issues`
 **Source:** `.claude/commands/issues.md`
@@ -302,30 +326,24 @@ after seven days.
 
 The harness is deliberately paranoid about a few things:
 
-- **Commits accumulate, pushes are explicit.** `/improve` commits but
-  never pushes. Only `/ship` and `/issues` push
-  (and `/issues` only after its own quality gates). This means a broken
-  autonomous run can be `git reset --hard HEAD~N` without affecting
-  anyone else's view of the repo.
+- **Safety gates before ambition.** Red main CI and high CodeQL outrank
+  product digs for that cycle. Tip CI **in_progress** blocks new product
+  pushes (poll / hold; repair path uses explicit repair flags).
 
-- **Worktree must be clean after a push.** `/ship` verifies `git
-  status` is clean after push. Saved memory enforces this across
-  cycles: any leftover `dist/` artefacts from a bundle rebuild are
-  committed before the cycle reports complete.
+- **Small coherent commits; gated push.** `/improve` product cycles commit
+  and may push through `push_gate` / ship-surface when tip allows — not
+  speculative force-push. `/issues` and `/ship` remain first-class publish
+  paths. A broken local run is still reviewable via `git log` + cycle log.
 
-- **Versioning is traceable.** Every bug-fix push gets a unique patch
-  bump via `/bump patch`. The `v0.57.22 → v0.57.28` trail across a
-  single session is not noise — each tag corresponds to exactly one
-  deployment.
+- **Worktree discipline.** Prefer named staging (not casual `git add -A`).
+  Secrets stay out of commits. Pre-commit failures → fix + new commit, not
+  amend-to-bypass.
 
-- **No `git add -A`.** All commands stage files by name. Secrets (.env,
-  credentials) are explicitly warned about. `/ship` refuses to force
-  push or bypass pre-commit hooks unless asked.
+- **Close-the-loop.** Recurrent CI failure classes get promoted into
+  local ship-surface / preflight so the next dig fails before push.
 
-- **No `--no-verify` on commits or pushes.** If a pre-commit hook fails,
-  the fix-then-retry path is a new commit, not an amend — because
-  amending would modify the prior commit that the failing hook was
-  meant to protect.
+- **Versioning is traceable** when `/bump` is used for release trails;
+  not every improve dig bumps the public version.
 
 ---
 
@@ -374,40 +392,29 @@ a "try harder" problem.
 
 ## 7. Practical invocation recipes
 
-The first time you run a loop, run one cycle manually first to seed
-the backlog and review what got discovered:
+Prefer **self-schedule** (Step 6 of `/improve`) over stacking fixed tickers.
+For day-one:
 
 ```
-# seed + one cycle
+# one cycle (agent host)
 /improve
 
-# review backlog
-$EDITOR dev_docs/improve-backlog.md
+# review log / backlog
+$EDITOR dev_docs/improve-log.md
+# probes
+uv run python scripts/improve_example_probes.py --status
 
-# now run the loop
+# rearm if the chain died — see docs/harness/operator-field-guide.md
+```
+
+Session-bound alternative (Claude Code `/loop`):
+
+```
 /loop 15m /improve
+/loop 30m /improve framework-ux
 ```
 
-For a heavy weekend of framework work:
-
-```
-/loop 30m /improve framework-ux   # governance + QA on UX layer
-/loop 20m /improve                # hygiene loop
-# Claude Code will notify on every terminal event from either loop
-```
-
-Cancel everything at end of session:
-
-```
-# list active cron jobs
-CronList
-
-# cancel each
-CronDelete <id>
-```
-
-Or just exit the Claude Code session — session-only crons expire
-automatically after seven days.
+Operator rearm, budget reset, force table: [Operator field guide](harness/operator-field-guide.md).
 
 ---
 

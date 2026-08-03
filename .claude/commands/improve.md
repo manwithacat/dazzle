@@ -1,5 +1,7 @@
 Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → **GitHub inbox** (consumer + owner/pilot bugs + open PRs / Dependabot) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (opportunistic CI-aware interval; ~15m inbox re-probe when quiet).
 
+**Human intelligibility (does not change this runbook):** structure and portable design → `docs/harness/improve-exemplar.md`; operator rearm/status → `docs/harness/operator-field-guide.md`; strategy one-liners → `docs/harness/strategy-catalog.md`.
+
 Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, GitHub inbox, signal bus, log, self-schedule).
 
 ### Multi-agent workflows (Grok Build)

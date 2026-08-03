@@ -223,8 +223,14 @@ surface invoice_detail "Invoice":
     show: LineItem
     columns: description, quantity, unit_amount
 
+  # Goal B conversation: billing discussion pull queue on the invoice hub.
+  related discussion "Discussion":
+    display: queue
+    show: InvoiceNote
+    columns: body, author, created_at
+
   ux:
-    purpose: "Invoice document — header, line composition, and sensitivity flags"
+    purpose: "Invoice document — header, line composition, discussion, and sensitivity flags"
 
 surface invoice_create "Create Invoice":
   uses entity Invoice
@@ -247,6 +253,52 @@ surface invoice_edit "Edit Invoice":
     field amount "Amount"
     field project "Project"
     field sensitive "Sensitive"
+
+
+# =============================================================================
+# INVOICE NOTE SURFACES (Goal B conversation)
+# =============================================================================
+
+surface invoice_note_list "Invoice Notes":
+  uses entity InvoiceNote
+  mode: list
+  render: fragment
+  open: InvoiceNote via id | Invoice via invoice
+
+  section main "Notes":
+    field body "Note"
+    field author "Author"
+    field invoice "Invoice"
+    field created_at "When"
+
+  ux:
+    purpose: "Billing discussion — open a note or its parent invoice"
+    sort: created_at desc
+    search: body, author
+    empty: "No invoice notes yet"
+
+surface invoice_note_detail "Invoice Note":
+  uses entity InvoiceNote
+  mode: view
+  render: fragment
+
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field invoice "Invoice"
+    field created_at "When"
+
+  ux:
+    purpose: "Read a billing note in context of its parent invoice"
+
+surface invoice_note_create "Add Invoice Note":
+  uses entity InvoiceNote
+  mode: create
+  render: fragment
+  section main "New note":
+    field invoice "Invoice"
+    field author "Author"
+    field body "Note"
 
 # =============================================================================
 # LINE ITEM SURFACES (Goal B document composition)
@@ -355,7 +407,8 @@ surface membership_edit "Edit Membership":
 # =============================================================================
 
 workspace billing "Acme Billing":
-  purpose: "Manage organizations, projects, invoices and team memberships"
+  # Goal B conversation + document: discussion trail with line composition.
+  purpose: "Live conversation, line composition, and portfolio for organizations, projects, invoices"
   stage: "simple_list"
   # Gate the management workspace to the org-management personas. admin
   # (cross-org), org_owner (their org), auditor (read-only review) all
@@ -366,6 +419,15 @@ workspace billing "Acme Billing":
   # to all authenticated users).
   access: persona(admin, org_owner, auditor)
 
+  # Goal B conversation spine FIRST — domain-true billing prose above fold.
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on invoices appear here"
+
   # Metrics-first portfolio (story-to-composition) before dense entity lists.
   portfolio_metrics:
     source: Invoice
@@ -375,10 +437,23 @@ workspace billing "Acme Billing":
       projects: count(Project)
       invoices: count(Invoice)
       members: count(Membership)
+      conversation: count(InvoiceNote)
     tones:
       invoices: accent
+      conversation: accent
 
-  # Goal B document composition first (above fold): named line descriptions
+  ux:
+    as admin:
+      purpose: "See billing discussion before composition and portfolio queues"
+      focus: live_conversation, portfolio_metrics, composition, open_invoices
+    as org_owner:
+      purpose: "Invoice discussion and composition before org portfolio"
+      focus: live_conversation, portfolio_metrics, composition, open_invoices
+    as auditor:
+      purpose: "Review discussion trail with invoice portfolio"
+      focus: live_conversation, portfolio_metrics, composition, open_invoices
+
+  # Goal B document composition: named line descriptions
   # (Bill.com / Stripe Invoicing peer — not header-only amount shells).
   composition:
     source: LineItem
@@ -509,9 +584,18 @@ workspace projects_home "Projects":
 # Third product workspace: invoice-first job desk so entity
 # lists no longer dominate product shell count vs workspaces.
 workspace invoices_home "Invoices":
-  purpose: "Invoice desk — cash context and open bills before org/project drill-down"
+  # Goal B conversation: discussion first on the invoice desk.
+  purpose: "Invoice desk — live conversation, cash context, open bills"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor, project_member)
+
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on open bills appear here"
 
   invoice_pulse:
     source: Invoice
@@ -520,8 +604,24 @@ workspace invoices_home "Invoices":
       invoices: count(Invoice)
       projects: count(Project)
       organizations: count(Organization)
+      conversation: count(InvoiceNote)
     tones:
       invoices: accent
+      conversation: accent
+
+  ux:
+    as admin:
+      purpose: "See invoice discussion before open bills"
+      focus: live_conversation, invoice_pulse, open_bills
+    as org_owner:
+      purpose: "Billing discussion and open bills"
+      focus: live_conversation, invoice_pulse, open_bills
+    as auditor:
+      purpose: "Review discussion trail with open bills"
+      focus: live_conversation, invoice_pulse, open_bills
+    as project_member:
+      purpose: "Discussion on invoices in your scope"
+      focus: live_conversation, invoice_pulse, open_bills
 
   open_bills:
     source: Invoice
