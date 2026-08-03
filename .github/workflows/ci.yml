@@ -662,11 +662,27 @@ jobs:
         python -m playwright install --with-deps chromium
       timeout-minutes: 5
 
+    # Cache-hit path still runs apt install-deps (OS packages are not in the
+    # browser cache). Azure apt mirrors occasionally take >2m for the font
+    # package set (~21MB) — cycle 1669 red tip 30797833263 timed out here
+    # with product green elsewhere. Align with cold-path 5m so infra flake
+    # does not badge-red INTERACTION_WALK.
     - name: Install Playwright OS deps (cache hit)
       if: steps.playwright-cache.outputs.cache-hit == 'true'
       run: |
-        python -m playwright install-deps chromium
-      timeout-minutes: 2
+        set +e
+        for attempt in 1 2 3; do
+          echo "=== install-deps attempt $attempt / 3 ==="
+          python -m playwright install-deps chromium
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            exit 0
+          fi
+          echo "install-deps rc=$rc — retrying after short backoff"
+          sleep $((attempt * 15))
+        done
+        exit 1
+      timeout-minutes: 5
 
     - name: Run INTERACTION_WALK (with retry)
       # Per design-doc step 4: retry up to 2 times on regression to
