@@ -10,7 +10,7 @@ the users who belong to them, the projects each organization runs, the invoices
 raised against those projects, and the memberships that assign users to
 specific projects.
 
-The system's defining property is that every one of those five record types is
+The system's defining property is that every one of those core record types is
 under declared visibility rules, and the rules distinguish five different roles
 — from a platform administrator with cross-organization access down to an
 external contractor who sees only non-sensitive material on assigned projects.
@@ -37,13 +37,15 @@ membership assigns them to.
 **Invoices.** An Invoice is a billing record always raised against a Project,
 with its amount recorded in whole cents. Invoices can be flagged as sensitive,
 and that flag is enforced by the visibility rules: members and contractors
-never see sensitive invoices, while auditors and owners do.
+never see sensitive invoices, while auditors and owners do. Each invoice can
+carry **line items** — named composition lines (description, quantity, unit
+amount in cents) that make up the document body, not just a header total.
 
 **Memberships.** A Membership links a User to a Project — it is the assignment
 record that grants project members and contractors their view of the work.
 
-All five record types can be browsed, inspected in detail, created, and edited
-through dedicated screens — twenty in all.
+All six domain record types can be browsed, inspected in detail, created, and
+edited through dedicated screens — including invoice document composition.
 
 ## Who uses it
 
@@ -145,4 +147,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:a6cc61cab46290ab231e11dc4c508ae606f60c5174c384ec806838836ed55446 -->
+<!-- dazzle-spec-brief: sha256:c2bc6b970778c9421d29f1cd15fca00d22dd92c1d6cccdad51691d6d5da3ce1f -->

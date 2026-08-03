@@ -11,6 +11,7 @@
     "User",
     "Project",
     "Invoice",
+    "LineItem",
     "Membership",
     "OnboardingState",
     "SystemHealth",
@@ -622,6 +623,156 @@
     {
       "role": "external_contractor",
       "entity": "Invoice",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "admin",
+      "entity": "LineItem",
+      "operation": "list",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "LineItem",
+      "operation": "read",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "LineItem",
+      "operation": "create",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "LineItem",
+      "operation": "update",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "admin",
+      "entity": "LineItem",
+      "operation": "delete",
+      "decision": "PERMIT"
+    },
+    {
+      "role": "org_owner",
+      "entity": "LineItem",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "LineItem",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "LineItem",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "org_owner",
+      "entity": "LineItem",
+      "operation": "update",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "org_owner",
+      "entity": "LineItem",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "LineItem",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "LineItem",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "auditor",
+      "entity": "LineItem",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "LineItem",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "auditor",
+      "entity": "LineItem",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "LineItem",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "LineItem",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "project_member",
+      "entity": "LineItem",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "LineItem",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "project_member",
+      "entity": "LineItem",
+      "operation": "delete",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "LineItem",
+      "operation": "list",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "LineItem",
+      "operation": "read",
+      "decision": "PERMIT_SCOPED"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "LineItem",
+      "operation": "create",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "LineItem",
+      "operation": "update",
+      "decision": "DENY"
+    },
+    {
+      "role": "external_contractor",
+      "entity": "LineItem",
       "operation": "delete",
       "decision": "DENY"
     },

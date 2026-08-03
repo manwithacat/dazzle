@@ -135,6 +135,8 @@ entity Project "Project":
 entity Invoice "Invoice":
   intent: "Billing record — FK-path scope (project.org) + inequality (sensitive != true); boolean-AND compound predicate tenant-isolates project_member/external_contractor. Amount stored as integer cents (no separate money type)"
 
+  # Goal B document: queue/ref title is the invoice number, not a UUID shell.
+  display_field: number
   id: uuid pk
   number: str(40) required
   amount: int required
@@ -173,6 +175,57 @@ entity Invoice "Invoice":
     list: project.org = current_user.org and sensitive != true
       as: project_member, external_contractor
     read: project.org = current_user.org and sensitive != true
+      as: project_member, external_contractor
+
+  audit: all
+
+# =============================================================================
+# LINE ITEM — document composition body of an Invoice (Goal B document depth)
+# =============================================================================
+
+entity LineItem "Line Item":
+  intent: "A single line on an invoice document — description + qty × unit amount (cents). Peer tools (Bill.com / Stripe Invoicing) show named composition lines, not header-only amounts."
+  # Goal B: queue title is the human line description, not a UUID shell.
+  display_field: description
+
+  id: uuid pk
+  invoice: ref Invoice required
+  description: str(200) required
+  quantity: int=1
+  unit_amount: int required
+  created_at: datetime auto_add
+
+  # Same role surface as Invoice read/list; create stays admin-only (no
+  # FK-path create scope for org_owner — #1124, matches Invoice).
+  permit:
+    create: role(admin)
+    read: role(admin) or role(org_owner) or role(auditor) or role(project_member) or role(external_contractor)
+    update: role(admin) or role(org_owner)
+    delete: role(admin)
+    list: role(admin) or role(org_owner) or role(auditor) or role(project_member) or role(external_contractor)
+
+  scope:
+    create: all
+      as: admin
+    read: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
+    list: all
+      as: admin
+    update: invoice.project.org = current_user.org
+      as: org_owner
+    list: invoice.project.org = current_user.org
+      as: org_owner, auditor
+    read: invoice.project.org = current_user.org
+      as: org_owner, auditor
+    # Sensitivity follows parent invoice — members never see lines on
+    # sensitive documents (same rule as Invoice list/read).
+    list: invoice.project.org = current_user.org and invoice.sensitive != true
+      as: project_member, external_contractor
+    read: invoice.project.org = current_user.org and invoice.sensitive != true
       as: project_member, external_contractor
 
   audit: all

@@ -216,8 +216,15 @@ surface invoice_detail "Invoice":
     field sensitive "Sensitive"
     field created_at "Created"
 
+  # Document composition (Goal B): line items are the invoice body, not a
+  # warehouse table — named descriptions + qty × unit (cents).
+  related lines "Line items":
+    display: queue
+    show: LineItem
+    columns: description, quantity, unit_amount
+
   ux:
-    purpose: "Invoice detail — amount, project context, and sensitivity flags"
+    purpose: "Invoice document — header, line composition, and sensitivity flags"
 
 surface invoice_create "Create Invoice":
   uses entity Invoice
@@ -240,6 +247,63 @@ surface invoice_edit "Edit Invoice":
     field amount "Amount"
     field project "Project"
     field sensitive "Sensitive"
+
+# =============================================================================
+# LINE ITEM SURFACES (Goal B document composition)
+# =============================================================================
+
+surface line_item_list "Line Items":
+  uses entity LineItem
+  mode: list
+  render: fragment
+  # Dual open: line hub first; parent Invoice document second.
+  open: LineItem via id | Invoice via invoice
+
+  section main "Line Items":
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit (¢)"
+    field invoice "Invoice"
+
+  ux:
+    purpose: "Document lines — open a row for the line or parent invoice document"
+
+surface line_item_detail "Line Item":
+  uses entity LineItem
+  mode: view
+  render: fragment
+
+  section main "Line":
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit (¢)"
+    field invoice "Invoice"
+    field created_at "Created"
+
+  ux:
+    purpose: "One line on an invoice document — hop to the parent invoice for composition"
+
+surface line_item_create "Create Line Item":
+  uses entity LineItem
+  mode: create
+  render: fragment
+
+  section main "New Line":
+    field invoice "Invoice"
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit (¢)"
+
+surface line_item_edit "Edit Line Item":
+  uses entity LineItem
+  mode: edit
+  render: fragment
+
+  section main "Line":
+    field invoice "Invoice"
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit (¢)"
 
 # =============================================================================
 # MEMBERSHIP SURFACES
@@ -314,10 +378,20 @@ workspace billing "Acme Billing":
     tones:
       invoices: accent
 
+  # Goal B document composition first (above fold): named line descriptions
+  # (Bill.com / Stripe Invoicing peer — not header-only amount shells).
+  composition:
+    source: LineItem
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No line items yet — add lines to an invoice document"
+
   open_invoices:
     source: Invoice
     sort: created_at desc
-    limit: 15
+    limit: 8
     display: queue
     empty: "No invoices found"
 

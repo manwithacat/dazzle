@@ -2,7 +2,7 @@
   "framework_id": "iso27001",
   "framework_name": "ISO/IEC 27001:2022",
   "framework_version": "2022",
-  "dsl_hash": "sha256:c27bc2c1c39e465d",
+  "dsl_hash": "sha256:1449868bc2b8fcaf",
   "controls": [
     {
       "control_id": "A.5.1",
@@ -130,6 +130,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -398,6 +428,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -718,6 +778,36 @@
           "dsl_ref": "Invoice.permit"
         },
         {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
           "entity": "Membership",
           "construct": "permit",
           "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
@@ -983,6 +1073,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -1309,6 +1429,66 @@
           "dsl_ref": "Invoice.scope"
         },
         {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
           "entity": "Membership",
           "construct": "scope",
           "detail": "create: None",
@@ -1554,6 +1734,36 @@
           "dsl_ref": "Invoice.permit"
         },
         {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
           "entity": "Membership",
           "construct": "permit",
           "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
@@ -1789,6 +1999,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -2158,6 +2398,36 @@
           "dsl_ref": "Invoice.permit"
         },
         {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
           "entity": "Membership",
           "construct": "permit",
           "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
@@ -2403,6 +2673,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -2872,6 +3172,36 @@
           "dsl_ref": "Invoice.permit"
         },
         {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
           "entity": "Membership",
           "construct": "permit",
           "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
@@ -3097,6 +3427,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -3423,6 +3783,66 @@
           "dsl_ref": "Invoice.scope"
         },
         {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
           "entity": "Membership",
           "construct": "scope",
           "detail": "create: None",
@@ -3726,6 +4146,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -4071,6 +4521,66 @@
           "construct": "scope",
           "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
         },
         {
           "entity": "Membership",
@@ -4448,6 +4958,36 @@
           "dsl_ref": "Invoice.permit"
         },
         {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
           "entity": "Membership",
           "construct": "permit",
           "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
@@ -4673,6 +5213,36 @@
           "construct": "permit",
           "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "create: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "update: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "delete: comparison=None role_check=RoleCheck(role_name='admin') grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.permit"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "permit",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=None, grant_check=None, via_condition=None, left=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='admin'), grant_check=None, via_condition=None, left=None, operator=None, right=None), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='org_owner'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='auditor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)), operator=<LogicalOperator.OR: 'or'>, right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='project_member'), grant_check=None, via_condition=None, left=None, operator=None, right=None)) operator=<LogicalOperator.OR: 'or'> right=ConditionExpr(comparison=None, role_check=RoleCheck(role_name='external_contractor'), grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.permit"
         },
         {
           "entity": "Membership",
@@ -4997,6 +5567,66 @@
           "construct": "scope",
           "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
           "dsl_ref": "Invoice.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "create: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "delete: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "update: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)) role_check=None grant_check=None via_condition=None left=None operator=None right=None",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "list: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
+        },
+        {
+          "entity": "LineItem",
+          "construct": "scope",
+          "detail": "read: comparison=None role_check=None grant_check=None via_condition=None left=ConditionExpr(comparison=Comparison(field='invoice.project.org', function=None, operator=<ComparisonOperator.EQUALS: '='>, value=ConditionValue(literal='current_user.org', values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None) operator=<LogicalOperator.AND: 'and'> right=ConditionExpr(comparison=Comparison(field='invoice.sensitive', function=None, operator=<ComparisonOperator.NOT_EQUALS: '!='>, value=ConditionValue(literal=True, values=None, date_expr=None, current_bucket=False)), role_check=None, grant_check=None, via_condition=None, left=None, operator=None, right=None)",
+          "dsl_ref": "LineItem.scope"
         },
         {
           "entity": "Membership",
