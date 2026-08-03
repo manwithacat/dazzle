@@ -194,13 +194,14 @@ entity IssueReport "Issue Report":
   severity: enum[low,medium,high,critical]=medium
   description: text required
   steps_to_reproduce: text
-  photo_url: str(500)
+  photo_url: url
   reported_at: datetime auto_add
   status: enum[open,triaged,in_progress,fixed,verified,closed]=open
   resolution: text
   firmware_version: str(50)
   created_at: datetime auto_add
   updated_at: datetime auto_update
+  display_field: description
 
   # Computed field: days since issue was reported
   days_open: computed days_since(reported_at)
@@ -680,6 +681,7 @@ surface issue_report_list "Issues":
   open: IssueReport via id | Device via device_id | Tester via reported_by_id
 
   section main "Issue Reports":
+    field photo_url "Evidence"
     field device_id "Device"
     field reported_by_id "Reported By"
     field category "Category"
@@ -1439,7 +1441,7 @@ workspace manager_ops "Manager Ops":
     empty: "No devices"
 
 workspace issue_triage "Issue Triage":
-  purpose: "Engineer triage desk — open and critical field reports first"
+  purpose: "Engineer triage desk — field photo evidence first, then open/critical queues"
   access: persona(engineer, manager)
 
   open_pressure:
@@ -1452,6 +1454,16 @@ workspace issue_triage "Issue Triage":
     tones:
       open: warning
       critical: destructive
+
+  # Goal B media depth: buyer sees field photos above fold (not severity-only text).
+  field_evidence:
+    source: IssueReport
+    filter: status = open or status = triaged or status = in_progress
+    sort: severity desc, reported_at desc
+    limit: 12
+    display: grid
+    action: issue_report_detail
+    empty: "No field photos yet — ask testers to attach evidence"
 
   triage_queue:
     source: IssueReport
@@ -1471,13 +1483,6 @@ workspace issue_triage "Issue Triage":
     display: queue
     action: issue_report_detail
     empty: "No critical issues!"
-
-  issues_board:
-    source: IssueReport
-    display: kanban
-    group_by: status
-    action: issue_report_edit
-    empty: "No issues to triage"
 
   critical_trail:
     source: IssueReport

@@ -1,6 +1,17 @@
 ## [Unreleased]
 
+### Fixed
+- **hr_records manager org_structure (Goal B)** — Person seeds for manager/employee/hr_admin/finance
+  bind to `STABLE_PERSONA_USER_IDS` + `@demo.dazzle.local` emails; scopes use bare `current_user`
+  (no User entity). Manager My Team stills show named reports (Tina + Abdul) with employment trail
+  instead of empty "No people in scope". ManagerLink manager scope drops mixed-field OR (fail-closed).
+
+
 ### Added
+- **Goal B media depth (fieldtest_hub)** — Issue Triage shows field photo
+  evidence above fold: `photo_url: url` + placehold.co evidence seeds;
+  `field_evidence` grid on the triage desk; list projects Evidence first;
+  `display_field=description`. Hero stills recaptured (`issue_triage_*`).
 - **Goal B document depth (contact_manager)** — Home is no longer
   directory-metrics-only: `EngagementLetter.jsonl` seeds 12 domain-true
   documents (MSA, NDA, retainer, SOW, DPA, LOI, change order); Engagement Docs
@@ -26,6 +37,9 @@
   Peer read: PagerDuty/Datadog multi-signal walls, not a single limit:20 queue.
 
 ### Fixed
+- **Grid/queue display_key skips media columns** — `_pick_display_key` no
+  longer selects `image`/`color`/`bool` as card titles (photo_url-as-title
+  hid thumbs and showed raw placehold URLs on field-evidence grids).
 - **CI preflight after media depth** — extract `dazzle.render.cell_chrome` leaf (swatch + media thumbs) to clear deferred-import + complexity ratchets; rebuild HM dist/site after `dz-media-thumb` CSS.
 
 ### Added

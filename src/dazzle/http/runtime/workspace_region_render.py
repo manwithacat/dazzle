@@ -223,6 +223,12 @@ _TYPED_REGION_DISPLAYS: frozenset[str] = (
 )
 
 
+# Column types that must not become card/grid titles (chrome or binary media).
+# Goal B media: image/color are visual affordances, not row identity — picking
+# photo_url as display_key made grid titles raw placehold URLs and skipped thumbs.
+_NON_TITLE_COL_TYPES = frozenset({"badge", "ref", "image", "color", "bool"})
+
+
 def _pick_display_key(
     columns: list[dict[str, Any]],
     *,
@@ -237,13 +243,13 @@ def _pick_display_key(
     1. ``preferred`` (typically the entity's ``display_field``) when set —
        even if that field is not among the projected columns, so queue
        cards still label by subject/title rather than raw ``id``.
-    2. First non-badge / non-ref column.
+    2. First non-badge / non-ref / non-media column.
     3. First column key, else ``"name"``.
     """
     if preferred:
         return preferred
     return next(
-        (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
+        (c["key"] for c in columns if c.get("type") not in _NON_TITLE_COL_TYPES),
         columns[0]["key"] if columns else "name",
     )
 
