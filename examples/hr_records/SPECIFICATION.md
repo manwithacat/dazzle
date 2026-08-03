@@ -13,6 +13,8 @@ compensation, and who they report to. Because each fact carries the period it
 was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
+Staff desks also surface a **people notes** trail (PersonNote with display_field body) so HR conversation sits above warehouse queues — not only directory metrics.
+
 Four kinds of people use it — HR administrators, line managers, finance staff,
 and employees themselves — and what each of them can see is not left to
 convention. Visibility rules are declared once in the model and applied
@@ -120,4 +122,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:c5e7a3536291d8c61a62e80c4b6bdbcf1686cc6f47e04fe926808ba66f30e3de -->
+<!-- dazzle-spec-brief: sha256:c6bb5c76218a1f9f4061279f5af381725cf827b7be00aa05ada2776e08c3596b -->

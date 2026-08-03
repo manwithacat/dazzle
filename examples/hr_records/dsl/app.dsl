@@ -241,6 +241,43 @@ entity Person "Person":
   audit: all
 
 
+
+# Goal B conversation: peer HR tools (Workday / BambooHR / Personio) show
+# people notes on the staff desk — not only directory queues and metric tiles.
+entity PersonNote "Person Note":
+  intent: "HR discussion on a Person — the conversation that moves onboarding, leave, or promotion forward"
+  domain: hr
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  person: ref Person required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    list: role(hr_admin) or role(manager) or role(finance) or role(employee)
+    read: role(hr_admin) or role(manager) or role(finance) or role(employee)
+    create: role(hr_admin) or role(manager)
+    update: role(hr_admin) or role(manager)
+    delete: role(hr_admin)
+
+  scope:
+    list: all
+      as: hr_admin, manager, finance, employee
+    read: all
+      as: hr_admin, manager, finance, employee
+    create: all
+      as: hr_admin, manager
+    update: all
+      as: hr_admin, manager
+    delete: all
+      as: hr_admin
+
+  fitness:
+    repr_fields: [person, author, body]
+
+
 # =============================================================================
 # EMPLOYMENT — temporal core (#1217 Pattern 7)
 # =============================================================================
@@ -489,8 +526,13 @@ surface person_detail "Person":
     display: queue
     show: ManagerLink
     columns: report, manager, start_date, end_date
+  # Goal B conversation: people notes pull queue on the person hub.
+  related discussion "Discussion":
+    display: queue
+    show: PersonNote
+    columns: body, author, created_at
   ux:
-    purpose: "Person hub — identity, tenure strip, employment, salary, and reporting-line pull queues"
+    purpose: "Person hub — identity, tenure, employment, salary, reporting lines, and HR discussion"
 
 surface person_create "Add Person":
   uses entity Person
@@ -509,6 +551,48 @@ surface person_edit "Edit Person":
     field preferred_name "Preferred name"
     field email "Email"
     field ended_at "Ended"
+
+
+surface person_note_list "Person Notes":
+  uses entity PersonNote
+  mode: list
+  render: fragment
+  open: PersonNote via id | Person via person
+
+  section main "Notes":
+    field body "Note"
+    field author "Author"
+    field person "Person"
+    field created_at "When"
+
+  ux:
+    purpose: "HR discussion — open a note or its parent person"
+    sort: created_at desc
+    search: body, author
+    empty: "No person notes yet"
+
+surface person_note_detail "Person Note":
+  uses entity PersonNote
+  mode: view
+  render: fragment
+
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field person "Person"
+    field created_at "When"
+
+  ux:
+    purpose: "Read an HR note in context of its parent person"
+
+surface person_note_create "Add Person Note":
+  uses entity PersonNote
+  mode: create
+  render: fragment
+  section main "New note":
+    field person "Person"
+    field author "Author"
+    field body "Note"
 
 surface department_list "Departments":
   uses entity Department
@@ -738,9 +822,22 @@ surface managerlink_edit "End Reporting Line":
 
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
-  purpose: "Current employees, filterable by department + level"
+  # Goal B conversation: people notes trail with directory pulse so the
+  # staff desk is an HR reply surface, not only warehouse queues.
+  purpose: "People notes, directory pulse, and current staff queues"
 
-  # Job strip first — counts before the dense directory list.
+  # Goal B conversation spine FIRST — newest HR notes so above-fold stills
+  # show domain-true people prose (display_field: body). Peer Workday /
+  # BambooHR put discussion on the first screen.
+  live_conversation:
+    source: PersonNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: person_note_detail
+    empty: "No conversation yet — notes on people and onboarding appear here"
+
+  # Job strip — counts including conversation volume.
   headcount:
     source: Person
     display: metrics
@@ -749,8 +846,24 @@ workspace staff_directory "Staff Directory":
       departments: count(Department)
       roles: count(Role)
       employment_rows: count(Employment)
+      conversation: count(PersonNote)
     tones:
       people: accent
+      conversation: accent
+
+  ux:
+    as hr_admin:
+      purpose: "See people notes before the full directory queue"
+      focus: live_conversation, headcount, current_staff, recent_starters
+    as manager:
+      purpose: "Team-relevant people notes and directory pulse"
+      focus: live_conversation, headcount, current_staff, recent_starters
+    as finance:
+      purpose: "People notes and headcount before compensation hop"
+      focus: live_conversation, headcount, current_staff
+    as employee:
+      purpose: "Directory pulse and any visible people notes"
+      focus: live_conversation, headcount, current_staff
 
   current_staff:
     source: Person
@@ -1122,8 +1235,18 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  purpose: "Line manager desk — direct reports, roles, and reporting lines"
+  # Goal B conversation: people notes on the manager desk — not only reports.
+  purpose: "People notes, direct reports, roles, and reporting lines"
   access: persona(manager, hr_admin)
+
+  # Goal B conversation spine FIRST — domain-true HR prose above fold.
+  live_conversation:
+    source: PersonNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: person_note_detail
+    empty: "No team conversation yet — notes on reports appear here"
 
   team_pulse:
     source: Person
@@ -1133,8 +1256,18 @@ workspace my_team "My Team":
       employment_rows: count(Employment)
       reporting_lines: count(ManagerLink)
       roles: count(Role)
+      conversation: count(PersonNote)
     tones:
       people: accent
+      conversation: accent
+
+  ux:
+    as manager:
+      purpose: "See team people notes before report queues"
+      focus: live_conversation, team_pulse, reports, reporting_lines
+    as hr_admin:
+      purpose: "People notes and team pulse for manager-scope coaching"
+      focus: live_conversation, team_pulse, reports, reporting_lines
 
   reports:
     source: Person
