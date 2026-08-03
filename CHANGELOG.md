@@ -10,6 +10,10 @@
 
 
 ### Added
+- **Goal B document depth (simple_task)** — Admin Dashboard, Team Overview, and My Work lead with
+  Composition: `TaskBrief` entity (`display_field=headline`) + 12 domain-true acceptance/brief/
+  runbook/checklist seeds so queue titles are document lines, not empty title chrome; dual-open
+  brief_list; related Briefs on task hub; Documents metric. Hero stills recaptured.
 - **Goal B conversation depth (llm_ticket_classifier)** — Support Dashboard and Ticket Management
   lead with Live AI Replies: `TicketClassification.display_field=suggested_response` so queues show
   domain-true draft replies (not category-only shells); recapture supervisor/agent stills.

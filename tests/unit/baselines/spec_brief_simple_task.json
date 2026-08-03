@@ -53,6 +53,26 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "TaskBrief",
+      "title": "Task Brief",
+      "intent": "A named document line on a Task — acceptance criteria, runbook step, or brief section buyers scan above the fold",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "task",
+          "target": "Task",
+          "target_title": "Task",
+          "required": true
+        },
+        {
+          "field": "author",
+          "target": "User",
+          "target_title": "Team Member",
+          "required": false
+        }
+      ]
     }
   ],
   "actors": [
@@ -140,6 +160,30 @@
       "name": "comment_edit",
       "title": "Edit Comment",
       "entity": "TaskComment",
+      "mode": "edit"
+    },
+    {
+      "name": "brief_list",
+      "title": "Briefs",
+      "entity": "TaskBrief",
+      "mode": "list"
+    },
+    {
+      "name": "brief_detail",
+      "title": "Brief Detail",
+      "entity": "TaskBrief",
+      "mode": "view"
+    },
+    {
+      "name": "brief_create",
+      "title": "Add Brief",
+      "entity": "TaskBrief",
+      "mode": "create"
+    },
+    {
+      "name": "brief_edit",
+      "title": "Edit Brief",
+      "entity": "TaskBrief",
       "mode": "edit"
     },
     {
@@ -385,13 +429,14 @@
       "name": "admin_dashboard",
       "title": "Admin Dashboard",
       "kind": "workspace",
-      "purpose": "System-wide overview and management",
+      "purpose": "System-wide overview — document composition plus pressure queues",
       "personas": [
         "admin"
       ],
       "contents": [
         "metrics of Task",
         "metrics of User",
+        "queue of TaskBrief",
         "queue of Task",
         "queue of Task"
       ]
@@ -400,13 +445,14 @@
       "name": "team_overview",
       "title": "Team Overview",
       "kind": "workspace",
-      "purpose": "Monitor team progress and workload",
+      "purpose": "Lead desk — document briefs, review pressure, and plate by person",
       "personas": [
         "admin",
         "manager"
       ],
       "contents": [
         "metrics of Task",
+        "queue of TaskBrief",
         "bar_chart of Task",
         "queue of Task",
         "queue of User",
@@ -418,10 +464,11 @@
       "name": "my_work",
       "title": "My Work",
       "kind": "workspace",
-      "purpose": "Personal task view for assigned work",
+      "purpose": "Personal plate — briefs on your work, board flow, and discussion",
       "personas": [],
       "contents": [
         "metrics of Task",
+        "queue of TaskBrief",
         "kanban of Task",
         "timeline of Task",
         "timeline of TaskComment"
@@ -534,7 +581,8 @@
     "scoped_entities": [
       "User",
       "Task",
-      "TaskComment"
+      "TaskComment",
+      "TaskBrief"
     ],
     "persona_count": 3,
     "scope_rules": [
@@ -689,6 +737,53 @@
       },
       {
         "entity": "TaskComment",
+        "operation": "delete",
+        "personas": [
+          "admin"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskBrief",
+        "operation": "list",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskBrief",
+        "operation": "read",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskBrief",
+        "operation": "create",
+        "personas": [
+          "admin",
+          "manager",
+          "member"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskBrief",
+        "operation": "update",
+        "personas": [
+          "admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "TaskBrief",
         "operation": "delete",
         "personas": [
           "admin"

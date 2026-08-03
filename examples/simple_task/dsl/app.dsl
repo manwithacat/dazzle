@@ -197,6 +197,48 @@ entity TaskComment "Task Comment":
     repr_fields: [task, author, content]
 
 # =============================================================================
+# TaskBrief Entity — document composition body on a Task (Goal B document)
+# =============================================================================
+
+entity TaskBrief "Task Brief":
+  # Goal B document: peer tools (Linear / Asana / Notion) show named brief /
+  # acceptance lines on work — not title-only warehouse queues. display_field
+  # drives queue titles so hero stills read as document composition.
+  intent: "A named document line on a Task — acceptance criteria, runbook step, or brief section buyers scan above the fold"
+  domain: task_management
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  task: ref Task required
+  headline: str(200) required
+  doc_kind: enum[brief, acceptance, runbook, checklist]=brief
+  body: text
+  author: ref User
+  created_at: datetime auto_add
+
+  permit:
+    list: role(admin) or role(manager) or role(member)
+    read: role(admin) or role(manager) or role(member)
+    create: role(admin) or role(manager) or role(member)
+    update: role(admin) or role(manager)
+    delete: role(admin)
+
+  scope:
+    list: all
+      as: admin, manager, member
+    read: all
+      as: admin, manager, member
+    create: all
+      as: admin, manager, member
+    update: all
+      as: admin, manager
+    delete: all
+      as: admin
+
+  fitness:
+    repr_fields: [task, headline, doc_kind, author]
+
+# =============================================================================
 # Personas - role-based variants for the UI
 # =============================================================================
 
@@ -376,6 +418,13 @@ surface task_detail "Task Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  # Document composition (Goal B): named brief / acceptance lines are the
+  # work body peer tools show — not title-only chrome.
+  related briefs "Briefs":
+    display: queue
+    show: TaskBrief
+    columns: headline, doc_kind, author
+
   # Task hub discussion as pull roster queue (content-first), not warehouse
   # table — ST-021 assignee overview / Monday-review path (cycle 1502 acceptance).
   related discussion "Discussion":
@@ -384,7 +433,7 @@ surface task_detail "Task Detail":
     columns: content, author, created_at
 
   ux:
-    purpose: "Task context — status, ownership, and discussion in one place"
+    purpose: "Task context — document briefs, status, ownership, and discussion in one place"
 
 # Task Comment List - triple open note + parent task + author hub
 surface task_comments "Task Comments":
@@ -445,6 +494,76 @@ surface comment_edit "Edit Comment":
 
   ux:
     purpose: "Edit an existing comment"
+
+# =============================================================================
+# TaskBrief surfaces (Goal B document composition)
+# =============================================================================
+
+surface brief_list "Briefs":
+  uses entity TaskBrief
+  mode: list
+  render: fragment
+  # Dual open: brief hub first; parent Task document second.
+  open: TaskBrief via id | Task via task
+
+  section main "Briefs":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field task "Task"
+    field author "Author"
+    field created_at "Added"
+
+  ux:
+    purpose: "Document lines — open a row for the brief or parent task"
+    sort: created_at desc
+    filter: doc_kind, author
+    search: headline, body
+    empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
+
+surface brief_detail "Brief Detail":
+  uses entity TaskBrief
+  mode: view
+  render: fragment
+
+  section main "Brief":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+    field task "Task"
+    field author "Author"
+    field created_at "Added"
+
+  ux:
+    purpose: "One document line on a task — hop to the parent task for full composition"
+
+surface brief_create "Add Brief":
+  uses entity TaskBrief
+  mode: create
+  render: fragment
+
+  section main "New Brief":
+    field task "Task"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+
+  ux:
+    purpose: "Attach a named brief, acceptance line, or runbook step to a task"
+
+surface brief_edit "Edit Brief":
+  uses entity TaskBrief
+  mode: edit
+  render: fragment
+
+  access: persona(admin, manager)
+
+  section main "Edit Brief":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+
+  ux:
+    purpose: "Update a task brief line"
 
 # Task Create Form
 surface task_create "Create Task":
@@ -681,7 +800,9 @@ workspace task_board "Task Board":
 
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
-  purpose: "System-wide overview and management"
+  # Goal B document: peer ops tools put named briefs / acceptance lines on
+  # the home desk — not only status tiles and title queues.
+  purpose: "System-wide overview — document composition plus pressure queues"
 
   metrics:
     source: Task
@@ -691,11 +812,11 @@ workspace admin_dashboard "Admin Dashboard":
       todo: count(Task where status = todo)
       in_progress: count(Task where status = in_progress)
       in_review: count(Task where status = review)
-      done: count(Task where status = done)
+      documents: count(TaskBrief)
     tones:
       in_progress: accent
       in_review: warning
-      done: positive
+      documents: accent
 
   team_metrics:
     source: User
@@ -705,6 +826,15 @@ workspace admin_dashboard "Admin Dashboard":
       active_users: count(User where is_active = true)
     tones:
       active_users: positive
+
+  # Goal B document spine — named brief headlines above fold (not UUID shells).
+  composition:
+    source: TaskBrief
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: brief_detail
+    empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
 
   # Job queues — not bare CRUD lists (ST-014 pressure surfaces).
   urgent_tasks:
@@ -727,7 +857,7 @@ workspace admin_dashboard "Admin Dashboard":
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
-  purpose: "Monitor team progress and workload"
+  purpose: "Lead desk — document briefs, review pressure, and plate by person"
 
   metrics:
     source: Task
@@ -739,12 +869,21 @@ workspace team_overview "Team Overview":
       # Prefer done_at when present; fall back to due_date window so seed loads
       # that stamp updated_at=now do not make "completed today" equal total.
       done: count(Task where status = done)
-      open: count(Task where status != done)
+      documents: count(TaskBrief)
     tones:
       in_progress: accent
       in_review: warning
       done: positive
-      open: accent
+      documents: accent
+
+  # Goal B document composition — acceptance / brief headlines for Monday review.
+  composition:
+    source: TaskBrief
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: brief_detail
+    empty: "No document lines yet — briefs and acceptance criteria appear here"
 
   # Status mix chart — different mode family than queues.
   flow_chart:
@@ -813,7 +952,7 @@ workspace team_overview "Team Overview":
 
 workspace my_work "My Work":
   access: authenticated
-  purpose: "Personal task view for assigned work"
+  purpose: "Personal plate — briefs on your work, board flow, and discussion"
 
   my_summary:
     source: Task
@@ -822,11 +961,20 @@ workspace my_work "My Work":
       in_progress: count(Task where status = in_progress and assigned_to = current_user)
       todo: count(Task where status = todo and assigned_to = current_user)
       in_review: count(Task where status = review and assigned_to = current_user)
-      done: count(Task where status = done and assigned_to = current_user)
+      documents: count(TaskBrief)
     tones:
       in_progress: accent
       in_review: warning
-      done: positive
+      documents: accent
+
+  # Goal B document spine on the member hero — brief headlines, not empty chrome.
+  composition:
+    source: TaskBrief
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: brief_detail
+    empty: "No briefs on open work yet — acceptance lines appear as teammates attach them"
 
   # Kanban for personal flow — mode family distinct from listish queues.
   my_board:

@@ -72,6 +72,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open",
     "tests/unit/test_llm_classifier_conversation_goal_b.py",
     "tests/unit/test_design_studio_conversation_goal_b.py",
+    # simple_task Goal B document (cycle 1656 TaskBrief composition + dual-open)
+    "tests/unit/test_simple_task_document_goal_b.py",
+    "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)

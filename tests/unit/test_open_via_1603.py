@@ -251,6 +251,29 @@ def test_simple_task_comments_triple_open() -> None:
     ]
 
 
+def test_simple_task_brief_list_dual_open() -> None:
+    """brief_list dual-open: TaskBrief hub + parent Task (Goal B document cycle 1656)."""
+    appspec = load_project_appspec(SIMPLE)
+    briefs = next(s for s in appspec.surfaces if s.name == "brief_list")
+    assert briefs.open_via == "id"
+    assert briefs.open_entity == "TaskBrief"
+    assert [(t.entity, t.via) for t in (briefs.open_via_targets or [])] == [
+        ("TaskBrief", "id"),
+        ("Task", "task"),
+    ]
+    entity = appspec.get_entity("TaskBrief")
+    assert getattr(entity, "display_field", None) == "headline"
+    tmpl = resolve_list_detail_url_template(briefs, entity)
+    assert tmpl == "/app/taskbrief/{id}"
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    cands = resolve_list_detail_url_candidates(briefs, entity)
+    assert cands == [
+        "/app/taskbrief/{id}",
+        "/app/task/{task}",
+    ]
+
+
 def test_support_tickets_comment_list_triple_open() -> None:
     """comment_list triple-open: Comment hub, Ticket, author User (cycle 1604)."""
     appspec = load_project_appspec(SUPPORT)
