@@ -155,9 +155,13 @@ entity Task "Task":
 # =============================================================================
 
 entity TaskComment "Task Comment":
+  # Goal B conversation: peer task tools (Linear / Asana / Jira) show
+  # discussion notes as row identity on the home desk — not only metrics
+  # and document briefs. display_field drives Live Conversation titles.
   intent: "A discussion note attached to a Task by a Team Member to capture context or decisions"
   domain: task_management
   patterns: messaging, audit_trail
+  display_field: content
   id: uuid pk
   task: ref Task required
   author: ref User required
@@ -800,9 +804,18 @@ workspace task_board "Task Board":
 
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
-  # Goal B document: peer ops tools put named briefs / acceptance lines on
-  # the home desk — not only status tiles and title queues.
-  purpose: "System-wide overview — document composition plus pressure queues"
+  # Goal B conversation + document: discussion trail with briefs so the
+  # admin desk is a reply surface, not only status tiles and title queues.
+  purpose: "System-wide overview — live conversation, document composition, pressure queues"
+
+  # Goal B conversation spine FIRST — domain-true comment prose above fold.
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — task comments appear here"
 
   metrics:
     source: Task
@@ -813,10 +826,17 @@ workspace admin_dashboard "Admin Dashboard":
       in_progress: count(Task where status = in_progress)
       in_review: count(Task where status = review)
       documents: count(TaskBrief)
+      conversation: count(TaskComment)
     tones:
       in_progress: accent
       in_review: warning
       documents: accent
+      conversation: accent
+
+  ux:
+    as admin:
+      purpose: "See task discussion before document briefs and pressure queues"
+      focus: live_conversation, metrics, composition, urgent_tasks
 
   team_metrics:
     source: User
@@ -857,7 +877,16 @@ workspace admin_dashboard "Admin Dashboard":
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
-  purpose: "Lead desk — document briefs, review pressure, and plate by person"
+  # Goal B conversation + document: discussion first, then briefs and review.
+  purpose: "Lead desk — live conversation, document briefs, review pressure, plate by person"
+
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No team conversation yet — comments on tasks appear here"
 
   metrics:
     source: Task
@@ -870,11 +899,21 @@ workspace team_overview "Team Overview":
       # that stamp updated_at=now do not make "completed today" equal total.
       done: count(Task where status = done)
       documents: count(TaskBrief)
+      conversation: count(TaskComment)
     tones:
       in_progress: accent
       in_review: warning
       done: positive
       documents: accent
+      conversation: accent
+
+  ux:
+    as manager:
+      purpose: "See team discussion before briefs and review queues"
+      focus: live_conversation, metrics, composition, needs_review
+    as admin:
+      purpose: "Team conversation and Monday review pressure"
+      focus: live_conversation, metrics, composition, needs_review
 
   # Goal B document composition — acceptance / brief headlines for Monday review.
   composition:
@@ -932,6 +971,7 @@ workspace team_overview "Team Overview":
     sort: created_at desc
     limit: 12
     display: timeline
+    action: comment_detail
     empty: "No recent comments"
 
   lead_readiness:
@@ -952,7 +992,16 @@ workspace team_overview "Team Overview":
 
 workspace my_work "My Work":
   access: authenticated
-  purpose: "Personal plate — briefs on your work, board flow, and discussion"
+  # Goal B conversation + document: discussion trail with personal briefs.
+  purpose: "Personal plate — live conversation, briefs on your work, board flow"
+
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — comments on your tasks appear here"
 
   my_summary:
     source: Task
@@ -962,10 +1011,23 @@ workspace my_work "My Work":
       todo: count(Task where status = todo and assigned_to = current_user)
       in_review: count(Task where status = review and assigned_to = current_user)
       documents: count(TaskBrief)
+      conversation: count(TaskComment)
     tones:
       in_progress: accent
       in_review: warning
       documents: accent
+      conversation: accent
+
+  ux:
+    as member:
+      purpose: "See discussion on your work before briefs and the board"
+      focus: live_conversation, my_summary, composition
+    as manager:
+      purpose: "Personal conversation trail and plate"
+      focus: live_conversation, my_summary, composition
+    as admin:
+      purpose: "Personal conversation trail and plate"
+      focus: live_conversation, my_summary, composition
 
   # Goal B document spine on the member hero — brief headlines, not empty chrome.
   composition:

@@ -429,11 +429,12 @@
       "name": "admin_dashboard",
       "title": "Admin Dashboard",
       "kind": "workspace",
-      "purpose": "System-wide overview — document composition plus pressure queues",
+      "purpose": "System-wide overview — live conversation, document composition, pressure queues",
       "personas": [
         "admin"
       ],
       "contents": [
+        "queue of TaskComment",
         "metrics of Task",
         "metrics of User",
         "queue of TaskBrief",
@@ -445,12 +446,13 @@
       "name": "team_overview",
       "title": "Team Overview",
       "kind": "workspace",
-      "purpose": "Lead desk — document briefs, review pressure, and plate by person",
+      "purpose": "Lead desk — live conversation, document briefs, review pressure, plate by person",
       "personas": [
         "admin",
         "manager"
       ],
       "contents": [
+        "queue of TaskComment",
         "metrics of Task",
         "queue of TaskBrief",
         "bar_chart of Task",
@@ -464,9 +466,10 @@
       "name": "my_work",
       "title": "My Work",
       "kind": "workspace",
-      "purpose": "Personal plate — briefs on your work, board flow, and discussion",
+      "purpose": "Personal plate — live conversation, briefs on your work, board flow",
       "personas": [],
       "contents": [
+        "queue of TaskComment",
         "metrics of Task",
         "queue of TaskBrief",
         "kanban of Task",
