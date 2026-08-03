@@ -3,12 +3,13 @@ module contact_manager.signing
 use contact_manager.core
 
 entity EngagementLetter "Engagement Letter":
-  intent: "Signed engagement letter / NDA between the firm and a contact"
+  intent: "Signed engagement letter / NDA between the firm and a contact — scope_summary is the document title buyers scan, not a UUID shell"
   domain: crm
   patterns: signing, lifecycle
 
-  # Cycle 1615 story_walk: scan letter queues by party (counterparty), not UUID.
-  display_field: party
+  # Goal B document depth: queue/card title is the human document name
+  # (MSA / NDA / retainer / SOW), not only counterparty party string.
+  display_field: scope_summary
   id: uuid pk
   contact: ref Contact required
   party: str(200) required
@@ -40,16 +41,17 @@ surface engagement_letter_list "Engagement letters":
   mode: list
   open: EngagementLetter via id | Contact via contact
   section main:
+    field scope_summary "Document"
     field party "Party"
     field status "Status"
     field effective_date "Effective"
     field contact "Contact"
     field signatory_name "Signatory"
   ux:
-    purpose: "Engagement letter queue — open a letter hub or hop to the Contact"
+    purpose: "Document composition queue — named letters with party + lifecycle; open a letter hub or hop to the Contact"
     filter: status
     sort: effective_date desc
-    search: party, signatory_name
+    search: party, signatory_name, scope_summary
     empty: "No engagement letters yet — open a contact hub to attach one"
 
 surface engagement_letter_detail "Engagement letter":
@@ -57,6 +59,7 @@ surface engagement_letter_detail "Engagement letter":
   mode: view
   section summary "Summary":
     layout: strip
+    field scope_summary "Document"
     field party "Party"
     field status "Status"
     field effective_date "Effective"
@@ -67,4 +70,4 @@ surface engagement_letter_detail "Engagement letter":
   section scope "Scope":
     field scope_summary "Scope summary"
   ux:
-    purpose: "Engagement letter hub — lifecycle strip, parties, and scope in one place"
+    purpose: "Engagement letter hub — named document, lifecycle strip, parties, and scope in one place"

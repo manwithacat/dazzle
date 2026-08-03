@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B document depth (contact_manager)** — Home is no longer
+  directory-metrics-only: `EngagementLetter.jsonl` seeds 12 domain-true
+  documents (MSA, NDA, retainer, SOW, DPA, LOI, change order); Engagement Docs
+  pulse + Composition queue surface named letter titles above fold;
+  `display_field=scope_summary`. Hero still `home_user` recaptured.
 - **Goal B conversation depth (support_tickets)** — Ticket Queue is no longer
   metrics+ticket-rows only: `Comment.jsonl` seeds 12 domain-true customer↔agent
   notes (login reset, refund, SLA, PDF CDN, 2FA SMS, webhooks); `live_conversation`

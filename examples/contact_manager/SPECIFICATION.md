@@ -29,9 +29,9 @@ for overview, then **Contacts** for dual-pane browse.
 
 ## Where work happens
 
-**Home** is the welcome overview: directory metrics (total and favourites), a
-favourites queue for starred contacts, an open engagement-letters queue
-(draft and sent), and a short alphabetical sample of the directory.
+**Home** is the welcome overview: directory metrics, engagement-document
+pulse (documents / awaiting signature / drafts), a **composition** queue of
+named open letters (draft and sent), favourites, and search.
 **Contacts** is the dual-pane browse surface: search, a favourites queue
 strip, the full contact list, and a detail panel for the selected contact.
 Engagement letter rows dual-open the letter hub or the parent Contact hub.
@@ -88,4 +88,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:f397c4ab62011990df8197eb50619bd279f35d28fe4d40e89dce369fa777d9c4 -->
+<!-- dazzle-spec-brief: sha256:23e4064536b5051181a7a821a3a635816ab6b7f7d87a3776acdec44587755568 -->

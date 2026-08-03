@@ -129,14 +129,14 @@ surface contact_detail "Contact Detail":
 
   # Journey deepen: reverse-hop engagement letters (SPEC signing flow) — pull
   # roster queue (RelatedDisplayMode.QUEUE), not a warehouse table (cycle 1498).
-  # Cycle 1615: include status so lifecycle is scannable on the contact hub.
+  # Goal B document: lead with scope_summary (document title) then lifecycle.
   related engagements "Engagement letters":
     display: queue
     show: EngagementLetter
-    columns: party, status, effective_date, signatory_name, scope_summary
+    columns: scope_summary, status, party, effective_date, signatory_name
 
   ux:
-    purpose: "Contact hub — identity, employment, notes, and engagement letters in one place"
+    purpose: "Contact hub — identity, employment, notes, and named engagement documents in one place"
 
 # Create form
 surface contact_create "Create Contact":
@@ -203,8 +203,10 @@ search on Contact:
 # TR-2: first-run / post-login welcome — overview before the dense list.
 # Story-driven (docs/guides/story-to-composition.md): metrics + favourites
 # queue first (ST-007), then a short directory sample (ST-004).
+# Goal B document depth: named engagement letters above fold (composition),
+# not only directory metrics + empty letter chrome.
 workspace home "Home":
-  purpose: "Welcome overview for your contact directory"
+  purpose: "Directory overview plus document composition — open engagement letters first"
   access: persona(user, admin)
 
   directory_stats:
@@ -217,6 +219,30 @@ workspace home "Home":
     tones:
       favourites: accent
       total_contacts: positive
+
+  # Document pulse (Goal B): letters awaiting action, not only people counts.
+  engagement_docs:
+    source: EngagementLetter
+    display: metrics
+    aggregate:
+      documents: count(EngagementLetter)
+      awaiting_signature: count(EngagementLetter where status = sent)
+      drafts: count(EngagementLetter where status = draft)
+    tones:
+      documents: accent
+      awaiting_signature: positive
+
+  # Goal B composition queue — named document titles (scope_summary) above
+  # fold; peer professional tools (Clio / PracticePanther) show open letters
+  # as work, not buried under contact hubs.
+  composition:
+    source: EngagementLetter
+    filter: status = draft or status = sent
+    sort: effective_date desc
+    limit: 10
+    display: queue
+    action: engagement_letter_detail
+    empty: "No open engagement letters — draft an MSA, NDA, or retainer from a contact hub."
 
   # ST-007 — favourites as a work queue, not buried in the full list sort.
   favourite_contacts:
@@ -262,25 +288,14 @@ workspace home "Home":
     # Placeholder must say results-panel (not list filter) — panel agents mis-score search
     empty: "Results appear below as you type (name, company, or email). The directory list stays full until you open a hit."
 
-  # ST-009 / cycle 1615 — open engagement letters as a pull queue on Home
-  # (draft+sent), not only buried under contact hub related.
-  open_engagement_letters:
-    source: EngagementLetter
-    filter: status = draft or status = sent
-    sort: effective_date desc
-    limit: 8
-    display: queue
-    action: engagement_letter_detail
-    empty: "No draft or sent engagement letters — open a contact hub to start one."
-
   ux:
     as user:
-      purpose: "See a friendly overview before diving into the full list"
-      # Surface search early so pilots discover FTS (panel 1279 missed results panel)
-      focus: directory_stats, find_contact, favourite_contacts, open_engagement_letters, recent_contacts
+      purpose: "See open engagement documents and directory pulse before the full list"
+      # Document composition above fold (Goal B); search still available after
+      focus: directory_stats, engagement_docs, composition, favourite_contacts, find_contact, recent_contacts
     as admin:
-      purpose: "Directory overview"
-      focus: directory_stats, find_contact, favourite_contacts, open_engagement_letters, recent_contacts
+      purpose: "Directory + engagement document overview"
+      focus: directory_stats, engagement_docs, composition, favourite_contacts, find_contact, recent_contacts
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
