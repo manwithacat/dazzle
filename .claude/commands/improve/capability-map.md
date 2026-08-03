@@ -87,7 +87,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1643 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1645 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -96,7 +96,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1643 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -131,6 +131,7 @@ apply map patches with `{"apply":true}`.
 ## Cycle notes (newest first)
 
 
+> **Cycle 1645 (2026-08-03).** campaign force **framework-ux**: **ship** grid-cell drill open discovery — `drill_anchor_open_attrs(kind="grid")` stamps `data-dz-open-*` on whole-card grid drills (action-card / dashboard parity); unit pins. densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1. fitness **USED@1645**. budget 1. Explore **10/100**.
 > **Cycle 1643 (2026-08-03).** **capability-sweep** (cadence ≥20 since 1623) + campaign-aligned **framework-ux ship**. Inventory: flip USED→STALE lag≥20 (journey@1614, smoke suite@1619, gallery probes@1616, fitness@1617, prove@1615, …). DRIVER CodeQL+inbox **USED@1643**. fitness **USED@1643**. **UNOWNED=0 COGNITION_STALE_eff=15 HYGIENE_STALE_eff=30** rows=64. densify_allowed=0 dual_lock=0 suppress_smoke=1 require_mutation=1. **Ship:** action-card `data-dz-open-*` discovery (list/detail) + fix `entity_label_from_detail_url` so `/app/<slug>` lists label entity not `App`. Top digs next: interesting_product / story_walk / agent_acceptance / gallery; **semgrep hygiene** never-exercised; domain|presentation COGNITION re-touch — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **9/100**.
 
 

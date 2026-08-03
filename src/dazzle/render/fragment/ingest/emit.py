@@ -346,15 +346,16 @@ def drill_open_discovery_attrs(drill_url: str) -> str:
 
 
 def drill_anchor_open_attrs(drill_url: str, *, kind: str) -> str:
-    """Open discovery + drill marker for a dashboard ``<a href=drill>``.
+    """Open discovery + drill marker for a whole-card/cell ``<a href=drill>``.
 
     Sole-emitter for ``data-dz-*-drill`` markers (cycle 1617). ``kind`` is one
-    of ``task_inbox`` / ``cohort`` / ``day_timeline``.
+    of ``task_inbox`` / ``cohort`` / ``day_timeline`` / ``grid`` (cycle 1645).
     """
     markers = {
         "task_inbox": "data-dz-task-inbox-drill",
         "cohort": "data-dz-cohort-drill",
         "day_timeline": "data-dz-day-timeline-drill",
+        "grid": "data-dz-grid-drill",
     }
     try:
         marker = markers[kind]

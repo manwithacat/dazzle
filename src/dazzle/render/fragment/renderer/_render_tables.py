@@ -53,6 +53,7 @@ from dazzle.render.fragment.ingest import (
     render_queue_row,
     render_status_list_entry,
 )
+from dazzle.render.fragment.ingest.emit import drill_anchor_open_attrs
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -1196,8 +1197,10 @@ class _RenderTablesMixin:
             if getattr(cell, "drill_url", ""):
                 href = ctx.escape_attr(cell.drill_url)
                 # Whole card is the drill target so title + fields open the hub.
+                # Cycle 1645: stamp data-dz-open-* (action-card / dashboard parity).
+                open_attrs = drill_anchor_open_attrs(str(cell.drill_url), kind="grid")
                 cells_html.append(
-                    f'<a class="dz-grid-cell " href="{href}" data-dz-grid-drill>'
+                    f'<a class="dz-grid-cell " href="{href}" {open_attrs}>'
                     f"{title_html}"
                     f"{fields_html}"
                     f"</a>"
