@@ -255,8 +255,10 @@ def action_card_root_attrs(card: ActionCard) -> str:
 def render_action_card(card: ActionCard) -> str:
     """Model → one action card (search-select pattern; matches HM render).
 
-    Byte-faithful to ``packages/hatchi-maxchi/contracts/action_grid.py``
-    ``render`` so dual-lock DOM + gallery exemplars stay one shape.
+    Structure matches ``packages/hatchi-maxchi/contracts/action_grid.py``
+    ``render`` (dual-lock DOM). Cycle 1643: when ``url`` is a real app path,
+    stamp ``data-dz-open-*`` discovery attrs (queue/dashboard drill parity)
+    so agents attr-read the hop without scraping the label alone.
     """
     tone = _html.escape(card.tone, quote=True)
     label = _html.escape(card.label)
@@ -276,7 +278,12 @@ def render_action_card(card: ActionCard) -> str:
     root_attrs = action_card_root_attrs(card)
     if card.url:
         href = _html.escape(card.url, quote=True)
-        return f'<a href="{href}" class="dz-action-card" {root_attrs}>{body}</a>'
+        url = str(card.url).strip()
+        # Skip fragment-only / empty placeholders (gallery exemplars use "#").
+        open_extra = ""
+        if url and url != "#" and not url.startswith("#"):
+            open_extra = f" {drill_open_discovery_attrs(url)}"
+        return f'<a href="{href}" class="dz-action-card" {root_attrs}{open_extra}>{body}</a>'
     return f'<div class="dz-action-card" {root_attrs}>{body}</div>'
 
 

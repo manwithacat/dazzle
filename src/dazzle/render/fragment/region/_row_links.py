@@ -116,19 +116,29 @@ def _try_format_url(tmpl: str, mapping: dict[str, str]) -> str | None:
 
 
 def entity_label_from_detail_url(url: str) -> str:
-    """Human label for a resolved detail path (cycle 1571 dual-open labels).
+    """Human label for a resolved app path (detail or list).
 
-    ``/app/user/u-9`` → ``User``; ``/app/payment-attempt/x`` → ``Payment attempt``.
-    Used for secondary/context hop ``title`` / ``aria-label`` / ``data-dz-open-entity``.
+    ``/app/user/u-9`` → ``User``; ``/app/payment-attempt/x`` → ``Payment attempt``;
+    ``/app/ticket`` (list) → ``Ticket``; ``/app/invoices?status=x`` → ``Invoices``.
+    Cycle 1643: list surfaces used to take ``segs[-2]`` and label as ``App``.
+    Used for hop ``title`` / ``aria-label`` / ``data-dz-open-entity``.
     """
-    if not url:
+    if not url or str(url).strip() in ("", "#"):
         return "Related"
     path = str(url).split("?", 1)[0].strip("/")
     segs = [s for s in path.split("/") if s]
-    if len(segs) < 2:
+    if not segs:
         return "Related"
-    # /app/<slug>/<id> → slug at -2; bare /<slug>/<id> same
-    slug = segs[-2]
+    # /app/<slug>[/<id>…] → entity slug is always segs[1]
+    if segs[0] == "app":
+        if len(segs) < 2:
+            return "Related"
+        slug = segs[1]
+    elif len(segs) >= 2:
+        # bare /<slug>/<id>
+        slug = segs[-2]
+    else:
+        slug = segs[0]
     words = [w for w in slug.replace("_", "-").split("-") if w]
     if not words:
         return "Related"
