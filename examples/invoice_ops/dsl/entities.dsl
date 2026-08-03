@@ -251,6 +251,50 @@ entity LineItem "Line Item":
   audit: all
 
 # =============================================================================
+# INVOICE NOTE — Goal B conversation on the AP trail (approver ↔ finance).
+# =============================================================================
+
+entity InvoiceNote "Invoice Note":
+  # Goal B conversation: peer AP tools (Bill.com / Tipalti / Coupa) show
+  # approval discussion copy on work desks — not status queues alone.
+  # author is a display string (ops_dashboard IncidentNote pattern) so seed
+  # bootstrap does not require composite User FK before persona mirror.
+  intent: "Operator discussion on an Invoice — the conversation that drives approve, dispute, and pay"
+  domain: accounts_payable
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  tenant_id: ref Tenant required
+  invoice: ref Invoice required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    create: role(requester) or role(approver) or role(finance) or role(finance_admin)
+    read: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+    update: role(approver) or role(finance) or role(finance_admin)
+    delete: role(tenant_admin)
+    list: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+
+  scope:
+    create: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin
+    read: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
+    update: tenant_id = current_user.tenant_id
+      as: approver, finance, finance_admin
+    delete: tenant_id = current_user.tenant_id
+      as: tenant_admin
+    list: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
+
+  fitness:
+    repr_fields: [invoice, author, body]
+
+  audit: all
+
+# =============================================================================
 # PAYMENT ATTEMPT — one attempt to settle an approved invoice.
 # =============================================================================
 

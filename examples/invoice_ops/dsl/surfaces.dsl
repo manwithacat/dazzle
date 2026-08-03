@@ -48,8 +48,13 @@ surface invoice_detail "Invoice":
     display: queue
     show: PaymentAttempt
     columns: attempt_number, status, failure_reason, created_at
+  # Goal B conversation: AP discussion pull queue on the invoice hub.
+  related discussion "Discussion":
+    display: queue
+    show: InvoiceNote
+    columns: body, author, created_at
   ux:
-    purpose: "Invoice document — header, line composition, and payment trail"
+    purpose: "Invoice document — header, line composition, discussion, and payment trail"
 
 surface invoice_create "New Invoice":
   uses entity Invoice
@@ -59,6 +64,40 @@ surface invoice_create "New Invoice":
     field supplier "Supplier"
     field amount "Amount"
     field currency "Currency"
+
+surface invoice_note_list "Invoice Notes":
+  uses entity InvoiceNote
+  mode: list
+  open: InvoiceNote via id | Invoice via invoice
+  section main:
+    field body "Note"
+    field author "Author"
+    field invoice "Invoice"
+    field created_at "When"
+  ux:
+    purpose: "AP discussion — open a note or its parent invoice"
+    sort: created_at desc
+    search: body, author
+    empty: "No invoice notes yet"
+
+surface invoice_note_detail "Invoice Note":
+  uses entity InvoiceNote
+  mode: view
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field invoice "Invoice"
+    field created_at "When"
+  ux:
+    purpose: "Read an AP discussion note in context of its parent invoice"
+
+surface invoice_note_create "Add Invoice Note":
+  uses entity InvoiceNote
+  mode: create
+  section main:
+    field invoice "Invoice"
+    field author "Author"
+    field body "Note"
 
 # =============================================================================
 # SUPPLIER SURFACES
@@ -349,7 +388,9 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  purpose: "Day-to-day invoice throughput — pipeline, payment health, and the queues that need a person"
+  # Goal B conversation: AP desks lead with the live discussion trail so
+  # buyer stills show approve/pay notes above the fold (not only queues).
+  purpose: "Day-to-day invoice throughput — live discussion, pipeline, and queues that need a person"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   ops_metrics:
@@ -359,12 +400,21 @@ workspace finance_ops "Finance Operations":
       submitted: count(Invoice where status = submitted)
       approved: count(Invoice where status = approved)
       disputed: count(Invoice where status = disputed)
-      paid: count(Invoice where status = paid)
+      conversation: count(InvoiceNote)
     tones:
       submitted: warning
       disputed: destructive
-      paid: positive
+      conversation: accent
       approved: accent
+
+  # Goal B conversation spine — newest AP notes (display_field: body).
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — approval and payment notes appear here"
 
   invoice_pipeline:
     source: Invoice
@@ -502,7 +552,7 @@ workspace my_invoices "My Invoices":
     empty: "No invoices yet"
 
 workspace approval_desk "Approval Desk":
-  purpose: "Approver job — clear the awaiting-approval queue, open the invoice hub"
+  purpose: "Approver job — live discussion trail and the awaiting-approval queue"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -511,11 +561,19 @@ workspace approval_desk "Approval Desk":
     aggregate:
       awaiting: count(Invoice where status = submitted)
       approved: count(Invoice where status = approved)
-      rejected: count(Invoice where status = rejected)
+      conversation: count(InvoiceNote)
     tones:
       awaiting: warning
       approved: positive
-      rejected: destructive
+      conversation: accent
+
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on invoices in review appear here"
 
   awaiting_approval:
     source: Invoice
@@ -553,7 +611,7 @@ workspace approval_desk "Approval Desk":
     empty: "No suppliers yet"
 
 workspace pay_desk "Pay Desk":
-  purpose: "Finance job — settle approved invoices and resolve open disputes"
+  purpose: "Finance job — settlement discussion, ready-to-pay queue, and disputes"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -562,11 +620,19 @@ workspace pay_desk "Pay Desk":
     aggregate:
       ready: count(Invoice where status = approved)
       disputed: count(Invoice where status = disputed)
-      paid: count(Invoice where status = paid)
+      conversation: count(InvoiceNote)
     tones:
       ready: accent
       disputed: destructive
-      paid: positive
+      conversation: accent
+
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — payment and dispute notes appear here"
 
   ready_to_pay:
     source: Invoice
