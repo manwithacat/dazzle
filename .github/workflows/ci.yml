@@ -646,9 +646,15 @@ jobs:
     # Cache the chromium browser binary (~150MB) keyed on the resolved
     # playwright version. CDN downloads were the dominant flake class
     # on this job — v0.67.124 timed out the 5-min install on an
-    # otherwise green build. On cache hit we still re-run install-deps
-    # (apt-get OS packages are fresh on every runner) but skip the
-    # network pull.
+    # otherwise green build.
+    #
+    # Cache-hit path deliberately does NOT run `playwright install-deps`:
+    # GHA ubuntu runners already ship the shared libs Chromium needs, and
+    # install-deps re-pulls ~21MB of optional CJK/legacy fonts via Azure
+    # apt. That apt step alone red-tipped main twice with product green
+    # elsewhere (cycle 1669 @2m timeout; cycle 1672 @5m+retry still stuck
+    # on fonts-ipafont-gothic / fonts-freefont-ttf). Cold path still uses
+    # --with-deps so first-run runners get a complete install.
     - name: Cache Playwright chromium browser
       id: playwright-cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
@@ -660,29 +666,20 @@ jobs:
       if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: |
         python -m playwright install --with-deps chromium
-      timeout-minutes: 5
+      timeout-minutes: 8
 
-    # Cache-hit path still runs apt install-deps (OS packages are not in the
-    # browser cache). Azure apt mirrors occasionally take >2m for the font
-    # package set (~21MB) — cycle 1669 red tip 30797833263 timed out here
-    # with product green elsewhere. Align with cold-path 5m so infra flake
-    # does not badge-red INTERACTION_WALK.
-    - name: Install Playwright OS deps (cache hit)
+    - name: Verify Playwright chromium launch (cache hit)
       if: steps.playwright-cache.outputs.cache-hit == 'true'
       run: |
-        set +e
-        for attempt in 1 2 3; do
-          echo "=== install-deps attempt $attempt / 3 ==="
-          python -m playwright install-deps chromium
-          rc=$?
-          if [ "$rc" -eq 0 ]; then
-            exit 0
-          fi
-          echo "install-deps rc=$rc — retrying after short backoff"
-          sleep $((attempt * 15))
-        done
-        exit 1
-      timeout-minutes: 5
+        python - <<'PY'
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            browser.close()
+        print("chromium launch ok (cache hit; skipped apt install-deps)")
+        PY
+      timeout-minutes: 2
 
     - name: Run INTERACTION_WALK (with retry)
       # Per design-doc step 4: retry up to 2 times on regression to
