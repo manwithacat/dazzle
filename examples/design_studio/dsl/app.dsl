@@ -203,11 +203,17 @@ entity Campaign "Campaign":
       as: admin
 
 entity Feedback "Design Feedback":
+  # Goal B conversation: peer review tools (Figma/Abstract) show critique copy
+  # as the row identity — not a UUID shell. display_field drives queue titles.
+  intent: "Threaded review critique on a Design Asset — the conversation that moves draft to approved"
+  domain: design
+  patterns: messaging, audit_trail
+  display_field: comment
   id: uuid pk
   asset: ref Asset required
   reviewer: ref User required
   rating: int
-  comment: text
+  comment: text required
   created_at: datetime auto_add
 
   permit:
@@ -229,13 +235,16 @@ entity Feedback "Design Feedback":
     delete: all
       as: admin
 
+  fitness:
+    repr_fields: [asset, reviewer, comment, rating]
+
 # ── Workspaces ───────────────────────────────────────────────────────
 
 # Story-driven: designer home = metrics + recent work; reviewer home =
 # review_desk / asset_catalog (docs/guides/story-to-composition.md).
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
-  purpose: "Studio portfolio — metrics and mixed job views, not warehouse grids only"
+  purpose: "Studio portfolio — metrics, critique trail, and mixed job views (not warehouse grids only)"
   portfolio:
     source: Asset
     display: metrics
@@ -243,9 +252,19 @@ workspace studio_dashboard "Studio Dashboard":
       assets: count(Asset)
       in_review: count(Asset where status = review)
       brands: count(Brand)
-      campaigns: count(Campaign)
+      conversation: count(Feedback)
     tones:
       in_review: warning
+      conversation: accent
+  # Goal B conversation: designers land here — surface newest review notes so
+  # the portfolio home is a reply desk, not only asset inventory.
+  live_conversation:
+    source: Feedback
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: feedback_detail
+    empty: "No critique yet — reviewer notes on your assets appear here"
   # Work-surface utility (cycle 1483 journey): brand portfolio is a pull-to-open
   # queue toward brand hubs — not a decorative card grid on the studio home.
   brands:
@@ -363,7 +382,10 @@ workspace brand_desk "Brand Desk":
     empty: "No campaigns yet"
 
 workspace review_desk "Review Desk":
-  purpose: "Reviewer job — clear the in-review queue before browsing the catalog"
+  # Goal B conversation depth: peer design tools put the critique trail on the
+  # review home — not only the asset worklist. Buyer stills should show real
+  # comment copy above the fold (display_field: comment on Feedback).
+  purpose: "Review queue plus the live critique trail — reply where the conversation already is"
   access: persona(admin, designer, reviewer)
   review_load:
     source: Asset
@@ -372,9 +394,22 @@ workspace review_desk "Review Desk":
       in_review: count(Asset where status = review)
       draft: count(Asset where status = draft)
       approved: count(Asset where status = approved)
+      conversation: count(Feedback)
     tones:
       in_review: warning
       approved: positive
+      conversation: accent
+
+  # Goal B conversation spine — newest critique as pull-to-open queue above the
+  # asset worklist so hero stills show domain-true review copy, not empty theater.
+  live_conversation:
+    source: Feedback
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: feedback_detail
+    empty: "No conversation yet — reviewer notes appear here as assets move through review"
+
   awaiting_review:
     source: Asset
     filter: status = review
@@ -389,13 +424,6 @@ workspace review_desk "Review Desk":
     limit: 12
     display: queue
     empty: "No recent approvals"
-
-  recent_feedback:
-    source: Feedback
-    sort: created_at desc
-    limit: 10
-    display: timeline
-    empty: "No feedback notes yet"
 
   review_board:
     source: Asset
@@ -468,26 +496,28 @@ workspace campaign_desk "Campaigns":
 
 # Sixth product workspace: feedback trail desk.
 workspace feedback_desk "Feedback":
-  purpose: "Feedback desk — recent notes on assets in review"
+  purpose: "Critique trail — conversation on assets in review, not a warehouse dump of notes"
   access: persona(admin, designer, reviewer)
 
   feedback_pulse:
     source: Feedback
     display: metrics
     aggregate:
-      notes: count(Feedback)
+      conversation: count(Feedback)
       assets: count(Asset)
       in_review: count(Asset where status = review)
     tones:
-      notes: accent
+      conversation: accent
       in_review: warning
 
-  recent_notes:
+  # Conversation spine on the dedicated feedback desk (same queue identity).
+  live_conversation:
     source: Feedback
     sort: created_at desc
     limit: 25
     display: queue
-    empty: "No feedback yet"
+    action: feedback_detail
+    empty: "No conversation yet — add a critique from an asset hub"
 
   # Work-surface utility: in-review assets are pull work — queue beats grid.
   assets_in_review:
@@ -917,16 +947,17 @@ surface feedback_list "Feedback":
   # Triple open (journey dig cycle 1596): note hub, asset hub, reviewer teammate.
   open: Feedback via id | Asset via asset | User via reviewer
   section main:
+    # Comment first — conversation identity (display_field) before meta.
+    field comment "Critique"
     field asset "Asset"
     field reviewer "Reviewer"
     field rating "Rating"
-    field comment "Comment"
     field created_at "Date"
   ux:
-    purpose: "Feedback trail — open a row for the note, asset, or reviewer hub"
+    purpose: "Conversation trail — open a critique note, the parent asset, or the reviewer hub"
     sort: created_at desc
     filter: asset, reviewer
-    empty: "No feedback submitted yet."
+    empty: "No conversation yet — critique notes appear here as review moves"
 
 # View surface so ST-004 story_coverage sees Feedback.view for reviewer
 # (related table alone was not enough for discovery coherence).
@@ -934,14 +965,15 @@ surface feedback_list "Feedback":
 surface feedback_detail "Feedback Detail":
   uses entity Feedback
   mode: view
-  section summary "Feedback":
+  section summary "Critique":
+    layout: strip
+    field comment "Critique"
+    field rating "Rating"
     field asset "Asset"
     field reviewer "Reviewer"
-    field rating "Rating"
-    field comment "Comment"
     field created_at "Date"
   ux:
-    purpose: "Read a feedback note in context of the parent Asset"
+    purpose: "Read the critique in context of the parent asset — conversation hub, not a form dump"
 
 surface feedback_edit "Edit Feedback":
   uses entity Feedback
