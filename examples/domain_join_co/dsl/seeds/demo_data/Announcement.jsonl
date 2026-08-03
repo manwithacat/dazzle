@@ -1,0 +1,4 @@
+{"id": "d2000000-0000-4000-8000-000000000001", "title": "Q3 all-hands: domain join is live", "body": "Self-service join is on for @acme.example — verify DNS-TXT then request membership.", "workspace": "d1000000-0000-4000-8000-000000000001", "status": "published"}
+{"id": "d2000000-0000-4000-8000-000000000002", "title": "Office wifi rotation Friday", "body": "Guest SSID rotates Friday 18:00. Staff VPN is unaffected.", "workspace": "d1000000-0000-4000-8000-000000000001", "status": "published"}
+{"id": "d2000000-0000-4000-8000-000000000003", "title": "Draft: handbook update", "body": "Remote work policy draft for review before publish.", "workspace": "d1000000-0000-4000-8000-000000000001", "status": "draft"}
+{"id": "d2000000-0000-4000-8000-000000000004", "title": "Northwind kickoff logistics", "body": "Domain join for northwind.example opens Monday — admin_approval required.", "workspace": "d1000000-0000-4000-8000-000000000002", "status": "published"}

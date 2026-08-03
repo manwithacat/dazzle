@@ -100,6 +100,40 @@ entity Announcement "Announcement":
     update: workspace = current_tenant
       as: admin
 
+# Goal B conversation: peer workplace tools (Slack/Workplace/Teams) show
+# discussion on the team board — not only announcement title queues.
+entity AnnouncementNote "Announcement Note":
+  intent: "Team discussion on an Announcement — the conversation that turns a post into action"
+  domain: workplace
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  announcement: ref Announcement required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    create: role(admin) or role(member)
+    read: role(admin) or role(member)
+    update: role(admin)
+    list: role(admin) or role(member)
+
+  scope:
+    # Notes inherit announcement visibility via parent workspace fence on list
+    # through announcement FK; row scope uses announcement's workspace.
+    list: announcement.workspace = current_tenant
+      as: admin, member
+    read: announcement.workspace = current_tenant
+      as: admin, member
+    create: announcement.workspace = current_tenant
+      as: admin, member
+    update: announcement.workspace = current_tenant
+      as: admin
+
+  fitness:
+    repr_fields: [announcement, author, body]
+
 # ── Surfaces (the guide overlays target these) ────────────────────────────────
 
 surface announcement_list "Announcements":
@@ -129,8 +163,47 @@ surface announcement_detail "Announcement":
     field workspace "Workspace"
   section body "Body":
     field body "Body"
+  # Goal B conversation: team discussion on the announcement hub.
+  related discussion "Discussion":
+    display: queue
+    show: AnnouncementNote
+    columns: body, author, created_at
   ux:
-    purpose: "Announcement hub — lifecycle strip, workspace context, and body in one place"
+    purpose: "Announcement hub — lifecycle strip, body, and team discussion"
+
+surface announcement_note_list "Announcement Notes":
+  uses entity AnnouncementNote
+  mode: list
+  open: AnnouncementNote via id | Announcement via announcement
+  section main:
+    field body "Note"
+    field author "Author"
+    field announcement "Announcement"
+    field created_at "When"
+  ux:
+    purpose: "Team discussion — open a note or its parent announcement"
+    sort: created_at desc
+    search: body, author
+    empty: "No discussion yet"
+
+surface announcement_note_detail "Announcement Note":
+  uses entity AnnouncementNote
+  mode: view
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field announcement "Announcement"
+    field created_at "When"
+  ux:
+    purpose: "Read a team note in context of its parent announcement"
+
+surface announcement_note_create "Add Announcement Note":
+  uses entity AnnouncementNote
+  mode: create
+  section main:
+    field announcement "Announcement"
+    field author "Author"
+    field body "Note"
 
 surface announcement_create "Post Announcement":
   uses entity Announcement
@@ -171,7 +244,9 @@ surface workspace_detail "Workspace":
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
-  purpose: "Admin desk — join readiness, team pulse, and announcement queue"
+  # Goal B conversation: admin home leads with team discussion trail so stills
+  # show domain-true post replies, not only announcement title queues.
+  purpose: "Admin desk — live discussion, join readiness, team pulse, and announcement queue"
   access: persona(admin, member)
 
   team_pulse:
@@ -179,9 +254,19 @@ workspace home "Workspace Home":
     display: metrics
     aggregate:
       announcements: count(Announcement)
-      workspaces: count(Workspace)
+      conversation: count(AnnouncementNote)
     tones:
       announcements: accent
+      conversation: accent
+
+  # Goal B conversation spine — newest team notes (display_field: body).
+  live_conversation:
+    source: AnnouncementNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: announcement_note_detail
+    empty: "No conversation yet — team notes on announcements appear here"
 
   join_readiness:
     display: status_list
@@ -257,7 +342,7 @@ workspace home "Workspace Home":
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
 workspace announce "Team Board":
-  purpose: "Announcement board — post and browse without warehouse list chrome"
+  purpose: "Announcement board — live discussion trail and posts without warehouse chrome"
   access: persona(admin, member)
 
   board_pulse:
@@ -265,9 +350,18 @@ workspace announce "Team Board":
     display: metrics
     aggregate:
       posts: count(Announcement)
-      workspaces: count(Workspace)
+      conversation: count(AnnouncementNote)
     tones:
       posts: accent
+      conversation: accent
+
+  live_conversation:
+    source: AnnouncementNote
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: announcement_note_detail
+    empty: "No conversation yet — notes on published posts appear here"
 
   feed_queue:
     source: Announcement
