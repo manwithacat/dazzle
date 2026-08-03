@@ -67,6 +67,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
     # depth on contact_manager — display_field + home region rename ×3 Pythons)
     "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
+    # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
+    # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
+    # previously green while main matrix red)
+    "tests/unit/test_acme_billing_reference_drift.py",
 )
 
 REMEDIATION = """
@@ -151,6 +155,15 @@ Remediation by class (run from repo root):
     # Goal B document depth may change display_field / home region names —
     # update tests/unit/test_open_via_1603.py pins with the product ship.
     pytest tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open -q
+
+  acme_billing RBAC matrix / compliance auditspec drift
+    # After DSL entity/permit/scope changes on examples/acme_billing:
+    cd examples/acme_billing
+    python -m dazzle rbac matrix --format json > expected/rbac-matrix.json
+    dazzle compliance compile
+    python3 -c "import json; from pathlib import Path; d=json.loads(Path('.dazzle/compliance/output/iso27001/auditspec.json').read_text()); d.pop('generated_at', None); d.pop('dsl_source', None); Path('expected/compliance-auditspec.json').write_text(json.dumps(d, indent=2)+chr(10))"
+    # CHANGELOG under Changed/Fixed; then:
+    pytest tests/unit/test_acme_billing_reference_drift.py -q
 
 Re-run:
   make ship-surface
