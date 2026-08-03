@@ -59,9 +59,16 @@ inputs:
 runs:
   using: composite
   steps:
+    # Pin uv version so setup-uv does not resolve "latest" via
+    # raw.githubusercontent.com/astral-sh/versions (uv.ndjson). That path
+    # timed out on main GUIDE_WALK contact_manager (run 30785730558) while
+    # every other job that already had setup completed was green — infra
+    # flake, not product. Explicit version still downloads from GitHub
+    # Releases (or Astral mirror) but skips the versions-manifest hop.
     - name: Install uv
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
       with:
+        version: "0.11.19"
         enable-cache: true
         cache-dependency-glob: uv.lock
 
