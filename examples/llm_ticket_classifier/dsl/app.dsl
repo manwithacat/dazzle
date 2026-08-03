@@ -154,7 +154,9 @@ entity Ticket "Support Ticket":
   updated_at: datetime auto_update
 
 entity TicketClassification "Ticket Classification":
-  display_field: category
+  # Goal B conversation: queue title is the AI suggested reply (buyer-readable
+  # thread line), not a bare category enum shell.
+  display_field: suggested_response
   id: uuid pk
   ticket: ref Ticket required
   category: enum[billing, technical, feature_request, account, other]
@@ -166,7 +168,7 @@ entity TicketClassification "Ticket Classification":
   llm_job_id: str(100)  # Reference to LLM job for auditability
 
   fitness:
-    repr_fields: [ticket, category, priority, sentiment, confidence, classified_at]
+    repr_fields: [ticket, category, priority, sentiment, confidence, suggested_response, classified_at]
 
 entity PriorityAssessment "Priority Assessment Result":
   id: uuid pk
@@ -231,15 +233,15 @@ surface ticket_detail "Ticket Detail":
     field created_at "Created"
     field updated_at "Updated"
 
-  # Ticket hub AI trail as pull roster queue (category-first), not warehouse
-  # table — ST-002 support-agent hub path (cycle 1504 journey_dogfood).
+  # Ticket hub AI trail — suggested reply first (Goal B conversation), then
+  # triage badges — ST-002 support-agent hub path (cycle 1504 journey_dogfood).
   related classifications "AI Classifications":
     display: queue
     show: TicketClassification
-    columns: category, priority, sentiment, classified_at
+    columns: suggested_response, category, priority, sentiment, classified_at
 
   ux:
-    purpose: "Ticket hub — lifecycle strip and related LLM classification runs"
+    purpose: "Ticket hub — lifecycle strip and AI reply trail with triage labels"
 
 surface classification_list "Classifications":
   uses entity TicketClassification
@@ -302,11 +304,21 @@ workspace support_dashboard "Support Dashboard":
       classified: positive
       in_progress: accent
 
+  # Goal B conversation: AI suggested replies above fold (Zendesk/Intercom
+  # peer — agent-ready draft thread, not category-only shells).
+  live_ai_replies:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 10
+    display: queue
+    action: ticket_detail
+    empty: "No AI replies yet — classify a ticket to draft the thread"
+
   open_queue:
     source: Ticket
     filter: status = open
     sort: created_at desc
-    limit: 20
+    limit: 12
     display: queue
     action: ticket_detail
     empty: "No open tickets"
@@ -315,7 +327,7 @@ workspace support_dashboard "Support Dashboard":
     source: Ticket
     filter: status = in_progress
     sort: created_at desc
-    limit: 15
+    limit: 12
     display: queue
     action: ticket_detail
     empty: "Nothing in progress"
@@ -324,7 +336,7 @@ workspace support_dashboard "Support Dashboard":
   classifications:
     source: TicketClassification
     sort: classified_at desc
-    limit: 20
+    limit: 15
     display: timeline
     empty: "No classifications yet"
 
@@ -386,11 +398,20 @@ workspace ticket_management "Ticket Management":
       in_progress: accent
       classified: positive
 
+  # Goal B conversation on the agent default desk — draft replies first.
+  live_ai_replies:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 10
+    display: queue
+    action: ticket_detail
+    empty: "No AI replies yet — classify a ticket to draft the thread"
+
   ticket_queue:
     source: Ticket
     filter: status != closed
     sort: created_at desc
-    limit: 20
+    limit: 15
     display: queue
     action: ticket_detail
     empty: "No open tickets in the system"
@@ -443,10 +464,19 @@ workspace classification_desk "Classifications":
     tones:
       classifications: accent
 
+  # Goal B conversation composition: suggested replies are the desk body.
+  live_ai_replies:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 15
+    display: queue
+    action: ticket_detail
+    empty: "No AI replies yet — classify a ticket to draft the thread"
+
   latest:
     source: TicketClassification
     sort: classified_at desc
-    limit: 25
+    limit: 20
     display: queue
     empty: "No classifications yet"
 

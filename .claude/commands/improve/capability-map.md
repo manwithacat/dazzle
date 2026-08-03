@@ -54,7 +54,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | USED |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1650 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1653 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1624 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -131,6 +131,7 @@ apply map patches with `{"apply":true}`.
 ## Cycle notes (newest first)
 
 
+> **Cycle 1653 (2026-08-03).** residual=0 densify=0 CI green post-repair; campaign story_walk **overridden** interesting_product. Goal B **conversation@llm_ticket_classifier**: live_ai_replies + suggested_response display_field; stills recaptured. interesting_product **USED@1653**. budget 1. Explore **14/100**.
 > **Cycle 1650 (2026-08-03).** residual=0 densify=0 campaign story_walk **overridden** interesting_product (require_mutation). Goal B **document@acme_billing**: LineItem composition + demo User bind for current_user.org; hero stills recaptured. interesting_product **USED@1650**. budget 1. Explore **13/100**.
 > **Cycle 1648 (2026-08-03).** residual=0 densify=0 campaign story_walk overridden interesting_product. Goal B **org_structure@hr_records**: STABLE Person bind + manager My Team stills (Tina+Abdul). interesting_product **USED@1648** (1647 fieldtest media same campaign). budget 1. Explore **12/100**.
 > **Cycle 1647 (2026-08-03).** residual=0 densify=0 campaign story_walk **overridden** to interesting_product (require_mutation). Goal B **org_structure@hr_records**: STABLE Person bind + manager My Team stills (Tina+Abdul). interesting_product **USED@1647**. budget 1. Explore **11/100**.

@@ -10,6 +10,9 @@
 
 
 ### Added
+- **Goal B conversation depth (llm_ticket_classifier)** — Support Dashboard and Ticket Management
+  lead with Live AI Replies: `TicketClassification.display_field=suggested_response` so queues show
+  domain-true draft replies (not category-only shells); recapture supervisor/agent stills.
 - **Goal B document depth (acme_billing)** — billing desk Composition queue shows named
   invoice line items (description × qty × unit) above fold; `LineItem` entity + seeds;
   demo persona User bind so `current_user.org` scopes populate; RBAC matrix + SPEC refreshed.
