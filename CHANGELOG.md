@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.110.1] - 2026-08-03
+
+### Fixed
+- **PyPI wheel smoke (`dazzle --help`)** — add `httpx` as a core dependency.
+  CLI load (demo data, walk runner, testing clients) imports httpx at module
+  import time; bare-wheel install without it failed Publish to PyPI smoke after
+  v0.110.0 (`ModuleNotFoundError: httpx`).
+
+
 ## [0.110.0] - 2026-08-03
 
 ### Added

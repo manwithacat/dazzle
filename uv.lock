@@ -933,13 +933,14 @@ wheels = [
 
 [[package]]
 name = "dazzle-dsl"
-version = "0.110.0"
+version = "0.110.1"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "bleach" },
     { name = "faker" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "itsdangerous" },
     { name = "markdown" },
     { name = "psycopg", extra = ["binary"] },
@@ -1142,6 +1143,7 @@ requires-dist = [
     { name = "google-auth", marker = "extra == 'mobile-full'", specifier = ">=2.25.0" },
     { name = "google-auth", marker = "extra == 'social-auth'", specifier = ">=2.25.0" },
     { name = "google-genai", marker = "extra == 'llm'", specifier = ">=1.0.0" },
+    { name = "httpx", specifier = ">=0.24.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "httpx", marker = "extra == 'mobile-full'", specifier = ">=0.25.0" },
     { name = "httpx", marker = "extra == 'serve'", specifier = ">=0.24.0" },
