@@ -222,6 +222,13 @@ entity Task "Task":
       as: admin, manager
 
 entity Comment "Comment":
+  # Goal B conversation: peer tools (Linear/Jira/Asana) show discussion copy as
+  # the row identity on work desks — not a UUID shell. display_field drives
+  # queue titles so hero stills read as a live thread.
+  intent: "Threaded discussion note on a Task — the conversation that unblocks delivery"
+  domain: project_delivery
+  patterns: messaging, audit_trail
+  display_field: body
   id: uuid pk
   task: ref Task required
   author: ref User required
@@ -246,6 +253,9 @@ entity Comment "Comment":
       as: admin
     delete: all
       as: admin
+
+  fitness:
+    repr_fields: [task, author, body]
 
 entity Attachment "Attachment":
   intent: "Supporting document on a task — filename is the document identity buyers scan, not a UUID shell"
@@ -284,7 +294,9 @@ entity Attachment "Attachment":
 
 workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
-  purpose: "Project and task overview — metrics and work queues first"
+  # Goal B conversation: manager/admin home surfaces the live discussion trail
+  # above the task pile — peer PM tools put thread copy on the first screen.
+  purpose: "Portfolio metrics, live discussion trail, and work queues — not warehouse grids only"
 
   portfolio_metrics:
     source: Task
@@ -293,10 +305,21 @@ workspace dashboard "Dashboard":
       open_tasks: count(Task where status != done)
       in_progress: count(Task where status = in_progress)
       critical: count(Task where priority = critical and status != done)
-      projects: count(Project where status = active)
+      conversation: count(Comment)
     tones:
       in_progress: accent
       critical: destructive
+      conversation: accent
+
+  # Goal B conversation spine — newest notes as pull-to-open queue so buyer
+  # stills show domain-true discussion copy above the fold.
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — task discussion notes appear here as work moves"
 
   # Work the pile — review queue before the visual board.
   open_task_queue:
@@ -375,7 +398,7 @@ workspace project_board "Project Board":
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
 workspace my_tasks "My Tasks":
-  purpose: "Member desk — assigned work and due pressure, not the full project warehouse"
+  purpose: "Member desk — assigned work, live discussion, and due pressure"
   access: persona(admin, manager, member)
 
   load:
@@ -385,9 +408,21 @@ workspace my_tasks "My Tasks":
       open: count(Task where status != done)
       in_progress: count(Task where status = in_progress)
       review: count(Task where status = review)
+      conversation: count(Comment)
     tones:
       in_progress: accent
       review: warning
+      conversation: accent
+
+  # Goal B: members land here — surface newest notes so the desk is a reply
+  # surface, not only an assigned-task warehouse.
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — notes on your tasks appear here"
 
   assigned_queue:
     source: Task
@@ -411,6 +446,7 @@ workspace my_tasks "My Tasks":
     sort: created_at desc
     limit: 10
     display: timeline
+    action: comment_detail
     empty: "No recent comments"
 
   my_priority_mix:
@@ -471,23 +507,33 @@ workspace milestone_plan "Milestone Plan":
 
 # Fifth product workspace: discussion desk vs bare comment list.
 workspace discussion_desk "Discussion":
-  purpose: "Cross-task discussion pulse and recent comments"
+  # Goal B conversation depth: dedicated trail desk mirrors Linear/Jira activity.
+  purpose: "Live discussion trail across tasks — reply where the conversation already is"
   access: persona(admin, manager, member)
 
   discussion_pulse:
     source: Comment
     display: metrics
     aggregate:
-      comments: count(Comment)
+      conversation: count(Comment)
       open_tasks: count(Task where status != done)
     tones:
-      comments: accent
+      conversation: accent
+
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 20
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — notes on open tasks appear here"
 
   recent:
     source: Comment
     sort: created_at desc
     limit: 25
     display: timeline
+    action: comment_detail
     empty: "No comments yet"
 
   open_tasks:
