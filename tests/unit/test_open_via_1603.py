@@ -390,10 +390,12 @@ def test_contact_manager_engagement_letter_list_dual_open() -> None:
         "/app/engagementletter/{id}",
         "/app/contact/{contact}",
     ]
-    assert getattr(entity, "display_field", None) == "party"
-    # Home open-letters queue (draft|sent) is product path for ST-009.
+    # Goal B document depth: scope_summary is the document title buyers scan
+    # (MSA/NDA/retainer), not only the counterparty party string.
+    assert getattr(entity, "display_field", None) == "scope_summary"
+    # Home composition queue (draft|sent) is product path for ST-009 / Goal B.
     home = next(w for w in appspec.workspaces if w.name == "home")
-    assert any(r.name == "open_engagement_letters" for r in home.regions)
+    assert any(r.name == "composition" for r in home.regions)
 
 
 def test_resolve_first_non_null_candidates() -> None:

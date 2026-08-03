@@ -64,6 +64,9 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 1499 dz-toggle — CONSUMER_MAP + DUAL_LOCK_COVERAGE drift ×3 Pythons)
     "tests/unit/test_consumer_map_tool.py::test_committed_consumer_map_matches_generator",
     "tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator",
+    # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
+    # depth on contact_manager — display_field + home region rename ×3 Pythons)
+    "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
 )
 
 REMEDIATION = """
@@ -143,6 +146,11 @@ Remediation by class (run from repo root):
     .venv/bin/python scripts/gen_ux_catalogue.py
     uv run python packages/hatchi-maxchi/tools/contract_surface.py --write
     # commit regenerated files; do not ship with dirty gen outputs
+
+  open_via dual-open pin (contact_manager engagement letters)
+    # Goal B document depth may change display_field / home region names —
+    # update tests/unit/test_open_via_1603.py pins with the product ship.
+    pytest tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open -q
 
 Re-run:
   make ship-surface
