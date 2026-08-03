@@ -248,6 +248,10 @@ entity Comment "Comment":
       as: admin
 
 entity Attachment "Attachment":
+  intent: "Supporting document on a task — filename is the document identity buyers scan, not a UUID shell"
+  # Goal B document depth: queue/timeline title is the human filename.
+  display_field: filename
+
   id: uuid pk
   task: ref Task required
   uploaded_by: ref User required
@@ -513,56 +517,51 @@ workspace discussion_desk "Discussion":
       count: count(Task)
     empty: "No open tasks"
 
-# Sixth product workspace: files desk for attachment work.
+# Sixth product workspace: document composition desk (Goal B document depth).
+# Peer tools (Linear / Jira / Asana) show named deliverables above empty task
+# chrome — filenames + parent task context, not a blank "No attachments yet".
 workspace files_desk "Files":
-  purpose: "Attachment desk — files linked to tasks, not a warehouse dump"
+  purpose: "Document composition — named deliverables linked to tasks (not a warehouse dump)"
   access: persona(admin, manager, member)
 
   files_pulse:
     source: Attachment
     display: metrics
     aggregate:
-      files: count(Attachment)
-      tasks: count(Task)
-      projects: count(Project)
+      documents: count(Attachment)
+      open_tasks: count(Task where status != done)
+      projects: count(Project where status = active)
     tones:
-      files: accent
+      documents: accent
+      open_tasks: positive
 
-  # Work-surface utility: dated attachment stream → timeline (time_order).
-  recent_files:
+  # Document body first (Goal B): composition queue with human filenames as
+  # titles — pull open the attachment hub (PDF viewer path).
+  composition:
     source: Attachment
     sort: created_at desc
     limit: 25
-    display: timeline
+    display: queue
     action: attachment_view
-    empty: "No attachments yet"
+    empty: "No documents yet — upload a deliverable on a task"
 
-  open_tasks:
+  # Tasks still missing evidence (secondary pressure, under composition).
+  needs_evidence:
     source: Task
-    filter: status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No open tasks"
-
-  urgent_queue:
-    source: Task
-    filter: status != done and (priority = critical or priority = high)
-    sort: priority desc, due_date asc
+    filter: status = in_progress or status = review
+    sort: priority desc, updated_at desc
     limit: 12
     display: queue
-    action: task_edit
-    empty: "No high-priority open tasks"
+    action: task_detail
+    empty: "No in-flight tasks waiting on documents"
 
-  status_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+  recent_uploads:
+    source: Attachment
+    sort: created_at desc
+    limit: 12
+    display: timeline
+    action: attachment_view
+    empty: "No recent uploads"
 
 workspace people_desk "People":
   purpose: "Team pulse — who is on the roster and open work load by status"
