@@ -77,6 +77,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",
     # project_tracker Goal B conversation (cycle 1658 Comment display_field + live trail)
     "tests/unit/test_project_tracker_conversation_goal_b.py",
+    # ops_dashboard Goal B conversation (cycle 1660 IncidentNote + command_center trail)
+    "tests/unit/test_ops_dashboard_conversation_goal_b.py",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)

@@ -131,6 +131,41 @@ entity Alert "Alert":
   fitness:
     repr_fields: [system, severity, message, status, triggered_at]
 
+# Goal B conversation: peer ops tools (PagerDuty / Opsgenie) show incident
+# timeline notes on the command desk — not only alert rows and metric tiles.
+entity IncidentNote "Incident Note":
+  intent: "Operator discussion on an Alert — the conversation that drives ack, mitigation, and resolve"
+  domain: operations
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  alert: ref Alert required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    list: role(ops_engineer) or role(admin)
+    read: role(ops_engineer) or role(admin)
+    create: role(ops_engineer) or role(admin)
+    update: role(ops_engineer) or role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      as: ops_engineer, admin
+    read: all
+      as: ops_engineer, admin
+    create: all
+      as: ops_engineer, admin
+    update: all
+      as: ops_engineer, admin
+    delete: all
+      as: admin
+
+  fitness:
+    repr_fields: [alert, author, body]
+
 # v0.61.72 (#6) — single-row Integration entity for the
 # confirm_action_panel demo. AegisMark UX patterns roadmap item #6
 # uses this shape for the SIMS-sync opt-in: one record per tenant,
@@ -206,38 +241,47 @@ nav ops_nav:
 # =============================================================================
 
 workspace command_center "Command Center":
-  # Goal B command_density (interesting_product): peer ops tools (PagerDuty /
-  # Datadog) show ≥2 attention panels above the fold — fleet systems in
-  # trouble *and* the active alert feed — not a single limit:20 queue that
-  # pushes every other signal below the viewport.
-  purpose: "Multi-panel ops attention — systems in trouble + active alert feed"
+  # Goal B command_density already: systems_attention + active_alerts above fold.
+  # Goal B conversation (cycle 1660): peer ops tools also put the incident
+  # discussion trail on the first screen — not only alert rows.
+  purpose: "Multi-panel ops attention — systems in trouble, active alerts, and live incident notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
-  # Fleet attention — non-healthy systems first (degraded / critical / offline).
-  # Domain-true second panel for command density; operators act on boxes
-  # before scrolling a long alert list.
+  # Goal B conversation spine FIRST — newest operator notes so above-fold
+  # stills show domain-true mitigation prose (display_field: body). Peer
+  # PagerDuty/Opsgenie put the incident thread on the first screen.
+  live_conversation:
+    source: IncidentNote
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: incident_note_detail
+    empty: "No incident notes yet — operator discussion on active alerts appears here"
+    refresh: every 30s
+
+  # Fleet attention — non-healthy systems (degraded / critical / offline).
+  # Cap at 4 so conversation + systems + alerts share the fold.
   systems_attention:
     source: System
     filter: status != healthy
     sort: error_rate desc, response_time_ms desc
-    limit: 6
+    limit: 4
     display: queue
     action: system_detail
     empty: "All systems healthy"
     refresh: every 30s
 
-  # Alert Feed - active alerts as an urgency queue (severity-sorted), not a
-  # multi-field admin list. Live-refreshes (#1391). Cap at 8 so systems
-  # attention stays above fold with fold_count=3 (command_center stage).
+  # Alert Feed - active alerts as an urgency queue (severity-sorted).
+  # Live-refreshes (#1391). Cap at 6 for fold with conversation + systems.
   active_alerts:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at desc
-    limit: 8
+    limit: 6
     display: queue
     refresh: every 30s
 
@@ -317,10 +361,11 @@ workspace command_center "Command Center":
       total_systems: count(System)
       healthy_count: count(System where status = healthy)
       critical_count: count(System where status = critical)
-      avg_response_time: avg(response_time_ms)
+      conversation: count(IncidentNote)
     tones:
       healthy_count: positive
       critical_count: destructive
+      conversation: accent
 
   # Alert Volume — bar-chart distribution by severity
   alert_severity_breakdown:
@@ -648,11 +693,13 @@ workspace command_center "Command Center":
   ux:
     as ops_engineer:
       scope: all
-      purpose: "Systems needing attention and the active alert feed at a glance"
-      focus: systems_attention, active_alerts, ops_readiness
+      # Goal B: lead with incident discussion so fold_count=3 stills show
+      # Live Conversation prose, then systems + active alerts (command density).
+      purpose: "Incident notes, systems needing attention, and the active alert feed"
+      focus: live_conversation, systems_attention, active_alerts
     as admin:
-      purpose: "Full fleet command — attention panels first"
-      focus: systems_attention, active_alerts, ops_readiness
+      purpose: "Full fleet command — conversation trail and attention panels first"
+      focus: live_conversation, systems_attention, active_alerts
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
@@ -665,7 +712,9 @@ workspace command_center "Command Center":
 # single column via the project's responsive rules.
 
 workspace incident_review "Incident Review":
-  purpose: "Side-by-side pairs for change-management review"
+  # Goal B conversation: review desk pairs alert pressure with the live
+  # operator note trail (PagerDuty-style incident discussion).
+  purpose: "Incident review — alert pressure plus the live discussion trail"
   stage: "pair_strip"
   access: persona(ops_engineer)
 
@@ -676,9 +725,19 @@ workspace incident_review "Incident Review":
     aggregate:
       active: count(Alert where status = active)
       resolved: count(Alert where status = resolved)
+      conversation: count(IncidentNote)
     tones:
       active: warning
       resolved: positive
+      conversation: accent
+
+  live_conversation:
+    source: IncidentNote
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: incident_note_detail
+    empty: "No conversation yet — notes on open incidents appear here"
 
   # Work-surface utility: triggered alerts are a dated stream — timeline.
   recent_alerts:
@@ -1134,8 +1193,55 @@ surface alert_detail "Alert Detail":
     field message "Message"
     field acknowledged_by "Acknowledged By"
 
+  # Goal B conversation: operator notes pull queue on the alert hub.
+  related discussion "Discussion":
+    display: queue
+    show: IncidentNote
+    columns: body, author, created_at
+
   ux:
-    purpose: "Inspect alert severity strip and open parent System hub for context"
+    purpose: "Inspect alert severity strip, operator discussion, and parent System hub"
+
+surface incident_note_list "Incident Notes":
+  uses entity IncidentNote
+  mode: list
+  render: fragment
+  open: IncidentNote via id | Alert via alert
+
+  section main "Notes":
+    field body "Note"
+    field author "Author"
+    field alert "Alert"
+    field created_at "When"
+
+  ux:
+    purpose: "Incident discussion — open a note or its parent alert"
+    sort: created_at desc
+    search: body, author
+    empty: "No incident notes yet"
+
+surface incident_note_detail "Incident Note":
+  uses entity IncidentNote
+  mode: view
+  render: fragment
+
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field alert "Alert"
+    field created_at "When"
+
+  ux:
+    purpose: "Read an operator note in context of its parent alert"
+
+surface incident_note_create "Add Incident Note":
+  uses entity IncidentNote
+  mode: create
+  render: fragment
+  section main "New note":
+    field alert "Alert"
+    field author "Author"
+    field body "Note"
 
 surface alert_ack "Acknowledge Alert":
   uses entity Alert
