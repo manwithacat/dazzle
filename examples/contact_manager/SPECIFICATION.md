@@ -88,4 +88,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:23e4064536b5051181a7a821a3a635816ab6b7f7d87a3776acdec44587755568 -->
+<!-- dazzle-spec-brief: sha256:a9eb710f492feff7dae54e1face7e2ecbe46ddd6f6a16d2c72d4c3cbd1e587f3 -->

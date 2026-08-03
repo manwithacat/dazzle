@@ -82,6 +82,23 @@ entity Contact "Contact":
   fitness:
     repr_fields: [first_name, last_name, email, company, is_favorite]
 
+# Goal B conversation: peer CRM tools (HubSpot / Attio / Affinity) show
+# relationship notes as the row identity on the home desk — not only
+# directory metrics and engagement-letter composition.
+entity ContactNote "Contact Note":
+  intent: "Relationship note on a Contact — the conversation that moves a letter or call forward"
+  domain: crm
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  contact: ref Contact required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  fitness:
+    repr_fields: [contact, author, body]
+
 # List view - browsable contact directory
 surface contact_list "Contacts":
   uses entity Contact
@@ -135,6 +152,12 @@ surface contact_detail "Contact Detail":
     show: EngagementLetter
     columns: scope_summary, status, party, effective_date, signatory_name
 
+  # Goal B conversation: relationship notes pull queue on the contact hub.
+  related discussion "Discussion":
+    display: queue
+    show: ContactNote
+    columns: body, author, created_at
+
   ux:
     purpose: "Contact hub — identity, employment, notes, and named engagement documents in one place"
 
@@ -187,6 +210,47 @@ surface contact_edit "Edit Contact":
   ux:
     purpose: "Update contact information"
 
+surface contact_note_list "Contact Notes":
+  uses entity ContactNote
+  mode: list
+  render: fragment
+  open: ContactNote via id | Contact via contact
+
+  section main "Notes":
+    field body "Note"
+    field author "Author"
+    field contact "Contact"
+    field created_at "When"
+
+  ux:
+    purpose: "Relationship discussion — open a note or its parent contact"
+    sort: created_at desc
+    search: body, author
+    empty: "No contact notes yet"
+
+surface contact_note_detail "Contact Note":
+  uses entity ContactNote
+  mode: view
+  render: fragment
+
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field contact "Contact"
+    field created_at "When"
+
+  ux:
+    purpose: "Read a relationship note in context of its parent contact"
+
+surface contact_note_create "Add Contact Note":
+  uses entity ContactNote
+  mode: create
+  render: fragment
+  section main "New note":
+    field contact "Contact"
+    field author "Author"
+    field body "Note"
+
 # #954 — full-text search over Contact. Indexed via tsvector + GIN
 # at startup; powers the search_box region below + the
 # /api/fts/Contact endpoint.
@@ -206,7 +270,9 @@ search on Contact:
 # Goal B document depth: named engagement letters above fold (composition),
 # not only directory metrics + empty letter chrome.
 workspace home "Home":
-  purpose: "Directory overview plus document composition — open engagement letters first"
+  # Goal B conversation + document: relationship notes trail with letter
+  # composition so the home desk is a reply surface, not only directory pulse.
+  purpose: "Relationship notes, engagement documents, and directory pulse"
   access: persona(user, admin)
 
   directory_stats:
@@ -215,10 +281,11 @@ workspace home "Home":
     aggregate:
       total_contacts: count(Contact)
       favourites: count(Contact where is_favorite = true)
-      companies: count(Contact where company != null)
+      conversation: count(ContactNote)
     tones:
       favourites: accent
       total_contacts: positive
+      conversation: accent
 
   # Document pulse (Goal B): letters awaiting action, not only people counts.
   engagement_docs:
@@ -232,9 +299,17 @@ workspace home "Home":
       documents: accent
       awaiting_signature: positive
 
-  # Goal B composition queue — named document titles (scope_summary) above
-  # fold; peer professional tools (Clio / PracticePanther) show open letters
-  # as work, not buried under contact hubs.
+  # Goal B conversation spine FIRST — newest relationship notes so above-fold
+  # stills show domain-true CRM prose (display_field: body).
+  live_conversation:
+    source: ContactNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: contact_note_detail
+    empty: "No conversation yet — notes on contacts and letters appear here"
+
+  # Goal B composition queue — named document titles (scope_summary).
   composition:
     source: EngagementLetter
     filter: status = draft or status = sent
@@ -290,12 +365,12 @@ workspace home "Home":
 
   ux:
     as user:
-      purpose: "See open engagement documents and directory pulse before the full list"
-      # Document composition above fold (Goal B); search still available after
-      focus: directory_stats, engagement_docs, composition, favourite_contacts, find_contact, recent_contacts
+      purpose: "See relationship notes and open engagement documents before the full list"
+      # Conversation + composition above fold (Goal B); search after
+      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts
     as admin:
-      purpose: "Directory + engagement document overview"
-      focus: directory_stats, engagement_docs, composition, favourite_contacts, find_contact, recent_contacts
+      purpose: "Relationship notes, directory pulse, and engagement documents"
+      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
