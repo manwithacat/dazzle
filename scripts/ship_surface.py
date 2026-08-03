@@ -67,6 +67,11 @@ SHIP_TESTS: tuple[str, ...] = (
     # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
     # depth on contact_manager — display_field + home region rename ×3 Pythons)
     "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
+    # open_via + Goal B conversation (CI red 2026-08-03 after llm_ticket
+    # display_field→suggested_response — pin must ship with product, not lag)
+    "tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open",
+    "tests/unit/test_llm_classifier_conversation_goal_b.py",
+    "tests/unit/test_design_studio_conversation_goal_b.py",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)
@@ -151,10 +156,12 @@ Remediation by class (run from repo root):
     uv run python packages/hatchi-maxchi/tools/contract_surface.py --write
     # commit regenerated files; do not ship with dirty gen outputs
 
-  open_via dual-open pin (contact_manager engagement letters)
-    # Goal B document depth may change display_field / home region names —
-    # update tests/unit/test_open_via_1603.py pins with the product ship.
+  open_via dual-open pin (Goal B display_field / home region renames)
+    # Goal B depth may change display_field / home region names — update
+    # tests/unit/test_open_via_1603.py pins with the product ship (same commit).
     pytest tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open -q
+    pytest tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open -q
+    pytest tests/unit/test_llm_classifier_conversation_goal_b.py tests/unit/test_design_studio_conversation_goal_b.py -q
 
   acme_billing RBAC matrix / compliance auditspec drift
     # After DSL entity/permit/scope changes on examples/acme_billing:

@@ -371,7 +371,8 @@ def test_llm_classification_list_dual_open() -> None:
         "/app/ticketclassification/{id}",
         "/app/ticket/{ticket}",
     ]
-    assert getattr(entity, "display_field", None) == "category"
+    # Goal B conversation (cycle 1653): queue titles are AI draft replies, not category shells.
+    assert getattr(entity, "display_field", None) == "suggested_response"
 
 
 def test_contact_manager_engagement_letter_list_dual_open() -> None:
