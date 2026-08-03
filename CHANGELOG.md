@@ -1,6 +1,8 @@
 ## [Unreleased]
 
 ### Fixed
+- **acme_billing compliance expected (CI)** — regenerate `expected/compliance-auditspec.json`
+  after Goal B LineItem ship so `dsl_hash` matches live compile (reference-drift gate).
 - **hr_records manager org_structure (Goal B)** — Person seeds for manager/employee/hr_admin/finance
   bind to `STABLE_PERSONA_USER_IDS` + `@demo.dazzle.local` emails; scopes use bare `current_user`
   (no User entity). Manager My Team stills show named reports (Tina + Abdul) with employment trail
@@ -8,6 +10,9 @@
 
 
 ### Added
+- **Goal B document depth (acme_billing)** — billing desk Composition queue shows named
+  invoice line items (description × qty × unit) above fold; `LineItem` entity + seeds;
+  demo persona User bind so `current_user.org` scopes populate; RBAC matrix + SPEC refreshed.
 - **Goal B media depth (fieldtest_hub)** — Issue Triage shows field photo
   evidence above fold: `photo_url: url` + placehold.co evidence seeds;
   `field_evidence` grid on the triage desk; list projects Evidence first;
