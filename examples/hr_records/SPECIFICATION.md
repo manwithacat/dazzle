@@ -120,4 +120,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:53f0c008330428b0856ae2d244f813ff9cf87a3651b8a10600c79dcbcd2e78ce -->
+<!-- dazzle-spec-brief: sha256:c5e7a3536291d8c61a62e80c4b6bdbcf1686cc6f47e04fe926808ba66f30e3de -->

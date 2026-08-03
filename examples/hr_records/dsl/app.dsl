@@ -224,16 +224,18 @@ entity Person "Person":
     # read: id in (select report from ManagerLink current where manager = current_user.person)
     #   as: manager
     # ------------------------------------------------
-    # Hand-rolled (returns ALL historical reports, not just current):
-    read: via ManagerLink(manager = current_user.person, report = id)
+    # Hand-rolled (returns ALL historical reports, not just current).
+    # Cycle 1647 Goal B: Person rows for manager/employee/hr_admin/finance use
+    # STABLE_PERSONA_USER_IDS so bare current_user == Person.id (no User entity).
+    read: via ManagerLink(manager = current_user, report = id)
       as: manager
-    list: via ManagerLink(manager = current_user.person, report = id)
+    list: via ManagerLink(manager = current_user, report = id)
       as: manager
 
     # Employee sees self only.
-    read: id = current_user.person
+    read: id = current_user
       as: employee
-    list: id = current_user.person
+    list: id = current_user
       as: employee
 
   audit: all
@@ -302,15 +304,15 @@ entity Employment "Employment":
 
     # Manager sees employment rows of their (currently/historically) reports.
     # Same temporal-traversal gap as Person.
-    read: via ManagerLink(manager = current_user.person, report = person)
+    read: via ManagerLink(manager = current_user, report = person)
       as: manager
-    list: via ManagerLink(manager = current_user.person, report = person)
+    list: via ManagerLink(manager = current_user, report = person)
       as: manager
 
     # Employee sees own employment history (all rows, including closed).
-    read: person = current_user.person
+    read: person = current_user
       as: employee
-    list: person = current_user.person
+    list: person = current_user
       as: employee
 
   audit: all
@@ -361,9 +363,9 @@ entity Salary "Salary":
       as: hr_admin, finance
 
     # Employee sees own salary history.
-    read: person = current_user.person
+    read: person = current_user
       as: employee
-    list: person = current_user.person
+    list: person = current_user
       as: employee
 
   audit: all
@@ -423,16 +425,19 @@ entity ManagerLink "Manager Link":
     list: all
       as: hr_admin
 
-    # Manager sees rows where they are the manager OR the report.
-    read: manager = current_user.person or report = current_user.person
+    # Manager sees outbound reporting lines (people they manage).
+    # Mixed-field OR (manager=… or report=…) fail-closes at runtime (#1630) —
+    # so do not combine directions in one predicate. Inbound "my manager" is
+    # visible on person_detail reporting_history for the manager's own row.
+    read: manager = current_user
       as: manager
-    list: manager = current_user.person or report = current_user.person
+    list: manager = current_user
       as: manager
 
     # Employee sees rows where they are the report.
-    read: report = current_user.person
+    read: report = current_user
       as: employee
-    list: report = current_user.person
+    list: report = current_user
       as: employee
 
   audit: all

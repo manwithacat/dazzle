@@ -699,7 +699,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its id is the user's person"
+        "rule": "its id is the signed-in user"
       },
       {
         "entity": "Person",
@@ -707,7 +707,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its id is the user's person"
+        "rule": "its id is the signed-in user"
       },
       {
         "entity": "Employment",
@@ -773,7 +773,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its person is the user's person"
+        "rule": "its person is the signed-in user"
       },
       {
         "entity": "Employment",
@@ -781,7 +781,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its person is the user's person"
+        "rule": "its person is the signed-in user"
       },
       {
         "entity": "Salary",
@@ -831,7 +831,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its person is the user's person"
+        "rule": "its person is the signed-in user"
       },
       {
         "entity": "Salary",
@@ -839,7 +839,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its person is the user's person"
+        "rule": "its person is the signed-in user"
       },
       {
         "entity": "ManagerLink",
@@ -887,7 +887,7 @@
         "personas": [
           "manager"
         ],
-        "rule": "(its manager is the user's person or its report is the user's person)"
+        "rule": "its manager is the signed-in user"
       },
       {
         "entity": "ManagerLink",
@@ -895,7 +895,7 @@
         "personas": [
           "manager"
         ],
-        "rule": "(its manager is the user's person or its report is the user's person)"
+        "rule": "its manager is the signed-in user"
       },
       {
         "entity": "ManagerLink",
@@ -903,7 +903,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its report is the user's person"
+        "rule": "its report is the signed-in user"
       },
       {
         "entity": "ManagerLink",
@@ -911,7 +911,7 @@
         "personas": [
           "employee"
         ],
-        "rule": "its report is the user's person"
+        "rule": "its report is the signed-in user"
       }
     ]
   },

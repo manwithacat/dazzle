@@ -54,7 +54,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | USED |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1647 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1648 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1624 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -131,6 +131,7 @@ apply map patches with `{"apply":true}`.
 ## Cycle notes (newest first)
 
 
+> **Cycle 1648 (2026-08-03).** residual=0 densify=0 campaign story_walk overridden interesting_product. Goal B **org_structure@hr_records**: STABLE Person bind + manager My Team stills (Tina+Abdul). interesting_product **USED@1648** (1647 fieldtest media same campaign). budget 1. Explore **12/100**.
 > **Cycle 1647 (2026-08-03).** residual=0 densify=0 campaign story_walk **overridden** to interesting_product (require_mutation). Goal B **org_structure@hr_records**: STABLE Person bind + manager My Team stills (Tina+Abdul). interesting_product **USED@1647**. budget 1. Explore **11/100**.
 > **Cycle 1645 (2026-08-03).** campaign force **framework-ux**: **ship** grid-cell drill open discovery — `drill_anchor_open_attrs(kind="grid")` stamps `data-dz-open-*` on whole-card grid drills (action-card / dashboard parity); unit pins. densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1. fitness **USED@1645**. budget 1. Explore **10/100**.
 > **Cycle 1643 (2026-08-03).** **capability-sweep** (cadence ≥20 since 1623) + campaign-aligned **framework-ux ship**. Inventory: flip USED→STALE lag≥20 (journey@1614, smoke suite@1619, gallery probes@1616, fitness@1617, prove@1615, …). DRIVER CodeQL+inbox **USED@1643**. fitness **USED@1643**. **UNOWNED=0 COGNITION_STALE_eff=15 HYGIENE_STALE_eff=30** rows=64. densify_allowed=0 dual_lock=0 suppress_smoke=1 require_mutation=1. **Ship:** action-card `data-dz-open-*` discovery (list/detail) + fix `entity_label_from_detail_url` so `/app/<slug>` lists label entity not `App`. Top digs next: interesting_product / story_walk / agent_acceptance / gallery; **semgrep hygiene** never-exercised; domain|presentation COGNITION re-touch — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **9/100**.
