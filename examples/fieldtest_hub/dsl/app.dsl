@@ -255,6 +255,43 @@ entity IssueReport "Issue Report":
   fitness:
     repr_fields: [device_id, category, severity, status, reported_by_id]
 
+
+# Goal B conversation: peer field-quality tools (Jira / Linear / Zendesk) show
+# triage discussion on the ops desk — not only photo grids and severity queues.
+entity IssueNote "Issue Note":
+  intent: "Engineer/tester discussion on an IssueReport — the conversation that drives triage, mitigation, and close"
+  domain: quality
+  patterns: messaging, audit_trail
+  display_field: body
+  id: uuid pk
+  issue: ref IssueReport required
+  author: str(120) required
+  body: text required
+  created_at: datetime auto_add
+
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(engineer) or role(manager) or role(tester)
+    update: role(engineer) or role(manager)
+    delete: role(engineer)
+
+  scope:
+    list: all
+      as: engineer, manager, tester
+    read: all
+      as: engineer, manager, tester
+    create: all
+      as: engineer, manager, tester
+    update: all
+      as: engineer, manager
+    delete: all
+      as: engineer
+
+  fitness:
+    repr_fields: [issue, author, body]
+
+
 # Entity: TestSession
 entity TestSession "Test Session":
   intent: "A logged episode of hands-on testing on a specific Device by a Tester, capturing duration, conditions, and observations"
@@ -741,8 +778,14 @@ surface issue_report_detail "Issue Detail":
     field photo_url "Photo/Video"
     field resolution "Resolution"
 
+  # Goal B conversation: triage discussion pull queue on the issue hub.
+  related discussion "Discussion":
+    display: queue
+    show: IssueNote
+    columns: body, author, created_at
+
   ux:
-    purpose: "Issue hub — classification strip and evidence for triage"
+    purpose: "Issue hub — classification, evidence, and triage discussion"
 
     as engineer:
       scope: all
@@ -808,6 +851,48 @@ surface issue_report_edit "Update Issue":
       scope: reported_by_id = current_user
 
 # Surface: Test Session List
+
+surface issue_note_list "Issue Notes":
+  uses entity IssueNote
+  mode: list
+  render: fragment
+  open: IssueNote via id | IssueReport via issue
+
+  section main "Notes":
+    field body "Note"
+    field author "Author"
+    field issue "Issue"
+    field created_at "When"
+
+  ux:
+    purpose: "Triage discussion — open a note or its parent issue"
+    sort: created_at desc
+    search: body, author
+    empty: "No issue notes yet"
+
+surface issue_note_detail "Issue Note":
+  uses entity IssueNote
+  mode: view
+  render: fragment
+
+  section summary "Note":
+    field body "Note"
+    field author "Author"
+    field issue "Issue"
+    field created_at "When"
+
+  ux:
+    purpose: "Read a triage note in context of its parent issue"
+
+surface issue_note_create "Add Issue Note":
+  uses entity IssueNote
+  mode: create
+  render: fragment
+  section main "New note":
+    field issue "Issue"
+    field author "Author"
+    field body "Note"
+
 surface test_session_list "Test Sessions":
   uses entity TestSession
   mode: list
@@ -1087,8 +1172,16 @@ surface task_edit "Edit Task":
 #   ST-037 triage queue · ST-040 team workload · ST-041 release metrics
 #   TR-17 manager focus: fleet KPIs + tester activity first
 workspace engineering_dashboard "Engineering Dashboard":
-  purpose: "Fleet overview, tester activity, and field-quality oversight"
+  purpose: "Triage notes, fleet overview, and field-quality oversight"
   access: persona(engineer, manager)
+
+  live_conversation:
+    source: IssueNote
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: issue_note_detail
+    empty: "No conversation yet — notes on field issues appear here"
 
   # Fleet overview KPI strip: total/active/prototype/recalled devices.
   fleet_overview:
@@ -1099,10 +1192,20 @@ workspace engineering_dashboard "Engineering Dashboard":
       active_devices: count(Device where status = active)
       prototype_devices: count(Device where status = prototype)
       recalled_devices: count(Device where status = recalled)
+      conversation: count(IssueNote)
     tones:
       active_devices: positive
       recalled_devices: destructive
       prototype_devices: accent
+      conversation: accent
+
+  ux:
+    as engineer:
+      purpose: "See triage discussion before fleet and issue queues"
+      focus: live_conversation, fleet_overview, triage_queue, critical_issues
+    as manager:
+      purpose: "Triage notes and fleet pulse"
+      focus: live_conversation, fleet_overview, triage_queue, critical_issues
 
   # TR-35: fleet status without click-through to /app/device — non-active
   # devices as a review queue next to the KPI strip.
@@ -1371,8 +1474,19 @@ workspace tester_dashboard "Tester Dashboard":
 # nav for engineer/manager/tester (auto-discover still lists entities).
 
 workspace manager_ops "Manager Ops":
-  purpose: "Fleet health and field quality at a glance — no device warehouse hop"
+  # Goal B conversation: triage notes trail with fleet pulse so ops is a
+  # reply surface, not only device/issue queues.
+  purpose: "Triage notes, fleet health, and field quality at a glance"
   access: persona(manager, admin)
+
+  # Goal B conversation spine FIRST — domain-true field prose above fold.
+  live_conversation:
+    source: IssueNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: issue_note_detail
+    empty: "No conversation yet — notes on field issues appear here"
 
   fleet_overview:
     source: Device
@@ -1382,10 +1496,20 @@ workspace manager_ops "Manager Ops":
       active_devices: count(Device where status = active)
       prototype_devices: count(Device where status = prototype)
       recalled_devices: count(Device where status = recalled)
+      conversation: count(IssueNote)
     tones:
       active_devices: positive
       recalled_devices: destructive
       prototype_devices: accent
+      conversation: accent
+
+  ux:
+    as manager:
+      purpose: "See triage discussion before fleet and issue queues"
+      focus: live_conversation, fleet_overview, quality_strip, critical_issues
+    as admin:
+      purpose: "Triage notes and fleet pulse for field quality oversight"
+      focus: live_conversation, fleet_overview, quality_strip, critical_issues
 
   device_attention:
     source: Device
@@ -1441,8 +1565,18 @@ workspace manager_ops "Manager Ops":
     empty: "No devices"
 
 workspace issue_triage "Issue Triage":
-  purpose: "Engineer triage desk — field photo evidence first, then open/critical queues"
+  # Goal B conversation + media: discussion trail with field photos.
+  purpose: "Triage notes, field photo evidence, then open/critical queues"
   access: persona(engineer, manager)
+
+  # Goal B conversation spine FIRST — domain-true mitigation prose above fold.
+  live_conversation:
+    source: IssueNote
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: issue_note_detail
+    empty: "No triage conversation yet — engineer notes on open issues appear here"
 
   open_pressure:
     source: IssueReport
@@ -1451,9 +1585,19 @@ workspace issue_triage "Issue Triage":
       open: count(IssueReport where status = open)
       critical: count(IssueReport where severity = critical and status != closed)
       total: count(IssueReport)
+      conversation: count(IssueNote)
     tones:
       open: warning
       critical: destructive
+      conversation: accent
+
+  ux:
+    as engineer:
+      purpose: "See triage discussion and field photos before severity queues"
+      focus: live_conversation, open_pressure, field_evidence, triage_queue
+    as manager:
+      purpose: "Triage notes and critical field quality pressure"
+      focus: live_conversation, open_pressure, field_evidence, critical_issues
 
   # Goal B media depth: buyer sees field photos above fold (not severity-only text).
   field_evidence:

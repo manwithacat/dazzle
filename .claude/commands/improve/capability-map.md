@@ -41,6 +41,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1671 (2026-08-03).** residual=0 densify=0 CI green post-1669 repair; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1669). Goal B **conversation@fieldtest_hub**: IssueNote display_field=body + live_conversation on manager_ops/issue_triage/engineering_dashboard; domain-true field notes; unit pin + ship-surface. interesting_product **USED@1671**. budget 1. Explore **23/100**.
 > **Cycle 1668 (2026-08-03).** residual=0 densify=0 CI green post-1666; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1667). Goal B **conversation@hr_records**: PersonNote display_field=body + live_conversation on staff_directory/my_team; domain-true people notes; unit pin + ship-surface. interesting_product **USED@1668**. budget 1. Explore **22/100**.
 > **Cycle 1663 (2026-08-03).** **capability-sweep** (cadence ≥20 since 1643) — inventory reconcile vs tip `10648d9a0`. **UNOWNED=0** **COGNITION_STALE_eff≈29** **HYGIENE_STALE_eff≈36** rows≈73. Flipped USED→STALE lag≥20 (product_quality/demo quality/validate/qa trial/acceptance/walk@1633 lag30; CodeQL+inbox re-USED@1663). DRIVER CodeQL+inbox **USED@1663**. Tip CI **queued** (1662 invoice_ops Goal B) — no product push. Top digs next (aggressive densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1): interesting_product depth when tip green / framework-ux edge / domain|presentation COGNITION re-touch / **semgrep hygiene** — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 0. Explore **19/100**.
 ---
@@ -56,7 +57,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1668 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1671 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1624 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
