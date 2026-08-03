@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.110.0] - 2026-08-03
+
+### Added
+- **Improve harness exemplar docs** — human-facing package at `docs/harness/`
+  (exemplar anatomy, operator field guide, strategy catalog) with README + MkDocs
+  nav; portable control-plane packaging without changing loop operation.
+
 ### Fixed
 - **acme_billing compliance expected (CI)** — regenerate `expected/compliance-auditspec.json`
   after Goal B LineItem ship so `dsl_hash` matches live compile (reference-drift gate).
