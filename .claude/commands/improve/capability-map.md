@@ -73,7 +73,7 @@ apply map patches with `{"apply":true}`.
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1675 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | USED |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1676 | USED |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1647 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1633 | STALE |
@@ -102,7 +102,7 @@ apply map patches with `{"apply":true}`.
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1676 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1341 | STALE |
@@ -112,7 +112,7 @@ apply map patches with `{"apply":true}`.
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1417 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1676 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |

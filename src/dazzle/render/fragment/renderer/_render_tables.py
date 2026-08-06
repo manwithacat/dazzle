@@ -53,7 +53,10 @@ from dazzle.render.fragment.ingest import (
     render_queue_row,
     render_status_list_entry,
 )
-from dazzle.render.fragment.ingest.emit import drill_anchor_open_attrs
+from dazzle.render.fragment.ingest.emit import (
+    drill_anchor_open_attrs,
+    drill_open_discovery_attrs,
+)
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -418,10 +421,17 @@ class _RenderTablesMixin:
 
     @staticmethod
     def _related_drill_attrs(drill: str, ctx: RenderContext) -> str:
-        """The htmx click-to-detail attrs for a related row/card/file (or "")."""
+        """htmx click-to-detail + open discovery for a related row/card/file.
+
+        Cycle 1676 — stamp ``data-dz-open-*`` (queue/grid/dashboard parity) so
+        agents attr-read related-entity hops on detail pages without scraping
+        cell text. Host is the row/card/file element (no separate ``<a>``).
+        """
         if not drill:
             return ""
+        open_attrs = drill_open_discovery_attrs(drill)
         return (
+            f" data-dz-related-drill {open_attrs}"
             f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
             'hx-trigger="click" hx-target="#main-content" hx-swap="innerHTML"'
         )
@@ -497,12 +507,8 @@ class _RenderTablesMixin:
                 body_rows = []
                 for ri, row in enumerate(t.rows):
                     drill = t.row_drill[ri] if t.row_drill else ""
-                    attrs = (
-                        f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
-                        'hx-trigger="click" hx-target="#main-content" hx-swap="innerHTML"'
-                        if drill
-                        else ""
-                    )
+                    # Cycle 1676: open discovery via sole-emitter _related_drill_attrs
+                    attrs = self._related_drill_attrs(drill, ctx) if drill else ""
                     cells = "".join(f"<td>{ctx.escape(c)}</td>" for c in row)
                     body_rows.append(f"<tr{attrs}>{cells}</tr>")
                 body = "".join(body_rows)
