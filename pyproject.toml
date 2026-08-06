@@ -166,7 +166,7 @@ sso = [
     # cryptography: AES-GCM secret-at-rest for enterprise Connections
     # (auth Plan 4a, dazzle.http.runtime.auth.connection_crypto) — lazy-imported,
     # so core installs without [sso] are unaffected until a connection is used.
-    "cryptography>=41.0.0",
+    "cryptography>=50.0.0",
     # dnspython: DNS-TXT domain-ownership verification for enterprise Connections
     # (auth Plan 4b.iv, dazzle.http.runtime.auth.domain_verification) — lazy-imported
     # inside DnspythonResolver, so core installs are unaffected until verify-domain runs.
@@ -192,7 +192,7 @@ signing = [
     "fpdf2>=2.8.0",
     "pyhanko>=0.25.0",
     "Pillow>=12.3.0",
-    "cryptography>=41.0.0",
+    "cryptography>=50.0.0",
 ]
 dev = [
     "pytest>=7.4",
@@ -299,7 +299,7 @@ tigerbeetle = [
 # Mobile authentication (JWT, OAuth2, Push)
 mobile = [
     "PyJWT>=2.8.0",
-    "cryptography>=41.0.0",
+    "cryptography>=50.0.0",
 ]
 # Social authentication providers
 social_auth = [
@@ -313,7 +313,7 @@ push = [
 # All mobile features
 mobile_full = [
     "PyJWT>=2.8.0",
-    "cryptography>=41.0.0",
+    "cryptography>=50.0.0",
     "google-auth>=2.25.0",
     "httpx>=0.25.0",
     "firebase-admin>=6.2.0",

@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Security
+- **aiohttp 3.14.1 → 3.14.3** — GHSA-cq5v-8q36-5273 (high OOB heap read), GHSA-mfx4-hv73-q22v /
+  GHSA-mq44-7p77-q5h7 (WebSocket). Via `[aws]` / aioboto3 stack in `uv.lock`.
+- **cryptography 49.0.0 → 50.0.0** — GHSA-g6cj-pr64-35w5 / CVE-2026-69247 (PKCS#7 Bleichenbacher
+  oracle). Floor raised to `>=50.0.0` on `[sso]` / `[signing]` / `[mobile]` extras.
+- **CI:** `pypa/gh-action-pypi-publish` 1.14.1 → 1.14.2 (Twine 7 / OIDC timeout fixes).
+
 ## [0.110.1] - 2026-08-03
 
 ### Fixed
