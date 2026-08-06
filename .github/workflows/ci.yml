@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  # Manual re-queue when GHA drops push events or empty commits skip path
+  # filters (paths-ignore + zero file changes does not start the matrix).
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
     # Skip CI for pure-docs changes. Anything that touches runtime/code/
