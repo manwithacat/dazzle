@@ -594,6 +594,18 @@ surface person_note_create "Add Person Note":
     field author "Author"
     field body "Note"
 
+# Edit surface so permit.update rows do not 404 on /app/personnote/{id}/edit
+# (smoke dig 2026-08-06: auto_seed http_error on Edit for seeded PersonNotes).
+surface person_note_edit "Edit Person Note":
+  uses entity PersonNote
+  mode: edit
+  render: fragment
+  section main "Edit note":
+    field body "Note"
+    field author "Author"
+  ux:
+    purpose: "Correct an HR discussion note without losing person context"
+
 surface department_list "Departments":
   uses entity Department
   mode: list
