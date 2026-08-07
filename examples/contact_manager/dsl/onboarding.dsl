@@ -30,7 +30,7 @@ guide contacts_onboarding "Getting started with Contacts":
     kind: popover
     target: surface.contact_create
     title: "Start with a first name"
-    body: "First name + email are the only required fields. You can fill in phone, company, and notes later."
+    body: "First and last name are required, plus email or phone (at least one). Company and notes can wait."
     placement: bottom
     complete_on: field_filled surface.contact_create.field.first_name
 

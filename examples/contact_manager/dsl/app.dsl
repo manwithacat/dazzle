@@ -64,7 +64,10 @@ entity Contact "Contact":
   id: uuid pk
   first_name: str(100) required pii(category=identity)
   last_name: str(100) required pii(category=identity)
-  email: email unique required pii(category=contact)
+  # Panel 1745 / trial adoption: name + at least one reachable channel.
+  # Email is unique when present, but phone-only prospects must save
+  # (invariant below). Create form no longer hard-requires email.
+  email: email unique pii(category=contact)
   phone: str(20) pii(category=contact)
   company: str(200)
   job_title: str(150)
@@ -115,7 +118,7 @@ surface contact_list "Contacts":
     field is_favorite "Favorite"
 
   ux:
-    purpose: "Browse and search contacts — open a row for the contact hub"
+    purpose: "Browse and search contacts — Find by first name, last name, email, or company above the A–Z list; open a row for the contact hub"
     sort: last_name asc, first_name asc
     filter: is_favorite
     search: first_name, last_name, email, company
@@ -183,7 +186,7 @@ surface contact_create "Create Contact":
     field notes "Notes"
 
   ux:
-    purpose: "Add a new contact"
+    purpose: "Add a new contact — name plus email or phone (at least one channel)"
 
 # Edit form
 surface contact_edit "Edit Contact":

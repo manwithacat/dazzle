@@ -20,7 +20,7 @@ dazzle serve
 
 | Feature | Usage |
 |---------|-------|
-| **Email Field Type** | `email: email unique required` with validation |
+| **Email Field Type** | `email: email unique  # optional; phone-or-email invariant` with validation |
 | **Indexes** | Multi-column index: `index last_name,first_name` |
 | **Workspace Signals** | List + detail dual-signal pattern |
 | **Display Mode** | `display: detail` creates DETAIL_VIEW signal |
@@ -82,7 +82,7 @@ contact_manager/
 ### Email with Unique Constraint
 ```dsl
 entity Contact "Contact":
-  email: email unique required
+  email: email unique  # optional; phone-or-email invariant
   # email field type provides validation
   # unique constraint prevents duplicates
 ```
