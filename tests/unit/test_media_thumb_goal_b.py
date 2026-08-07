@@ -71,3 +71,32 @@ def test_asset_seeds_have_preview_urls() -> None:
         if pu.startswith("https://placehold.co/"):
             with_preview += 1
     assert with_preview >= 8
+
+
+def test_detail_display_type_promotes_media_keys() -> None:
+    """VIEW form kinds (url/text) must still thumb/swatch on detail hubs."""
+    from dazzle.http.runtime.renderers.fragment_adapter import _detail_display_type
+
+    assert (
+        _detail_display_type({"key": "logo_url", "kind": "text", "value": "https://x"}) == "image"
+    )
+    assert (
+        _detail_display_type({"key": "preview_url", "kind": "url", "value": "https://x"}) == "image"
+    )
+    assert (
+        _detail_display_type({"key": "primary_color", "kind": "text", "value": "#111111"})
+        == "color"
+    )
+    assert _detail_display_type({"key": "notes", "kind": "textarea", "value": "hi"}) == "text"
+
+
+def test_detail_field_value_emits_media_thumb() -> None:
+    from dazzle.http.runtime.renderers.fragment_adapter import _detail_field_value
+    from dazzle.render.fragment import FragmentRenderer, RawHTML
+
+    url = "https://placehold.co/128x128/1C1917/EA580C/png?text=AW"
+    frag = _detail_field_value({"key": "logo_url", "kind": "text", "label": "Logo", "value": url})
+    assert isinstance(frag, RawHTML)
+    html = FragmentRenderer().render(frag)
+    assert "dz-media-thumb" in html
+    assert url in html

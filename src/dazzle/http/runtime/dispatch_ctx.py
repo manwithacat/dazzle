@@ -164,6 +164,8 @@ def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
         "label": getattr(f, "label", "") or field_name,
         "value": "" if value is None else value,
         "kind": kind,
+        # widget= from DSL (e.g. color) — detail display when form kind is text.
+        "widget": str(getattr(f, "widget", None) or ""),
         "currency_code": currency_code,
         "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
         "ref_entity": ref_entity,

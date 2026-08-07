@@ -15,6 +15,7 @@ from typing import Any
 
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.fragment import (
     URL,
     Badge,
@@ -134,6 +135,28 @@ _FORM_KIND_TO_DISPLAY: dict[str, str] = {
 }
 
 
+def _detail_display_type(f: dict[str, Any]) -> str:
+    """Map form-kind / field key → list-cell display type for detail values.
+
+    VIEW surfaces build FieldContext with *form* kinds (url/text/…), so
+    logo_url / preview_url / primary_color used to leak as bare URL/hex
+    prose on brand/asset hubs while workspace lists already thumbs+swatches
+    via ``field_kind_to_col_type`` (agent_acceptance / Goal B media).
+    """
+    kind = str(f.get("kind", "text") or "text")
+    key = str(f.get("key", "") or "")
+    widget = str(f.get("widget", "") or "").lower()
+    display = _FORM_KIND_TO_DISPLAY.get(kind, kind)
+    media = _media_col_type_for_field_name(key)
+    if media is not None:
+        return media
+    if widget == "color" or kind == "color":
+        return "color"
+    if widget in ("image", "media") or kind in ("image", "media"):
+        return "image"
+    return display
+
+
 def _detail_field_value(f: dict[str, Any]) -> Fragment:
     """ADR-0049 Phase 2 (flip review): render one detail field VALUE through the
     same typed-cell core the list rows use (`_render_cell_display`) — so `ref`
@@ -143,10 +166,11 @@ def _detail_field_value(f: dict[str, Any]) -> Fragment:
     value = f.get("value")
     if value in (None, "", "—"):
         return Text("—")
-    kind = str(f.get("kind", "text") or "text")
+    key = str(f.get("key", "") or "")
     col = {
-        "type": _FORM_KIND_TO_DISPLAY.get(kind, kind),
-        "key": str(f.get("key", "") or ""),
+        "type": _detail_display_type(f),
+        "key": key,
+        "label": str(f.get("label", "") or key),
         "ref_entity": str(f.get("ref_entity", "") or ""),
         "filter_ref_entity": str(f.get("ref_entity", "") or ""),
         "ref_route": str(f.get("ref_route", "") or ""),
