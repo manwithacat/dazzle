@@ -1049,6 +1049,94 @@ class TestSeedPreflightAndCircuitBreaker:
         assert posted[0]["entity"] == "Brand"
         assert posted[0]["id"] == "4d000000-0000-4000-8000-000000000001"
 
+    def test_trial_seed_loads_csv_parents_before_jsonl_children(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """CSV-only parents must seed (contact_manager Contact.csv + ContactNote.jsonl).
+
+        Cycle 1738: trial seeder only walked ``*.jsonl``, so Contact rows were
+        skipped, ContactNote 400'd on FK, circuit breaker aborted — empty
+        acceptance panel.
+        """
+        from dazzle.cli import qa as qa_cli
+
+        data_dir = tmp_path / "demo_data"
+        data_dir.mkdir()
+        (data_dir / "Contact.csv").write_text(
+            "id,first_name,last_name\nb2926c87-cfb0-4a8a-93af-1e817baaac27,Ruth,Griffiths\n",
+            encoding="utf-8",
+        )
+        (data_dir / "ContactNote.jsonl").write_text(
+            '{"id": "c8000000-0000-4000-8000-000000000001", '
+            '"contact": "b2926c87-cfb0-4a8a-93af-1e817baaac27", "body": "note"}\n',
+            encoding="utf-8",
+        )
+
+        class _FakeEntity:
+            def __init__(self, name: str) -> None:
+                self.name = name
+                self.fields = []
+
+        class _FakeDomain:
+            entities = [_FakeEntity("Contact"), _FakeEntity("ContactNote")]
+
+        class _FakeAppSpec:
+            domain = _FakeDomain()
+
+        monkeypatch.setattr(
+            "dazzle.cli.utils.load_project_appspec",
+            lambda _p: _FakeAppSpec(),
+        )
+        monkeypatch.setattr(
+            "dazzle.demo_data.loader.topological_sort_entities",
+            lambda _entities: ["Contact", "ContactNote"],
+        )
+        monkeypatch.setattr(
+            "dazzle.demo_data.test_mode_load.find_demo_data_dir",
+            lambda _p: data_dir,
+        )
+
+        posted: list[dict[str, Any]] = []
+
+        class _FakeResp:
+            status_code = 200
+            text = "{}"
+
+            def json(self) -> dict[str, Any]:
+                return {"created": {"x": 1}}
+
+        class _FakeClient:
+            def __init__(self, *_a: Any, **_k: Any) -> None:
+                pass
+
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *_a: Any) -> None:
+                return None
+
+            def post(self, *_a: Any, **_k: Any) -> _FakeResp:
+                body = _k.get("json") or {}
+                for fx in body.get("fixtures") or []:
+                    posted.append(fx)
+                return _FakeResp()
+
+        monkeypatch.setattr("httpx.Client", _FakeClient)
+
+        def _boom(*_a: Any, **_k: Any) -> None:
+            raise AssertionError("must not regenerate when CSV/JSONL seeds exist")
+
+        import dazzle.mcp.server.handlers.demo_data as _demo_mod
+
+        monkeypatch.setattr(_demo_mod, "demo_generate_impl", _boom)
+
+        ok = qa_cli._seed_demo_data_for_trial(tmp_path, "http://localhost:9999", "test-secret")
+        assert ok is True
+        entities = [p["entity"] for p in posted]
+        assert entities == ["Contact", "ContactNote"]
+        assert posted[0]["id"] == "b2926c87-cfb0-4a8a-93af-1e817baaac27"
+        assert posted[1]["id"] == "c8000000-0000-4000-8000-000000000001"
+
 
 # ---------------------------------------------------------------------------
 # Trial logging quieting (TR-47)

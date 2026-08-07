@@ -192,12 +192,16 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
     import httpx
 
     from dazzle.cli.utils import load_project_appspec
-    from dazzle.demo_data.loader import topological_sort_entities
+    from dazzle.demo_data.loader import (
+        find_seed_files,
+        read_seed_file,
+        topological_sort_entities,
+    )
     from dazzle.demo_data.test_mode_load import find_demo_data_dir
     from dazzle.mcp.server.handlers.demo_data import demo_generate_impl
 
     blueprint = project_dir / "dsl" / "seeds" / "demo_data" / "blueprint.json"
-    # Prefer assignment-aware story-spine jsonl (dsl/seeds/demo_data) over a
+    # Prefer assignment-aware story-spine seeds (dsl/seeds/demo_data) over a
     # blueprint-only `.dazzle/demo_data/` dir that would force faker regenerate
     # with random User ids — Feedback.reviewer then 400s and the pilot desk is
     # empty (acceptance panel / --fresh-db; align with reset-and-load #1626).
@@ -257,7 +261,11 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
                 err=True,
             )
 
-    if existing_data is None or not any(existing_data.glob("*.jsonl")):
+    # Existing seed dirs may be CSV-only (contact_manager Contact.csv) or a
+    # mix of CSV parents + JSONL children. find_seed_files prefers JSONL when
+    # both exist. Only regenerate from the blueprint when no seed files at all.
+    has_existing_seeds = bool(existing_data is not None and find_seed_files(existing_data))
+    if not has_existing_seeds:
         tmp_root = Path(tempfile.mkdtemp(prefix="dazzle-trial-seed-"))
         try:
             result = demo_generate_impl(
@@ -274,31 +282,35 @@ def _seed_demo_data_for_trial(project_dir: Path, site_url: str, test_secret: str
             typer.echo(f"Seed skipped: demo data generation failed ({exc})", err=True)
             return True
     else:
-        data_dir = existing_data
+        data_dir = existing_data  # type: ignore[assignment]
 
     # Build the fixture batch by walking files in topological order.
+    # Use find_seed_files/read_seed_file so CSV parents are not skipped when
+    # only children have .jsonl (cycle 1738: contact_manager Contact.csv →
+    # ContactNote 400 "Referenced record not found").
     entity_order = topological_sort_entities(appspec.domain.entities)
+    seed_files = find_seed_files(data_dir)
     fixtures: list[dict[str, Any]] = []
     for entity_name in entity_order:
-        entity_file = data_dir / f"{entity_name}.jsonl"
-        if not entity_file.exists():
+        entity_file = seed_files.get(entity_name)
+        if entity_file is None:
             continue
-        with entity_file.open() as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    row = _json.loads(line)
-                except _json.JSONDecodeError:
-                    continue
-                fixtures.append(
-                    {
-                        "id": str(row.get("id", "")),
-                        "entity": entity_name,
-                        "data": row,
-                    }
-                )
+        try:
+            rows = read_seed_file(entity_file)
+        except (OSError, ValueError, _json.JSONDecodeError) as exc:
+            typer.echo(
+                f"Seed note: could not read {entity_file.name} ({exc})",
+                err=True,
+            )
+            continue
+        for row in rows:
+            fixtures.append(
+                {
+                    "id": str(row.get("id", "")),
+                    "entity": entity_name,
+                    "data": row,
+                }
+            )
 
     if not fixtures:
         typer.echo("Seed skipped: no rows to seed", err=True)
