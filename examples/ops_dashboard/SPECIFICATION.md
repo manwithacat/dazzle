@@ -26,7 +26,7 @@ Around these, the product provides the full working surface: engineers can brows
 
 ## Where work happens
 
-**Command Center** is the heart of the product: real-time multi-panel operations attention for the Operations Engineer. Above the fold it pairs a **systems needing attention** queue (degraded / critical / offline estate) with a capped severity-sorted **active alert** feed — two attention panels, not a single long queue. Below that it still presents the full analytical layer — alert timeline, ack queue, task inbox; Systems as kanban, grid, lists, and metrics; bar charts, insight summary, comparison, heatmap, line/area/sparkline trends, day timeline; and System statistical views (histogram, radar, box plot, bullet/bar-track, profile cards, cohort strip).
+**Command Center** is the heart of the product: real-time multi-panel operations attention for the Operations Engineer. Above the fold it opens with a **health pulse** (fleet counts including critical and conversation honesty), then a **systems needing attention** queue (degraded / critical / offline estate) and a capped severity-sorted **active alert** feed, with a capped **live incident notes** trail sharing the fold — multi-panel attention, not a conversation list that owns the viewport. Below that it still presents the full analytical layer — alert timeline, ack queue, task inbox; Systems as kanban, grid, and lists; bar charts, insight summary, comparison, heatmap, line/area/sparkline trends, day timeline; and System statistical views (histogram, radar, box plot, bullet/bar-track, profile cards, cohort strip).
 
 **Incident Review** serves the same engineers for side-by-side pairs in change-management review: Alert metrics beside an Alert list, System metrics, and a confirm-action panel for the Integration connection.
 
@@ -63,4 +63,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:9a90e17027040b4e2271ddc75cdca4950da7eb9082a7a61d135c498fdd93ccd9 -->
+<!-- dazzle-spec-brief: sha256:812fe59f6405ffd290039add128d7cef02b7d6c41e499bf22940b5a8ec6e5578 -->

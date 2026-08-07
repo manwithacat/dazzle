@@ -241,30 +241,36 @@ nav ops_nav:
 # =============================================================================
 
 workspace command_center "Command Center":
-  # Goal B command_density already: systems_attention + active_alerts above fold.
-  # Goal B conversation (cycle 1660): peer ops tools also put the incident
-  # discussion trail on the first screen — not only alert rows.
-  purpose: "Multi-panel ops attention — systems in trouble, active alerts, and live incident notes"
+  # Goal B command_density (cycle 1728): peer PagerDuty/Datadog ops homes put
+  # systems pressure + active alerts (+ health pulse) above a conversation trail —
+  # not a note list that owns the viewport. Conversation stays, capped to share fold.
+  purpose: "Multi-panel ops attention — health pulse, systems in trouble, active alerts, and live incident notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
-  # Goal B conversation spine FIRST — newest operator notes so above-fold
-  # stills show domain-true mitigation prose (display_field: body). Peer
-  # PagerDuty/Opsgenie put the incident thread on the first screen.
-  live_conversation:
-    source: IncidentNote
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: incident_note_detail
-    empty: "No incident notes yet — operator discussion on active alerts appears here"
-    refresh: every 30s
+  # Health pulse first — fleet counts with critical + conversation honesty.
+  health_summary:
+    source: System
+    display: metrics
+    notice:
+      title: "Status as of last sync"
+      body: "Counts refresh every 30s; alert deltas use the prior 24h window."
+      tone: accent
+    aggregate:
+      total_systems: count(System)
+      healthy_count: count(System where status = healthy)
+      critical_count: count(System where status = critical)
+      conversation: count(IncidentNote)
+    tones:
+      healthy_count: positive
+      critical_count: destructive
+      conversation: accent
 
   # Fleet attention — non-healthy systems (degraded / critical / offline).
-  # Cap at 4 so conversation + systems + alerts share the fold.
+  # Cap at 4 so metrics + dual panels + conversation share the fold.
   systems_attention:
     source: System
     filter: status != healthy
@@ -276,13 +282,24 @@ workspace command_center "Command Center":
     refresh: every 30s
 
   # Alert Feed - active alerts as an urgency queue (severity-sorted).
-  # Live-refreshes (#1391). Cap at 6 for fold with conversation + systems.
+  # Live-refreshes (#1391). Cap at 4 for fold with systems + conversation.
   active_alerts:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at desc
-    limit: 6
+    limit: 4
     display: queue
+    refresh: every 30s
+
+  # Goal B conversation spine AFTER dual attention — newest operator notes so
+  # stills show domain-true mitigation prose without owning the whole fold.
+  live_conversation:
+    source: IncidentNote
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: incident_note_detail
+    empty: "No incident notes yet — operator discussion on active alerts appears here"
     refresh: every 30s
 
   # Alert Timeline — chronological event stream across all systems
@@ -347,25 +364,8 @@ workspace command_center "Command Center":
     outlier_method: iqr
     empty: "No systems registered"
 
-  # Health Summary — metrics tile region. Picks up the v0.61.65
-  # per-tile tones (#2) and v0.61.68 notice band (#7) from the
-  # AegisMark UX patterns roadmap.
-  health_summary:
-    source: System
-    display: metrics
-    notice:
-      title: "Status as of last sync"
-      body: "Counts refresh every 30s; alert deltas use the prior 24h window."
-      tone: accent
-    aggregate:
-      total_systems: count(System)
-      healthy_count: count(System where status = healthy)
-      critical_count: count(System where status = critical)
-      conversation: count(IncidentNote)
-    tones:
-      healthy_count: positive
-      critical_count: destructive
-      conversation: accent
+  # Health Summary is declared above the fold (Goal B command_density) —
+  # dual attention + conversation share the first screen with the pulse.
 
   # Alert Volume — bar-chart distribution by severity
   alert_severity_breakdown:
@@ -693,13 +693,12 @@ workspace command_center "Command Center":
   ux:
     as ops_engineer:
       scope: all
-      # Goal B: lead with incident discussion so fold_count=3 stills show
-      # Live Conversation prose, then systems + active alerts (command density).
-      purpose: "Incident notes, systems needing attention, and the active alert feed"
-      focus: live_conversation, systems_attention, active_alerts
+      # Goal B command_density: health pulse + dual attention above conversation.
+      purpose: "Multi-panel ops — health pulse, systems pressure, active alerts, then incident notes"
+      focus: health_summary, systems_attention, active_alerts, live_conversation
     as admin:
-      purpose: "Full fleet command — conversation trail and attention panels first"
-      focus: live_conversation, systems_attention, active_alerts
+      purpose: "Full fleet command — multi-panel attention before conversation trail"
+      focus: health_summary, systems_attention, active_alerts, live_conversation
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)

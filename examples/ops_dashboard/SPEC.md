@@ -93,11 +93,12 @@ The COMMAND_CENTER archetype provides a dense, expert-focused layout optimized f
 
 **Where work happens** (job-shaped first, not a bare alert table):
 
-- **Health metrics** strip (estate counts / health summary)
-- **Acknowledgement queue** (`ack_queue`) for unacked alerts by severity
-- Live alert feed, systems grid/kanban, status_list readiness, and charts
-- **Task inbox** for multi-source “what needs me” ops work
-- Secondary: Incident Review (side-by-side pairs) and Incident Response wizard
+- **Health metrics** strip (estate counts / health summary, including critical + conversation honesty)
+- **Systems needing attention** queue (non-healthy estate, capped)
+- **Active alert** feed (severity-sorted, capped)
+- **Live incident notes** trail (capped conversation sharing the fold)
+- Secondary analytical layer: ack queue, systems grid/kanban, status_list readiness, charts, task inbox
+- Secondary desks: Incident Review (side-by-side pairs) and Incident Response wizard
 
 **Signals**:
 
