@@ -304,27 +304,28 @@ workspace studio_dashboard "Studio Dashboard":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-# Goal B media: catalog is a visual media shelf (preview thumbs + type labels),
-# not a metadata-only warehouse. Brand palette strip anchors identity above fold.
+# Goal B media (cycle 1734): catalog is a visual media shelf — asset preview
+# thumbs must win the fold. Peer tools (Bynder / Frontify / Adobe CC) put
+# pixels first; brand meta is secondary context, not a four-row palette wall.
 workspace asset_catalog "Asset Catalog":
-  purpose: "Media shelf — brand logos + palette, then asset preview thumbs (no metric delta theater)"
+  purpose: "Media shelf — asset preview thumbs above fold, then compact brand palette (no metric delta theater)"
   access: persona(admin, designer, reviewer)
-  # Brand identity strip first: logos + palette swatches (framework image/color).
-  brand_palette:
-    source: Brand
-    display: queue
-    sort: name asc
-    limit: 8
-    action: brand_detail
-    empty: "No brands yet"
-  # Visual media grid — preview_url thumbs + type · name titles.
+  # Visual media grid FIRST — preview_url thumbs + type · name titles.
   media_grid:
     source: Asset
     display: grid
     sort: created_at desc
-    limit: 20
+    limit: 12
     action: asset_detail
     empty: "No assets yet — upload or seed previews"
+  # Brand identity strip after pixels (cap so it cannot eat the fold).
+  brand_palette:
+    source: Brand
+    display: queue
+    sort: name asc
+    limit: 4
+    action: brand_detail
+    empty: "No brands yet"
   review_queue:
     source: Asset
     filter: status = review
@@ -347,18 +348,37 @@ workspace asset_catalog "Asset Catalog":
     aggregate:
       count: count(Asset)
     empty: "No assets yet"
+  ux:
+    as designer:
+      purpose: "See asset preview thumbs above fold before brand palette"
+      focus: media_grid, brand_palette, review_queue
+    as admin:
+      purpose: "Media shelf first — previews, then brand identity"
+      focus: media_grid, brand_palette, review_queue
+    as reviewer:
+      purpose: "Scan creatives as pixels before brand meta"
+      focus: media_grid, brand_palette, review_queue
 
-# Goal B media: brand desk is logo + palette identity, then campaigns/assets.
+# Goal B media: brand desk is asset media shelf first, then compact logo identity.
 workspace brand_desk "Brand Desk":
-  purpose: "Brand media identity — logos and palette swatches above fold, then work queues"
+  purpose: "Brand media identity — asset preview thumbs above fold, then logo shelf and campaigns"
   access: persona(admin, designer)
-  # Logo + primary/secondary/accent swatches on each row (media depth).
+  # Goal B media shelf FIRST — logo/photo creatives as preview thumbs (pixels win).
+  asset_media:
+    source: Asset
+    filter: asset_type = logo or asset_type = photo or asset_type = illustration
+    sort: created_at desc
+    limit: 8
+    display: grid
+    action: asset_detail
+    empty: "No logo or photo assets yet"
+  # Logo + primary/secondary/accent swatches (compact — cap for fold share).
   # Metrics omitted on purpose: seed-noise period deltas are presentation residual.
   brand_media:
     source: Brand
     display: queue
     sort: name asc
-    limit: 25
+    limit: 3
     action: brand_detail
     empty: "No brands yet"
   campaign_queue:
@@ -380,6 +400,13 @@ workspace brand_desk "Brand Desk":
     aggregate:
       count: count(Campaign)
     empty: "No campaigns yet"
+  ux:
+    as designer:
+      purpose: "Asset media previews above fold before logo shelf and campaigns"
+      focus: asset_media, brand_media, campaign_queue
+    as admin:
+      purpose: "Creative previews first, then brand logos and campaign schedule"
+      focus: asset_media, brand_media, campaign_queue
 
 workspace review_desk "Review Desk":
   # Goal B conversation depth: peer design tools put the critique trail on the

@@ -60,12 +60,13 @@ and that grant is itself an explicit, auditable declaration.
 
 - **Studio Dashboard** — designer/admin portfolio: metrics, brand pull-queue, asset timelines,
   asset trail, status chart, and in-review queue.
-- **Brand Desk** — brand-first path: brand metrics, brand pull-queue, active campaign
-  queue, asset trail, and campaign mix chart.
+- **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
+  thumbs above fold), compact logo identity shelf, active campaign queue, asset trail,
+  and campaign mix chart.
 - **Review Desk** — reviewer home: review-load metrics (including conversation count), live critique trail (Feedback copy above the fold), awaiting-review queue,
   recently approved, feedback timeline, pipeline kanban, and status chart.
-- **Asset Catalog** — catalog metrics, metadata card grid of assets, review queue, pipeline
-  kanban, and status mix chart.
+- **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
+  compact brand palette, review queue, pipeline kanban, and status mix chart.
 - **Campaigns** — campaign schedule desk with seeded active queue, status board, brand
   context, and load chart; campaign detail hubs list assigned creatives.
 - **Feedback** — feedback trail with notes queue, assets-in-review grid,
@@ -125,4 +126,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:3456c5057e1605bca9ba9b4f37e6c2e258cacf3327f9b3da0a40da497b48f159 -->
+<!-- dazzle-spec-brief: sha256:f6a0b75fd3c561baddd47bc9e0f7f6d1e9d922ddd1b75cf429266b343dcc665e -->

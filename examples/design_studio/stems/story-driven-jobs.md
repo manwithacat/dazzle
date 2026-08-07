@@ -10,7 +10,8 @@ a shared asset warehouse.
 - designer default: `studio_dashboard` = portfolio metrics + grids.
 - designer also has `brand_desk` (brand-first path).
 - reviewer default: `review_desk` = review-load + awaiting-review queue.
-- `asset_catalog` remains the full library (card grid, not a media gallery) for all product personas.
+- `asset_catalog` is the media shelf (preview thumbs first, then brand palette)
+  for all product personas — pixels above brand meta (Goal B media).
 - Brand hub related **assets** and **campaigns** are **pull queues**
   (assets: name+status+type; campaigns: name+status) — not status_cards/tables.
 - Asset hub feedback is a **pull queue** (rating+comment) — not warehouse tables.
