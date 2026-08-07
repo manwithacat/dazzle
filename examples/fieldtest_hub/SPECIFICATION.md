@@ -31,9 +31,10 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
 - **Engineering Dashboard** — engineer home: fleet metrics, device-attention
   and triage queues, critical issues and open tasks, then secondary views
   (kanban boards, timelines, device tree, diagram, map, tester directory).
-- **Manager Ops** — manager home: fleet health KPIs, non-active device queue,
-  quality strip, critical issues, tester activity, and open work — without the
-  engineering mega-board chrome.
+- **Manager Ops** — manager home multi-panel command density: quality pulse
+  (open / critical / sessions), capped critical-issue and non-active device
+  attention queues, then triage notes and fleet KPIs — dual attention above
+  fold, not a single conversation list that owns the viewport.
 - **Issue Triage** — shared engineer/manager desk for open and critical field
   reports (severity-first queue and status board).
 - **Firmware Pipeline** — release desk: draft/live metrics, release grid and
@@ -86,4 +87,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:f259fd825ed10a48e1940cdf05c3bd5079fc71da242d2d7e341955d623c0a485 -->
+<!-- dazzle-spec-brief: sha256:2f2c3b53b9af9a6693794dbee0322738c630cff6fd7bc183230c35c947ab9693 -->

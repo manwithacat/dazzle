@@ -1474,16 +1474,53 @@ workspace tester_dashboard "Tester Dashboard":
 # nav for engineer/manager/tester (auto-discover still lists entities).
 
 workspace manager_ops "Manager Ops":
-  # Goal B conversation: triage notes trail with fleet pulse so ops is a
-  # reply surface, not only device/issue queues.
-  purpose: "Triage notes, fleet health, and field quality at a glance"
+  # Goal B command_density (cycle 1726): peer field-ops / Datadog-style homes
+  # put ≥2 attention panels above fold — critical issues + non-active devices —
+  # not a single conversation queue that eats the viewport. Caps match
+  # ops_dashboard command_center (conversation + systems + alerts share fold).
+  # Goal B conversation remains: domain-true IssueNote prose still on home.
+  purpose: "Multi-panel field ops — quality pulse, critical issues, device attention, and triage notes"
   access: persona(manager, admin)
 
-  # Goal B conversation spine FIRST — domain-true field prose above fold.
+  # Compact quality pulse first (open / critical / sessions).
+  quality_strip:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      open: count(IssueReport where status = open)
+      critical: count(IssueReport where severity = critical and status != closed)
+      sessions: count(TestSession)
+      conversation: count(IssueNote)
+    tones:
+      open: warning
+      critical: destructive
+      conversation: accent
+
+  # Attention panel 1 — critical open field issues (cap for fold share).
+  critical_issues:
+    source: IssueReport
+    filter: severity = critical and status != closed
+    sort: reported_at desc
+    limit: 4
+    display: queue
+    action: issue_report_detail
+    empty: "No critical issues!"
+
+  # Attention panel 2 — non-active fleet (prototype / recalled / offline).
+  device_attention:
+    source: Device
+    filter: status != active
+    sort: status asc, name asc
+    limit: 4
+    display: queue
+    action: device_detail
+    empty: "All registered devices are active"
+
+  # Conversation trail shares the fold — cap so dual attention stays visible.
   live_conversation:
     source: IssueNote
     sort: created_at desc
-    limit: 8
+    limit: 4
     display: queue
     action: issue_note_detail
     empty: "No conversation yet — notes on field issues appear here"
@@ -1505,40 +1542,11 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "See triage discussion before fleet and issue queues"
-      focus: live_conversation, fleet_overview, quality_strip, critical_issues
+      purpose: "Quality pulse, critical issues, and device attention above fold — notes share the fold"
+      focus: quality_strip, critical_issues, device_attention, live_conversation
     as admin:
-      purpose: "Triage notes and fleet pulse for field quality oversight"
-      focus: live_conversation, fleet_overview, quality_strip, critical_issues
-
-  device_attention:
-    source: Device
-    filter: status != active
-    sort: status asc, name asc
-    limit: 15
-    display: queue
-    action: device_detail
-    empty: "All registered devices are active"
-
-  quality_strip:
-    source: IssueReport
-    display: metrics
-    aggregate:
-      open: count(IssueReport where status = open)
-      critical: count(IssueReport where severity = critical and status != closed)
-      sessions: count(TestSession)
-    tones:
-      open: warning
-      critical: destructive
-
-  critical_issues:
-    source: IssueReport
-    filter: severity = critical and status != closed
-    sort: reported_at desc
-    limit: 10
-    display: queue
-    action: issue_report_detail
-    empty: "No critical issues!"
+      purpose: "Multi-panel field quality oversight — critical issues and device attention first"
+      focus: quality_strip, critical_issues, device_attention, live_conversation
 
   tester_activity:
     source: TestSession

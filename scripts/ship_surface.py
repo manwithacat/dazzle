@@ -101,6 +101,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_hr_records_conversation_goal_b.py",
     # fieldtest_hub Goal B conversation (cycle 1671 IssueNote + ops/triage trail)
     "tests/unit/test_fieldtest_conversation_goal_b.py",
+    # fieldtest_hub Goal B command_density (cycle 1726 manager_ops dual attention)
+    "tests/unit/test_fieldtest_command_density_goal_b.py",
     # simple_task Goal B conversation (cycle 1674 TaskComment live trail)
     "tests/unit/test_simple_task_conversation_goal_b.py",
     # acme_billing Goal B conversation (InvoiceNote live trail on billing desks)
