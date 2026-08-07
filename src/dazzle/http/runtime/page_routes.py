@@ -1606,8 +1606,16 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
             _filters: dict[str, Any] = {tab.filter_field: _id}
             if tab.filter_type_field and tab.filter_type_value:
                 _filters[tab.filter_type_field] = tab.filter_type_value
+            # #1646: finger-scale related budget (≤10), not warehouse page_size=50.
+            # Honour per-tab page_size/limit when IR carries it; default 8.
+            _tab_budget = getattr(tab, "page_size", None) or getattr(tab, "limit", None)
+            try:
+                _related_page_size = int(_tab_budget) if _tab_budget else 8
+            except (TypeError, ValueError):
+                _related_page_size = 8
+            _related_page_size = max(1, min(_related_page_size, 50))
             data = await _list_entity_in_process(
-                prc, tab.entity_name, page=1, page_size=50, filters=_filters
+                prc, tab.entity_name, page=1, page_size=_related_page_size, filters=_filters
             )
             tab.rows = data.get("items", [])
             tab.total = data.get("total", len(tab.rows))

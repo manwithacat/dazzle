@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1735 (2026-08-07).** **capability-sweep** (cadence ≥20 since formal@1663 / stamp@1714; log_meta null) + campaign **framework-ux ship** under require_mutation. Inventory tip green run **31179083450** (bf6433de8a): **UNOWNED=0** **COGNITION_STALE_eff≈25** **HYGIENE_STALE_eff≈38** rows≈78 (COGNITION=31 HYGIENE=40 DRIVER=2 EXEMPT=5). Fresh USED lag&lt;20: interesting_product@1730/34 Goal B ships, product_quality/demo quality/reset@1716, acceptance+trial@1725, gallery@1718. DRIVER CodeQL+inbox **USED@1735**. densify=0 dual_lock=0 suppress_smoke=1 residual=0. **Ship #1646:** detail money prefers `{name}_minor`/`_currency` when bare empty; related-tab page_size default **8** (finger-scale; honour tab.page_size/limit; cap 50). Unit pin + ship-surface promote. Top digs next: campaign journey_dogfood / story_walk / agent_acceptance / framework edge / **semgrep hygiene** never-exercised / domain|presentation COGNITION — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **15/100**.
+> **Cycle 1734 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop streak cap). Goal B **media@design_studio**: asset_catalog/brand_desk media grids first; unit pin + ship-surface; hero recapture. interesting_product **USED@1734**. CodeQL+inbox **USED@1734**. budget 1. Explore **14/100**.
 > **Cycle 1730 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop_streak≥5). Goal B **org_structure@project_tracker**: people_desk role kanban + department queue + project owners before unassigned; 6-person multi-dept seeds (non-STABLE ICs); unit pin + ship-surface; hero recapture. interesting_product **USED@1730**. CodeQL+inbox **USED@1730**. budget 1. Explore **11/100**.
 > **Cycle 1729 (2026-08-07).** **self-audit** (cadence ≥15 since 1713) — deferred campaign interesting_product. Window post-1713 → HEAD `72bf7f56f`. 5 largest product ships CLEAN: c1728 ops_dashboard command_density; c1727 support_tickets command_density; c1726 fieldtest command_density; c1725 media thumbs VIEW hubs; c1724 invoice_ops document. Unit pins 21 passed; stills mtimes match recapture claims; dig-contract theater N/A (Goal B product+still, not walk PASS). 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1729**. budget 0. Explore **10/100**. Next: capability-sweep lag (last formal@1663 / stamp@1714 overdue ≥20) or aggressive interesting_product (org_structure / empty_region) require_mutation.
 > **Cycle 1728 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop_streak≥5). Goal B **command_density@ops_dashboard**: command_center multi-panel health→systems→alerts before live_conversation (caps 4); unit pin + ship-surface; hero recapture. interesting_product **USED@1728**. CodeQL+inbox **USED@1728**. budget 1. Explore **10/100**.
@@ -69,7 +71,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1730 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1734 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -133,8 +135,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1729 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1729 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1735 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1735 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |

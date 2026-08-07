@@ -149,6 +149,33 @@ def _field_ref_route(f: Any) -> tuple[str, str]:
     return ref_entity, ref_route
 
 
+def _is_empty_detail_value(value: Any) -> bool:
+    """True when a raw item value should not be preferred over expanded keys."""
+    return value is None or value == ""
+
+
+def _resolve_detail_money_value(
+    field_name: str, item: dict[str, Any], bare: Any, extra: dict[str, Any]
+) -> tuple[Any, str]:
+    """Resolve money field value + currency from expanded storage (#1646).
+
+    Storage/API expand money to ``{name}_minor`` + ``{name}_currency``. LIST
+    columns already read ``_minor``; DETAIL must match so VIEW hubs do not
+    render ``—`` when only expanded keys are populated.
+    """
+    value = bare
+    if _is_empty_detail_value(value):
+        minor = item.get(f"{field_name}_minor")
+        if not _is_empty_detail_value(minor):
+            value = minor
+    currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+    if not currency_code:
+        currency_code = str(item.get(f"{field_name}_currency", "") or "")
+    if not currency_code:
+        currency_code = "GBP"
+    return value, currency_code
+
+
 def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
     """Map one FieldContext + item → flat detail field dict."""
     field_name = getattr(f, "name", "") or getattr(f, "key", "")
@@ -157,7 +184,12 @@ def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
     if kind == "ref" and isinstance(item, dict):
         value = _detail_ref_value(field_name, item, value)
     extra = getattr(f, "extra", None) or {}
-    currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+    if not isinstance(extra, dict):
+        extra = {}
+    currency_code = str(extra.get("currency_code", "") or "")
+    # Money / currency kinds: prefer expanded _minor/_currency when bare empty (#1646).
+    if kind in ("money", "currency") and isinstance(item, dict):
+        value, currency_code = _resolve_detail_money_value(field_name, item, value, extra)
     ref_entity, ref_route = _field_ref_route(f)
     return {
         "key": field_name,
