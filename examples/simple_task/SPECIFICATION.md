@@ -54,8 +54,9 @@ queues. The **Team Overview** is the manager home: metrics, flow chart, review
 queue, team roster, assignee plate kanban, and recent discussion timeline.
 **My Work** is each person's assigned pressure strip, personal board, due
 timeline, and discussion timeline. **Discussion** is the comment desk with
-trail, active cards, and status chart. **People** is the roster and capacity
-desk with unassigned queue, in-flight board, and load chart.
+trail, active cards, and status chart. **People** is the org-structure desk:
+role board + department queue, then roster, unassigned queue, plate-by-person,
+and department headcount mix.
 
 ## How work flows through it
 
@@ -119,4 +120,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:0e72f2f2ff9fd14cee304f5920e34e96ff3f89416ebd780ed0232e416991fb26 -->
+<!-- dazzle-spec-brief: sha256:fc5fcc73d3f48a61a881fd2f5a09ad77f2195feda2ac37e06396705a3f293eef -->

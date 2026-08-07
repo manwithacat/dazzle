@@ -1133,8 +1133,10 @@ workspace comments_desk "Discussion":
     empty: "No open tasks"
 
 # Fifth product workspace: people/roster desk.
+# Goal B org_structure: peer task tools (Linear / Asana / Notion) show team by
+# role and department — not a flat warehouse roster above an unassigned dump.
 workspace people_desk "People":
-  purpose: "Team roster and capacity — who is active and what is on their plate"
+  purpose: "Org structure people can parse — team by role and department, then open load"
   access: persona(admin, manager)
 
   people_pulse:
@@ -1148,13 +1150,33 @@ workspace people_desk "People":
       active: positive
       open_tasks: accent
 
-  # Work-surface utility: people roster is a pull-to-open teammate hub queue
-  # (Monday review / ST-021), not a card gallery grid.
+  # Role board (enum columns admin/manager/member) — org authority shape.
+  by_role:
+    source: User
+    filter: is_active = true
+    display: kanban
+    group_by: role
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No team members yet"
+
+  # Department roster queue — people names with department meta (org placement).
+  by_department:
+    source: User
+    filter: is_active = true
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No team members yet"
+
+  # Secondary flat roster (after hierarchy) — sorted by department.
   roster:
     source: User
     filter: is_active = true
-    sort: name asc
-    limit: 25
+    sort: department asc, name asc
+    limit: 20
     display: queue
     action: user_detail
     empty: "No active teammates"
@@ -1163,7 +1185,7 @@ workspace people_desk "People":
     source: Task
     filter: assigned_to = null and status != done
     sort: priority desc
-    limit: 15
+    limit: 12
     display: queue
     action: task_edit
     empty: "Every open task has an owner"
@@ -1187,6 +1209,16 @@ workspace people_desk "People":
     action: task_detail
     empty: "No tasks in progress or review"
 
+  # Department headcount mix (org shape at a glance).
+  dept_mix:
+    source: User
+    filter: is_active = true
+    display: bar_chart
+    group_by: department
+    aggregate:
+      count: count(User)
+    empty: "No team members yet"
+
   load_mix:
     source: Task
     filter: status != done and assigned_to != null
@@ -1199,15 +1231,23 @@ workspace people_desk "People":
   capacity_hint:
     display: status_list
     entries:
-      - title: "Plate by person"
-        caption: "Kanban columns are assignees — Monday scan who owns what"
+      - title: "By role board"
+        caption: "Admin / Manager / Member columns show org authority at a glance"
         icon: "users"
         state: accent
-      - title: "Unassigned queue"
-        caption: "Only tasks with no owner appear above"
+      - title: "Department queue"
+        caption: "People sorted by dept before flat roster and unassigned load"
+        icon: "building"
+        state: positive
+      - title: "Plate by person"
+        caption: "Assignee columns for Monday capacity scan after org shape"
         icon: "list-checks"
         state: warning
-      - title: "Board view"
-        caption: "Status flow is on Task Board for visual WIP"
-        icon: "columns"
-        state: positive
+
+  ux:
+    as manager:
+      purpose: "See team by role and department before unassigned load"
+      focus: people_pulse, by_role, by_department, roster
+    as admin:
+      purpose: "Org structure and role board before open-task load"
+      focus: people_pulse, by_role, by_department, roster

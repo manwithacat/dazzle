@@ -499,17 +499,20 @@
       "name": "people_desk",
       "title": "People",
       "kind": "workspace",
-      "purpose": "Team roster and capacity — who is active and what is on their plate",
+      "purpose": "Org structure people can parse — team by role and department, then open load",
       "personas": [
         "admin",
         "manager"
       ],
       "contents": [
         "metrics of User",
+        "kanban of User",
+        "queue of User",
         "queue of User",
         "queue of Task",
         "kanban of Task",
         "kanban of Task",
+        "bar_chart of User",
         "bar_chart of Task"
       ]
     }
