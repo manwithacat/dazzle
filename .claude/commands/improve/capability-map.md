@@ -83,12 +83,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1616 | STALE |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1718 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1624 | STALE |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1616 | STALE |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1718 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -137,6 +137,7 @@ apply map patches with `{"apply":true}`.
 
 
 > **Cycle 1656 (2026-08-03).** residual=0 densify=0 CI green post-1655 repair; campaign story_walk **overridden** interesting_product (require_mutation). Goal B **document@simple_task**: TaskBrief entity + composition queues on admin/team/my_work; 12 domain-true brief/acceptance/runbook lines; hero stills show Composition headlines above fold; open_via + ship-surface pins. interesting_product **USED@1656**. budget 1. Explore **16/100**.
+> **Cycle 1718 (2026-08-07).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 45 PASS; **Ship** `grid.column_resize_drag_widens` + `grid_column_resize` runner (drag handle +64 widens col within snap; aria-sort unchanged); catalog **46/46 PASS**; unit pin. densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1718**. budget 1. Explore **1/100**.
 > **Cycle 1654 (2026-08-03).** residual=0 densify=0 tip CI **in_progress** (1653 llm_ticket ship) — no push. campaign story_walk **overridden** interesting_product (require_mutation). Goal B **conversation@design_studio**: Feedback display_field=comment + live_conversation on studio_dashboard/review_desk/feedback_desk; domain-true critique seeds; hero stills show Live Conversation prose above fold; unit pin. interesting_product **USED@1654**. budget 1. Explore **15/100**.
 > **Cycle 1653 (2026-08-03).** residual=0 densify=0 CI green post-repair; campaign story_walk **overridden** interesting_product. Goal B **conversation@llm_ticket_classifier**: live_ai_replies + suggested_response display_field; stills recaptured. interesting_product **USED@1653**. budget 1. Explore **14/100**.
 > **Cycle 1650 (2026-08-03).** residual=0 densify=0 campaign story_walk **overridden** interesting_product (require_mutation). Goal B **document@acme_billing**: LineItem composition + demo User bind for current_user.org; hero stills recaptured. interesting_product **USED@1650**. budget 1. Explore **13/100**.

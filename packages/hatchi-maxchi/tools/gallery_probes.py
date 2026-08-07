@@ -1270,6 +1270,42 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1718 — grid-resize extension: drag header handle widens <col>
+    # without firing sort. Catalog expand under require_mutation (discover
+    # uncovered=0; 45/45 green). Mirrors
+    # test_behaviour.test_grid_column_resize_drags_col_width_and_persists
+    # (drag + sort-immunity only; skip reload persistence).
+    Probe(
+        id="grid.column_resize_drag_widens",
+        stem="grid",
+        page="hyperparts/grid.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pointer-dragging a header resize handle widens the column's <col> "
+            "(snap-8, live) without cycling the header's aria-sort "
+            "(dz-grid-resize) — resize chrome is live controller work, not a "
+            "static col width demo"
+        ),
+        kind="grid_column_resize",
+        params={
+            "body": "[data-grid-body], [data-dz-grid-body]",
+            "handle": ('[data-grid-resize="first"], [data-dz-grid-resize="first"]'),
+            "col": (
+                '[data-grid] col[data-col="first"], '
+                '[data-dz-grid] col[data-col="first"], '
+                '[data-grid] col[data-dz-col="first"], '
+                '[data-dz-grid] col[data-dz-col="first"]'
+            ),
+            "drag_px": 64,
+            "snap_tol": 16,
+            "scope": ".hm-preview",
+            "hydrate_ms": 3000,
+            "settle_ms": 80,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -4364,6 +4400,178 @@ def _run_grid_column_visibility(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_grid_column_resize(page: Any, probe: Probe) -> dict[str, Any]:
+    """Drag a grid header resize handle; assert col width grows; sort untouched.
+
+    Mirrors test_behaviour.test_grid_column_resize_drags_col_width_and_persists
+    (drag + sort-immunity; no reload persistence pin).
+    """
+    params = probe.params
+    body_sel = params.get("body", "[data-grid-body], [data-dz-grid-body]")
+    handle_sel = params.get(
+        "handle",
+        '[data-grid-resize="first"], [data-dz-grid-resize="first"]',
+    )
+    col_sel = params.get(
+        "col",
+        (
+            '[data-grid] col[data-col="first"], '
+            '[data-dz-grid] col[data-col="first"], '
+            '[data-grid] col[data-dz-col="first"], '
+            '[data-dz-grid] col[data-dz-col="first"]'
+        ),
+    )
+    drag_px = int(params.get("drag_px", 64))
+    snap_tol = int(params.get("snap_tol", 16))
+    hydrate_ms = int(params.get("hydrate_ms", 3000))
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    body = scope.locator(body_sel).first
+    if body.count() == 0:
+        body = page.locator(body_sel).first
+    if body.count() == 0:
+        return {"verdict": "ERROR", "detail": f"grid body not found ({body_sel})"}
+
+    try:
+        first_body = body_sel.split(",")[0].strip()
+        page.wait_for_selector(
+            f"{first_body} tr[id], {first_body} tr[data-grid-row-id], "
+            f"{first_body} tr[data-dz-grid-row-id]",
+            timeout=hydrate_ms,
+        )
+    except Exception:  # noqa: BLE001
+        page.wait_for_timeout(min(hydrate_ms, 800))
+
+    handle = scope.locator(handle_sel).first
+    if handle.count() == 0:
+        handle = page.locator(handle_sel).first
+    if handle.count() == 0:
+        return {
+            "verdict": "ERROR",
+            "detail": f"resize handle not found ({handle_sel}) — grid-resize missing?",
+        }
+
+    # Ensure handle is in viewport (grid often below fold).
+    handle.scroll_into_view_if_needed()
+    page.wait_for_timeout(50)
+
+    start_width = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const c = document.querySelector(part.trim());
+            if (!c) continue;
+            const w = c.offsetWidth || c.getBoundingClientRect().width;
+            if (w) return Math.round(w);
+          }
+          return 0;
+        }""",
+        col_sel,
+    )
+    if not start_width:
+        start_width = page.evaluate(
+            """(sel) => {
+              for (const part of sel.split(',')) {
+                const h = document.querySelector(part.trim());
+                if (!h) continue;
+                const th = h.closest('th');
+                if (th) return Math.round(th.getBoundingClientRect().width);
+              }
+              return 0;
+            }""",
+            handle_sel,
+        )
+    if not start_width:
+        return {
+            "verdict": "ERROR",
+            "detail": f"could not measure start width ({col_sel} / handle th)",
+        }
+
+    aria_before = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const h = document.querySelector(part.trim());
+            if (!h) continue;
+            const th = h.closest('th');
+            return th ? th.getAttribute('aria-sort') : null;
+          }
+          return null;
+        }""",
+        handle_sel,
+    )
+
+    box = handle.bounding_box()
+    if not box:
+        return {"verdict": "ERROR", "detail": "resize handle has no bounding box"}
+    x = box["x"] + box["width"] / 2
+    y = box["y"] + box["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + drag_px, y, steps=4)
+    page.mouse.up()
+    page.wait_for_timeout(settle)
+
+    end_width = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const c = document.querySelector(part.trim());
+            if (!c) continue;
+            const styleW = parseInt(c.style.width, 10) || 0;
+            if (styleW) return styleW;
+            return Math.round(c.offsetWidth || c.getBoundingClientRect().width || 0);
+          }
+          return 0;
+        }""",
+        col_sel,
+    )
+    expected = start_width + drag_px
+    if abs(end_width - expected) > snap_tol:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"drag +{drag_px} from {start_width} must land within snap "
+                f"tol={snap_tol} of {expected}; got width={end_width} "
+                "— dz-grid-resize not applying live col width"
+            ),
+            "start_width": start_width,
+            "end_width": end_width,
+            "expected": expected,
+        }
+
+    aria_after = page.evaluate(
+        """(sel) => {
+          for (const part of sel.split(',')) {
+            const h = document.querySelector(part.trim());
+            if (!h) continue;
+            const th = h.closest('th');
+            return th ? th.getAttribute('aria-sort') : null;
+          }
+          return null;
+        }""",
+        handle_sel,
+    )
+    if aria_after != aria_before:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"resize drag must not cycle header sort "
+                f"(aria-sort {aria_before!r} → {aria_after!r})"
+            ),
+            "aria_before": aria_before,
+            "aria_after": aria_after,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"drag +{drag_px}px {start_width}→{end_width} (tol {snap_tol}); "
+            f"aria-sort unchanged ({aria_before!r})"
+        ),
+        "start_width": start_width,
+        "end_width": end_width,
+    }
+
+
 def _run_native_dialog_close_submit(page: Any, probe: Probe) -> dict[str, Any]:
     """Open via data-dialog-open; close via method=dialog submit (✕).
 
@@ -4578,6 +4786,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "kanban_keyboard_move": _run_kanban_keyboard_move,
     "grid_inline_edit": _run_grid_inline_edit,
     "grid_column_visibility": _run_grid_column_visibility,
+    "grid_column_resize": _run_grid_column_resize,
 }
 
 

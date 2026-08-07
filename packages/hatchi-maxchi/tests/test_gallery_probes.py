@@ -72,6 +72,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "kanban.keyboard_move_updates_column" in ids
     assert "grid.inline_edit_commits_and_refreshes" in ids
     assert "grid.column_visibility_toggle_and_reset" in ids
+    assert "grid.column_resize_drag_widens" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -87,6 +88,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "kanban_keyboard_move",
             "grid_inline_edit",
             "grid_column_visibility",
+            "grid_column_resize",
             "css_tooltip_hover",
             "css_tooltip_force_open",
             "data_open_escape",
