@@ -54,6 +54,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "toggle.pressed_flips" in ids
     assert "toggle_group.radio_exclusive" in ids
     assert "carousel.advance_next" in ids
+    assert "carousel.keyboard_arrows_change_slide" in ids
     assert "combobox.enhance_and_select" in ids
     assert "wizard.forward_after_valid" in ids
     assert "toast.dismiss_and_client_fire" in ids
@@ -99,6 +100,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "aria_pressed_toggle",
             "radio_group_select",
             "carousel_advance",
+            "carousel_keyboard_arrows",
             "combobox_select",
             "wizard_step_forward",
             "toast_dismiss_and_fire",
@@ -120,6 +122,9 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     carousel = next(p for p in PROBES if p.id == "carousel.advance_next")
     assert carousel.kind == "carousel_advance"
     assert carousel.fix_surface == "controller"
+    carousel_kb = next(p for p in PROBES if p.id == "carousel.keyboard_arrows_change_slide")
+    assert carousel_kb.kind == "carousel_keyboard_arrows"
+    assert carousel_kb.fix_surface == "controller"
     combobox = next(p for p in PROBES if p.id == "combobox.enhance_and_select")
     assert combobox.kind == "combobox_select"
     assert combobox.fix_surface == "controller"

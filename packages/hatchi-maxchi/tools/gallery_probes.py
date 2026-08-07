@@ -664,6 +664,35 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1739 — carousel keyboard: ArrowRight/Left + End/Home from toolbar focus.
+    # Catalog expand under require_mutation (discover uncovered=0; 46/46 green).
+    # Mirrors test_behaviour.test_carousel_keyboard_arrows_change_slide.
+    Probe(
+        id="carousel.keyboard_arrows_change_slide",
+        stem="carousel",
+        page="hyperparts/carousel.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "With focus on a carousel control, ArrowRight/Left step index 0↔1 and "
+            "End/Home jump to last/first slide (data-carousel-index) — keyboard "
+            "parity for clamp strips, not pointer-only chrome"
+        ),
+        kind="carousel_keyboard_arrows",
+        params={
+            "root": (
+                '[data-carousel-wrap="none"], [data-dz-carousel-wrap="none"], '
+                ".carousel[data-carousel-wrap=none], .dz-carousel[data-dz-carousel-wrap=none]"
+            ),
+            "next": "[data-carousel-next], [data-dz-carousel-next]",
+            "prev": "[data-carousel-prev], [data-dz-carousel-prev]",
+            "expect_last_index": "3",
+            "scope": ".hm-preview",
+            "settle_ms": 100,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
     # Cycle 1513 — combobox progressive enhance + pick commits select value.
     Probe(
         id="combobox.enhance_and_select",
@@ -2331,6 +2360,114 @@ def _run_carousel_advance(page: Any, probe: Probe) -> dict[str, Any]:
         "index_before": index_before,
         "index_after": index_after,
         "status_after": status_after.strip(),
+    }
+
+
+def _run_carousel_keyboard_arrows(page: Any, probe: Probe) -> dict[str, Any]:
+    """Keyboard ArrowRight/Left + End/Home change carousel index from control focus.
+
+    Mirrors test_behaviour.test_carousel_keyboard_arrows_change_slide (cycle 1739).
+    """
+    params = probe.params
+    root_sel = params["root"]
+    next_sel = params.get("next", "[data-carousel-next], [data-dz-carousel-next]")
+    prev_sel = params.get("prev", "[data-carousel-prev], [data-dz-carousel-prev]")
+    expect_last = str(params.get("expect_last_index", "3"))
+    settle = int(params.get("settle_ms", 100))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"carousel root not found ({root_sel})"}
+
+    def _index() -> str:
+        return (
+            root.get_attribute("data-carousel-index")
+            or root.get_attribute("data-dz-carousel-index")
+            or "0"
+        )
+
+    next_btn = None
+    for part in next_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            next_btn = loc
+            break
+    if next_btn is None:
+        return {"verdict": "ERROR", "detail": f"next control not found ({next_sel})"}
+
+    prev_btn = None
+    for part in prev_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            prev_btn = loc
+            break
+    if prev_btn is None:
+        return {"verdict": "ERROR", "detail": f"prev control not found ({prev_sel})"}
+
+    next_btn.focus()
+    page.wait_for_timeout(40)
+    page.keyboard.press("ArrowRight")
+    page.wait_for_timeout(settle)
+    if _index() != "1":
+        return {
+            "verdict": "FAIL",
+            "detail": f"ArrowRight from focus must set index=1; got {_index()!r}",
+            "dom_hint": root_sel,
+        }
+
+    page.keyboard.press("ArrowLeft")
+    page.wait_for_timeout(settle)
+    if _index() != "0":
+        return {
+            "verdict": "FAIL",
+            "detail": f"ArrowLeft must return index=0; got {_index()!r}",
+            "dom_hint": root_sel,
+        }
+
+    page.keyboard.press("End")
+    page.wait_for_timeout(settle)
+    if _index() != expect_last:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"End must jump to last index={expect_last!r}; got {_index()!r}"
+            ),
+            "dom_hint": root_sel,
+        }
+
+    # Home may scroll the page if focus is lost — re-focus prev first (behaviour pin).
+    prev_btn.focus()
+    page.wait_for_timeout(40)
+    page.keyboard.press("Home")
+    page.wait_for_timeout(settle)
+    if _index() != "0":
+        return {
+            "verdict": "FAIL",
+            "detail": f"Home must jump to index=0; got {_index()!r}",
+            "dom_hint": root_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"ArrowRight/Left 0↔1; End→{expect_last}; Home→0 (keyboard clamp strip)"
+        ),
+        "last_index": expect_last,
     }
 
 
@@ -4767,6 +4904,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "aria_pressed_toggle": _run_aria_pressed_toggle,
     "radio_group_select": _run_radio_group_select,
     "carousel_advance": _run_carousel_advance,
+    "carousel_keyboard_arrows": _run_carousel_keyboard_arrows,
     "combobox_select": _run_combobox_select,
     "wizard_step_forward": _run_wizard_step_forward,
     "toast_dismiss_and_fire": _run_toast_dismiss_and_fire,

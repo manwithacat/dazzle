@@ -39,6 +39,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `toggle.pressed_flips` | `toggle` | exclusive | high | controller | Clicking a toolbar toggle flips aria-pressed both ways (Bold/Italic mode must stay live without a page reload) |
 | `toggle_group.radio_exclusive` | `toggle-group` | exclusive | high | css | Selecting a second toggle-group segment checks only that radio (List then Board leaves only Board checked — native exclusive group) |
 | `carousel.advance_next` | `carousel` | exclusive | high | controller | Clicking Next advances the clamp carousel from slide 1 to 2 (data-carousel-index, active slide, and live status must update) |
+| `carousel.keyboard_arrows_change_slide` | `carousel` | exclusive | high | controller | With focus on a carousel control, ArrowRight/Left step index 0↔1 and End/Home jump to last/first slide (data-carousel-index) — keyboard parity for clamp strips, not pointer-only chrome |
 | `combobox.enhance_and_select` | `combobox` | exclusive | high | controller | Native select[data-combobox] enhances on pointerdown; picking High writes select value=high, shows High in the overlay input, and closes the listbox (data-open cleared) |
 | `wizard.forward_after_valid` | `wizard` | exclusive | high | controller | After filling the required field on step 0, clicking the step-1 stepper advances data-step to 1, shows stage 1, and marks step 1 current (forward is validity-gated one step at a time) |
 | `toast.dismiss_and_client_fire` | `toast` | exclusive | high | controller | Dismissing a stack toast removes it after leave motion; dispatching showToast appends a new toast with the detail title (stack host must honor dismiss + client fire — not a static markup demo) |
@@ -72,3 +73,4 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 
 - **exclusive** — menubar / nav / accordion: only one panel open
 - **multi_open** — tree forests: expanding siblings must *not* close peers
+
