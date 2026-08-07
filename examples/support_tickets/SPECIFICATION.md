@@ -57,17 +57,19 @@ comments.
 ## Where work happens
 
 Five workspaces organise the work. The **Ticket Queue** is the agent home for
-incoming tickets — summary metrics, a review queue, a kanban board of open
+incoming tickets — summary metrics (including conversation volume), a **live
+conversation** queue of newest notes, a review queue, a kanban board of open
 statuses, and a recent-comment **timeline** (dated stream, not a flat list).
 **Manager Ops** is the manager home for team performance and escalations —
-metrics, SLA readiness, critical/unassigned queues (capped), status funnel, and
-a short recent-ticket trail. Lifecycle kanban for claimed work lives on the
-**Agent Dashboard** (not a second open-board on Manager Ops). The **Agent
-Dashboard** is a personal dashboard for claimed work — a status kanban of
-assigned open tickets, a resolved close-out queue, lifecycle metrics, and
-comment **timelines**/activity last. **My Tickets** is the customer's home:
-open/WIP counts, open-cases queue, resolved-recent **timeline**, history chart,
-trail, and open cards.
+metrics (including conversation volume), a live conversation queue of newest
+customer/agent notes, SLA readiness, critical/unassigned queues (capped),
+status funnel, and a short recent-ticket trail. Lifecycle kanban for claimed
+work lives on the **Agent Dashboard** (not a second open-board on Manager Ops).
+The **Agent Dashboard** is a personal dashboard for claimed work — a status
+kanban of assigned open tickets, a **my conversation** notes queue, a resolved
+close-out queue, lifecycle metrics, and comment **timelines**/activity last.
+**My Tickets** is the customer's home: open/WIP counts, open-cases queue,
+resolved-recent **timeline**, history chart, trail, and open cards.
 The **Agent Console** — shared by administrators, managers, and agents — lets
 you pick an agent and see their tickets, comments, comparison charts, priority
 queue, comment trail, and open ticket cards.
@@ -87,8 +89,8 @@ Eighteen authored scenarios pin the flows down; representative ones:
 - When a Support Agent resolves a ticket, its status becomes resolved and the
   customer is notified.
 - When a Support Manager reviews team performance on Manager Ops, they see
-  open, in-progress, critical, and resolved counts plus critical and
-  unassigned queues.
+  open, in-progress, critical, resolved, and conversation counts plus the
+  live note trail and critical/unassigned queues.
 - When a Support Manager reassigns a ticket, the chosen agent takes it over
   and the previous assignee is notified.
 - When the Administrator triages the full queue, they see every ticket
@@ -145,4 +147,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:5a1171201adefc5f6be8825b6ac93e4c802de3822d03f097c7c0057b61621ed5 -->
+<!-- dazzle-spec-brief: sha256:5fd8e19f680164405c526c0ce64dd52a18428bd7263728146957ade739d565f9 -->

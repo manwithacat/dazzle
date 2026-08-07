@@ -41,6 +41,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1720 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (claim backlog **304**). Goal B **conversation@support_tickets**: Comment display_field=content; manager_ops conversation metric + live_conversation queue; unit pin + ship-surface; hero stills recaptured (Live Conversation thread copy above fold). interesting_product **USED@1720**. budget 1. Explore **3/100**.
 > **Cycle 1719 (2026-08-07).** campaign force **framework-ux** + require_mutation: **ship** create-CTA open discovery — `create_cta_open_attrs` (`data-dz-create-drill` + `data-dz-open-*` via=create → phrase `Create {Entity}`) on CreateButton, table empty CTA, related create row; unit pin test_create_cta_open_discovery_1719 + ship-surface. densify=0 dual_lock=0 residual=0. open_discovery leaf **USED@1719**. budget 1. Explore **2/100**.
 > **Cycle 1714 (2026-08-07).** **capability-sweep** (cadence ≥20 since 1663) + campaign **framework-ux ship**. Inventory: **UNOWNED=0** **COGNITION_STALE_eff≈31** **HYGIENE_STALE_eff≈40** rows≈78. DRIVER CodeQL+inbox **USED@1714**. densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1. **Ship:** person chip + non-person `/app` ref Link open discovery (`data-dz-user-chip-drill` / `data-dz-ref-link-drill` + `data-dz-open-*`; optional via=col key). Unit pin test_ref_link_open_discovery_1714. Top digs next: interesting_product / story_walk / agent_acceptance / framework edge / **semgrep hygiene** never-exercised — **not** dual_lock/smoke/WI densify. budget 1. Explore **3/100**.
 > **Cycle 1674 (2026-08-03).** residual=0 densify=0 CI green post-1672; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1672). Goal B **conversation@simple_task**: TaskComment display_field=content + live_conversation on admin_dashboard/team_overview/my_work; existing domain-true seeds; unit pin + ship-surface. interesting_product **USED@1674**. budget 1. Explore **24/100**.
@@ -60,7 +61,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1712 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1720 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |

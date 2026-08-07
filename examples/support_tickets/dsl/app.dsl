@@ -162,6 +162,8 @@ entity Comment "Comment":
   intent: "Enable threaded communication on tickets with internal notes for agents"
   domain: support
   patterns: audit_trail, messaging
+  # Goal B: queue/timeline labels must show thread copy (not id/UUID theater)
+  display_field: content
 
   id: uuid pk
   ticket: ref Ticket required
@@ -543,7 +545,9 @@ workspace manager_ops "Manager Ops":
   # ST-027 team performance + SLA narrative; critical/unassigned queues for
   # ST-028/029. TR-52 moved managers off empty personal assigned lists — this
   # is the metrics-first home that matches the story.
-  purpose: "Team performance, SLA readiness, and escalations"
+  # Goal B conversation (cycle 1720): peer ops desks show the live thread
+  # volume + newest notes on the command home, not only ticket metrics.
+  purpose: "Team performance, SLA readiness, live conversation, and escalations"
   stage: "command_center"
   access: persona(manager)
 
@@ -555,10 +559,22 @@ workspace manager_ops "Manager Ops":
       in_progress: count(Ticket where status = in_progress)
       critical_open: count(Ticket where priority = critical and status != closed)
       resolved: count(Ticket where status = resolved)
+      conversation: count(Comment)
     tones:
       critical_open: destructive
       resolved: positive
       in_progress: accent
+      conversation: accent
+
+  # Goal B conversation spine — newest customer/agent notes above SLA strip
+  # so manager hero stills show real thread copy (refunds, lockouts, temp pw).
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — customer and agent notes appear here as cases move"
 
   # Static readiness strip — pairs with sla TicketResponseTime commitment.
   sla_readiness:

@@ -99,6 +99,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_simple_task_conversation_goal_b.py",
     # acme_billing Goal B conversation (InvoiceNote live trail on billing desks)
     "tests/unit/test_acme_billing_conversation_goal_b.py",
+    # support_tickets Goal B conversation (Comment display_field + manager_ops trail)
+    "tests/unit/test_support_tickets_conversation_goal_b.py",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)
