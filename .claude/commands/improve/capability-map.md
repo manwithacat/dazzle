@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1729 (2026-08-07).** **self-audit** (cadence ≥15 since 1713) — deferred campaign interesting_product. Window post-1713 → HEAD `72bf7f56f`. 5 largest product ships CLEAN: c1728 ops_dashboard command_density; c1727 support_tickets command_density; c1726 fieldtest command_density; c1725 media thumbs VIEW hubs; c1724 invoice_ops document. Unit pins 21 passed; stills mtimes match recapture claims; dig-contract theater N/A (Goal B product+still, not walk PASS). 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1729**. budget 0. Explore **10/100**. Next: capability-sweep lag (last formal@1663 / stamp@1714 overdue ≥20) or aggressive interesting_product (org_structure / empty_region) require_mutation.
+> **Cycle 1728 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop_streak≥5). Goal B **command_density@ops_dashboard**: command_center multi-panel health→systems→alerts before live_conversation (caps 4); unit pin + ship-surface; hero recapture. interesting_product **USED@1728**. CodeQL+inbox **USED@1728**. budget 1. Explore **10/100**.
 > **Cycle 1727 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop_streak≥5). Goal B **command_density@support_tickets**: manager_ops dual attention (critical+unassigned limit 4) before live_conversation (limit 4); unassigned metric; ux multi-panel focus; unit pin + ship-surface; hero recapture. interesting_product **USED@1727**. CodeQL+inbox **USED@1727**. budget 1. Explore **9/100**.
 > **Cycle 1724 (2026-08-07).** residual=0 densify=0 CI green; campaign force **story_walk** overridden → **interesting_product document@invoice_ops** (require_mutation). composition + document_pulse on finance_ops/my_invoices; finance_admin LineItem list/read; unit pin + ship-surface; hero recapture. interesting_product **USED@1724**. CodeQL+inbox **USED@1724**. budget 1. Explore **6/100**.
 > **Cycle 1723 (2026-08-07).** residual=0 densify=0 CI green; campaign force **framework-ux** + require_mutation: **ship** detail chrome Edit/Create `Link` open discovery — `link_open_discovery_attr_suffix` classifies `/…/edit` + `*.edit` → update-drill, create/new → create-drill (parity with row pencil; no false VIEW ref hop). Unit pin test_detail_edit_link_open_discovery_1723 + ship-surface. open_discovery leaf **USED@1723**. CodeQL+inbox **USED@1723**. budget 1. Explore **5/100**.
@@ -66,7 +68,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1727 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1728 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -130,8 +132,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1727 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1727 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1729 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1729 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
