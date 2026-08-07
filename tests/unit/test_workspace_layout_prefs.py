@@ -518,8 +518,7 @@ class TestApplyPersonaFocus:
             "directory_stats",
             "favourite_contacts",
             "recent_contacts",
-            "company_contacts",
-            "company_mix",
+            "practice_context",
             "find_contact",
         ]
         regions = []

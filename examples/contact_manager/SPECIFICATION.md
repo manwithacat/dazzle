@@ -29,11 +29,16 @@ for overview, then **Contacts** for dual-pane browse.
 
 ## Where work happens
 
-**Home** is the welcome overview: directory metrics, engagement-document
-pulse (documents / awaiting signature / drafts), a **composition** queue of
-named open letters (draft and sent), favourites, and search.
-**Contacts** is the dual-pane browse surface: search, a favourites queue
-strip, the full contact list, and a detail panel for the selected contact.
+**Home** is the welcome overview (empty-region honesty): directory metrics,
+engagement-document pulse, a **live relationship-notes** trail, a **composition**
+queue of named open letters (draft and sent), favourites, an always-filled
+practice context strip, and search — without company bar-chart voids or twin
+company dumps.
+**Contacts** is the dual-pane browse surface: a favourites queue strip, the full
+contact list, and a detail panel for the selected contact (no favourite kanban
+theater under the list).
+**Companies** is the company roll-up: pulse metrics, a company roster queue,
+recent people timeline, and context strip — without an empty group-by chart.
 Engagement letter rows dual-open the letter hub or the parent Contact hub.
 
 ## How work flows through it
@@ -88,4 +93,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:a9eb710f492feff7dae54e1face7e2ecbe46ddd6f6a16d2c72d4c3cbd1e587f3 -->
+<!-- dazzle-spec-brief: sha256:960c82626e7b3a1449de4bb7190d7ac46113d2075432e3529f1a41812c2f10a4 -->

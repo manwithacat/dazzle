@@ -270,9 +270,9 @@ search on Contact:
 # Goal B document depth: named engagement letters above fold (composition),
 # not only directory metrics + empty letter chrome.
 workspace home "Home":
-  # Goal B conversation + document: relationship notes trail with letter
-  # composition so the home desk is a reply surface, not only directory pulse.
-  purpose: "Relationship notes, engagement documents, and directory pulse"
+  # Goal B conversation + document + empty_region_honesty: notes + letters above
+  # fold; omit company bar chart / twin company dumps that read as empty theater.
+  purpose: "Relationship notes, engagement documents, and directory pulse — no empty-region theater"
   access: persona(user, admin)
 
   directory_stats:
@@ -338,23 +338,22 @@ workspace home "Home":
     action: contact_detail
     empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
 
-  company_contacts:
-    source: Contact
-    filter: company != null
-    sort: company asc, last_name asc
-    limit: 8
-    display: timeline
-    action: contact_detail
-    empty: "No company contacts yet"
-
-  company_mix:
-    source: Contact
-    filter: company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No company contacts yet"
+  # Always-filled context strip (not seed-dependent chart theater).
+  practice_context:
+    display: status_list
+    entries:
+      - title: "Notes first"
+        caption: "Relationship notes move letters and calls forward"
+        icon: "message-square"
+        state: accent
+      - title: "Engagement docs"
+        caption: "MSAs, NDAs, and retainers open from composition"
+        icon: "file-text"
+        state: positive
+      - title: "Directory"
+        caption: "Favourites and A–Z live on Contacts"
+        icon: "users"
+        state: positive
 
   find_contact:
     source: Contact
@@ -365,12 +364,12 @@ workspace home "Home":
 
   ux:
     as user:
-      purpose: "See relationship notes and open engagement documents before the full list"
-      # Conversation + composition above fold (Goal B); search after
-      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts
+      purpose: "Relationship notes and engagement documents — no empty company chart theater"
+      # Goal B empty_region_honesty: conversation + composition above fold; no twin dumps
+      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts, practice_context
     as admin:
-      purpose: "Relationship notes, directory pulse, and engagement documents"
-      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts
+      purpose: "Notes, letters, and directory pulse without bar-chart voids"
+      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts, practice_context
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
@@ -413,16 +412,18 @@ workspace contacts "Contacts":
     action: contact_edit
     # Weight: 0.5 (base) + 0.2 (detail) = 0.7 (DETAIL_VIEW)
 
-  favorite_board:
-    source: Contact
-    display: kanban
-    group_by: is_favorite
-    sort: last_name asc
-    action: contact_detail
-    empty: "No contacts yet"
+  ux:
+    as user:
+      purpose: "Favourites strip then A–Z dual-pane — no kanban theater under the list"
+      focus: favourites_queue, contact_list, contact_detail
+    as admin:
+      purpose: "Favourites strip then A–Z dual-pane directory"
+      focus: favourites_queue, contact_list, contact_detail
 
 # Third product workspace: company-first job desk.
 workspace companies "Companies":
+  # Goal B empty_region_honesty: one pulse + company roster + recent people —
+  # drop empty bar-chart group-by that duplicates the queue.
   purpose: "Company roll-up — who works where before opening a person"
   access: persona(user, admin)
 
@@ -447,15 +448,6 @@ workspace companies "Companies":
     action: contact_detail
     empty: "No company contacts yet"
 
-  company_chart:
-    source: Contact
-    filter: company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No company contacts yet"
-
   recent_people:
     source: Contact
     sort: updated_at desc
@@ -463,3 +455,23 @@ workspace companies "Companies":
     display: timeline
     action: contact_detail
     empty: "No contacts yet"
+
+  company_context:
+    display: status_list
+    entries:
+      - title: "Call by company"
+        caption: "Open a person from the company roster for the hub"
+        icon: "building-2"
+        state: accent
+      - title: "Star favourites"
+        caption: "Favourites surface on Home and Contacts"
+        icon: "star"
+        state: positive
+
+  ux:
+    as user:
+      purpose: "Company roster without empty chart voids"
+      focus: company_pulse, by_company, recent_people, company_context
+    as admin:
+      purpose: "Who works where — roster first, no bar-chart theater"
+      focus: company_pulse, by_company, recent_people, company_context
