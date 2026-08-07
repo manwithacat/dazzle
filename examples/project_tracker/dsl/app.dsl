@@ -622,7 +622,10 @@ workspace files_desk "Files":
     empty: "No recent uploads"
 
 workspace people_desk "People":
-  purpose: "Team pulse — who is on the roster and open work load by status"
+  # Goal B org_structure: peer PM tools (Linear / Asana / Notion) show team
+  # by department and project ownership — not a flat warehouse roster above
+  # an unassigned task dump.
+  purpose: "Org structure people can parse — team by department, project owners, then open load"
   access: persona(admin, manager)
 
   team_pulse:
@@ -636,12 +639,43 @@ workspace people_desk "People":
       open_tasks: accent
       people: positive
 
+  # Role board (enum columns admin/manager/member) — org authority shape.
+  by_role:
+    source: User
+    filter: is_active = true
+    display: kanban
+    group_by: role
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No team members yet"
+
+  # Department roster queue — people names with department meta (org placement).
+  by_department:
+    source: User
+    filter: is_active = true
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No team members yet"
+
+  # Ownership lines — who owns which active projects (accountability hierarchy).
+  project_owners:
+    source: Project
+    filter: status = active
+    sort: name asc
+    limit: 15
+    display: queue
+    action: project_detail
+    empty: "No active projects"
+
+  # Secondary flat roster (after hierarchy) — sorted by department.
   roster:
     source: User
     filter: is_active = true
-    sort: name asc
+    sort: department asc, name asc
     limit: 25
-    # Active roster is a people queue (open hub), not a dense grid.
     display: queue
     action: user_detail
     empty: "No team members yet"
@@ -650,7 +684,7 @@ workspace people_desk "People":
     source: Task
     filter: assigned_to = null and status != done
     sort: priority desc
-    limit: 15
+    limit: 12
     display: queue
     action: task_edit
     empty: "Every open task has an assignee"
@@ -658,18 +692,27 @@ workspace people_desk "People":
   discussion_pulse:
     source: Comment
     sort: created_at desc
-    limit: 15
+    limit: 12
     display: timeline
     empty: "No recent comments"
 
-  load_mix:
-    source: Task
-    filter: status != done
+  # Department headcount mix (org shape at a glance).
+  dept_mix:
+    source: User
+    filter: is_active = true
     display: bar_chart
-    group_by: status
+    group_by: department
     aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+      count: count(User)
+    empty: "No team members yet"
+
+  ux:
+    as manager:
+      purpose: "See team by department and project owners before unassigned load"
+      focus: team_pulse, by_role, by_department, project_owners
+    as admin:
+      purpose: "Org structure and ownership before open-task load"
+      focus: team_pulse, by_role, by_department, project_owners
 
 
 surface project_list "Projects":

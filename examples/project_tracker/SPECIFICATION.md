@@ -45,8 +45,9 @@ the **Project Board**. Both places stay available to everyone with access.
   in-flight kanban, and priority mix chart.
 - **Files** — attachment pulse, file grid, open-task timeline, urgent queue,
   and status mix chart.
-- **People** — admin/manager team pulse: roster grid, unassigned queue,
-  discussion timeline, and open-work load chart.
+- **People** — admin/manager org desk: team pulse, role board (kanban),
+  department roster queue, project ownership queue, secondary roster,
+  unassigned load, discussion trail, and department headcount chart.
 - **Review** — admin/manager review desk: review metrics, review queue,
   pipeline board, comment trail, and open status chart.
 
@@ -81,4 +82,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:4ece651237ea4639917d20cf4097306111809173a2c7c770d2d0bf6c1152d797 -->
+<!-- dazzle-spec-brief: sha256:5d98f434ee509f52140b991211a65e955a6834d4cd5eb25360c1f3166bdf9161 -->

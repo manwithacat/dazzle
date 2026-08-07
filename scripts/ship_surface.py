@@ -77,6 +77,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",
     # project_tracker Goal B conversation (cycle 1658 Comment display_field + live trail)
     "tests/unit/test_project_tracker_conversation_goal_b.py",
+    # project_tracker Goal B org_structure (cycle 1730 people_desk by dept + owners)
+    "tests/unit/test_project_tracker_org_structure_goal_b.py",
     # cycle 1714 — person chip + non-person ref Link open discovery (leaf open_discovery)
     "tests/unit/test_ref_link_open_discovery_1714.py",
     # cycle 1719 — create CTA open discovery (CreateButton + empty + related)
