@@ -99,6 +99,110 @@ def test_related_tab_page_size_default_is_finger_scale() -> None:
     assert "if _tab_budget else 8" in src
 
 
+def test_related_group_dsl_limit_parses() -> None:
+    """related limit: / page_size: land on IR RelatedGroup (#1646 DSL budget)."""
+    from pathlib import Path
+
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    src = """module t
+app t "T":
+  security_profile: basic
+
+entity Parent "Parent":
+  id: uuid pk
+  name: str(100)
+
+entity Child "Child":
+  id: uuid pk
+  parent: ref Parent
+  title: str(100)
+
+surface parent_detail "Parent":
+  uses entity Parent
+  mode: view
+  section main:
+    field name "Name"
+  related kids "Kids":
+    display: queue
+    show: Child
+    columns: title
+    limit: 5
+"""
+    _m, _a, _t, _c, _u, frag = parse_dsl(src, Path("t.dsl"))
+    surface = next(s for s in frag.surfaces if s.name == "parent_detail")
+    assert len(surface.related_groups) == 1
+    rg = surface.related_groups[0]
+    assert rg.name == "kids"
+    assert rg.limit == 5
+
+
+def test_related_group_dsl_page_size_alias() -> None:
+    from pathlib import Path
+
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    src = """module t
+app t "T":
+  security_profile: basic
+
+entity Parent "Parent":
+  id: uuid pk
+  name: str(100)
+
+entity Child "Child":
+  id: uuid pk
+  parent: ref Parent
+  title: str(100)
+
+surface parent_detail "Parent":
+  uses entity Parent
+  mode: view
+  section main:
+    field name "Name"
+  related kids "Kids":
+    display: table
+    show: Child
+    page_size: 3
+"""
+    _m, _a, _t, _c, _u, frag = parse_dsl(src, Path("t.dsl"))
+    surface = next(s for s in frag.surfaces if s.name == "parent_detail")
+    assert surface.related_groups[0].limit == 3
+
+
+def test_related_tab_context_carries_budget() -> None:
+    """RelatedTabContext accepts page_size/limit for page_routes honour path."""
+    from dazzle.render.context import ColumnContext, RelatedTabContext
+
+    tab = RelatedTabContext(
+        tab_id="tab-child",
+        label="Kids",
+        entity_name="Child",
+        api_endpoint="/children",
+        filter_field="parent",
+        columns=[ColumnContext(key="title", label="Title", type="text")],
+        page_size=5,
+        limit=5,
+    )
+    assert tab.page_size == 5
+    assert tab.limit == 5
+    # page_routes reads either attr
+    budget = getattr(tab, "page_size", None) or getattr(tab, "limit", None)
+    assert int(budget) == 5
+
+
+def test_template_compiler_stamps_related_budget() -> None:
+    """Group limit is copied onto RelatedTabContext tabs in the group."""
+    from pathlib import Path
+
+    src = Path("src/dazzle/page/converters/template_compiler.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'getattr(group, "limit", None)' in src
+    assert '"page_size": _budget_i' in src
+    assert '"limit": _budget_i' in src
+
+
 def test_detail_money_non_money_unchanged() -> None:
     f = SimpleNamespace(
         name="title",

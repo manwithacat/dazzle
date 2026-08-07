@@ -44,15 +44,18 @@ surface invoice_detail "Invoice":
     display: queue
     show: LineItem
     columns: description, quantity, unit_amount
+    limit: 8
   related payments "Payment attempts":
     display: queue
     show: PaymentAttempt
     columns: attempt_number, status, failure_reason, created_at
+    limit: 5
   # Goal B conversation: AP discussion pull queue on the invoice hub.
   related discussion "Discussion":
     display: queue
     show: InvoiceNote
     columns: body, author, created_at
+    limit: 5
   ux:
     purpose: "Invoice document — header, line composition, discussion, and payment trail"
 

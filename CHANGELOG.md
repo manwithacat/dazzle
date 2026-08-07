@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Related-tab DSL budget (`limit` / `page_size`)** — `related` blocks accept
+  `limit: N` (alias `page_size: N`); IR + template_compiler stamp the budget onto
+  related tabs so first-paint fetch honours the authored finger-scale (#1646
+  remaining acceptance). invoice_ops invoice hub lines/payments/discussion set
+  budgets as dogfood. Unit pins on parse + RelatedTabContext + compiler stamp.
 - **Goal B empty_region_honesty (domain_join_co)** — Team Board / Workspace Home
   drop twin empty queues and lying nested conversation metrics; lead with live
   discussion + feed; `DAZZLE_HOST_TENANT_SLUG` demo bind so localhost recapture

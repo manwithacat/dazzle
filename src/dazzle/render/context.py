@@ -302,6 +302,9 @@ class RelatedTabContext(BaseModel):
     # Role-based tab visibility (#501): hide tab entirely for unauthorized roles
     visible: bool = True
     visible_condition: dict[str, Any] | None = None
+    # #1646: first-paint related fetch budget (from DSL related limit/page_size)
+    page_size: int | None = None
+    limit: int | None = None
 
 
 class RelatedGroupContext(BaseModel):

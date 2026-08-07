@@ -1381,6 +1381,19 @@ def _compile_view_surface(
                     filtered.sort(key=lambda c: order.get(c.key, 999))
                     projected_tabs.append(tab.model_copy(update={"columns": filtered}))
                 group_tabs = projected_tabs
+            # #1646: stamp DSL related limit/page_size onto tabs so page_routes
+            # honour a first-paint budget instead of only the default 8.
+            _budget = getattr(group, "limit", None)
+            if _budget is not None:
+                try:
+                    _budget_i = max(1, min(int(_budget), 50))
+                except (TypeError, ValueError):
+                    _budget_i = None
+                if _budget_i is not None:
+                    group_tabs = [
+                        t.model_copy(update={"page_size": _budget_i, "limit": _budget_i})
+                        for t in group_tabs
+                    ]
             claimed.update(group.show)
             if group_tabs:
                 related_groups_ctx.append(

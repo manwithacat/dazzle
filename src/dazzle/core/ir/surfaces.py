@@ -64,6 +64,10 @@ class RelatedGroup(BaseModel):
         show: Entity names to include (validated at link time)
         columns: Optional field projection for related tabs (scannable
             3–5 columns). Empty means all non-FK entity fields (legacy).
+        limit: Optional first-paint row budget for related-tab fetch
+            (#1646). When set, detail related tabs honour this instead of
+            the framework finger-scale default (8). Alias ``page_size`` in
+            DSL maps to the same field.
     """
 
     name: str
@@ -71,6 +75,7 @@ class RelatedGroup(BaseModel):
     display: RelatedDisplayMode
     show: list[str]
     columns: list[str] = Field(default_factory=list)
+    limit: int | None = None
 
     model_config = ConfigDict(frozen=True)
 

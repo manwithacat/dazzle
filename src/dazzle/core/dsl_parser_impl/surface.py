@@ -68,9 +68,11 @@ class SurfaceParserMixin:
         Syntax::
 
             related name "Title":
-              display: table|status_cards|file_list
+              display: table|status_cards|file_list|queue
               show: EntityA, EntityB
               columns: title, status, due_date   # optional projection
+              limit: 5                           # optional first-paint budget (#1646)
+              # page_size: 5 is accepted as an alias of limit
         """
         self.advance()  # consume 'related'
         name = self.expect(TokenType.IDENTIFIER).value
@@ -84,6 +86,7 @@ class SurfaceParserMixin:
         display = None
         show: list[str] = []
         columns: list[str] = []
+        limit: int | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -115,6 +118,12 @@ class SurfaceParserMixin:
                     self.advance()
                     columns.append(self.expect_identifier_or_keyword().value)
                 self.skip_newlines()
+            elif token.type == TokenType.LIMIT or token.value in ("limit", "page_size"):
+                # #1646: first-paint related-tab budget (finger-scale override).
+                self.advance()
+                self.expect(TokenType.COLON)
+                limit = int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
             else:
                 break
 
@@ -132,6 +141,7 @@ class SurfaceParserMixin:
             display=display,
             show=show,
             columns=columns,
+            limit=limit,
         )
 
     def _parse_surface_access(self) -> ir.SurfaceAccessSpec:
