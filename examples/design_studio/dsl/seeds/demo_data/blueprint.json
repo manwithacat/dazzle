@@ -71,7 +71,7 @@
       {
         "name": "Brand",
         "row_count_default": 4,
-        "notes": "Explicit Brand.jsonl is source of truth (#1626 P0-8): named brands + hex palettes + logo_url placeholders",
+        "notes": "Explicit Brand.jsonl is source of truth (#1626 P0-8): named brands + hex palettes + logo_url placeholders Explicit created_by on Brand.jsonl for dual-open creator hub (cycle 1716).",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -150,7 +150,7 @@
       {
         "name": "Asset",
         "row_count_default": 12,
-        "notes": "Explicit Asset.jsonl: story titles + \u22654 review for Review Desk (#1626 P0-8/P0-5)",
+        "notes": "Explicit Asset.jsonl: story titles + \u22654 review for Review Desk (#1626 P0-8/P0-5) Explicit created_by on Asset.jsonl so Media Grid/list triple-open User hub is not blank (cycle 1716 agent_acceptance_panel).",
         "tenant_scoped": false,
         "field_patterns": [
           {
