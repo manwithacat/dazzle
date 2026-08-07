@@ -64,12 +64,12 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
     return f"Open {ent} via {field_phrase}"
 
 
-def create_cta_open_attrs(href: str) -> str:
-    """Open-discovery attrs for create CTAs (list header, empty, related).
+def _app_action_open_attrs(href: str, *, marker: str, via: str) -> str:
+    """Shared /app/ open-discovery stamp for create/edit (and similar) actions.
 
-    Cycle 1719 — agents attr-read create hops without scraping the label.
-    Marker ``data-dz-create-drill`` + ``data-dz-open-*`` with ``via=create``.
-    Skips empty / fragment-only / non-app paths (parity with action cards).
+    Cycle 1722 — collapse create_cta_open_attrs / edit_action_open_attrs clone
+    pair (clone ratchet red main after 1721). Marker + via differ; path gate
+    and ``drill_open_discovery_attrs`` assembly are identical.
     """
     url = (href or "").strip()
     if not url or url == "#" or url.startswith("#"):
@@ -78,7 +78,17 @@ def create_cta_open_attrs(href: str) -> str:
     segs = [s for s in path.strip("/").split("/") if s]
     if not (path.startswith("/app/") and len(segs) >= 2 and segs[0] == "app"):
         return ""
-    return f"data-dz-create-drill {drill_open_discovery_attrs(url, via='create')}"
+    return f"{marker} {drill_open_discovery_attrs(url, via=via)}"
+
+
+def create_cta_open_attrs(href: str) -> str:
+    """Open-discovery attrs for create CTAs (list header, empty, related).
+
+    Cycle 1719 — agents attr-read create hops without scraping the label.
+    Marker ``data-dz-create-drill`` + ``data-dz-open-*`` with ``via=create``.
+    Skips empty / fragment-only / non-app paths (parity with action cards).
+    """
+    return _app_action_open_attrs(href, marker="data-dz-create-drill", via="create")
 
 
 def create_cta_open_attr_suffix(href: str) -> str:
@@ -96,14 +106,7 @@ def edit_action_open_attrs(href: str) -> str:
     under ``ingest/``) + ``data-dz-open-*`` with ``via=edit``. Skips empty /
     fragment-only / non-app paths (parity with create CTAs).
     """
-    url = (href or "").strip()
-    if not url or url == "#" or url.startswith("#"):
-        return ""
-    path = url.split("?", 1)[0].strip()
-    segs = [s for s in path.strip("/").split("/") if s]
-    if not (path.startswith("/app/") and len(segs) >= 2 and segs[0] == "app"):
-        return ""
-    return f"data-dz-update-drill {drill_open_discovery_attrs(url, via='edit')}"
+    return _app_action_open_attrs(href, marker="data-dz-update-drill", via="edit")
 
 
 def edit_action_open_attr_suffix(href: str) -> str:
