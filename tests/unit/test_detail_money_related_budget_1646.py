@@ -195,9 +195,7 @@ def test_template_compiler_stamps_related_budget() -> None:
     """Group limit is copied onto RelatedTabContext tabs in the group."""
     from pathlib import Path
 
-    src = Path("src/dazzle/page/converters/template_compiler.py").read_text(
-        encoding="utf-8"
-    )
+    src = Path("src/dazzle/page/converters/template_compiler.py").read_text(encoding="utf-8")
     assert 'getattr(group, "limit", None)' in src
     assert '"page_size": _budget_i' in src
     assert '"limit": _budget_i' in src

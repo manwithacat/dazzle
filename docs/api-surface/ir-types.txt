@@ -2368,6 +2368,7 @@ ir_class: RelatedGroup
     - show: list[str]
   optional:
     - columns: list[str] = []
+    - limit: int | None = None
     - title: str | None = None
 
 ir_class: RetryConfig
