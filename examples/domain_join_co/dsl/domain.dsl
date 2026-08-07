@@ -244,20 +244,20 @@ surface workspace_detail "Workspace":
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
-  # Goal B conversation: admin home leads with team discussion trail so stills
-  # show domain-true post replies, not only announcement title queues.
+  # Goal B conversation + empty_region_honesty: lead with discussion and
+  # readiness; omit duplicate board dumps / empty chart theater below fold.
   purpose: "Admin desk — live discussion, join readiness, team pulse, and announcement queue"
   access: persona(admin, member)
 
+  # Metrics honesty: count Announcement only (nested AnnouncementNote metrics
+  # were ship-lying as 0 while the conversation queue was populated).
   team_pulse:
     source: Announcement
     display: metrics
     aggregate:
       announcements: count(Announcement)
-      conversation: count(AnnouncementNote)
     tones:
       announcements: accent
-      conversation: accent
 
   # Goal B conversation spine — newest team notes (display_field: body).
   live_conversation:
@@ -292,7 +292,7 @@ workspace home "Workspace Home":
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
-  # Work-surface utility: board feed is awareness stream — timeline beats inventory list.
+  # Awareness stream — one timeline, not a second identical queue dump.
   board_preview:
     source: Announcement
     sort: title asc
@@ -300,15 +300,6 @@ workspace home "Workspace Home":
     display: timeline
     action: announcement_detail
     empty: "Board is empty"
-
-  tenant_roots:
-    source: Workspace
-    sort: name asc
-    limit: 10
-    # Workspace picker is pull-to-enter (queue), not a dense catalogue table.
-    display: queue
-    action: workspace_detail
-    empty: "No workspaces yet"
 
   activity_strip:
     display: status_list
@@ -322,27 +313,29 @@ workspace home "Workspace Home":
         icon: "pen"
         state: accent
 
-  board_cards:
-    source: Announcement
-    sort: title asc
-    limit: 12
-    # Pull-to-read board (queue), not catalogue grid cards.
+  tenant_roots:
+    source: Workspace
+    sort: name asc
+    limit: 10
+    # Workspace picker is pull-to-enter (queue), not a dense catalogue table.
     display: queue
-    action: announcement_detail
-    empty: "No announcements yet"
+    action: workspace_detail
+    empty: "No workspaces yet"
 
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No announcements yet"
+  ux:
+    as admin:
+      purpose: "Discussion and readiness before tenant roots — no empty chart theater"
+      focus: team_pulse, live_conversation, join_readiness, announcement_queue
+    as member:
+      purpose: "Catch up on team discussion before opening posts"
+      focus: team_pulse, live_conversation, announcement_queue, board_preview
 
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
 workspace announce "Team Board":
-  purpose: "Announcement board — live discussion trail and posts without warehouse chrome"
+  # Goal B empty_region_honesty: one pulse + conversation + feed + filled
+  # context strip — no duplicate queues / empty bar / workspace voids.
+  purpose: "Announcement board — live discussion trail and posts without empty-region theater"
   access: persona(admin, member)
 
   board_pulse:
@@ -350,10 +343,8 @@ workspace announce "Team Board":
     display: metrics
     aggregate:
       posts: count(Announcement)
-      conversation: count(AnnouncementNote)
     tones:
       posts: accent
-      conversation: accent
 
   live_conversation:
     source: AnnouncementNote
@@ -371,15 +362,7 @@ workspace announce "Team Board":
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
-  feed_cards:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    # Member feed is a work queue of posts to open, not a card catalogue.
-    display: queue
-    action: announcement_detail
-    empty: "No announcements yet — post one to keep the team informed"
-
+  # Always-filled status strip (not a seed-dependent void).
   join_context:
     display: status_list
     entries:
@@ -388,8 +371,12 @@ workspace announce "Team Board":
         icon: "globe"
         state: accent
       - title: "Stay informed"
-        caption: "Open any post for the full announcement hub"
+        caption: "Open any post for the full announcement hub and discussion"
         icon: "megaphone"
+        state: positive
+      - title: "Reply in-thread"
+        caption: "Notes on a post keep join and wifi cutover decisions in one place"
+        icon: "message-square"
         state: positive
 
   post_trail:
@@ -400,21 +387,13 @@ workspace announce "Team Board":
     action: announcement_detail
     empty: "No announcements yet"
 
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No announcements yet"
-
-  workspace_cards:
-    source: Workspace
-    sort: name asc
-    limit: 8
-    display: queue
-    action: workspace_detail
-    empty: "No workspace context"
+  ux:
+    as admin:
+      purpose: "Team discussion and feed without duplicate empty regions"
+      focus: board_pulse, live_conversation, feed_queue, join_context
+    as member:
+      purpose: "Catch up — conversation and posts, no warehouse chrome"
+      focus: board_pulse, live_conversation, feed_queue, join_context
 
 workspace publish_desk "Publish":
   purpose: "Admin publish desk — draft queue and live board pulse before posting"
@@ -467,10 +446,7 @@ workspace publish_desk "Publish":
     action: announcement_detail
     empty: "No posts yet"
 
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts yet"
+  ux:
+    as admin:
+      purpose: "Drafts and live posts before trail — no empty chart theater"
+      focus: publish_pulse, draft_queue, live_cards, readiness

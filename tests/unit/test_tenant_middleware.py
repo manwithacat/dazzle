@@ -86,6 +86,35 @@ def test_canonical_host_passes_through_with_no_tenant():
     assert resp.json() == {"tenant": None}
 
 
+def test_demo_host_tenant_slug_binds_on_canonical_host(monkeypatch):
+    """QA/recapture on localhost: DAZZLE_HOST_TENANT_SLUG binds current_tenant."""
+    rows = {("Trust", "acme"): {"id": uuid4(), "slug": "acme", "name": "Acme"}}
+    binding = _binding(rows, canonical=["localhost"])
+    monkeypatch.setenv("DAZZLE_HOST_TENANT_SLUG", "acme")
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "localhost"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": "acme"}
+
+
+def test_demo_host_tenant_slug_skips_test_seed_path(monkeypatch):
+    """Seed before Workspace exists must not 404 on /__test__."""
+    binding = _binding({}, canonical=["localhost"])
+    monkeypatch.setenv("DAZZLE_HOST_TENANT_SLUG", "acme")
+    app = FastAPI()
+
+    @app.post("/__test__/seed")
+    async def seed(request: Request) -> dict:
+        tenant = getattr(request.state, "tenant", None)
+        return {"tenant": None if tenant is None else tenant.slug}
+
+    app.add_middleware(TenantResolutionMiddleware, binding=binding)
+    client = TestClient(app)
+    resp = client.post("/__test__/seed", headers={"host": "localhost"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": None}
+
+
 def test_tenant_subdomain_resolves():
     rows = {("Trust", "acme"): {"id": uuid4(), "slug": "acme", "name": "Acme"}}
     binding = _binding(rows)

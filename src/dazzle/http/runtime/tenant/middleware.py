@@ -7,6 +7,7 @@ auth dependency runs. See the design spec for the full lifecycle.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
@@ -25,6 +26,11 @@ from dazzle.http.runtime.tenant.resolver import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Demo / QA capture on apex (localhost): force host-tenant bind so
+# `current_tenant` scopes populate job desks without real DNS subdomains.
+# Set by recapture_demo_fleet for tenant_host examples (e.g. domain_join_co).
+_HOST_TENANT_SLUG_ENV = "DAZZLE_HOST_TENANT_SLUG"
 
 
 NotFoundRenderer = Callable[[str], str]
@@ -53,6 +59,13 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         host = (request.headers.get("host") or "").split(":")[0].lower()
+        path = request.url.path or ""
+
+        # Demo override — bind a known slug even on canonical hosts (localhost).
+        # Skip /__test__ so reset-and-load can seed before the slug exists.
+        demo_slug = (os.environ.get(_HOST_TENANT_SLUG_ENV) or "").strip().lower()
+        if demo_slug and not path.startswith("/__test__"):
+            return await self._dispatch_slug(request, call_next, demo_slug, host=host)
 
         if host in self._b.canonical_hosts:
             request.state.tenant = None
@@ -63,6 +76,16 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
             return Response("Bad Host", status_code=400)
 
         slug = host[: -len(suffix)]
+        return await self._dispatch_slug(request, call_next, slug, host=host)
+
+    async def _dispatch_slug(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+        slug: str,
+        *,
+        host: str,
+    ) -> Response:
         try:
             validate_slug(slug)
         except ValueError:

@@ -23,7 +23,10 @@ def test_home_and_announce_declare_live_conversation() -> None:
     assert "workspace announce" in text
     assert "live_conversation:" in text
     assert "source: AnnouncementNote" in text
-    assert "conversation: count(AnnouncementNote)" in text
+    # Metrics honesty: nested count(AnnouncementNote) was ship-lying as 0 —
+    # conversation proof is the queue, not a zeroed metric tile.
+    assert "conversation: count(AnnouncementNote)" not in text
+    assert "announcements: count(Announcement)" in text or "posts: count(Announcement)" in text
 
 
 def test_announcement_note_seeds_have_domain_true_copy() -> None:

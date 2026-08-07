@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B empty_region_honesty (domain_join_co)** — Team Board / Workspace Home
+  drop twin empty queues and lying nested conversation metrics; lead with live
+  discussion + feed; `DAZZLE_HOST_TENANT_SLUG` demo bind so localhost recapture
+  resolves `current_tenant` for tenant_host apps; unit pins + member stills.
 - **Open discovery on person chips + non-person ref Links** — leaf module
   `dazzle.render.open_discovery` stamps `data-dz-open-*` (optional `via=` col key)
   on user-chip anchors and `/app/<entity>` ref Links so agents attr-read hops
