@@ -1969,6 +1969,38 @@ def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: 
     assert cur('.master-detail:not([data-clone]) .master-detail__item[hx-get$="inv-002"]') == "true"
 
 
+def test_master_detail_keyboard_arrows_change_selection(page) -> None:  # type: ignore[no-untyped-def]
+    """Cycle 1743 — ArrowDown/Up + End/Home move master-detail selection and
+    load the sibling detail pane (keyboard parity with carousel arrows @1739).
+    Focus must start on a list item; form fields are not stolen."""
+    goto_part(page, "master-detail")
+    seed = page.locator('.master-detail__item[hx-get$="inv-001"]').first
+    seed.focus()
+    page.wait_for_timeout(40)
+
+    page.keyboard.press("ArrowDown")
+    page.wait_for_timeout(150)
+    cur = lambda sel: page.eval_on_selector(sel, "el => el.getAttribute('aria-current')")  # noqa: E731
+    assert cur('.master-detail__item[hx-get$="inv-002"]') == "true"
+    assert cur('.master-detail__item[hx-get$="inv-001"]') is None
+    assert "Globex" in page.inner_text(".master-detail__detail")
+
+    page.keyboard.press("ArrowUp")
+    page.wait_for_timeout(150)
+    assert cur('.master-detail__item[hx-get$="inv-001"]') == "true"
+    assert "Acme" in page.inner_text(".master-detail__detail")
+
+    page.keyboard.press("End")
+    page.wait_for_timeout(150)
+    assert cur('.master-detail__item[hx-get$="inv-003"]') == "true"
+    assert "Initech" in page.inner_text(".master-detail__detail")
+
+    page.keyboard.press("Home")
+    page.wait_for_timeout(150)
+    assert cur('.master-detail__item[hx-get$="inv-001"]') == "true"
+    assert "Acme" in page.inner_text(".master-detail__detail")
+
+
 # === Grid extensions (promoted from Dazzle, 0.1.26): col-vis / resize / edit ===
 
 

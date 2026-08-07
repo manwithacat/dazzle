@@ -983,6 +983,46 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1743 — master-detail keyboard: ArrowDown/Up + End/Home from item focus.
+    # Campaign framework-ux (require_mutation) after dual_pane region ship; carousel
+    # keyboard parity (cycle 1739) for list↔detail selection.
+    # Mirrors test_behaviour.test_master_detail_keyboard_arrows_change_selection.
+    Probe(
+        id="master_detail.keyboard_arrows_change_selection",
+        stem="master-detail",
+        page="hyperparts/master-detail.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "With focus on a master-detail list item, ArrowDown/Up move "
+            "aria-current to next/prev and load the sibling detail pane "
+            "(INV-002 · Globex); End/Home jump last/first — keyboard parity "
+            "for dual_pane selection, not pointer-only chrome"
+        ),
+        kind="master_detail_keyboard_arrows",
+        params={
+            "root": (
+                "[data-dz-master-detail], .dz-master-detail, [data-master-detail], .master-detail"
+            ),
+            "item": (
+                ".dz-master-detail__item, .master-detail__item, "
+                "a.dz-master-detail__item, a.master-detail__item"
+            ),
+            "detail": (
+                ".dz-master-detail__detail, .master-detail__detail, "
+                "[data-dz-master-detail-detail-body], [data-master-detail-detail-body]"
+            ),
+            "seed_hx_suffix": "inv-001",
+            "expect_after_down_label": "Globex",
+            "expect_after_down_detail": "Globex",
+            "expect_after_end_label": "Initech",
+            "expect_after_home_label": "Acme",
+            "settle_ms": 200,
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
     # Cycle 1565 — pagination: page-2 hx-get swaps list body via MOCK_HTMX.
     # Catalog expand under require_mutation (discover uncovered=0).
     Probe(
@@ -3565,6 +3605,136 @@ def _run_master_detail_select(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_master_detail_keyboard_arrows(page: Any, probe: Probe) -> dict[str, Any]:
+    """Keyboard ArrowDown/Up + End/Home change master-detail selection + detail.
+
+    Mirrors test_behaviour.test_master_detail_keyboard_arrows_change_selection
+    (cycle 1743). Focus must start on a list item (not a form field).
+    """
+    params = probe.params
+    root_sel = params["root"]
+    item_sel = params["item"]
+    detail_sel = params.get("detail", ".master-detail__detail, .dz-master-detail__detail")
+    seed_suffix = str(params.get("seed_hx_suffix", "inv-001"))
+    expect_down = str(params.get("expect_after_down_label", "Globex"))
+    expect_down_detail = str(params.get("expect_after_down_detail", expect_down))
+    expect_end = str(params.get("expect_after_end_label", "Initech"))
+    expect_home = str(params.get("expect_after_home_label", "Acme"))
+    settle = int(params.get("settle_ms", 200))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"master-detail root not found ({root_sel})"}
+
+    seed = None
+    for part in item_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        cand = root.locator(f'{part}[hx-get$="{seed_suffix}"]').first
+        if cand.count() > 0:
+            seed = cand
+            break
+    if seed is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"seed list item not found (hx-get$={seed_suffix!r})",
+            "dom_hint": item_sel,
+        }
+
+    current_sel = ", ".join(
+        f'{p.strip()}[aria-current="true"]' for p in item_sel.split(",") if p.strip()
+    )
+
+    def _current_label() -> str:
+        currents = root.locator(current_sel)
+        if currents.count() < 1:
+            return ""
+        return _norm_label(currents.first.inner_text())
+
+    def _detail_text() -> str:
+        for part in detail_sel.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            loc = root.locator(part).first
+            if loc.count() > 0:
+                return _norm_label(loc.inner_text())
+            loc = scope.locator(part).first
+            if loc.count() > 0:
+                return _norm_label(loc.inner_text())
+        return ""
+
+    seed.focus()
+    page.wait_for_timeout(40)
+    page.keyboard.press("ArrowDown")
+    page.wait_for_timeout(settle)
+    label = _current_label()
+    if expect_down.lower() not in label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"ArrowDown must select ≈{expect_down!r}; got {label!r}",
+            "dom_hint": item_sel,
+        }
+    detail_text = _detail_text()
+    if expect_down_detail.lower() not in detail_text.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"ArrowDown detail missing {expect_down_detail!r} "
+                f"(got {detail_text[:120]!r}) — selection ok but hx-get failed"
+            ),
+            "current_label": label,
+        }
+
+    page.keyboard.press("ArrowUp")
+    page.wait_for_timeout(settle)
+    label = _current_label()
+    if expect_home.lower() not in label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"ArrowUp must return ≈{expect_home!r}; got {label!r}",
+            "dom_hint": item_sel,
+        }
+
+    page.keyboard.press("End")
+    page.wait_for_timeout(settle)
+    label = _current_label()
+    if expect_end.lower() not in label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"End must select ≈{expect_end!r}; got {label!r}",
+            "dom_hint": item_sel,
+        }
+
+    page.keyboard.press("Home")
+    page.wait_for_timeout(settle)
+    label = _current_label()
+    if expect_home.lower() not in label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"Home must select ≈{expect_home!r}; got {label!r}",
+            "dom_hint": item_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"ArrowDown→{expect_down!r}+detail; ArrowUp→{expect_home!r}; "
+            f"End→{expect_end!r}; Home→{expect_home!r}"
+        ),
+    }
+
+
 def _run_pagination_page_load(page: Any, probe: Probe) -> dict[str, Any]:
     """Click a page-N control; assert list body receives MOCK_HTMX rows.
 
@@ -4914,6 +5084,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "app_shell_sidebar_toggle": _run_app_shell_sidebar_toggle,
     "confirm_intercept_accept": _run_confirm_intercept_accept,
     "master_detail_select": _run_master_detail_select,
+    "master_detail_keyboard_arrows": _run_master_detail_keyboard_arrows,
     "pagination_page_load": _run_pagination_page_load,
     "date_range_change": _run_date_range_change,
     "search_box_type_results": _run_search_box_type_results,

@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1743 (2026-08-07).** tip CI green (31203989983 / 8cdb9ad). Campaign **framework-ux** under aggressive require_mutation (policy force agent_qa_smoke was no_smoke_report stamp thrash — suppress_recurring_smoke). **Ship:** master-detail keyboard ArrowDown/Up + End/Home selection + hx-get detail load (carousel keyboard parity @1739; dual_pane list focusable rows). Gallery probe master_detail.keyboard_arrows_change_selection PASS; behaviour pin. HM dist + dazzle.min.js + site rebuild. gallery_probes **USED@1743**. densify=0 dual_lock=0. budget 1. Explore **19/100**.
+
 > **Cycle 1735 (2026-08-07).** **capability-sweep** (cadence ≥20 since formal@1663 / stamp@1714; log_meta null) + campaign **framework-ux ship** under require_mutation. Inventory tip green run **31179083450** (bf6433de8a): **UNOWNED=0** **COGNITION_STALE_eff≈25** **HYGIENE_STALE_eff≈38** rows≈78 (COGNITION=31 HYGIENE=40 DRIVER=2 EXEMPT=5). Fresh USED lag&lt;20: interesting_product@1730/34 Goal B ships, product_quality/demo quality/reset@1716, acceptance+trial@1725, gallery@1718. DRIVER CodeQL+inbox **USED@1735**. densify=0 dual_lock=0 suppress_smoke=1 residual=0. **Ship #1646:** detail money prefers `{name}_minor`/`_currency` when bare empty; related-tab page_size default **8** (finger-scale; honour tab.page_size/limit; cap 50). Unit pin + ship-surface promote. Top digs next: campaign journey_dogfood / story_walk / agent_acceptance / framework edge / **semgrep hygiene** never-exercised / domain|presentation COGNITION — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **15/100**.
 > **Cycle 1734 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop streak cap). Goal B **media@design_studio**: asset_catalog/brand_desk media grids first; unit pin + ship-surface; hero recapture. interesting_product **USED@1734**. CodeQL+inbox **USED@1734**. budget 1. Explore **14/100**.
 > **Cycle 1730 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (open_hop_streak≥5). Goal B **org_structure@project_tracker**: people_desk role kanban + department queue + project owners before unassigned; 6-person multi-dept seeds (non-STABLE ICs); unit pin + ship-surface; hero recapture. interesting_product **USED@1730**. CodeQL+inbox **USED@1730**. budget 1. Explore **11/100**.
@@ -95,12 +97,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1739 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1743 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1624 | STALE |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1739 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1743 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |

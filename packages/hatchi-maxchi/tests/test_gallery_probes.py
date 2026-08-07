@@ -63,6 +63,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "money.sync_minor_and_blur_normalize" in ids
     assert "app_shell.sidebar_toggle" in ids
     assert "master_detail.select_item" in ids
+    assert "master_detail.keyboard_arrows_change_selection" in ids
     assert "pagination.page_two_loads_rows" in ids
     assert "date_range.change_fires_search" in ids
     assert "search_box.type_fires_results" in ids
@@ -110,6 +111,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "app_shell_sidebar_toggle",
             "confirm_intercept_accept",
             "master_detail_select",
+            "master_detail_keyboard_arrows",
             "pagination_page_load",
             "date_range_change",
             "search_box_type_results",
@@ -160,6 +162,13 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert master_detail.fix_surface == "controller"
     assert master_detail.page == "hyperparts/master-detail.html"
     assert master_detail.stem == "master-detail"
+    master_detail_kb = next(
+        p for p in PROBES if p.id == "master_detail.keyboard_arrows_change_selection"
+    )
+    assert master_detail_kb.kind == "master_detail_keyboard_arrows"
+    assert master_detail_kb.fix_surface == "controller"
+    assert master_detail_kb.page == "hyperparts/master-detail.html"
+    assert master_detail_kb.stem == "master-detail"
     pagination = next(p for p in PROBES if p.id == "pagination.page_two_loads_rows")
     assert pagination.kind == "pagination_page_load"
     assert pagination.fix_surface == "controller"
