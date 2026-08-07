@@ -40,11 +40,17 @@ def entity_label_from_detail_url(url: str) -> str:
 
 
 def open_hop_label(entity_label: str, via_field: str = "") -> str:
-    """User-facing hop phrase: ``Open Task`` / ``Open User via assigned to``."""
+    """User-facing hop phrase: ``Open Task`` / ``Open User via assigned to``.
+
+    Cycle 1719 — ``via=create`` / ``via=new`` yields ``Create {Entity}`` for
+    list/empty/related create CTAs (same attr grammar as VIEW hops).
+    """
     ent = (entity_label or "Related").strip() or "Related"
     via = (via_field or "").strip()
     if not via or via == "id":
         return f"Open {ent}"
+    if via.casefold() in ("create", "new"):
+        return f"Create {ent}"
     words = [w for w in via.replace("-", "_").split("_") if w]
     if not words:
         return f"Open {ent}"
@@ -52,6 +58,29 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
     if field_phrase.casefold() == ent.casefold():
         return f"Open {ent}"
     return f"Open {ent} via {field_phrase}"
+
+
+def create_cta_open_attrs(href: str) -> str:
+    """Open-discovery attrs for create CTAs (list header, empty, related).
+
+    Cycle 1719 — agents attr-read create hops without scraping the label.
+    Marker ``data-dz-create-drill`` + ``data-dz-open-*`` with ``via=create``.
+    Skips empty / fragment-only / non-app paths (parity with action cards).
+    """
+    url = (href or "").strip()
+    if not url or url == "#" or url.startswith("#"):
+        return ""
+    path = url.split("?", 1)[0].strip()
+    segs = [s for s in path.strip("/").split("/") if s]
+    if not (path.startswith("/app/") and len(segs) >= 2 and segs[0] == "app"):
+        return ""
+    return f"data-dz-create-drill {drill_open_discovery_attrs(url, via='create')}"
+
+
+def create_cta_open_attr_suffix(href: str) -> str:
+    """Leading-space open attrs for appending onto an ``<a …>`` tag, or ``""``."""
+    extra = create_cta_open_attrs(href)
+    return f" {extra}" if extra else ""
 
 
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:

@@ -91,6 +91,7 @@ from dazzle.render.fragment.renderer._data_row import (
     slideover_panel_id,
 )
 from dazzle.render.fragment.renderer._helpers import _render_references
+from dazzle.render.open_discovery import create_cta_open_attr_suffix
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -352,9 +353,11 @@ class _RenderTablesMixin:
 
         empty_cta = ""
         if s.empty_action_href and s.empty_action_label:
+            open_attr = create_cta_open_attr_suffix(str(s.empty_action_href))
             empty_cta = (
                 f'<a href="{ctx.escape_attr(s.empty_action_href)}" '
-                f'class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+                f'class="dz-button" data-dz-variant="primary" data-dz-size="sm"'
+                f"{open_attr}>"
                 '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">'
                 '<path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" '
                 'stroke-linecap="round"/></svg>'
@@ -459,10 +462,12 @@ class _RenderTablesMixin:
     def _related_create_row(t: RelatedTab, ctx: RenderContext) -> str:
         if not t.create_href:
             return ""
+        # Cycle 1719 — open discovery on related-entity create CTA
+        open_attr = create_cta_open_attr_suffix(str(t.create_href))
         return (
             '<div class="dz-related-create-row">'
             f'<a href="{ctx.escape_attr(t.create_href)}" class="dz-related-create-button" '
-            f'data-dazzle-action="{ctx.escape_attr(t.create_action)}">'
+            f'data-dazzle-action="{ctx.escape_attr(t.create_action)}"{open_attr}>'
             f"+ New {ctx.escape(t.create_label)}</a></div>"
         )
 

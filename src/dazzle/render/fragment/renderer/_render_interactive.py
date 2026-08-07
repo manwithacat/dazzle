@@ -63,7 +63,7 @@ from dazzle.render.fragment.primitives import (
     Toolbar,
 )
 from dazzle.render.fragment.renderer._helpers import _hx_attrs, _pagination_pages
-from dazzle.render.open_discovery import drill_open_discovery_attrs
+from dazzle.render.open_discovery import create_cta_open_attr_suffix, drill_open_discovery_attrs
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -216,16 +216,24 @@ class _RenderInteractiveMixin:
 
         Carries `data-dazzle-action="{entity_name}.create"` — the RBAC
         contract checker's anchor — plus the 12×12 `+` icon SVG and a
-        "New {entity_name}" label (or caller's custom label)."""
-        href_attr = ctx.escape_attr(str(b.href))
+        "New {entity_name}" label (or caller's custom label).
+
+        Cycle 1719 — stamp ``data-dz-create-drill`` + ``data-dz-open-*`` so
+        agents attr-read the create hop (list header / empty EmptyState CTA)
+        without scraping the label alone.
+        """
+        raw_href = str(b.href)
+        href_attr = ctx.escape_attr(raw_href)
         action_attr = ctx.escape_attr(f"{b.entity_name}.create")
         # #1487: prefer the declared display title; fall back to humanising the
         # raw entity identifier only when no title is declared.
         label = b.label or f"New {b.entity_title or b.entity_name.replace('_', ' ')}"
+        open_attr = create_cta_open_attr_suffix(raw_href)
         return (
             f'<a href="{href_attr}" '
             f'data-dazzle-action="{action_attr}" '
-            f'class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+            f'class="dz-button" data-dz-variant="primary" data-dz-size="sm"'
+            f"{open_attr}>"
             f'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" '
             f'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
             f'<path d="M6 1v10M1 6h10" stroke="currentColor" '

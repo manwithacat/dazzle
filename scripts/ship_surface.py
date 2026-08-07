@@ -79,6 +79,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_project_tracker_conversation_goal_b.py",
     # cycle 1714 — person chip + non-person ref Link open discovery (leaf open_discovery)
     "tests/unit/test_ref_link_open_discovery_1714.py",
+    # cycle 1719 — create CTA open discovery (CreateButton + empty + related)
+    "tests/unit/test_create_cta_open_discovery_1719.py",
     # cycle 1712 — presentation residual delta_theater honesty under 100%
     "tests/unit/test_presentation_residual_1626.py",
     # ops_dashboard Goal B conversation (cycle 1660 IncidentNote + command_center trail)
