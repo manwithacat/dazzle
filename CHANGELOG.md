@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+- **Goal B document depth (project_tracker)** — manager/admin Dashboard leads with
+  Composition (`Attachment` filenames as row titles) and a Documents metric tile so
+  hero stills show deliverable identity on Home, not only on the Files desk;
+  SPECIFICATION + brief fingerprint refreshed; stills recaptured.
+
+### Fixed
+- **Presentation residual `delta_theater` false positive** — OCR pattern no longer
+  flags honest spaced `(25%) vs prior` under 100%; still catches absurd ≥100% and
+  glued `%)vs` seed-noise theater (#1626 F1).
+
 ### Security
 - **aiohttp 3.14.1 → 3.14.3** — GHSA-cq5v-8q36-5273 (high OOB heap read), GHSA-mfx4-hv73-q22v /
   GHSA-mq44-7p77-q5h7 (WebSocket). Via `[aws]` / aioboto3 stack in `uv.lock`.

@@ -294,9 +294,9 @@ entity Attachment "Attachment":
 
 workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
-  # Goal B conversation: manager/admin home surfaces the live discussion trail
-  # above the task pile — peer PM tools put thread copy on the first screen.
-  purpose: "Portfolio metrics, live discussion trail, and work queues — not warehouse grids only"
+  # Goal B conversation + document: peer PM tools (Linear / Asana / Jira) put
+  # named deliverables and discussion on the first screen — not only task piles.
+  purpose: "Portfolio metrics, document composition, live discussion trail, and work queues"
 
   portfolio_metrics:
     source: Task
@@ -305,18 +305,30 @@ workspace dashboard "Dashboard":
       open_tasks: count(Task where status != done)
       in_progress: count(Task where status = in_progress)
       critical: count(Task where priority = critical and status != done)
+      documents: count(Attachment)
       conversation: count(Comment)
     tones:
       in_progress: accent
       critical: destructive
+      documents: accent
       conversation: accent
 
+  # Goal B document spine on Home (not only Files desk) — human filenames as
+  # titles so hero stills read as document composition above the fold.
+  composition:
+    source: Attachment
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: attachment_view
+    empty: "No documents yet — upload a deliverable on a task"
+
   # Goal B conversation spine — newest notes as pull-to-open queue so buyer
-  # stills show domain-true discussion copy above the fold.
+  # stills show domain-true discussion copy with the document strip.
   live_conversation:
     source: Comment
     sort: created_at desc
-    limit: 10
+    limit: 6
     display: queue
     action: comment_detail
     empty: "No conversation yet — task discussion notes appear here as work moves"

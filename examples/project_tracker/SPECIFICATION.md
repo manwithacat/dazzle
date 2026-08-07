@@ -32,8 +32,9 @@ the **Project Board**. Both places stay available to everyone with access.
 
 ## Where work happens
 
-- **Dashboard** — manager/admin portfolio: task metrics, open-task queue,
-  project grid, task-flow kanban, and priority mix chart.
+- **Dashboard** — manager/admin portfolio: task metrics (including document
+  count), named deliverable composition queue, live discussion trail,
+  open-task queue, project grid, task-flow kanban, and priority mix chart.
 - **Project Board** — delivery board: board metrics, task kanban, unassigned
   queue, milestone timeline, and project status chart.
 - **My Tasks** — member home: personal load metrics, open-task queue,
@@ -80,4 +81,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:488207f707e06f70237ff271159715c7d89df9bcbc5fcd3afb295ac5e74375dc -->
+<!-- dazzle-spec-brief: sha256:4ece651237ea4639917d20cf4097306111809173a2c7c770d2d0bf6c1152d797 -->

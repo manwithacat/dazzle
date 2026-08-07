@@ -26,9 +26,11 @@ _REF_AS_REPR_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 # #1626 F1 / S2 — metric delta seed-noise theater on hero stills.
+# Flag absurd ≥100% chunks and OCR-glued `%)vs` (no space after `)`).
+# Do **not** flag honest `(25%) vs prior` — emit already omits |pct| ≥ 100.
 _DELTA_THEATER_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\(\s*\d{3,}(?:\.\d+)?\s*%\s*\)"),  # (150.0%) / (200%)
-    re.compile(r"%\s*\)\s*vs", re.IGNORECASE),  # glued %)vs prior
+    re.compile(r"%\)vs", re.IGNORECASE),  # glued %)vs prior (OCR collapse)
 )
 
 # Queue pilot: person should be Avatar, not "Assigned To: Name" prose.

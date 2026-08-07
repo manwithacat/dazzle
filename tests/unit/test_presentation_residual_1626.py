@@ -26,7 +26,10 @@ def test_find_delta_theater_absurd_pct_and_glue() -> None:
 
     assert _find_delta_theater("↑+3(150.0%)vs prior 30 days")
     assert _find_delta_theater("4+3(200%) vs prior")
+    assert _find_delta_theater("↑+3(25%)vs prior 30 days")  # OCR-glued %)vs
     assert _find_delta_theater("+4 vs prior 30 days") is None
+    # Honest spaced pct under 100 is not theater (emit already omits |pct| ≥ 100)
+    assert _find_delta_theater("↑+3 (25%) vs prior 30 days") is None
 
 
 def test_score_presentation_skips_absent_shots(tmp_path: Path) -> None:
