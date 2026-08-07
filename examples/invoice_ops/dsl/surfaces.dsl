@@ -388,9 +388,9 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  # Goal B conversation: AP desks lead with the live discussion trail so
-  # buyer stills show approve/pay notes above the fold (not only queues).
-  purpose: "Day-to-day invoice throughput — live discussion, pipeline, and queues that need a person"
+  # Goal B conversation + document: AP desks lead with discussion trail and
+  # line-item composition so buyer stills show document body (not only queues).
+  purpose: "Day-to-day invoice throughput — live discussion, line composition, pipeline, and queues that need a person"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   ops_metrics:
@@ -406,6 +406,28 @@ workspace finance_ops "Finance Operations":
       disputed: destructive
       conversation: accent
       approved: accent
+
+  # Goal B document metric — count LineItem from LineItem source (cross-entity
+  # count(LineItem) under source Invoice paints Documents: 0 theater).
+  document_pulse:
+    source: LineItem
+    display: metrics
+    aggregate:
+      documents: count(LineItem)
+      open_invoices: count(Invoice where status != paid and status != rejected)
+    tones:
+      documents: accent
+      open_invoices: warning
+
+  # Goal B document spine on ops home (not only line_items_desk) — peer Bill.com
+  # / Tipalti put line descriptions above the fold with the discussion trail.
+  composition:
+    source: LineItem
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: invoice_detail
+    empty: "No line items yet — add lines to a draft invoice"
 
   # Goal B conversation spine — newest AP notes (display_field: body).
   live_conversation:
@@ -484,7 +506,9 @@ workspace finance_ops "Finance Operations":
 # finance_ops remains the shared ops overview for admin/oversight personas.
 
 workspace my_invoices "My Invoices":
-  purpose: "Requester desk — drafts, submissions, and line-item work on my invoices"
+  # Goal B document: requester home shows line composition (descriptions) with
+  # draft work — not only invoice headers.
+  purpose: "Requester desk — line composition, drafts, submissions, and line-item work on my invoices"
   access: persona(requester)
 
   my_pipeline:
@@ -499,6 +523,25 @@ workspace my_invoices "My Invoices":
       draft: warning
       submitted: accent
       paid: positive
+
+  # Goal B document metric from LineItem source (honest line count).
+  document_pulse:
+    source: LineItem
+    display: metrics
+    aggregate:
+      documents: count(LineItem)
+    tones:
+      documents: accent
+
+  # Goal B document spine on requester home — composition lines pull open the
+  # parent invoice document hub (description as title).
+  composition:
+    source: LineItem
+    sort: created_at desc
+    limit: 12
+    display: queue
+    action: invoice_detail
+    empty: "No line items yet — add lines to a draft invoice"
 
   drafts:
     source: Invoice

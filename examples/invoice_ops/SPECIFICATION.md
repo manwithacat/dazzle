@@ -67,15 +67,16 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
 Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 
-- **My Invoices** — requester home: draft and in-flight queues, status kanban,
-  supplier grid, and personal pipeline metrics.
+- **My Invoices** — requester home: line-item composition (document body),
+  draft and in-flight queues, status kanban, supplier grid, and pipeline metrics.
 - **Approval Desk** — approver home: awaiting-approval queue, approval board,
   recently decided timeline, and supplier context grid.
 - **Pay Desk** — finance home: ready-to-pay and dispute queues, settle board,
   payment health, and dispute trail.
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
-- **Finance Operations** — shared ops overview: metrics, lifecycle funnel,
-  review queues, ops kanban, and recent paid timeline.
+- **Finance Operations** — shared ops overview: line composition + live
+  discussion trail above the fold, metrics, lifecycle funnel, review queues,
+  ops kanban, and recent paid timeline.
 - **Suppliers** — vendor desk: roster grid, bank refs, invoice trail and
   status mix chart.
 - **Team** — tenant admin people desk with supplier and tenant context.
@@ -163,4 +164,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:aa5ff1e781ec32c77b9b179ee9b713584a5a0fe12d9a09651d77f06ccea03602 -->
+<!-- dazzle-spec-brief: sha256:a164abbfa088e13c28193b052c48d616fe2b109e504b7eb78eae89b748de209e -->

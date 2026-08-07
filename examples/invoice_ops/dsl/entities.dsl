@@ -231,22 +231,24 @@ entity LineItem "Line Item":
 
   permit:
     create: role(requester)
-    read: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
+    # finance_admin: cross-cutting oversight (finance_ops composition spine) —
+    # must list/read lines or hero stills show empty document theater.
+    read: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
     update: role(requester)
     delete: role(requester)
-    list: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
+    list: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
 
   scope:
     create: tenant_id = current_user.tenant_id
       as: requester
     read: tenant_id = current_user.tenant_id
-      as: requester, approver, finance, auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
     update: tenant_id = current_user.tenant_id
       as: requester
     delete: tenant_id = current_user.tenant_id
       as: requester
     list: tenant_id = current_user.tenant_id
-      as: requester, approver, finance, auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
 
   audit: all
 
