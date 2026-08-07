@@ -46,11 +46,12 @@ per-agent inspection.
 
 **Support Managers** are team leads monitoring performance and handling
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
-ensuring quality and customer satisfaction. They land on **Manager Ops**: team
-counts, an SLA readiness strip, critical and unassigned work queues, and a
-lifecycle funnel — not an empty personal assigned kanban. The team Ticket Queue
-and Agent Console remain available. Managers alone can delete tickets or
-comments.
+ensuring quality and customer satisfaction. They land on **Manager Ops**: a
+multi-panel command home with team counts (including unassigned), an SLA
+readiness strip, dual attention queues (critical + unassigned, fold-capped), a
+live conversation trail, and a lifecycle funnel — not conversation-only above
+the fold, and not an empty personal assigned kanban. The team Ticket Queue and
+Agent Console remain available. Managers alone can delete tickets or comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
@@ -60,11 +61,12 @@ Five workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — summary metrics (including conversation volume), a **live
 conversation** queue of newest notes, a review queue, a kanban board of open
 statuses, and a recent-comment **timeline** (dated stream, not a flat list).
-**Manager Ops** is the manager home for team performance and escalations —
-metrics (including conversation volume), a live conversation queue of newest
-customer/agent notes, SLA readiness, critical/unassigned queues (capped),
-status funnel, and a short recent-ticket trail. Lifecycle kanban for claimed
-work lives on the **Agent Dashboard** (not a second open-board on Manager Ops).
+**Manager Ops** is the manager home for multi-panel support ops — metrics
+(critical, unassigned, conversation volume), SLA readiness, dual attention
+queues (critical + unassigned, limit 4 each) **before** a capped live
+conversation trail (limit 4), status funnel, and a short recent-ticket trail.
+Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
+second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
 kanban of assigned open tickets, a **my conversation** notes queue, a resolved
 close-out queue, lifecycle metrics, and comment **timelines**/activity last.
@@ -147,4 +149,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:5fd8e19f680164405c526c0ce64dd52a18428bd7263728146957ade739d565f9 -->
+<!-- dazzle-spec-brief: sha256:86d06d77f387b9edf182b8c86073a195811a17a46ccf0854b315330e812e2a4b -->

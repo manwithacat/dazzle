@@ -545,9 +545,11 @@ workspace manager_ops "Manager Ops":
   # ST-027 team performance + SLA narrative; critical/unassigned queues for
   # ST-028/029. TR-52 moved managers off empty personal assigned lists — this
   # is the metrics-first home that matches the story.
-  # Goal B conversation (cycle 1720): peer ops desks show the live thread
-  # volume + newest notes on the command home, not only ticket metrics.
-  purpose: "Team performance, SLA readiness, live conversation, and escalations"
+  # Goal B conversation (cycle 1720): live thread volume on the command home.
+  # Goal B command_density (cycle 1727): dual attention (critical + unassigned)
+  # shares the fold with capped conversation — peer Zendesk/Intercom manager
+  # homes are multi-panel pressure, not conversation-only above the fold.
+  purpose: "Multi-panel support ops — SLA pulse, dual queues, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -558,25 +560,18 @@ workspace manager_ops "Manager Ops":
       open: count(Ticket where status = open)
       in_progress: count(Ticket where status = in_progress)
       critical_open: count(Ticket where priority = critical and status != closed)
+      unassigned: count(Ticket where assigned_to = null and status = open)
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
     tones:
       critical_open: destructive
+      unassigned: warning
       resolved: positive
       in_progress: accent
       conversation: accent
 
-  # Goal B conversation spine — newest customer/agent notes above SLA strip
-  # so manager hero stills show real thread copy (refunds, lockouts, temp pw).
-  live_conversation:
-    source: Comment
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: comment_detail
-    empty: "No conversation yet — customer and agent notes appear here as cases move"
-
   # Static readiness strip — pairs with sla TicketResponseTime commitment.
+  # Above dual queues so SLA narrative is visible before conversation trail.
   sla_readiness:
     display: status_list
     entries:
@@ -597,13 +592,13 @@ workspace manager_ops "Manager Ops":
         icon: "circle-check"
         state: positive
 
-  # Cap queue rows — unbounded queues + row hx-preload storm browser
-  # resources under pilot scroll (manager_evaluation console thrash).
+  # Dual attention (ST-028/029) — cap for fold share with conversation.
+  # Unbounded queues + row hx-preload storm browser under pilot scroll.
   critical_queue:
     source: Ticket
     filter: priority = critical and status != closed
     sort: created_at asc
-    limit: 12
+    limit: 4
     display: queue
     action: ticket_edit
     empty: "No critical tickets open"
@@ -612,10 +607,25 @@ workspace manager_ops "Manager Ops":
     source: Ticket
     filter: assigned_to = null and status = open
     sort: priority desc, created_at asc
-    limit: 12
+    limit: 4
     display: queue
     action: ticket_edit
     empty: "Every open ticket has an assignee"
+
+  # Goal B conversation spine AFTER dual attention so manager hero stills
+  # show pressure queues + thread copy sharing the fold (not conversation-only).
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: comment_detail
+    empty: "No conversation yet — customer and agent notes appear here as cases move"
+
+  ux:
+    as manager:
+      purpose: "Multi-panel support ops — dual queues before conversation trail"
+      focus: team_metrics, sla_readiness, critical_queue, unassigned_queue, live_conversation
 
   resolution_funnel:
     source: Ticket
@@ -628,14 +638,14 @@ workspace manager_ops "Manager Ops":
   recent_trail:
     source: Ticket
     sort: updated_at desc
-    limit: 8
+    limit: 6
     display: timeline
     action: ticket_detail
     empty: "No tickets yet"
 
   # Lifecycle kanban lives on agent_dashboard (my_assigned). Manager Ops
-  # stays metrics + SLA strip + focused queues (stem ST-027–029) — a
-  # second full open-board here doubled concurrent row preloads and
+  # stays metrics + SLA strip + dual attention + conversation (ST-027–029) —
+  # a second full open-board here doubled concurrent row preloads and
   # thrash under trial scroll without adding reassignment clarity.
 
 workspace agent_dashboard "Agent Dashboard":
