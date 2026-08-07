@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1744 (2026-08-07).** **self-audit** (cadence ≥15 since 1729) — deferred campaign residual digs. Window `d74bebf`..`5f893497`. 5 largest CLEAN: c1743 master-detail keyboard; c1733 domain_join empty_region; c1738 trial CSV seeder + dig-contract; c1735 #1646 money/related; c1731 hr_records org_structure. Unit pins pass; dig-contract 1738 receipt+log contract lines ok. 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1744**. budget 0. Explore **19/100**. Next: agent_acceptance contact_manager (residual=17) or campaign rotation under aggressive; capability-sweep@1735 next~1755; self-audit@1744 next~1759.
+
 > **Cycle 1743 (2026-08-07).** tip CI green (31203989983 / 8cdb9ad). Campaign **framework-ux** under aggressive require_mutation (policy force agent_qa_smoke was no_smoke_report stamp thrash — suppress_recurring_smoke). **Ship:** master-detail keyboard ArrowDown/Up + End/Home selection + hx-get detail load (carousel keyboard parity @1739; dual_pane list focusable rows). Gallery probe master_detail.keyboard_arrows_change_selection PASS; behaviour pin. HM dist + dazzle.min.js + site rebuild. gallery_probes **USED@1743**. densify=0 dual_lock=0. budget 1. Explore **19/100**.
 
 > **Cycle 1735 (2026-08-07).** **capability-sweep** (cadence ≥20 since formal@1663 / stamp@1714; log_meta null) + campaign **framework-ux ship** under require_mutation. Inventory tip green run **31179083450** (bf6433de8a): **UNOWNED=0** **COGNITION_STALE_eff≈25** **HYGIENE_STALE_eff≈38** rows≈78 (COGNITION=31 HYGIENE=40 DRIVER=2 EXEMPT=5). Fresh USED lag&lt;20: interesting_product@1730/34 Goal B ships, product_quality/demo quality/reset@1716, acceptance+trial@1725, gallery@1718. DRIVER CodeQL+inbox **USED@1735**. densify=0 dual_lock=0 suppress_smoke=1 residual=0. **Ship #1646:** detail money prefers `{name}_minor`/`_currency` when bare empty; related-tab page_size default **8** (finger-scale; honour tab.page_size/limit; cap 50). Unit pin + ship-surface promote. Top digs next: campaign journey_dogfood / story_walk / agent_acceptance / framework edge / **semgrep hygiene** never-exercised / domain|presentation COGNITION — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **15/100**.
@@ -137,8 +139,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1735 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1735 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1744 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1744 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
