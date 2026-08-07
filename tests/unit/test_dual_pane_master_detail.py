@@ -69,6 +69,10 @@ def test_render_master_detail_shell_has_contract_markers() -> None:
     assert "data-dz-master-detail" in html
     assert "data-dz-master-detail-list-body" in html
     assert "data-dz-master-detail-detail-body" in html
+    # List body is the swap root for region HTMX chrome (list-search q= filter).
+    assert "data-dz-region" in html
+    assert 'data-dz-region-name="contact_list"' in html
+    assert 'id="region-contact_list-md-list"' in html or 'id="region-contact_list-' in html
     assert f'id="{master_detail_pane_id("contact_detail")}"' in html
     assert "hx-get=" in html
     assert "Select an item" in html

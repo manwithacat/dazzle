@@ -76,13 +76,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1725 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1741 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1633 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1614 | STALE |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1624 | STALE |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1725 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1741 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -95,12 +95,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1718 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1739 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1624 | STALE |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1718 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1739 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -148,6 +148,8 @@ apply map patches with `{"apply":true}`.
 ## Cycle notes (newest first)
 
 
+> **Cycle 1741 (2026-08-07).** residual=0 densify=0 tip CI green; **agent_acceptance_panel** contact_manager small_firm_owner: seed 54/54; panel recommend=unclear (synthesized, budget_exceeded); **product/framework fix**: dual_pane master-detail list body stamps `data-dz-region` so list-search `hx-target=closest [data-dz-region]` filters the directory (find-by-name was a no-op). auto_seed search bug closed in-cycle. qa trial + agent_acceptance_panel **USED@1741**. budget 1. Explore **17/100**.
+> **Cycle 1739 (2026-08-07).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 46 PASS; **Ship** `carousel.keyboard_arrows_change_slide` + `carousel_keyboard_arrows` runner (ArrowRight/Left 0↔1; End→last; Home→0); catalog **47** probes; unit pin. densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1739**. budget 1. Explore **17/100**.
 > **Cycle 1656 (2026-08-03).** residual=0 densify=0 CI green post-1655 repair; campaign story_walk **overridden** interesting_product (require_mutation). Goal B **document@simple_task**: TaskBrief entity + composition queues on admin/team/my_work; 12 domain-true brief/acceptance/runbook lines; hero stills show Composition headlines above fold; open_via + ship-surface pins. interesting_product **USED@1656**. budget 1. Explore **16/100**.
 > **Cycle 1718 (2026-08-07).** campaign force **hm-convergence gallery_probes**: discover uncovered=0; prior 45 PASS; **Ship** `grid.column_resize_drag_widens` + `grid_column_resize` runner (drag handle +64 widens col within snap; aria-sort unchanged); catalog **46/46 PASS**; unit pin. densify=0 dual_lock=0 coherence=0. gallery_probes + hm gallery interaction **USED@1718**. budget 1. Explore **1/100**.
 > **Cycle 1654 (2026-08-03).** residual=0 densify=0 tip CI **in_progress** (1653 llm_ticket ship) — no push. campaign story_walk **overridden** interesting_product (require_mutation). Goal B **conversation@design_studio**: Feedback display_field=comment + live_conversation on studio_dashboard/review_desk/feedback_desk; domain-true critique seeds; hero stills show Live Conversation prose above fold; unit pin. interesting_product **USED@1654**. budget 1. Explore **15/100**.

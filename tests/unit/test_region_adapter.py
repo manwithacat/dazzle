@@ -281,6 +281,9 @@ def test_list_with_search_fields_renders_q_input() -> None:
     assert "Find by first name" in html
     assert "dz-list-search-label" in html
     assert "filter-label" in html
+    # Swap target must resolve on dual_pane list bodies (data-dz-region) and
+    # dashboard cards alike — closest region chrome, not a bare #region- id.
+    assert 'hx-target="closest [data-dz-region]"' in html
     # Must not be the FTS results-panel search_box path.
     assert "dz-search-results-contact_list" not in html
 

@@ -105,10 +105,12 @@ def render_master_detail_shell(
 ) -> str:
     """Emit the dual-pane master-detail Hyperpart shell for a workspace pair.
 
-    List body lazy-loads via the normal region endpoint. Detail pane starts with
-    an empty prompt; the first list row uses ``hx-trigger="click, load once"`` so
-    it auto-fills the pane when the list fragment settles. Further rows hx-get
-    ``detail_endpoint_base?id=…`` into ``.dz-master-detail__detail`` on click.
+    List body lazy-loads via the normal region endpoint. The list body slot
+    carries ``data-dz-region`` so list-search / FilterBar
+    ``hx-target="closest [data-dz-region]"`` resolves (dashboard cards already
+    stamp this; dual_pane previously omitted it — find-by-name was a no-op).
+    Detail pane starts with an empty prompt; list rows hx-get
+    ``detail_endpoint_base?id=…`` into the detail pane on click.
     """
     import html as _html
 
@@ -140,6 +142,7 @@ def render_master_detail_shell(
         f"</div></div>"
         f'<div class="dz-card-body" id="{esc(list_body_id)}" '
         f'data-display="list" '
+        f'data-dz-region data-dz-region-name="{esc(list_region)}" '
         f'data-dz-master-detail-list-body="true" '
         f'hx-get="{esc(list_endpoint)}" '
         f'hx-trigger="{esc(trigger)}" '
