@@ -79,7 +79,8 @@ dedicated screens — fourteen in all, from the staff directory to
   queue, reason chart, and people pull-queue to person hubs.
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
   timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
-- **My Team** — manager desk with reports queue, cards, and role mix chart.
+- **My Team** — manager desk: level board + department assignments + reporting
+  lines (org structure), then capped people notes and a secondary report roster.
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
 - **Reporting** — ManagerLink trail with people cards and department chart.
 
@@ -122,4 +123,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:bcd717d8a08bca9c12af8bbd452865faba2ee1ec53dcce820396f483df32770e -->
+<!-- dazzle-spec-brief: sha256:51c0d244fb3ccb74a8a7342cbfef0896c965452728270aa8fdcf8e5b56b4023e -->

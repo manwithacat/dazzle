@@ -1247,18 +1247,11 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  # Goal B conversation: people notes on the manager desk — not only reports.
-  purpose: "People notes, direct reports, roles, and reporting lines"
+  # Post-5.8 Goal B org_structure: peer HR tools (Workday / BambooHR / Lattice)
+  # show team by level and department with reporting lines — not conversation
+  # thrash + flat person dump + duplicate report queues above the fold.
+  purpose: "Org structure managers can parse — team by level and department, reporting lines, then notes"
   access: persona(manager, hr_admin)
-
-  # Goal B conversation spine FIRST — domain-true HR prose above fold.
-  live_conversation:
-    source: PersonNote
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: person_note_detail
-    empty: "No team conversation yet — notes on reports appear here"
 
   team_pulse:
     source: Person
@@ -1271,63 +1264,85 @@ workspace my_team "My Team":
       conversation: count(PersonNote)
     tones:
       people: accent
+      reporting_lines: positive
       conversation: accent
+
+  # Role-level board (enum columns ic1…m4) — career ladder shape at a glance.
+  by_level:
+    source: Role
+    display: kanban
+    group_by: level
+    sort: title asc
+    limit: 40
+    action: role_detail
+    empty: "No roles defined yet"
+
+  # Active assignments grouped by department — who sits where in the org.
+  by_department:
+    source: Employment
+    filter: end_date = null
+    display: kanban
+    group_by: department
+    sort: start_date desc
+    limit: 40
+    action: employment_detail
+    empty: "No active employment rows"
+
+  # Who reports to whom — pull-to-open ManagerLink queue (not buried timeline).
+  reporting_lines:
+    source: ManagerLink
+    sort: start_date desc
+    limit: 20
+    display: queue
+    action: managerlink_detail
+    empty: "No reporting lines yet — assign a manager to a person"
 
   ux:
     as manager:
-      purpose: "See team people notes before report queues"
-      focus: live_conversation, team_pulse, reports, reporting_lines
+      purpose: "See team by level and department before conversation thrash"
+      focus: team_pulse, by_level, by_department, reporting_lines
     as hr_admin:
-      purpose: "People notes and team pulse for manager-scope coaching"
-      focus: live_conversation, team_pulse, reports, reporting_lines
+      purpose: "Org structure and reporting lines for manager-scope coaching"
+      focus: team_pulse, by_level, by_department, reporting_lines
 
+  # Conversation capped after org regions (still present — not removed).
+  live_conversation:
+    source: PersonNote
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: person_note_detail
+    empty: "No team conversation yet — notes on reports appear here"
+
+  # Flat report roster after hierarchy (secondary).
   reports:
     source: Person
     display: queue
-    limit: 25
+    limit: 12
     action: person_detail
     empty: "No people in scope"
-
-  # Work-surface utility: employment + reporting history are chronological streams.
-  team_employment:
-    source: Employment
-    display: timeline
-    limit: 20
-    empty: "No employment rows for your team"
-
-  reporting_lines:
-    source: ManagerLink
-    display: timeline
-    limit: 20
-    empty: "No reporting lines yet"
-
-  role_mix:
-    source: Role
-    # Team desk role mix is pull-to-open (queue), not a dense catalogue table.
-    display: queue
-    limit: 15
-    action: role_detail
-    empty: "No roles defined"
 
   team_readiness:
     display: status_list
     entries:
-      - title: "Reports first"
-        caption: "Open a person for career timeline without warehouse chrome"
-        icon: "users"
+      - title: "Org structure"
+        caption: "Level board and department assignments before notes"
+        icon: "network"
         state: accent
       - title: "Reporting lines"
-        caption: "ManagerLink history also lives on the Reporting desk"
+        caption: "ManagerLink also lives on the Reporting desk"
         icon: "git-branch"
         state: positive
 
-  # Work-surface utility: report cards are pull-to-open career hubs, not a dense card gallery.
-  report_cards:
-    source: Person
-    display: queue
-    limit: 20
-    action: person_detail
-    empty: "No people in scope"
+  # Department headcount mix (org shape chart).
+  dept_mix:
+    source: Employment
+    filter: end_date = null
+    display: bar_chart
+    group_by: department
+    aggregate:
+      count: count(Employment)
+    empty: "No active employment rows"
 
   role_mix_chart:
     source: Role
