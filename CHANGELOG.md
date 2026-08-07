@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **Open discovery on person chips + non-person ref Links** — leaf module
+  `dazzle.render.open_discovery` stamps `data-dz-open-*` (optional `via=` col key)
+  on user-chip anchors and `/app/<entity>` ref Links so agents attr-read hops
+  without scraping labels; unit pin `test_ref_link_open_discovery_1714`.
 - **Goal B document depth (project_tracker)** — manager/admin Dashboard leads with
   Composition (`Attachment` filenames as row titles) and a Documents metric tile so
   hero stills show deliverable identity on Home, not only on the Files desk;

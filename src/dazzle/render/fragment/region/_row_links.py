@@ -9,6 +9,25 @@ ADR-0038 so the standalone list path (``back``) and the workspace region path
 from typing import Any
 from uuid import UUID
 
+from dazzle.render.open_discovery import (
+    entity_label_from_detail_url,
+    open_hop_label,
+)
+
+# Re-export leaf open-discovery labels (cycle 1714) so existing importers keep
+# ``from …region._row_links import entity_label_from_detail_url, open_hop_label``.
+__all__ = (
+    "entity_label_from_detail_url",
+    "open_hop_label",
+    "via_field_from_template",
+    "field_label_from_via",
+    "_resolve_row_links",
+    "_resolve_row_open_chain",
+    "_format_link_value",
+    "_item_format_map",
+    "_try_format_url",
+)
+
 
 def _format_link_value(value: Any) -> str:
     """Coerce a row field value to a URL path segment (#1603 dogfood).
@@ -115,36 +134,6 @@ def _try_format_url(tmpl: str, mapping: dict[str, str]) -> str | None:
     return url or None
 
 
-def entity_label_from_detail_url(url: str) -> str:
-    """Human label for a resolved app path (detail or list).
-
-    ``/app/user/u-9`` → ``User``; ``/app/payment-attempt/x`` → ``Payment attempt``;
-    ``/app/ticket`` (list) → ``Ticket``; ``/app/invoices?status=x`` → ``Invoices``.
-    Cycle 1643: list surfaces used to take ``segs[-2]`` and label as ``App``.
-    Used for hop ``title`` / ``aria-label`` / ``data-dz-open-entity``.
-    """
-    if not url or str(url).strip() in ("", "#"):
-        return "Related"
-    path = str(url).split("?", 1)[0].strip("/")
-    segs = [s for s in path.split("/") if s]
-    if not segs:
-        return "Related"
-    # /app/<slug>[/<id>…] → entity slug is always segs[1]
-    if segs[0] == "app":
-        if len(segs) < 2:
-            return "Related"
-        slug = segs[1]
-    elif len(segs) >= 2:
-        # bare /<slug>/<id>
-        slug = segs[-2]
-    else:
-        slug = segs[0]
-    words = [w for w in slug.replace("_", "-").split("-") if w]
-    if not words:
-        return "Related"
-    return " ".join(w[:1].upper() + w[1:] for w in words)
-
-
 def via_field_from_template(tmpl: str) -> str:
     """Extract the open-via placeholder from a detail URL template.
 
@@ -170,27 +159,6 @@ def field_label_from_via(via: str) -> str:
     # Sentence case: first word capital, rest lower (relation phrases).
     head, *rest = words
     return " ".join([head[:1].upper() + head[1:].lower(), *[w.lower() for w in rest]])
-
-
-def open_hop_label(entity_label: str, via_field: str = "") -> str:
-    """User-facing hop phrase for dual-open actions (cycle 1577).
-
-    Same-entity ``via id`` stays ``Open Task``; FK hops become
-    ``Open User via assigned to`` so agents/users see the relation, not only
-    the target entity slug from the URL.
-    """
-    ent = (entity_label or "Related").strip() or "Related"
-    via = (via_field or "").strip()
-    if not via or via == "id":
-        return f"Open {ent}"
-    words = [w for w in via.replace("-", "_").split("_") if w]
-    if not words:
-        return f"Open {ent}"
-    field_phrase = " ".join(w.lower() for w in words)
-    # Avoid "Open User via user" when via name matches entity
-    if field_phrase.casefold() == ent.casefold():
-        return f"Open {ent}"
-    return f"Open {ent} via {field_phrase}"
 
 
 def _resolve_row_open_chain(

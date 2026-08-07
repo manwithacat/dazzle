@@ -57,9 +57,11 @@ from dazzle.render.fragment.ingest.models import (
     TimeSeries,
     Tree,
 )
-from dazzle.render.fragment.region._row_links import (
-    entity_label_from_detail_url,
-    open_hop_label,
+from dazzle.render.open_discovery import (
+    drill_open_discovery_attrs as _leaf_drill_open_discovery_attrs,
+)
+from dazzle.render.open_discovery import (
+    hub_open_discovery_attrs as _leaf_hub_open_discovery_attrs,
 )
 
 _BULLET_BAND_COLORS: dict[str, str] = {
@@ -300,49 +302,29 @@ def queue_row_root_attrs(row: QueueRow) -> str:
     return base
 
 
-def _hub_open_discovery_attrs(drill_url: str) -> tuple[str, str]:
+def _hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:
     """Primary dual-open attrs for a hub drill (link attrs, host chain attrs).
 
     Cycle 1606 — queue parity with list-row dual-open discovery.
     Cycle 1612 — same attrs on kanban / activity / timeline / tree drills so
     agents attr-read open hops without scraping titles only. Hub drills are
     same-entity VIEW paths (via ``id``) today.
+    Cycle 1714 — optional ``via`` for FK person/ref chips; assembly lives in
+    ``dazzle.render.open_discovery`` (leaf — person chips import it).
     """
-    href = _html.escape(drill_url, quote=True)
-    ent = entity_label_from_detail_url(drill_url)
-    ent_attr = _html.escape(ent, quote=True)
-    phrase = open_hop_label(ent, "id")
-    phrase_attr = _html.escape(phrase, quote=True)
-    aria = _html.escape(phrase, quote=True)
-    link_attrs = (
-        f'data-dz-open-via="id" '
-        f'data-dz-open-entity="{ent_attr}" '
-        f'data-dz-open-role="primary" '
-        f'data-dz-open-hop="0" '
-        f'data-dz-open-label="{phrase_attr}" '
-        f'aria-label="{aria}" '
-        f'title="{phrase_attr}" '
-    )
-    # Host-level chain (single hop) mirrors table multi-hop chain attrs.
-    host_attrs = (
-        f' data-dz-open-chain="{href}"'
-        f' data-dz-open-chain-via="id"'
-        f' data-dz-open-hops="1"'
-        f' data-dz-open-chain-label="{phrase_attr}"'
-        f' data-dz-open-chain-entity="{ent_attr}"'
-    )
-    return link_attrs, host_attrs
+    return _leaf_hub_open_discovery_attrs(drill_url, via=via)
 
 
-def drill_open_discovery_attrs(drill_url: str) -> str:
+def drill_open_discovery_attrs(drill_url: str, *, via: str = "id") -> str:
     """Single-anchor open discovery (link + chain) for dashboard drills.
 
     Cycle 1617 — task-inbox / cohort-strip / day-timeline wrap the whole
     cell in ``<a href=drill>`` (no separate host root). Agents need the same
     ``data-dz-open-*`` attrs as queue/kanban without scraping titles.
+    Cycle 1714 — optional ``via`` for FK person/ref chips; leaf assembly in
+    ``dazzle.render.open_discovery``.
     """
-    link_attrs, host_attrs = _hub_open_discovery_attrs(drill_url)
-    return (link_attrs + host_attrs).strip()
+    return _leaf_drill_open_discovery_attrs(drill_url, via=via)
 
 
 def drill_anchor_open_attrs(drill_url: str, *, kind: str) -> str:

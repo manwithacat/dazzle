@@ -41,6 +41,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1714 (2026-08-07).** **capability-sweep** (cadence ≥20 since 1663) + campaign **framework-ux ship**. Inventory: **UNOWNED=0** **COGNITION_STALE_eff≈31** **HYGIENE_STALE_eff≈40** rows≈78. DRIVER CodeQL+inbox **USED@1714**. densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1. **Ship:** person chip + non-person `/app` ref Link open discovery (`data-dz-user-chip-drill` / `data-dz-ref-link-drill` + `data-dz-open-*`; optional via=col key). Unit pin test_ref_link_open_discovery_1714. Top digs next: interesting_product / story_walk / agent_acceptance / framework edge / **semgrep hygiene** never-exercised — **not** dual_lock/smoke/WI densify. budget 1. Explore **3/100**.
 > **Cycle 1674 (2026-08-03).** residual=0 densify=0 CI green post-1672; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1672). Goal B **conversation@simple_task**: TaskComment display_field=content + live_conversation on admin_dashboard/team_overview/my_work; existing domain-true seeds; unit pin + ship-surface. interesting_product **USED@1674**. budget 1. Explore **24/100**.
 > **Cycle 1671 (2026-08-03).** residual=0 densify=0 CI green post-1669 repair; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1669). Goal B **conversation@fieldtest_hub**: IssueNote display_field=body + live_conversation on manager_ops/issue_triage/engineering_dashboard; domain-true field notes; unit pin + ship-surface. interesting_product **USED@1671**. budget 1. Explore **23/100**.
 > **Cycle 1668 (2026-08-03).** residual=0 densify=0 CI green post-1666; campaign story_walk **overridden** interesting_product (require_mutation; claim PENDING#1667). Goal B **conversation@hr_records**: PersonNote display_field=body + live_conversation on staff_directory/my_team; domain-true people notes; unit pin + ship-surface. interesting_product **USED@1668**. budget 1. Explore **22/100**.
@@ -58,7 +59,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1674 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1712 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1624 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -70,12 +71,12 @@ apply map patches with `{"apply":true}`.
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1614 | STALE |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1624 | STALE |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1633 | STALE |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1675 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | USED |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1676 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1675 | STALE |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1676 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1647 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1647 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1633 | STALE |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1633 | STALE |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -91,7 +92,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1645 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1645 | STALE |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -100,9 +101,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1676 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1676 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1341 | STALE |
@@ -112,7 +113,7 @@ apply map patches with `{"apply":true}`.
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1417 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1676 | USED |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1676 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |
@@ -122,8 +123,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1663 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1663 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1714 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1714 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |

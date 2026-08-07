@@ -14,6 +14,7 @@ import re
 from typing import Any
 
 from dazzle.render.filters import _ref_display_name
+from dazzle.render.open_discovery import drill_open_discovery_attrs
 
 # Target entity names that mean "show an avatar chip".
 _PERSON_ENTITIES = frozenset(
@@ -147,6 +148,10 @@ def wrap_user_chip_link(chip_html: str, value: Any, col: dict[str, Any] | None =
 
     List rows, detail cells, and workspace regions share this seam so person
     chips stay clickable wherever they appear (cycle 1364 parity with region).
+
+    Cycle 1714 — stamp ``data-dz-open-*`` (queue/grid/ref-link parity) so agents
+    attr-read person hops without scraping the avatar label alone. Prefer the
+    column ``key`` as open-via (e.g. ``assigned_to``) when present.
     """
     if not chip_html or chip_html == "—":
         return chip_html
@@ -154,7 +159,12 @@ def wrap_user_chip_link(chip_html: str, value: Any, col: dict[str, Any] | None =
     if not url:
         return chip_html
     href = _html_mod.escape(url, quote=True)
-    return f'<a href="{href}" class="dz-user-chip-link">{chip_html}</a>'
+    via = str((col or {}).get("key") or "id").strip() or "id"
+    open_attrs = drill_open_discovery_attrs(url, via=via)
+    return (
+        f'<a href="{href}" class="dz-user-chip-link" data-dz-user-chip-drill '
+        f"{open_attrs}>{chip_html}</a>"
+    )
 
 
 def render_user_chip_html(
