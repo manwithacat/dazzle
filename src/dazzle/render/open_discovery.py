@@ -44,6 +44,8 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
 
     Cycle 1719 — ``via=create`` / ``via=new`` yields ``Create {Entity}`` for
     list/empty/related create CTAs (same attr grammar as VIEW hops).
+
+    Cycle 1721 — ``via=edit`` yields ``Edit {Entity}`` for row pencil actions.
     """
     ent = (entity_label or "Related").strip() or "Related"
     via = (via_field or "").strip()
@@ -51,6 +53,8 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
         return f"Open {ent}"
     if via.casefold() in ("create", "new"):
         return f"Create {ent}"
+    if via.casefold() == "edit":
+        return f"Edit {ent}"
     words = [w for w in via.replace("-", "_").split("_") if w]
     if not words:
         return f"Open {ent}"
@@ -80,6 +84,31 @@ def create_cta_open_attrs(href: str) -> str:
 def create_cta_open_attr_suffix(href: str) -> str:
     """Leading-space open attrs for appending onto an ``<a …>`` tag, or ``""``."""
     extra = create_cta_open_attrs(href)
+    return f" {extra}" if extra else ""
+
+
+def edit_action_open_attrs(href: str) -> str:
+    """Open-discovery attrs for row edit pencil actions.
+
+    Cycle 1721 — agents attr-read UPDATE hops without scraping the pencil
+    icon / ``data-dazzle-action``. Marker ``data-dz-update-drill`` (not
+    ``data-dz-edit-*`` — that prefix is the HM grid-edit sole-emitter family
+    under ``ingest/``) + ``data-dz-open-*`` with ``via=edit``. Skips empty /
+    fragment-only / non-app paths (parity with create CTAs).
+    """
+    url = (href or "").strip()
+    if not url or url == "#" or url.startswith("#"):
+        return ""
+    path = url.split("?", 1)[0].strip()
+    segs = [s for s in path.strip("/").split("/") if s]
+    if not (path.startswith("/app/") and len(segs) >= 2 and segs[0] == "app"):
+        return ""
+    return f"data-dz-update-drill {drill_open_discovery_attrs(url, via='edit')}"
+
+
+def edit_action_open_attr_suffix(href: str) -> str:
+    """Leading-space open attrs for appending onto an edit ``<a …>`` tag, or ``""``."""
+    extra = edit_action_open_attrs(href)
     return f" {extra}" if extra else ""
 
 

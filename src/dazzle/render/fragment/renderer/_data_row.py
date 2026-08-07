@@ -43,6 +43,7 @@ from dazzle.render.fragment.region._row_links import (
     open_hop_label,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
+from dazzle.render.open_discovery import edit_action_open_attr_suffix
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
 
 # Raw ISO / Postgres timestamptz leak detector for the text fallback path.
@@ -638,12 +639,19 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f"{lucide_svg_html('eye', cls='dz-tr-action-icon')}</a>"
         )
         # Pencil only when UPDATE is permitted — view (eye) stays for readers.
+        # Cycle 1721: open discovery on /app/* edit hrefs (parity with VIEW + create).
         if can_update:
+            edit_href = f"{detail_url}/edit"
+            edit_open = edit_action_open_attr_suffix(edit_href)
+            # When open attrs stamp aria-label/title, skip the legacy row-label
+            # aria so agents get a single attr grammar (Edit {Entity}).
+            edit_aria = "" if edit_open else f'aria-label="Edit {row_label_attr}" '
             edit_link_html = (
                 f'<a href="{detail_url_attr}/edit" '  # nosemgrep
                 f'data-dazzle-action="{entity_name_attr}.edit" '
-                f'aria-label="Edit {row_label_attr}" '
-                f'class="dz-tr-action">'
+                f"{edit_aria}"
+                f'class="dz-tr-action"'
+                f"{edit_open}>"
                 f"{lucide_svg_html('pencil', cls='dz-tr-action-icon')}</a>"
             )
 
