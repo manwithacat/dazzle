@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1723 (2026-08-07).** residual=0 densify=0 CI green; campaign force **framework-ux** + require_mutation: **ship** detail chrome Edit/Create `Link` open discovery — `link_open_discovery_attr_suffix` classifies `/…/edit` + `*.edit` → update-drill, create/new → create-drill (parity with row pencil; no false VIEW ref hop). Unit pin test_detail_edit_link_open_discovery_1723 + ship-surface. open_discovery leaf **USED@1723**. CodeQL+inbox **USED@1723**. budget 1. Explore **5/100**.
+> **Cycle 1722 (2026-08-07).** **cimonitor** — tip red run 31146712575 (c1721): clone ratchet `create_cta_open_attrs`≈`edit_action_open_attrs`. Extract `_app_action_open_attrs(marker,via)`. CodeQL+inbox **USED@1722**. budget 0. Explore **4/100**. Next when tip green: aggressive story_walk (capability-sweep log_meta lag note).
 > **Cycle 1721 (2026-08-07).** residual=0 densify=0 CI green; campaign force **framework-ux** + require_mutation: **ship** row-edit open discovery — `edit_action_open_attrs` (`data-dz-update-drill` + `data-dz-open-*` via=edit → phrase `Edit {Entity}`) on data-row pencil (VIEW/create parity; marker avoids HM `data-dz-edit-*` sole-emitter family). Unit pin test_edit_action_open_discovery_1721 + ship-surface. open_discovery leaf **USED@1721**. budget 1. Explore **4/100**.
 > **Cycle 1720 (2026-08-07).** residual=0 densify=0 CI green; campaign force **interesting_product** (claim backlog **304**). Goal B **conversation@support_tickets**: Comment display_field=content; manager_ops conversation metric + live_conversation queue; unit pin + ship-surface; hero stills recaptured (Live Conversation thread copy above fold). interesting_product **USED@1720**. budget 1. Explore **3/100**.
 > **Cycle 1719 (2026-08-07).** campaign force **framework-ux** + require_mutation: **ship** create-CTA open discovery — `create_cta_open_attrs` (`data-dz-create-drill` + `data-dz-open-*` via=create → phrase `Create {Entity}`) on CreateButton, table empty CTA, related create row; unit pin test_create_cta_open_discovery_1719 + ship-surface. densify=0 dual_lock=0 residual=0. open_discovery leaf **USED@1719**. budget 1. Explore **2/100**.
@@ -126,8 +128,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1714 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1714 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1723 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1723 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |

@@ -63,7 +63,10 @@ from dazzle.render.fragment.primitives import (
     Toolbar,
 )
 from dazzle.render.fragment.renderer._helpers import _hx_attrs, _pagination_pages
-from dazzle.render.open_discovery import create_cta_open_attr_suffix, drill_open_discovery_attrs
+from dazzle.render.open_discovery import (
+    create_cta_open_attr_suffix,
+    link_open_discovery_attr_suffix,
+)
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -164,20 +167,11 @@ class _RenderInteractiveMixin:
         href = ctx.escape_attr(raw_href)
         action_attr = self._action_attrs(link.data_action, ctx)
         tab_attr = ' target="_blank" rel="noopener noreferrer"' if link.new_tab else ""
-        # Cycle 1714 — non-person FK refs (region _format_cell → Link) need the
-        # same data-dz-open-* discovery as person chips / queue drills. Only
-        # ``/app/<entity>[/…]`` paths (not marketing/nav or external).
-        open_extra = ""
-        path = raw_href.split("?", 1)[0].strip()
-        segs = [s for s in path.strip("/").split("/") if s]
-        is_app_entity = (
-            path.startswith("/app/")
-            and len(segs) >= 2
-            and segs[0] == "app"
-            and not (link.data_action or "").startswith("nav.")
-        )
-        if is_app_entity:
-            open_extra = f" data-dz-ref-link-drill {drill_open_discovery_attrs(raw_href)}"
+        # Cycle 1714 — non-person FK refs (region _format_cell → Link).
+        # Cycle 1723 — edit/create primary Links classified in the leaf
+        # (``link_open_discovery_attr_suffix``) so agents get update/create
+        # drill grammar, not a false VIEW ref hop.
+        open_extra = link_open_discovery_attr_suffix(raw_href, data_action=link.data_action or "")
         return (
             f'<a class="dz-link" href="{href}"{action_attr}{tab_attr}{open_extra}>'
             f"{ctx.escape(link.label)}</a>"

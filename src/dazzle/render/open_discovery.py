@@ -115,6 +115,50 @@ def edit_action_open_attr_suffix(href: str) -> str:
     return f" {extra}" if extra else ""
 
 
+def _app_link_open_kind(path: str, action: str, segs: list[str]) -> str:
+    """Classify an ``/app/…`` Link as ``edit`` / ``create`` / ``view``."""
+    path_norm = path.rstrip("/")
+    action_cf = (action or "").casefold()
+    if path_norm.endswith("/edit") or action_cf.endswith(".edit"):
+        return "edit"
+    leaf = segs[-1].casefold() if segs else ""
+    if leaf in ("create", "new") or action_cf.endswith(".create"):
+        return "create"
+    if path_norm.endswith("/create") or path_norm.endswith("/new"):
+        return "create"
+    return "view"
+
+
+def link_open_discovery_attr_suffix(href: str, *, data_action: str = "") -> str:
+    """Open-discovery attr suffix for typed ``Link`` emission.
+
+    Cycle 1723 — detail chrome Edit / CREATE primary Links must not look
+    like VIEW ref hops. Classification:
+
+    * ``nav.*`` actions → no open stamp (shell/nav)
+    * path ends ``/edit`` or action ends ``.edit`` → update-drill
+    * create/new path or action ends ``.create`` → create-drill
+    * other ``/app/<entity>…`` → ref-link drill (VIEW hop)
+    * non-app / empty → ``""``
+    """
+    url = (href or "").strip()
+    if not url or url == "#" or url.startswith("#"):
+        return ""
+    action = (data_action or "").strip()
+    if action.casefold().startswith("nav."):
+        return ""
+    path = url.split("?", 1)[0].strip()
+    segs = [s for s in path.strip("/").split("/") if s]
+    if not path.startswith("/app/") or len(segs) < 2 or segs[0] != "app":
+        return ""
+    kind = _app_link_open_kind(path, action, segs)
+    if kind == "edit":
+        return edit_action_open_attr_suffix(url)
+    if kind == "create":
+        return create_cta_open_attr_suffix(url)
+    return f" data-dz-ref-link-drill {drill_open_discovery_attrs(url)}"
+
+
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:
     """Primary dual-open attrs (link attrs, host chain attrs) for one hop."""
     via_field = (via or "id").strip() or "id"

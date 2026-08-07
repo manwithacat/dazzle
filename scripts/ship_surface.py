@@ -83,6 +83,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_create_cta_open_discovery_1719.py",
     # cycle 1721 — row edit pencil open discovery (VIEW/create parity)
     "tests/unit/test_edit_action_open_discovery_1721.py",
+    # cycle 1723 — detail chrome Edit/Create Link open discovery (not VIEW ref)
+    "tests/unit/test_detail_edit_link_open_discovery_1723.py",
     # cycle 1712 — presentation residual delta_theater honesty under 100%
     "tests/unit/test_presentation_residual_1626.py",
     # ops_dashboard Goal B conversation (cycle 1660 IncidentNote + command_center trail)
