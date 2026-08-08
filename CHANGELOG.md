@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **marker + `display: map` hyperpart emitter** — `Marker` / `MapBoard` Fragment dual-lock
+  (`.dz-marker` pin chrome on a vendor-free plan canvas); region builder from entity
+  location/name + status tone or static entries; dogfood fieldtest_hub `device_map` +
+  simple_task `sample_map`. Unlocks previously deferred map display.
 - **hover-card hyperpart emitter (compose guest)** — `HoverCard` Fragment dual-lock
   (`.dz-hover-card` + `data-dz-hover-card`); person chips with email/role/department/title
   meta compose a rich preview panel (opt-out `hover_card: false`; avatar_only density

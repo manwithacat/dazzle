@@ -869,6 +869,19 @@ workspace admin_dashboard "Admin Dashboard":
       - title: "Assignee columns"
         body: "https://placehold.co/640x360/334155/A3E635/png?text=Assignees"
 
+  # Hyperpart emitter dogfood: display: map → Marker pin board (.dz-marker).
+  sample_map:
+    display: map
+    title: "Sample sites"
+    entries:
+      - title: "HQ"
+        body: "success"
+      - title: "Depot"
+        body: "warning"
+        icon: "lg"
+      - title: "Alert"
+        body: "danger"
+
   ux:
     as admin:
       purpose: "See task discussion before document briefs and pressure queues"

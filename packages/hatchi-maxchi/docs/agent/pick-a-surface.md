@@ -47,6 +47,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Chat speech shell (inbound/outbound) | `bubble` | `display: conversation` / `Bubble` fragment |
 | Multi-image stage strip (prev/next) | `carousel` | `display: carousel` / `Carousel` fragment |
 | Rich person/entity preview on hover | `hover-card` | Person chip compose guest / `HoverCard` fragment (no region verb) |
+| Map / plan pin chrome (label + tone) | `marker` | `display: map` / `Marker` fragment (host placement) |
 | Wrapping actions | `cluster` / `toolbar` | Compose real children in HTML |
 
 ### Menus / panels / chrome strips

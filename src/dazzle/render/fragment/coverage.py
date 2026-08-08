@@ -197,6 +197,7 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "accordion",
         "conversation",
         "carousel",
+        "map",  # marker pin board — vendor-free plan canvas (2026-08-09)
         "profile_card",
         "action_grid",
         "tree",
@@ -252,7 +253,8 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
 #   primitive. So the substrate genuinely does not render it and the audit
 #   correctly reports it as unsupported; listed here so that persistent
 #   blocked-count (project_tracker `attachment_view`) reads as intentional.
-_DEFERRED_DISPLAYS: frozenset[str] = frozenset({"map", "pdf_viewer"})
+# `map` shipped 2026-08-09 as vendor-free Marker pin board (no tile SDK).
+_DEFERRED_DISPLAYS: frozenset[str] = frozenset({"pdf_viewer"})
 
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:

@@ -122,3 +122,56 @@ class HoverCard:
             raise ValueError("HoverCard requires non-empty trigger")
         if not self.title or not str(self.title).strip():
             raise ValueError("HoverCard requires non-empty title")
+
+
+_MARKER_TONES = ("", "success", "warning", "danger")
+_MARKER_SIZES = ("", "lg")
+
+
+@dataclass(frozen=True, slots=True)
+class Marker:
+    """HM Marker hyperpart — dual-lock ``.dz-marker`` map pin chrome.
+
+    Gallery spine: pin silhouette + optional label. Host owns map
+    projection / placement (``x_pct`` / ``y_pct`` on a MapBoard canvas).
+    Authored via ``display: map`` (region board of pins) or composed
+    explicitly as a Fragment.
+
+    Dual-lock root: ``.dz-marker`` (contracts/marker.py).
+    """
+
+    label: str
+    tone: Literal["", "success", "warning", "danger"] = ""
+    size: Literal["", "lg"] = ""
+    x_pct: float = 50.0
+    y_pct: float = 50.0
+    title: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("Marker requires non-empty label")
+        if self.tone not in _MARKER_TONES:
+            raise ValueError(f"invalid Marker tone {self.tone!r}")
+        if self.size not in _MARKER_SIZES:
+            raise ValueError(f"invalid Marker size {self.size!r}")
+        if not (0.0 <= float(self.x_pct) <= 100.0):
+            raise ValueError("Marker x_pct must be in [0, 100]")
+        if not (0.0 <= float(self.y_pct) <= 100.0):
+            raise ValueError("Marker y_pct must be in [0, 100]")
+
+
+@dataclass(frozen=True, slots=True)
+class MapBoard:
+    """Host map plan canvas of Marker pins (``display: map``).
+
+    Vendor-free static board — no tile SDK. Markers are dual-lock HM
+    chrome; the canvas (``.dz-map``) is framework host CSS placement.
+    """
+
+    markers: tuple[Marker, ...]
+    label: str = "Map"
+    empty_message: str = "No locations."
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("MapBoard requires non-empty label")

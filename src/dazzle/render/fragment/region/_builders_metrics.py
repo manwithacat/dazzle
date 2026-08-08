@@ -7,6 +7,7 @@ Surface kind and tile/list/bar/stage-row shapes:
   - _build_status_list     vertical icon + title + caption + pill rows
   - _build_accordion       exclusive details group (FAQ / section disclosure)
   - _build_carousel        media stage strip with prev/next/dots
+  - _build_map             map plan board of Marker pin chrome
   - _build_progress        <progress> header + StageBar chip list
   - _build_pipeline_steps  horizontal stage cards with arrow connectors
 
@@ -27,6 +28,8 @@ from dazzle.render.fragment import (
     CarouselSlide,
     EmptyState,
     Fragment,
+    MapBoard,
+    Marker,
     MetricsGrid,
     MetricTile,
     PipelineStage,
@@ -43,6 +46,33 @@ from dazzle.render.fragment.region._shared import (
 )
 
 _CAROUSEL_MEDIA_KEYS = ("preview_url", "logo_url", "photo_url", "image_url", "src")
+_MAP_LABEL_KEYS = (
+    "location",
+    "city",
+    "site",
+    "region",
+    "place",
+    "address",
+    "name",
+    "title",
+    "label",
+)
+_MAP_TONE_BY_STATUS: dict[str, str] = {
+    "active": "success",
+    "online": "success",
+    "ok": "success",
+    "healthy": "success",
+    "warning": "warning",
+    "degraded": "warning",
+    "prototype": "warning",
+    "pending": "warning",
+    "danger": "danger",
+    "critical": "danger",
+    "recalled": "danger",
+    "alert": "danger",
+    "error": "danger",
+    "failed": "danger",
+}
 
 
 def _carousel_src_from_item(item: dict[str, Any]) -> str:
@@ -51,6 +81,84 @@ def _carousel_src_from_item(item: dict[str, Any]) -> str:
         if val:
             return str(val)
     return ""
+
+
+def _stable_map_xy(key: str) -> tuple[float, float]:
+    """Deterministic placement in the inner 12–88% band (avoid canvas edges)."""
+    h = 0
+    for ch in key:
+        h = (h * 33 + ord(ch)) & 0xFFFFFFFF
+    x = 12.0 + (h % 7600) / 100.0  # 12..88
+    y = 12.0 + ((h // 7600) % 7600) / 100.0
+    return x, y
+
+
+def _map_tone_from_status(status: str) -> str:
+    return _MAP_TONE_BY_STATUS.get(str(status).strip().lower(), "")
+
+
+def _map_label_from_item(item: dict[str, Any]) -> str:
+    for key in _MAP_LABEL_KEYS:
+        val = item.get(key)
+        if val not in (None, "", "—"):
+            return str(val).strip()
+    return ""
+
+
+def _map_markers_from_items(items: list[Any]) -> list[Marker]:
+    markers: list[Marker] = []
+    for raw in items:
+        if not isinstance(raw, dict):
+            continue
+        label = _map_label_from_item(raw)
+        if not label:
+            continue
+        status = str(raw.get("status") or raw.get("state") or raw.get("tone") or "")
+        tone = _map_tone_from_status(status) if status else ""
+        if status and status.lower() in ("success", "warning", "danger"):
+            tone = status.lower()
+        title = str(raw.get("name") or raw.get("title") or label)
+        # Prefer distinct seed for placement so same location still fans out by id.
+        seed = str(raw.get("id") or raw.get("serial_number") or title or label)
+        x, y = _stable_map_xy(seed)
+        markers.append(
+            Marker(label=label[:40], tone=tone, x_pct=x, y_pct=y, title=title)  # type: ignore[arg-type]
+        )
+    return markers
+
+
+def _entry_field(raw: Any, *names: str) -> str:
+    """First non-empty field from a status-entry dict or IR object."""
+    for name in names:
+        if isinstance(raw, dict):
+            val = raw.get(name)
+        else:
+            val = getattr(raw, name, None)
+        if val not in (None, "", "—"):
+            return str(val).strip()
+    return ""
+
+
+def _coerce_marker_tone(raw: str) -> str:
+    if raw in ("success", "warning", "danger"):
+        return raw
+    return _map_tone_from_status(raw)
+
+
+def _map_markers_from_entries(entries: list[Any]) -> list[Marker]:
+    markers: list[Marker] = []
+    for i, raw in enumerate(entries):
+        label = _entry_field(raw, "title", "label")
+        if not label:
+            continue
+        tone = _coerce_marker_tone(_entry_field(raw, "caption", "body", "tone"))
+        size_raw = _entry_field(raw, "icon", "size").lower()
+        size = "lg" if size_raw in ("lg", "large") else ""
+        x, y = _stable_map_xy(f"{i}:{label}")
+        markers.append(
+            Marker(label=label[:40], tone=tone, size=size, x_pct=x, y_pct=y, title=label)  # type: ignore[arg-type]
+        )
+    return markers
 
 
 def _carousel_slides_from_items(items: list[Any]) -> list[CarouselSlide]:
@@ -340,6 +448,28 @@ class _BuildersMetricsMixin:
             label=str(label),
             wrap="none",
             ratio="16/9",
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "list", body_frag)
+
+    def _build_map(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: map` — vendor-free plan board of HM Marker pins.
+
+        Entity rows → pins (label from location/name; tone from status).
+        Static ``entries:`` use title=label, caption/body=tone, icon=size.
+        Placement is a stable hash of the label (no lat/lng / tile SDK).
+        """
+        title = _region_title(region)
+        markers = _map_markers_from_items(list(ctx.get("items") or []))
+        if not markers:
+            markers = _map_markers_from_entries(list(ctx.get("status_entries") or []))
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No locations."
+        )
+        label = title or str(getattr(region, "name", None) or "Map")
+        body_frag: Fragment = MapBoard(
+            markers=tuple(markers),
+            label=str(label),
             empty_message=str(empty_msg),
         )
         return _wrap_surface(title, "list", body_frag)

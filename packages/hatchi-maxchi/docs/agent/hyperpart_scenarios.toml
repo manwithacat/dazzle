@@ -282,3 +282,24 @@ severity = "low"
 residual_lane = "none"
 example_homes = ["simple_task assigned_to User chips", "support_tickets assignee chips"]
 scanner = "catalogue_only"
+
+[[scenario]]
+id = "device_geo_map_markers"
+hyperpart = "marker"
+authoring = "display:map"
+layer = "region"
+job = "Fleet / site distribution uses map pin chrome, not a flat location list."
+use_when = [
+  "operator compares places on a plan or board",
+  "rows have location/name labels (lat/lng optional; hash placement ok)",
+]
+refuse_when = [
+  "need real basemap zoom/tiles (still deferred — host SDK)",
+  "single address field on a form (plain text)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["fieldtest_hub engineering_dashboard.device_map", "simple_task sample_map"]
+scanner = "catalogue_only"

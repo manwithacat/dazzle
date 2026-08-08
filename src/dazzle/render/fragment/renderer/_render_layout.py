@@ -50,6 +50,8 @@ from dazzle.render.fragment.primitives import (
     HoverCard,
     Icon,
     LazyTabPanel,
+    MapBoard,
+    Marker,
     Modal,
     Region,
     Row,
@@ -147,6 +149,56 @@ class _RenderLayoutMixin:
             f'<p class="dz-hover-card__title">{title}</p>'
             f"{desc_html}"
             f"</div></div>"
+        )
+
+    def _emit_marker(self, m: Marker, ctx: RenderContext) -> str:
+        """HM Marker — dual-lock ``.dz-marker`` map pin chrome.
+
+        Pin + optional label; placement attrs for MapBoard host canvas.
+        Root is contracts/marker.py dual-lock.
+        """
+        tone_attr = f' data-dz-tone="{ctx.escape_attr(m.tone)}"' if m.tone else ""
+        size_attr = f' data-dz-size="{ctx.escape_attr(m.size)}"' if m.size else ""
+        title_attr = f' title="{ctx.escape_attr(m.title)}"' if m.title else ""
+        # Absolute placement when parent canvas is position:relative.
+        style = (
+            f' style="left:{float(m.x_pct):.2f}%;top:{float(m.y_pct):.2f}%;'
+            f'position:absolute;transform:translate(-50%,-100%)"'
+        )
+        label = ctx.escape(m.label)
+        return (
+            f'<span class="dz-marker" data-dz-marker{tone_attr}{size_attr}'
+            f"{title_attr}{style}>"
+            f'<span class="dz-marker__pin" aria-hidden="true"></span>'
+            f'<span class="dz-marker__label">{label}</span>'
+            f"</span>"
+        )
+
+    def _emit_map_board(self, board: MapBoard, ctx: RenderContext) -> str:
+        """Host map plan canvas of Marker pins (``display: map``).
+
+        Vendor-free static board — no tile SDK. Canvas is framework host;
+        each pin is HM dual-lock ``.dz-marker``.
+        """
+        label = ctx.escape_attr(board.label)
+        if not board.markers:
+            return (
+                f'<div class="dz-map" data-dz-map data-dz-entry-count="0" '
+                f'role="region" aria-label="{label}">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(board.empty_message)}</p>"
+                f"</div>"
+            )
+        pins = "".join(self._emit_marker(m, ctx) for m in board.markers)
+        n = len(board.markers)
+        return (
+            f'<div class="dz-map" data-dz-map data-dz-entry-count="{n}" '
+            f'role="region" aria-label="{label}">'
+            f'<div class="dz-map__canvas" style="position:relative;min-height:16rem;'
+            f"border:1px solid var(--colour-border);border-radius:var(--radius-md);"
+            f"background:var(--colour-surface-muted,var(--colour-surface));"
+            f'overflow:hidden">{pins}</div>'
+            f"</div>"
         )
 
     def _emit_row(self, r: Row, ctx: RenderContext) -> str:

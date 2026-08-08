@@ -86,3 +86,11 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Runtime: `wrap_hover_card_preview` in `user_chip.py` (opt-out `hover_card: false`)
 - Dogfood: any `ref User` with loaded email/role (simple_task / support_tickets)
 - Tests: `test_hover_card_emitter`
+
+## Reference ship: marker (2026-08-09)
+
+- `display: map` → `MapBoard` of `Marker` → `.dz-marker` pin chrome
+- Fragment: `Marker(label=…, tone=…, size=…)` dual-lock; host placement via x/y %
+- Vendor-free plan canvas (no tile SDK); status → tone; location/name → label
+- Dogfood: fieldtest_hub `device_map`; simple_task `sample_map` static entries
+- Tests: `test_marker_emitter`

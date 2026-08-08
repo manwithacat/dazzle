@@ -304,15 +304,15 @@ def test_audit_flags_unsupported_display_mode() -> None:
     surface = SurfaceSpec(
         name="metrics_chart",
         mode=SurfaceMode.LIST,
-        display="map",
+        display="not_a_real_mode",
     )
     appspec = _make_appspec([surface])
     report = audit_appspec(appspec)
     assert report.blocked_count == 1
     blockers = report.surfaces[0].blockers
-    assert any(b.kind.value == "unsupported_display" and b.detail == "map" for b in blockers), (
-        f"Expected map blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
-    )
+    assert any(
+        b.kind.value == "unsupported_display" and b.detail == "not_a_real_mode" for b in blockers
+    ), f"Expected not_a_real_mode blocker, got {[(b.kind.value, b.detail) for b in blockers]!r}"
 
 
 def test_audit_does_not_flag_empty_display() -> None:
@@ -372,13 +372,10 @@ def test_audit_walks_workspace_regions_and_flags_unsupported_display() -> None:
     by_name = {s.name: s for s in report.surfaces}
     assert "my_workspace.metrics_chart" in by_name
     assert "my_workspace.task_list" in by_name
-    # map is unsupported; flagged
+    # map is supported (Marker pin board, 2026-08-09)
     bar_entry = by_name["my_workspace.metrics_chart"]
-    assert not bar_entry.is_ready
+    assert bar_entry.is_ready
     assert bar_entry.mode == "REGION"
-    assert any(
-        b.kind.value == "unsupported_display" and b.detail == "map" for b in bar_entry.blockers
-    )
     # List is supported; ready
     list_entry = by_name["my_workspace.task_list"]
     assert list_entry.is_ready

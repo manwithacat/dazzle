@@ -93,6 +93,8 @@ from dazzle.render.fragment.primitives import (
     ListColumn,
     ListFilterBar,
     ListRegion,
+    MapBoard,
+    Marker,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -377,4 +379,6 @@ __all__ = [
     "BreadcrumbItem",
     "Bubble",
     "HoverCard",
+    "Marker",
+    "MapBoard",
 ]

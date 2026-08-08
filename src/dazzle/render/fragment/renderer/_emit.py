@@ -80,6 +80,8 @@ from dazzle.render.fragment.primitives import (
     Link,
     ListFilterBar,
     ListRegion,
+    MapBoard,
+    Marker,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -250,6 +252,10 @@ class FragmentRenderer(
                 return self._emit_bubble(fragment, ctx)
             case HoverCard():
                 return self._emit_hover_card(fragment, ctx)
+            case Marker():
+                return self._emit_marker(fragment, ctx)
+            case MapBoard():
+                return self._emit_map_board(fragment, ctx)
             case EmptyState():
                 return self._emit_empty_state(fragment, ctx)
             case Skeleton():

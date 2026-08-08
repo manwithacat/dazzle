@@ -132,7 +132,8 @@ SIGNALS: dict[str, object] = {
     "message": "exempt:no Dazzle emitter yet (gallery chat message row)",
     "message-scroller": "exempt:no Dazzle emitter yet (gallery chat transcript scroller)",
     "navigation-menu": "exempt:no Dazzle emitter yet (gallery top mega-nav shell)",
-    "marker": "exempt:no Dazzle emitter yet (gallery map pin chrome)",
+    # display: map → MapBoard of Marker pins → .dz-marker (2026-08-09)
+    "marker": r"display:\s*map",
     "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 

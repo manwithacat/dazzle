@@ -429,9 +429,9 @@ agent_surface = "pick-a-work-surface"
 id = "marker"
 class = "compose"
 layer = "region"
-dsl = "map region pin chrome"
-status = "planned"
-job = "Use marker via map region pin chrome"
+dsl = "display: map + Marker fragment"
+status = "live"
+job = "Use marker via display: map pin chrome + Marker fragment"
 agent_surface = "pick-a-work-surface"
 
 [[part]]

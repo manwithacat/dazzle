@@ -91,6 +91,8 @@ from dazzle.render.fragment import (
     ListColumn,
     ListFilterBar,
     ListRegion,
+    MapBoard,
+    Marker,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -386,6 +388,10 @@ def _sample_for(primitive_type: type) -> object:
         return Bubble(text="Hello", from_="in")
     if primitive_type is HoverCard:
         return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")
+    if primitive_type is Marker:
+        return Marker(label="HQ", tone="success", x_pct=40.0, y_pct=55.0)
+    if primitive_type is MapBoard:
+        return MapBoard(markers=(Marker(label="HQ"), Marker(label="Depot", tone="danger")))
     if primitive_type is Carousel:
         return Carousel(
             slides=(

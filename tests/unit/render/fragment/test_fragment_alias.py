@@ -84,6 +84,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Breadcrumb",
         "Bubble",
         "HoverCard",
+        "Marker",
+        "MapBoard",
         "Carousel",
         "BarTrack",
         "StageBar",
