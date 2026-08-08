@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **hover-card hyperpart emitter (compose guest)** — `HoverCard` Fragment dual-lock
+  (`.dz-hover-card` + `data-dz-hover-card`); person chips with email/role/department/title
+  meta compose a rich preview panel (opt-out `hover_card: false`; avatar_only density
+  stays compact). No region verb — catalogue planned→live; fleet signal `ref User`.
 - **`display: carousel` hyperpart emitter** — `Carousel` / `CarouselSlide` Fragment dual-lock
   (`.dz-carousel` + `data-dz-carousel`); region builder from entity media URLs or static
   entries; dogfood on design_studio `asset_carousel` + simple_task `sample_gallery`.

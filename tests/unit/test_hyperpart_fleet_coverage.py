@@ -122,7 +122,8 @@ SIGNALS: dict[str, object] = {
     # media field compose → .dz-aspect-ratio dual-lock (2026-08-08)
     "aspect-ratio": r"logo_url|preview_url|photo_url",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",
-    "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
+    # person chip compose guest → .dz-hover-card (2026-08-09)
+    "hover-card": r"ref\s+User",
     # display: carousel → Carousel → .dz-carousel (2026-08-08)
     "carousel": r"display:\s*carousel",
     "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",

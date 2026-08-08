@@ -46,6 +46,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Where am I in the app (trail above main) | `breadcrumb` | Shell trail from route + title / `Breadcrumb` fragment |
 | Chat speech shell (inbound/outbound) | `bubble` | `display: conversation` / `Bubble` fragment |
 | Multi-image stage strip (prev/next) | `carousel` | `display: carousel` / `Carousel` fragment |
+| Rich person/entity preview on hover | `hover-card` | Person chip compose guest / `HoverCard` fragment (no region verb) |
 | Wrapping actions | `cluster` / `toolbar` | Compose real children in HTML |
 
 ### Menus / panels / chrome strips

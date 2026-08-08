@@ -1,9 +1,10 @@
-"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble.
+"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble, HoverCard.
 
 These are the leaf-level visual primitives. They do not contain children
 (except EmptyState, which contains an optional action). Most apps' visible
 text routes through Text or Heading; status indicators route through Badge.
-Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``)."""
+Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``).
+HoverCard is the rich preview affordance (HM dual-lock ``.dz-hover-card``)."""
 
 from dataclasses import dataclass
 from typing import Literal
@@ -97,3 +98,27 @@ class Bubble:
             raise ValueError(f"invalid Bubble from_ {self.from_!r}; expected in|out")
         if self.tone not in _BUBBLE_TONES:
             raise ValueError(f"invalid Bubble tone {self.tone!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class HoverCard:
+    """HM HoverCard hyperpart — dual-lock ``.dz-hover-card`` rich preview.
+
+    Gallery spine: trigger + floating panel opens on ``:hover`` /
+    ``:focus-within`` (fine pointers + keyboard) and on click/tap via
+    ``controllers/dz-hover-card.js`` (``data-dz-open``). No region verb —
+    compose guest under person chips or nest explicitly as a Fragment.
+
+    Dual-lock root: ``.dz-hover-card`` (contracts/hover_card.py).
+    """
+
+    trigger: str
+    title: str
+    description: str = ""
+    open: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.trigger or not str(self.trigger).strip():
+            raise ValueError("HoverCard requires non-empty trigger")
+        if not self.title or not str(self.title).strip():
+            raise ValueError("HoverCard requires non-empty title")

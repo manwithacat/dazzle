@@ -77,6 +77,7 @@ from dazzle.render.fragment import (
     HeatmapRow,
     Histogram,
     HistogramBin,
+    HoverCard,
     Icon,
     InlineEdit,
     Interactive,
@@ -383,6 +384,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is Bubble:
         return Bubble(text="Hello", from_="in")
+    if primitive_type is HoverCard:
+        return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")
     if primitive_type is Carousel:
         return Carousel(
             slides=(

@@ -22,6 +22,7 @@ from dazzle.render.fragment.primitives.content import (
     Bubble,
     EmptyState,
     Heading,
+    HoverCard,
     Icon,
     Skeleton,
     Text,
@@ -157,6 +158,7 @@ Fragment = (
     | Icon
     | Badge
     | Bubble
+    | HoverCard
     | EmptyState
     | Skeleton
     # Interactive

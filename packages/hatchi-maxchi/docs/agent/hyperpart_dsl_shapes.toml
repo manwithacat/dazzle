@@ -375,9 +375,9 @@ agent_surface = "pick-a-work-surface"
 id = "hover-card"
 class = "chrome"
 layer = "affordance"
-dsl = "compose guest; no region verb"
-status = "planned"
-job = "Use hover-card via compose guest; no region verb"
+dsl = "person chip compose guest + HoverCard fragment"
+status = "live"
+job = "Use hover-card via person chip compose guest + HoverCard fragment"
 agent_surface = "shell"
 
 [[part]]

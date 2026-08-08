@@ -19,6 +19,7 @@ from dazzle.render.fragment.primitives.content import (
     Bubble,
     EmptyState,
     Heading,
+    HoverCard,
     Icon,
     Skeleton,
     Text,
@@ -189,6 +190,7 @@ __all__ = [
     "Icon",
     "Badge",
     "Bubble",
+    "HoverCard",
     "EmptyState",
     "Skeleton",
     # interactive

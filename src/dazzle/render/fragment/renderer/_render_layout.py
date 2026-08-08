@@ -47,6 +47,7 @@ from dazzle.render.fragment.primitives import (
     EmptyState,
     Grid,
     Heading,
+    HoverCard,
     Icon,
     LazyTabPanel,
     Modal,
@@ -122,6 +123,31 @@ class _RenderLayoutMixin:
             paragraphs = [str(b.text).strip()]
         body = "".join(f"<p>{ctx.escape(p)}</p>" for p in paragraphs)
         return f'<div class="dz-bubble" data-dz-from="{from_attr}"{tone_attr}>{body}</div>'
+
+    def _emit_hover_card(self, h: HoverCard, ctx: RenderContext) -> str:
+        """HM HoverCard — dual-lock ``.dz-hover-card`` rich preview panel.
+
+        Canonical spine: button trigger + ``.dz-hover-card__content``
+        (title + description). ``open=True`` stamps ``data-dz-open`` for
+        tests / touch demos. Root is contracts/hover_card.py dual-lock.
+        """
+        open_attr = " data-dz-open" if h.open else ""
+        title = ctx.escape(h.title)
+        trigger = ctx.escape(h.trigger)
+        desc_html = (
+            f'<p class="dz-hover-card__description">{ctx.escape(h.description)}</p>'
+            if h.description
+            else ""
+        )
+        return (
+            f'<div class="dz-hover-card" data-dz-hover-card{open_attr}>'
+            f'<button type="button" class="dz-hover-card__trigger" '
+            f'aria-expanded="{"true" if h.open else "false"}">{trigger}</button>'
+            f'<div class="dz-hover-card__content" role="tooltip">'
+            f'<p class="dz-hover-card__title">{title}</p>'
+            f"{desc_html}"
+            f"</div></div>"
+        )
 
     def _emit_row(self, r: Row, ctx: RenderContext) -> str:
         # Layouts L2: Row renders the HM cluster Hyperpart (wrapping

@@ -70,6 +70,7 @@ from dazzle.render.fragment.primitives import (
     Heading,
     Heatmap,
     Histogram,
+    HoverCard,
     Icon,
     InlineEdit,
     Interactive,
@@ -247,6 +248,8 @@ class FragmentRenderer(
                 return self._emit_badge(fragment, ctx)
             case Bubble():
                 return self._emit_bubble(fragment, ctx)
+            case HoverCard():
+                return self._emit_hover_card(fragment, ctx)
             case EmptyState():
                 return self._emit_empty_state(fragment, ctx)
             case Skeleton():

@@ -260,3 +260,25 @@ severity = "low"
 residual_lane = "none"
 example_homes = ["design_studio brand_desk.asset_carousel", "simple_task sample_gallery"]
 scanner = "catalogue_only"
+
+[[scenario]]
+id = "person_chip_hover_card"
+hyperpart = "hover-card"
+authoring = "person chip compose guest"
+layer = "affordance"
+job = "Person refs with email/role meta open a rich hover preview, not bare name only."
+use_when = [
+  "operator needs identity context without leaving the list/queue",
+  "loaded person dict has email, role, department, or title",
+]
+refuse_when = [
+  "name-only scalars with no preview meta",
+  "multi-control forms under the panel (use popover/dialog)",
+  "queue avatar_only density (stays compact)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["simple_task assigned_to User chips", "support_tickets assignee chips"]
+scanner = "catalogue_only"

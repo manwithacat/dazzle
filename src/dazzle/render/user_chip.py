@@ -4,7 +4,12 @@ When a ``ref`` column points at a person-like entity (User, Contact, …)
 or the loaded dict looks like a person, emit a ``.dz-avatar`` + name chip
 instead of bare text. Contract root: ``.dz-avatar`` (HM avatar hyperpart).
 
-Opt-out: column metadata ``avatar: false`` / ``person_chip: false``.
+When the loaded person dict carries preview meta (email / role /
+department / title), the chip is composed as a guest inside HM
+``.dz-hover-card`` so hover/focus shows a rich preview (no region verb).
+
+Opt-out: column metadata ``avatar: false`` / ``person_chip: false`` /
+``hover_card: false``.
 """
 
 from __future__ import annotations
@@ -167,6 +172,71 @@ def wrap_user_chip_link(chip_html: str, value: Any, col: dict[str, Any] | None =
     )
 
 
+_HOVER_DESC_KEYS = (
+    "email",
+    "role",
+    "department",
+    "title",
+    "job_title",
+    "status",
+)
+
+
+def _hover_preview_parts(value: Any) -> tuple[str, str] | None:
+    """Return ``(title, description)`` when *value* has hover-card preview meta.
+
+    Description is a middot-joined subset of email/role/department/title.
+    Name-only dicts skip the wrap (no useful panel body).
+    """
+    if not isinstance(value, dict):
+        return None
+    name = _ref_display_name(value)
+    if not name:
+        return None
+    bits: list[str] = []
+    for key in _HOVER_DESC_KEYS:
+        raw = value.get(key)
+        if raw in (None, "", "—"):
+            continue
+        text = str(raw).strip()
+        if text and text not in bits and text != name:
+            bits.append(text)
+    if not bits:
+        return None
+    return name, " · ".join(bits)
+
+
+def wrap_hover_card_preview(
+    trigger_html: str,
+    *,
+    title: str,
+    description: str = "",
+) -> str:
+    """Compose guest: wrap *trigger_html* in dual-lock ``.dz-hover-card``.
+
+    Trigger is host-owned (often a user chip or chip link) — we do **not**
+    stamp ``.dz-hover-card__trigger`` on links so click navigation is not
+    stolen by ``dz-hover-card.js`` ``preventDefault``. Fine pointers open
+    via CSS ``:hover`` / ``:focus-within`` on the root.
+    """
+    if not trigger_html or trigger_html == "—":
+        return trigger_html
+    title_esc = _html_mod.escape(title, quote=False)
+    desc_html = (
+        f'<p class="dz-hover-card__description">{_html_mod.escape(description, quote=False)}</p>'
+        if description
+        else ""
+    )
+    return (
+        f'<div class="dz-hover-card" data-dz-hover-card>'
+        f"{trigger_html}"
+        f'<div class="dz-hover-card__content" role="tooltip">'
+        f'<p class="dz-hover-card__title">{title_esc}</p>'
+        f"{desc_html}"
+        f"</div></div>"
+    )
+
+
 def render_user_chip_html(
     value: Any,
     col: dict[str, Any] | None = None,
@@ -223,7 +293,26 @@ def render_user_chip_html(
     )
 
 
-def render_user_chip_linked_html(value: Any, col: dict[str, Any] | None = None) -> str:
-    """Chip HTML, link-wrapped when ``ref_route`` is present on *col*."""
-    chip = render_user_chip_html(value, col)
-    return wrap_user_chip_link(chip, value, col)
+def render_user_chip_linked_html(
+    value: Any,
+    col: dict[str, Any] | None = None,
+    *,
+    density: str = "avatar_name",
+) -> str:
+    """Chip HTML, link-wrapped when ``ref_route`` is present on *col*.
+
+    Compose guest: when the person dict carries preview meta (email/role/…),
+    wrap the chip in ``.dz-hover-card`` (HM hover-card hyperpart). Opt-out
+    via column ``hover_card: false``. ``avatar_only`` density stays compact
+    (queue meta) — no floating panel.
+    """
+    col = col or {}
+    chip = render_user_chip_html(value, col, density=density)
+    linked = wrap_user_chip_link(chip, value, col)
+    if col.get("hover_card") is False or density == "avatar_only":
+        return linked
+    preview = _hover_preview_parts(value)
+    if not preview:
+        return linked
+    title, description = preview
+    return wrap_hover_card_preview(linked, title=title, description=description)

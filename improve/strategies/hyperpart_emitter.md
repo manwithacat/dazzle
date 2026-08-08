@@ -78,3 +78,11 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Entries: `title`=alt + `body`/`caption`=image URL; or entity `preview_url`/`logo_url`/`photo_url`
 - Dogfood: `design_studio` `brand_desk.asset_carousel`; `simple_task` `sample_gallery`
 - Tests: `test_carousel_emitter`
+
+## Reference ship: hover-card (2026-08-09)
+
+- Compose guest (no region verb): person chip + email/role meta → `.dz-hover-card`
+- Fragment: `HoverCard(trigger=…, title=…, description=…)` dual-lock preview
+- Runtime: `wrap_hover_card_preview` in `user_chip.py` (opt-out `hover_card: false`)
+- Dogfood: any `ref User` with loaded email/role (simple_task / support_tickets)
+- Tests: `test_hover_card_emitter`

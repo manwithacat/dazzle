@@ -83,6 +83,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "AspectRatio",
         "Breadcrumb",
         "Bubble",
+        "HoverCard",
         "Carousel",
         "BarTrack",
         "StageBar",

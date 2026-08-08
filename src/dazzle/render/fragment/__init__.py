@@ -79,6 +79,7 @@ from dazzle.render.fragment.primitives import (
     HeatmapRow,
     Histogram,
     HistogramBin,
+    HoverCard,
     Icon,
     InlineEdit,
     Interactive,
@@ -375,4 +376,5 @@ __all__ = [
     "Breadcrumb",
     "BreadcrumbItem",
     "Bubble",
+    "HoverCard",
 ]
