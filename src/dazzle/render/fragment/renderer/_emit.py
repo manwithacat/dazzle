@@ -19,6 +19,7 @@ from dazzle.render.fragment.escape import (
 )
 from dazzle.render.fragment.primitives import (
     KPI,
+    Accordion,
     ActionCard,
     ActionGrid,
     ActivityFeed,
@@ -290,6 +291,8 @@ class FragmentRenderer(
                 return self._emit_tree(fragment, ctx)
             case ActionCard():
                 return self._emit_action_card(fragment, ctx)
+            case Accordion():
+                return self._emit_accordion(fragment, ctx)
             case ActionGrid():
                 return self._emit_action_grid(fragment, ctx)
             case ProfileCard():

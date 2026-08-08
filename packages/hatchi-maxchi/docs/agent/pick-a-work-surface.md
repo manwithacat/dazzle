@@ -31,6 +31,7 @@ Primary axis is SHARED pool + claim/filter?                   → queue
 Primary axis is multi-field inventory / admin table?          → list (table)
 Primary axis is awareness / notifications?                    → activity_feed
 Primary axis is service health rows?                          → status_list
+Static FAQ / exclusive section disclosure (one open)?       → accordion
 ```
 
 ## Decision table (job → surface)

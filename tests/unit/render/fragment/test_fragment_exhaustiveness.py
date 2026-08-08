@@ -11,6 +11,8 @@ import pytest
 from dazzle.render.fragment import (
     KPI,
     URL,
+    Accordion,
+    AccordionItem,
     ActionCard,
     ActionGrid,
     ActivityFeed,
@@ -360,6 +362,10 @@ def _sample_for(primitive_type: type) -> object:
         return KanbanCard(title="Task")
     if primitive_type is ActivityFeed:
         return ActivityFeed(items=(("now", "Alice", "did the thing"),))
+    if primitive_type is Accordion:
+        return Accordion(items=(AccordionItem(title="Q", body="A", open=True),))
+    if primitive_type is AccordionItem:
+        return AccordionItem(title="Q", body="A")
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:

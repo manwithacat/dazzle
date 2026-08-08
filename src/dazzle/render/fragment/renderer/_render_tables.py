@@ -6,7 +6,7 @@ emits a Table/Grid/List structure or a metric/card tile:
   - _emit_table, _emit_kpi
   - _emit_pivot_table, _emit_pivot_table_region
   - _emit_list_region, _emit_grid_region
-  - _emit_detail_grid, _emit_status_list, _emit_activity_feed
+  - _emit_detail_grid, _emit_status_list, _emit_accordion, _emit_activity_feed
   - _emit_profile_card, _emit_action_card, _emit_action_grid
   - _emit_metrics_grid, _emit_metric_tile
   - _emit_bar_track, _emit_stage_bar
@@ -59,6 +59,7 @@ from dazzle.render.fragment.ingest.emit import (
 )
 from dazzle.render.fragment.primitives import (
     KPI,
+    Accordion,
     ActionCard,
     ActionGrid,
     ActivityFeed,
@@ -1221,6 +1222,35 @@ class _RenderTablesMixin:
 
         return render_grid_region(
             GridRegionSeam(body_html=f'<div class="dz-grid-list">{"".join(cells_html)}</div>')
+        )
+
+    def _emit_accordion(self, a: Accordion, ctx: RenderContext) -> str:
+        """HM Accordion — ``div.dz-accordion`` of exclusive native details.
+
+        Dual-lock root ``.dz-accordion`` (contracts/accordion.py). Shared
+        ``name=`` on items gives single-open exclusive policy (zero JS).
+        """
+        if not a.items:
+            return (
+                f'<div class="dz-accordion" data-dz-entry-count="0">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(a.empty_message)}</p>"
+                f"</div>"
+            )
+        name = ctx.escape_attr(a.name)
+        parts: list[str] = []
+        for item in a.items:
+            open_attr = " open" if item.open else ""
+            parts.append(
+                f'<details class="dz-accordion__item" name="{name}"{open_attr}>'
+                f'<summary class="dz-accordion__trigger">'
+                f"{ctx.escape(item.title)}</summary>"
+                f'<div class="dz-accordion__panel">'
+                f"{ctx.escape(item.body)}</div>"
+                f"</details>"
+            )
+        return (
+            f'<div class="dz-accordion" data-dz-entry-count="{len(a.items)}">{"".join(parts)}</div>'
         )
 
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:

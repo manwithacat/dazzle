@@ -27,6 +27,7 @@ from dazzle.render.fragment.primitives.content import (
 )
 from dazzle.render.fragment.primitives.data import (
     KPI,
+    Accordion,
     ActionCard,
     ActionGrid,
     ActivityFeed,
@@ -184,6 +185,7 @@ Fragment = (
     | PivotTableRegion
     | QueueRegion
     | RelatedGroup
+    | Accordion
     | ActionGrid
     | ActivityFeed
     | StatusList

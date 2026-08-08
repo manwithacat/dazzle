@@ -1969,7 +1969,7 @@ class WorkspaceParserMixin:
         Returns ``(caption, icon, state)``. ``state`` defaults to ``"neutral"``.
         """
         valid_states = {"positive", "warning", "destructive", "neutral", "accent"}
-        valid_keys = {"title", "caption", "icon", "state"}
+        valid_keys = {"title", "caption", "body", "icon", "state"}
 
         caption_str = ""
         icon_str = ""
@@ -1987,6 +1987,10 @@ class WorkspaceParserMixin:
             self.advance()
             self.expect(TokenType.COLON)
             if key == "caption":
+                caption_str = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+            elif key == "body":
+                # Accordion panel body (alias of caption for display: accordion)
                 caption_str = self.expect(TokenType.STRING).value
                 self.skip_newlines()
             elif key == "icon":

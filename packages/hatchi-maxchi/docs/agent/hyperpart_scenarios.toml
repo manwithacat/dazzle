@@ -177,6 +177,28 @@ example_homes = ["simple_task.task_create.priority"]
 scanner = "catalogue_only"
 
 [[scenario]]
+id = "faq_section_accordion"
+hyperpart = "accordion"
+authoring = "display: accordion"
+layer = "region"
+job = "Exclusive section disclosure for FAQ / help panels — not multi-open trees."
+use_when = [
+  "workspace region is static help/FAQ or multi-section disclosure",
+  "operator needs one panel open at a time (native details name=)",
+]
+refuse_when = [
+  "hierarchical multi-open forest (use display: tree)",
+  "row expand into entity detail (use list expand mode)",
+  "menubar exclusive chrome (use menubar, not accordion)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "medium"
+residual_lane = "framework-ux"
+example_homes = ["simple_task.admin_dashboard.task_faq"]
+scanner = "catalogue_only"
+
+[[scenario]]
 id = "live_conversation_thread"
 hyperpart = "message-scroller"
 authoring = "planned:display:conversation"

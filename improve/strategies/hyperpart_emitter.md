@@ -36,3 +36,10 @@
 - `widget=switch` → `SwitchField` → `data-dz-switch`
 - Dogfood: `examples/simple_task` `user_edit` / `is_active`
 - Tests: `test_form_widget_showcase_phase3`, `test_simple_task_switch_emitter`
+
+## Reference ship: accordion (2026-08-08)
+
+- `display: accordion` → `Accordion` → `.dz-accordion` exclusive details
+- Dogfood: `examples/simple_task` `admin_dashboard.task_faq`
+- Entries: `title` + `body` (or `caption`); first panel open
+- Tests: `test_accordion_emitter`

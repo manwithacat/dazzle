@@ -5,6 +5,7 @@ Surface kind and tile/list/bar/stage-row shapes:
 
   - _build_metrics         MetricsGrid of MetricTile primitives
   - _build_status_list     vertical icon + title + caption + pill rows
+  - _build_accordion       exclusive details group (FAQ / section disclosure)
   - _build_progress        <progress> header + StageBar chip list
   - _build_pipeline_steps  horizontal stage cards with arrow connectors
 
@@ -19,6 +20,8 @@ from typing import Any, Literal
 
 from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.fragment import (
+    Accordion,
+    AccordionItem,
     EmptyState,
     Fragment,
     MetricsGrid,
@@ -228,6 +231,44 @@ class _BuildersMetricsMixin:
         )
         body: Fragment = StatusList(entries=tuple(entries), empty_message=str(empty_msg))
         return _wrap_surface(title, "list", body)
+
+    def _build_accordion(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: accordion` regions render HM Accordion of exclusive details.
+
+        Reuses authored ``status_entries`` (``entries:`` block): ``title`` is
+        the summary trigger; ``caption`` is the panel body (agent-facing
+        synonym for body copy). First entry starts open for progressive
+        disclosure; remaining stay closed. Shared ``name=`` uses region name.
+        """
+        title = _region_title(region)
+        raw_entries = ctx.get("status_entries") or []
+        items: list[AccordionItem] = []
+        for i, raw in enumerate(raw_entries):
+            if not isinstance(raw, dict):
+                continue
+            entry_title = str(raw.get("title") or "")
+            if not entry_title:
+                continue
+            body = str(raw.get("body") or raw.get("caption") or "")
+            items.append(
+                AccordionItem(
+                    title=entry_title,
+                    body=body,
+                    open=(i == 0),
+                )
+            )
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No panels."
+        )
+        region_name = str(getattr(region, "name", None) or "acc")
+        # Stable HTML name token for exclusive group
+        name = "dz-acc-" + "".join(c if c.isalnum() else "-" for c in region_name)
+        body_frag: Fragment = Accordion(
+            items=tuple(items),
+            name=name,
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "list", body_frag)
 
     def _build_metrics(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: metrics` (and `summary`) regions render a row of

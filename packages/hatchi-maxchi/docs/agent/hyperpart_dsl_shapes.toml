@@ -22,11 +22,11 @@ updated = "2026-08-08"
 
 [[part]]
 id = "accordion"
-class = "display_or_form"
-layer = "form"
-dsl = "section disclosure / display: accordion"
-status = "planned"
-job = "Use accordion via section disclosure / display: accordion"
+class = "display"
+layer = "region"
+dsl = "display: accordion"
+status = "live"
+job = "Use accordion via display: accordion + entries: (title/body panels)"
 agent_surface = "pick-a-work-surface"
 
 [[part]]

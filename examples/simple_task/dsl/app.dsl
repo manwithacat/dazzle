@@ -835,6 +835,18 @@ workspace admin_dashboard "Admin Dashboard":
       documents: accent
       conversation: accent
 
+  # Hyperpart emitter dogfood: display: accordion (exclusive FAQ disclosure).
+  task_faq:
+    display: accordion
+    title: "Task board FAQ"
+    entries:
+      - title: "How does priority work?"
+        body: "Priority is a closed enum (low / medium / high / urgent). Create and edit use the toggle-group control so leads pick urgency without a long select."
+      - title: "What does review status mean?"
+        body: "Tasks in review wait for a lead before they can close. Clear review before assigning more WIP."
+      - title: "Who appears on the board?"
+        body: "Kanban columns are assignees — each person owns a column of work in progress."
+
   ux:
     as admin:
       purpose: "See task discussion before document briefs and pressure queues"

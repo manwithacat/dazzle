@@ -1134,6 +1134,41 @@ class StatusList:
 
 
 @dataclass(frozen=True, slots=True)
+class AccordionItem:
+    """One exclusive <details> panel in an Accordion (HM accordion hyperpart).
+
+    ``title`` is the summary trigger; ``body`` is plain panel copy (escaped at
+    emit). ``open`` marks the panel that starts expanded (typically one).
+    """
+
+    title: str
+    body: str = ""
+    open: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.title:
+            raise ValueError("AccordionItem requires a non-empty title")
+
+
+@dataclass(frozen=True, slots=True)
+class Accordion:
+    """HM Accordion hyperpart — ``div.dz-accordion`` of native details items.
+
+    Dual-lock root: ``.dz-accordion`` (contracts/accordion.py). Shared
+    ``name=`` on items enforces single-open exclusive policy (zero JS).
+    Authored via ``display: accordion`` + ``entries:`` (title + caption/body).
+    """
+
+    items: tuple[AccordionItem, ...]
+    name: str = "dz-acc"
+    empty_message: str = "No panels."
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("Accordion requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
 class ActivityFeed:
     """Activity feed list — one row per event with time + optional actor +
     description.

@@ -71,7 +71,8 @@ SIGNALS: dict[str, object] = {
     # widget=toggle_group → ToggleGroupField → .dz-toggle-group (2026-08-08)
     "toggle-group": r"widget\s*[:=]\s*toggle[_-]?group",
     "breadcrumb": "exempt:no Dazzle emitter yet (gallery primitive)",
-    "accordion": "exempt:no Dazzle emitter yet (gallery primitive)",
+    # display: accordion → Accordion → .dz-accordion (2026-08-08)
+    "accordion": r"display:\s*accordion",
     "tabs": r"display:\s*tabbed_list",
     "avatar": r"display:\s*profile_card",
     "progress": "exempt:no Dazzle emitter yet (the determinate bar; the StageBar is progress-region)",

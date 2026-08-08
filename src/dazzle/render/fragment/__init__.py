@@ -11,6 +11,8 @@ from dazzle.render.fragment.escape import RawHTML, Script, Slot, Stylesheet
 from dazzle.render.fragment.htmx import URL, HxTrigger, TargetSelector
 from dazzle.render.fragment.primitives import (
     KPI,
+    Accordion,
+    AccordionItem,
     ActionCard,
     ActionGrid,
     ActivityFeed,
@@ -268,6 +270,8 @@ __all__ = [
     "Bullet",
     "BulletRow",
     "ActionCard",
+    "Accordion",
+    "AccordionItem",
     "ActionGrid",
     "ProfileCard",
     "MetricTile",
