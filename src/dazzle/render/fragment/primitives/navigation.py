@@ -13,6 +13,44 @@ from dazzle.render.fragment.htmx import URL
 
 
 @dataclass(frozen=True, slots=True)
+class BreadcrumbItem:
+    """One crumb in a Breadcrumb trail.
+
+    ``href=None`` marks the current page (renders as ``aria-current="page"``
+    without a link). Linked crumbs take a path or absolute URL string.
+    """
+
+    label: str
+    href: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("BreadcrumbItem requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
+class Breadcrumb:
+    """HM Breadcrumb hyperpart — dual-lock ``nav.dz-breadcrumb`` trail.
+
+    Gallery spine: ``<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>…``.
+    Separators are CSS-generated (chevrons). Authored as shell trail from
+    ``current_route`` / page title (see ``build_shell_breadcrumb``) or composed
+    explicitly as a fragment.
+
+    Dual-lock root: ``.dz-breadcrumb`` (contracts/breadcrumb.py).
+    """
+
+    items: tuple[BreadcrumbItem, ...]
+    aria_label: str = "Breadcrumb"
+
+    def __post_init__(self) -> None:
+        if not self.items:
+            raise ValueError("Breadcrumb requires at least one BreadcrumbItem")
+        if not self.aria_label or not str(self.aria_label).strip():
+            raise ValueError("Breadcrumb aria_label must be non-empty")
+
+
+@dataclass(frozen=True, slots=True)
 class NavItem:
     """Single navigation entry — typically a link to a workspace,
     surface, or external resource.

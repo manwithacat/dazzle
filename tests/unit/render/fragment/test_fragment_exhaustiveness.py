@@ -23,6 +23,8 @@ from dazzle.render.fragment import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Breadcrumb,
+    BreadcrumbItem,
     BulkActionToolbar,
     Bullet,
     BulletRow,
@@ -369,6 +371,13 @@ def _sample_for(primitive_type: type) -> object:
         return AccordionItem(title="Q", body="A")
     if primitive_type is AspectRatio:
         return AspectRatio(child=Text("frame"), ratio="16/9", width="10rem")
+    if primitive_type is Breadcrumb:
+        return Breadcrumb(
+            items=(
+                BreadcrumbItem(label="Home", href="/"),
+                BreadcrumbItem(label="Here", href=None),
+            )
+        )
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:

@@ -81,6 +81,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "StatusList",
         "Accordion",
         "AspectRatio",
+        "Breadcrumb",
         "BarTrack",
         "StageBar",
         "LazyTabPanel",

@@ -56,3 +56,10 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Fragment: `AspectRatio(child=…, ratio="16/9")` → dual-lock `data-dz-ratio` presets
 - Dogfood: `design_studio` Brand/Asset media thumbs; `fieldtest_hub` photo_url
 - Tests: `test_aspect_ratio_emitter` + media thumb Goal B pins
+
+## Reference ship: breadcrumb (2026-08-08)
+
+- Shell trail: `current_route` + `page_title` → `build_shell_breadcrumb` → `.dz-breadcrumb`
+- Fragment: `Breadcrumb(items=(BreadcrumbItem(...), …))` dual-lock nav spine
+- Dogfood: every chromed app page (Home → leaf above main)
+- Tests: `test_breadcrumb_emitter`

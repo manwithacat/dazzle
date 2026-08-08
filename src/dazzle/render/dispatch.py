@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.renderer_registry import default_renderer_names
+from dazzle.render.breadcrumbs import build_shell_breadcrumb
 from dazzle.render.fragment import (
     URL,
     AppShell,
@@ -41,6 +42,7 @@ from dazzle.render.fragment import (
     Page,
     Row,
     Sidebar,
+    Stack,
     Text,
     Topbar,
 )
@@ -464,10 +466,16 @@ def build_app_chrome_page(
     app_prefix = getattr(ctx, "app_prefix", "") or "/app"
     command_endpoint = f"{app_prefix}/command" if sidebar is not None else ""
     content_measure = _shell_content_measure(ctx)
+    # HM breadcrumb shell trail (hyperpart emitter): path + page title →
+    # dual-lock `.dz-breadcrumb` above the surface body (pure render layer).
+    shell_body: object = RawHTML(inner_html)
+    breadcrumb = build_shell_breadcrumb(ctx)
+    if breadcrumb is not None:
+        shell_body = Stack(children=(breadcrumb, RawHTML(inner_html)), gap="sm")
     body = AppShell(
         sidebar=sidebar,
         header=topbar,
-        body=RawHTML(inner_html),
+        body=shell_body,
         view_name=getattr(ctx, "view_name", "") or "",
         surface_name=getattr(ctx, "surface_name", "") or "",
         workspace_name=getattr(ctx, "workspace_name", "") or "",

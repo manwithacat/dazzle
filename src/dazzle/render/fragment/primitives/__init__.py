@@ -151,6 +151,8 @@ from dazzle.render.fragment.primitives.interactive import (
 )
 from dazzle.render.fragment.primitives.layout import AspectRatio, Grid, Row, Split, Stack
 from dazzle.render.fragment.primitives.navigation import (
+    Breadcrumb,
+    BreadcrumbItem,
     NavGroup,
     NavItem,
     Sidebar,
@@ -315,4 +317,6 @@ __all__ = [
     "NavGroup",
     "NavItem",
     "SkipLink",
+    "Breadcrumb",
+    "BreadcrumbItem",
 ]

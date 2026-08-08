@@ -23,6 +23,8 @@ from dazzle.render.fragment.primitives import (
     BarChart,
     BarTrack,
     BoxPlot,
+    Breadcrumb,
+    BreadcrumbItem,
     BulkActionToolbar,
     Bullet,
     BulletRow,
@@ -365,4 +367,6 @@ __all__ = [
     "NavGroup",
     "NavItem",
     "SkipLink",
+    "Breadcrumb",
+    "BreadcrumbItem",
 ]

@@ -643,7 +643,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "contracts/breadcrumb.py",
         "breadcrumb",
         True,
-    ),  # HM gallery breadcrumb (no FragmentRenderer emit yet)
+    ),  # HM breadcrumb — shell trail + Breadcrumb fragment
     (
         "contracts/auto_grid.py",
         "auto_grid",

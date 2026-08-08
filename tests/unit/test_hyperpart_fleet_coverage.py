@@ -70,7 +70,8 @@ SIGNALS: dict[str, object] = {
     "date-range": r"date_range|date-range",
     # widget=toggle_group → ToggleGroupField → .dz-toggle-group (2026-08-08)
     "toggle-group": r"widget\s*[:=]\s*toggle[_-]?group",
-    "breadcrumb": "exempt:no Dazzle emitter yet (gallery primitive)",
+    # shell trail → Breadcrumb → .dz-breadcrumb (2026-08-08)
+    "breadcrumb": "always",
     # display: accordion → Accordion → .dz-accordion (2026-08-08)
     "accordion": r"display:\s*accordion",
     "tabs": r"display:\s*tabbed_list",

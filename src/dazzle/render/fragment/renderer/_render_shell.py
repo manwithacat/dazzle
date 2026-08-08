@@ -40,6 +40,7 @@ from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.nav_icons import infer_nav_icon
 from dazzle.render.fragment.primitives import (
     AppShell,
+    Breadcrumb,
     ErrorPage,
     NavGroup,
     NavItem,
@@ -346,6 +347,24 @@ class _RenderShellMixin:
             f'<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span>'
             f"</button>"
         )
+
+    def _emit_breadcrumb(self, b: Breadcrumb, ctx: RenderContext) -> str:
+        """HM Breadcrumb — dual-lock ``nav.dz-breadcrumb`` trail.
+
+        List items, links, and ``aria-current="page"`` are host-owned content;
+        the dual-lock root is ``.dz-breadcrumb`` (contracts/breadcrumb.py).
+        Separators are CSS-generated (chevrons) — markup stays list-clean.
+        """
+        parts: list[str] = []
+        for item in b.items:
+            label = ctx.escape(item.label)
+            if item.href:
+                href = ctx.escape_attr(item.href)
+                parts.append(f'<li><a href="{href}">{label}</a></li>')
+            else:
+                parts.append(f'<li aria-current="page">{label}</li>')
+        aria = ctx.escape_attr(b.aria_label)
+        return f'<nav class="dz-breadcrumb" aria-label="{aria}"><ol>{"".join(parts)}</ol></nav>'
 
     def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:
         """`<div class="dz-topbar">` with leading / title / trailing.

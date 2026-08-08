@@ -132,9 +132,9 @@ agent_surface = "pick-a-work-surface"
 id = "breadcrumb"
 class = "chrome"
 layer = "shell"
-dsl = "sitespec trail / shell breadcrumb"
-status = "planned"
-job = "Use breadcrumb via sitespec trail / shell breadcrumb"
+dsl = "shell trail (current_route + page title → Breadcrumb fragment)"
+status = "live"
+job = "Use breadcrumb via shell trail / Breadcrumb fragment (.dz-breadcrumb)"
 agent_surface = "shell"
 
 [[part]]
