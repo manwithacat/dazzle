@@ -11072,10 +11072,7 @@
     "mi_rank": "A"
   },
   "dazzle/http/runtime/breadcrumbs.py": {
-    "functions": {
-      "Crumb": 1,
-      "build_breadcrumb_trail": 8
-    },
+    "functions": {},
     "mi_rank": "A"
   },
   "dazzle/http/runtime/bulk_payload.py": {
@@ -18094,19 +18091,21 @@
       "Scenario.to_json": 1,
       "_entity_by_name": 5,
       "_field_type_kind": 3,
+      "_is_bookkeeping_bool": 3,
       "_is_bool_kind": 4,
-      "_iter_bool_fields": 7,
+      "_iter_bool_fields": 8,
       "_scenario_from_raw": 12,
+      "_skip_switch_authoring": 3,
       "_str_tuple": 3,
       "_surface_field_names": 8,
       "_surface_field_widget": 14,
       "_surface_mode": 2,
       "_switch_author_action": 2,
       "_switch_emit_covered": 1,
-      "_switch_row_for_field": 9,
+      "_switch_row_for_field": 7,
       "catalogue_snapshot": 4,
       "load_scenarios": 7,
-      "scan_boolean_switch": 12,
+      "scan_boolean_switch": 14,
       "scan_scenario_opportunities": 1,
       "scenarios_by_scanner": 3
     },
@@ -18661,6 +18660,15 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/breadcrumbs.py": {
+    "functions": {
+      "Crumb": 1,
+      "build_breadcrumb_trail": 8,
+      "build_shell_breadcrumb": 13,
+      "crumbs_to_breadcrumb": 2
+    },
+    "mi_rank": "A"
+  },
   "dazzle/render/cell_chrome.py": {
     "functions": {
       "_media_host_and_path": 5,
@@ -18726,7 +18734,7 @@
       "_safe_url": 3,
       "_shell_content_measure": 7,
       "_sidebar_from_nav_model": 20,
-      "build_app_chrome_page": 10,
+      "build_app_chrome_page": 11,
       "build_page": 4,
       "dispatch_render": 4,
       "dispatch_render_page": 2
@@ -19121,6 +19129,8 @@
     "functions": {
       "Badge": 3,
       "Badge.__post_init__": 2,
+      "Bubble": 6,
+      "Bubble.__post_init__": 5,
       "EmptyState": 1,
       "Heading": 3,
       "Heading.__post_init__": 2,
@@ -19341,6 +19351,8 @@
   },
   "dazzle/render/fragment/primitives/layout.py": {
     "functions": {
+      "AspectRatio": 5,
+      "AspectRatio.__post_init__": 4,
       "Grid": 4,
       "Grid.__post_init__": 3,
       "Row": 5,
@@ -19354,6 +19366,10 @@
   },
   "dazzle/render/fragment/primitives/navigation.py": {
     "functions": {
+      "Breadcrumb": 5,
+      "Breadcrumb.__post_init__": 4,
+      "BreadcrumbItem": 4,
+      "BreadcrumbItem.__post_init__": 3,
       "NavGroup": 4,
       "NavGroup.__post_init__": 3,
       "NavItem": 3,
@@ -19449,6 +19465,7 @@
     "functions": {
       "_BuildersTimelineMixin": 21,
       "_BuildersTimelineMixin._build_activity_feed": 7,
+      "_BuildersTimelineMixin._build_conversation": 17,
       "_BuildersTimelineMixin._build_day_timeline": 16,
       "_BuildersTimelineMixin._build_task_inbox": 26,
       "_BuildersTimelineMixin._build_timeline": 33,
@@ -19456,7 +19473,8 @@
       "_activity_description": 4,
       "_activity_drill_by_id": 4,
       "_activity_empty_message": 3,
-      "_activity_feed_rows": 6
+      "_activity_feed_rows": 6,
+      "_conversation_orientation": 12
     },
     "mi_rank": "A"
   },
@@ -19553,7 +19571,7 @@
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
       "FragmentRenderer": 34,
-      "FragmentRenderer._emit": 114,
+      "FragmentRenderer._emit": 117,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -19668,7 +19686,9 @@
       "_RenderLayoutMixin": 3,
       "_RenderLayoutMixin._dztable_mount_attrs": 1,
       "_RenderLayoutMixin._emit": 1,
+      "_RenderLayoutMixin._emit_aspect_ratio": 3,
       "_RenderLayoutMixin._emit_badge": 1,
+      "_RenderLayoutMixin._emit_bubble": 6,
       "_RenderLayoutMixin._emit_card": 4,
       "_RenderLayoutMixin._emit_drawer": 1,
       "_RenderLayoutMixin._emit_empty_state": 3,
@@ -19690,9 +19710,10 @@
   },
   "dazzle/render/fragment/renderer/_render_shell.py": {
     "functions": {
-      "_RenderShellMixin": 5,
+      "_RenderShellMixin": 4,
       "_RenderShellMixin._emit": 1,
       "_RenderShellMixin._emit_app_shell": 13,
+      "_RenderShellMixin._emit_breadcrumb": 3,
       "_RenderShellMixin._emit_error_page": 2,
       "_RenderShellMixin._emit_nav_group": 4,
       "_RenderShellMixin._emit_nav_item": 6,

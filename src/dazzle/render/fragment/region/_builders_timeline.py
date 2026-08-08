@@ -1,10 +1,10 @@
 """Timeline-family region builders.
 
-Houses the 4 timeline-family builders. All four produce a chronological
-or event-stream Surface:
+Houses the timeline-family builders. Chronological / event-stream Surfaces:
 
   - _build_timeline       Timeline of TimelineEvents with rich fields
   - _build_activity_feed  chronological dot + bubble feed
+  - _build_conversation   stack of Bubble hyperparts (display: conversation)
   - _build_day_timeline   vertical scroll of slot cards (#1016)
   - _build_task_inbox     workflow-led prioritised due-action list (#1015)
 
@@ -22,9 +22,12 @@ from typing import Any
 
 from dazzle.render.fragment import (
     ActivityFeed,
+    Bubble,
     DayTimelineRegion,
     DayTimelineSlot,
+    EmptyState,
     Fragment,
+    Stack,
     Surface,
     TaskInboxItem,
     TaskInboxRegion,
@@ -89,6 +92,21 @@ def _activity_empty_message(region: Any, ctx: RegionContext) -> str:
     return str(
         ctx.get("empty_message") or getattr(region, "empty_message", None) or "No activity yet"
     )
+
+
+def _conversation_orientation(item: dict[str, Any]) -> str:
+    """Map a conversation row to Bubble ``from_`` (in|out)."""
+    raw = item.get("from") or item.get("direction") or item.get("from_")
+    if raw is not None and str(raw).strip().lower() in ("in", "out"):
+        return str(raw).strip().lower()
+    # Support-ticket internal notes / agent replies → outbound surface.
+    for key in ("is_internal", "internal", "is_agent", "outbound"):
+        val = item.get(key)
+        if val is True or (isinstance(val, str) and val.strip().lower() in ("true", "1", "yes")):
+            return "out"
+        if val is False or (isinstance(val, str) and val.strip().lower() in ("false", "0", "no")):
+            return "in"
+    return "in"
 
 
 def _activity_drill_by_id(items: list[dict[str, Any]], detail_url_template: str) -> dict[int, str]:
@@ -265,6 +283,50 @@ class _BuildersTimelineMixin:
             if rows
             else ActivityFeed(items=(), empty_message=empty_msg)
         )
+        return _wrap_surface(title, "report", body)
+
+    def _build_conversation(self, region: Any, ctx: RegionContext) -> Surface:
+        """``display: conversation`` — stack of HM Bubble dual-lock shells.
+
+        First emitter path for the bubble hyperpart (compose under conversation).
+        Live rows (``ctx["items"]``) map ``content``/body fields to bubble text;
+        ``is_internal`` (or ``from`` / ``direction`` in|out) picks orientation
+        (internal notes → outbound agent surface). Static ``status_entries``
+        (``entries:``) dogfood the same spine when title is ``in``/``out``.
+        """
+        title = _region_title(region)
+        empty_msg = str(
+            ctx.get("empty_message")
+            or getattr(region, "empty_message", None)
+            or "No conversation yet."
+        )
+        bubbles: list[Bubble] = []
+
+        for item in list(ctx.get("items", []) or []):
+            if not isinstance(item, dict):
+                continue
+            text = _activity_description(item)
+            if not text:
+                continue
+            orient = _conversation_orientation(item)
+            bubbles.append(Bubble(text=text, from_=orient))  # type: ignore[arg-type]
+
+        if not bubbles:
+            for raw in list(ctx.get("status_entries") or []):
+                if not isinstance(raw, dict):
+                    continue
+                text = str(raw.get("body") or raw.get("caption") or "").strip()
+                if not text:
+                    continue
+                tag = str(raw.get("title") or "").strip().lower()
+                orient = tag if tag in ("in", "out") else "in"
+                bubbles.append(Bubble(text=text, from_=orient))  # type: ignore[arg-type]
+
+        if not bubbles:
+            body_empty: Fragment = EmptyState(title=empty_msg, description="")
+            return _wrap_surface(title, "report", body_empty)
+
+        body: Fragment = Stack(children=tuple(bubbles), gap="sm")
         return _wrap_surface(title, "report", body)
 
     def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:

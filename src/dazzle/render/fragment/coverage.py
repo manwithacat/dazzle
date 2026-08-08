@@ -195,6 +195,7 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "funnel_chart",
         "status_list",
         "accordion",
+        "conversation",
         "profile_card",
         "action_grid",
         "tree",

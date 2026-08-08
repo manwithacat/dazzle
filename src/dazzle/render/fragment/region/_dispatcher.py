@@ -112,6 +112,7 @@ class WorkspaceRegionAdapter(
         "profile_card": "_build_profile_card",
         "queue": "_build_queue",
         "activity_feed": "_build_activity_feed",
+        "conversation": "_build_conversation",  # bubble hyperpart stack
         "histogram": "_build_histogram",
         "heatmap": "_build_heatmap",
         "cohort_strip": "_build_cohort_strip",  # #1018 (v0.67.7)

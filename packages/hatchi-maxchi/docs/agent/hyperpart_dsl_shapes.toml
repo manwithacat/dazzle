@@ -141,9 +141,9 @@ agent_surface = "shell"
 id = "bubble"
 class = "compose"
 layer = "region"
-dsl = "compose under display: conversation"
-status = "planned"
-job = "Use bubble via compose under display: conversation"
+dsl = "display: conversation / Bubble fragment (.dz-bubble)"
+status = "live"
+job = "Use bubble via display: conversation / Bubble fragment (.dz-bubble)"
 agent_surface = "pick-a-work-surface"
 
 [[part]]

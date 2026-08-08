@@ -31,6 +31,7 @@ from dazzle.render.fragment.primitives import (
     BarTrack,
     BoxPlot,
     Breadcrumb,
+    Bubble,
     BulkActionToolbar,
     Bullet,
     Button,
@@ -243,6 +244,8 @@ class FragmentRenderer(
                 return self._emit_icon(fragment, ctx)
             case Badge():
                 return self._emit_badge(fragment, ctx)
+            case Bubble():
+                return self._emit_bubble(fragment, ctx)
             case EmptyState():
                 return self._emit_empty_state(fragment, ctx)
             case Skeleton():

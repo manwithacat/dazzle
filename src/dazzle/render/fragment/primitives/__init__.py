@@ -16,6 +16,7 @@ from dazzle.render.fragment.primitives.containers import (
 )
 from dazzle.render.fragment.primitives.content import (
     Badge,
+    Bubble,
     EmptyState,
     Heading,
     Icon,
@@ -185,6 +186,7 @@ __all__ = [
     "Heading",
     "Icon",
     "Badge",
+    "Bubble",
     "EmptyState",
     "Skeleton",
     # interactive

@@ -100,6 +100,7 @@ class DisplayMode(StrEnum):
     COMPARISON = "comparison"  # #1470: ranked-league (rank rows by metric + flag outliers)
     INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
     ACCORDION = "accordion"  # hyperpart emitter: exclusive details group (FAQ / section disclosure)
+    CONVERSATION = "conversation"  # hyperpart emitter: stack of Bubble shells (chat thread)
 
 
 class WhenEmpty(StrEnum):

@@ -40,6 +40,7 @@ from dazzle.render.fragment.ingest import render_empty_state, render_skeleton
 from dazzle.render.fragment.primitives import (
     AspectRatio,
     Badge,
+    Bubble,
     Card,
     Drawer,
     DzTableMount,
@@ -105,6 +106,22 @@ class _RenderLayoutMixin:
         style = f' style="width: {ctx.escape_attr(a.width)}"' if a.width else ""
         aria = f' aria-label="{ctx.escape_attr(a.aria_label)}"' if a.aria_label else ""
         return f'<div class="dz-aspect-ratio" data-dz-ratio="{ratio}"{style}{aria}>{body}</div>'
+
+    def _emit_bubble(self, b: Bubble, ctx: RenderContext) -> str:
+        """HM Bubble — dual-lock ``.dz-bubble`` chat content shell.
+
+        ``data-dz-from`` picks inbound/outbound surface colour; optional
+        ``data-dz-tone="danger"`` for alert speech. Body is host-owned
+        escaped paragraphs (contracts/bubble.py root only).
+        """
+        from_attr = ctx.escape_attr(b.from_)
+        tone_attr = f' data-dz-tone="{ctx.escape_attr(b.tone)}"' if b.tone else ""
+        # Preserve multi-line copy as stacked <p> when author used newlines.
+        paragraphs = [p.strip() for p in str(b.text).split("\n") if p.strip()]
+        if not paragraphs:
+            paragraphs = [str(b.text).strip()]
+        body = "".join(f"<p>{ctx.escape(p)}</p>" for p in paragraphs)
+        return f'<div class="dz-bubble" data-dz-from="{from_attr}"{tone_attr}>{body}</div>'
 
     def _emit_row(self, r: Row, ctx: RenderContext) -> str:
         # Layouts L2: Row renders the HM cluster Hyperpart (wrapping

@@ -125,7 +125,8 @@ SIGNALS: dict[str, object] = {
     "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
     "carousel": "exempt:no Dazzle emitter yet (gallery media strip shell)",
     "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",
-    "bubble": "exempt:no Dazzle emitter yet (gallery chat bubble shell)",
+    # display: conversation → Bubble stack → .dz-bubble (2026-08-08)
+    "bubble": r"display:\s*conversation",
     "message": "exempt:no Dazzle emitter yet (gallery chat message row)",
     "message-scroller": "exempt:no Dazzle emitter yet (gallery chat transcript scroller)",
     "navigation-menu": "exempt:no Dazzle emitter yet (gallery top mega-nav shell)",

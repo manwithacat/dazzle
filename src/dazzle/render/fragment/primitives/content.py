@@ -1,8 +1,9 @@
-"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton.
+"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble.
 
 These are the leaf-level visual primitives. They do not contain children
 (except EmptyState, which contains an optional action). Most apps' visible
-text routes through Text or Heading; status indicators route through Badge."""
+text routes through Text or Heading; status indicators route through Badge.
+Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``)."""
 
 from dataclasses import dataclass
 from typing import Literal
@@ -10,6 +11,8 @@ from typing import Literal
 _TONES = ("default", "muted", "danger", "success", "warning")
 _BADGE_VARIANTS = ("default", "info", "success", "warning", "danger")
 _ICON_SIZES = ("sm", "md", "lg")
+_BUBBLE_FROM = ("in", "out")
+_BUBBLE_TONES = ("", "danger")
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,3 +72,28 @@ class Skeleton:
     def __post_init__(self) -> None:
         if self.lines < 1:
             raise ValueError(f"lines must be >= 1; got {self.lines}")
+
+
+@dataclass(frozen=True, slots=True)
+class Bubble:
+    """HM Bubble hyperpart — dual-lock ``.dz-bubble`` chat content shell.
+
+    Gallery spine: rounded inbound/outbound speech shell. Orientation via
+    ``data-dz-from="in|out"``; optional ``data-dz-tone="danger"``. Compose
+    under ``display: conversation`` (stack of bubbles from Comment rows or
+    static entries) or nest inside a future Message row.
+
+    Dual-lock root: ``.dz-bubble`` (contracts/bubble.py).
+    """
+
+    text: str
+    from_: Literal["in", "out"] = "in"
+    tone: Literal["", "danger"] = ""
+
+    def __post_init__(self) -> None:
+        if not self.text or not str(self.text).strip():
+            raise ValueError("Bubble requires non-empty text")
+        if self.from_ not in _BUBBLE_FROM:
+            raise ValueError(f"invalid Bubble from_ {self.from_!r}; expected in|out")
+        if self.tone not in _BUBBLE_TONES:
+            raise ValueError(f"invalid Bubble tone {self.tone!r}")

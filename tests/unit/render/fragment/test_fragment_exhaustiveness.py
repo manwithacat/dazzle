@@ -25,6 +25,7 @@ from dazzle.render.fragment import (
     BoxPlot,
     Breadcrumb,
     BreadcrumbItem,
+    Bubble,
     BulkActionToolbar,
     Bullet,
     BulletRow,
@@ -378,6 +379,8 @@ def _sample_for(primitive_type: type) -> object:
                 BreadcrumbItem(label="Here", href=None),
             )
         )
+    if primitive_type is Bubble:
+        return Bubble(text="Hello", from_="in")
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:

@@ -32,6 +32,7 @@ Primary axis is multi-field inventory / admin table?          → list (table)
 Primary axis is awareness / notifications?                    → activity_feed
 Primary axis is service health rows?                          → status_list
 Static FAQ / exclusive section disclosure (one open)?       → accordion
+Primary axis is customer↔agent chat bubbles (thread)?       → conversation
 ```
 
 ## Decision table (job → surface)

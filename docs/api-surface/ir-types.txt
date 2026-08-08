@@ -3741,6 +3741,7 @@ enum: DisplayMode
     - COHORT_STRIP = 'cohort_strip'
     - COMPARISON = 'comparison'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'
+    - CONVERSATION = 'conversation'
     - DAY_TIMELINE = 'day_timeline'
     - DETAIL = 'detail'
     - DIAGRAM = 'diagram'

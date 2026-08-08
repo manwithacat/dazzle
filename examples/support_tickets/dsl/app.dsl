@@ -477,11 +477,12 @@ workspace ticket_queue "Ticket Queue":
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
+  # Hyperpart emitter dogfood: display: conversation → Bubble stack (.dz-bubble)
   live_conversation:
     source: Comment
     sort: created_at desc
     limit: 10
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — customer and agent notes appear here as the case moves"
 

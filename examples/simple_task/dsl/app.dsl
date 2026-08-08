@@ -835,6 +835,16 @@ workspace admin_dashboard "Admin Dashboard":
       documents: accent
       conversation: accent
 
+  # Hyperpart emitter dogfood: display: conversation → Bubble (.dz-bubble).
+  sample_thread:
+    display: conversation
+    title: "Sample thread"
+    entries:
+      - title: "in"
+        body: "Can we reschedule the walkthrough to Thursday?"
+      - title: "out"
+        body: "Thursday 14:00 works — I'll send a calendar hold."
+
   # Hyperpart emitter dogfood: display: accordion (exclusive FAQ disclosure).
   task_faq:
     display: accordion

@@ -63,3 +63,10 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Fragment: `Breadcrumb(items=(BreadcrumbItem(...), …))` dual-lock nav spine
 - Dogfood: every chromed app page (Home → leaf above main)
 - Tests: `test_breadcrumb_emitter`
+
+## Reference ship: bubble (2026-08-08)
+
+- `display: conversation` → stack of `Bubble` → `.dz-bubble` + `data-dz-from`
+- Fragment: `Bubble(text=…, from_="in|out")` dual-lock speech shell
+- Dogfood: `support_tickets` `live_conversation`; `simple_task` `sample_thread` entries
+- Tests: `test_bubble_emitter`

@@ -25,6 +25,7 @@ from dazzle.render.fragment.primitives import (
     BoxPlot,
     Breadcrumb,
     BreadcrumbItem,
+    Bubble,
     BulkActionToolbar,
     Bullet,
     BulletRow,
@@ -369,4 +370,5 @@ __all__ = [
     "SkipLink",
     "Breadcrumb",
     "BreadcrumbItem",
+    "Bubble",
 ]
