@@ -185,12 +185,14 @@ def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
     shapes = shapes_snapshot()
     planned_shapes = int(shapes.get("planned") or 0)
     next_shape = shapes.get("next_planned")
-    # Programme residual: unfinished rational DSL shapes (emitters still to ship)
+    # Programme residual: unfinished rational DSL shapes (emitters still to ship).
+    # This is *not* noise — planned catalogue rows are first-path emitter work.
     residual = max(planned, planned_shapes)
     if residual > 0 and force is None:
         force = "framework-ux hyperpart_emitter"
-    # Status may show next_planned shape id; --next stays app-only (never a
-    # catalogue part name like "aspect-ratio" — that is not examples/<app>).
+    # Prefer an example app when a planned_emitter row names one; else the next
+    # planned catalogue id (aspect-ratio, accordion, …) so selection `nxt` is set
+    # and force= hyperpart_emitter wins over smoke thrash.
     display_next = next_app or (str(next_shape) if residual > 0 and next_shape else None)
     line = (
         f"hyperpart_scenarios apps={len(apps)} planned_emitter={planned} "
@@ -199,7 +201,7 @@ def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
         f"parts={shapes.get('count', 0)} next={display_next or '-'} "
         f"force={force or '-'}"
     )
-    return line, next_app, residual, force
+    return line, display_next, residual, force
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -280,9 +282,10 @@ def main(argv: list[str] | None = None) -> int:
             ("hyperpart_scenarios", f"hyperpart_scenarios error={type(exc).__name__}", None, -1)
         )
 
-    # Selection: structure → demo → journey → felt → story_walk → trial → process → smoke
-    # → domain_cognition → hyperpart_scenarios (planned emitters → framework-ux).
-    # Campaign land-l25-smoke / improve_policy may force agent_qa_smoke ahead of this list.
+    # Selection: product/demo/journey/felt first (real residual), then elevate
+    # hyperpart programme residual (planned emitters OR planned DSL shapes) above
+    # smoke/domain thrash. Presentation residual (pq_force framework-ux) still wins
+    # when it fires — wrong chrome beats unfinished catalogue shapes.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
         "demo_fleet": "demo_fleet",
@@ -326,9 +329,29 @@ def main(argv: list[str] | None = None) -> int:
         parts = pq_force.split()
         preferred_strategy = parts[-1] if parts else "demo_fleet"
         preferred_force = pq_force
-    if preferred_strategy is None and hp_force:
+    # Elevate planned DSL-shape / planned_emitter residual over smoke thrash.
+    # Cycle 1754–1755 wrongly treated planned_shapes as noise; catalogue drain
+    # is the programme (aspect-ratio → conversation → …).
+    hp_n = next((n for name, _l, _x, n in results if name == "hyperpart_scenarios"), 0) or 0
+    hp_nxt = next((x for name, _l, x, n in results if name == "hyperpart_scenarios" and n), None)
+    soft_example = preferred_probe in {
+        "qa_smoke",
+        "domain_cognition",
+        "story_walk",
+        "trial_verdict",
+        "process_dig",
+        None,
+    }
+    presentation_wins = bool(pq_force and "hyperpart_presentation" in (pq_force or ""))
+    if hp_n > 0 and hp_force and soft_example and not presentation_wins:
+        preferred_probe = "hyperpart_scenarios"
         preferred_strategy = "hyperpart_emitter"
         preferred_force = hp_force
+        preferred_next = hp_nxt or preferred_next
+    elif preferred_strategy is None and hp_force:
+        preferred_strategy = "hyperpart_emitter"
+        preferred_force = hp_force
+        preferred_next = preferred_next or hp_nxt
 
     if args.next:
         print(preferred_next or "")

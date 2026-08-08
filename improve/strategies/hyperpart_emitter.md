@@ -11,8 +11,14 @@
 
 | Residual | force | Action |
 |----------|-------|--------|
-| `planned_emitter > 0` | `framework-ux hyperpart_emitter` | Ship the full emitter package for that hyperpart |
+| `planned_emitter > 0` | `framework-ux hyperpart_emitter` | Domain wants a part with no DSL path yet — ship emitter package |
+| `dsl_shapes.planned > 0` | `framework-ux hyperpart_emitter` | **Programme residual** — catalogue still has unfinished first paths (not noise) |
 | `author_action` only | soft (not residual_total) | Optional product adopt dig; do not thrash quiet fleets |
+
+**Do honor** `force=framework-ux hyperpart_emitter` when either residual fires.
+Do **not** skip shape drain because `planned_emitter=0` — that only means no
+domain-fit scanner row; planned catalogue ids (aspect-ratio, carousel, …) still need emitters.
+Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 
 ## Emitter package (one PR / dig)
 
