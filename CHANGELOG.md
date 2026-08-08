@@ -20,6 +20,11 @@
   SPECIFICATION + brief fingerprint refreshed; stills recaptured.
 
 ### Fixed
+- **Switch scenario residual false positive on FeedbackReport** — `boolean_settings_switch`
+  no longer auto_seeds product residual for headless platform `notification_sent`
+  bookkeeping (toast idempotency). Require settings-like signal; skip headless/platform
+  for author_action; keep `widget=switch` emit_covered. Probes `--next` stays app-only
+  when only catalogue planned shapes remain.
 - **Presentation residual `delta_theater` false positive** — OCR pattern no longer
   flags honest spaced `(25%) vs prior` under 100%; still catches absurd ≥100% and
   glued `%)vs` seed-noise theater (#1626 F1).

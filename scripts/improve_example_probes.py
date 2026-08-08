@@ -189,13 +189,14 @@ def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
     residual = max(planned, planned_shapes)
     if residual > 0 and force is None:
         force = "framework-ux hyperpart_emitter"
-        if next_app is None and next_shape:
-            next_app = str(next_shape)
+    # Status may show next_planned shape id; --next stays app-only (never a
+    # catalogue part name like "aspect-ratio" — that is not examples/<app>).
+    display_next = next_app or (str(next_shape) if residual > 0 and next_shape else None)
     line = (
         f"hyperpart_scenarios apps={len(apps)} planned_emitter={planned} "
         f"author_action={author} dsl_shapes live={shapes.get('live', 0)} "
         f"planned={planned_shapes} chrome_only={shapes.get('chrome_only', 0)} "
-        f"parts={shapes.get('count', 0)} next={next_app or '-'} "
+        f"parts={shapes.get('count', 0)} next={display_next or '-'} "
         f"force={force or '-'}"
     )
     return line, next_app, residual, force

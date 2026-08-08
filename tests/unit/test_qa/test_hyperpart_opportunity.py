@@ -183,3 +183,39 @@ class TestScan:
         report = build_opportunity_report(app="simple_task", opportunities=opps)
         assert report["residual"]["author_action"] == 0
         assert report["residual"]["force_lane"] is None
+
+    def test_switch_skips_platform_headless_notification_sent(self) -> None:
+        """FeedbackReport.notification_sent must not thrash agent_qa_smoke residual.
+
+        Headless platform create falls back to the entity field map; the
+        bookkeeping flag matches ``notification`` settings-ish but is toast
+        idempotency (#721), not a product preferences control.
+        """
+        entity = SimpleNamespace(
+            name="FeedbackReport",
+            domain="platform",
+            fields=[
+                _field("description", "str"),
+                _field("notification_sent", "bool"),
+                _field("is_active", "bool"),
+            ],
+        )
+        surface = SimpleNamespace(
+            name="feedback_create",
+            entity_ref="FeedbackReport",
+            mode=SimpleNamespace(value="create"),
+            sections=[],
+            headless=True,
+        )
+        appspec = SimpleNamespace(
+            domain=SimpleNamespace(entities=[entity]),
+            surfaces=[surface],
+            workspaces=[],
+        )
+        opps = scan_appspec(appspec)
+        switch_rows = [o for o in opps if o.hyperpart == "switch"]
+        assert not any(o.field == "notification_sent" for o in switch_rows)
+        assert not any(o.status == "author_action" for o in switch_rows)
+        report = build_opportunity_report(app="simple_task", opportunities=opps)
+        assert report["residual"]["author_action"] == 0
+        assert not report.get("auto_seed")

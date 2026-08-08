@@ -240,6 +240,22 @@ def _switch_author_action(
     )
 
 
+def _is_bookkeeping_bool(fn: str) -> bool:
+    """Audit / system flags that must not be switch author_action residual.
+
+    ``notification_sent`` (FeedbackReport toast idempotency) matches the
+    loose ``notification`` settings-like regex but is not a preferences UI
+    control — refuse those suffixes so headless platform fields do not
+    thrash example-apps residual.
+    """
+    fl = fn.lower()
+    if fl in ("selected", "checked"):
+        return True
+    if fl.endswith(("_ids", "_sent", "_acked", "_seen", "_count")):
+        return True
+    return False
+
+
 def _switch_row_for_field(
     *,
     sc: Scenario,
@@ -256,22 +272,43 @@ def _switch_row_for_field(
     # Form control only — skip list/view columns that merely *name* like settings.
     if not formish and not surface_settings:
         return None
-    if fn in ("selected", "checked") or fn.endswith("_ids"):
+    if _is_bookkeeping_bool(fn):
         return None
-    if not (_FIELD_SETTINGSISH.search(fn) or surface_settings or formish):
+    # Require a settings signal — bare formish must not flag every create bool
+    # (that flooded FeedbackReport.notification_sent as product residual).
+    if not (_FIELD_SETTINGSISH.search(fn) or surface_settings):
         return None
     return _switch_author_action(sc, ent_name, fn, sname, widget)
 
 
 def _iter_bool_fields(surface: Any, entity: Any) -> list[tuple[str, Any]]:
     field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
-    candidates = _surface_field_names(surface) or list(field_map.keys())
+    surface_names = _surface_field_names(surface)
+    if surface_names:
+        candidates = surface_names
+    elif bool(getattr(surface, "headless", False)):
+        # Headless API surfaces (e.g. feedback_create) list no sections —
+        # do not invent authoring targets from the whole entity map.
+        candidates = []
+    else:
+        candidates = list(field_map.keys())
     out: list[tuple[str, Any]] = []
     for fn in candidates:
         fspec = field_map.get(fn)
         if fspec and _is_bool_kind(_field_type_kind(getattr(fspec, "type", None))):
             out.append((fn, fspec))
     return out
+
+
+def _skip_switch_authoring(*, domain: str, headless: bool, widget: str) -> bool:
+    """True when only explicit widget=switch coverage is allowed (no author_action).
+
+    Platform-injected entities and headless API surfaces must not thrash
+    example-apps residual with product adopt rows for system bools.
+    """
+    if widget == "switch":
+        return False
+    return domain == "platform" or headless
 
 
 def scan_boolean_switch(appspec: Any) -> list[Any]:
@@ -296,22 +333,27 @@ def scan_boolean_switch(appspec: Any) -> list[Any]:
         mode = _surface_mode(surface)
         surface_settings = bool(_SETTINGSISH.search(sname))
         formish = mode in ("create", "edit", "form", "settings")
+        headless = bool(getattr(surface, "headless", False))
         ent_name = str(
             getattr(surface, "entity_ref", None) or getattr(surface, "entity", None) or ""
         )
         entity = entity_by_name.get(ent_name)
         if not entity:
             continue
+        domain = str(getattr(entity, "domain", "") or "")
         for fn, _fspec in _iter_bool_fields(surface, entity):
             key = (ent_name, fn, sname)
             if key in seen:
+                continue
+            widget = _surface_field_widget(surface, fn)
+            if _skip_switch_authoring(domain=domain, headless=headless, widget=widget):
                 continue
             row = _switch_row_for_field(
                 sc=sc,
                 ent_name=ent_name,
                 fn=fn,
                 sname=sname,
-                widget=_surface_field_widget(surface, fn),
+                widget=widget,
                 formish=formish,
                 surface_settings=surface_settings,
             )
