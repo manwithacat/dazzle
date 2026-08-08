@@ -6,6 +6,7 @@ Surface kind and tile/list/bar/stage-row shapes:
   - _build_metrics         MetricsGrid of MetricTile primitives
   - _build_status_list     vertical icon + title + caption + pill rows
   - _build_accordion       exclusive details group (FAQ / section disclosure)
+  - _build_carousel        media stage strip with prev/next/dots
   - _build_progress        <progress> header + StageBar chip list
   - _build_pipeline_steps  horizontal stage cards with arrow connectors
 
@@ -22,6 +23,8 @@ from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.fragment import (
     Accordion,
     AccordionItem,
+    Carousel,
+    CarouselSlide,
     EmptyState,
     Fragment,
     MetricsGrid,
@@ -38,6 +41,52 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
 )
+
+_CAROUSEL_MEDIA_KEYS = ("preview_url", "logo_url", "photo_url", "image_url", "src")
+
+
+def _carousel_src_from_item(item: dict[str, Any]) -> str:
+    for key in _CAROUSEL_MEDIA_KEYS:
+        val = item.get(key)
+        if val:
+            return str(val)
+    return ""
+
+
+def _carousel_slides_from_items(items: list[Any]) -> list[CarouselSlide]:
+    slides: list[CarouselSlide] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        src = _carousel_src_from_item(item)
+        if not src:
+            continue
+        alt = str(
+            item.get("name") or item.get("title") or item.get("label") or item.get("alt") or "Slide"
+        )
+        chip = str(item.get("chip") or item.get("asset_type") or "")
+        slides.append(CarouselSlide(src=src, alt=alt, chip=chip))
+    return slides
+
+
+def _carousel_slides_from_entries(raw_entries: list[Any]) -> list[CarouselSlide]:
+    slides: list[CarouselSlide] = []
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            continue
+        entry_title = str(raw.get("title") or raw.get("alt") or "")
+        src = str(raw.get("body") or raw.get("caption") or raw.get("src") or "")
+        chip = str(raw.get("icon") or raw.get("chip") or "")
+        if src:
+            slides.append(CarouselSlide(src=src, alt=entry_title or "Slide", chip=chip))
+        elif entry_title:
+            slides.append(
+                CarouselSlide(
+                    title=entry_title,
+                    body=str(raw.get("body") or raw.get("caption") or ""),
+                )
+            )
+    return slides
 
 
 class _BuildersMetricsMixin:
@@ -266,6 +315,31 @@ class _BuildersMetricsMixin:
         body_frag: Fragment = Accordion(
             items=tuple(items),
             name=name,
+            empty_message=str(empty_msg),
+        )
+        return _wrap_surface(title, "list", body_frag)
+
+    def _build_carousel(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: carousel` regions render HM Carousel media stage.
+
+        Prefer entity rows with media URL fields (``preview_url`` /
+        ``logo_url`` / ``photo_url`` / ``image_url``). Fall back to authored
+        ``entries:`` where ``title`` is alt text and ``caption``/``body`` is
+        the image URL (optional ``icon`` as aspect chip). Clamp wrap default.
+        """
+        title = _region_title(region)
+        slides = _carousel_slides_from_items(list(ctx.get("items") or []))
+        if not slides:
+            slides = _carousel_slides_from_entries(list(ctx.get("status_entries") or []))
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No slides."
+        )
+        label = title or str(getattr(region, "name", None) or "Gallery")
+        body_frag: Fragment = Carousel(
+            slides=tuple(slides),
+            label=str(label),
+            wrap="none",
+            ratio="16/9",
             empty_message=str(empty_msg),
         )
         return _wrap_surface(title, "list", body_frag)

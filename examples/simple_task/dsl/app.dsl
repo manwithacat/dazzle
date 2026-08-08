@@ -857,6 +857,18 @@ workspace admin_dashboard "Admin Dashboard":
       - title: "Who appears on the board?"
         body: "Kanban columns are assignees — each person owns a column of work in progress."
 
+  # Hyperpart emitter dogfood: display: carousel (media stage strip).
+  sample_gallery:
+    display: carousel
+    title: "Sample gallery"
+    entries:
+      - title: "Priority board sketch"
+        body: "https://placehold.co/640x360/0F172A/38BDF8/png?text=Priority"
+      - title: "Review lane mock"
+        body: "https://placehold.co/640x360/1E293B/F59E0B/png?text=Review"
+      - title: "Assignee columns"
+        body: "https://placehold.co/640x360/334155/A3E635/png?text=Assignees"
+
   ux:
     as admin:
       purpose: "See task discussion before document briefs and pressure queues"

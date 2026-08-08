@@ -123,7 +123,8 @@ SIGNALS: dict[str, object] = {
     "aspect-ratio": r"logo_url|preview_url|photo_url",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",
     "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
-    "carousel": "exempt:no Dazzle emitter yet (gallery media strip shell)",
+    # display: carousel → Carousel → .dz-carousel (2026-08-08)
+    "carousel": r"display:\s*carousel",
     "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",
     # display: conversation → Bubble stack → .dz-bubble (2026-08-08)
     "bubble": r"display:\s*conversation",

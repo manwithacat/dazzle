@@ -138,8 +138,6 @@
   "services.DomainServiceSpec.stub_language",
   "sitespec.FAQItem.answer",
   "sitespec.LayoutSpec.section_backgrounds",
-  "sitespec.LogoSpec.alt",
-  "sitespec.MediaSpec.alt",
   "sitespec.TestimonialItem.author",
   "sitespec.TestimonialItem.avatar",
   "test_design.TestGap.related_entities",

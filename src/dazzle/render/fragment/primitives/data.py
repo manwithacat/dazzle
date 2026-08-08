@@ -1169,6 +1169,51 @@ class Accordion:
 
 
 @dataclass(frozen=True, slots=True)
+class CarouselSlide:
+    """One peer slide in a Carousel (HM carousel hyperpart).
+
+    Media slides set ``src`` (image URL) + ``alt``; optional ``chip`` names
+    source aspect. Text/hero slides may omit ``src`` and use ``title``/``body``.
+    """
+
+    src: str = ""
+    alt: str = ""
+    chip: str = ""
+    title: str = ""
+    body: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.src and not self.title and not self.body and not self.alt:
+            raise ValueError("CarouselSlide requires src, title, body, or alt (non-empty content)")
+
+
+@dataclass(frozen=True, slots=True)
+class Carousel:
+    """HM Carousel hyperpart — ``div.dz-carousel`` stage with prev/next/dots.
+
+    Dual-lock root: ``.dz-carousel`` + ``data-dz-carousel`` (contracts/carousel.py).
+    Authored via ``display: carousel`` + ``entries:`` (title=alt, caption/body=src)
+    or entity rows with ``preview_url`` / ``logo_url`` / ``photo_url``.
+    """
+
+    slides: tuple[CarouselSlide, ...]
+    label: str = "Gallery"
+    wrap: Literal["none", "loop"] = "none"
+    ratio: str = "16/9"
+    interval_ms: int = 0
+    size: Literal["", "sm", "lg"] = ""
+    empty_message: str = "No slides."
+
+    def __post_init__(self) -> None:
+        if self.wrap not in ("none", "loop"):
+            raise ValueError(f"invalid Carousel wrap {self.wrap!r}; expected none|loop")
+        if self.interval_ms < 0:
+            raise ValueError("Carousel interval_ms must be >= 0")
+        if self.size not in ("", "sm", "lg"):
+            raise ValueError(f"invalid Carousel size {self.size!r}")
+
+
+@dataclass(frozen=True, slots=True)
 class ActivityFeed:
     """Activity feed list — one row per event with time + optional actor +
     description.

@@ -96,6 +96,7 @@ class WorkspaceRegionAdapter(
         "funnel_chart": "_build_funnel_chart",
         "status_list": "_build_status_list",
         "accordion": "_build_accordion",
+        "carousel": "_build_carousel",
         "tree": "_build_tree",
         "pipeline_steps": "_build_pipeline_steps",
         "progress": "_build_progress",

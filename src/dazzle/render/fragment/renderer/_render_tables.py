@@ -6,7 +6,7 @@ emits a Table/Grid/List structure or a metric/card tile:
   - _emit_table, _emit_kpi
   - _emit_pivot_table, _emit_pivot_table_region
   - _emit_list_region, _emit_grid_region
-  - _emit_detail_grid, _emit_status_list, _emit_accordion, _emit_activity_feed
+  - _emit_detail_grid, _emit_status_list, _emit_accordion, _emit_carousel, _emit_activity_feed
   - _emit_profile_card, _emit_action_card, _emit_action_grid
   - _emit_metrics_grid, _emit_metric_tile
   - _emit_bar_track, _emit_stage_bar
@@ -64,6 +64,7 @@ from dazzle.render.fragment.primitives import (
     ActionGrid,
     ActivityFeed,
     BarTrack,
+    Carousel,
     ColumnVisibilityMenu,
     DataListScroll,
     DetailGrid,
@@ -1251,6 +1252,96 @@ class _RenderTablesMixin:
             )
         return (
             f'<div class="dz-accordion" data-dz-entry-count="{len(a.items)}">{"".join(parts)}</div>'
+        )
+
+    def _emit_carousel_slide(self, slide: Any, index: int, ctx: RenderContext) -> tuple[str, str]:
+        """Return (slide_html, dot_html) for one carousel peer."""
+        active = " data-dz-active" if index == 0 else ""
+        current = ' aria-current="true"' if index == 0 else ""
+        alt = ctx.escape_attr(slide.alt or slide.title or f"Slide {index + 1}")
+        slide_label = slide.alt or slide.title or f"Slide {index + 1}"
+        if slide.src:
+            chip = (
+                f'<span class="dz-carousel__chip">{ctx.escape(slide.chip)}</span>'
+                if slide.chip
+                else ""
+            )
+            inner = (
+                f'<div class="dz-carousel__media">'
+                f'<img src="{ctx.escape_attr(slide.src)}" alt="{alt}">'
+                f"{chip}</div>"
+            )
+            slide_cls = "dz-carousel__slide dz-carousel__slide--media"
+        else:
+            title_html = (
+                f'<p class="dz-carousel__hero-title">{ctx.escape(slide.title)}</p>'
+                if slide.title
+                else ""
+            )
+            body_html = (
+                f'<p class="dz-carousel__hero-text">{ctx.escape(slide.body)}</p>'
+                if slide.body
+                else ""
+            )
+            inner = f'<div class="dz-carousel__hero">{title_html}{body_html}</div>'
+            slide_cls = "dz-carousel__slide dz-carousel__slide--hero"
+        slide_html = f'<div class="{slide_cls}"{active}>{inner}</div>'
+        dot_html = (
+            f'<button type="button" class="dz-carousel__dot"{current} '
+            f'aria-label="Slide {index + 1}, {ctx.escape_attr(slide_label)}"></button>'
+        )
+        return slide_html, dot_html
+
+    def _emit_carousel(self, c: Carousel, ctx: RenderContext) -> str:
+        """HM Carousel — ``div.dz-carousel`` stage with prev/next/dots.
+
+        Dual-lock root ``.dz-carousel`` + ``data-dz-carousel``
+        (contracts/carousel.py · Decision 0009). First slide starts
+        ``data-dz-active``; clamp wrap disables Previous on index 0.
+        """
+        if not c.slides:
+            return (
+                f'<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
+                f'data-dz-entry-count="0" role="region" aria-roledescription="carousel" '
+                f'aria-label="{ctx.escape_attr(c.label)}">'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{ctx.escape(c.empty_message)}</p>"
+                f"</div>"
+            )
+        n = len(c.slides)
+        label = ctx.escape_attr(c.label)
+        wrap = ctx.escape_attr(c.wrap)
+        ratio = ctx.escape_attr(c.ratio or "16/9")
+        size_attr = f' data-dz-size="{ctx.escape_attr(c.size)}"' if c.size else ""
+        interval_attr = (
+            f' data-dz-carousel-interval="{int(c.interval_ms)}"' if c.interval_ms >= 500 else ""
+        )
+        slides_html: list[str] = []
+        dots_html: list[str] = []
+        for i, slide in enumerate(c.slides):
+            slide_html, dot_html = self._emit_carousel_slide(slide, i, ctx)
+            slides_html.append(slide_html)
+            dots_html.append(dot_html)
+        prev_disabled = " disabled" if c.wrap == "none" else ""
+        status = f"Slide 1 of {n}"
+        return (
+            f'<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
+            f'data-dz-carousel-wrap="{wrap}"{size_attr}{interval_attr} '
+            f'data-dz-entry-count="{n}" aria-roledescription="carousel" '
+            f'aria-label="{label}">'
+            f'<div class="dz-carousel__viewport" data-dz-ratio="{ratio}">'
+            f'<div class="dz-carousel__track">{"".join(slides_html)}</div></div>'
+            f'<div class="dz-carousel__controls">'
+            f'<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
+            f'aria-label="Previous slide"{prev_disabled}>‹</button>'
+            f'<div class="dz-carousel__dots" role="group" aria-label="Slides">'
+            f"{''.join(dots_html)}</div>"
+            f'<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
+            f'aria-label="Next slide">›</button>'
+            f"</div>"
+            f'<p class="dz-carousel__status" data-dz-carousel-status '
+            f'aria-live="polite">{ctx.escape(status)}</p>'
+            f"</div>"
         )
 
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:

@@ -38,6 +38,7 @@ from dazzle.render.fragment.primitives import (
     CalendarGrid,
     Card,
     CardPicker,
+    Carousel,
     CohortStripRegion,
     ColorField,
     ColumnVisibilityMenu,
@@ -302,6 +303,8 @@ class FragmentRenderer(
                 return self._emit_action_card(fragment, ctx)
             case Accordion():
                 return self._emit_accordion(fragment, ctx)
+            case Carousel():
+                return self._emit_carousel(fragment, ctx)
             case ActionGrid():
                 return self._emit_action_grid(fragment, ctx)
             case ProfileCard():

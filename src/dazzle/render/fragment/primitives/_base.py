@@ -40,6 +40,7 @@ from dazzle.render.fragment.primitives.data import (
     Bullet,
     CalendarGrid,
     CardPicker,
+    Carousel,
     CohortStripRegion,
     ColumnVisibilityMenu,
     ConfirmGate,
@@ -191,6 +192,7 @@ Fragment = (
     | QueueRegion
     | RelatedGroup
     | Accordion
+    | Carousel
     | ActionGrid
     | ActivityFeed
     | StatusList

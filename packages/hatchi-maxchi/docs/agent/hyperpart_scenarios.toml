@@ -243,7 +243,7 @@ scanner = "catalogue_only"
 [[scenario]]
 id = "media_gallery_carousel"
 hyperpart = "carousel"
-authoring = "planned:display:carousel"
+authoring = "display:carousel"
 layer = "region"
 job = "Multi-image asset / brand gallery uses carousel, not a flat file list."
 use_when = [
@@ -254,9 +254,9 @@ refuse_when = [
   "single thumbnail only",
   "document PDF primary (use pdf_viewer)",
 ]
-status_if_fit = "planned_emitter"
+status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
-residual_lane = "framework-ux"
-example_homes = ["design_studio Asset gallery"]
+residual_lane = "none"
+example_homes = ["design_studio brand_desk.asset_carousel", "simple_task sample_gallery"]
 scanner = "catalogue_only"

@@ -3738,6 +3738,7 @@ enum: DisplayMode
     - BAR_TRACK = 'bar_track'
     - BOX_PLOT = 'box_plot'
     - BULLET = 'bullet'
+    - CAROUSEL = 'carousel'
     - COHORT_STRIP = 'cohort_strip'
     - COMPARISON = 'comparison'
     - CONFIRM_ACTION_PANEL = 'confirm_action_panel'

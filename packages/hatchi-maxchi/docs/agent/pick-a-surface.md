@@ -45,6 +45,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Lock media frame ratio (thumbs, embeds) | `aspect-ratio` | Media field compose / `AspectRatio` fragment |
 | Where am I in the app (trail above main) | `breadcrumb` | Shell trail from route + title / `Breadcrumb` fragment |
 | Chat speech shell (inbound/outbound) | `bubble` | `display: conversation` / `Bubble` fragment |
+| Multi-image stage strip (prev/next) | `carousel` | `display: carousel` / `Carousel` fragment |
 | Wrapping actions | `cluster` / `toolbar` | Compose real children in HTML |
 
 ### Menus / panels / chrome strips

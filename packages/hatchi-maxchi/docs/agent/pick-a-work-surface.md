@@ -33,6 +33,7 @@ Primary axis is awareness / notifications?                    → activity_feed
 Primary axis is service health rows?                          → status_list
 Static FAQ / exclusive section disclosure (one open)?       → accordion
 Primary axis is customer↔agent chat bubbles (thread)?       → conversation
+Multi-image media strip (browse peers in a stage)?          → carousel
 ```
 
 ## Decision table (job → surface)

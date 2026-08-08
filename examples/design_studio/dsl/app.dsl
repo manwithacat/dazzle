@@ -372,6 +372,14 @@ workspace brand_desk "Brand Desk":
     display: grid
     action: asset_detail
     empty: "No logo or photo assets yet"
+  # Hyperpart emitter dogfood: display: carousel → Carousel (.dz-carousel).
+  asset_carousel:
+    source: Asset
+    filter: asset_type = logo or asset_type = photo or asset_type = illustration
+    sort: created_at desc
+    limit: 6
+    display: carousel
+    empty: "No media slides yet"
   # Logo + primary/secondary/accent swatches (compact — cap for fold share).
   # Metrics omitted on purpose: seed-noise period deltas are presentation residual.
   brand_media:

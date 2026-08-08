@@ -70,3 +70,11 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Fragment: `Bubble(text=…, from_="in|out")` dual-lock speech shell
 - Dogfood: `support_tickets` `live_conversation`; `simple_task` `sample_thread` entries
 - Tests: `test_bubble_emitter`
+
+## Reference ship: carousel (2026-08-08)
+
+- `display: carousel` → `Carousel` → `.dz-carousel` + `data-dz-carousel`
+- Fragment: `Carousel(slides=(CarouselSlide(...), …))` dual-lock stage strip
+- Entries: `title`=alt + `body`/`caption`=image URL; or entity `preview_url`/`logo_url`/`photo_url`
+- Dogfood: `design_studio` `brand_desk.asset_carousel`; `simple_task` `sample_gallery`
+- Tests: `test_carousel_emitter`

@@ -101,6 +101,7 @@ class DisplayMode(StrEnum):
     INSIGHT_SUMMARY = "insight_summary"  # #1470: deterministic grounded narrative
     ACCORDION = "accordion"  # hyperpart emitter: exclusive details group (FAQ / section disclosure)
     CONVERSATION = "conversation"  # hyperpart emitter: stack of Bubble shells (chat thread)
+    CAROUSEL = "carousel"  # hyperpart emitter: media stage strip prev/next/dots
 
 
 class WhenEmpty(StrEnum):

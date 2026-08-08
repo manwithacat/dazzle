@@ -1,6 +1,9 @@
 ## [Unreleased]
 
 ### Added
+- **`display: carousel` hyperpart emitter** — `Carousel` / `CarouselSlide` Fragment dual-lock
+  (`.dz-carousel` + `data-dz-carousel`); region builder from entity media URLs or static
+  entries; dogfood on design_studio `asset_carousel` + simple_task `sample_gallery`.
 - **Related-tab DSL budget (`limit` / `page_size`)** — `related` blocks accept
   `limit: N` (alias `page_size: N`); IR + template_compiler stamp the budget onto
   related tabs so first-paint fetch honours the authored finger-scale (#1646

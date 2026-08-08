@@ -34,6 +34,8 @@ from dazzle.render.fragment import (
     Card,
     CardPicker,
     CardPickerEntry,
+    Carousel,
+    CarouselSlide,
     CohortStripCell,
     CohortStripLensTab,
     CohortStripRegion,
@@ -381,6 +383,15 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is Bubble:
         return Bubble(text="Hello", from_="in")
+    if primitive_type is Carousel:
+        return Carousel(
+            slides=(
+                CarouselSlide(src="https://placehold.co/1.png", alt="A"),
+                CarouselSlide(src="https://placehold.co/2.png", alt="B"),
+            )
+        )
+    if primitive_type is CarouselSlide:
+        return CarouselSlide(src="https://placehold.co/1.png", alt="A")
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:
