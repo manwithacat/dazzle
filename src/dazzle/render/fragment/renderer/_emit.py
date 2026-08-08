@@ -109,6 +109,7 @@ from dazzle.render.fragment.primitives import (
     StatusList,
     Submit,
     Surface,
+    SwitchField,
     Table,
     Tabs,
     TagsField,
@@ -116,6 +117,7 @@ from dazzle.render.fragment.primitives import (
     Text,
     Timeline,
     TimeSeries,
+    ToggleGroupField,
     Toolbar,
     Topbar,
     Tree,
@@ -400,6 +402,10 @@ class FragmentRenderer(
                 return self._emit_color_field(fragment, ctx)
             case SliderField():
                 return self._emit_slider_field(fragment, ctx)
+            case SwitchField():
+                return self._emit_switch_field(fragment, ctx)
+            case ToggleGroupField():
+                return self._emit_toggle_group_field(fragment, ctx)
             case RichTextField():
                 return self._emit_rich_text(fragment, ctx)
             case FileUpload():

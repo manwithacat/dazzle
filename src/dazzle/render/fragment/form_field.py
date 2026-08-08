@@ -28,7 +28,9 @@ from dazzle.render.fragment import (
     RichTextField,
     SearchSelect,
     SliderField,
+    SwitchField,
     TagsField,
+    ToggleGroupField,
     WidgetCombobox,
 )
 
@@ -99,7 +101,7 @@ def field_context_to_dict(field: Any, initial_values: dict[str, Any]) -> dict[st
 
 def field_dict_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | ColorField | SliderField | RichTextField":
+) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | ColorField | SliderField | SwitchField | ToggleGroupField | RichTextField":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -207,7 +209,7 @@ def field_dict_to_primitive(
         )
 
     # WIDGET overrides (ADR-0049 Phase 3a): a `widget=` clause selects a
-    # client-controller widget (combobox/tags/color/slider/rich_text).
+    # client-controller widget (combobox/tags/color/slider/switch/rich_text).
     # Routed before the plain enum/select branch — `widget=combobox` is the
     # HM-native progressively-enhanced `<select data-dz-combobox>`, not the
     # vanilla Combobox. `multi_select`, `range`/date_range, and the JS `picker`
@@ -252,6 +254,24 @@ def field_dict_to_primitive(
             step=str(extra.get("step", 1)),
             required=required,
             initial_value=widget_initial or "50",
+        )
+    if widget == "switch":
+        return SwitchField(
+            name=name,
+            label=label,
+            required=required,
+            initial_value=widget_initial,
+        )
+    if widget in ("toggle_group", "toggle-group"):
+        opts = tuple((str(v), str(label_)) for v, label_ in (field_dict.get("options") or []))
+        if not opts:
+            opts = (("", "—"),)
+        return ToggleGroupField(
+            name=name,
+            label=label,
+            options=opts,
+            required=required,
+            initial_value=widget_initial,
         )
     if widget == "rich_text":
         return RichTextField(

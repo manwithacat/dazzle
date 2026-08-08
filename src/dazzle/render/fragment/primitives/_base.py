@@ -102,7 +102,9 @@ from dazzle.render.fragment.primitives.forms import (
     SearchSelect,
     SliderField,
     Submit,
+    SwitchField,
     TagsField,
+    ToggleGroupField,
     WidgetCombobox,
 )
 from dazzle.render.fragment.primitives.interactive import (
@@ -230,6 +232,8 @@ Fragment = (
     | TagsField
     | ColorField
     | SliderField
+    | SwitchField
+    | ToggleGroupField
     | RichTextField
     | FileUpload
     | Submit

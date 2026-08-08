@@ -2,7 +2,7 @@
 
 On/off control — progressive enhancement over a native checkbox. State is the checkbox's checked attribute (DOM), not a JS store.
 
-> **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
+> **Layer:** L1 surface · **Recipe:** `boolean-settings` — boolean settings / on-off preference
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
 
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
@@ -77,8 +77,10 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 """HYPERPART: switch — on/off control over a native checkbox.
 
 Dual-lock unit is the switch input root. Label chrome and track styling are
-host-owned. Selector ``[data-dz-switch]`` is the stable substrate root
-(gallery CSS progressive enhancement; no FragmentRenderer emit yet).
+host-owned. Selector ``[data-dz-switch]`` is the stable substrate root.
+
+Dazzle form path (2026-08-07): ``widget=switch`` → ``SwitchField`` →
+``FragmentRenderer._emit_switch_field`` mounts this anatomy on create/edit forms.
 """
 
 from contracts._kit import DomContract, Node, Present

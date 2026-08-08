@@ -580,7 +580,8 @@ surface task_create "Create Task":
     field description "Description"
 
   section scheduling "Scheduling & Ownership":
-    field priority "Priority"
+    # HM toggle-group — small closed enum (4 values) as segmented control
+    field priority "Priority" widget=toggle_group
     field due_date "Due Date"
     field assigned_to "Assign To"
 
@@ -611,7 +612,7 @@ surface task_edit "Edit Task":
     field status "Status"
 
   section scheduling "Scheduling & Ownership":
-    field priority "Priority"
+    field priority "Priority" widget=toggle_group
     field due_date "Due Date"
     field assigned_to "Assigned To"
 
@@ -724,7 +725,8 @@ surface user_edit "Edit Team Member":
     field department "Department"
 
   section account "Account Status":
-    field is_active "Active"
+    # HM Switch hyperpart — boolean settings / account on-off (emitter package 2026-08-07)
+    field is_active "Active" widget=switch
 
   ux:
     purpose: "Update team member details"

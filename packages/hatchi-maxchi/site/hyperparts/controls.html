@@ -346,8 +346,10 @@ has a dedicated contracts/switch.py for data-dz-switch progressive enhancement.
 </code></pre></figure><h4 class="hm-ref-mod"><code>contracts/switch.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-switch]</code> (part <code>switch</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-switch]</code></td><td><code>data-switch</code></td><td>present (any value)</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Import path is monorepo/package-local (<code>from contracts._kit import …</code>). Source-token form often uses <code>data-*</code>; gallery demos above are unprefixed. Do not copy this into app routes.</p><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/switch.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: switch — on/off control over a native checkbox.
 
 Dual-lock unit is the switch input root. Label chrome and track styling are
-host-owned. Selector ``[data-dz-switch]`` is the stable substrate root
-(gallery CSS progressive enhancement; no FragmentRenderer emit yet).
+host-owned. Selector ``[data-dz-switch]`` is the stable substrate root.
+
+Dazzle form path (2026-08-07): ``widget=switch`` → ``SwitchField`` →
+``FragmentRenderer._emit_switch_field`` mounts this anatomy on create/edit forms.
 &quot;&quot;&quot;</span>
 
 <span class="code__tok--kw">from</span> <span class="code__tok--name">contracts</span><span class="code__tok--op">.</span><span class="code__tok--name">_kit</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">,</span> <span class="code__tok--name">Node</span><span class="code__tok--op">,</span> <span class="code__tok--name">Present</span>

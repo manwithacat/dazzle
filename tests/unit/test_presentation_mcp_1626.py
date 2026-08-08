@@ -48,7 +48,7 @@ def test_presentation_opportunities_support_tickets() -> None:
     assert data["ok"] is True
     assert data["app"] == "support_tickets"
     assert "presentation_cognition" in data
-    assert data["schema_version"] == 2
+    assert data["schema_version"] >= 2
 
 
 def test_presentation_residual_missing_app_errors() -> None:

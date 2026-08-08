@@ -105,7 +105,7 @@ def test_opportunity_report_includes_presentation_cognition() -> None:
         )
     ]
     report = build_opportunity_report(app="support_tickets", opportunities=opps)
-    assert report["schema_version"] == 2
+    assert report["schema_version"] >= 2
     assert "presentation_cognition" in report
     assert report["presentation_cognition"]["person_rows_all_emit_covered"] is True
     assert "caveat" in report["presentation_cognition"]

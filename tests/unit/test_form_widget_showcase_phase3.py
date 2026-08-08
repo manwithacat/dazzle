@@ -1,5 +1,5 @@
 """ADR-0049 Phase 3a — substrate parity for the `widget=`-driven form widgets
-(combobox / tags / color / slider / rich_text), widgets 3-7/9.
+(combobox / tags / color / slider / switch / rich_text), widgets 3-7/9.
 
 These are exercised by the `component_showcase` gallery fixture and ~12-20 fleet
 DSL files each. combobox/tags are HM-native progressive-enhancement controllers
@@ -20,7 +20,9 @@ from dazzle.render.fragment import (
     FragmentRenderer,
     RichTextField,
     SliderField,
+    SwitchField,
     TagsField,
+    ToggleGroupField,
     WidgetCombobox,
 )
 
@@ -104,6 +106,56 @@ def test_slider_widget_min_max_step() -> None:
     assert 'step="1"' in html
     assert 'value="3"' in html
     assert "data-dz-range-value" in html
+
+
+def test_switch_widget_hm_anatomy() -> None:
+    """widget=switch mounts HM Switch spine (not controls pill input.dz-switch)."""
+    fd = {
+        "name": "is_active",
+        "label": "Active",
+        "widget": "switch",
+        "value": "true",
+    }
+    assert isinstance(_field_to_primitive(fd), SwitchField)
+    html = _render(fd)
+    assert 'data-dz-widget="switch"' in html
+    assert 'class="dz-switch"' in html
+    assert "data-dz-switch" in html
+    assert 'class="dz-switch__track"' in html
+    assert 'type="checkbox"' in html
+    assert 'value="true"' in html
+    assert " checked" in html
+    assert "Active" in html
+    # Refuse controls-pill almost-DOM (input.dz-switch)
+    assert 'class="dz-switch"' in html and "input" in html
+    assert 'input class="dz-switch"' not in html.replace("dz-switch__", "")
+    assert 'class="dz-form-checkbox"' not in html
+
+
+def test_switch_widget_unchecked() -> None:
+    html = _render({"name": "muted", "label": "Muted", "widget": "switch", "value": "false"})
+    assert "data-dz-switch" in html
+    assert " checked" not in html
+
+
+def test_toggle_group_widget_hm_anatomy() -> None:
+    fd = {
+        "name": "priority",
+        "label": "Priority",
+        "widget": "toggle_group",
+        "options": [("low", "Low"), ("medium", "Medium"), ("high", "High")],
+        "value": "medium",
+    }
+    assert isinstance(_field_to_primitive(fd), ToggleGroupField)
+    html = _render(fd)
+    assert 'data-dz-widget="toggle_group"' in html
+    assert 'class="dz-toggle-group"' in html
+    assert 'role="radiogroup"' in html
+    assert 'type="radio"' in html
+    assert 'value="medium"' in html and " checked" in html
+    assert "Priority" in html
+    # label outside fieldset — no legend
+    assert "<legend" not in html
 
 
 def test_rich_text_widget_options() -> None:

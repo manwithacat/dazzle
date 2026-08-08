@@ -34,7 +34,9 @@ These are the high-risk lookalikes. CI locks (`require_substrings` /
 
 Same **job** can have multiple **surfaces**. Pick from `docs/agent/pick-a-surface.md`; do not merge L1s by visual shape.
 
+- **`boolean-settings`** (boolean settings / on-off preference): `switch`
 - **`chrome-presentation`** (presentation / chrome): `toast`, `toolbar`
+- **`closed-enum-segments`** (small closed enum as segmented control): `toggle-group`
 - **`command-palette`** (command palette search): `command`
 - **`confirm-affordance`** (confirm irreversible action): `confirm`
 - **`field-triad`** (label + help + error triad): `field`
@@ -45,7 +47,7 @@ Same **job** can have multiple **surfaces**. Pick from `docs/agent/pick-a-surfac
 - **`overlay-dialog`** (modal / drawer overlay): `dialog`, `drawer`
 - **`remote-fk-typeahead`** (remote FK typeahead): `search-select`
 - **`single-select-form`** (single-select (form field)): `combobox`
-- **_(unset)_** (68 parts): open pick-a-surface or seed `_RECIPE_SEED` in `site/registry.py` when a part sits on the matrix
+- **_(unset)_** (66 parts): open pick-a-surface or seed `_RECIPE_SEED` in `site/registry.py` when a part sits on the matrix
 
 ## Reverse index by part
 
@@ -761,7 +763,7 @@ _No composition edges declared._
 
 ### `switch`
 
-**Layer:** `L1`
+**Layer:** `L1` · **Recipe:** `boolean-settings` (boolean settings / on-off preference)
 
 **Embedded by (hard `composes`)**
 
@@ -829,7 +831,7 @@ _No composition edges declared._
 
 ### `toggle-group`
 
-**Layer:** `L1`
+**Layer:** `L1` · **Recipe:** `closed-enum-segments` (small closed enum as segmented control)
 
 **Embedded by (hard `composes`)**
 

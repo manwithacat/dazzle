@@ -1,8 +1,10 @@
 """HYPERPART: switch — on/off control over a native checkbox.
 
 Dual-lock unit is the switch input root. Label chrome and track styling are
-host-owned. Selector ``[data-dz-switch]`` is the stable substrate root
-(gallery CSS progressive enhancement; no FragmentRenderer emit yet).
+host-owned. Selector ``[data-dz-switch]`` is the stable substrate root.
+
+Dazzle form path (2026-08-07): ``widget=switch`` → ``SwitchField`` →
+``FragmentRenderer._emit_switch_field`` mounts this anatomy on create/edit forms.
 """
 
 from contracts._kit import DomContract, Node, Present

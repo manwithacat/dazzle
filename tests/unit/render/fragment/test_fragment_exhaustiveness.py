@@ -130,6 +130,7 @@ from dazzle.render.fragment import (
     Stylesheet,
     Submit,
     Surface,
+    SwitchField,
     Table,
     Tabs,
     TagsField,
@@ -141,6 +142,7 @@ from dazzle.render.fragment import (
     Timeline,
     TimelineEvent,
     TimeSeries,
+    ToggleGroupField,
     Toolbar,
     Topbar,
     Tree,
@@ -485,6 +487,12 @@ def _sample_for(primitive_type: type) -> object:
         return ColorField(name="cl", label="Colour")
     if primitive_type is SliderField:
         return SliderField(name="sl", label="Slider")
+    if primitive_type is SwitchField:
+        return SwitchField(name="sw", label="Switch")
+    if primitive_type is ToggleGroupField:
+        return ToggleGroupField(
+            name="tg", label="View", options=(("list", "List"), ("board", "Board"))
+        )
     if primitive_type is RichTextField:
         return RichTextField(name="rt", label="Rich")
     if primitive_type is FileUpload:

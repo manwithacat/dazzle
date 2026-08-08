@@ -149,6 +149,58 @@ def _domain_cognition() -> tuple[str, str | None, int]:
     return mod.format_status(rows), nxt, len(residual)
 
 
+def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
+    """Hyperpart scenario + DSL-shape residual — planned emitters / shapes.
+
+    Residual (forces framework-ux hyperpart_emitter):
+      max(planned_emitter rows across apps, planned DSL shapes in catalogue)
+
+    *author_action* is reported only (product adopt), not residual_total.
+    """
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
+    from dazzle.qa.hyperpart_opportunity import build_opportunity_report, scan_appspec
+
+    examples = REPO / "examples"
+    apps = sorted(p.name for p in examples.iterdir() if p.is_dir() and (p / "dazzle.toml").exists())
+    planned = 0
+    author = 0
+    next_app: str | None = None
+    force: str | None = None
+    for app in apps:
+        try:
+            spec = load_project_appspec(examples / app)
+            report = build_opportunity_report(app=app, opportunities=scan_appspec(spec))
+        except Exception:  # noqa: BLE001 — probe must not crash OBSERVE
+            continue
+        res = report.get("residual") or {}
+        p = int(res.get("planned_emitter") or 0)
+        a = int(res.get("author_action") or 0)
+        planned += p
+        author += a
+        if p > 0 and next_app is None:
+            next_app = app
+            force = "framework-ux hyperpart_emitter"
+
+    shapes = shapes_snapshot()
+    planned_shapes = int(shapes.get("planned") or 0)
+    next_shape = shapes.get("next_planned")
+    # Programme residual: unfinished rational DSL shapes (emitters still to ship)
+    residual = max(planned, planned_shapes)
+    if residual > 0 and force is None:
+        force = "framework-ux hyperpart_emitter"
+        if next_app is None and next_shape:
+            next_app = str(next_shape)
+    line = (
+        f"hyperpart_scenarios apps={len(apps)} planned_emitter={planned} "
+        f"author_action={author} dsl_shapes live={shapes.get('live', 0)} "
+        f"planned={planned_shapes} chrome_only={shapes.get('chrome_only', 0)} "
+        f"parts={shapes.get('count', 0)} next={next_app or '-'} "
+        f"force={force or '-'}"
+    )
+    return line, next_app, residual, force
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
@@ -218,8 +270,17 @@ def main(argv: list[str] | None = None) -> int:
             ("domain_cognition", f"domain_cognition error={type(exc).__name__}", None, -1)
         )
 
+    hp_force: str | None = None
+    try:
+        hp_line, hp_nxt, hp_n, hp_force = _hyperpart_scenarios()
+        results.append(("hyperpart_scenarios", hp_line, hp_nxt, hp_n))
+    except Exception as exc:  # noqa: BLE001
+        results.append(
+            ("hyperpart_scenarios", f"hyperpart_scenarios error={type(exc).__name__}", None, -1)
+        )
+
     # Selection: structure → demo → journey → felt → story_walk → trial → process → smoke
-    # → domain_cognition (lifecycle/process priors; last so product residuals win).
+    # → domain_cognition → hyperpart_scenarios (planned emitters → framework-ux).
     # Campaign land-l25-smoke / improve_policy may force agent_qa_smoke ahead of this list.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
@@ -231,6 +292,7 @@ def main(argv: list[str] | None = None) -> int:
         "process_dig": "story_walk",  # default; overridden by receipt strategy
         "qa_smoke": "agent_qa_smoke",
         "domain_cognition": "domain_lifecycle_priors",
+        "hyperpart_scenarios": "hyperpart_emitter",
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
@@ -249,6 +311,9 @@ def main(argv: list[str] | None = None) -> int:
                 parts = pq_force.split()
                 preferred_strategy = parts[-1] if parts else "demo_fleet"
                 preferred_force = pq_force
+            elif name == "hyperpart_scenarios" and hp_force:
+                preferred_strategy = "hyperpart_emitter"
+                preferred_force = hp_force
             else:
                 preferred_strategy = STRATEGY_FOR.get(name, name)
                 preferred_force = (
@@ -260,6 +325,9 @@ def main(argv: list[str] | None = None) -> int:
         parts = pq_force.split()
         preferred_strategy = parts[-1] if parts else "demo_fleet"
         preferred_force = pq_force
+    if preferred_strategy is None and hp_force:
+        preferred_strategy = "hyperpart_emitter"
+        preferred_force = hp_force
 
     if args.next:
         print(preferred_next or "")
@@ -303,13 +371,14 @@ def main(argv: list[str] | None = None) -> int:
         for line in pq_lines:
             if line not in {r[1] for r in results[:3]}:
                 print(line)
-        # story_walk + trial_verdict + process_dig + domain_cognition status lines
+        # story_walk + trial_verdict + process_dig + domain_cognition + hyperpart_scenarios
         for name, line, _nxt, _n in results:
             if name in {
                 "story_walk",
                 "trial_verdict",
                 "process_dig",
                 "domain_cognition",
+                "hyperpart_scenarios",
             }:
                 print(line)
         if wi_line:

@@ -46,6 +46,7 @@ when residual remains: product → demo → journey):
 | `example-apps domain_lifecycle_priors` | `improve/strategies/domain_lifecycle_priors.md` | `scripts/domain_cognition_bar.py` (+ lifecycle/process priors) |
 | `example-apps hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | recapture prove only; emit fix is framework-ux |
 | `framework-ux hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` | MCP `presentation` + `product_quality` presentation residual |
+| `framework-ux hyperpart_emitter` | `improve/strategies/hyperpart_emitter.md` | `hyperpart_scenarios planned_emitter>0` — ship DSL path for gallery-only part |
 | `example-apps interesting_product` | `improve/strategies/interesting_product.md` | post-5.8 Goal B depth menu + still proof |
 | `example-apps depth` | `improve/strategies/interesting_product.md` | alias of interesting_product |
 
@@ -65,11 +66,13 @@ Agent surfaces:
 # OBSERVE
 dazzle demo quality -p examples --json          # presentation residual in residual_total
 dazzle qa hyperpart-opportunities --app support_tickets --table
+python scripts/improve_example_probes.py --status   # hyperpart_scenarios planned_emitter / force=
 # MCP (downstream + monorepo agents)
 #   product_quality(operation=score, project_root=examples)
 #   presentation(operation=cognition|opportunities|residual, app=…)
 # KG: knowledge(operation=counter_prior, id=ref_as_repr)
 # Doctrine: docs/reference/hyperpart-presentation.md
+# Emitter package: improve/strategies/hyperpart_emitter.md + hyperpart_scenarios.toml
 ```
 
 Unified OBSERVE for every example-apps cycle (and for `--status`):

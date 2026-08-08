@@ -194,6 +194,8 @@ RECIPE_LABELS: dict[str, str] = {
     "layout-primitive": "layout primitive",
     "overlay-dialog": "modal / drawer overlay",
     "chrome-presentation": "presentation / chrome",
+    "boolean-settings": "boolean settings / on-off preference",
+    "closed-enum-segments": "small closed enum as segmented control",
 }
 
 # Explicit recipe (+ optional layer override) for parts that sit on the pick matrix.
@@ -217,6 +219,8 @@ _RECIPE_SEED: dict[str, tuple[str, str | None]] = {
     "master-detail": ("list-region-host", "L2"),
     "app-shell": ("list-region-host", "L2"),
     "toolbar": ("chrome-presentation", "L2"),
+    "switch": ("boolean-settings", "L1"),
+    "toggle-group": ("closed-enum-segments", "L1"),
 }
 
 

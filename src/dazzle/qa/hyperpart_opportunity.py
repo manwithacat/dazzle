@@ -13,6 +13,11 @@ Primary rule (agent + framework shared):
 
 Emits opportunity rows + trial-friction-compatible ``auto_seed`` candidates
 (``category=missing`` for under-application that still needs author action).
+
+Scenario catalogue (jobs → hyperpart → authoring class):
+``packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml`` via
+``dazzle.qa.hyperpart_scenarios``. Doctrine:
+``docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md``.
 """
 
 from __future__ import annotations
@@ -20,14 +25,24 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.qa.hyperpart_scenarios import catalogue_snapshot, scan_scenario_opportunities
+from dazzle.qa.hyperpart_types import HyperpartOpportunity
 from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
 from dazzle.render.user_chip import looks_like_person_ref
+
+# Re-export for callers/tests that import from this module.
+__all__ = [
+    "HyperpartOpportunity",
+    "build_opportunity_report",
+    "scan_appspec",
+    "scan_person_ref_opportunities",
+    "scan_queue_opportunities",
+]
 
 # Workspace display modes that already pull rich hyperparts.
 _QUEUE_ISH_NAME = re.compile(
@@ -39,44 +54,6 @@ _LISTISH_MODES = ("list", "view", "detail", "")
 _QUEUE_DISPLAYS = ("queue", "kanban", "task_inbox")
 _PLAIN_DISPLAYS = ("", "list", "table", "none")
 _REF_KINDS = frozenset({"ref", "belongs_to"})
-
-
-@dataclass
-class HyperpartOpportunity:
-    """One place a hyperpart should be considered or is now default-emitted."""
-
-    hyperpart: str  # avatar | queue | badge | money | …
-    kind: str  # person_ref | work_queue | …
-    entity: str
-    field: str
-    surface: str
-    location: str  # human path, e.g. surface TaskList.field.assigned_to
-    status: str
-    # emit_covered | emit_partial | author_action | matrix_miss | verify
-    # (legacy default_emit treated as emit_covered for list/detail only)
-    severity: str  # low | medium | high
-    description: str
-    ownership: str = "framework"  # framework default vs product authoring
-    notes: str = ""
-    hosts: str = ""  # comma-separated hosts known to render this field
-
-    def to_json(self) -> dict[str, Any]:
-        return asdict(self)
-
-    def to_friction(self) -> dict[str, Any]:
-        return {
-            "category": "missing" if self.status in ("author_action", "matrix_miss") else "other",
-            "severity": self.severity,
-            "description": self.description,
-            "url": self.location,
-            "evidence": (
-                f"hyperpart={self.hyperpart} kind={self.kind} "
-                f"entity={self.entity}.{self.field} status={self.status} "
-                f"hosts={self.hosts} {self.notes}"
-            ),
-            "blocks_pilot": False,
-            "ownership": self.ownership,
-        }
 
 
 def _field_type_kind(ft: Any) -> str:
@@ -298,6 +275,7 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     rows = scan_person_ref_opportunities(appspec)
     rows.extend(scan_person_queue_meta_opportunities(appspec))
     rows.extend(scan_queue_opportunities(appspec))
+    rows.extend(scan_scenario_opportunities(appspec))
     return rows
 
 
@@ -311,7 +289,46 @@ _GUIDANCE = {
     "queue": "Urgency-ordered work of the same type → display: queue, not a plain list.",
     "badge": "Lifecycle / status enums already map to badge cells by default.",
     "money": "Money fields map to currency cells by default.",
+    "switch": (
+        "Boolean settings → widget=switch → SwitchField / data-dz-switch (HM Switch). "
+        "Default bool still checkbox; authors opt in. Scenario residual: "
+        "emit_covered when widget present, author_action when settings-like bool lacks it. "
+        "Doctrine: hyperpart-emitter-scenario-cognition design (2026-08-07)."
+    ),
+    "scenarios": (
+        "Full job→hyperpart catalogue: packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml. "
+        "One authoring surface per job; density via present() matrix, not extra display: verbs."
+    ),
 }
+
+
+def _residual_counts(
+    opportunities: list[HyperpartOpportunity],
+) -> tuple[dict[str, int], dict[str, int], dict[str, int], int, int]:
+    by_hp: dict[str, int] = {}
+    by_status: dict[str, int] = {}
+    by_lane: dict[str, int] = {}
+    planned = 0
+    author_action = 0
+    for o in opportunities:
+        by_hp[o.hyperpart] = by_hp.get(o.hyperpart, 0) + 1
+        by_status[o.status] = by_status.get(o.status, 0) + 1
+        if o.status == "planned_emitter":
+            planned += 1
+            by_lane["framework-ux"] = by_lane.get("framework-ux", 0) + 1
+        elif o.status == "author_action":
+            author_action += 1
+            lane = "example-apps" if o.ownership == "product" else "framework-ux"
+            by_lane[lane] = by_lane.get(lane, 0) + 1
+    return by_hp, by_status, by_lane, planned, author_action
+
+
+def _force_lane(planned: int, author_action: int) -> str | None:
+    if planned > 0 and author_action == 0:
+        return "framework-ux"
+    if author_action > 0:
+        return "example-apps"
+    return None
 
 
 def build_opportunity_report(
@@ -328,36 +345,46 @@ def build_opportunity_report(
         for f, o in zip(frictions, opportunities, strict=True)
         if o.status == "author_action" and is_auto_seed_eligible(f)
     ]
-    by_hp: dict[str, int] = {}
-    by_status: dict[str, int] = {}
-    for o in opportunities:
-        by_hp[o.hyperpart] = by_hp.get(o.hyperpart, 0) + 1
-        by_status[o.status] = by_status.get(o.status, 0) + 1
+    by_hp, by_status, by_lane, planned, author_action = _residual_counts(opportunities)
     cog = cognition_snapshot()
-    # Agent cognition: all-green on scanned hosts is not fleet presentation done.
-    all_scanned_green = bool(opportunities) and all(
-        o.status == "emit_covered" for o in opportunities if o.kind.startswith("person")
+    person_rows = [o for o in opportunities if o.kind.startswith("person")]
+    all_scanned_green = bool(person_rows) and all(o.status == "emit_covered" for o in person_rows)
+    scenarios = catalogue_snapshot()
+    caveat = (
+        "emit_covered applies only to hosts_audited_by_scanner. "
+        "hosts_not_yet_audited may still stringify on stills — open hero PNG. "
+        "planned_emitter rows need framework emitters before example adopt."
+        if all_scanned_green
+        else "Drain author_action / emit_partial / matrix_miss / planned_emitter first; then stills."
     )
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "mode": "hyperpart_opportunity",
         "app": app,
         "count": len(opportunities),
         "by_hyperpart": by_hp,
         "by_status": by_status,
+        "residual": {
+            "author_action": author_action,
+            "planned_emitter": planned,
+            "by_lane": by_lane,
+            "force_lane": _force_lane(planned, author_action),
+        },
         "opportunities": [o.to_json() for o in opportunities],
         "friction": frictions,
         "auto_seed": auto_seed,
         "guidance": dict(_GUIDANCE),
+        "scenario_catalogue": {
+            "count": scenarios.get("count"),
+            "by_residual_lane": scenarios.get("by_residual_lane"),
+            "by_status_if_fit": scenarios.get("by_status_if_fit"),
+            "doctrine": scenarios.get("doctrine"),
+            "path": scenarios.get("path"),
+        },
         "presentation_cognition": {
             **cog,
             "person_rows_all_emit_covered": all_scanned_green,
-            "caveat": (
-                "emit_covered applies only to hosts_audited_by_scanner. "
-                "hosts_not_yet_audited may still stringify on stills — open hero PNG."
-                if all_scanned_green
-                else "Drain author_action / emit_partial / matrix_miss first; then stills."
-            ),
+            "caveat": caveat,
         },
     }
 

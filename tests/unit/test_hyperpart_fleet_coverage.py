@@ -68,7 +68,8 @@ SIGNALS: dict[str, object] = {
     # Anchor: fieldtest_hub manufacturer ← companies_house_lookup.
     "search-select": r"source[:=]\s*\w+\.\w+",
     "date-range": r"date_range|date-range",
-    "toggle-group": "exempt:no Dazzle emitter yet (gallery primitive)",
+    # widget=toggle_group → ToggleGroupField → .dz-toggle-group (2026-08-08)
+    "toggle-group": r"widget\s*[:=]\s*toggle[_-]?group",
     "breadcrumb": "exempt:no Dazzle emitter yet (gallery primitive)",
     "accordion": "exempt:no Dazzle emitter yet (gallery primitive)",
     "tabs": r"display:\s*tabbed_list",
@@ -113,7 +114,8 @@ SIGNALS: dict[str, object] = {
     # HM gallery / agent-pack snippets (build_site code Hyperpart); not a DSL surface.
     "code": "exempt:HM gallery + agent-pack snippets (no Dazzle DSL emitter yet)",
     # shadcn parity placeholders — gallery surfaces; no DSL emitter yet
-    "switch": "exempt:no Dazzle form-field emitter yet (gallery progressive-enhance shell)",
+    # widget=switch → SwitchField → label.dz-switch + data-dz-switch (2026-08-07)
+    "switch": r"widget\s*[:=]\s*switch",
     "toggle": "exempt:no Dazzle emitter yet (gallery aria-pressed button shell)",
     "aspect-ratio": "exempt:no Dazzle emitter yet (gallery CSS media frame)",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",

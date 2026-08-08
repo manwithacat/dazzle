@@ -91,6 +91,12 @@ SANCTIONED = {
     # TOML path for improve/agent pick (measurement — not runtime CSS/JS).
     "src/dazzle/qa/work_surface_utility.py",
     "scripts/work_surface_utility.py",
+    # Hyperpart scenario + DSL-shape catalogues live under HM agent docs;
+    # scanners load TOML for improve/agent pick (measurement — not runtime CSS/JS).
+    "src/dazzle/qa/hyperpart_scenarios.py",
+    "src/dazzle/qa/hyperpart_dsl_shapes.py",
+    "src/dazzle/qa/hyperpart_opportunity.py",
+    "src/dazzle/qa/hyperpart_types.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

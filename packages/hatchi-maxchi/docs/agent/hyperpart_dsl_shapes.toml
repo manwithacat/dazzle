@@ -1,0 +1,804 @@
+# Hyperpart → rational DSL authoring shape (agent-facing).
+#
+# Goal: every HM hyperpart has a documented shape agents can use when
+# modelling a business domain — live path, planned emitter, or explicit
+# chrome/refuse (no freeform invent).
+#
+# Doctrine: docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md
+# Fleet: tests/unit/test_hyperpart_fleet_coverage.py SIGNALS
+# Scenarios: packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml
+#
+# Schema ([[part]]):
+#   id            — hyperpart id
+#   class         — always|default_emit|display|widget|type|mode|peek|chrome|compose|layout|structural|display_or_form
+#   layer         — cell|field|region|surface|form|chrome|shell|layout|media|docs|affordance
+#   dsl           — authoring string or prose agents write
+#   status        — live|planned|chrome_only|refuse
+#   job           — one sentence
+#   agent_surface — pick-a-surface | pick-a-work-surface | default | shell | none
+
+version = 1
+updated = "2026-08-08"
+
+[[part]]
+id = "accordion"
+class = "display_or_form"
+layer = "form"
+dsl = "section disclosure / display: accordion"
+status = "planned"
+job = "Use accordion via section disclosure / display: accordion"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "action-grid"
+class = "display"
+layer = "region"
+dsl = "display: action_grid"
+status = "live"
+job = "Use action-grid via display: action_grid"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "activity-feed"
+class = "display"
+layer = "region"
+dsl = "display: activity_feed"
+status = "live"
+job = "Use activity-feed via display: activity_feed"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "alert"
+class = "chrome"
+layer = "form"
+dsl = "map to form-chrome errors / toast; not display:alert"
+status = "chrome_only"
+job = "Use alert via map to form-chrome errors / toast; not display:alert"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "app-shell"
+class = "always"
+layer = "chrome"
+dsl = "authenticated app shell"
+status = "live"
+job = "Use app-shell via authenticated app shell"
+agent_surface = "shell"
+
+[[part]]
+id = "aspect-ratio"
+class = "layout"
+layer = "media"
+dsl = "media frame — field/media compose"
+status = "planned"
+job = "Use aspect-ratio via media frame — field/media compose"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "auto-grid"
+class = "always"
+layer = "layout"
+dsl = "responsive auto grid"
+status = "live"
+job = "Use auto-grid via responsive auto grid"
+agent_surface = "shell"
+
+[[part]]
+id = "avatar"
+class = "default_emit"
+layer = "cell"
+dsl = "person ref → Avatar via present()"
+status = "live"
+job = "Use avatar via person ref → Avatar via present()"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "badge"
+class = "default_emit"
+layer = "cell"
+dsl = "status enum → badge cell"
+status = "live"
+job = "Use badge via status enum → badge cell"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "bar-chart"
+class = "display"
+layer = "region"
+dsl = "display: bar_chart"
+status = "live"
+job = "Use bar-chart via display: bar_chart"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "bar-track"
+class = "display"
+layer = "region"
+dsl = "display: bar_track"
+status = "live"
+job = "Use bar-track via display: bar_track"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "box-plot"
+class = "display"
+layer = "region"
+dsl = "display: box_plot"
+status = "live"
+job = "Use box-plot via display: box_plot"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "breadcrumb"
+class = "chrome"
+layer = "shell"
+dsl = "sitespec trail / shell breadcrumb"
+status = "planned"
+job = "Use breadcrumb via sitespec trail / shell breadcrumb"
+agent_surface = "shell"
+
+[[part]]
+id = "bubble"
+class = "compose"
+layer = "region"
+dsl = "compose under display: conversation"
+status = "planned"
+job = "Use bubble via compose under display: conversation"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "bullet"
+class = "display"
+layer = "region"
+dsl = "display: bullet"
+status = "live"
+job = "Use bullet via display: bullet"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "button"
+class = "always"
+layer = "chrome"
+dsl = "framework chrome / action buttons"
+status = "live"
+job = "Use button via framework chrome / action buttons"
+agent_surface = "shell"
+
+[[part]]
+id = "card"
+class = "always"
+layer = "region"
+dsl = "dashboard KPI cards"
+status = "live"
+job = "Use card via dashboard KPI cards"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "carousel"
+class = "display"
+layer = "region"
+dsl = "display: carousel"
+status = "planned"
+job = "Use carousel via display: carousel"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "center"
+class = "layout"
+layer = "layout"
+dsl = "fragment/blueprint only — no display verb"
+status = "chrome_only"
+job = "Use center via fragment/blueprint only — no display verb"
+agent_surface = "none"
+
+[[part]]
+id = "chart-legend"
+class = "display"
+layer = "region"
+dsl = "display: pie|area|line_chart"
+status = "live"
+job = "Use chart-legend via display: pie|area|line_chart"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "cluster"
+class = "always"
+layer = "layout"
+dsl = "wrapping action cluster"
+status = "live"
+job = "Use cluster via wrapping action cluster"
+agent_surface = "shell"
+
+[[part]]
+id = "code"
+class = "chrome"
+layer = "docs"
+dsl = "gallery + agent-pack snippets only"
+status = "chrome_only"
+job = "Use code via gallery + agent-pack snippets only"
+agent_surface = "shell"
+
+[[part]]
+id = "combobox"
+class = "widget"
+layer = "field"
+dsl = "widget=combobox"
+status = "live"
+job = "Use combobox via widget=combobox"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "command"
+class = "always"
+layer = "chrome"
+dsl = "⌘K palette"
+status = "live"
+job = "Use command via ⌘K palette"
+agent_surface = "shell"
+
+[[part]]
+id = "confirm"
+class = "always"
+layer = "chrome"
+dsl = "hx-confirm on destructive"
+status = "live"
+job = "Use confirm via hx-confirm on destructive"
+agent_surface = "shell"
+
+[[part]]
+id = "confirm-panel"
+class = "display"
+layer = "region"
+dsl = "display: confirm_action_panel"
+status = "live"
+job = "Use confirm-panel via display: confirm_action_panel"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "controls"
+class = "always"
+layer = "form"
+dsl = "native checkbox/radio pills"
+status = "live"
+job = "Use controls via native checkbox/radio pills"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "date-range"
+class = "widget"
+layer = "field"
+dsl = "date_range / date-range field"
+status = "live"
+job = "Use date-range via date_range / date-range field"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "diagram"
+class = "display"
+layer = "region"
+dsl = "display: diagram"
+status = "live"
+job = "Use diagram via display: diagram"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "dialog"
+class = "always"
+layer = "chrome"
+dsl = "detail drawer family / dialog"
+status = "live"
+job = "Use dialog via detail drawer family / dialog"
+agent_surface = "shell"
+
+[[part]]
+id = "drawer"
+class = "peek"
+layer = "chrome"
+dsl = "peek: slide_over"
+status = "live"
+job = "Use drawer via peek: slide_over"
+agent_surface = "shell"
+
+[[part]]
+id = "empty-state"
+class = "always"
+layer = "chrome"
+dsl = "empty lists / regions"
+status = "live"
+job = "Use empty-state via empty lists / regions"
+agent_surface = "shell"
+
+[[part]]
+id = "field"
+class = "always"
+layer = "form"
+dsl = "label+control triad on forms"
+status = "live"
+job = "Use field via label+control triad on forms"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "form-chrome"
+class = "always"
+layer = "form"
+dsl = "section: on forms"
+status = "live"
+job = "Use form-chrome via section: on forms"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "funnel"
+class = "display"
+layer = "region"
+dsl = "display: funnel_chart"
+status = "live"
+job = "Use funnel via display: funnel_chart"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "grid"
+class = "always"
+layer = "region"
+dsl = "list data table host"
+status = "live"
+job = "Use grid via list data table host"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "grid-list"
+class = "display"
+layer = "region"
+dsl = "display: grid"
+status = "live"
+job = "Use grid-list via display: grid"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "heatmap"
+class = "display"
+layer = "region"
+dsl = "display: heatmap"
+status = "live"
+job = "Use heatmap via display: heatmap"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "histogram"
+class = "display"
+layer = "region"
+dsl = "display: histogram"
+status = "live"
+job = "Use histogram via display: histogram"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "hover-card"
+class = "chrome"
+layer = "affordance"
+dsl = "compose guest; no region verb"
+status = "planned"
+job = "Use hover-card via compose guest; no region verb"
+agent_surface = "shell"
+
+[[part]]
+id = "icon"
+class = "always"
+layer = "chrome"
+dsl = "command palette results"
+status = "live"
+job = "Use icon via command palette results"
+agent_surface = "shell"
+
+[[part]]
+id = "item"
+class = "layout"
+layer = "layout"
+dsl = "list-row anatomy — compose only"
+status = "chrome_only"
+job = "Use item via list-row anatomy — compose only"
+agent_surface = "none"
+
+[[part]]
+id = "kanban"
+class = "display"
+layer = "region"
+dsl = "display: kanban"
+status = "live"
+job = "Use kanban via display: kanban"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "kbd"
+class = "chrome"
+layer = "chrome"
+dsl = "no DSL — .dz-kbd in command palette"
+status = "chrome_only"
+job = "Use kbd via no DSL — .dz-kbd in command palette"
+agent_surface = "shell"
+
+[[part]]
+id = "list-region"
+class = "display"
+layer = "region"
+dsl = "display: list"
+status = "live"
+job = "Use list-region via display: list"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "marker"
+class = "compose"
+layer = "region"
+dsl = "map region pin chrome"
+status = "planned"
+job = "Use marker via map region pin chrome"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "master-detail"
+class = "mode"
+layer = "surface"
+dsl = "dual-pane blueprint / mode bridge"
+status = "planned"
+job = "Use master-detail via dual-pane blueprint / mode bridge"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "menu"
+class = "always"
+layer = "chrome"
+dsl = "overflow More menu past 3 actions"
+status = "live"
+job = "Use menu via overflow More menu past 3 actions"
+agent_surface = "shell"
+
+[[part]]
+id = "menubar"
+class = "chrome"
+layer = "shell"
+dsl = "sitespec app chrome menubar"
+status = "planned"
+job = "Use menubar via sitespec app chrome menubar"
+agent_surface = "shell"
+
+[[part]]
+id = "message"
+class = "compose"
+layer = "region"
+dsl = "compose under display: conversation"
+status = "planned"
+job = "Use message via compose under display: conversation"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "message-scroller"
+class = "display"
+layer = "region"
+dsl = "display: conversation (primary)"
+status = "planned"
+job = "Use message-scroller via display: conversation (primary)"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "metrics"
+class = "display"
+layer = "region"
+dsl = "display: metrics"
+status = "live"
+job = "Use metrics via display: metrics"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "money"
+class = "type"
+layer = "field"
+dsl = "field type : money"
+status = "live"
+job = "Use money via field type : money"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "navigation-menu"
+class = "chrome"
+layer = "shell"
+dsl = "sitespec top product nav"
+status = "planned"
+job = "Use navigation-menu via sitespec top product nav"
+agent_surface = "shell"
+
+[[part]]
+id = "pagination"
+class = "always"
+layer = "chrome"
+dsl = "list pages"
+status = "live"
+job = "Use pagination via list pages"
+agent_surface = "shell"
+
+[[part]]
+id = "pdf"
+class = "display"
+layer = "region"
+dsl = "display: pdf_viewer"
+status = "live"
+job = "Use pdf via display: pdf_viewer"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "pivot"
+class = "display"
+layer = "region"
+dsl = "display: pivot_table"
+status = "live"
+job = "Use pivot via display: pivot_table"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "popover"
+class = "chrome"
+layer = "affordance"
+dsl = "host-local data-dz-popover / rare widget"
+status = "planned"
+job = "Use popover via host-local data-dz-popover / rare widget"
+agent_surface = "shell"
+
+[[part]]
+id = "profile-card"
+class = "display"
+layer = "region"
+dsl = "display: profile_card"
+status = "live"
+job = "Use profile-card via display: profile_card"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "progress"
+class = "display"
+layer = "region"
+dsl = "display: progress_bar (determinate; distinct from StageBar)"
+status = "planned"
+job = "Use progress via display: progress_bar (determinate; distinct from StageBar)"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "progress-region"
+class = "display"
+layer = "region"
+dsl = "display: progress"
+status = "live"
+job = "Use progress-region via display: progress"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "queue"
+class = "display"
+layer = "region"
+dsl = "display: queue"
+status = "live"
+job = "Use queue via display: queue"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "radar"
+class = "display"
+layer = "region"
+dsl = "display: radar"
+status = "live"
+job = "Use radar via display: radar"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "related-tables"
+class = "mode"
+layer = "surface"
+dsl = "mode: view reverse FKs"
+status = "live"
+job = "Use related-tables via mode: view reverse FKs"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "search-box"
+class = "display"
+layer = "region"
+dsl = "display: search_box"
+status = "live"
+job = "Use search-box via display: search_box"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "search-select"
+class = "type"
+layer = "field"
+dsl = "source=pack.operation"
+status = "live"
+job = "Use search-select via source=pack.operation"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "separator"
+class = "chrome"
+layer = "layout"
+dsl = "no DSL — visual primitive"
+status = "chrome_only"
+job = "Use separator via no DSL — visual primitive"
+agent_surface = "shell"
+
+[[part]]
+id = "sidebar-layout"
+class = "always"
+layer = "layout"
+dsl = "shell sidebar"
+status = "live"
+job = "Use sidebar-layout via shell sidebar"
+agent_surface = "shell"
+
+[[part]]
+id = "skeleton"
+class = "always"
+layer = "chrome"
+dsl = "htmx request loading"
+status = "live"
+job = "Use skeleton via htmx request loading"
+agent_surface = "shell"
+
+[[part]]
+id = "slider"
+class = "widget"
+layer = "field"
+dsl = "widget=slider"
+status = "live"
+job = "Use slider via widget=slider"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "sparkline"
+class = "display"
+layer = "region"
+dsl = "display: sparkline"
+status = "live"
+job = "Use sparkline via display: sparkline"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "stack"
+class = "always"
+layer = "layout"
+dsl = "L2 stack emitter"
+status = "live"
+job = "Use stack via L2 stack emitter"
+agent_surface = "shell"
+
+[[part]]
+id = "status-list"
+class = "display"
+layer = "region"
+dsl = "display: status_list"
+status = "live"
+job = "Use status-list via display: status_list"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "switch"
+class = "widget"
+layer = "field"
+dsl = "widget=switch"
+status = "live"
+job = "Use switch via widget=switch"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "tabs"
+class = "display"
+layer = "region"
+dsl = "display: tabbed_list"
+status = "live"
+job = "Use tabs via display: tabbed_list"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "tags"
+class = "widget"
+layer = "field"
+dsl = "widget=tags"
+status = "live"
+job = "Use tags via widget=tags"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "task-inbox"
+class = "display"
+layer = "region"
+dsl = "display: task_inbox"
+status = "live"
+job = "Use task-inbox via display: task_inbox"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "time-series"
+class = "display"
+layer = "region"
+dsl = "display: line_chart | area_chart"
+status = "live"
+job = "Use time-series via display: line_chart | area_chart"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "timeline"
+class = "display"
+layer = "region"
+dsl = "display: timeline | day_timeline"
+status = "live"
+job = "Use timeline via display: timeline | day_timeline"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "toast"
+class = "always"
+layer = "chrome"
+dsl = "#dz-toast stack"
+status = "live"
+job = "Use toast via #dz-toast stack"
+agent_surface = "shell"
+
+[[part]]
+id = "toggle"
+class = "widget"
+layer = "field"
+dsl = "widget=toggle (aria-pressed, not switch)"
+status = "planned"
+job = "Use toggle via widget=toggle (aria-pressed, not switch)"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "toggle-group"
+class = "widget"
+layer = "field"
+dsl = "widget=toggle_group"
+status = "live"
+job = "Small closed enum (2–5) as segmented exclusive choice"
+agent_surface = "pick-a-surface"
+
+[[part]]
+id = "toolbar"
+class = "always"
+layer = "chrome"
+dsl = "workspace/surface action strip"
+status = "live"
+job = "Use toolbar via workspace/surface action strip"
+agent_surface = "shell"
+
+[[part]]
+id = "tooltip"
+class = "chrome"
+layer = "affordance"
+dsl = "data-tooltip host attr (no display verb)"
+status = "chrome_only"
+job = "Use tooltip via data-tooltip host attr (no display verb)"
+agent_surface = "shell"
+
+[[part]]
+id = "tree"
+class = "display"
+layer = "region"
+dsl = "display: tree"
+status = "live"
+job = "Use tree via display: tree"
+agent_surface = "pick-a-work-surface"
+
+[[part]]
+id = "two-factor"
+class = "always"
+layer = "chrome"
+dsl = "sitespec 2fa routes"
+status = "live"
+job = "Use two-factor via sitespec 2fa routes"
+agent_surface = "shell"
+
+[[part]]
+id = "wizard"
+class = "structural"
+layer = "form"
+dsl = "experience step + sectioned create/edit"
+status = "live"
+job = "Use wizard via experience step + sectioned create/edit"
+agent_surface = "pick-a-surface"

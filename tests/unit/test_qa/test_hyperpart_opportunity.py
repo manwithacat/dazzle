@@ -9,12 +9,55 @@ from dazzle.qa.hyperpart_opportunity import (
     scan_appspec,
     scan_person_ref_opportunities,
 )
+from dazzle.qa.hyperpart_scenarios import catalogue_snapshot, load_scenarios
 
 
 def _field(name: str, kind: str, ref_entity: str = "") -> SimpleNamespace:
     return SimpleNamespace(
         name=name,
         type=SimpleNamespace(kind=kind, ref_entity=ref_entity or None),
+    )
+
+
+def _surface_with_widgets(
+    name: str,
+    entity: str,
+    fields: list[tuple[str, str | None]],
+    mode: str = "edit",
+) -> SimpleNamespace:
+    """fields: list of (field_name, widget or None)."""
+    elements = [
+        SimpleNamespace(field_name=fn, options={"widget": w} if w else {}) for fn, w in fields
+    ]
+    return SimpleNamespace(
+        name=name,
+        entity_ref=entity,
+        mode=SimpleNamespace(value=mode),
+        sections=[SimpleNamespace(elements=elements)],
+    )
+
+
+def _appspec_with_bool_settings(*, with_switch: bool = False) -> SimpleNamespace:
+    entity = SimpleNamespace(
+        name="AlertPref",
+        fields=[
+            _field("title", "str"),
+            _field("notify_email", "bool"),
+            _field("muted", "boolean"),
+        ],
+    )
+    w = "switch" if with_switch else None
+    return SimpleNamespace(
+        domain=SimpleNamespace(entities=[entity]),
+        surfaces=[
+            _surface_with_widgets(
+                "alert_settings",
+                "AlertPref",
+                [("title", None), ("notify_email", w), ("muted", w)],
+                mode="edit",
+            ),
+        ],
+        workspaces=[],
     )
 
 
@@ -107,3 +150,36 @@ class TestScan:
         ]
         opps = scan_appspec(appspec)
         assert not any(o.kind == "work_queue" for o in opps)
+
+    def test_scenario_catalogue_loads(self) -> None:
+        load_scenarios.cache_clear()
+        rows = load_scenarios()
+        assert len(rows) >= 5
+        ids = {s.id for s in rows}
+        assert "person_ref_cell" in ids
+        assert "boolean_settings_switch" in ids
+        switch = next(s for s in rows if s.id == "boolean_settings_switch")
+        assert switch.authoring == "widget=switch"
+        assert switch.scanner == "boolean_switch"
+        snap = catalogue_snapshot()
+        assert snap["count"] == len(rows)
+
+    def test_switch_scenario_author_action_without_widget(self) -> None:
+        opps = scan_appspec(_appspec_with_bool_settings(with_switch=False))
+        switch_rows = [o for o in opps if o.hyperpart == "switch"]
+        assert switch_rows
+        assert all(o.status == "author_action" for o in switch_rows)
+        report = build_opportunity_report(app="ops_dashboard", opportunities=opps)
+        assert report["schema_version"] >= 3
+        assert report["residual"]["author_action"] >= 1
+        assert report["residual"]["force_lane"] == "example-apps"
+        assert "scenario_catalogue" in report
+
+    def test_switch_scenario_emit_covered_with_widget(self) -> None:
+        opps = scan_appspec(_appspec_with_bool_settings(with_switch=True))
+        switch_rows = [o for o in opps if o.hyperpart == "switch"]
+        assert switch_rows
+        assert all(o.status == "emit_covered" for o in switch_rows)
+        report = build_opportunity_report(app="simple_task", opportunities=opps)
+        assert report["residual"]["author_action"] == 0
+        assert report["residual"]["force_lane"] is None

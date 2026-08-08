@@ -51,7 +51,9 @@ from dazzle.render.fragment.primitives import (
     SearchSelect,
     SliderField,
     Submit,
+    SwitchField,
     TagsField,
+    ToggleGroupField,
     WidgetCombobox,
 )
 
@@ -557,6 +559,63 @@ class _RenderFormsMixin:
             "</div>"
         )
         return self._widget_label(ctx.escape(s.label), name, inner)
+
+    def _emit_switch_field(self, s: SwitchField, ctx: RenderContext) -> str:
+        """HM Switch — label.dz-switch + data-dz-switch + track (gallery spine).
+
+        Text label lives *inside* the switch label (no nested <label>). Dual-lock
+        root is ``[data-dz-switch]`` (contracts/switch.py). Checkbox value is
+        ``true`` so form POST matches existing bool coerce paths.
+        """
+        name = ctx.escape_attr(s.name)
+        raw = str(s.initial_value or "").strip().lower()
+        checked = " checked" if raw in ("true", "1", "on", "yes") else ""
+        required_attr = ' required aria-required="true"' if s.required else ""
+        # Single label owns the switch (gallery anatomy); no outer dz-field
+        # <label for=> which would nest labels illegally.
+        return (
+            f'<div class="dz-form-field" data-dz-widget="switch">'
+            f'<label class="dz-switch">'
+            f'<input type="checkbox" id="field-{name}" name="{name}" '
+            f'value="true" data-dz-switch data-dazzle-field="{name}"'
+            f"{checked}{required_attr}>"
+            f'<span class="dz-switch__track" aria-hidden="true"></span>'
+            f"<span>{ctx.escape(s.label)}</span>"
+            f"</label></div>"
+        )
+
+    def _emit_toggle_group_field(self, t: ToggleGroupField, ctx: RenderContext) -> str:
+        """HM toggle-group — fieldset.dz-toggle-group + native radios (gallery spine).
+
+        Label is *outside* the fieldset (legend inside breaks segment flex).
+        Dual-lock root: ``.dz-toggle-group`` (contracts/toggle_group.py).
+        """
+        name = ctx.escape_attr(t.name)
+        label_html = ctx.escape(t.label)
+        init = str(t.initial_value or "")
+        # First option wins if no initial
+        if not init and t.options:
+            init = t.options[0][0]
+        segs: list[str] = []
+        for i, (val, lab) in enumerate(t.options):
+            v_attr = ctx.escape_attr(val)
+            checked = " checked" if str(val) == init else ""
+            # required only on first radio so form validation works once
+            req = ' required aria-required="true"' if t.required and i == 0 else ""
+            segs.append(
+                f"<label>"
+                f'<input type="radio" name="{name}" value="{v_attr}" '
+                f'data-dazzle-field="{name}"{checked}{req}>'
+                f"<span>{ctx.escape(lab)}</span></label>"
+            )
+        return (
+            f'<div class="dz-form-field" data-dz-widget="toggle_group">'
+            f'<span class="dz-field__label" id="field-{name}-label">{label_html}</span>'
+            f'<fieldset class="dz-toggle-group" role="radiogroup" '
+            f'aria-labelledby="field-{name}-label">'
+            f"{''.join(segs)}"
+            f"</fieldset></div>"
+        )
 
     def _emit_rich_text(self, r: RichTextField, ctx: RenderContext) -> str:
         import json

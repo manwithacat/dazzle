@@ -292,6 +292,49 @@ class SliderField:
 
 
 @dataclass(frozen=True, slots=True)
+class SwitchField:
+    """HM Switch hyperpart (`widget=switch`) — progressive checkbox with
+    ``label.dz-switch`` + ``data-dz-switch`` + track (not the controls pill
+    ``input.dz-switch``). Dual-lock root: ``[data-dz-switch]``.
+
+    Use for boolean settings / on-off preferences. Default bare bool fields
+    still render as ``Field(kind=checkbox)``; authors opt in with
+    ``widget=switch``.
+    """
+
+    name: str
+    label: str
+    required: bool = False
+    initial_value: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("SwitchField requires a non-empty name")
+
+
+@dataclass(frozen=True, slots=True)
+class ToggleGroupField:
+    """HM toggle-group hyperpart (`widget=toggle_group`) — segmented exclusive
+    choice on native radios. Dual-lock root: ``.dz-toggle-group``.
+
+    Prefer for small closed enums (2–5). Larger enums stay combobox.
+    Label lives *outside* the fieldset (legend breaks segment flex).
+    """
+
+    name: str
+    label: str
+    options: tuple[tuple[str, str], ...] = ()
+    required: bool = False
+    initial_value: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("ToggleGroupField requires a non-empty name")
+        if not self.options:
+            raise ValueError("ToggleGroupField requires at least one option")
+
+
+@dataclass(frozen=True, slots=True)
 class RichTextField:
     """Rich-text editor (`widget=rich_text`). Parity with the legacy
     `_render_rich_text` — a hidden input holds the HTML, `data-dz-editor`

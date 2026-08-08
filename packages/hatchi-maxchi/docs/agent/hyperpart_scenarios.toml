@@ -1,0 +1,219 @@
+# Hyperpart scenario catalogue — proactive usage identification for agents.
+#
+# Purpose: given domain + surface signals, recommend a hyperpart and the
+# *authoring class* that should mount it. Complements:
+#   - pick-a-surface.md / pick-a-work-surface.md (human pick matrices)
+#   - work_surface_utility.toml (region fit / refuse)
+#   - dazzle.qa.hyperpart_opportunity (static scanner)
+#
+# Doctrine: docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md
+#
+# Schema ([[scenario]]):
+#   id              — stable slug
+#   hyperpart       — HM part id
+#   authoring       — default_emit | display:<mode> | widget:<name> | type | chrome | planned:<note>
+#   layer           — cell | region | field | chrome
+#   job             — one sentence
+#   use_when        — positive fit criteria (heuristic strings for agents + scanners)
+#   refuse_when     — anti-fit
+#   status_if_fit   — emit_covered | author_action | matrix_miss | planned_emitter
+#   ownership       — framework | product
+#   severity        — low | medium | high
+#   residual_lane   — framework-ux | example-apps | none
+#   example_homes   — optional anchors
+#   scanner         — python scanner id that implements this row (or "catalogue_only")
+
+version = 1
+updated = "2026-08-07"
+
+# ── Default emit (framework; no DSL) ─────────────────────────────────
+
+[[scenario]]
+id = "person_ref_cell"
+hyperpart = "avatar"
+authoring = "default_emit"
+layer = "cell"
+job = "Show who a person-ref field refers to as an Avatar chip, not raw id/prose."
+use_when = [
+  "field is ref/belongs_to to a person-like entity (User, Person, Contact, …)",
+  "surface is list/detail (not create/edit form field)",
+]
+refuse_when = [
+  "host is metrics_tile (person refused)",
+  "column opts out with avatar:false",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["support_tickets.Ticket.assigned_to"]
+scanner = "person_ref"
+
+[[scenario]]
+id = "person_ref_queue_meta"
+hyperpart = "avatar"
+authoring = "default_emit"
+layer = "cell"
+job = "On queue rows, person meta is avatar_only density — no 'Assigned To: Name' prose."
+use_when = [
+  "person ref field rendered on display:queue region meta strip",
+]
+refuse_when = [
+  "region is not queue-ish display",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "framework-ux"
+example_homes = ["support_tickets.manager_ops critical_queue"]
+scanner = "person_queue_meta"
+
+[[scenario]]
+id = "money_cell"
+hyperpart = "money"
+authoring = "default_emit"
+layer = "cell"
+job = "Money-typed fields render via money hyperpart / minor-unit honesty."
+use_when = [
+  "field type is money/currency",
+]
+refuse_when = [
+  "field is plain number without money type (do not invent currency)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["invoice_ops amount fields"]
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "status_badge_cell"
+hyperpart = "badge"
+authoring = "default_emit"
+layer = "cell"
+job = "Lifecycle / status enums map to badge cells by default."
+use_when = [
+  "field is a closed status/lifecycle enum on list/detail",
+]
+refuse_when = [
+  "multi-select tags (use tags widget)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+scanner = "catalogue_only"
+
+# ── Authoring opt-in (product DSL) ───────────────────────────────────
+
+[[scenario]]
+id = "shared_urgency_pool"
+hyperpart = "queue"
+authoring = "display:queue"
+layer = "region"
+job = "Shared work pool with claim/filter — not a plain list."
+use_when = [
+  "region name/title matches work-pool heuristics (queue, backlog, overdue, inbox, …)",
+  "entity is claimable operational work",
+]
+refuse_when = [
+  "display already in {queue, kanban, task_inbox}",
+  "region is pure metrics or chart",
+]
+status_if_fit = "author_action"
+ownership = "product"
+severity = "medium"
+residual_lane = "example-apps"
+example_homes = ["support_tickets ticket_queue"]
+scanner = "work_queue"
+
+# ── Planned emitters (gallery exists; no Dazzle path yet) ────────────
+# residual_lane=framework-ux: do NOT thrash example-apps until emitter ships.
+
+[[scenario]]
+id = "boolean_settings_switch"
+hyperpart = "switch"
+authoring = "widget=switch"
+layer = "field"
+job = "Boolean settings / preferences use Switch hyperpart, not an anonymous checkbox."
+use_when = [
+  "boolean field on settings, preferences, or mute/enable surface",
+  "immediate on/off semantics (single flag)",
+]
+refuse_when = [
+  "multi-flag checkbox group (prefer controls)",
+  "toolbar filter chip (host-local)",
+  "row bulk-select checkbox",
+]
+# Emitter shipped 2026-08-07 (SwitchField). Scanner reports emit_covered when
+# widget=switch is present; author_action when boolean settings-like field lacks it.
+status_if_fit = "author_action"
+ownership = "product"
+severity = "medium"
+residual_lane = "example-apps"
+example_homes = ["simple_task.user_edit.is_active"]
+scanner = "boolean_switch"
+
+[[scenario]]
+id = "closed_enum_toggle_group"
+hyperpart = "toggle-group"
+authoring = "widget=toggle_group"
+layer = "field"
+job = "Small closed enums (2–5) as segmented toggle-group on forms/filters."
+use_when = [
+  "enum field with 2–5 values on form or filter bar",
+  "exclusive single choice with high visual priority",
+]
+refuse_when = [
+  "large enum (prefer combobox)",
+  "multi-select labels (prefer tags)",
+]
+status_if_fit = "emit_covered"
+ownership = "product"
+severity = "low"
+residual_lane = "example-apps"
+example_homes = ["simple_task.task_create.priority"]
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "live_conversation_thread"
+hyperpart = "message-scroller"
+authoring = "planned:display:conversation"
+layer = "region"
+job = "Live customer↔agent (or similar) thread composes message-scroller + message + bubble."
+use_when = [
+  "region is a chronological comment/message thread for support or collab",
+  "primary job is read/write conversation, not field inventory",
+]
+refuse_when = [
+  "plain activity_feed of system events (use activity_feed)",
+  "single-field note list without thread UX",
+]
+status_if_fit = "planned_emitter"
+ownership = "framework"
+severity = "medium"
+residual_lane = "framework-ux"
+example_homes = ["support_tickets live_conversation / comments"]
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "media_gallery_carousel"
+hyperpart = "carousel"
+authoring = "planned:display:carousel"
+layer = "region"
+job = "Multi-image asset / brand gallery uses carousel, not a flat file list."
+use_when = [
+  "entity has multiple image/media attachments shown as a strip",
+  "operator browses visuals more than file metadata",
+]
+refuse_when = [
+  "single thumbnail only",
+  "document PDF primary (use pdf_viewer)",
+]
+status_if_fit = "planned_emitter"
+ownership = "framework"
+severity = "low"
+residual_lane = "framework-ux"
+example_homes = ["design_studio Asset gallery"]
+scanner = "catalogue_only"
