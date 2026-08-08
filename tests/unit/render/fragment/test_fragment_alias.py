@@ -118,9 +118,11 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "TagsField",
         "ColorField",
         "SliderField",
+        "SwitchField",
         "RichTextField",
         "FileUpload",
         "Submit",
+        "ToggleGroupField",
         # escape
         "RawHTML",
         "Slot",
