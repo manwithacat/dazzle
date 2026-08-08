@@ -2,7 +2,7 @@
 
 Dual-lock unit is the frame root. ``data-dz-ratio`` presets and child
 fill (object-fit) are host-owned. Class ``.dz-aspect-ratio`` is the stable
-substrate root (gallery CSS; no FragmentRenderer emit yet).
+substrate root — FragmentRenderer ``AspectRatio`` + media-thumb field compose.
 """
 
 from contracts._kit import DomContract, Node

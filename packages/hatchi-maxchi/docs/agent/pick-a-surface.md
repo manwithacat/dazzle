@@ -42,6 +42,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Label + help + error | `field` | aria-invalid / describedby |
 | Page motif of existing parts | **Blueprint** | Not a new Hyperpart |
 | Vertical rhythm | `stack` | Layout primitive |
+| Lock media frame ratio (thumbs, embeds) | `aspect-ratio` | Media field compose / `AspectRatio` fragment |
 | Wrapping actions | `cluster` / `toolbar` | Compose real children in HTML |
 
 ### Menus / panels / chrome strips

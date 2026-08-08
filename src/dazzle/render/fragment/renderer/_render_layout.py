@@ -38,6 +38,7 @@ from dazzle.render.fragment.ingest import EmptyState as EmptyStateSeam
 from dazzle.render.fragment.ingest import Skeleton as SkeletonSeam
 from dazzle.render.fragment.ingest import render_empty_state, render_skeleton
 from dazzle.render.fragment.primitives import (
+    AspectRatio,
     Badge,
     Card,
     Drawer,
@@ -92,6 +93,18 @@ class _RenderLayoutMixin:
         # data-dz-gap scale, not the retired --gap-* modifier classes.
         body = "".join(self._emit(c, ctx) for c in s.children)  # type: ignore[arg-type]
         return f'<div class="dz-stack" data-dz-gap="{ctx.escape_attr(s.gap)}">{body}</div>'
+
+    def _emit_aspect_ratio(self, a: AspectRatio, ctx: RenderContext) -> str:
+        """HM AspectRatio — dual-lock ``.dz-aspect-ratio`` media frame.
+
+        ``data-dz-ratio`` selects gallery presets (1/1, 4/3, 16/9, 21/9).
+        Optional CSS width keeps fixed thumbs stable (cell_chrome uses 3rem).
+        """
+        body = self._emit(a.child, ctx)  # type: ignore[arg-type]
+        ratio = ctx.escape_attr(a.ratio)
+        style = f' style="width: {ctx.escape_attr(a.width)}"' if a.width else ""
+        aria = f' aria-label="{ctx.escape_attr(a.aria_label)}"' if a.aria_label else ""
+        return f'<div class="dz-aspect-ratio" data-dz-ratio="{ratio}"{style}{aria}>{body}</div>'
 
     def _emit_row(self, r: Row, ctx: RenderContext) -> str:
         # Layouts L2: Row renders the HM cluster Hyperpart (wrapping

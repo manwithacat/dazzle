@@ -118,7 +118,8 @@ SIGNALS: dict[str, object] = {
     # widget=switch → SwitchField → label.dz-switch + data-dz-switch (2026-08-07)
     "switch": r"widget\s*[:=]\s*switch",
     "toggle": "exempt:no Dazzle emitter yet (gallery aria-pressed button shell)",
-    "aspect-ratio": "exempt:no Dazzle emitter yet (gallery CSS media frame)",
+    # media field compose → .dz-aspect-ratio dual-lock (2026-08-08)
+    "aspect-ratio": r"logo_url|preview_url|photo_url",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",
     "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
     "carousel": "exempt:no Dazzle emitter yet (gallery media strip shell)",

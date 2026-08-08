@@ -149,7 +149,7 @@ from dazzle.render.fragment.primitives.interactive import (
     Interactive,
     Link,
 )
-from dazzle.render.fragment.primitives.layout import Grid, Row, Split, Stack
+from dazzle.render.fragment.primitives.layout import AspectRatio, Grid, Row, Split, Stack
 from dazzle.render.fragment.primitives.navigation import (
     NavGroup,
     NavItem,
@@ -165,6 +165,7 @@ __all__ = [
     "Row",
     "Split",
     "Grid",
+    "AspectRatio",
     # containers
     "Page",
     "AppShell",

@@ -84,7 +84,11 @@ def _safe_media_image_url(value: Any) -> str | None:
 
 
 def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
-    """Post-5.8 media depth — compact image thumb for logo/preview URL cells."""
+    """Post-5.8 media depth — compact image thumb for logo/preview URL cells.
+
+    Mounts HM dual-lock ``.dz-aspect-ratio`` (1/1) so field/media compose
+    exercises the aspect-ratio hyperpart spine (not a bare fixed-size img).
+    """
     url = _safe_media_image_url(value)
     if not url:
         raw = "" if value is None else str(value).strip()
@@ -93,7 +97,11 @@ def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
         return _html_mod.escape(raw, quote=False)
     src = _html_mod.escape(url, quote=True)
     alt_esc = _html_mod.escape(alt or "Preview", quote=True)
+    # Square media frame: width 3rem; child fills via .dz-aspect-ratio > * CSS.
     return (
+        f'<div class="dz-aspect-ratio" data-dz-ratio="1/1" data-dz-media-frame '
+        f'style="width: 3rem;">'
         f'<img class="dz-media-thumb" data-dz-media-thumb src="{src}" '
-        f'alt="{alt_esc}" loading="lazy" decoding="async" width="48" height="48" />'
+        f'alt="{alt_esc}" loading="lazy" decoding="async" />'
+        f"</div>"
     )

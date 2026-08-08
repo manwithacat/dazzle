@@ -33,6 +33,10 @@ def test_media_thumb_html_emits_img() -> None:
     assert "dz-media-thumb" in html
     assert 'src="https://placehold.co/64x64/111111/FFFFFF/png?text=A"' in html
     assert "data-dz-media-thumb" in html
+    # dual-lock aspect-ratio media frame (field/media compose path)
+    assert 'class="dz-aspect-ratio"' in html
+    assert 'data-dz-ratio="1/1"' in html
+    assert "data-dz-media-frame" in html
 
 
 def test_field_kind_palette_and_logo_names() -> None:
@@ -100,3 +104,4 @@ def test_detail_field_value_emits_media_thumb() -> None:
     html = FragmentRenderer().render(frag)
     assert "dz-media-thumb" in html
     assert url in html
+    assert 'class="dz-aspect-ratio"' in html

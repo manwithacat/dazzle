@@ -105,6 +105,27 @@ severity = "low"
 residual_lane = "none"
 scanner = "catalogue_only"
 
+[[scenario]]
+id = "media_url_thumb_frame"
+hyperpart = "aspect-ratio"
+authoring = "default_emit"
+layer = "cell"
+job = "Logo/preview/photo URL cells mount a dual-lock aspect-ratio frame, not a bare fixed-size img."
+use_when = [
+  "field is image-typed URL (logo_url, preview_url, photo_url, …)",
+  "surface is list/queue/grid/detail cell showing a media thumb",
+]
+refuse_when = [
+  "non-image URL or unsafe host (escape as text)",
+  "file binary upload widget (use file field)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "medium"
+residual_lane = "none"
+example_homes = ["design_studio Brand.logo_url", "fieldtest_hub IssueReport.photo_url"]
+scanner = "catalogue_only"
+
 # ── Authoring opt-in (product DSL) ───────────────────────────────────
 
 [[scenario]]

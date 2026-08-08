@@ -69,9 +69,9 @@ agent_surface = "shell"
 id = "aspect-ratio"
 class = "layout"
 layer = "media"
-dsl = "media frame — field/media compose"
-status = "planned"
-job = "Use aspect-ratio via media frame — field/media compose"
+dsl = "media field compose (logo_url/preview_url/photo_url → .dz-aspect-ratio)"
+status = "live"
+job = "Use aspect-ratio via media field thumbs + AspectRatio fragment"
 agent_surface = "pick-a-surface"
 
 [[part]]

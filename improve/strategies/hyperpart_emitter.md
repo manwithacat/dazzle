@@ -49,3 +49,10 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Dogfood: `examples/simple_task` `admin_dashboard.task_faq`
 - Entries: `title` + `body` (or `caption`); first panel open
 - Tests: `test_accordion_emitter`
+
+## Reference ship: aspect-ratio (2026-08-08)
+
+- Field/media compose: `logo_url` / `preview_url` / `photo_url` → `.dz-aspect-ratio` + img
+- Fragment: `AspectRatio(child=…, ratio="16/9")` → dual-lock `data-dz-ratio` presets
+- Dogfood: `design_studio` Brand/Asset media thumbs; `fieldtest_hub` photo_url
+- Tests: `test_aspect_ratio_emitter` + media thumb Goal B pins

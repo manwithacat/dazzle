@@ -79,7 +79,7 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 
 Dual-lock unit is the frame root. ``data-dz-ratio`` presets and child
 fill (object-fit) are host-owned. Class ``.dz-aspect-ratio`` is the stable
-substrate root (gallery CSS; no FragmentRenderer emit yet).
+substrate root — FragmentRenderer ``AspectRatio`` + media-thumb field compose.
 """
 
 from contracts._kit import DomContract, Node
@@ -95,7 +95,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). Dual-lock root .dz-aspect-ratio (HMC-132). No controller.
+shadcn parity (HMC-036). Pure CSS aspect-ratio + data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). Dual-lock root .dz-aspect-ratio (HMC-132). Dazzle: AspectRatio fragment + media field thumbs (logo_url/preview_url/photo_url). No controller.
 
 ## Source files
 

@@ -1,5 +1,5 @@
 """Layout primitives — Stack (vertical), Row (horizontal), Split (two-panel),
-Grid (n-column).
+Grid (n-column), AspectRatio (media frame).
 
 These are the structural building blocks that hold other primitives. They do
 not have semantic meaning beyond layout — for semantic containers, see
@@ -17,6 +17,7 @@ from typing import Literal
 _GAPS = ("none", "sm", "md", "lg")
 _ALIGNS = ("start", "center", "end", "stretch")
 _RATIOS = ("1:2", "1:1", "2:1", "1:3", "3:1")
+_ASPECT_RATIOS = ("1/1", "4/3", "16/9", "21/9")
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,3 +76,26 @@ class Grid:
             raise ValueError("Grid requires at least one child")
         if not (1 <= self.columns <= 12):
             raise ValueError(f"columns must be in [1, 12]; got {self.columns}")
+
+
+@dataclass(frozen=True, slots=True)
+class AspectRatio:
+    """HM media frame — dual-lock ``.dz-aspect-ratio`` (HMC-036 / HMC-132).
+
+    Locks width/height for a single child (typically an image). Ratio presets
+    match gallery ``data-dz-ratio`` tokens. Field/media compose also mounts this
+    spine for ``logo_url`` / ``preview_url`` / ``photo_url`` thumbs.
+    """
+
+    child: object
+    ratio: Literal["1/1", "4/3", "16/9", "21/9"] = "16/9"
+    width: str | None = None
+    aria_label: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.ratio not in _ASPECT_RATIOS:
+            raise ValueError(
+                f"invalid aspect ratio {self.ratio!r}; expected one of {_ASPECT_RATIOS}"
+            )
+        if self.width is not None and not str(self.width).strip():
+            raise ValueError("AspectRatio width must be non-empty when provided")

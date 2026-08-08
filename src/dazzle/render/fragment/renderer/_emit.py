@@ -25,6 +25,7 @@ from dazzle.render.fragment.primitives import (
     ActivityFeed,
     AddCardRow,
     AppShell,
+    AspectRatio,
     Badge,
     BarChart,
     BarTrack,
@@ -202,6 +203,8 @@ class FragmentRenderer(
                 return self._emit_split(fragment, ctx)
             case Grid():
                 return self._emit_grid(fragment, ctx)
+            case AspectRatio():
+                return self._emit_aspect_ratio(fragment, ctx)
             # Containers
             case Page():
                 return self._emit_page(fragment, ctx)

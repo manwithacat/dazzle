@@ -46,9 +46,19 @@ def test_status_prints_structural_and_felt(probes, capsys) -> None:
 def test_next_prefers_structural_then_felt(probes, capsys) -> None:
     rc = probes.main(["--next"])
     out = capsys.readouterr().out.strip()
-    # Empty when clean; otherwise a showcase app name.
+    # Empty when clean; otherwise a showcase app name *or* a planned DSL-shape
+    # catalogue id (hyperpart_emitter programme residual, e.g. aspect-ratio).
     if out:
-        assert (REPO / "examples" / out).is_dir()
+        is_app = (REPO / "examples" / out).is_dir()
+        try:
+            from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
+
+            planned = set(shapes_snapshot().get("planned_ids") or [])
+        except Exception:  # noqa: BLE001 — probe suite must stay lightweight
+            planned = set()
+        assert is_app or out in planned, (
+            f"--next={out!r} is neither an examples/ app nor a planned DSL shape"
+        )
         assert rc == 1
     else:
         assert rc == 0

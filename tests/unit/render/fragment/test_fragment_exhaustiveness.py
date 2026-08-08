@@ -18,6 +18,7 @@ from dazzle.render.fragment import (
     ActivityFeed,
     AddCardRow,
     AppShell,
+    AspectRatio,
     Badge,
     BarChart,
     BarTrack,
@@ -366,6 +367,8 @@ def _sample_for(primitive_type: type) -> object:
         return Accordion(items=(AccordionItem(title="Q", body="A", open=True),))
     if primitive_type is AccordionItem:
         return AccordionItem(title="Q", body="A")
+    if primitive_type is AspectRatio:
+        return AspectRatio(child=Text("frame"), ratio="16/9", width="10rem")
     if primitive_type is StatusList:
         return StatusList(entries=(StatusListEntry(title="OK", state="positive"),))
     if primitive_type is StatusListEntry:

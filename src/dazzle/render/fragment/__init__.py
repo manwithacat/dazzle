@@ -18,6 +18,7 @@ from dazzle.render.fragment.primitives import (
     ActivityFeed,
     AddCardRow,
     AppShell,
+    AspectRatio,
     Badge,
     BarChart,
     BarTrack,
@@ -213,6 +214,7 @@ __all__ = [
     "Spacing",
     # primitives — layout
     "Stack",
+    "AspectRatio",
     "Row",
     "Split",
     "Grid",
