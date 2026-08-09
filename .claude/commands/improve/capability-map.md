@@ -47,6 +47,12 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1744 (2026-08-07).** **self-audit** (cadence ≥15 since 1729) — deferred campaign residual digs. Window `d74bebf`..`5f893497`. 5 largest CLEAN: c1743 master-detail keyboard; c1733 domain_join empty_region; c1738 trial CSV seeder + dig-contract; c1735 #1646 money/related; c1731 hr_records org_structure. Unit pins pass; dig-contract 1738 receipt+log contract lines ok. 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1744**. budget 0. Explore **19/100**. Next: agent_acceptance contact_manager (residual=17) or campaign rotation under aggressive; capability-sweep@1735 next~1755; self-audit@1744 next~1759.
 
+> **Cycle 1818 (2026-08-09).** residual=0 densify=0 tip CI green **31326287750** @336a5335c (post-1817). Campaign force **framework-ux** + require_mutation: **ship** sidebar NavItem open discovery — `link_open_discovery_attr_suffix` on Sidebar / NavGroup `/app/<entity>…` hops (create/edit/view classify; home/bare `/app`/non-app unstamped; open-discovery owns aria-label when stamped, product aria for unstamped). Unit pin test_sidebar_nav_open_discovery_1818 + ship-surface + TR-20 nav test update. open_discovery leaf **USED@1818**. CodeQL+inbox **USED@1818**. budget 1. Explore **40/100**. Next: agent_acceptance / journey_dogfood / interesting other / framework edge; self-audit@1814 ~1829; capability-sweep@1815 next~1835.
+
+> **Cycle 1816 (2026-08-09).** residual=0 densify=0 tip CI green **31324585412** @c978c98a0. Campaign force **framework-ux** + require_mutation: **ship** menubar + navigation-menu open discovery — `link_open_discovery_attr_suffix` on `/app/<entity>…` menuitems + product NavigationMenu links (create/edit/view classify; marketing/bare `/app` unstamped). Unit pin test_menubar_nav_menu_open_discovery_1816 + ship-surface. open_discovery leaf **USED@1816**. CodeQL+inbox **USED@1816**. budget 1. Explore **38/100**. Next: agent_acceptance / semgrep never-exercised / journey_dogfood / interesting other; self-audit@1814 ~1829; capability-sweep@1815 next~1835.
+
+> **Cycle 1817 (2026-08-09).** concurrent **1816** menubar+nav-menu open discovery @bdabc08a2 (framework-ux). This cycle Goal B **empty_region_honesty@simple_task** @336a5335c under residual=0 require_mutation (campaign framework-ux overridden — hop thrash avoid; doctrine Goal B). Semgrep sentinel `--all-src` **0 findings**; registry p/python packs timed out (MCP partial). densify=0 dual_lock=0. Top digs next: agent_acceptance / framework edge / journey / interesting other / wait tip CI. budget 1. Explore **38/100**. self-audit@1814 ~1829; capability-sweep@1815 ~1835.
+
 > **Cycle 1815 (2026-08-09).** **capability-sweep** (cadence ≥20 since 1795) + Goal B **empty_region_honesty@project_tracker** under aggressive require_mutation. Tip CI green **31322899902** @6df3efa6a. Inventory: **UNOWNED=0** **COGNITION_STALE_eff=28** **HYGIENE_STALE_eff=39** rows=78 (COGNITION=31 HYGIENE=40 DRIVER=2 EXEMPT=5). USED→STALE lag≥20: dual_lock@1794. Fresh USED: interesting_product@1815; product maturity/probes re-stamp OBSERVE; CodeQL+inbox **USED@1815**. densify=0 dual_lock=0 suppress_smoke=1 residual=0. **Ship:** prune priority_mix / project_status_mix / my_priority_mix bar charts + my_tasks twin comment timeline; focus spines + unit pin + still recapture. Top digs next: agent_acceptance_panel / semgrep never-exercised / framework edge / journey_dogfood / domain|presentation COGNITION — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **37/100**. Next self-audit@1814 ~1829; capability-sweep@1815 next~1835.
 
 > **Cycle 1814 (2026-08-09).** **self-audit** (cadence ≥15 since 1799) — tip CI **31322899902** in_progress @6df3efa6a. Window post-1799 → HEAD. 5 largest product ships: ConfirmGate/workspace open discovery CLEAN; Message open discovery CLEAN product + dig_contract DISCREPANCY; empty_region@support_tickets CLEAN product + dig_contract DISCREPANCY; breadcrumb open discovery CLEAN (+receipt); coverage repair CLEAN. Unit pins pass. **AUD-010 OPEN** (dig receipt theater 1811/1812). No REGRESSION. CodeQL+inbox **USED@1814**. budget 0. Explore **36/100**. Next self-audit@1814 ~1829; capability-sweep@1795 next~1815.
@@ -91,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1815 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1817 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -130,9 +136,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1805 | USED |
-| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
-| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1817 | USED |
+| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 1817 | USED |
+| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 1817 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1676 | STALE |
@@ -155,8 +161,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1815 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1815 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1818 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1818 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |

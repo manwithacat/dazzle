@@ -60,11 +60,22 @@ def test_nav_item_label_is_escaped() -> None:
 
 
 def test_nav_item_exposes_aria_label_and_data_dz_nav() -> None:
-    """TR-20: stable hooks for agents/Playwright (avoid fragile has-text alone)."""
+    """TR-20: stable hooks for agents/Playwright (avoid fragile has-text alone).
+
+    Cycle 1818 — ``/app/<entity>…`` hops also stamp open-discovery; that
+    owns ``aria-label`` (``Open System``). Product-label aria remains for
+    unstamped (home / non-app) paths. ``data-dz-nav`` slug is always set.
+    """
     html = _render(NavItem(label="Systems", href=URL("/app/system")))
-    assert 'aria-label="Systems"' in html
+    assert 'aria-label="Open System"' in html
     assert 'data-dz-nav="system"' in html
     assert 'href="/app/system"' in html
+    assert "data-dz-ref-link-drill" in html
+    assert 'data-dz-open-entity="System"' in html
+
+    home = _render(NavItem(label="Home", href=URL("/app")))
+    assert 'aria-label="Home"' in home
+    assert "data-dz-ref-link-drill" not in home
 
 
 def test_nav_item_href_uses_typed_url() -> None:
