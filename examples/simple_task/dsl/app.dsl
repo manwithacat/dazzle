@@ -741,6 +741,7 @@ surface user_edit "Edit Team Member":
 
 workspace task_board "Task Board":
   access: persona(admin, manager, member)
+  # Goal B empty_region_honesty (cycle 1817)
   purpose: "Manage tasks visually"
 
   board_pulse:
@@ -788,20 +789,16 @@ workspace task_board "Task Board":
     action: task_edit
     empty: "No urgent tasks"
 
-  status_mix:
-    source: Task
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No tasks yet"
-
-  recent_comments:
-    source: TaskComment
-    display: timeline
-    sort: created_at desc
-    limit: 12
-    empty: "No comments yet"
+  ux:
+    as admin:
+      purpose: "Visual board spine — dual kanban + due/urgent; no chart void"
+      focus: board_pulse, tasks, by_assignee, upcoming_due, urgent_queue
+    as manager:
+      purpose: "Visual board spine — dual kanban + due/urgent; no chart void"
+      focus: board_pulse, tasks, by_assignee, upcoming_due, urgent_queue
+    as member:
+      purpose: "Visual board spine — dual kanban + due/urgent; no chart void"
+      focus: board_pulse, tasks, by_assignee, upcoming_due, urgent_queue
 
 # Story-driven compositions (docs/guides/story-to-composition.md):
 #   admin   → admin_dashboard = metrics + urgent/overdue queues (ST-014)
@@ -978,13 +975,14 @@ workspace team_overview "Team Overview":
       documents: accent
       conversation: accent
 
+  # Goal B empty_region_honesty (cycle 1817)
   ux:
     as manager:
-      purpose: "See team discussion before briefs and review queues"
-      focus: live_conversation, metrics, composition, needs_review
+      purpose: "Discussion + briefs + review + plate — no chart/twin comment void"
+      focus: live_conversation, metrics, composition, needs_review, team_roster, plate_by_person
     as admin:
-      purpose: "Team conversation and Monday review pressure"
-      focus: live_conversation, metrics, composition, needs_review
+      purpose: "Discussion + briefs + review + plate — no chart/twin comment void"
+      focus: live_conversation, metrics, composition, needs_review, team_roster, plate_by_person
 
   # Goal B document composition — acceptance / brief headlines for Monday review.
   composition:
@@ -995,14 +993,6 @@ workspace team_overview "Team Overview":
     action: brief_detail
     empty: "No document lines yet — briefs and acceptance criteria appear here"
 
-  # Status mix chart — different mode family than queues.
-  flow_chart:
-    source: Task
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No tasks yet"
 
   # ST-018 review queue (one listish Task signal for the review job).
   needs_review:
@@ -1035,15 +1025,6 @@ workspace team_overview "Team Overview":
     action: task_edit
     empty: "No assigned open work"
 
-  # Discussion pulse — TaskComment source (time-ordered events, not a field table).
-  # HMC-065 follow-on / work_surface_utility: timeline for dated comment streams.
-  recent_discussion:
-    source: TaskComment
-    sort: created_at desc
-    limit: 12
-    display: timeline
-    action: comment_detail
-    empty: "No recent comments"
 
   lead_readiness:
     display: status_list
@@ -1089,16 +1070,17 @@ workspace my_work "My Work":
       documents: accent
       conversation: accent
 
+  # Goal B empty_region_honesty (cycle 1817)
   ux:
     as member:
-      purpose: "See discussion on your work before briefs and the board"
-      focus: live_conversation, my_summary, composition
+      purpose: "Conversation + briefs + board + dues — no twin comment dump"
+      focus: live_conversation, my_summary, composition, my_board, my_upcoming
     as manager:
-      purpose: "Personal conversation trail and plate"
-      focus: live_conversation, my_summary, composition
+      purpose: "Conversation + briefs + board + dues — no twin comment dump"
+      focus: live_conversation, my_summary, composition, my_board, my_upcoming
     as admin:
-      purpose: "Personal conversation trail and plate"
-      focus: live_conversation, my_summary, composition
+      purpose: "Conversation + briefs + board + dues — no twin comment dump"
+      focus: live_conversation, my_summary, composition, my_board, my_upcoming
 
   # Goal B document spine on the member hero — brief headlines, not empty chrome.
   composition:
@@ -1129,13 +1111,6 @@ workspace my_work "My Work":
     action: task_edit
     empty: "No upcoming due dates on your work"
 
-  # Comments source — dated events; timeline over list (time_order axis).
-  my_discussion:
-    source: TaskComment
-    sort: created_at desc
-    limit: 12
-    display: timeline
-    empty: "No comments on tasks yet"
 
   focus_hint:
     display: status_list

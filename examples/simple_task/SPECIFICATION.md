@@ -47,14 +47,16 @@ they are the assignee or the creator, and can update only those.
 ## Where work happens
 
 Work is organised into job-shaped workspaces. The **Task Board** — shared by
-all three roles — has board metrics, a kanban of tasks, due timeline, urgent
-queue, status chart, and comment trail. The **Admin Dashboard** is the
-administrator home: metrics for tasks and users, plus urgent and overdue
-queues. The **Team Overview** is the manager home: metrics, flow chart, review
-queue, team roster, assignee plate kanban, and recent discussion timeline.
-**My Work** is each person's assigned pressure strip, personal board, due
-timeline, and discussion timeline. **Discussion** is the comment desk with
-trail, active cards, and status chart. **People** is the org-structure desk:
+all three roles — has board metrics, dual kanban (status + assignee), due
+timeline, and urgent queue (no status chart / comment dump theater —
+empty_region honesty). The **Admin Dashboard** is the administrator home:
+metrics for tasks and users, plus urgent and overdue queues. The **Team
+Overview** is the manager home: live conversation, metrics, document briefs,
+review queue, team roster, and assignee plate kanban (status counts live in
+metrics — no flow chart / twin comment dump). **My Work** is each person's
+conversation trail, pressure strip, briefs, personal board, and due timeline
+(no twin comment dump). **Discussion** is the comment desk with trail, active
+cards, and status chart. **People** is the org-structure desk:
 role board + department queue, then roster, unassigned queue, plate-by-person,
 and department headcount mix.
 
@@ -120,4 +122,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:2683f5f5874463eec007a8e10a78078502f4e2ede6ac2fe5ad353a68527c11cb -->
+<!-- dazzle-spec-brief: sha256:e9429567e34b7255e345c0113e2410a9f94c8549a9f3d7b9404cc4ebcd4578da -->

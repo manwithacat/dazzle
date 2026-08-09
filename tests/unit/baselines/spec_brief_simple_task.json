@@ -420,9 +420,7 @@
         "kanban of Task",
         "kanban of Task",
         "timeline of Task",
-        "queue of Task",
-        "bar_chart of Task",
-        "timeline of TaskComment"
+        "queue of Task"
       ]
     },
     {
@@ -455,11 +453,9 @@
         "conversation of TaskComment",
         "metrics of Task",
         "queue of TaskBrief",
-        "bar_chart of Task",
         "queue of Task",
         "queue of User",
-        "kanban of Task",
-        "timeline of TaskComment"
+        "kanban of Task"
       ]
     },
     {
@@ -473,8 +469,7 @@
         "metrics of Task",
         "queue of TaskBrief",
         "kanban of Task",
-        "timeline of Task",
-        "timeline of TaskComment"
+        "timeline of Task"
       ]
     },
     {
