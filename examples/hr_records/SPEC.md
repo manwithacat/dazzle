@@ -177,9 +177,9 @@ Job homes lead with **metrics**, then the directory/salary work — not a bare
 staff table as the only region.
 
 ### Workspace: `staff_directory` (default landing for hr_admin + manager)
-- **Headcount metrics** first (people, departments, roles)
+- **People notes** trail first (Goal B conversation), then **headcount metrics**
 - **Staff list** — current employees (active Employment), columns: name, role, department, manager
-- Recent starters / directory lists as supporting regions
+- Recent starters + department/role context hubs (no under-fold status/dept bar theater)
 - **Filters**: by department, by role level, by "starting in last 90 days", by "ended in last 90 days"
 - **Sort**: by name, by tenure (started_at desc), by department
 - For `manager` persona: scoped to own reports

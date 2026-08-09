@@ -67,10 +67,10 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — shared entry: headcount metrics, staff queue, department
-  context, people cards, employment-by-department chart, and assignment-status mix
-  (active / on leave / terminated). Employment history triple-opens assignment hub,
-  person career hub, and role catalogue (`Employment|Person|Role`).
+- **Staff Directory** — shared entry: people notes, headcount metrics, current
+  staff and recent starters queues, plus department/role context hubs (no
+  under-fold status/dept bar theater). Employment history triple-opens
+  assignment hub, person career hub, and role catalogue (`Employment|Person|Role`).
 - **Person Detail** — career desk: employment queue plus salary and reporting
   timelines, employment trail, and salary reason chart.
 - **Departments & Roles** — org pulse, department tree (nested under parent
@@ -80,7 +80,8 @@ dedicated screens — fourteen in all, from the staff directory to
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
   timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
 - **My Team** — manager desk: level board + department assignments + reporting
-  lines (org structure), then capped people notes and a secondary report roster.
+  lines (org structure), then capped people notes and a secondary report roster
+  (no redundant under-fold org bar charts).
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
 - **Reporting** — span-of-control kanban by manager, department placement board,
   then active ManagerLink queue and people hubs (not a dept-name bar chart).
@@ -124,4 +125,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:0cfbfe6c197937ec3d3313477bef4626178b9aca7ffc9eb9bf4d38bb0b52115e -->
+<!-- dazzle-spec-brief: sha256:511b71662bdfa357a339db09bb5a2e7af5d783cff3c9b859a439e832e9477ea5 -->

@@ -45,7 +45,10 @@ def test_my_team_declares_level_and_dept_boards_before_conversation() -> None:
 def test_my_team_ux_focus_org_before_load() -> None:
     block = _my_team_block()
     assert "focus: team_pulse, by_level, by_department, reporting_lines" in block
-    assert "dept_mix:" in block
+    # Cycle 1819 empty_region: no under-fold bar theater (kanbans own org shape)
+    assert "dept_mix:" not in block
+    assert "role_mix_chart:" not in block
+    assert "display: bar_chart" not in block
     assert "org structure" in block.lower() or "Org structure" in block
 
 

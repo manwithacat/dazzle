@@ -932,31 +932,10 @@ workspace staff_directory "Staff Directory":
         icon: "badge-check"
         state: positive
 
-  # Work-surface utility: directory person cards are a pull-to-open queue, not a gallery grid.
-  people_cards:
-    source: Person
-    display: queue
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  dept_mix:
-    source: Employment
-    display: bar_chart
-    group_by: department
-    aggregate:
-      count: count(Employment)
-    empty: "No employment rows"
-
-  # Lifecycle signal (cycle 1479 story_walk): status mix next to dept mix so
-  # ST-001/ST-005 see active / on_leave / terminated without orphan CRUD.
-  assignment_status_mix:
-    source: Employment
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Employment)
-    empty: "No employment rows"
+  # Cycle 1819 Goal B empty_region: drop twin people_cards + under-fold
+  # dept/status bar-chart theater. Peer Workday/BambooHR homes lead with
+  # notes + staff queues; lifecycle status lives on employment list/detail
+  # (ST-001/ST-005). Secondary desks keep bar_chart for coverage.
 
 
 workspace person_detail "Person Detail":
@@ -1334,23 +1313,9 @@ workspace my_team "My Team":
         icon: "git-branch"
         state: positive
 
-  # Department headcount mix (org shape chart).
-  dept_mix:
-    source: Employment
-    filter: end_date = null
-    display: bar_chart
-    group_by: department
-    aggregate:
-      count: count(Employment)
-    empty: "No active employment rows"
-
-  role_mix_chart:
-    source: Role
-    display: bar_chart
-    group_by: level
-    aggregate:
-      count: count(Role)
-    empty: "No roles defined"
+  # Cycle 1819 Goal B empty_region: drop dept_mix + role_mix_chart bar
+  # theater — by_level / by_department kanbans already show org shape.
+  # org_chart + compensation + active_staff retain bar_chart coverage.
 
 
 # Seventh product workspace: HR starters / onboarding desk.

@@ -38,6 +38,20 @@
       "relationships": []
     },
     {
+      "name": "PersonNote",
+      "title": "Person Note",
+      "intent": "HR discussion on a Person — the conversation that moves onboarding, leave, or promotion forward",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "person",
+          "target": "Person",
+          "target_title": "Person",
+          "required": true
+        }
+      ]
+    },
+    {
       "name": "Employment",
       "title": "Employment",
       "intent": "Effective-dated record of role/department assignment. NULL end_date = currently active.",
@@ -180,6 +194,30 @@
       "name": "person_edit",
       "title": "Edit Person",
       "entity": "Person",
+      "mode": "edit"
+    },
+    {
+      "name": "person_note_list",
+      "title": "Person Notes",
+      "entity": "PersonNote",
+      "mode": "list"
+    },
+    {
+      "name": "person_note_detail",
+      "title": "Person Note",
+      "entity": "PersonNote",
+      "mode": "view"
+    },
+    {
+      "name": "person_note_create",
+      "title": "Add Person Note",
+      "entity": "PersonNote",
+      "mode": "create"
+    },
+    {
+      "name": "person_note_edit",
+      "title": "Edit Person Note",
+      "entity": "PersonNote",
       "mode": "edit"
     },
     {
@@ -360,7 +398,7 @@
       "name": "staff_directory",
       "title": "Staff Directory",
       "kind": "workspace",
-      "purpose": "Current employees, filterable by department + level",
+      "purpose": "People notes, directory pulse, and current staff queues",
       "personas": [
         "hr_admin",
         "manager",
@@ -368,14 +406,12 @@
         "employee"
       ],
       "contents": [
+        "queue of PersonNote",
         "metrics of Person",
         "queue of Person",
         "queue of Person",
         "queue of Department",
-        "queue of Role",
-        "queue of Person",
-        "bar_chart of Employment",
-        "bar_chart of Employment"
+        "queue of Role"
       ]
     },
     {
@@ -455,19 +491,18 @@
       "name": "my_team",
       "title": "My Team",
       "kind": "workspace",
-      "purpose": "Line manager desk — direct reports, roles, and reporting lines",
+      "purpose": "Org structure managers can parse — team by level and department, reporting lines, then notes",
       "personas": [
         "manager",
         "hr_admin"
       ],
       "contents": [
         "metrics of Person",
-        "queue of Person",
-        "timeline of Employment",
-        "timeline of ManagerLink",
-        "queue of Role",
-        "queue of Person",
-        "bar_chart of Role"
+        "kanban of Role",
+        "kanban of Employment",
+        "queue of ManagerLink",
+        "queue of PersonNote",
+        "queue of Person"
       ]
     },
     {
@@ -490,17 +525,18 @@
       "name": "reporting_desk",
       "title": "Reporting",
       "kind": "workspace",
-      "purpose": "People reporting lines — who reports to whom across the org (not only department units)",
+      "purpose": "People hierarchy — span of control by manager, active lines, then roster (not only department units)",
       "personas": [
         "hr_admin",
         "manager"
       ],
       "contents": [
         "metrics of ManagerLink",
+        "kanban of ManagerLink",
+        "kanban of Employment",
         "queue of ManagerLink",
         "queue of Person",
-        "timeline of ManagerLink",
-        "bar_chart of Department"
+        "timeline of ManagerLink"
       ]
     },
     {
@@ -537,6 +573,7 @@
       "Department",
       "Role",
       "Person",
+      "PersonNote",
       "Employment",
       "Salary",
       "ManagerLink"
@@ -708,6 +745,54 @@
           "employee"
         ],
         "rule": "its id is the signed-in user"
+      },
+      {
+        "entity": "PersonNote",
+        "operation": "list",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "PersonNote",
+        "operation": "read",
+        "personas": [
+          "hr_admin",
+          "manager",
+          "finance",
+          "employee"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "PersonNote",
+        "operation": "create",
+        "personas": [
+          "hr_admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "PersonNote",
+        "operation": "update",
+        "personas": [
+          "hr_admin",
+          "manager"
+        ],
+        "rule": "all records"
+      },
+      {
+        "entity": "PersonNote",
+        "operation": "delete",
+        "personas": [
+          "hr_admin"
+        ],
+        "rule": "all records"
       },
       {
         "entity": "Employment",

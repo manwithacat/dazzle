@@ -123,6 +123,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_invoice_ops_document_goal_b.py",
     # invoice_ops Goal B command_density (cycle 1793 pay_desk dual attention)
     "tests/unit/test_invoice_ops_command_density_goal_b.py",
+    # cycle 1819 — Goal B empty_region honesty @invoice_ops primary desks
+    "tests/unit/test_invoice_ops_empty_region_goal_b.py",
     # contact_manager Goal B conversation (cycle 1664 ContactNote + home trail)
     "tests/unit/test_contact_manager_conversation_goal_b.py",
     # contact_manager Goal B empty_region_honesty (cycle 1742 Home/Contacts/Companies prune)
@@ -135,6 +137,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_hr_records_conversation_goal_b.py",
     # hr_records Goal B org_structure (cycle 1731 my_team level/dept boards)
     "tests/unit/test_hr_records_org_structure_goal_b.py",
+    # hr_records Goal B empty_region_honesty (cycle 1819 staff + my_team prune)
+    "tests/unit/test_hr_records_empty_region_goal_b.py",
     # fieldtest_hub Goal B conversation (cycle 1671 IssueNote + ops/triage trail)
     "tests/unit/test_fieldtest_conversation_goal_b.py",
     # fieldtest_hub Goal B command_density (cycle 1726 manager_ops dual attention)
