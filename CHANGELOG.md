@@ -1,6 +1,9 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B command_density (invoice_ops)** — Pay Desk is multi-panel settlement:
+  metrics → capped ready-to-pay + disputed attention → live AP notes; unit pins
+  + SPEC brief fingerprint; stills recaptured.
 - **toggle hyperpart emitter** — `Toggle` / `ToggleField` Fragment dual-lock (`button.dz-toggle[data-dz-toggle]` + `aria-pressed`); `widget=toggle` form path; client `dz-toggle.js` flips press; not switch/toggle-group; catalogue planned→live; dogfood simple_task `user_edit` `is_starred`.
 - **progress hyperpart emitter** — `ProgressBar` Fragment dual-lock (`.dz-progress` + `role=progressbar`); `display: progress_bar` region path (entries title/body/icon=tone); distinct from `display: progress` / StageBar; catalogue planned→live; dogfood simple_task `sample_progress`.
 - **popover hyperpart emitter** — `Popover` Fragment dual-lock (`details.dz-popover`); list column-visibility free panel dual-locks as popover (not menu); catalogue planned→live; dogfood any list with >3 columns.

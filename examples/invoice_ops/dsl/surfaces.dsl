@@ -657,7 +657,9 @@ workspace approval_desk "Approval Desk":
     empty: "No suppliers yet"
 
 workspace pay_desk "Pay Desk":
-  purpose: "Finance job — settlement discussion, ready-to-pay queue, and disputes"
+  # Goal B command_density: Bill.com / Tipalti settlement homes put dual
+  # attention (ready-to-pay + disputes) above the conversation trail.
+  purpose: "Multi-panel settlement — metrics, ready-to-pay, disputes, then live AP notes"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -672,19 +674,12 @@ workspace pay_desk "Pay Desk":
       disputed: destructive
       conversation: accent
 
-  live_conversation:
-    source: InvoiceNote
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: invoice_note_detail
-    empty: "No conversation yet — payment and dispute notes appear here"
-
+  # Dual attention (fold share with capped conversation spine).
   ready_to_pay:
     source: Invoice
     filter: status = approved
     sort: amount desc
-    limit: 20
+    limit: 4
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
@@ -693,10 +688,27 @@ workspace pay_desk "Pay Desk":
     source: Invoice
     filter: status = disputed
     sort: updated_at desc
-    limit: 15
+    limit: 4
     display: queue
     action: invoice_detail
     empty: "No disputes open"
+
+  # Goal B conversation spine AFTER dual attention.
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — payment and dispute notes appear here"
+
+  ux:
+    as finance:
+      purpose: "Multi-panel settlement — dual attention before live AP notes"
+      focus: settle_metrics, ready_to_pay, disputed_queue, live_conversation
+    as finance_admin:
+      purpose: "Multi-panel settlement — dual attention before live AP notes"
+      focus: settle_metrics, ready_to_pay, disputed_queue, live_conversation
 
   settle_board:
     source: Invoice

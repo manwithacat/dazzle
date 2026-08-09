@@ -101,6 +101,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_invoice_ops_conversation_goal_b.py",
     # invoice_ops Goal B document (cycle 1724 composition on finance_ops/my_invoices)
     "tests/unit/test_invoice_ops_document_goal_b.py",
+    # invoice_ops Goal B command_density (cycle 1793 pay_desk dual attention)
+    "tests/unit/test_invoice_ops_command_density_goal_b.py",
     # contact_manager Goal B conversation (cycle 1664 ContactNote + home trail)
     "tests/unit/test_contact_manager_conversation_goal_b.py",
     # contact_manager Goal B empty_region_honesty (cycle 1742 Home/Contacts/Companies prune)

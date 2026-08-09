@@ -9,7 +9,7 @@ not one shared mega-list plus warehouse CRUD.
 
 - requester → `my_invoices` (drafts + in-flight)
 - approver → `approval_desk` (awaiting + recently decided)
-- finance → `pay_desk` (ready-to-pay + disputes + payment health)
+- finance → `pay_desk` (multi-panel: ready-to-pay + disputes before notes)
 - auditor → `audit_review` (payment trail + settled invoices)
 - tenant_admin / finance_admin → `finance_ops` (shared ops overview)
 - Stories `given:` match each persona’s `default_workspace`.

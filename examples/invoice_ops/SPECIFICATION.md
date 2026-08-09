@@ -71,7 +71,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics.
 - **Approval Desk** — approver home: awaiting-approval queue, approval board,
   recently decided timeline, and supplier context grid.
-- **Pay Desk** — finance home: ready-to-pay and dispute queues, settle board,
+- **Pay Desk** — finance home (multi-panel settlement): metrics, capped
+  ready-to-pay and dispute attention panels, live AP notes, then settle board,
   payment health, and dispute trail.
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
 - **Finance Operations** — shared ops overview: line composition + live
@@ -164,4 +165,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:a164abbfa088e13c28193b052c48d616fe2b109e504b7eb78eae89b748de209e -->
+<!-- dazzle-spec-brief: sha256:2862ef4fb76dc5e23f27e477c17f73bfcbf49389fbba881e728979ca757d5baa -->

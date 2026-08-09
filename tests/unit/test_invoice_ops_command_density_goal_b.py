@@ -1,0 +1,44 @@
+"""Post-5.8 Goal B command_density — invoice_ops Pay Desk multi-panel settlement."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
+
+
+def _pay_desk_block() -> str:
+    text = SURFACES.read_text()
+    start = text.index('workspace pay_desk "Pay Desk":')
+    end = text.index('workspace audit_review "Audit Review":', start)
+    return text[start:end]
+
+
+def test_pay_desk_declares_dual_attention_before_conversation() -> None:
+    """Peer AP settle homes put ≥2 attention panels above the note trail."""
+    block = _pay_desk_block()
+    assert "settle_metrics:" in block
+    assert "ready_to_pay:" in block
+    assert "disputed_queue:" in block
+    assert "live_conversation:" in block
+    # Order: metrics → ready → disputes → conversation (command density).
+    assert block.index("settle_metrics:") < block.index("ready_to_pay:")
+    assert block.index("ready_to_pay:") < block.index("disputed_queue:")
+    assert block.index("disputed_queue:") < block.index("live_conversation:")
+
+
+def test_pay_desk_caps_attention_for_fold_share() -> None:
+    block = _pay_desk_block()
+    assert "limit: 4" in block
+    assert "focus: settle_metrics, ready_to_pay, disputed_queue, live_conversation" in block
+    assert "Multi-panel settlement" in block or "multi-panel" in block.lower()
+
+
+def test_pay_desk_metrics_count_ready_disputed_and_conversation() -> None:
+    block = _pay_desk_block()
+    assert "ready: count(Invoice where status = approved)" in block
+    assert "disputed: count(Invoice where status = disputed)" in block
+    assert "conversation: count(InvoiceNote)" in block
+    assert "filter: status = approved" in block
+    assert "filter: status = disputed" in block
