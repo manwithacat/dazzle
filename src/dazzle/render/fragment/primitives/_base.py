@@ -77,6 +77,7 @@ from dazzle.render.fragment.primitives.data import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    ProgressBar,
     QueueRegion,
     Radar,
     RelatedGroup,
@@ -216,6 +217,7 @@ Fragment = (
     | Sparkline
     | Tree
     | BarTrack
+    | ProgressBar
     | StageBar
     | LazyTabPanel
     | SearchBox

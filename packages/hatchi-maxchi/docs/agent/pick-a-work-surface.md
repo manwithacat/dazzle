@@ -35,6 +35,7 @@ Static FAQ / exclusive section disclosure (one open)?       → accordion
 Primary axis is customer↔agent chat bubbles (thread)?       → conversation
 Multi-image media strip (browse peers in a stage)?          → carousel
 Spatial pins on a plan/board (no tile SDK)?                 → map (marker)
+Toned determinate % fill (capacity / upload; not stage chips)? → progress_bar
 ```
 
 ## Decision table (job → surface)

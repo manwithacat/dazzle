@@ -203,6 +203,7 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
         "tree",
         "pipeline_steps",
         "progress",
+        "progress_bar",  # HM progress hyperpart — toned determinate .dz-progress
         "heatmap",
         "confirm_action_panel",
         "search_box",

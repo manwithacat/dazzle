@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 142 |
+| Modules | 143 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -111,6 +111,7 @@ blast radius (who embeds / refuses this part).
 | `popover` | `popover` | `details.dz-popover, .dz-popover` | details.dz-popover, .dz-popover[] | — |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |
+| `progress_bar` | `progress` | `.dz-progress` | .dz-progress[] | ProgressBarModel(label:str:opt; max_value:float:opt; tone:Literal:opt; value:float:opt) |
 | `queue` | `queue` | `[data-dz-queue-row]` | [data-dz-queue-row][data-dz-queue-row=present] | QueueRow(actions_html:str:opt; attention_level:str:opt; attention_message:str:opt; badges_html:str:opt; date_html:str:opt; drill_url:str:opt; title:str:req) |
 | `queue_filters` | `queue-filters` | `.dz-queue-filters` | .dz-queue-filters[] | — |
 | `queue_region` | `queue-region` | `.dz-queue-region` | .dz-queue-region[] | — |

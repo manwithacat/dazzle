@@ -9,6 +9,7 @@ Surface kind and tile/list/bar/stage-row shapes:
   - _build_carousel        media stage strip with prev/next/dots
   - _build_map             map plan board of Marker pin chrome
   - _build_progress        <progress> header + StageBar chip list
+  - _build_progress_bar    HM progress hyperpart — toned determinate .dz-progress
   - _build_pipeline_steps  horizontal stage cards with arrow connectors
 
 No family-local helpers — all cross-cutting plumbing lives in `_shared`.
@@ -34,12 +35,17 @@ from dazzle.render.fragment import (
     MetricTile,
     PipelineStage,
     PipelineSteps,
+    Stack,
     StageBar,
     StatusList,
     StatusListEntry,
     Surface,
 )
 from dazzle.render.fragment.region._context import RegionContext
+from dazzle.render.fragment.region._progress_bar import (
+    progress_bars_from_entries,
+    progress_bars_from_items,
+)
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
@@ -473,6 +479,33 @@ class _BuildersMetricsMixin:
             empty_message=str(empty_msg),
         )
         return _wrap_surface(title, "list", body_frag)
+
+    def _build_progress_bar(self, region: Any, ctx: RegionContext) -> Surface:
+        """`display: progress_bar` — HM Progress hyperpart (toned determinate bar).
+
+        Distinct from ``display: progress`` (StageBar / progress-region).
+        Static ``entries:``: title=label, caption/body=value (0..100),
+        optional icon=tone (success|warning|destructive). Entity rows may
+        supply ``percent`` / ``progress`` / ``value`` + name/title.
+        """
+        title = _region_title(region)
+        bars = progress_bars_from_entries(list(ctx.get("status_entries") or []))
+        if not bars:
+            bars = progress_bars_from_items(list(ctx.get("items") or []))
+        empty_msg = (
+            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No progress."
+        )
+        body_frag: Fragment
+        if not bars:
+            body_frag = EmptyState(
+                title="No progress",
+                description=str(empty_msg),
+            )
+        elif len(bars) == 1:
+            body_frag = bars[0]
+        else:
+            body_frag = Stack(children=tuple(bars), gap="sm")
+        return _wrap_surface(title, "dashboard", body_frag)
 
     def _build_metrics(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: metrics` (and `summary`) regions render a row of

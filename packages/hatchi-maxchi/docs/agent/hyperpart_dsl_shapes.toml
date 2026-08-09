@@ -556,8 +556,8 @@ id = "progress"
 class = "display"
 layer = "region"
 dsl = "display: progress_bar (determinate; distinct from StageBar)"
-status = "planned"
-job = "Use progress via display: progress_bar (determinate; distinct from StageBar)"
+status = "live"
+job = "Use progress via display: progress_bar (determinate; distinct from StageBar / display: progress)"
 agent_surface = "pick-a-work-surface"
 
 [[part]]

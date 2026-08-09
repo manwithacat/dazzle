@@ -415,3 +415,26 @@ severity = "low"
 residual_lane = "none"
 example_homes = ["any list surface with >3 visible columns (ColumnVisibilityMenu)"]
 scanner = "catalogue_only"
+
+[[scenario]]
+id = "determinate_capacity_progress_bar"
+hyperpart = "progress"
+authoring = "display: progress_bar"
+layer = "region"
+job = "Single toned determinate fill (capacity / upload / SLA %) uses HM progress bar, not StageBar chips."
+use_when = [
+  "operator needs at-a-glance percent fill for one or few metrics",
+  "tone (success/warning/destructive) communicates health of a capacity signal",
+  "no multi-stage workflow chips — just value against max",
+]
+refuse_when = [
+  "workflow stages with complete/active/empty chips (use display: progress / StageBar)",
+  "per-row labelled tracks against a shared max (use display: bar_track)",
+  "ranked league comparison (use display: comparison)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["simple_task sample_progress"]
+scanner = "catalogue_only"

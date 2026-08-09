@@ -117,6 +117,7 @@ from dazzle.render.fragment import (
     PivotTableRegion,
     Popover,
     ProfileCard,
+    ProgressBar,
     QueueBadgeColumn,
     QueueDateColumn,
     QueueMetric,
@@ -470,6 +471,8 @@ def _sample_for(primitive_type: type) -> object:
         return StatusListEntry(title="OK")
     if primitive_type is BarTrack:
         return BarTrack(rows=(("X", 1.0, "1", 50.0),), max_value=100.0)
+    if primitive_type is ProgressBar:
+        return ProgressBar(value=62, label="Storage used", tone="success")
     if primitive_type is StageBar:
         return StageBar(stages=(("X", 1, False),))
     if primitive_type is LazyTabPanel:

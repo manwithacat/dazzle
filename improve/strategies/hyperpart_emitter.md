@@ -148,3 +148,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Not menu (actions), not dialog (modal), not tooltip (timeout)
 - Dogfood: any list with >3 columns (Columns free panel)
 - Tests: `test_popover_emitter`
+
+## Reference ship: progress (2026-08-09)
+
+- `display: progress_bar` → `ProgressBar` → `.dz-progress` + `role=progressbar`
+- Fragment: `ProgressBar(value=…, label=…, tone=…)` dual-lock toned determinate bar
+- Entries: title=label, body/caption=value, optional icon=tone (success|warning|destructive)
+- Distinct from `display: progress` / StageBar (progress-region stage chips)
+- Dogfood: simple_task `sample_progress`
+- Tests: `test_progress_bar_emitter`

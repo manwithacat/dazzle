@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- **progress hyperpart emitter** — `ProgressBar` Fragment dual-lock (`.dz-progress` + `role=progressbar`); `display: progress_bar` region path (entries title/body/icon=tone); distinct from `display: progress` / StageBar; catalogue planned→live; dogfood simple_task `sample_progress`.
 - **popover hyperpart emitter** — `Popover` Fragment dual-lock (`details.dz-popover`); list column-visibility free panel dual-locks as popover (not menu); catalogue planned→live; dogfood any list with >3 columns.
 - **navigation-menu hyperpart emitter** — `NavigationMenu` Fragment dual-lock (`.dz-navigation-menu`); sitespec `layout.nav` mounts product top nav in site chrome; catalogue planned→live; dogfood all example sitespec public navs.
 - **message hyperpart emitter** — `Message` Fragment dual-lock (`.dz-message` row with optional media/meta + nested `Bubble`); `display: conversation` stacks Message rows; catalogue planned→live; dogfood support_tickets `live_conversation` + simple_task `sample_thread`.

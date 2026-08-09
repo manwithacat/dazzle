@@ -93,6 +93,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "MapBoard",
         "Carousel",
         "BarTrack",
+        "ProgressBar",
         "StageBar",
         "LazyTabPanel",
         "SearchBox",

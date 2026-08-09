@@ -102,6 +102,7 @@ class DisplayMode(StrEnum):
     ACCORDION = "accordion"  # hyperpart emitter: exclusive details group (FAQ / section disclosure)
     CONVERSATION = "conversation"  # hyperpart emitter: stack of Bubble shells (chat thread)
     CAROUSEL = "carousel"  # hyperpart emitter: media stage strip prev/next/dots
+    PROGRESS_BAR = "progress_bar"  # hyperpart emitter: toned determinate .dz-progress bar
 
 
 class WhenEmpty(StrEnum):

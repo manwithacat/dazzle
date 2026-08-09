@@ -75,6 +75,7 @@ from dazzle.render.fragment.primitives import (
     PivotTable,
     PivotTableRegion,
     ProfileCard,
+    ProgressBar,
     QueueRegion,
     RelatedGroup,
     RelatedTab,
@@ -1445,4 +1446,39 @@ class _RenderTablesMixin:
                 complete_count=s.complete_count,
                 total=s.total,
             )
+        )
+
+    def _emit_progress_bar(self, p: ProgressBar, ctx: RenderContext) -> str:
+        """HM Progress hyperpart — toned determinate ``.dz-progress`` bar.
+
+        Dual-lock root ``.dz-progress`` + ``role=progressbar`` (hm-core).
+        Fill via ``--dz-progress-value`` on ``.dz-progress__bar``. Distinct
+        from StageBar / progress-region (``display: progress``).
+        """
+        pct = p.percent
+        # Whole-number fill when exact; keep one decimal otherwise for ARIA.
+        if pct == int(pct):
+            pct_str = str(int(pct))
+            now_str = str(int(round(float(p.value))))
+        else:
+            pct_str = f"{pct:.1f}".rstrip("0").rstrip(".")
+            now_str = (
+                str(int(p.value))
+                if float(p.value) == int(p.value)
+                else f"{float(p.value):.1f}".rstrip("0").rstrip(".")
+            )
+        max_str = (
+            str(int(p.max_value))
+            if float(p.max_value) == int(p.max_value)
+            else f"{float(p.max_value):.1f}".rstrip("0").rstrip(".")
+        )
+        label = (p.label or "Progress").strip()
+        label_attr = ctx.escape_attr(label)
+        tone_attr = f' data-dz-tone="{ctx.escape_attr(p.tone)}"' if p.tone else ""
+        return (
+            f'<div class="dz-progress" role="progressbar" '
+            f'aria-label="{label_attr}" aria-valuenow="{now_str}" '
+            f'aria-valuemin="0" aria-valuemax="{max_str}"{tone_attr}>'
+            f'<div class="dz-progress__bar" style="--dz-progress-value:{pct_str}%"></div>'
+            f"</div>"
         )

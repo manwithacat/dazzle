@@ -77,7 +77,8 @@ SIGNALS: dict[str, object] = {
     "accordion": r"display:\s*accordion",
     "tabs": r"display:\s*tabbed_list",
     "avatar": r"display:\s*profile_card",
-    "progress": "exempt:no Dazzle emitter yet (the determinate bar; the StageBar is progress-region)",
+    # display: progress_bar → ProgressBar → .dz-progress (2026-08-09)
+    "progress": r"display:\s*progress_bar",
     "sidebar-layout": "always",
     "auto-grid": "always",
     "center": "exempt:no Dazzle emitter yet (gallery/HM-site layout primitive)",

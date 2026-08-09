@@ -99,6 +99,7 @@ from dazzle.render.fragment.primitives import (
     PivotTableRegion,
     Popover,
     ProfileCard,
+    ProgressBar,
     QueueRegion,
     Radar,
     RefPicker,
@@ -361,6 +362,8 @@ class FragmentRenderer(
                 return self._emit_status_list(fragment, ctx)
             case BarTrack():
                 return self._emit_bar_track(fragment, ctx)
+            case ProgressBar():
+                return self._emit_progress_bar(fragment, ctx)
             case StageBar():
                 return self._emit_stage_bar(fragment, ctx)
             case LazyTabPanel():

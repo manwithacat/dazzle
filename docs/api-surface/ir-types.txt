@@ -3761,6 +3761,7 @@ enum: DisplayMode
     - PIVOT_TABLE = 'pivot_table'
     - PROFILE_CARD = 'profile_card'
     - PROGRESS = 'progress'
+    - PROGRESS_BAR = 'progress_bar'
     - QUEUE = 'queue'
     - RADAR = 'radar'
     - SEARCH_BOX = 'search_box'

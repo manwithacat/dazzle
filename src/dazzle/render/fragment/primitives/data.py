@@ -455,6 +455,9 @@ class StageBar:
     `complete_pct` is rendered numerically next to the `<progress>`
     bar; `complete_count + total` produce the "N of M complete"
     summary when `total > 0`.
+
+    Distinct from :class:`ProgressBar` (HM ``progress`` hyperpart —
+    single toned determinate track via ``display: progress_bar``).
     """
 
     stages: tuple[tuple[str, int, bool], ...]
@@ -467,6 +470,40 @@ class StageBar:
             raise ValueError("StageBar requires at least one stage")
         if not (0.0 <= self.complete_pct <= 100.0):
             raise ValueError(f"StageBar complete_pct={self.complete_pct} outside [0, 100]")
+
+
+_PROGRESS_BAR_TONES = ("", "success", "warning", "destructive")
+
+
+@dataclass(frozen=True, slots=True)
+class ProgressBar:
+    """HM Progress hyperpart — toned determinate bar (``.dz-progress``).
+
+    Dual-lock root: ``.dz-progress`` + ``role=progressbar`` (hm-core).
+    Authored via ``display: progress_bar`` + ``entries:`` (title=label,
+    caption/body=value 0..max, optional icon=tone) or composed as a
+    Fragment. Distinct from :class:`StageBar` / ``display: progress``
+    (progress-region stage chips).
+    """
+
+    value: float
+    label: str = ""
+    tone: Literal["", "success", "warning", "destructive"] = ""
+    max_value: float = 100.0
+
+    def __post_init__(self) -> None:
+        if self.max_value <= 0:
+            raise ValueError(f"ProgressBar max_value={self.max_value} must be > 0")
+        if float(self.value) < 0:
+            raise ValueError(f"ProgressBar value={self.value} must be >= 0")
+        if self.tone not in _PROGRESS_BAR_TONES:
+            raise ValueError(f"invalid ProgressBar tone {self.tone!r}")
+
+    @property
+    def percent(self) -> float:
+        """Clamp fill percentage to [0, 100] relative to max_value."""
+        pct = (float(self.value) / float(self.max_value)) * 100.0
+        return max(0.0, min(100.0, pct))
 
 
 @dataclass(frozen=True, slots=True)

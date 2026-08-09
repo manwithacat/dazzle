@@ -884,6 +884,21 @@ workspace admin_dashboard "Admin Dashboard":
       - title: "Alert"
         body: "danger"
 
+  # Hyperpart emitter dogfood: display: progress_bar → ProgressBar (.dz-progress).
+  # Distinct from display: progress (StageBar / progress-region stage chips).
+  sample_progress:
+    display: progress_bar
+    title: "Capacity signals"
+    entries:
+      - title: "Board fill"
+        body: "62"
+      - title: "Review lane"
+        body: "100"
+        icon: "success"
+      - title: "Urgent queue"
+        body: "38"
+        icon: "warning"
+
   ux:
     as admin:
       purpose: "See task discussion before document briefs and pressure queues"

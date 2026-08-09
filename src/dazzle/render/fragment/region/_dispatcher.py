@@ -101,6 +101,7 @@ class WorkspaceRegionAdapter(
         "tree": "_build_tree",
         "pipeline_steps": "_build_pipeline_steps",
         "progress": "_build_progress",
+        "progress_bar": "_build_progress_bar",  # HM progress hyperpart (determinate bar)
         "confirm_action_panel": "_build_confirm_action_panel",
         "search_box": "_build_search_box",
         "bar_track": "_build_bar_track",
