@@ -422,10 +422,12 @@ def _list_has_open_via(surface: Any) -> bool:
 
 # Process lint (#1637): scoreboard language in product DSL means the measure
 # colonized the medium. Agents must not leave "WI D:" / "densify" comments.
-_SCOREBOARD_PATTERNS = (
-    r"\bWI\s*D\b",
-    r"\bWI\s*N\b",
-    r"\bWI\s*L\b",
+#
+# WI axis tokens (D/N/L) are case-sensitive and require whitespace after ``WI``
+# so re.IGNORECASE does not match English "win" / "wild" / "wid" (cycle 1804:
+# design_studio "pixels win" false-positive scoreboard_smells=2).
+_SCOREBOARD_WI_AXIS_RE = r"\bWI\s+[DNL]\b"
+_SCOREBOARD_PATTERNS_IC = (
     r"\bwi_primary\b",
     r"\bwi_fleet\b",
     r"\bdensify\b",
@@ -433,6 +435,8 @@ _SCOREBOARD_PATTERNS = (
     r"\bdesk.entity soft.?cap\b",
     r"\bfeature_creep\b",
 )
+# Back-compat alias for tests / importers that still expect a flat tuple.
+_SCOREBOARD_PATTERNS = (_SCOREBOARD_WI_AXIS_RE, *_SCOREBOARD_PATTERNS_IC)
 
 
 def _scan_scoreboard_smells(app_dir: Path) -> int:
@@ -448,7 +452,8 @@ def _scan_scoreboard_smells(app_dir: Path) -> int:
     # Prefer dsl/ only when present to avoid double-counting.
     if (app_dir / "dsl").is_dir():
         files = list((app_dir / "dsl").rglob("*.dsl"))
-    compiled = [re.compile(p, re.IGNORECASE) for p in _SCOREBOARD_PATTERNS]
+    compiled = [re.compile(_SCOREBOARD_WI_AXIS_RE)]  # case-sensitive WI + space + axis
+    compiled.extend(re.compile(p, re.IGNORECASE) for p in _SCOREBOARD_PATTERNS_IC)
     hits = 0
     for path in files:
         try:

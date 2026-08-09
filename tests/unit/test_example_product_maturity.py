@@ -356,6 +356,22 @@ def test_scoreboard_smell_scan(pm, tmp_path) -> None:
     assert n >= 3
 
 
+def test_scoreboard_smell_ignores_english_win(pm, tmp_path) -> None:
+    """Cycle 1804: IGNORECASE ``WI N`` must not match English ``win`` / media prose."""
+    dsl = tmp_path / "dsl"
+    dsl.mkdir()
+    (dsl / "app.dsl").write_text(
+        "# thumbs must win the fold. Peer tools put pixels first.\n"
+        "# Goal B media shelf FIRST — logo/photo creatives (pixels win).\n"
+        "# Real scoreboard markers still count: WI N: nav share\n"
+        "workspace media_home:\n  region shelf: grid Asset\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "dazzle.toml").write_text("[project]\nname='t'\n", encoding="utf-8")
+    n = pm._scan_scoreboard_smells(tmp_path)
+    assert n == 1  # only the explicit ``WI N:`` line
+
+
 def test_warehouse_index_cli(pm, capsys) -> None:
     rc = pm.main(["--warehouse-index"])
     out = capsys.readouterr().out

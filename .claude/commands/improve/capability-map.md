@@ -68,6 +68,9 @@ apply map patches with `{"apply":true}`.
 > **Cycle 1663 (2026-08-03).** **capability-sweep** (cadence ≥20 since 1643) — inventory reconcile vs tip `10648d9a0`. **UNOWNED=0** **COGNITION_STALE_eff≈29** **HYGIENE_STALE_eff≈36** rows≈73. Flipped USED→STALE lag≥20 (product_quality/demo quality/validate/qa trial/acceptance/walk@1633 lag30; CodeQL+inbox re-USED@1663). DRIVER CodeQL+inbox **USED@1663**. Tip CI **queued** (1662 invoice_ops Goal B) — no product push. Top digs next (aggressive densify=0 dual_lock=0 suppress_smoke=1 require_mutation=1): interesting_product depth when tip green / framework-ux edge / domain|presentation COGNITION re-touch / **semgrep hygiene** — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 0. Explore **19/100**.
 ---
 
+
+> **Cycle 1804 (2026-08-09).** residual=0 densify=0 CI green **31313118349** @04c45e7f3. Campaign force story_walk **overridden** (residual=0 thrash ban / harness_only) → **framework process lint**: scoreboard `WI N` IGNORECASE matched English **win** (design_studio "pixels win" → false scoreboard_smells=2). Ship: case-sensitive `WI\s+[DNL]` + unit pin; fleet smells **0**. example product maturity **USED@1804**. budget 1. Explore **30/100**. Next: agent_acceptance / semgrep / framework edge; self-audit@1799 next~1814; capability-sweep@1795 next~1815.
+
 ## Registry
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
@@ -86,10 +89,10 @@ apply map patches with `{"apply":true}`.
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1741 | STALE |
 | `qa-trial` skill | COGNITION | skill | trials | 1633 | STALE |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1804 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1614 | STALE |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1795 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1804 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1741 | STALE |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
