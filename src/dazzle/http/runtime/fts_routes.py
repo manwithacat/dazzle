@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.render.open_discovery import search_open_attr_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +136,6 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     import html
 
     from dazzle.render.filters import _gettext
-    from dazzle.render.open_discovery import search_open_attr_suffix
 
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
