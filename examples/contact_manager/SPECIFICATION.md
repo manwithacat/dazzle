@@ -30,7 +30,8 @@ for overview, then **Contacts** for dual-pane browse.
 ## Where work happens
 
 **Home** is the welcome overview (empty-region honesty): directory metrics,
-engagement-document pulse, a **live relationship-notes** trail, a **composition**
+engagement-document pulse, a **live relationship-notes** trail rendered as
+Message/Bubble conversation chrome (not a meta queue of note rows), a **composition**
 queue of named open letters (draft and sent), favourites, an always-filled
 practice context strip, and search — without company bar-chart voids or twin
 company dumps.
@@ -93,4 +94,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:960c82626e7b3a1449de4bb7190d7ac46113d2075432e3529f1a41812c2f10a4 -->
+<!-- dazzle-spec-brief: sha256:df0ce0560bf4f4c77d3190df3529efa016298b03ad174b02c9c8bf48e7c5a425 -->

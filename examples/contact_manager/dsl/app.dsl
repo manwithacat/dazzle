@@ -305,11 +305,12 @@ workspace home "Home":
 
   # Goal B conversation spine FIRST — newest relationship notes so above-fold
   # stills show domain-true CRM prose (display_field: body).
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
   live_conversation:
     source: ContactNote
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: contact_note_detail
     empty: "No conversation yet — notes on contacts and letters appear here"
 

@@ -24,6 +24,12 @@ def test_home_declares_live_conversation_spine() -> None:
     assert "source: ContactNote" in text
     assert "conversation: count(ContactNote)" in text
     assert "focus: live_conversation" in text
+    # Goal B interesting_product: hero live threads use Message/Bubble chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    block = text.split("workspace home", 1)[1]
+    region = block.split("live_conversation:", 1)[1][:400]
+    assert "display: conversation" in region
+    assert "source: ContactNote" in region
 
 
 def test_contact_note_seeds_have_domain_true_crm_copy() -> None:
