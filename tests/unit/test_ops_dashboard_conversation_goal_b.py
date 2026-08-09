@@ -24,6 +24,13 @@ def test_command_center_declares_live_conversation_spine() -> None:
     assert "source: IncidentNote" in text
     assert "conversation: count(IncidentNote)" in text
     assert "workspace incident_review" in text
+    # Goal B interesting_product: hero live threads use Message/Bubble chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    for ws in ("workspace command_center", "workspace incident_review"):
+        block = text.split(ws, 1)[1]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, ws
+        assert "source: IncidentNote" in region
 
 
 def test_incident_note_seeds_have_domain_true_ops_copy() -> None:

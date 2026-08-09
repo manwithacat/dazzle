@@ -293,11 +293,12 @@ workspace command_center "Command Center":
 
   # Goal B conversation spine AFTER dual attention — newest operator notes so
   # stills show domain-true mitigation prose without owning the whole fold.
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
   live_conversation:
     source: IncidentNote
     sort: created_at desc
     limit: 4
-    display: queue
+    display: conversation
     action: incident_note_detail
     empty: "No incident notes yet — operator discussion on active alerts appears here"
     refresh: every 30s
@@ -730,11 +731,12 @@ workspace incident_review "Incident Review":
       resolved: positive
       conversation: accent
 
+  # display: conversation → Message/Bubble chrome for incident discussion.
   live_conversation:
     source: IncidentNote
     sort: created_at desc
     limit: 10
-    display: queue
+    display: conversation
     action: incident_note_detail
     empty: "No conversation yet — notes on open incidents appear here"
 
