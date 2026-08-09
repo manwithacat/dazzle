@@ -58,3 +58,13 @@ def test_my_tickets_drops_bar_chart_and_duplicate_dumps() -> None:
     assert "ux:" in block
     assert "as customer:" in block
     assert block.count("display: timeline") == 1
+
+
+def test_agent_console_hosts_progress_and_activity_feed_coverage() -> None:
+    """Hero prune must not leave display: progress / activity_feed fleet-uncovered."""
+    block = _workspace_block("agent_console")
+    assert "agent_lifecycle_progress:" in block
+    assert "display: progress" in block
+    assert "agent_comment_activity:" in block
+    assert "display: activity_feed" in block
+    assert "current_context" in block

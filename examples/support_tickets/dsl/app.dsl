@@ -920,6 +920,25 @@ workspace agent_console "Agent Console":
     action: ticket_detail
     empty: "No open tickets for this agent"
 
+  # Framework artefact coverage dogfood (cycle 1813): display: progress +
+  # activity_feed live under context_selector scope — not on agent_dashboard
+  # hero (empty_region honesty). Proves GROUP BY / feed re-scope with
+  # current_context like the #1305 bar charts above.
+  agent_lifecycle_progress:
+    source: Ticket
+    filter: assigned_to = current_context
+    display: progress
+    group_by: status
+    empty: "No tickets for this agent"
+
+  agent_comment_activity:
+    source: Comment
+    filter: ticket.assigned_to = current_context
+    display: activity_feed
+    sort: created_at desc
+    limit: 15
+    empty: "No comments for this agent"
+
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
   default_workspace: ticket_queue

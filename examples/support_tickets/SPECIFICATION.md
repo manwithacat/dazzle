@@ -79,8 +79,8 @@ theater or triple activity dumps — empty_region honesty).
 queues, one case-history timeline, and how-it-works guidance (no bar-chart
 theater or duplicate open/timeline dumps).
 The **Agent Console** — shared by administrators, managers, and agents — lets
-you pick an agent and see their tickets, comments, comparison charts, priority
-queue, comment trail, and open ticket cards.
+you pick an agent and see their tickets, comments, comparison charts, lifecycle
+progress, comment activity feed, priority queue, comment trail, and open ticket cards.
 
 ## How work flows through it
 
@@ -155,4 +155,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:080dcc02470061f1823a97e24a27386a80c1d8286d6f39b3d09b445c960976c8 -->
+<!-- dazzle-spec-brief: sha256:5b4734e21f9a5e1fd844cf990de9b68943520b033cf147369d1a5a7c6cc4ff94 -->
