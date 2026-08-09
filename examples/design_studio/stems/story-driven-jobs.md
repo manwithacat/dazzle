@@ -7,7 +7,7 @@ a shared asset warehouse.
 
 ## Reconstruct
 
-- designer default: `studio_dashboard` = portfolio metrics + grids.
+- designer default: `studio_dashboard` = media home (preview thumbs) + compact load + critique.
 - designer also has `brand_desk` (brand-first path).
 - reviewer default: `review_desk` = review-load + awaiting-review queue.
 - `asset_catalog` is the media shelf (preview thumbs first, then brand palette)

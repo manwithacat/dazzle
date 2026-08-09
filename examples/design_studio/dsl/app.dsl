@@ -243,11 +243,22 @@ entity Feedback "Design Feedback":
 
 # ── Workspaces ───────────────────────────────────────────────────────
 
-# Story-driven: designer home = metrics + recent work; reviewer home =
-# review_desk / asset_catalog (docs/guides/story-to-composition.md).
+# Story-driven: designer home = studio_dashboard; reviewer often uses review_desk
+# (docs/guides/story-to-composition.md). Goal B media home: peer creative tools
+# (Figma / Adobe / Bynder) put recent creatives as pixels on the portfolio home —
+# not metrics + critique meta first.
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
-  purpose: "Studio portfolio — metrics, critique trail, and mixed job views (not warehouse grids only)"
+  purpose: "Studio media home — creative preview thumbs above fold, then compact load and critique trail"
+  # Goal B media home FIRST — portfolio is a visual shelf (preview_url thumbs).
+  media_shelf:
+    source: Asset
+    display: grid
+    sort: updated_at desc
+    limit: 8
+    action: asset_detail
+    empty: "No assets yet — seed or upload previews"
+  # Compact load strip after pixels (no delta-theater tile wall).
   portfolio:
     source: Asset
     display: metrics
@@ -259,53 +270,40 @@ workspace studio_dashboard "Studio Dashboard":
     tones:
       in_review: warning
       conversation: accent
-  # Goal B conversation: designers land here — surface newest review notes so
-  # the portfolio home is a reply desk, not only asset inventory.
+  # Critique trail after media — reply desk secondary to the creative shelf.
   live_conversation:
     source: Feedback
     sort: created_at desc
-    limit: 8
+    limit: 6
     display: queue
     action: feedback_detail
     empty: "No critique yet — reviewer notes on your assets appear here"
-  # Work-surface utility (cycle 1483 journey): brand portfolio is a pull-to-open
-  # queue toward brand hubs — not a decorative card grid on the studio home.
+  # Pull-to-open brand hubs (capped so meta cannot eat the fold).
   brands:
     source: Brand
     display: queue
     sort: name asc
-    limit: 20
+    limit: 6
     action: brand_detail
     empty: "No brands yet"
-  # Work-surface utility: recent updates are a dated stream (pair with asset_trail).
-  recent_assets:
-    source: Asset
-    display: timeline
-    sort: updated_at desc
-    limit: 12
-    action: asset_detail
-    empty: "No assets yet"
-  asset_trail:
-    source: Asset
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    empty: "No assets yet"
-  asset_status_mix:
-    source: Asset
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No assets yet"
   review_pressure:
     source: Asset
     filter: status = review
     sort: updated_at asc
-    limit: 12
+    limit: 8
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
+  ux:
+    as designer:
+      purpose: "See creative preview thumbs above fold before load metrics and critique"
+      focus: media_shelf, portfolio, live_conversation, review_pressure
+    as admin:
+      purpose: "Media home first — portfolio thumbs, then studio load and brand hubs"
+      focus: media_shelf, portfolio, brands, review_pressure
+    as reviewer:
+      purpose: "Scan recent creatives as pixels before critique trail"
+      focus: media_shelf, live_conversation, review_pressure
 
 # Goal B media (cycle 1734): catalog is a visual media shelf — asset preview
 # thumbs must win the fold. Peer tools (Bynder / Frontify / Adobe CC) put
