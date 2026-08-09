@@ -97,6 +97,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_edit_action_open_discovery_1721.py",
     # cycle 1723 — detail chrome Edit/Create Link open discovery (not VIEW ref)
     "tests/unit/test_detail_edit_link_open_discovery_1723.py",
+    # cycle 1805 — ConfirmGate + workspace primary action open discovery
+    "tests/unit/test_confirm_gate_open_discovery_1805.py",
     # cycle 1735 — #1646 detail money _minor/_currency + related tab finger budget
     "tests/unit/test_detail_money_related_budget_1646.py",
     # cycle 1712 — presentation residual delta_theater honesty under 100%

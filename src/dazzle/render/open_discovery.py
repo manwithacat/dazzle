@@ -39,6 +39,18 @@ def entity_label_from_detail_url(url: str) -> str:
     return " ".join(w[:1].upper() + w[1:] for w in words)
 
 
+# Special via tokens → phrase verb (keeps open_hop_label CC low).
+_OPEN_HOP_VIA_VERB: dict[str, str] = {
+    "create": "Create",
+    "new": "Create",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "revoke": "Revoke",
+    "re-enable": "Re-enable",
+    "reenable": "Re-enable",
+}
+
+
 def open_hop_label(entity_label: str, via_field: str = "") -> str:
     """User-facing hop phrase: ``Open Task`` / ``Open User via assigned to``.
 
@@ -46,15 +58,17 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
     list/empty/related create CTAs (same attr grammar as VIEW hops).
 
     Cycle 1721 — ``via=edit`` yields ``Edit {Entity}`` for row pencil actions.
+
+    Cycle 1805 — ``via=confirm`` / ``via=revoke`` / ``via=re-enable`` for
+    ConfirmGate primary / revoke / re-enable action anchors.
     """
     ent = (entity_label or "Related").strip() or "Related"
     via = (via_field or "").strip()
     if not via or via == "id":
         return f"Open {ent}"
-    if via.casefold() in ("create", "new"):
-        return f"Create {ent}"
-    if via.casefold() == "edit":
-        return f"Edit {ent}"
+    verb = _OPEN_HOP_VIA_VERB.get(via.casefold())
+    if verb is not None:
+        return f"{verb} {ent}"
     words = [w for w in via.replace("-", "_").split("_") if w]
     if not words:
         return f"Open {ent}"
@@ -112,6 +126,34 @@ def edit_action_open_attrs(href: str) -> str:
 def edit_action_open_attr_suffix(href: str) -> str:
     """Leading-space open attrs for appending onto an edit ``<a …>`` tag, or ``""``."""
     extra = edit_action_open_attrs(href)
+    return f" {extra}" if extra else ""
+
+
+def confirm_action_open_attrs(href: str, *, via: str = "confirm") -> str:
+    """Open-discovery attrs for ConfirmGate action anchors.
+
+    Cycle 1805 — agents attr-read confirm / revoke / re-enable hops without
+    scraping button copy. Markers:
+
+    * ``data-dz-confirm-drill`` — primary commit / re-enable (via=confirm|re-enable)
+    * ``data-dz-revoke-drill`` — live-state revoke (via=revoke)
+
+    Skips empty / fragment-only / non-app paths (parity with create/edit).
+    """
+    via_norm = (via or "confirm").strip() or "confirm"
+    via_cf = via_norm.casefold()
+    if via_cf == "revoke":
+        marker = "data-dz-revoke-drill"
+    else:
+        marker = "data-dz-confirm-drill"
+        if via_cf in ("reenable",):
+            via_norm = "re-enable"
+    return _app_action_open_attrs(href, marker=marker, via=via_norm)
+
+
+def confirm_action_open_attr_suffix(href: str, *, via: str = "confirm") -> str:
+    """Leading-space open attrs for ConfirmGate ``<a …>`` tags, or ``""``."""
+    extra = confirm_action_open_attrs(href, via=via)
     return f" {extra}" if extra else ""
 
 

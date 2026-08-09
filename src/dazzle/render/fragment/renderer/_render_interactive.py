@@ -64,6 +64,7 @@ from dazzle.render.fragment.primitives import (
 )
 from dazzle.render.fragment.renderer._helpers import _hx_attrs, _pagination_pages
 from dazzle.render.open_discovery import (
+    confirm_action_open_attr_suffix,
     create_cta_open_attr_suffix,
     link_open_discovery_attr_suffix,
 )
@@ -368,9 +369,12 @@ class _RenderInteractiveMixin:
                 f"</div>"
             )
             if c.revoke_url:
+                # Cycle 1805 — stamp open-discovery so agents attr-read revoke hops.
+                revoke_open = confirm_action_open_attr_suffix(c.revoke_url, via="revoke")
                 inner += (
                     f'<div class="dz-confirm-actions">'
-                    f'<a href="{ctx.escape_attr(c.revoke_url)}" class="dz-confirm-revoke">'
+                    f'<a href="{ctx.escape_attr(c.revoke_url)}" class="dz-confirm-revoke"'
+                    f"{revoke_open}>"
                     f"{ctx.escape(c.revoke_label)}</a>"
                     f"</div>"
                 )
@@ -382,10 +386,12 @@ class _RenderInteractiveMixin:
                 f"</div>"
             )
             if c.primary_action_url:
+                # Cycle 1805 — re-enable hop uses confirm-drill + via=re-enable.
+                re_open = confirm_action_open_attr_suffix(c.primary_action_url, via="re-enable")
                 inner += (
                     f'<div class="dz-confirm-actions">'
                     f'<a href="{ctx.escape_attr(c.primary_action_url)}" '
-                    f'class="dz-confirm-primary">{ctx.escape(c.re_enable_label)}</a>'
+                    f'class="dz-confirm-primary"{re_open}>{ctx.escape(c.re_enable_label)}</a>'
                     f"</div>"
                 )
         elif c.confirmations:
@@ -423,9 +429,13 @@ class _RenderInteractiveMixin:
             # Dual-button row (still inside the <ul> per legacy template)
             actions_inner = ""
             if c.secondary_action_url:
+                # Secondary is usually "save draft" / navigational hop — stamp
+                # generic open-discovery (VIEW/create/edit classify) when /app/.
+                sec_open = link_open_discovery_attr_suffix(c.secondary_action_url)
                 actions_inner += (
                     f'<a href="{ctx.escape_attr(c.secondary_action_url)}" '
-                    f'class="dz-confirm-secondary">{ctx.escape(c.secondary_label)}</a>'
+                    f'class="dz-confirm-secondary"{sec_open}>'
+                    f"{ctx.escape(c.secondary_label)}</a>"
                 )
             if c.primary_action_url:
                 # State-in-DOM gate (dz-confirm-gate.js): the anchor ships
@@ -434,6 +444,9 @@ class _RenderInteractiveMixin:
                 # and drops aria-disabled once every required box is
                 # ticked. Zero required boxes = armed at SSR (the
                 # controller then never needs to fire).
+                # Cycle 1805 — open attrs always on the element (even when
+                # href is parked) so agents discover the confirm hop.
+                confirm_open = confirm_action_open_attr_suffix(c.primary_action_url, via="confirm")
                 if required_count == 0:
                     gate_state = f'href="{ctx.escape_attr(c.primary_action_url)}" '
                 else:
@@ -441,7 +454,7 @@ class _RenderInteractiveMixin:
                 actions_inner += (
                     f'<a data-dz-confirm-href="{ctx.escape_attr(c.primary_action_url)}" '
                     f"{gate_state}"
-                    f'class="dz-confirm-primary">'
+                    f'class="dz-confirm-primary"{confirm_open}>'
                     f"{ctx.escape(c.primary_label)}</a>"
                 )
             inner = (
@@ -456,14 +469,17 @@ class _RenderInteractiveMixin:
             # Off/pending/draft, no checklist — dual button alone
             actions_inner = ""
             if c.secondary_action_url:
+                sec_open = link_open_discovery_attr_suffix(c.secondary_action_url)
                 actions_inner += (
                     f'<a href="{ctx.escape_attr(c.secondary_action_url)}" '
-                    f'class="dz-confirm-secondary">{ctx.escape(c.secondary_label)}</a>'
+                    f'class="dz-confirm-secondary"{sec_open}>'
+                    f"{ctx.escape(c.secondary_label)}</a>"
                 )
             if c.primary_action_url:
+                confirm_open = confirm_action_open_attr_suffix(c.primary_action_url, via="confirm")
                 actions_inner += (
                     f'<a href="{ctx.escape_attr(c.primary_action_url)}" '
-                    f'class="dz-confirm-primary">'
+                    f'class="dz-confirm-primary"{confirm_open}>'
                     f"{ctx.escape('Confirm')}</a>"
                 )
             inner = f'<div class="dz-confirm-actions">{actions_inner}</div>'

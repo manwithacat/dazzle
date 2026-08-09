@@ -57,6 +57,7 @@ from dazzle.render.fragment.primitives import (
     WorkspaceShell,
     WorkspaceToolbar,
 )
+from dazzle.render.open_discovery import link_open_discovery_attr_suffix
 
 
 def _load_static(name: str) -> str:
@@ -644,7 +645,9 @@ class _RenderShellMixin:
         items = "".join(
             f'<a href="{ctx.escape_attr(a.route)}" hx-boost="true" '
             f'class="dz-menu__item"'
-            f"{self._usage_action_attr(w.workspace_name, a.route, ctx)}>"
+            f"{self._usage_action_attr(w.workspace_name, a.route, ctx)}"
+            # Cycle 1805 — open-discovery stamp for overflow create/view hops.
+            f"{link_open_discovery_attr_suffix(a.route)}>"
             f"{ctx.escape(a.label)}</a>"
             for a in w.overflow_actions
         )
@@ -685,7 +688,10 @@ class _RenderShellMixin:
             actions_inner = "".join(
                 f'<a href="{ctx.escape_attr(a.route)}" hx-boost="true" '
                 f'class="dz-workspace-action"'
-                f"{self._usage_action_attr(w.workspace_name, a.route, ctx)}>"
+                f"{self._usage_action_attr(w.workspace_name, a.route, ctx)}"
+                # Cycle 1805 — open-discovery on heading primary actions
+                # (create/view classify via link_open_discovery_attr_suffix).
+                f"{link_open_discovery_attr_suffix(a.route)}>"
                 f'<svg width="14" height="14" fill="none" stroke="currentColor" '
                 f'viewBox="0 0 24 24" aria-hidden="true">'
                 f'<path stroke-linecap="round" stroke-linejoin="round" '
