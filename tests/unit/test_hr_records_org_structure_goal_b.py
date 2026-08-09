@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B org_structure — hr_records My Team hierarchy."""
+"""Post-5.8 Goal B org_structure — hr_records My Team + Reporting hierarchy."""
 
 from __future__ import annotations
 
@@ -12,6 +12,13 @@ def _my_team_block() -> str:
     text = APP.read_text()
     start = text.index('workspace my_team "My Team":')
     end = text.index('workspace starters_desk "New Starters":', start)
+    return text[start:end]
+
+
+def _reporting_desk_block() -> str:
+    text = APP.read_text()
+    start = text.index('workspace reporting_desk "Reporting":')
+    end = text.index('workspace active_staff "Active Staff":', start)
     return text[start:end]
 
 
@@ -50,3 +57,26 @@ def test_my_team_reporting_lines_are_queue_not_only_timeline() -> None:
     region = block[start:end]
     assert "display: queue" in region
     assert "action: managerlink_detail" in region
+
+
+def test_reporting_desk_span_of_control_before_flat_queue() -> None:
+    """Peer HR tools show span-of-control people columns, not only a link table."""
+    block = _reporting_desk_block()
+    assert "\n  span_of_control:" in block
+    assert "group_by: manager" in block
+    assert "\n  by_department:" in block
+    assert "display: kanban" in block
+    assert "\n  active_links:" in block
+    # People hierarchy before flat queue / dept-name bar theater
+    assert block.index("reporting_pulse:") < block.index("\n  span_of_control:")
+    assert block.index("\n  span_of_control:") < block.index("\n  by_department:")
+    assert block.index("\n  by_department:") < block.index("\n  active_links:")
+    assert "dept_mix:" not in block
+    assert "bar_chart" not in block
+
+
+def test_reporting_desk_ux_focus_org_people() -> None:
+    block = _reporting_desk_block()
+    assert "focus: reporting_pulse, span_of_control, by_department, active_links" in block
+    assert "focus: reporting_pulse, span_of_control, active_links, people_cards" in block
+    assert "span of control" in block.lower() or "Span of control" in block

@@ -1398,8 +1398,11 @@ workspace starters_desk "New Starters":
     empty: "No salary rows yet"
 
 # Eighth product workspace: reporting-line desk.
+# Post-5.8 Goal B org_structure (cycle 1802): peer Workday / Lattice / BambooHR
+# put span-of-control people columns first — not a flat link table + dept-name
+# bar chart theater. Full recursive tree remains TODO #hr-hierarchy.
 workspace reporting_desk "Reporting":
-  purpose: "People reporting lines — who reports to whom across the org (not only department units)"
+  purpose: "People hierarchy — span of control by manager, active lines, then roster (not only department units)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1409,48 +1412,76 @@ workspace reporting_desk "Reporting":
       links: count(ManagerLink)
       people: count(Person)
       departments: count(Department)
+      roles: count(Role)
     tones:
       links: accent
+      people: positive
+
+  # Span of control — columns are managers; cards are report→manager lines.
+  # Buyer-true org parse without recursive descendant DSL.
+  span_of_control:
+    source: ManagerLink
+    sort: start_date desc
+    limit: 40
+    display: kanban
+    group_by: manager
+    action: managerlink_detail
+    empty: "No reporting lines yet — assign a manager to a person"
+
+  # Active assignments by department — who sits where (people placement).
+  by_department:
+    source: Employment
+    filter: end_date = null
+    display: kanban
+    group_by: department
+    sort: start_date desc
+    limit: 40
+    action: employment_detail
+    empty: "No active employment rows"
 
   active_links:
     source: ManagerLink
     sort: start_date desc
     display: queue
-    limit: 25
+    limit: 20
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
+
+  ux:
+    as hr_admin:
+      purpose: "Parse span of control and department placement before flat link thrash"
+      focus: reporting_pulse, span_of_control, by_department, active_links
+    as manager:
+      purpose: "See who sits under each manager and open a reporting line"
+      focus: reporting_pulse, span_of_control, active_links, people_cards
 
   # Work-surface utility: reporting desk people are open-person queue, not inventory grid.
   people_cards:
     source: Person
     display: queue
-    limit: 20
+    limit: 15
     action: person_detail
     empty: "No people on record"
 
   link_trail:
     source: ManagerLink
     display: timeline
-    limit: 20
+    limit: 12
     empty: "No reporting lines yet"
 
-  dept_mix:
-    source: Department
-    display: bar_chart
-    group_by: name
-    aggregate:
-      count: count(Department)
-    empty: "No departments"
-
-  chain_hint:
+  org_readiness:
     display: status_list
     entries:
+      - title: "Span of control"
+        caption: "Kanban columns are managers — open a card for report and manager hubs"
+        icon: "network"
+        state: accent
       - title: "Temporal links"
         caption: "ManagerLink rows are time-bounded — use Time Machine for as-of snapshots"
         icon: "clock"
-        state: accent
+        state: positive
       - title: "Team desk"
-        caption: "Line managers start from My Team for report-first work"
+        caption: "Line managers start from My Team for level and department boards"
         icon: "users"
         state: positive
 

@@ -82,7 +82,8 @@ dedicated screens — fourteen in all, from the staff directory to
 - **My Team** — manager desk: level board + department assignments + reporting
   lines (org structure), then capped people notes and a secondary report roster.
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
-- **Reporting** — ManagerLink trail with people cards and department chart.
+- **Reporting** — span-of-control kanban by manager, department placement board,
+  then active ManagerLink queue and people hubs (not a dept-name bar chart).
 
 ## The technical foundation
 
@@ -123,4 +124,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:51c0d244fb3ccb74a8a7342cbfef0896c965452728270aa8fdcf8e5b56b4023e -->
+<!-- dazzle-spec-brief: sha256:0cfbfe6c197937ec3d3313477bef4626178b9aca7ffc9eb9bf4d38bb0b52115e -->
