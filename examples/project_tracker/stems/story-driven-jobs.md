@@ -6,9 +6,12 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 
 ## Reconstruct
 
-- admin/manager default: `dashboard` = portfolio metrics + open task queue + grid + kanban.
-- member default: `my_tasks` = personal load + assigned queue + board.
-- `project_board` = delivery kanban + unassigned queue + milestones.
+- admin/manager default: `dashboard` = portfolio metrics + composition +
+  conversation + open task queue + grid + kanban (no priority bar-chart void).
+- member default: `my_tasks` = personal load + conversation + assigned queue +
+  board (no chart / twin comment timeline).
+- `project_board` = delivery kanban + unassigned queue + milestones (metrics
+  encode status counts — no project status chart theater).
 - `milestone_plan` = manager schedule desk (milestones + active projects).
 - Project hub related **tasks** and **milestones** are **pull queues**
   (milestones: name+status+end) — not status_cards warehouse chrome.

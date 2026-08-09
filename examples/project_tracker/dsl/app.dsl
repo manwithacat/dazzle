@@ -296,6 +296,9 @@ workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
   # Goal B conversation + document: peer PM tools (Linear / Asana / Jira) put
   # named deliverables and discussion on the first screen — not only task piles.
+  # Goal B empty_region_honesty (cycle 1815): drop bar-chart priority mix theater
+  # that leaves a large void under the portfolio spine — metrics already encode
+  # open/critical load; keep composition + conversation + queues + kanban.
   purpose: "Portfolio metrics, document composition, live discussion trail, and work queues"
 
   portfolio_metrics:
@@ -356,17 +359,22 @@ workspace dashboard "Dashboard":
     group_by: status
     sort: priority desc
 
-  priority_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+  ux:
+    as admin:
+      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
+      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
+    as manager:
+      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
+      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
+    as member:
+      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
+      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
 
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
+  # Goal B empty_region_honesty (cycle 1815): kanban + unassigned + milestones
+  # are the board spine; drop project_status_mix bar chart (metrics already
+  # surface todo/in_progress/done — chart is redundant void risk).
   purpose: "Task and milestone management"
 
   board_metrics:
@@ -400,16 +408,22 @@ workspace project_board "Project Board":
     display: timeline
     sort: start_date asc
 
-  project_status_mix:
-    source: Project
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Project)
-    empty: "No projects"
+  ux:
+    as admin:
+      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, milestones
+    as manager:
+      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, milestones
+    as member:
+      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, milestones
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
 workspace my_tasks "My Tasks":
+  # Goal B empty_region_honesty (cycle 1815): conversation + assigned queue +
+  # kanban is the member spine — drop bar-chart priority mix and twin comment
+  # timeline (live_conversation already shows Message chrome).
   purpose: "Member desk — assigned work, live discussion, and due pressure"
   access: persona(admin, manager, member)
 
@@ -453,22 +467,16 @@ workspace my_tasks "My Tasks":
     group_by: status
     sort: priority desc
 
-  recent_discussion:
-    source: Comment
-    sort: created_at desc
-    limit: 10
-    display: timeline
-    action: comment_detail
-    empty: "No recent comments"
-
-  my_priority_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+  ux:
+    as admin:
+      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
+      focus: load, live_conversation, assigned_queue, board
+    as manager:
+      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
+      focus: load, live_conversation, assigned_queue, board
+    as member:
+      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
+      focus: load, live_conversation, assigned_queue, board
 
 workspace milestone_plan "Milestone Plan":
   purpose: "Schedule desk — milestones before drilling into task lists"

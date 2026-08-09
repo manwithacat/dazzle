@@ -89,6 +89,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_project_tracker_conversation_goal_b.py",
     # project_tracker Goal B org_structure (cycle 1730 people_desk by dept + owners)
     "tests/unit/test_project_tracker_org_structure_goal_b.py",
+    # project_tracker Goal B empty_region_honesty (cycle 1815 prune bar charts / twin dumps)
+    "tests/unit/test_project_tracker_empty_region_goal_b.py",
     # cycle 1714 — person chip + non-person ref Link open discovery (leaf open_discovery)
     "tests/unit/test_ref_link_open_discovery_1714.py",
     # cycle 1719 — create CTA open discovery (CreateButton + empty + related)
