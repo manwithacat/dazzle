@@ -69,14 +69,16 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 
 - **My Invoices** — requester home: line-item composition (document body),
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics.
-- **Approval Desk** — approver home: awaiting-approval queue, approval board,
-  recently decided timeline, and supplier context grid.
+- **Approval Desk** — approver home: live AP discussion as Message/Bubble
+  conversation chrome (not a meta queue of note rows), awaiting-approval queue,
+  approval board, recently decided timeline, and supplier context grid.
 - **Pay Desk** — finance home (multi-panel settlement): metrics, capped
-  ready-to-pay and dispute attention panels, live AP notes, then settle board,
-  payment health, and dispute trail.
+  ready-to-pay and dispute attention panels, live AP notes as Message/Bubble
+  conversation chrome, then settle board, payment health, and dispute trail.
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
 - **Finance Operations** — shared ops overview: line composition + live
-  discussion trail above the fold, metrics, lifecycle funnel, review queues,
+  discussion trail rendered as Message/Bubble conversation chrome (not a meta
+  queue of note rows) above the fold, metrics, lifecycle funnel, review queues,
   ops kanban, and recent paid timeline.
 - **Suppliers** — vendor desk: roster grid, bank refs, invoice trail and
   status mix chart.
@@ -165,4 +167,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:2862ef4fb76dc5e23f27e477c17f73bfcbf49389fbba881e728979ca757d5baa -->
+<!-- dazzle-spec-brief: sha256:71c372a51925634f0303be9479ec43010aa0200298e1231110e1785150b4865c -->

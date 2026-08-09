@@ -26,6 +26,13 @@ def test_finance_desks_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: InvoiceNote" in text
     assert "conversation: count(InvoiceNote)" in text
+    # Goal B interesting_product: hero live threads use Message/Bubble chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    for ws in ("finance_ops", "approval_desk", "pay_desk"):
+        block = text.split(f"workspace {ws}", 1)[1]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, ws
+        assert "source: InvoiceNote" in region
 
 
 def test_invoice_note_seeds_have_domain_true_ap_copy() -> None:

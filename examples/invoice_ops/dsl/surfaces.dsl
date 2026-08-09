@@ -433,11 +433,12 @@ workspace finance_ops "Finance Operations":
     empty: "No line items yet — add lines to a draft invoice"
 
   # Goal B conversation spine — newest AP notes (display_field: body).
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
   live_conversation:
     source: InvoiceNote
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: invoice_note_detail
     empty: "No conversation yet — approval and payment notes appear here"
 
@@ -613,11 +614,12 @@ workspace approval_desk "Approval Desk":
       approved: positive
       conversation: accent
 
+  # display: conversation → Message/Bubble chrome (not queue meta of note rows).
   live_conversation:
     source: InvoiceNote
     sort: created_at desc
     limit: 10
-    display: queue
+    display: conversation
     action: invoice_note_detail
     empty: "No conversation yet — notes on invoices in review appear here"
 
@@ -694,11 +696,12 @@ workspace pay_desk "Pay Desk":
     empty: "No disputes open"
 
   # Goal B conversation spine AFTER dual attention.
+  # display: conversation → Message/Bubble chrome (not queue meta of note rows).
   live_conversation:
     source: InvoiceNote
     sort: created_at desc
     limit: 6
-    display: queue
+    display: conversation
     action: invoice_note_detail
     empty: "No conversation yet — payment and dispute notes appear here"
 
