@@ -676,7 +676,8 @@ surface tester_create "Register Tester":
     field skill_level "Skill Level"
 
   section account "Account Status":
-    field active "Active"
+    # HM Switch — account on-off (boolean_settings_switch)
+    field active "Active" widget=switch
 
   ux:
     purpose: "Register a new field tester"
@@ -700,7 +701,8 @@ surface tester_edit "Edit Tester":
     field skill_level "Skill Level"
 
   section account "Account Status":
-    field active "Active"
+    # HM Switch — account on-off (boolean_settings_switch)
+    field active "Active" widget=switch
 
   ux:
     purpose: "Update tester information"

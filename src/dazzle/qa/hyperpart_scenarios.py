@@ -256,6 +256,25 @@ def _is_bookkeeping_bool(fn: str) -> bool:
     return False
 
 
+# Explicit form widgets that already author a non-checkbox control. These are
+# not "missing switch" residual — e.g. mode_press ``widget=toggle`` on
+# is_starred (catalogue example_homes) must not thrash boolean_settings_switch.
+_SWITCH_ALT_WIDGETS = frozenset(
+    {
+        "toggle",
+        "toggle_group",
+        "radio",
+        "select",
+        "combobox",
+        "tags",
+        "rich_text",
+        "picker",
+        "slider",
+        "textarea",
+    }
+)
+
+
 def _switch_row_for_field(
     *,
     sc: Scenario,
@@ -269,6 +288,9 @@ def _switch_row_for_field(
     """Build one switch opportunity or None if field is out of scope."""
     if widget == "switch":
         return _switch_emit_covered(sc, ent_name, fn, sname)
+    # Already authored to a different form hyperpart (toggle dogfood, etc.).
+    if widget in _SWITCH_ALT_WIDGETS:
+        return None
     # Form control only — skip list/view columns that merely *name* like settings.
     if not formish and not surface_settings:
         return None

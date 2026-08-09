@@ -1030,4 +1030,5 @@ surface user_edit "Edit Team Member":
   section organisation "Organisation":
     field role "Role"
     field department "Department"
-    field is_active "Active"
+    # HM Switch — account on-off (boolean_settings_switch)
+    field is_active "Active" widget=switch

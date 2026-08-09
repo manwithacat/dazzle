@@ -208,7 +208,8 @@ surface contact_edit "Edit Contact":
 
   section extras "Additional Info":
     field notes "Notes"
-    field is_favorite "Favorite"
+    # HM Switch — boolean settings / favorite on-off (boolean_settings_switch)
+    field is_favorite "Favorite" widget=switch
 
   ux:
     purpose: "Update contact information"
