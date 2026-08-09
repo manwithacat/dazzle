@@ -33,13 +33,17 @@ def _render(node: object) -> str:
 
 
 def test_unsupported_display_raises_with_actionable_hint() -> None:
-    """`map` is the canonical deferred display — vendor-neutral
-    geographic rendering is genuinely hard; see `_DEFERRED_DISPLAYS`
-    in coverage.py for the design rationale. The canary stays here
-    because we expect `map` to remain unsupported indefinitely."""
+    """Pin NotImplementedError + actionable hint for a substrate-deferred
+    display. Id is taken from coverage `_DEFERRED_DISPLAYS` so graduating
+    a former deferred (e.g. `map` → Marker board 2026-08-09) cannot
+    leave a hard-coded canary that expects raise forever."""
+    from dazzle.render.fragment.coverage import _DEFERRED_DISPLAYS
+
+    assert _DEFERRED_DISPLAYS, "expected at least one deferred display for canary"
+    deferred = sorted(_DEFERRED_DISPLAYS)[0]
     adapter = WorkspaceRegionAdapter()
-    with pytest.raises(NotImplementedError, match="map"):
-        adapter.build(_FakeRegion("r", display="map"), {})
+    with pytest.raises(NotImplementedError, match=deferred):
+        adapter.build(_FakeRegion("r", display=deferred), {})
 
 
 # ───────────────── Timeline ───────────────────────

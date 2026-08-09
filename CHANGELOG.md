@@ -31,6 +31,7 @@
   SPECIFICATION + brief fingerprint refreshed; stills recaptured.
 
 ### Fixed
+- **region adapter deferred-display canary** — `test_unsupported_display_raises_with_actionable_hint` now pins NotImplementedError against coverage `_DEFERRED_DISPLAYS` (currently `pdf_viewer`) instead of hard-coding `map`, which graduated with the marker emitter and red'd main CI.
 - **Switch scenario residual false positive on FeedbackReport** — `boolean_settings_switch`
   no longer auto_seeds product residual for headless platform `notification_sent`
   bookkeeping (toast idempotency). Require settings-like signal; skip headless/platform
