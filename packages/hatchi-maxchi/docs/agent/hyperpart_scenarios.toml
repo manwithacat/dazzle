@@ -220,18 +220,41 @@ example_homes = ["simple_task.admin_dashboard.task_faq"]
 scanner = "catalogue_only"
 
 [[scenario]]
+id = "chat_message_row_under_conversation"
+hyperpart = "message"
+authoring = "display: conversation"
+layer = "region"
+job = "Each chat turn is a Message row (media + author/time + Bubble), not a bare bubble stack."
+use_when = [
+  "region uses display: conversation",
+  "rows need speaker meta / orientation (in|out) around speech",
+]
+refuse_when = [
+  "system activity timeline without chat turn structure (use activity_feed)",
+  "single overflow menu of actions (use menu)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "medium"
+residual_lane = "none"
+example_homes = ["support_tickets live_conversation", "simple_task sample_thread"]
+scanner = "catalogue_only"
+
+[[scenario]]
 id = "live_conversation_thread"
 hyperpart = "message-scroller"
-authoring = "planned:display:conversation"
+authoring = "planned:display:conversation + message-scroller shell"
 layer = "region"
-job = "Live customer↔agent (or similar) thread composes message-scroller + message + bubble."
+job = "Live customer↔agent thread still wants message-scroller chrome around Message+Bubble rows."
 use_when = [
   "region is a chronological comment/message thread for support or collab",
   "primary job is read/write conversation, not field inventory",
+  "transcript needs sticky scroller chrome beyond a plain stack of Message rows",
 ]
 refuse_when = [
   "plain activity_feed of system events (use activity_feed)",
   "single-field note list without thread UX",
+  "Message rows alone already cover the job (message emit_covered)",
 ]
 status_if_fit = "planned_emitter"
 ownership = "framework"

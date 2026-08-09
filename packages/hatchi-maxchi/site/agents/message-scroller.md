@@ -134,7 +134,8 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 
 Dual-lock unit is the message root. Author/time, bubble body, and
 ``data-dz-from`` orientation are host-owned. Class ``.dz-message`` is the
-stable substrate root (gallery CSS; no FragmentRenderer emit yet).
+stable substrate root (gallery CSS; Fragment ``Message`` +
+``display: conversation`` emit the spine with nested ``Bubble``).
 """
 
 from contracts._kit import DomContract, Node
@@ -165,8 +166,8 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 
 Dual-lock unit is the bubble root. Body copy and ``data-dz-from`` orientation
 are host-owned. Class ``.dz-bubble`` is the stable substrate root (gallery CSS;
-Fragment ``Bubble`` + ``display: conversation`` emit the spine). Compose
-inside message rows for full chat UI.
+Fragment ``Bubble`` nests inside ``Message`` under ``display: conversation``).
+Compose inside message rows for full chat UI.
 """
 
 from contracts._kit import DomContract, Node

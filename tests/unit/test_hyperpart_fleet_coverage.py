@@ -129,9 +129,9 @@ SIGNALS: dict[str, object] = {
     "carousel": r"display:\s*carousel",
     # menubar: true → shell Menubar → .dz-menubar (2026-08-09)
     "menubar": r"menubar:\s*true",
-    # display: conversation → Bubble stack → .dz-bubble (2026-08-08)
+    # display: conversation → Message(.dz-message) + Bubble(.dz-bubble) (2026-08-09)
     "bubble": r"display:\s*conversation",
-    "message": "exempt:no Dazzle emitter yet (gallery chat message row)",
+    "message": r"display:\s*conversation",
     "message-scroller": "exempt:no Dazzle emitter yet (gallery chat transcript scroller)",
     "navigation-menu": "exempt:no Dazzle emitter yet (gallery top mega-nav shell)",
     # display: map → MapBoard of Marker pins → .dz-marker (2026-08-09)

@@ -23,6 +23,7 @@ from dazzle.render.fragment.primitives.content import (
     Icon,
     MapBoard,
     Marker,
+    Message,
     Skeleton,
     Text,
 )
@@ -195,6 +196,7 @@ __all__ = [
     "Icon",
     "Badge",
     "Bubble",
+    "Message",
     "HoverCard",
     "Marker",
     "MapBoard",

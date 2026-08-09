@@ -2,7 +2,8 @@
 
 Dual-lock unit is the message root. Author/time, bubble body, and
 ``data-dz-from`` orientation are host-owned. Class ``.dz-message`` is the
-stable substrate root (gallery CSS; no FragmentRenderer emit yet).
+stable substrate root (gallery CSS; Fragment ``Message`` +
+``display: conversation`` emit the spine with nested ``Bubble``).
 """
 
 from contracts._kit import DomContract, Node

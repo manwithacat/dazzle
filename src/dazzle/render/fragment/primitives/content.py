@@ -1,10 +1,14 @@
-"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble, HoverCard.
+"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble, Message, HoverCard.
 
 These are the leaf-level visual primitives. They do not contain children
-(except EmptyState, which contains an optional action). Most apps' visible
-text routes through Text or Heading; status indicators route through Badge.
-Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``).
-HoverCard is the rich preview affordance (HM dual-lock ``.dz-hover-card``)."""
+(except EmptyState, which contains an optional action; Message nests a
+Bubble). Most apps' visible text routes through Text or Heading; status
+indicators route through Badge. Bubble is the chat speech shell (HM
+dual-lock ``.dz-bubble``). Message is the chat row (media + meta + bubble;
+HM dual-lock ``.dz-message``). HoverCard is the rich preview affordance
+(HM dual-lock ``.dz-hover-card``)."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
@@ -14,6 +18,7 @@ _BADGE_VARIANTS = ("default", "info", "success", "warning", "danger")
 _ICON_SIZES = ("sm", "md", "lg")
 _BUBBLE_FROM = ("in", "out")
 _BUBBLE_TONES = ("", "danger")
+_MESSAGE_FROM = ("in", "out")
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,8 +86,7 @@ class Bubble:
 
     Gallery spine: rounded inbound/outbound speech shell. Orientation via
     ``data-dz-from="in|out"``; optional ``data-dz-tone="danger"``. Compose
-    under ``display: conversation`` (stack of bubbles from Comment rows or
-    static entries) or nest inside a future Message row.
+    under ``display: conversation`` (nest inside Message row).
 
     Dual-lock root: ``.dz-bubble`` (contracts/bubble.py).
     """
@@ -98,6 +102,38 @@ class Bubble:
             raise ValueError(f"invalid Bubble from_ {self.from_!r}; expected in|out")
         if self.tone not in _BUBBLE_TONES:
             raise ValueError(f"invalid Bubble tone {self.tone!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class Message:
+    """HM Message hyperpart — dual-lock ``.dz-message`` chat row.
+
+    Gallery spine: optional media chip + author/time meta + nested Bubble.
+    Orientation via ``data-dz-from="in|out"`` (flex reverse for outbound).
+    Compose under ``display: conversation`` (stack of Message rows).
+
+    Dual-lock root: ``.dz-message`` (contracts/message.py).
+    """
+
+    bubble: Bubble
+    author: str = ""
+    time_label: str = ""
+    time_datetime: str = ""
+    media_label: str = ""
+    from_: Literal["in", "out"] | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.bubble, Bubble):
+            raise ValueError("Message.bubble must be a Bubble")
+        orient = self.from_ if self.from_ is not None else self.bubble.from_
+        if orient not in _MESSAGE_FROM:
+            raise ValueError(f"invalid Message from_ {orient!r}; expected in|out")
+
+    @property
+    def orientation(self) -> Literal["in", "out"]:
+        if self.from_ is not None:
+            return self.from_
+        return self.bubble.from_
 
 
 @dataclass(frozen=True, slots=True)

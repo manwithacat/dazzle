@@ -52,6 +52,7 @@ from dazzle.render.fragment.primitives import (
     LazyTabPanel,
     MapBoard,
     Marker,
+    Message,
     Modal,
     Region,
     Row,
@@ -125,6 +126,39 @@ class _RenderLayoutMixin:
             paragraphs = [str(b.text).strip()]
         body = "".join(f"<p>{ctx.escape(p)}</p>" for p in paragraphs)
         return f'<div class="dz-bubble" data-dz-from="{from_attr}"{tone_attr}>{body}</div>'
+
+    def _emit_message(self, m: Message, ctx: RenderContext) -> str:
+        """HM Message — dual-lock ``.dz-message`` chat row (media + meta + bubble).
+
+        Gallery spine: optional ``.dz-message__media`` chip, author/time meta,
+        nested Bubble under ``.dz-message__body``. Orientation via
+        ``data-dz-from`` (flex reverse for outbound). Root is contracts/message.py.
+        """
+        orient = ctx.escape_attr(m.orientation)
+        media = ""
+        if m.media_label and str(m.media_label).strip():
+            media = (
+                f'<span class="dz-message__media" aria-hidden="true">'
+                f"{ctx.escape(str(m.media_label).strip())}</span>"
+            )
+        meta_bits: list[str] = []
+        if m.author and str(m.author).strip():
+            meta_bits.append(
+                f'<span class="dz-message__author">{ctx.escape(str(m.author).strip())}</span>'
+            )
+        if m.time_label and str(m.time_label).strip():
+            dt = f' datetime="{ctx.escape_attr(m.time_datetime)}"' if m.time_datetime else ""
+            meta_bits.append(
+                f'<time class="dz-message__time"{dt}>{ctx.escape(str(m.time_label).strip())}</time>'
+            )
+        meta = f'<div class="dz-message__meta">{"".join(meta_bits)}</div>' if meta_bits else ""
+        bubble_html = self._emit_bubble(m.bubble, ctx)
+        return (
+            f'<div class="dz-message" data-dz-from="{orient}">'
+            f"{media}"
+            f'<div class="dz-message__body">{meta}{bubble_html}</div>'
+            f"</div>"
+        )
 
     def _emit_hover_card(self, h: HoverCard, ctx: RenderContext) -> str:
         """HM HoverCard — dual-lock ``.dz-hover-card`` rich preview panel.

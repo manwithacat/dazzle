@@ -138,7 +138,6 @@
   "services.DomainServiceSpec.stub_language",
   "sitespec.FAQItem.answer",
   "sitespec.LayoutSpec.section_backgrounds",
-  "sitespec.TestimonialItem.author",
   "sitespec.TestimonialItem.avatar",
   "test_design.TestGap.related_entities",
   "test_design.TestGapAnalysis.suggested_designs",

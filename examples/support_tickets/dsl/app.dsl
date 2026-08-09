@@ -477,7 +477,7 @@ workspace ticket_queue "Ticket Queue":
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
-  # Hyperpart emitter dogfood: display: conversation → Bubble stack (.dz-bubble)
+  # Hyperpart emitter dogfood: display: conversation → Message(.dz-message) + Bubble(.dz-bubble)
   live_conversation:
     source: Comment
     sort: created_at desc

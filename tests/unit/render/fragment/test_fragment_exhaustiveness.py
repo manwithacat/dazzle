@@ -96,6 +96,7 @@ from dazzle.render.fragment import (
     Menubar,
     MenubarAction,
     MenubarMenu,
+    Message,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -398,6 +399,13 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is Bubble:
         return Bubble(text="Hello", from_="in")
+    if primitive_type is Message:
+        return Message(
+            bubble=Bubble(text="Hello", from_="in"),
+            author="Maya",
+            time_label="10:02",
+            media_label="MR",
+        )
     if primitive_type is HoverCard:
         return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")
     if primitive_type is Marker:

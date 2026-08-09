@@ -4,7 +4,7 @@ Houses the timeline-family builders. Chronological / event-stream Surfaces:
 
   - _build_timeline       Timeline of TimelineEvents with rich fields
   - _build_activity_feed  chronological dot + bubble feed
-  - _build_conversation   stack of Bubble hyperparts (display: conversation)
+  - _build_conversation   stack of Message (+Bubble) hyperparts (display: conversation)
   - _build_day_timeline   vertical scroll of slot cards (#1016)
   - _build_task_inbox     workflow-led prioritised due-action list (#1015)
 
@@ -27,6 +27,7 @@ from dazzle.render.fragment import (
     DayTimelineSlot,
     EmptyState,
     Fragment,
+    Message,
     Stack,
     Surface,
     TaskInboxItem,
@@ -107,6 +108,57 @@ def _conversation_orientation(item: dict[str, Any]) -> str:
         if val is False or (isinstance(val, str) and val.strip().lower() in ("false", "0", "no")):
             return "in"
     return "in"
+
+
+def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
+    """Return (time_label, time_datetime) from common timestamp fields."""
+    for key in ("created_at", "timestamp", "time", "sent_at", "updated_at"):
+        raw = item.get(key)
+        if raw is None or raw == "":
+            continue
+        text = str(raw).strip()
+        if not text:
+            continue
+        # Prefer a short clock label when ISO-ish; keep full string as datetime.
+        label = text
+        if "T" in text:
+            # 2026-07-12T10:02:00Z → 10:02
+            clock = text.split("T", 1)[1]
+            label = clock[:5] if len(clock) >= 5 else clock
+        return label, text
+    return "", ""
+
+
+def _media_initials(author: str) -> str:
+    words = [w for w in author.strip().split() if w]
+    if not words:
+        return ""
+    return "".join(w[0] for w in words[:2]).upper()
+
+
+def _conversation_message(
+    text: str,
+    orient: str,
+    *,
+    author: str = "",
+    time_label: str = "",
+    time_datetime: str = "",
+    media_label: str = "",
+) -> Message:
+    """Build a Message row wrapping a Bubble for conversation stacks."""
+    bubble = Bubble(text=text, from_=orient)  # type: ignore[arg-type]
+    author_s = author.strip()
+    if not author_s:
+        author_s = "Agent" if orient == "out" else "Customer"
+    media = media_label.strip() or _media_initials(author_s)
+    return Message(
+        bubble=bubble,
+        author=author_s,
+        time_label=time_label,
+        time_datetime=time_datetime,
+        media_label=media,
+        from_=orient,  # type: ignore[arg-type]
+    )
 
 
 def _activity_drill_by_id(items: list[dict[str, Any]], detail_url_template: str) -> dict[int, str]:
@@ -286,13 +338,14 @@ class _BuildersTimelineMixin:
         return _wrap_surface(title, "report", body)
 
     def _build_conversation(self, region: Any, ctx: RegionContext) -> Surface:
-        """``display: conversation`` — stack of HM Bubble dual-lock shells.
+        """``display: conversation`` — stack of HM Message rows (Bubble inside).
 
-        First emitter path for the bubble hyperpart (compose under conversation).
-        Live rows (``ctx["items"]``) map ``content``/body fields to bubble text;
-        ``is_internal`` (or ``from`` / ``direction`` in|out) picks orientation
-        (internal notes → outbound agent surface). Static ``status_entries``
-        (``entries:``) dogfood the same spine when title is ``in``/``out``.
+        First emitter path for the **message** hyperpart (compose under
+        conversation). Live rows (``ctx["items"]``) map content/body to bubble
+        text; actor keys + timestamps fill meta; ``is_internal`` (or ``from`` /
+        ``direction`` in|out) picks orientation (internal notes → outbound).
+        Static ``status_entries`` (``entries:``) dogfood the same spine when
+        title is ``in``/``out``.
         """
         title = _region_title(region)
         empty_msg = str(
@@ -300,7 +353,7 @@ class _BuildersTimelineMixin:
             or getattr(region, "empty_message", None)
             or "No conversation yet."
         )
-        bubbles: list[Bubble] = []
+        messages: list[Message] = []
 
         for item in list(ctx.get("items", []) or []):
             if not isinstance(item, dict):
@@ -309,24 +362,60 @@ class _BuildersTimelineMixin:
             if not text:
                 continue
             orient = _conversation_orientation(item)
-            bubbles.append(Bubble(text=text, from_=orient))  # type: ignore[arg-type]
+            author = (
+                _activity_actor_label(item)
+                or str(item.get("user_name") or item.get("name") or "").strip()
+            )
+            time_label, time_dt = _conversation_time(item)
+            media = str(item.get("media") or item.get("initials") or "").strip()
+            messages.append(
+                _conversation_message(
+                    text,
+                    orient,
+                    author=author,
+                    time_label=time_label,
+                    time_datetime=time_dt,
+                    media_label=media,
+                )
+            )
 
-        if not bubbles:
+        if not messages:
             for raw in list(ctx.get("status_entries") or []):
                 if not isinstance(raw, dict):
                     continue
-                text = str(raw.get("body") or raw.get("caption") or "").strip()
+                # Prefer body as speech; caption is author when body is set,
+                # otherwise caption is legacy speech text (bubble dogfood).
+                body = str(raw.get("body") or raw.get("message") or "").strip()
+                caption = str(raw.get("caption") or "").strip()
+                if body:
+                    text = body
+                    author = str(raw.get("author") or caption or "").strip()
+                else:
+                    text = caption
+                    author = str(raw.get("author") or "").strip()
                 if not text:
                     continue
                 tag = str(raw.get("title") or "").strip().lower()
                 orient = tag if tag in ("in", "out") else "in"
-                bubbles.append(Bubble(text=text, from_=orient))  # type: ignore[arg-type]
+                time_label = str(raw.get("time") or raw.get("time_label") or "").strip()
+                time_dt = str(raw.get("datetime") or raw.get("time_datetime") or "").strip()
+                media = str(raw.get("media") or "").strip()
+                messages.append(
+                    _conversation_message(
+                        text,
+                        orient,
+                        author=author,
+                        time_label=time_label,
+                        time_datetime=time_dt,
+                        media_label=media,
+                    )
+                )
 
-        if not bubbles:
+        if not messages:
             body_empty: Fragment = EmptyState(title=empty_msg, description="")
             return _wrap_surface(title, "report", body_empty)
 
-        body: Fragment = Stack(children=tuple(bubbles), gap="sm")
+        body: Fragment = Stack(children=tuple(messages), gap="sm")
         return _wrap_surface(title, "report", body)
 
     def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:

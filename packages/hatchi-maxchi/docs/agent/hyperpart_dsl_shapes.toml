@@ -465,9 +465,9 @@ agent_surface = "shell"
 id = "message"
 class = "compose"
 layer = "region"
-dsl = "compose under display: conversation"
-status = "planned"
-job = "Use message via compose under display: conversation"
+dsl = "compose under display: conversation → Message + Bubble (.dz-message)"
+status = "live"
+job = "Use message via compose under display: conversation → Message + Bubble (.dz-message)"
 agent_surface = "pick-a-work-surface"
 
 [[part]]

@@ -83,6 +83,7 @@ from dazzle.render.fragment.primitives import (
     MapBoard,
     Marker,
     Menubar,
+    Message,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -253,6 +254,8 @@ class FragmentRenderer(
                 return self._emit_badge(fragment, ctx)
             case Bubble():
                 return self._emit_bubble(fragment, ctx)
+            case Message():
+                return self._emit_message(fragment, ctx)
             case HoverCard():
                 return self._emit_hover_card(fragment, ctx)
             case Marker():

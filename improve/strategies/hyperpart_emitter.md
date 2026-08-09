@@ -112,3 +112,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Controller: `dz-menubar.js` exclusive open + outside/Escape dismiss
 - Dogfood: design_studio `menubar: true`
 - Tests: `test_menubar_emitter`
+
+## Reference ship: message (2026-08-09)
+
+- `display: conversation` → stack of `Message` (each nests `Bubble`) → `.dz-message` + `.dz-bubble`
+- Fragment: `Message(bubble=…, author=…, time_label=…, media_label=…)` dual-lock row
+- Optional media chip + author/time meta; orientation `data-dz-from` flex-reverses outbound
+- Live rows: actor keys + timestamps → meta; `is_internal` → outbound
+- Dogfood: support_tickets `live_conversation`; simple_task `sample_thread`
+- Tests: `test_message_emitter` (+ bubble pins still nest)

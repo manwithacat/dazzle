@@ -26,6 +26,7 @@ from dazzle.render.fragment.primitives.content import (
     Icon,
     MapBoard,
     Marker,
+    Message,
     Skeleton,
     Text,
 )
@@ -162,6 +163,7 @@ Fragment = (
     | Icon
     | Badge
     | Bubble
+    | Message
     | HoverCard
     | Marker
     | MapBoard
