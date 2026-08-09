@@ -181,14 +181,17 @@ class TestColumnVisibilityMenu:
 
     def test_trigger_is_a_details_summary(self) -> None:
         html = _render(self._menu((("name", "Name"), ("status", "Status"))))
-        assert '<details class="dz-table-col-menu">' in html
-        assert '<summary class="dz-table-col-menu-trigger"' in html
+        # Free content under trigger → dual-lock popover + host col-menu classes
+        assert 'class="dz-popover dz-table-col-menu"' in html
+        assert "data-dz-popover" in html
+        assert "dz-table-col-menu-trigger" in html
         assert 'aria-label="Toggle column visibility"' in html
         assert "colMenuOpen" not in html, "no Alpine open/close state"
 
     def test_panel_is_a_plain_disclosure(self) -> None:
         html = _render(self._menu((("name", "Name"),)))
-        assert 'class="dz-table-col-menu-panel"' in html
+        assert "dz-popover__panel" in html
+        assert "dz-table-col-menu-panel" in html
         # A details disclosure can't back the ARIA menu keyboard contract —
         # the roles are deliberately dropped (Bucket-B precedent).
         assert 'role="menu"' not in html

@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- **popover hyperpart emitter** — `Popover` Fragment dual-lock (`details.dz-popover`); list column-visibility free panel dual-locks as popover (not menu); catalogue planned→live; dogfood any list with >3 columns.
 - **navigation-menu hyperpart emitter** — `NavigationMenu` Fragment dual-lock (`.dz-navigation-menu`); sitespec `layout.nav` mounts product top nav in site chrome; catalogue planned→live; dogfood all example sitespec public navs.
 - **message hyperpart emitter** — `Message` Fragment dual-lock (`.dz-message` row with optional media/meta + nested `Bubble`); `display: conversation` stacks Message rows; catalogue planned→live; dogfood support_tickets `live_conversation` + simple_task `sample_thread`.
 - **menubar hyperpart emitter** — `Menubar` / `MenubarMenu` / `MenubarAction` Fragment dual-lock (`.dz-menubar`); opt-in via `menubar: true` on the app block; shell mounts from nav groups in topbar leading; dogfood design_studio.

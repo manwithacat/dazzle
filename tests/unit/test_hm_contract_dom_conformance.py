@@ -1753,13 +1753,9 @@ def _emit_root_only_html(part_id: str) -> str:
             "</ul></nav>"
         )
     if part_id == "popover":
-        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-128).
-        return (
-            '<details class="dz-popover">'
-            '<summary class="dz-button" data-dz-variant="secondary">Open</summary>'
-            '<div class="dz-popover__content">Popover body</div>'
-            "</details>"
-        )
+        from dazzle.render.fragment.primitives.content import Popover
+
+        return r.render(Popover(trigger="Open", title="Details", body="Popover body"))
     if part_id == "switch":
         # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-129).
         return (

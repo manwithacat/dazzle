@@ -18,7 +18,7 @@
 #   agent_surface — pick-a-surface | pick-a-work-surface | default | shell | none
 
 version = 1
-updated = "2026-08-08"
+updated = "2026-08-09"
 
 [[part]]
 id = "accordion"
@@ -537,9 +537,9 @@ agent_surface = "pick-a-work-surface"
 id = "popover"
 class = "chrome"
 layer = "affordance"
-dsl = "host-local data-dz-popover / rare widget"
-status = "planned"
-job = "Use popover via host-local data-dz-popover / rare widget"
+dsl = "host-local Popover fragment / list column-visibility free panel"
+status = "live"
+job = "Use popover via Popover fragment or list Columns free panel (.dz-popover)"
 agent_surface = "shell"
 
 [[part]]

@@ -115,6 +115,7 @@ from dazzle.render.fragment import (
     PivotDimSpec,
     PivotTable,
     PivotTableRegion,
+    Popover,
     ProfileCard,
     QueueBadgeColumn,
     QueueDateColumn,
@@ -448,6 +449,8 @@ def _sample_for(primitive_type: type) -> object:
         )
     if primitive_type is HoverCard:
         return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")
+    if primitive_type is Popover:
+        return Popover(trigger="Details", title="Dimensions", body="Filters and previews.")
     if primitive_type is Marker:
         return Marker(label="HQ", tone="success", x_pct=40.0, y_pct=55.0)
     if primitive_type is MapBoard:

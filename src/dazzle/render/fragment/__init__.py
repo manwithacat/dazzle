@@ -117,6 +117,7 @@ from dazzle.render.fragment.primitives import (
     PivotDimSpec,
     PivotTable,
     PivotTableRegion,
+    Popover,
     ProfileCard,
     QueueBadgeColumn,
     QueueDateColumn,
@@ -397,6 +398,7 @@ __all__ = [
     "Message",
     "MessageScroller",
     "HoverCard",
+    "Popover",
     "Marker",
     "MapBoard",
 ]

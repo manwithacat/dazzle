@@ -109,7 +109,8 @@ SIGNALS: dict[str, object] = {
     "diagram": r"display:\s*diagram",
     "separator": "exempt:visual primitive, no DSL surface",
     "icon": "always",  # via command-palette results (lazy /command fetch) — thin anchor
-    "popover": "exempt:no Dazzle emitter yet (gallery primitive)",
+    # list column-visibility free panel dual-locks as .dz-popover (2026-08-09)
+    "popover": "always",
     "tooltip": "exempt:no Dazzle emitter yet (gallery primitive)",
     "alert": "exempt:no Dazzle emitter yet (form errors are form-chrome dz-form-errors; the banner is a CSS-only different contract)",
     # Shell toast stack (#dz-toast) + with_toast OOB host — always in chrome.

@@ -49,6 +49,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Chat transcript viewport (scrollable stack) | `message-scroller` | `display: conversation` / `MessageScroller` fragment (wraps Message) |
 | Multi-image stage strip (prev/next) | `carousel` | `display: carousel` / `Carousel` fragment |
 | Rich person/entity preview on hover | `hover-card` | Person chip compose guest / `HoverCard` fragment (no region verb) |
+| Free content under a trigger (filters/preview/columns) | `popover` | `Popover` fragment / list Columns free panel (not menu) |
 | Map / plan pin chrome (label + tone) | `marker` | `display: map` / `Marker` fragment (host placement) |
 | List + sibling detail on one workspace | `master-detail` | `stage: dual_pane_flow` + LIST/DETAIL pair shell |
 | App chrome File/Edit/View command strip | `menubar` | `menubar: true` on app block → topbar `Menubar` |

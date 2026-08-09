@@ -139,3 +139,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Optional mega branches (`details` + `data-dz-layout=mega`); controller exclusive open
 - Dogfood: every example sitespec public nav (design_studio Home / Sign In)
 - Tests: `test_navigation_menu_emitter`
+
+## Reference ship: popover (2026-08-09)
+
+- Host-local free panel: list `ColumnVisibilityMenu` → dual-lock `.dz-popover` + host col-menu classes
+- Fragment: `Popover(trigger=…, title=…, body=…)` dual-lock `details.dz-popover`
+- Light-dismiss: `dz-details-light-dismiss.js` (Esc + outside); optional `data-dz-dismiss`
+- Not menu (actions), not dialog (modal), not tooltip (timeout)
+- Dogfood: any list with >3 columns (Columns free panel)
+- Tests: `test_popover_emitter`

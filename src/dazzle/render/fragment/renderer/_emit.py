@@ -97,6 +97,7 @@ from dazzle.render.fragment.primitives import (
     PipelineSteps,
     PivotTable,
     PivotTableRegion,
+    Popover,
     ProfileCard,
     QueueRegion,
     Radar,
@@ -264,6 +265,8 @@ class FragmentRenderer(
                 return self._emit_message_scroller(fragment, ctx)
             case HoverCard():
                 return self._emit_hover_card(fragment, ctx)
+            case Popover():
+                return self._emit_popover(fragment, ctx)
             case Marker():
                 return self._emit_marker(fragment, ctx)
             case MapBoard():

@@ -55,6 +55,7 @@ from dazzle.render.fragment.primitives import (
     Message,
     MessageScroller,
     Modal,
+    Popover,
     Region,
     Row,
     Skeleton,
@@ -204,6 +205,31 @@ class _RenderLayoutMixin:
             f'<p class="dz-hover-card__title">{title}</p>'
             f"{desc_html}"
             f"</div></div>"
+        )
+
+    def _emit_popover(self, p: Popover, ctx: RenderContext) -> str:
+        """HM Popover — dual-lock ``details.dz-popover`` free-content panel.
+
+        Canonical spine: ``<details>`` + summary trigger (button chrome) +
+        ``.dz-popover__panel``. ``open=True`` uses native open attribute.
+        Align via ``data-dz-align``; light-dismiss via optional
+        ``data-dz-dismiss``. Root is contracts/popover.py dual-lock.
+        """
+        open_attr = " open" if p.open else ""
+        align_attr = f' data-dz-align="{ctx.escape_attr(p.align)}"' if p.align else ""
+        dismiss_attr = f' data-dz-dismiss="{ctx.escape_attr(p.dismiss)}"' if p.dismiss else ""
+        trigger = ctx.escape(p.trigger)
+        title_html = (
+            f'<div class="dz-popover__title">{ctx.escape(p.title)}</div>' if p.title else ""
+        )
+        body_html = f'<p class="dz-popover__body">{ctx.escape(p.body)}</p>' if p.body else ""
+        return (
+            f'<details class="dz-popover" data-dz-popover{open_attr}'
+            f"{align_attr}{dismiss_attr}>"
+            f'<summary class="dz-button" data-dz-variant="outline">{trigger}</summary>'
+            f'<div class="dz-popover__panel">'
+            f"{title_html}{body_html}"
+            f"</div></details>"
         )
 
     def _emit_marker(self, m: Marker, ctx: RenderContext) -> str:

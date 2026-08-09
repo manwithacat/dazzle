@@ -1,5 +1,5 @@
 """Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton,
-Bubble, Message, MessageScroller, HoverCard.
+Bubble, Message, MessageScroller, HoverCard, Popover.
 
 These are the leaf-level visual primitives. They do not contain children
 (except EmptyState, which contains an optional action; Message nests a
@@ -9,7 +9,8 @@ Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``). Message is
 the chat row (media + meta + bubble; HM dual-lock ``.dz-message``).
 MessageScroller is the transcript viewport (HM dual-lock
 ``.dz-message-scroller``). HoverCard is the rich preview affordance
-(HM dual-lock ``.dz-hover-card``)."""
+(HM dual-lock ``.dz-hover-card``). Popover is free content under a trigger
+(HM dual-lock ``details.dz-popover``)."""
 
 from __future__ import annotations
 
@@ -194,6 +195,40 @@ class HoverCard:
             raise ValueError("HoverCard requires non-empty trigger")
         if not self.title or not str(self.title).strip():
             raise ValueError("HoverCard requires non-empty title")
+
+
+_POPOVER_ALIGNS = ("", "start", "end")
+
+
+@dataclass(frozen=True, slots=True)
+class Popover:
+    """HM Popover hyperpart — dual-lock ``details.dz-popover`` free panel.
+
+    Gallery spine: native ``<details>`` + ``summary`` trigger +
+    ``.dz-popover__panel`` free content. Light-dismiss via
+    ``dz-details-light-dismiss.js`` (Esc + outside; optional
+    ``data-dz-dismiss`` / ``data-dz-dismiss-ms``). Not a menu (action list),
+    not a dialog (modal trap), not a tooltip (no default timeout).
+
+    Dual-lock root: ``details.dz-popover`` (contracts/popover.py).
+    Host-local path: list column-visibility free panels dual-lock as
+    popover; compose explicitly as a Fragment for filters/previews.
+    """
+
+    trigger: str
+    title: str = ""
+    body: str = ""
+    open: bool = False
+    align: Literal["", "start", "end"] = ""
+    dismiss: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.trigger or not str(self.trigger).strip():
+            raise ValueError("Popover requires non-empty trigger")
+        if not (self.title or self.body):
+            raise ValueError("Popover requires title and/or body content")
+        if self.align not in _POPOVER_ALIGNS:
+            raise ValueError(f"invalid Popover align {self.align!r}")
 
 
 _MARKER_TONES = ("", "success", "warning", "danger")

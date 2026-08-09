@@ -391,3 +391,27 @@ severity = "low"
 residual_lane = "none"
 example_homes = ["contact_manager contacts (contact_list + contact_detail)"]
 scanner = "catalogue_only"
+
+[[scenario]]
+id = "list_columns_free_panel_popover"
+hyperpart = "popover"
+authoring = "host-local Popover / ColumnVisibilityMenu dual-lock"
+layer = "affordance"
+job = "Free content under a trigger (column toggles, filters, previews) uses HM popover, not menu or dialog."
+use_when = [
+  "list has more than three columns and operators toggle visibility",
+  "host needs filters/preview/form fragment under one control without modal trap",
+  "compose Popover fragment for filters or quick facts",
+]
+refuse_when = [
+  "action list from one button (use menu)",
+  "modal multi-control body (use dialog)",
+  "rich person identity on hover (use hover-card)",
+  "auto-timeout glance hint (use tooltip data-tooltip)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["any list surface with >3 visible columns (ColumnVisibilityMenu)"]
+scanner = "catalogue_only"

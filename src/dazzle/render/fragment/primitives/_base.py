@@ -28,6 +28,7 @@ from dazzle.render.fragment.primitives.content import (
     Marker,
     Message,
     MessageScroller,
+    Popover,
     Skeleton,
     Text,
 )
@@ -169,6 +170,7 @@ Fragment = (
     | Message
     | MessageScroller
     | HoverCard
+    | Popover
     | Marker
     | MapBoard
     | EmptyState

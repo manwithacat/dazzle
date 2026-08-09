@@ -698,12 +698,15 @@ class _RenderTablesMixin:
         return self._emit_related_cards_or_files(tabs, ctx, kind="files")
 
     def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
-        """Convergence C2.1: the column-visibility menu as a native <details>
-        disclosure (the HM `.dz-menu` idiom — no open/close JS), with the
-        toggles on the delegated `dz-grid-cols.js` extension's seam
-        (`data-dz-grid-col-toggle`; checked = visible; persisted per grid id).
-        The ARIA menu roles are deliberately dropped — a details disclosure
-        can't back the menu keyboard contract (the Bucket-B precedent)."""
+        """Convergence C2.1 + popover dual-lock: column-visibility free panel.
+
+        Free content under a trigger → HM ``popover`` (not menu action list).
+        Outer root dual-locks ``details.dz-popover`` (contracts/popover.py) and
+        keeps ``dz-table-col-menu`` host classes for grid-cols CSS/seams.
+        Toggles ride ``data-dz-grid-col-toggle`` (checked = visible). ARIA menu
+        roles deliberately dropped — details can't back the menu keyboard
+        contract (Bucket-B). Light-dismiss via dz-details-light-dismiss.js.
+        """
         items: list[str] = []
         for key, label in m.columns:
             ck = ctx.escape_attr(key)
@@ -716,8 +719,10 @@ class _RenderTablesMixin:
                 f"<span>{ctx.escape(label)}</span></label>"
             )
         return (
-            '<details class="dz-table-col-menu">'
-            '<summary class="dz-table-col-menu-trigger" '
+            '<details class="dz-popover dz-table-col-menu" data-dz-popover '
+            'data-dz-align="end">'
+            '<summary class="dz-button dz-table-col-menu-trigger" '
+            'data-dz-variant="outline" '
             'aria-label="Toggle column visibility">'
             '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
             'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
@@ -728,7 +733,7 @@ class _RenderTablesMixin:
             '<rect x="10" y="1" width="3" height="12" rx="0.5" stroke="currentColor" '
             'stroke-width="1.5"/>'
             "</svg>Columns</summary>"
-            '<div class="dz-table-col-menu-panel">'
+            '<div class="dz-popover__panel dz-table-col-menu-panel">'
             f"{''.join(items)}"
             # #853 escape hatch: show every column + clear the stored set.
             '<button type="button" class="dz-table-col-menu-reset" '
