@@ -385,6 +385,11 @@ class _RenderShellMixin:
         Each menu is a native ``details.dz-menubar__item``; ``dz-menubar.js``
         owns exclusive open + outside/Escape dismiss. Panel actions are
         host-owned links/buttons (``role=menuitem``).
+
+        Cycle 1816 — stamp open-discovery on ``/app/<entity>…`` menuitem
+        hrefs (create/edit/view classify via ``link_open_discovery_attr_suffix``)
+        so agents attr-read chrome hops without scraping menu labels.
+        Non-app / bare ``/app`` / fragment hrefs stay unstamped.
         """
         menu_parts: list[str] = []
         for menu in m.menus:
@@ -393,7 +398,8 @@ class _RenderShellMixin:
                 label = ctx.escape(action.label)
                 if action.href:
                     href = ctx.escape_attr(action.href)
-                    actions_html.append(f'<a href="{href}" role="menuitem">{label}</a>')
+                    open_extra = link_open_discovery_attr_suffix(str(action.href))
+                    actions_html.append(f'<a href="{href}" role="menuitem"{open_extra}>{label}</a>')
                 else:
                     actions_html.append(f'<button type="button" role="menuitem">{label}</button>')
             menu_label = ctx.escape(menu.label)
@@ -412,7 +418,12 @@ class _RenderShellMixin:
         )
 
     def _emit_navigation_menu_link(self, link: NavigationMenuLink, ctx: RenderContext) -> str:
-        """Panel or top-level link anchor for NavigationMenu."""
+        """Panel or top-level link anchor for NavigationMenu.
+
+        Cycle 1816 — open-discovery on ``/app/<entity>…`` panel links
+        (product paths that resolve into the app surface). Marketing
+        ``/pricing``-class hrefs stay plain.
+        """
         label = ctx.escape(link.label)
         desc = ""
         if link.description:
@@ -420,7 +431,8 @@ class _RenderShellMixin:
         current = ' aria-current="page"' if link.current else ""
         if link.href:
             href = ctx.escape_attr(link.href)
-            return f'<a href="{href}"{current}>{label}{desc}</a>'
+            open_extra = link_open_discovery_attr_suffix(str(link.href))
+            return f'<a href="{href}"{current}{open_extra}>{label}{desc}</a>'
         return f"<span{current}>{label}{desc}</span>"
 
     def _emit_navigation_menu(self, m: NavigationMenu, ctx: RenderContext) -> str:
@@ -457,8 +469,10 @@ class _RenderShellMixin:
                 current = ' aria-current="page"' if item.current else ""
                 if item.href:
                     href = ctx.escape_attr(item.href)
+                    open_extra = link_open_discovery_attr_suffix(str(item.href))
                     anchor = (
-                        f'<a class="dz-navigation-menu__link" href="{href}"{current}>{label}</a>'
+                        f'<a class="dz-navigation-menu__link" href="{href}"'
+                        f"{current}{open_extra}>{label}</a>"
                     )
                 else:
                     anchor = f'<span class="dz-navigation-menu__link"{current}>{label}</span>'

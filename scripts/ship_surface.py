@@ -105,6 +105,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_breadcrumb_open_discovery_1806.py",
     # cycle 1811 — conversation Message open discovery (detail_url_template hub)
     "tests/unit/test_message_open_discovery_1811.py",
+    # cycle 1816 — menubar + navigation-menu open discovery (chrome /app hops)
+    "tests/unit/test_menubar_nav_menu_open_discovery_1816.py",
     # cycle 1735 — #1646 detail money _minor/_currency + related tab finger budget
     "tests/unit/test_detail_money_related_budget_1646.py",
     # cycle 1712 — presentation residual delta_theater honesty under 100%
