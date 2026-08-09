@@ -35,6 +35,7 @@ from dazzle.page.runtime.site_renderer import get_site_js
 from dazzle.render.context import PageContext
 from dazzle.render.dispatch import build_page
 from dazzle.render.fragment.renderer import FragmentRenderer
+from dazzle.render.navigation_menu import build_site_navigation_menu
 
 logger = logging.getLogger(__name__)
 
@@ -454,9 +455,6 @@ def create_site_page_routes(
         qa_personas = getattr(ctx, "qa_personas", None) or []
 
         # --- Nav (site/includes/nav.html → HM navigation-menu dual-lock) ---
-        from dazzle.render.fragment import FragmentRenderer
-        from dazzle.render.navigation_menu import build_site_navigation_menu
-
         current_route_raw = str(getattr(ctx, "current_route", "") or "")
         nav_menu = build_site_navigation_menu(
             nav_items,

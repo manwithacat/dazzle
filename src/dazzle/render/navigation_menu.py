@@ -39,6 +39,73 @@ def _is_current(href: str, current_route: str) -> bool:
     return a == b
 
 
+def _link_from(raw: Any, route: str) -> NavigationMenuLink | None:
+    label = _label_of(raw)
+    if not label:
+        return None
+    href = _href_of(raw) or None
+    desc = getattr(raw, "description", None)
+    if desc is None and isinstance(raw, dict):
+        desc = raw.get("description") or raw.get("sublabel")
+    return NavigationMenuLink(
+        label=label,
+        href=href,
+        current=_is_current(href or "", route),
+        description=str(desc or "").strip(),
+    )
+
+
+def _group_from(child: Any, route: str) -> NavigationMenuGroup | None:
+    """Accept a titled group dict/object or a bare link."""
+    if isinstance(child, dict) and ("links" in child or "title" in child):
+        title = str(child.get("title") or "").strip()
+        raw_links = list(child.get("links") or [])
+    elif hasattr(child, "links"):
+        title = str(getattr(child, "title", "") or "").strip()
+        raw_links = list(getattr(child, "links", None) or [])
+    else:
+        title = ""
+        raw_links = [child]
+    links = tuple(link for raw in raw_links if (link := _link_from(raw, route)) is not None)
+    if not links:
+        return None
+    return NavigationMenuGroup(links=links, title=title)
+
+
+def _children_of(raw: Any) -> list[Any] | None:
+    children = getattr(raw, "children", None)
+    if children is None and isinstance(raw, dict):
+        children = raw.get("children") or raw.get("groups")
+    if not children:
+        return None
+    return list(children)
+
+
+def _branch_from(raw: Any, route: str, label: str) -> NavigationMenuBranch | None:
+    children = _children_of(raw)
+    if children is None:
+        return None
+    groups = tuple(g for child in children if (g := _group_from(child, route)) is not None)
+    if not groups:
+        return None
+    mega = bool(getattr(raw, "mega", False))
+    if not mega and isinstance(raw, dict):
+        mega = bool(raw.get("mega"))
+    if not mega:
+        mega = len(groups) > 1
+    return NavigationMenuBranch(label=label, groups=groups, mega=mega)
+
+
+def _item_from(raw: Any, route: str) -> NavigationMenuLink | NavigationMenuBranch | None:
+    label = _label_of(raw)
+    if not label:
+        return None
+    branch = _branch_from(raw, route, label)
+    if branch is not None:
+        return branch
+    return _link_from(raw, route)
+
+
 def build_site_navigation_menu(
     nav_items: Any,
     *,
@@ -53,63 +120,8 @@ def build_site_navigation_menu(
     """
     if not nav_items:
         return None
-    items: list[NavigationMenuLink | NavigationMenuBranch] = []
     route = str(current_route or "").strip()
-    for raw in nav_items:
-        label = _label_of(raw)
-        if not label:
-            continue
-        children = getattr(raw, "children", None)
-        if children is None and isinstance(raw, dict):
-            children = raw.get("children") or raw.get("groups")
-        if children:
-            groups: list[NavigationMenuGroup] = []
-            for child in children:
-                g_title = ""
-                g_links_raw: list[Any]
-                if isinstance(child, dict) and ("links" in child or "title" in child):
-                    g_title = str(child.get("title") or "").strip()
-                    g_links_raw = list(child.get("links") or [])
-                elif hasattr(child, "links"):
-                    g_title = str(getattr(child, "title", "") or "").strip()
-                    g_links_raw = list(getattr(child, "links", None) or [])
-                else:
-                    g_links_raw = [child]
-                links: list[NavigationMenuLink] = []
-                for link in g_links_raw:
-                    ll = _label_of(link)
-                    if not ll:
-                        continue
-                    lh = _href_of(link) or None
-                    desc = getattr(link, "description", None)
-                    if desc is None and isinstance(link, dict):
-                        desc = link.get("description") or link.get("sublabel")
-                    links.append(
-                        NavigationMenuLink(
-                            label=ll,
-                            href=lh,
-                            current=_is_current(lh or "", route),
-                            description=str(desc or "").strip(),
-                        )
-                    )
-                if links:
-                    groups.append(NavigationMenuGroup(links=tuple(links), title=g_title))
-            if groups:
-                mega = bool(getattr(raw, "mega", False))
-                if not mega and isinstance(raw, dict):
-                    mega = bool(raw.get("mega"))
-                if not mega:
-                    mega = len(groups) > 1
-                items.append(NavigationMenuBranch(label=label, groups=tuple(groups), mega=mega))
-            continue
-        href = _href_of(raw) or None
-        items.append(
-            NavigationMenuLink(
-                label=label,
-                href=href,
-                current=_is_current(href or "", route),
-            )
-        )
+    items = tuple(item for raw in nav_items if (item := _item_from(raw, route)) is not None)
     if not items:
         return None
-    return NavigationMenu(items=tuple(items), aria_label=aria_label or "Product")
+    return NavigationMenu(items=items, aria_label=aria_label or "Product")
