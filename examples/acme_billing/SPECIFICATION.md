@@ -81,20 +81,21 @@ warehouse:
 - **Acme Billing** — multi-panel home for administrators, organization
   owners, and auditors: portfolio metrics, dual attention (open books +
   sensitive flags), line composition, then live invoice notes, with
-  organization / project / membership context below.
+  organization / project context below (no role-mix chart under the fold).
 - **My Work** — home for project members and external contractors: assigned
-  projects, invoices, membership timeline, and invoice mix chart.
-- **Projects** — project-first path: kanban portfolio, recent invoices, load
-  chart, and project trail.
-- **Invoices** — invoice desk with status board, timeline, projects grid, and
-  status mix chart.
-- **Team** — membership timeline, people grid, role chart, and membership queue.
-- **Organizations** — org portfolio grid, project trail, invoice load chart,
-  and open bills queue.
+  projects and invoices only (no status chart / membership timeline voids).
+- **Projects** — project-first path: kanban portfolio and recent invoices
+  (no load chart / twin project trail).
+- **Invoices** — invoice desk with live conversation, status board, and
+  projects context (no status mix chart / twin bill timeline).
+- **Team** — people queue and membership queue (no role chart / twin roster).
+- **Organizations** — org portfolio roster and open bills queue (no project
+  trail / invoice-load chart voids).
 - **Membership Ops** — access desk: membership metrics, roster grid, project
   queue, people trail, and role mix chart.
 - **Sensitive Review** — owner/auditor sensitivity desk: sensitive metrics,
-  sensitive queue, project cards, invoice trail, and project load chart.
+  sensitive queue, project cards, invoice trail, and project load chart
+  (secondary desk retains bar chart for fleet coverage).
 
 ## How work flows through it
 
@@ -148,4 +149,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:e2abc1f0b601b45f2c59cd91d21a10e46f4ecac3a45bb9db5aa715dbd1d276b3 -->
+<!-- dazzle-spec-brief: sha256:d2a965664362ef28689a4b51f4522097806607738b2fe89eb91ed455d41a949b -->

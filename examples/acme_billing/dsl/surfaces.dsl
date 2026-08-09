@@ -499,17 +499,15 @@ workspace billing "Acme Billing":
     sort: name asc
     empty: "No projects found"
 
-  membership_mix:
-    source: Membership
-    display: bar_chart
-    group_by: role
-    aggregate:
-      count: count(Membership)
-    empty: "No memberships found"
+  # Cycle 1828 Goal B empty_region_honesty: drop membership_mix bar chart —
+  # dual attention + composition + conversation already fill the fold; role
+  # mix lives on secondary desks (sensitive_review / public_billing / org_pulse).
 
 # Product landing for scoped workers (product maturity: not warehouse-only).
 # Separate from billing so org-management chrome stays gated to owner/auditor.
 workspace my_work "My Work":
+  # Goal B empty_region_honesty (cycle 1828): assigned work queues only —
+  # not status bar chart / membership timeline voids under the fold.
   purpose: "What am I assigned to — projects and invoices I can act on"
   stage: "simple_list"
   access: persona(project_member, external_contractor)
@@ -538,22 +536,11 @@ workspace my_work "My Work":
     limit: 15
     empty: "No invoices in your scope"
 
-  team_context:
-    source: Membership
-    display: timeline
-    empty: "No memberships in your scope"
-
-  my_invoice_mix:
-    source: Invoice
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices in your scope"
-
 # Second product workspace lowers warehouse density and gives owners a
 # project-first path distinct from the org/memberships portfolio.
 workspace projects_home "Projects":
+  # Goal B empty_region_honesty (cycle 1828): kanban + recent invoices —
+  # prune invoice_by_project bar and twin project_trail timeline.
   purpose: "Project portfolio — open a project before drilling into invoices"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor, project_member, external_contractor)
@@ -581,24 +568,11 @@ workspace projects_home "Projects":
     limit: 10
     empty: "No invoices yet"
 
-  invoice_by_project:
-    source: Invoice
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
-
-  project_trail:
-    source: Project
-    display: timeline
-    sort: name asc
-    empty: "No projects found"
-
 # Third product workspace: invoice-first job desk so entity
 # lists no longer dominate product shell count vs workspaces.
 workspace invoices_home "Invoices":
-  # Goal B conversation: discussion first on the invoice desk.
+  # Goal B conversation + empty_region_honesty: discussion + open bills board —
+  # no status bar chart or twin bill timeline under the fold (cycle 1828).
   purpose: "Invoice desk — live conversation, cash context, open bills"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor, project_member)
@@ -644,13 +618,6 @@ workspace invoices_home "Invoices":
     sort: created_at desc
     empty: "No open invoices"
 
-  bill_timeline:
-    source: Invoice
-    display: timeline
-    sort: created_at desc
-    limit: 15
-    empty: "No open invoices"
-
   # Work-surface utility (cycle 1488 journey): project context → pull queue.
   projects_context:
     source: Project
@@ -659,17 +626,11 @@ workspace invoices_home "Invoices":
     action: project_detail
     empty: "No projects found"
 
-  invoice_status_mix:
-    source: Invoice
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
-
 # Fourth product workspace: team membership desk separate from
 # org portfolio / projects / invoices — lowers list:workspace ratio.
 workspace team_home "Team":
+  # Goal B empty_region_honesty (cycle 1828): people + membership queues —
+  # prune role bar chart and twin roster timeline.
   purpose: "Team desk — who has access to which projects"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor)
@@ -684,11 +645,6 @@ workspace team_home "Team":
     tones:
       memberships: accent
 
-  roster:
-    source: Membership
-    display: timeline
-    empty: "No memberships yet"
-
   # Work-surface utility (cycle 1488 journey): people roster → pull-to-open users.
   people:
     source: User
@@ -696,14 +652,6 @@ workspace team_home "Team":
     sort: name asc
     action: user_detail
     empty: "No users found"
-
-  membership_chart:
-    source: Membership
-    display: bar_chart
-    group_by: role
-    aggregate:
-      count: count(Membership)
-    empty: "No memberships yet"
 
   membership_queue:
     source: Membership
@@ -713,6 +661,8 @@ workspace team_home "Team":
 
 # Fifth job desk: organization portfolio separate from billing shell
 workspace orgs_home "Organizations":
+  # Goal B empty_region_honesty (cycle 1828): org roster + open bills —
+  # prune project timeline twin and invoice-load bar chart.
   purpose: "Org portfolio — tenants before project/invoice drill-down"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor)
@@ -734,20 +684,6 @@ workspace orgs_home "Organizations":
     sort: name asc
     action: organization_detail
     empty: "No organizations found"
-
-  project_context:
-    source: Project
-    display: timeline
-    sort: name asc
-    empty: "No projects found"
-
-  org_invoice_load:
-    source: Invoice
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
 
   open_bills:
     source: Invoice
