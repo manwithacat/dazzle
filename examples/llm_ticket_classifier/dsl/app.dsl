@@ -287,8 +287,12 @@ surface classification_detail "Classification Detail":
 
 # Story-driven (docs/guides/story-to-composition.md): supervisor metrics +
 # open queue first; agent ticket_management is a review queue not CRUD list.
+# Goal B command_density (cycle 1791): peer Zendesk/Intercom AI supervisor
+# homes put high-severity triage + open pressure above the AI reply trail —
+# multi-panel attention, not conversation-only / flat queue thrash above fold.
 workspace support_dashboard "Support Dashboard":
-  purpose: "Monitor and classify support tickets"
+  purpose: "Multi-panel AI triage — metrics, high-severity classifications, open queue, live AI replies"
+  stage: "command_center"
   access: persona(supervisor, support_agent, admin)
 
   classification_metrics:
@@ -296,32 +300,56 @@ workspace support_dashboard "Support Dashboard":
     display: metrics
     aggregate:
       open: count(Ticket where status = open)
+      high_severity: count(TicketClassification where priority = high or priority = critical)
       classified: count(TicketClassification)
       in_progress: count(Ticket where status = in_progress)
-      priorities: count(PriorityAssessment)
+      conversation: count(TicketClassification)
     tones:
       open: warning
+      high_severity: destructive
       classified: positive
       in_progress: accent
+      conversation: accent
 
-  # Goal B conversation: AI suggested replies above fold (Zendesk/Intercom
-  # peer — agent-ready draft thread, not category-only shells).
-  live_ai_replies:
+  # Dual attention (fold share with capped AI reply trail).
+  high_severity:
     source: TicketClassification
+    filter: priority = high or priority = critical
     sort: classified_at desc
-    limit: 10
+    limit: 4
     display: queue
-    action: ticket_detail
-    empty: "No AI replies yet — classify a ticket to draft the thread"
+    action: classification_detail
+    empty: "No high-severity classifications — triage is quiet"
 
-  open_queue:
+  open_attention:
     source: Ticket
     filter: status = open
     sort: created_at desc
-    limit: 12
+    limit: 4
     display: queue
     action: ticket_detail
     empty: "No open tickets"
+
+  # Goal B conversation spine AFTER dual attention — Message/Bubble chrome
+  # for AI suggested replies (display_field: suggested_response).
+  live_ai_replies:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 4
+    display: conversation
+    action: classification_detail
+    empty: "No AI replies yet — classify a ticket to draft the thread"
+
+  ux:
+    as supervisor:
+      purpose: "Multi-panel AI triage — dual attention before live reply trail"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies
+    as support_agent:
+      purpose: "Multi-panel AI triage — dual attention before live reply trail"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies
+    as admin:
+      purpose: "Multi-panel AI triage — dual attention before live reply trail"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies
 
   in_progress_queue:
     source: Ticket
