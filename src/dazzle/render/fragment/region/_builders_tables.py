@@ -219,6 +219,29 @@ def _queue_row_meta_columns(
             continue
         col_type = str(col.get("type") or "").lower()
         key_l = key.lower()
+        # Goal B conversation / flags: never print raw True/False on queue meta
+        # ("Is Internal: False"). False bools are noise; true flags get a short
+        # affirmative chip (Internal / Yes) so orientation fields stay buyer-true.
+        if isinstance(raw, bool) or col_type in ("bool", "boolean"):
+            truthy = raw is True or (
+                isinstance(raw, str) and raw.strip().lower() in ("true", "1", "yes")
+            )
+            falsy = raw is False or (
+                isinstance(raw, str) and raw.strip().lower() in ("false", "0", "no")
+            )
+            if falsy:
+                continue
+            if truthy:
+                if key_l in ("is_internal", "internal", "is_agent", "outbound", "private"):
+                    meta.append(QueueMetaColumn(label="", value="Internal"))
+                else:
+                    meta.append(
+                        QueueMetaColumn(
+                            label=str(col.get("label") or key),
+                            value="Yes",
+                        )
+                    )
+            continue
         # Goal B media — logo/preview thumbs first on brand/asset queues.
         if col_type == "image":
             thumb = _render_media_thumb_html(raw, alt=str(col.get("label") or key))

@@ -120,6 +120,48 @@ def test_queue_meta_folds_currency_into_amount() -> None:
     assert "12,550" in meta[0].value
 
 
+def test_queue_meta_suppresses_false_bool_and_humanises_internal_flag() -> None:
+    """Goal B: never print 'Is Internal: False'; true → short Internal chip."""
+    from dazzle.render.fragment.region._builders_tables import _queue_row_meta_columns
+
+    cols = [
+        {"key": "content", "label": "Comment", "type": "text"},
+        {"key": "is_internal", "label": "Is Internal", "type": "bool"},
+        {"key": "ticket", "label": "Ticket", "type": "text"},
+    ]
+    # False internal note — flag omitted so meta is ticket only (no True/False).
+    meta_false = _queue_row_meta_columns(
+        {
+            "content": "Customer saw a blank PDF",
+            "is_internal": False,
+            "ticket": "Invoice PDF download returns blank page",
+        },
+        cols,
+        display_key="content",
+        queue_status_field="",
+    )
+    joined_false = " | ".join(f"{m.label}:{m.value}" for m in meta_false)
+    assert "False" not in joined_false
+    assert "True" not in joined_false
+    assert "Is Internal" not in joined_false
+    assert any(m.value == "Invoice PDF download returns blank page" for m in meta_false)
+
+    meta_true = _queue_row_meta_columns(
+        {
+            "content": "Force-expire both sessions",
+            "is_internal": True,
+            "ticket": "Cannot login after password reset",
+        },
+        cols,
+        display_key="content",
+        queue_status_field="",
+    )
+    values = [m.value for m in meta_true]
+    assert "Internal" in values
+    assert "True" not in values
+    assert "False" not in values
+
+
 def test_queue_row_html_joins_meta_chips_with_sep() -> None:
     """#1626 R1 — rendered queue meta chips use mid-dot separators for OCR/humans."""
     # Contract string from _render_tables queue path — keep in lockstep.

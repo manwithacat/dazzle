@@ -617,12 +617,13 @@ workspace manager_ops "Manager Ops":
     empty: "Every open ticket has an assignee"
 
   # Goal B conversation spine AFTER dual attention so manager hero stills
-  # show pressure queues + thread copy sharing the fold (not conversation-only).
+  # show pressure queues + Message/Bubble chrome (not raw is_internal queue meta).
+  # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
   live_conversation:
     source: Comment
     sort: created_at desc
     limit: 4
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — customer and agent notes appear here as cases move"
 

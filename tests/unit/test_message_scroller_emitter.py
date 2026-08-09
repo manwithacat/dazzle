@@ -164,3 +164,69 @@ def test_dsl_shapes_message_scroller_live() -> None:
     assert "message-scroller" not in planned
     assert snap["next_planned"] != "message-scroller"
     assert snap["live"] >= 75
+
+
+def test_conversation_display_is_in_list_family_whitelist() -> None:
+    """HTTP region path must whitelist CONVERSATION or stills stay empty shells."""
+    from dazzle.http.runtime.workspace_region_render import (
+        _LIST_FAMILY,
+        _TYPED_REGION_DISPLAYS,
+        RegionRenderInputs,
+        RenderEnv,
+        _build_list_adapter_ctx,
+    )
+
+    assert "CONVERSATION" in _LIST_FAMILY
+    assert "CONVERSATION" in _TYPED_REGION_DISPLAYS
+
+    ctx_region = type(
+        "R",
+        (),
+        {
+            "name": "live_conversation",
+            "empty_message": "No conversation yet",
+            "status_entries": [],
+            "endpoint": "/api/workspaces/x/regions/live_conversation",
+        },
+    )()
+    ctx = type(
+        "C",
+        (),
+        {
+            "ctx_region": ctx_region,
+            "source": "Comment",
+            "surface_empty_message": None,
+            "ir_region": None,
+        },
+    )()
+    inputs = RegionRenderInputs(
+        items=[
+            {
+                "content": "Hello from customer",
+                "is_internal": False,
+                "author_display": "Casey User",
+                "created_at": "2026-07-15 10:30:00+01:00",
+            }
+        ]
+    )
+    env = RenderEnv(
+        ctx=ctx,
+        ir_region=ctx_region,
+        inputs=inputs,
+        request=type("Req", (), {"query_params": {}})(),
+        user_ctx=type("U", (), {})(),
+        sort=None,
+        sort_dir="asc",
+    )
+    adapter_ctx = _build_list_adapter_ctx("CONVERSATION", env, {})
+    assert adapter_ctx["items"]
+    assert adapter_ctx["items"][0]["content"] == "Hello from customer"
+    assert "No conversation" in str(adapter_ctx.get("empty_message") or "")
+
+
+def test_conversation_time_parses_postgres_space_timestamp() -> None:
+    from dazzle.render.fragment.region._builders_timeline import _conversation_time
+
+    label, full = _conversation_time({"created_at": "2026-07-15 10:30:00+01:00"})
+    assert label == "10:30"
+    assert "2026-07-15" in full

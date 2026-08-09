@@ -30,6 +30,19 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "conversation: count(Comment)" in manager
     assert "live_conversation:" in manager
+    # Goal B interesting_product: manager ops uses Message/Bubble conversation
+    # chrome (not raw is_internal queue meta) after dual attention panels.
+    live = manager.split("live_conversation:", 1)[1].split("\n  ux:", 1)[0]
+    assert "display: conversation" in live
+    assert "source: Comment" in live
+
+
+def test_ticket_queue_live_conversation_uses_message_chrome() -> None:
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    live = block.split("live_conversation:", 1)[1].split("\n  open_queue:", 1)[0]
+    assert "display: conversation" in live
+    assert "source: Comment" in live
 
 
 def test_comment_seeds_have_domain_true_support_copy() -> None:

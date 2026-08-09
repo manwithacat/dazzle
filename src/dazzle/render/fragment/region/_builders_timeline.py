@@ -72,6 +72,11 @@ def _activity_description(item: dict[str, Any]) -> str:
 
 def _activity_actor_label(item: dict[str, Any]) -> str:
     """Resolve actor display string (scalar or nested name/email)."""
+    # Prefer precomputed ``*_display`` labels (FK join shells often id-only).
+    for key in _ACTIVITY_ACTOR_KEYS:
+        disp = item.get(f"{key}_display")
+        if disp is not None and str(disp).strip():
+            return str(disp).strip()
     for key in _ACTIVITY_ACTOR_KEYS:
         raw = item.get(key)
         if raw is None or raw == "":
@@ -119,10 +124,13 @@ def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
         if not text:
             continue
         # Prefer a short clock label when ISO-ish; keep full string as datetime.
+        # Accept both ``2026-07-12T10:02:00Z`` and Postgres ``2026-07-12 10:02:00+01:00``.
         label = text
-        if "T" in text:
-            # 2026-07-12T10:02:00Z → 10:02
-            clock = text.split("T", 1)[1]
+        sep = "T" if "T" in text else (" " if " " in text and len(text) >= 16 else "")
+        if sep:
+            clock = text.split(sep, 1)[1]
+            # Drop tz tail: 10:02:00+01:00 / 10:02:00Z → 10:02
+            clock = clock.replace("Z", "").split("+", 1)[0].split("-", 1)[0]
             label = clock[:5] if len(clock) >= 5 else clock
         return label, text
     return "", ""
