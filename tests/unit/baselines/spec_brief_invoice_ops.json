@@ -115,6 +115,26 @@
       ]
     },
     {
+      "name": "InvoiceNote",
+      "title": "Invoice Note",
+      "intent": "Operator discussion on an Invoice — the conversation that drives approve, dispute, and pay",
+      "lifecycle_states": [],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "invoice",
+          "target": "Invoice",
+          "target_title": "Invoice",
+          "required": true
+        }
+      ]
+    },
+    {
       "name": "PaymentAttempt",
       "title": "Payment Attempt",
       "intent": "One attempt to settle an approved invoice via the payment provider",
@@ -252,6 +272,24 @@
       "name": "invoice_create",
       "title": "New Invoice",
       "entity": "Invoice",
+      "mode": "create"
+    },
+    {
+      "name": "invoice_note_list",
+      "title": "Invoice Notes",
+      "entity": "InvoiceNote",
+      "mode": "list"
+    },
+    {
+      "name": "invoice_note_detail",
+      "title": "Invoice Note",
+      "entity": "InvoiceNote",
+      "mode": "view"
+    },
+    {
+      "name": "invoice_note_create",
+      "title": "Add Invoice Note",
+      "entity": "InvoiceNote",
       "mode": "create"
     },
     {
@@ -450,7 +488,7 @@
       "name": "finance_ops",
       "title": "Finance Operations",
       "kind": "workspace",
-      "purpose": "Day-to-day invoice throughput — pipeline, payment health, and the queues that need a person",
+      "purpose": "Day-to-day invoice throughput — live discussion, line composition, and queues that need a person",
       "personas": [
         "requester",
         "approver",
@@ -461,47 +499,47 @@
       ],
       "contents": [
         "metrics of Invoice",
-        "funnel_chart of Invoice",
+        "metrics of LineItem",
+        "queue of LineItem",
+        "conversation of InvoiceNote",
         "queue of Invoice",
         "queue of Invoice",
-        "bar_chart of PaymentAttempt",
         "queue of Invoice",
-        "kanban of Invoice",
-        "timeline of Invoice"
+        "kanban of Invoice"
       ]
     },
     {
       "name": "my_invoices",
       "title": "My Invoices",
       "kind": "workspace",
-      "purpose": "Requester desk — drafts, submissions, and line-item work on my invoices",
+      "purpose": "Requester desk — line composition, drafts, submissions, and line-item work on my invoices",
       "personas": [
         "requester"
       ],
       "contents": [
         "metrics of Invoice",
+        "metrics of LineItem",
+        "queue of LineItem",
         "queue of Invoice",
         "queue of Invoice",
         "kanban of Invoice",
-        "queue of Supplier",
-        "timeline of Invoice",
-        "bar_chart of Invoice"
+        "queue of Supplier"
       ]
     },
     {
       "name": "approval_desk",
       "title": "Approval Desk",
       "kind": "workspace",
-      "purpose": "Approver job — clear the awaiting-approval queue, open the invoice hub",
+      "purpose": "Approver job — live discussion trail and the awaiting-approval queue",
       "personas": [
         "approver",
         "finance_admin"
       ],
       "contents": [
         "metrics of Invoice",
+        "conversation of InvoiceNote",
         "queue of Invoice",
         "kanban of Invoice",
-        "timeline of Invoice",
         "queue of Supplier"
       ]
     },
@@ -509,7 +547,7 @@
       "name": "pay_desk",
       "title": "Pay Desk",
       "kind": "workspace",
-      "purpose": "Finance job — settle approved invoices and resolve open disputes",
+      "purpose": "Multi-panel settlement — metrics, ready-to-pay, disputes, then live AP notes",
       "personas": [
         "finance",
         "finance_admin"
@@ -518,9 +556,8 @@
         "metrics of Invoice",
         "queue of Invoice",
         "queue of Invoice",
-        "kanban of Invoice",
-        "bar_chart of PaymentAttempt",
-        "timeline of Invoice"
+        "conversation of InvoiceNote",
+        "kanban of Invoice"
       ]
     },
     {
@@ -652,6 +689,7 @@
       "SupplierBankAccount",
       "Invoice",
       "LineItem",
+      "InvoiceNote",
       "PaymentAttempt"
     ],
     "persona_count": 6,
@@ -908,6 +946,7 @@
           "requester",
           "approver",
           "finance",
+          "finance_admin",
           "auditor",
           "tenant_admin"
         ],
@@ -936,6 +975,62 @@
           "requester",
           "approver",
           "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceNote",
+        "operation": "create",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceNote",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceNote",
+        "operation": "update",
+        "personas": [
+          "approver",
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceNote",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceNote",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
           "auditor",
           "tenant_admin"
         ],

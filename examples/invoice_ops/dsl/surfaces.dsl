@@ -391,9 +391,10 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  # Goal B conversation + document: AP desks lead with discussion trail and
-  # line-item composition so buyer stills show document body (not only queues).
-  purpose: "Day-to-day invoice throughput — live discussion, line composition, pipeline, and queues that need a person"
+  # Goal B conversation + document + empty_region (cycle 1820): AP desks lead
+  # with discussion, line composition, and job queues — not funnel/bar-chart
+  # voids or paid-timeline dumps under the fold (Bill.com / Tipalti peer).
+  purpose: "Day-to-day invoice throughput — live discussion, line composition, and queues that need a person"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   ops_metrics:
@@ -442,14 +443,6 @@ workspace finance_ops "Finance Operations":
     action: invoice_note_detail
     empty: "No conversation yet — approval and payment notes appear here"
 
-  invoice_pipeline:
-    source: Invoice
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
-
   # Approver job — review queue with inline transitions when available.
   awaiting_approval:
     source: Invoice
@@ -470,14 +463,6 @@ workspace finance_ops "Finance Operations":
     action: invoice_detail
     empty: "Nothing ready to pay"
 
-  payment_health:
-    source: PaymentAttempt
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(PaymentAttempt)
-    empty: "No payment attempts"
-
   disputed_queue:
     source: Invoice
     filter: status = disputed
@@ -496,22 +481,34 @@ workspace finance_ops "Finance Operations":
     action: invoice_detail
     empty: "No invoices in the pipeline"
 
-  recent_paid:
-    source: Invoice
-    filter: status = paid
-    sort: updated_at desc
-    limit: 12
-    display: timeline
-    action: invoice_detail
-    empty: "No paid invoices yet"
+  ux:
+    as finance_admin:
+      purpose: "AP ops — discussion, documents, and job queues (no chart voids)"
+      focus: ops_metrics, document_pulse, composition, live_conversation, awaiting_approval, ready_to_pay
+    as tenant_admin:
+      purpose: "AP ops — discussion, documents, and job queues (no chart voids)"
+      focus: ops_metrics, document_pulse, composition, live_conversation, awaiting_approval, ready_to_pay
+    as finance:
+      purpose: "AP ops — settle queues with conversation spine"
+      focus: ops_metrics, live_conversation, ready_to_pay, disputed_queue
+    as approver:
+      purpose: "AP ops — review queue with conversation spine"
+      focus: ops_metrics, live_conversation, awaiting_approval, composition
+    as auditor:
+      purpose: "AP ops — evidence queues with conversation spine"
+      focus: ops_metrics, live_conversation, composition, disputed_queue
+    as requester:
+      purpose: "AP ops overview — composition and conversation"
+      focus: ops_metrics, composition, live_conversation, awaiting_approval
 
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.
 # finance_ops remains the shared ops overview for admin/oversight personas.
 
 workspace my_invoices "My Invoices":
-  # Goal B document: requester home shows line composition (descriptions) with
-  # draft work — not only invoice headers.
+  # Goal B document + empty_region (cycle 1820): requester home shows line
+  # composition + draft/submit queues + kanban — not status bar-chart voids or
+  # twin invoice timelines under the fold.
   purpose: "Requester desk — line composition, drafts, submissions, and line-item work on my invoices"
   access: persona(requester)
 
@@ -582,21 +579,10 @@ workspace my_invoices "My Invoices":
     action: supplier_detail
     empty: "No suppliers yet"
 
-  my_trail:
-    source: Invoice
-    sort: updated_at desc
-    limit: 12
-    display: timeline
-    action: invoice_detail
-    empty: "No invoices yet"
-
-  my_status_mix:
-    source: Invoice
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
+  ux:
+    as requester:
+      purpose: "My invoices — composition and draft/submit queues (no chart voids)"
+      focus: my_pipeline, document_pulse, composition, drafts, in_flight, my_status_board
 
 workspace approval_desk "Approval Desk":
   purpose: "Approver job — live discussion trail and the awaiting-approval queue"
@@ -641,15 +627,6 @@ workspace approval_desk "Approval Desk":
     action: invoice_detail
     empty: "No invoices in the approval pipeline"
 
-  recently_decided:
-    source: Invoice
-    filter: status = approved or status = rejected
-    sort: updated_at desc
-    limit: 12
-    display: timeline
-    action: invoice_detail
-    empty: "No recent decisions"
-
   suppliers_nearby:
     source: Supplier
     sort: name asc
@@ -658,9 +635,17 @@ workspace approval_desk "Approval Desk":
     action: supplier_detail
     empty: "No suppliers yet"
 
+  ux:
+    as approver:
+      purpose: "Approval — conversation + queue + board (no decision-timeline dump)"
+      focus: approval_load, live_conversation, awaiting_approval, approval_board
+    as finance_admin:
+      purpose: "Approval — conversation + queue + board (no decision-timeline dump)"
+      focus: approval_load, live_conversation, awaiting_approval, approval_board
+
 workspace pay_desk "Pay Desk":
-  # Goal B command_density: Bill.com / Tipalti settlement homes put dual
-  # attention (ready-to-pay + disputes) above the conversation trail.
+  # Goal B command_density + empty_region (cycle 1820): dual attention before
+  # notes; drop payment_health bar chart and dispute_trail twin dump under fold.
   purpose: "Multi-panel settlement — metrics, ready-to-pay, disputes, then live AP notes"
   access: persona(finance, finance_admin)
 
@@ -721,23 +706,6 @@ workspace pay_desk "Pay Desk":
     sort: updated_at desc
     action: invoice_detail
     empty: "No invoices in settle pipeline"
-
-  payment_health:
-    source: PaymentAttempt
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(PaymentAttempt)
-    empty: "No payment attempts"
-
-  dispute_trail:
-    source: Invoice
-    filter: status = disputed
-    sort: updated_at desc
-    limit: 12
-    display: timeline
-    action: invoice_detail
-    empty: "No dispute history"
 
 workspace audit_review "Audit Review":
   purpose: "Auditor job — payment trail and invoice evidence without warehouse CRUD"

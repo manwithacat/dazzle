@@ -68,18 +68,20 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 
 - **My Invoices** — requester home: line-item composition (document body),
-  draft and in-flight queues, status kanban, supplier grid, and pipeline metrics.
+  draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
+  (no status bar-chart or twin invoice timeline under the fold).
 - **Approval Desk** — approver home: live AP discussion as Message/Bubble
   conversation chrome (not a meta queue of note rows), awaiting-approval queue,
-  approval board, recently decided timeline, and supplier context grid.
+  approval board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, capped
   ready-to-pay and dispute attention panels, live AP notes as Message/Bubble
-  conversation chrome, then settle board, payment health, and dispute trail.
+  conversation chrome, then settle board (no payment-health chart or twin
+  dispute trail under the fold).
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
 - **Finance Operations** — shared ops overview: line composition + live
   discussion trail rendered as Message/Bubble conversation chrome (not a meta
-  queue of note rows) above the fold, metrics, lifecycle funnel, review queues,
-  ops kanban, and recent paid timeline.
+  queue of note rows) above the fold, metrics, review queues, and ops kanban
+  (no lifecycle funnel, payment bar chart, or paid timeline voids).
 - **Suppliers** — vendor desk: roster grid, bank refs, invoice trail and
   status mix chart.
 - **Team** — tenant admin people desk with supplier and tenant context.
@@ -167,4 +169,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:71c372a51925634f0303be9479ec43010aa0200298e1231110e1785150b4865c -->
+<!-- dazzle-spec-brief: sha256:6a0979d80ab082419e41d731f1da3e2690589825f473e57ce7968a2222ca63c5 -->
