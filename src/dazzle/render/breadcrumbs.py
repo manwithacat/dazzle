@@ -23,6 +23,24 @@ class Crumb:
     url: str | None = None
 
 
+# Intermediate prefixes that are URL namespaces, not navigable pages.
+# Linking them creates smoke-crawl / agent 404s (cycle 1826: bare
+# ``/app/workspaces`` parent crumb on every workspace page).
+_NON_PAGE_PATH_PREFIXES = frozenset(
+    {
+        "/app/workspaces",
+    }
+)
+
+
+def _suppress_crumb_url(accumulated: str, *, is_last: bool, multi_segment: bool) -> bool:
+    """True when this crumb must not be an ``<a href>``."""
+    if is_last and multi_segment:
+        return True
+    norm = accumulated.rstrip("/") or "/"
+    return norm in _NON_PAGE_PATH_PREFIXES
+
+
 def build_breadcrumb_trail(
     path: str,
     label_overrides: dict[str, str] | None = None,
@@ -35,7 +53,9 @@ def build_breadcrumb_trail(
 
     Returns:
         List of Crumb objects. The last crumb has ``url=None`` (current page)
-        when the path has more than one segment after Home.
+        when the path has more than one segment after Home. Structural
+        namespaces without an index page (e.g. ``/app/workspaces``) also
+        emit ``url=None`` so agents do not hop into a 404.
     """
     overrides = label_overrides or {}
     segments = [s for s in path.strip("/").split("/") if s]
@@ -44,12 +64,13 @@ def build_breadcrumb_trail(
         return [Crumb(label="Home", url="/")]
 
     crumbs: list[Crumb] = [Crumb(label="Home", url="/")]
+    multi = len(segments) > 1
 
     for i, segment in enumerate(segments):
         accumulated = "/" + "/".join(segments[: i + 1])
         label = overrides.get(accumulated, segment.replace("-", " ").replace("_", " ").title())
         is_last = i == len(segments) - 1
-        suppress_url = is_last and len(segments) > 1
+        suppress_url = _suppress_crumb_url(accumulated, is_last=is_last, multi_segment=multi)
         crumbs.append(Crumb(label=label, url=None if suppress_url else accumulated))
 
     return crumbs

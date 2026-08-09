@@ -43,3 +43,14 @@ class TestBuildBreadcrumbTrail:
         crumb = Crumb(label="Test", url="/test")
         assert crumb.label == "Test"
         assert crumb.url == "/test"
+
+    def test_workspace_namespace_intermediate_not_linked(self):
+        """Cycle 1826 — /app/workspaces is not a page; do not link parent crumb."""
+        trail = build_breadcrumb_trail("/app/workspaces/team_overview", {})
+        assert len(trail) == 4  # Home, App, Workspaces, Team Overview
+        assert trail[0].url == "/"
+        assert trail[1].url == "/app"
+        assert trail[2].label == "Workspaces"
+        assert trail[2].url is None  # namespace prefix — no index route
+        assert trail[3].url is None  # current page
+        assert trail[3].label == "Team Overview"

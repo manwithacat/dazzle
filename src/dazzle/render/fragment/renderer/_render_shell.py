@@ -368,14 +368,19 @@ class _RenderShellMixin:
         scraping labels (Home / bare ``/app`` stay unstamped).
         """
         parts: list[str] = []
-        for item in b.items:
+        n_items = len(b.items)
+        for i, item in enumerate(b.items):
             label = ctx.escape(item.label)
             if item.href:
                 href = ctx.escape_attr(item.href)
                 open_extra = breadcrumb_open_attr_suffix(str(item.href))
                 parts.append(f'<li><a href="{href}"{open_extra}>{label}</a></li>')
-            else:
+            elif i == n_items - 1:
+                # Current page only — intermediate unlinked crumbs (namespace
+                # prefixes without an index route, cycle 1826) stay plain text.
                 parts.append(f'<li aria-current="page">{label}</li>')
+            else:
+                parts.append(f"<li>{label}</li>")
         aria = ctx.escape_attr(b.aria_label)
         return f'<nav class="dz-breadcrumb" aria-label="{aria}"><ol>{"".join(parts)}</ol></nav>'
 

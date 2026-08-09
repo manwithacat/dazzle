@@ -3229,7 +3229,7 @@ def create_page_routes(
         # non-admin personas to hit 403 on login and the recovery path
         # (EX-035 dead-end loop). Cycle 225 fixed the upstream parser bug;
         # this cycle fixes the downstream structural fragility.
-        if "/" not in page_contexts:
+        if workspaces:
             from dazzle.page.converters.workspace_converter import (
                 resolve_persona_workspace_route,
             )
@@ -3260,9 +3260,21 @@ def create_page_routes(
             # the auth context has no known role.
             _fallback_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
 
-            router.get("/", response_class=HTMLResponse)(
-                _make_root_redirect_handler(deps, _persona_ws_routes, _fallback_ws_route)
-            )
+            # When "/" is not already registered as a page, redirect app root
+            # to a persona-appropriate workspace (cycle 227+).
+            if "/" not in page_contexts:
+                router.get("/", response_class=HTMLResponse)(
+                    _make_root_redirect_handler(deps, _persona_ws_routes, _fallback_ws_route)
+                )
+
+            # Cycle 1826 — bare ``/app/workspaces`` is a path namespace, not a
+            # page (smoke crawl auto_seed: breadcrumb parent → 404). Redirect
+            # to the same persona default as app root so agents / typed URLs
+            # land on a real workspace.
+            if ("GET", "/workspaces") not in claimed_paths:
+                router.get("/workspaces", response_class=HTMLResponse)(
+                    _make_root_redirect_handler(deps, _persona_ws_routes, _fallback_ws_route)
+                )
 
     # Command-palette results endpoint (HaTchi-MaXchi tranche 2B adoption).
     # Returns persona-scoped `.dz-command__item` markup for the `dz-command`
