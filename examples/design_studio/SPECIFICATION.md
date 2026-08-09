@@ -67,8 +67,9 @@ and that grant is itself an explicit, auditable declaration.
   recently approved, feedback timeline, pipeline kanban, and status chart.
 - **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
   compact brand palette, review queue, pipeline kanban, and status mix chart.
-- **Campaigns** — campaign schedule desk with seeded active queue, status board, brand
-  context, and load chart; campaign detail hubs list assigned creatives.
+- **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
+  compact schedule metrics, active briefs, and status board; campaign detail hubs show
+  an assigned creative media wall (not a bare name table).
 - **Feedback** — feedback trail with notes queue, assets-in-review grid,
   note timeline, and asset status chart.
 
@@ -126,4 +127,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:1a81290de0b4b38b777c817f6c68c26470de3a1a8281dd1968baa54e8f1eeac3 -->
+<!-- dazzle-spec-brief: sha256:eac4a0ce4ac154eb26055ea366537a9852764eda8d99b7f3ce9e1b884fe0bf85 -->

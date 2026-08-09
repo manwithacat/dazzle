@@ -479,11 +479,22 @@ workspace review_desk "Review Desk":
     empty: "No assets yet"
 
 # Fifth product workspace: campaign desk vs bare campaign list.
-# Goal B empty_region_honesty: desk must show live schedule pressure (active
-# queue + status board + mix), not multi-panel empty theater when seeds load.
+# Goal B media (cycle 1803): peer creative ops (Frame.io / Bynder / Adobe) put
+# campaign creatives as pixels on the schedule desk — not only briefs + charts.
+# Empty_region still holds: seeded assigned creatives + active queue fill fold.
 workspace campaign_desk "Campaigns":
-  purpose: "Campaign schedule desk — active briefs, status board, brand context"
+  purpose: "Campaign media desk — assigned creative preview thumbs above fold, then schedule pressure"
   access: persona(admin, designer, reviewer)
+
+  # Creative wall FIRST — preview_url thumbs for assets assigned to campaigns.
+  campaign_creatives:
+    source: Asset
+    filter: campaign != null
+    sort: updated_at desc
+    limit: 10
+    display: grid
+    action: asset_detail
+    empty: "No creatives assigned to campaigns yet — link assets from the asset hub"
 
   campaign_pulse:
     source: Campaign
@@ -491,15 +502,17 @@ workspace campaign_desk "Campaigns":
     aggregate:
       campaigns: count(Campaign)
       active: count(Campaign where status = active)
+      creatives: count(Asset where campaign != null)
       brands: count(Brand)
     tones:
       active: accent
+      creatives: positive
 
   active_queue:
     source: Campaign
     filter: status = active
     sort: name asc
-    limit: 12
+    limit: 10
     display: queue
     action: campaign_detail
     empty: "No active campaigns"
@@ -507,28 +520,31 @@ workspace campaign_desk "Campaigns":
   all_campaigns:
     source: Campaign
     sort: name asc
-    limit: 25
+    limit: 20
     display: kanban
     group_by: status
     action: campaign_detail
     empty: "No campaigns yet"
 
-  # Work-surface utility (cycle 1483 journey): brand context is pull-to-open, not grid.
+  # Brand context stays pull-to-open (not a palette wall competing with creatives).
   brand_context:
     source: Brand
     sort: name asc
     display: queue
-    limit: 12
+    limit: 8
     action: brand_detail
     empty: "No brands"
 
-  campaign_mix:
-    source: Campaign
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Campaign)
-    empty: "No campaigns yet"
+  ux:
+    as designer:
+      purpose: "Campaign creatives as pixels first — schedule briefs after the media wall"
+      focus: campaign_creatives, campaign_pulse, active_queue, all_campaigns
+    as admin:
+      purpose: "Media-first campaign desk — assigned thumbs, then schedule pressure"
+      focus: campaign_creatives, campaign_pulse, active_queue, all_campaigns
+    as reviewer:
+      purpose: "See campaign creatives before status boards"
+      focus: campaign_creatives, campaign_pulse, active_queue, all_campaigns
 
 # Sixth product workspace: feedback trail desk.
 workspace feedback_desk "Feedback":
@@ -960,15 +976,15 @@ surface campaign_detail "Campaign Detail":
     field end_date "End"
     field budget "Budget"
 
-  # Pull-next creatives assigned to this brief (not warehouse table) —
-  # agent acceptance: campaign desk → hub with assets, not field dump only.
+  # Goal B media: preview_url first so hub rows read as creatives, not name shells.
+  # (related display modes: table|status_cards|file_list|queue — not workspace grid)
   related assets "Campaign assets":
-    display: queue
+    display: status_cards
     show: Asset
-    columns: name, status, asset_type, quality_score
+    columns: preview_url, name, status, asset_type
 
   ux:
-    purpose: "Campaign hub — schedule strip, brand context, and assigned creative queue"
+    purpose: "Campaign hub — schedule strip and assigned creative cards with previews"
 
 surface feedback_create "Add Feedback":
   uses entity Feedback
