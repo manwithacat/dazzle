@@ -205,9 +205,10 @@ def _view_drill_open_attr_suffix(href: str, *, marker: str) -> str:
     """VIEW-style open-discovery suffix for a chrome surface (marker varies).
 
     Cycle 1823 — collapse breadcrumb / command clone pair (clone ratchet).
-    Marker differs (``data-dz-breadcrumb-drill`` vs ``data-dz-command-drill``);
-    path gate and ``drill_open_discovery_attrs`` assembly are identical.
-    Skips Home (``/`` / bare ``/app``), fragment-only, and non-app paths.
+    Cycle 1824 — FTS search_box result hops share the same helper
+    (``data-dz-search-drill``). Marker differs per surface; path gate and
+    ``drill_open_discovery_attrs`` assembly are identical. Skips Home
+    (``/`` / bare ``/app``), fragment-only, and non-app paths.
     """
     url = (href or "").strip()
     if not url or url == "#" or url.startswith("#"):
@@ -240,6 +241,17 @@ def command_open_attr_suffix(href: str) -> str:
     and non-app paths.
     """
     return _view_drill_open_attr_suffix(href, marker="data-dz-command-drill")
+
+
+def search_open_attr_suffix(href: str) -> str:
+    """Open-discovery attr suffix for FTS ``search_box`` result hops.
+
+    Cycle 1824 — agents attr-read ``display: search_box`` result destinations
+    without scraping titles. Marker ``data-dz-search-drill`` + VIEW-style
+    ``data-dz-open-*`` (``via=id`` → ``Open {Entity}``). Same path gate as
+    command / breadcrumb VIEW hops.
+    """
+    return _view_drill_open_attr_suffix(href, marker="data-dz-search-drill")
 
 
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:

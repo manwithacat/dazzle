@@ -135,6 +135,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     import html
 
     from dazzle.render.filters import _gettext
+    from dazzle.render.open_discovery import search_open_attr_suffix
 
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
@@ -149,7 +150,6 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
         )
         return HTMLResponse(body)  # nosemgrep: direct-use-of-jinja2
 
-    entity_slug = html.escape(str(entity).lower(), quote=True)
     label_text = _gettext("result") if total == 1 else _gettext("results")
     count_html = (
         f'<div class="dz-search-box-result-count">'
@@ -166,7 +166,6 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
         else:
             _id = ""
         id_str = str(_id)
-        id_attr = html.escape(id_str, quote=True)
 
         # Prefer human labels over raw ids. Contact-style rows often have
         # first_name/last_name/email but no title/name — showing UUIDs made
@@ -216,9 +215,16 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
                     f'<ul class="dz-search-box-result-snippets">{"".join(snippet_items)}</ul>'
                 )
 
+        # Cycle 1824 — stamp open-discovery so agents attr-read FTS result
+        # hops (search_box region) without scraping titles. Logical href
+        # before attr-escape; marker data-dz-search-drill (command/breadcrumb
+        # parity via _view_drill_open_attr_suffix).
+        href = f"/app/{str(entity).lower()}/{id_str}"
+        href_attr = html.escape(href, quote=True)
+        open_suffix = search_open_attr_suffix(href)
         rows.append(
             f'<li class="dz-search-box-result">'
-            f'<a href="/app/{entity_slug}/{id_attr}" class="dz-search-box-result-link">'
+            f'<a href="{href_attr}" class="dz-search-box-result-link"{open_suffix}>'
             f'<span class="dz-search-box-result-title">{label_html}</span>'
             f"{snippets_html}"
             f"</a></li>"
