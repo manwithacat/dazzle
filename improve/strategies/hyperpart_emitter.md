@@ -122,6 +122,15 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Dogfood: support_tickets `live_conversation`; simple_task `sample_thread`
 - Tests: `test_message_emitter` (+ bubble pins still nest)
 
+
+## Reference ship: message-scroller (2026-08-09)
+
+- `display: conversation` → `MessageScroller` of `Message`+`Bubble` → `.dz-message-scroller`
+- Fragment: `MessageScroller(messages=…, label=…, size=…)` dual-lock transcript viewport
+- `role=log` + `aria-live=polite`; empty affordance; auto-scroll controller deferred
+- Dogfood: support_tickets `live_conversation`; simple_task `sample_thread`
+- Tests: `test_message_scroller_emitter` (+ message pins nest)
+
 ## Reference ship: navigation-menu (2026-08-09)
 
 - Sitespec `layout.nav` → `NavigationMenu` → `.dz-navigation-menu` + `data-dz-navigation-menu`
