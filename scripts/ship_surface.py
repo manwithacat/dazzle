@@ -148,6 +148,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # support_tickets Goal B document (cycle 1798 SlaWaiver composition + dual-open)
     "tests/unit/test_support_tickets_document_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_support_tickets_sla_waiver_list_dual_open",
+    # support_tickets Goal B empty_region (cycle 1812 agent_dashboard + my_tickets prune)
+    "tests/unit/test_support_tickets_empty_region_goal_b.py",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)

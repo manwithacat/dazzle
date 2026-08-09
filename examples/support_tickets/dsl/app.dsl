@@ -699,6 +699,9 @@ workspace manager_ops "Manager Ops":
 workspace agent_dashboard "Agent Dashboard":
   # Personal agent view (assigned work + conversation). Manager team home is
   # manager_ops; agents keep this for "my WIP" after claiming from the queue.
+  # Goal B empty_region_honesty (cycle 1812): peer agent homes (Zendesk /
+  # Intercom) lead with WIP board + close-out + one comment trail — not funnel
+  # / progress chart theater or triple comment streams that render as voids.
   purpose: "Personal WIP board with the conversation trail on your assigned cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
@@ -737,31 +740,7 @@ workspace agent_dashboard "Agent Dashboard":
     action: ticket_detail
     empty: "No tickets pending closure"
 
-  # ── Lifecycle / SLA signal ──────────────────────────────────────────
-  resolution_funnel:
-    source: Ticket
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No tickets"
-
-  backlog_progress:
-    source: Ticket
-    display: progress
-    group_by: status
-    empty: "No backlog"
-
-  ticket_history:
-    source: Ticket
-    sort: updated_at desc
-    limit: 20
-    display: timeline
-    action: ticket_detail
-    empty: "No tickets logged yet"
-
-  # ── Activity last (comment noise) ───────────────────────────────────
-  # Work-surface utility: sparse dated events → timeline (mirrors simple_task).
+  # Single comment trail (no empty chart theater / triple activity dumps).
   recent_comments:
     source: Comment
     sort: created_at desc
@@ -770,22 +749,18 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "No recent comments"
 
-  comment_activity:
-    source: Comment
-    display: activity_feed
-    sort: created_at desc
-    limit: 20
-    empty: "No recent comments"
-
-  activity_timeline:
-    source: Comment
-    sort: created_at desc
-    limit: 30
-    display: timeline
-    action: comment_detail
-    empty: "No activity yet"
+  ux:
+    as agent:
+      purpose: "Personal WIP + conversation trail — no funnel/progress chart theater"
+      focus: my_assigned, my_conversation, pending_resolution, recent_comments
+    as manager:
+      purpose: "Personal WIP + conversation trail — no funnel/progress chart theater"
+      focus: my_assigned, my_conversation, pending_resolution, recent_comments
 
 workspace my_tickets "My Tickets":
+  # Goal B empty_region_honesty (cycle 1812): customer portal peers show
+  # status counts + open cases + one history — not bar-chart theater or
+  # duplicate open/timeline dumps that leave large empty voids.
   purpose: "Customer view of their submitted tickets"
   stage: "simple_list"
   access: persona(customer)
@@ -820,7 +795,7 @@ workspace my_tickets "My Tickets":
     action: ticket_detail
     empty: "Nothing currently in progress"
 
-  # Work-surface utility: full case history is chronological — timeline beats inventory list.
+  # One chronological case history — not twin timelines + bar chart theater.
   all_cases:
     source: Ticket
     filter: created_by = current_user
@@ -828,16 +803,6 @@ workspace my_tickets "My Tickets":
     display: timeline
     action: ticket_detail
     empty: "You have not submitted any tickets yet"
-
-  # Resolved history is chronological awareness — timeline beats inventory list.
-  resolved_recent:
-    source: Ticket
-    filter: created_by = current_user and status = resolved
-    sort: updated_at desc
-    limit: 10
-    display: timeline
-    action: ticket_detail
-    empty: "No resolved tickets yet"
 
   how_it_works:
     display: status_list
@@ -855,32 +820,10 @@ workspace my_tickets "My Tickets":
         icon: "message-square"
         state: warning
 
-  my_trail:
-    source: Ticket
-    filter: created_by = current_user
-    sort: updated_at desc
-    limit: 12
-    display: timeline
-    action: ticket_detail
-    empty: "You have not submitted any tickets yet"
-
-  my_status_mix:
-    source: Ticket
-    filter: created_by = current_user
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "You have not submitted any tickets yet"
-
-  open_cards:
-    source: Ticket
-    filter: created_by = current_user and status != closed
-    sort: updated_at desc
-    limit: 12
-    display: queue
-    action: ticket_detail
-    empty: "You have no open tickets"
+  ux:
+    as customer:
+      purpose: "Open cases and one history — no bar-chart theater or twin dumps"
+      focus: my_summary, open_cases, waiting_on_us, all_cases, how_it_works
 
 
 # =============================================================================

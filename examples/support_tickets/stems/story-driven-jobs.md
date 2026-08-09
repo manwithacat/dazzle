@@ -10,14 +10,16 @@ ST-013–018 own surfaces.
 
 - Agent default: `ticket_queue` = metrics + `display: queue` + kanban.
 - Agent secondary: `agent_dashboard` personal WIP = **kanban** (`my_assigned`
-  group_by status, non-closed) + resolved **queue** (`pending_resolution`) —
-  stage movement after claim, not a single-status list (HMC-065).
+  group_by status, non-closed) + conversation notes queue + resolved **queue**
+  (`pending_resolution`) + **one** comment timeline — stage movement after
+  claim, not a single-status list (HMC-065); no funnel/progress chart theater
+  or triple activity dumps (empty_region honesty cycle 1812).
 - Manager default: `manager_ops` = team metrics + status_list SLA strip +
   critical/unassigned queues (limit 12) + funnel + short recent_trail
   timeline (not an empty personal list; no second open-board kanban —
   lifecycle board stays on agent_dashboard).
-- Customer default: `my_tickets` = my metrics + open queue + resolved **timeline**
-  (`resolved_recent`) + history trail.
+- Customer default: `my_tickets` = my metrics + open/WIP queues + **one**
+  case-history timeline + how-it-works (no bar-chart theater or twin dumps).
 - Comment streams on `ticket_queue` / `agent_dashboard` use **timeline**
   (dated events), not inventory list — same work-surface utility as simple_task.
 - Comment list dual open `Comment via id | Ticket via ticket` (cycle 1543

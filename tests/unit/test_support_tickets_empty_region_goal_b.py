@@ -1,0 +1,60 @@
+"""Post-5.8 Goal B empty_region_honesty — support_tickets agent + customer desks."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+APP = ROOT / "examples/support_tickets/dsl/app.dsl"
+
+
+def _workspace_block(name: str) -> str:
+    text = APP.read_text()
+    marker = f'workspace {name} "'
+    start = text.index(marker)
+    rest = text[start + 1 :]
+    nxt = rest.find("\nworkspace ")
+    if nxt == -1:
+        return text[start:]
+    return text[start : start + 1 + nxt]
+
+
+def test_agent_dashboard_omits_funnel_progress_and_triple_comment_theater() -> None:
+    """Peer agent home: WIP kanban + notes + close-out + one trail — not chart voids."""
+    block = _workspace_block("agent_dashboard")
+    assert "my_assigned:" in block
+    assert "my_conversation:" in block
+    assert "pending_resolution:" in block
+    assert "recent_comments:" in block
+    assert "resolution_funnel:" not in block
+    assert "backlog_progress:" not in block
+    assert "ticket_history:" not in block
+    assert "comment_activity:" not in block
+    assert "activity_timeline:" not in block
+    assert "display: funnel_chart" not in block
+    assert "display: progress" not in block
+    assert "display: activity_feed" not in block
+    assert "focus: my_assigned, my_conversation, pending_resolution, recent_comments" in block
+    assert "ux:" in block
+    assert "as agent:" in block
+    # Single comment timeline only
+    assert block.count("display: timeline") == 1
+
+
+def test_my_tickets_drops_bar_chart_and_duplicate_dumps() -> None:
+    """Customer portal: counts + open work + one history — not chart/timeline theater."""
+    block = _workspace_block("my_tickets")
+    assert "my_summary:" in block
+    assert "open_cases:" in block
+    assert "waiting_on_us:" in block
+    assert "all_cases:" in block
+    assert "how_it_works:" in block
+    assert "my_status_mix:" not in block
+    assert "open_cards:" not in block
+    assert "resolved_recent:" not in block
+    assert "my_trail:" not in block
+    assert "display: bar_chart" not in block
+    assert "focus: my_summary, open_cases, waiting_on_us, all_cases, how_it_works" in block
+    assert "ux:" in block
+    assert "as customer:" in block
+    assert block.count("display: timeline") == 1

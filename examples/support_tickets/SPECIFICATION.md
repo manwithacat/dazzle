@@ -73,9 +73,11 @@ Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
 kanban of assigned open tickets, a **my conversation** notes queue, a resolved
-close-out queue, lifecycle metrics, and comment **timelines**/activity last.
-**My Tickets** is the customer's home: open/WIP counts, open-cases queue,
-resolved-recent **timeline**, history chart, trail, and open cards.
+close-out queue, and **one** recent-comment timeline (no funnel/progress chart
+theater or triple activity dumps — empty_region honesty).
+**My Tickets** is the customer's home: open/WIP counts, open and in-progress
+queues, one case-history timeline, and how-it-works guidance (no bar-chart
+theater or duplicate open/timeline dumps).
 The **Agent Console** — shared by administrators, managers, and agents — lets
 you pick an agent and see their tickets, comments, comparison charts, priority
 queue, comment trail, and open ticket cards.
@@ -153,4 +155,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:40579f5168aec5cfd9a2bd24ba24ea0105fe1413622ce15e3d8e88e92ed5d700 -->
+<!-- dazzle-spec-brief: sha256:080dcc02470061f1823a97e24a27386a80c1d8286d6f39b3d09b445c960976c8 -->
