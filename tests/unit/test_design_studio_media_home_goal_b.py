@@ -22,17 +22,22 @@ def test_studio_dashboard_media_shelf_wins_fold() -> None:
     assert "display: grid" in block
     assert "portfolio:" in block
     assert "live_conversation:" in block
-    # Order: media shelf → metrics → conversation (media home, not reply desk first).
+    # Order: media shelf → metrics → dual attention → conversation.
     assert block.index("media_shelf:") < block.index("portfolio:")
     assert block.index("portfolio:") < block.index("live_conversation:")
     assert block.index("media_shelf:") < block.index("live_conversation:")
+    assert block.index("media_shelf:") < block.index("review_pressure:")
+    assert block.index("media_shelf:") < block.index("draft_pressure:")
 
 
 def test_studio_dashboard_media_home_purpose_and_focus() -> None:
     block = _studio_dashboard_block()
-    assert "media home" in block.lower() or "Media home" in block
-    assert "focus: media_shelf, portfolio, live_conversation, review_pressure" in block
-    assert "limit: 8" in block
+    # Media shelf still wins the fold; dual attention sits after metrics (cycle 1836).
+    assert "media home" in block.lower() or "Multi-panel" in block or "multi-panel" in block.lower()
+    assert (
+        "focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation" in block
+    )
+    assert "limit: 2" in block or "limit: 3" in block
     # Fold share: drop redundant timeline/chart wall on the home desk.
     assert "recent_assets:" not in block
     assert "asset_trail:" not in block

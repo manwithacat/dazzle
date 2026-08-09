@@ -58,13 +58,15 @@ and that grant is itself an explicit, auditable declaration.
 
 ## Where work happens
 
-- **Studio Dashboard** — designer/admin media home: creative preview thumbs above the fold,
-  compact load metrics, critique trail, brand pull-queue, and in-review queue.
+- **Studio Dashboard** — multi-panel studio home (command_density): creative preview
+  thumbs above the fold, compact load metrics, dual attention (in-review + draft
+  queues capped for fold share), then critique trail and brand pull-queue.
 - **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
   thumbs above fold), compact logo identity shelf, active campaign queue, asset trail,
   and campaign mix chart.
-- **Review Desk** — reviewer home: review-load metrics (including conversation count), live critique trail (Feedback copy above the fold), awaiting-review queue,
-  recently approved, feedback timeline, pipeline kanban, and status chart.
+- **Review Desk** — multi-panel review home (command_density): review-load metrics
+  (including conversation count), dual attention (awaiting-review + draft queues),
+  then live critique trail (Feedback copy), recently approved, and pipeline kanban.
 - **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
   compact brand palette, review queue, pipeline kanban, and status mix chart.
 - **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
@@ -127,4 +129,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:eac4a0ce4ac154eb26055ea366537a9852764eda8d99b7f3ce9e1b884fe0bf85 -->
+<!-- dazzle-spec-brief: sha256:998fc8129b4643dcf8c94593c6d0f2f365477c504df234e4f827eff9a27d30e2 -->

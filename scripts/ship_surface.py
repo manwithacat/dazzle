@@ -82,6 +82,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_design_studio_media_home_goal_b.py",
     # design_studio Goal B media campaign creatives wall (cycle 1803)
     "tests/unit/test_design_studio_campaign_media_goal_b.py",
+    # design_studio Goal B command_density (cycle 1836 dual attention before trail)
+    "tests/unit/test_design_studio_command_density_goal_b.py",
     # simple_task Goal B document (cycle 1656 TaskBrief composition + dual-open)
     "tests/unit/test_simple_task_document_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",

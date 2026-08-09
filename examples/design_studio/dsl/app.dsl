@@ -249,13 +249,18 @@ entity Feedback "Design Feedback":
 # not metrics + critique meta first.
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
-  purpose: "Studio media home — creative preview thumbs above fold, then compact load and critique trail"
+  # Goal B media + command_density (cycle 1836): pixels first, then dual
+  # attention (review + draft) before critique trail — peer creative ops dens
+  # (Figma/Abstract/Frame.io) put multi-panel pressure above discussion.
+  purpose: "Multi-panel studio home — media shelf, dual attention pressure, then critique trail"
   # Goal B media home FIRST — portfolio is a visual shelf (preview_url thumbs).
   media_shelf:
     source: Asset
     display: grid
     sort: updated_at desc
-    limit: 8
+    # Cap 2 so dual attention (review+draft) shares the above-fold command dens
+    # with media home (cycle 1836 command_density still proof).
+    limit: 2
     action: asset_detail
     empty: "No assets yet — seed or upload previews"
   # Compact load strip after pixels (no delta-theater tile wall).
@@ -265,16 +270,35 @@ workspace studio_dashboard "Studio Dashboard":
     aggregate:
       assets: count(Asset)
       in_review: count(Asset where status = review)
+      drafts: count(Asset where status = draft)
       brands: count(Brand)
       conversation: count(Feedback)
     tones:
       in_review: warning
+      drafts: accent
       conversation: accent
-  # Critique trail after media — reply desk secondary to the creative shelf.
+  # Dual attention — in-review + draft pressure above fold (tight caps for fold).
+  review_pressure:
+    source: Asset
+    filter: status = review
+    sort: updated_at asc
+    limit: 3
+    display: queue
+    action: asset_edit
+    empty: "Nothing awaiting review"
+  draft_pressure:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 2
+    display: queue
+    action: asset_edit
+    empty: "No drafts in flight"
+  # Critique trail after dual attention — reply secondary to pressure queues.
   live_conversation:
     source: Feedback
     sort: created_at desc
-    limit: 6
+    limit: 3
     display: queue
     action: feedback_detail
     empty: "No critique yet — reviewer notes on your assets appear here"
@@ -283,27 +307,19 @@ workspace studio_dashboard "Studio Dashboard":
     source: Brand
     display: queue
     sort: name asc
-    limit: 6
+    limit: 4
     action: brand_detail
     empty: "No brands yet"
-  review_pressure:
-    source: Asset
-    filter: status = review
-    sort: updated_at asc
-    limit: 8
-    display: queue
-    action: asset_edit
-    empty: "Nothing awaiting review"
   ux:
     as designer:
-      purpose: "See creative preview thumbs above fold before load metrics and critique"
-      focus: media_shelf, portfolio, live_conversation, review_pressure
+      purpose: "Multi-panel media home — thumbs, review+draft dual attention, then critique"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation
     as admin:
-      purpose: "Media home first — portfolio thumbs, then studio load and brand hubs"
-      focus: media_shelf, portfolio, brands, review_pressure
+      purpose: "Multi-panel studio ops — media, dual attention, brands, then critique trail"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, brands, live_conversation
     as reviewer:
-      purpose: "Scan recent creatives as pixels before critique trail"
-      focus: media_shelf, live_conversation, review_pressure
+      purpose: "Multi-panel review home — creatives, dual attention, then critique trail"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation
 
 # Goal B media (cycle 1734): catalog is a visual media shelf — asset preview
 # thumbs must win the fold. Peer tools (Bynder / Frontify / Adobe CC) put
@@ -418,10 +434,10 @@ workspace brand_desk "Brand Desk":
       focus: asset_media, brand_media, campaign_queue
 
 workspace review_desk "Review Desk":
-  # Goal B conversation depth: peer design tools put the critique trail on the
-  # review home — not only the asset worklist. Buyer stills should show real
-  # comment copy above the fold (display_field: comment on Feedback).
-  purpose: "Review queue plus the live critique trail — reply where the conversation already is"
+  # Goal B command_density (cycle 1836): dual attention (awaiting + drafts)
+  # before conversation trail. Conversation still present — after pressure queues
+  # so buyer stills show multi-panel review ops (peer: Figma/Abstract review dens).
+  purpose: "Multi-panel review — dual attention pressure, then live critique trail"
   access: persona(admin, designer, reviewer)
   review_load:
     source: Asset
@@ -436,31 +452,41 @@ workspace review_desk "Review Desk":
       approved: positive
       conversation: accent
 
-  # Goal B conversation spine — newest critique as pull-to-open queue above the
-  # asset worklist so hero stills show domain-true review copy, not empty theater.
-  live_conversation:
-    source: Feedback
-    sort: created_at desc
-    limit: 10
-    display: queue
-    action: feedback_detail
-    empty: "No conversation yet — reviewer notes appear here as assets move through review"
-
+  # Dual attention — in-review + draft pressure above fold (tight caps so both
+  # queues share the viewport with metrics — cycle 1836 still proof).
   awaiting_review:
     source: Asset
     filter: status = review
     sort: updated_at asc
+    limit: 2
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
+  draft_queue:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 2
+    display: queue
+    action: asset_edit
+    empty: "No drafts waiting to enter review"
+
+  # Goal B conversation spine after dual attention — domain-true critique copy.
+  live_conversation:
+    source: Feedback
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: feedback_detail
+    empty: "No conversation yet — reviewer notes appear here as assets move through review"
+
   recently_approved:
     source: Asset
     filter: status = approved
     sort: updated_at desc
-    limit: 12
+    limit: 3
     display: queue
     empty: "No recent approvals"
-
   review_board:
     source: Asset
     filter: status = draft or status = review or status = approved
@@ -470,13 +496,16 @@ workspace review_desk "Review Desk":
     action: asset_edit
     empty: "No assets in the pipeline"
 
-  review_status_mix:
-    source: Asset
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No assets yet"
+  ux:
+    as reviewer:
+      purpose: "Multi-panel review — dual attention pressure before critique trail"
+      focus: review_load, awaiting_review, draft_queue, live_conversation
+    as designer:
+      purpose: "Multi-panel review — dual attention pressure before critique trail"
+      focus: review_load, awaiting_review, draft_queue, live_conversation
+    as admin:
+      purpose: "Multi-panel review ops — dual attention pressure before critique trail"
+      focus: review_load, awaiting_review, draft_queue, live_conversation
 
 # Fifth product workspace: campaign desk vs bare campaign list.
 # Goal B media (cycle 1803): peer creative ops (Frame.io / Bynder / Adobe) put
