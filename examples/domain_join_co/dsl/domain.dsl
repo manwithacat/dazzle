@@ -260,11 +260,12 @@ workspace home "Workspace Home":
       announcements: accent
 
   # Goal B conversation spine — newest team notes (display_field: body).
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta).
   live_conversation:
     source: AnnouncementNote
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: announcement_note_detail
     empty: "No conversation yet — team notes on announcements appear here"
 
@@ -346,11 +347,12 @@ workspace announce "Team Board":
     tones:
       posts: accent
 
+  # display: conversation → Message/Bubble chrome for team board discussion.
   live_conversation:
     source: AnnouncementNote
     sort: created_at desc
     limit: 10
-    display: queue
+    display: conversation
     action: announcement_note_detail
     empty: "No conversation yet — notes on published posts appear here"
 

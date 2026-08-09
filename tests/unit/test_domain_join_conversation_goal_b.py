@@ -24,9 +24,20 @@ def test_home_and_announce_declare_live_conversation() -> None:
     assert "live_conversation:" in text
     assert "source: AnnouncementNote" in text
     # Metrics honesty: nested count(AnnouncementNote) was ship-lying as 0 —
-    # conversation proof is the queue, not a zeroed metric tile.
+    # conversation proof is the trail, not a zeroed metric tile.
     assert "conversation: count(AnnouncementNote)" not in text
     assert "announcements: count(Announcement)" in text or "posts: count(Announcement)" in text
+    # Goal B interesting_product (cycle 1822): hero live threads use
+    # Message/Bubble chrome (not queue meta) after CONVERSATION wire-up.
+    for name in ("home", "announce"):
+        marker = f'workspace {name} "'
+        start = text.index(marker)
+        rest = text[start + 1 :]
+        nxt = rest.find("\nworkspace ")
+        block = text[start : start + 1 + nxt] if nxt != -1 else text[start:]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, name
+        assert "source: AnnouncementNote" in region
 
 
 def test_announcement_note_seeds_have_domain_true_copy() -> None:

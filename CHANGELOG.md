@@ -1,6 +1,15 @@
 ## [Unreleased]
 
 ### Added
+- **Goal B conversation (domain_join_co)** — Workspace Home and Team Board
+  `live_conversation` use `display: conversation` (Message/Bubble chrome) instead
+  of queue meta rows; unit pin + SPEC fingerprint; member stills recaptured.
+- **Goal B empty_region_honesty (invoice_ops)** — finance_ops / my_invoices /
+  approval_desk / pay_desk drop funnel, bar-chart, and timeline theater under
+  the fold; focus spines + unit pin + still recapture (cycle 1820).
+- **Goal B empty_region_honesty (hr_records)** — staff_directory and my_team drop
+  twin people cards and redundant org bar charts; secondary desks keep coverage
+  (cycle 1819).
 - **Goal B command_density (invoice_ops)** — Pay Desk is multi-panel settlement:
   metrics → capped ready-to-pay + disputed attention → live AP notes; unit pins
   + SPEC brief fingerprint; stills recaptured.

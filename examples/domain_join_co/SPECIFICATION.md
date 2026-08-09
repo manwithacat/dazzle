@@ -47,12 +47,12 @@ dedicated screens.
 
 ## Where work happens
 
-- **Workspace Home** — admin landing: team pulse, live discussion trail,
-  join-readiness strip, announcement queue, board timeline, and tenant roots
-  (no duplicate board dumps or empty chart theater).
-- **Team Board** — member home: board pulse, live discussion, feed queue,
-  always-filled join context strip, and post trail — without twin empty queues
-  or workspace voids.
+- **Workspace Home** — admin landing: team pulse, live discussion in Message
+  chrome, join-readiness strip, announcement queue, board timeline, and tenant
+  roots (no duplicate board dumps or empty chart theater).
+- **Team Board** — member home: board pulse, live discussion in Message chrome,
+  feed queue, always-filled join context strip, and post trail — without twin
+  empty queues or workspace voids.
 - **Publish** — admin publish desk: draft-only queue, published live cards,
   readiness strip, and publish trail (no empty posts chart).
 - **Announcement hub** — lifecycle strip (title, status, workspace) plus body.
@@ -92,4 +92,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Announcement lifecycle.** Announcements move draft → published → archived (admin may return published to draft or republish archived).
 
-<!-- dazzle-spec-brief: sha256:eae5296423d1352e1df51c7188199c43a1b6c03bca81e2cfb176df6105833546 -->
+<!-- dazzle-spec-brief: sha256:6c2c161384e20c612c93c919cce2e631a0934b6789d5a7cd27d1edebbffc7a4d -->
