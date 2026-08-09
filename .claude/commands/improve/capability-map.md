@@ -79,7 +79,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1793 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1795 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -89,7 +89,7 @@ apply map patches with `{"apply":true}`.
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1614 | STALE |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1775 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1795 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1741 | STALE |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -143,8 +143,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1775 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1775 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1795 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1795 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -154,6 +154,10 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1795 (2026-08-09).** **capability-sweep** (cadence ≥20 since 1775) + **interesting_product command_density@acme_billing** under aggressive require_mutation. Inventory tip green run **31303445930** (`d73d31cb5` progress_bar dual-lock). **UNOWNED=0** **COGNITION_STALE_eff=30** **HYGIENE_STALE_eff=39** rows=78 (COGNITION=31 HYGIENE=40 DRIVER=2 EXEMPT=5). USED→STALE lag≥20 then re-USED: unified probes/CodeQL/inbox@1775→@1795; interesting_product@1793→@1795; dual_lock_expand@1794 still fresh. densify=0 dual_lock_queue=0 suppress_smoke=1 residual=0. **Ship:** acme_billing billing workspace multi-panel — portfolio_metrics → open_invoices + sensitive_flags (limit 4) → composition → live_conversation; Goal B unit pin + ship_surface. Top digs next: interesting_product other depth / story_walk+dig-contract / agent_acceptance / **semgrep hygiene** never-exercised / domain COGNITION — **not** dual_lock/smoke/WI densify; metered vision → subscription substitutes only. budget 1. Explore **23/100**. Next self-audit@1784 ~1799; capability-sweep@1795 next~1815.
+
+
 
 
 > **Cycle 1741 (2026-08-07).** residual=0 densify=0 tip CI green; **agent_acceptance_panel** contact_manager small_firm_owner: seed 54/54; panel recommend=unclear (synthesized, budget_exceeded); **product/framework fix**: dual_pane master-detail list body stamps `data-dz-region` so list-search `hx-target=closest [data-dz-region]` filters the directory (find-by-name was a no-op). auto_seed search bug closed in-cycle. qa trial + agent_acceptance_panel **USED@1741**. budget 1. Explore **17/100**.

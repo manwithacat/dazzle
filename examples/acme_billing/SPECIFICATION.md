@@ -78,9 +78,10 @@ material through the record screens themselves.
 Work is split across job desks so scoped workers never land in the org-admin
 warehouse:
 
-- **Acme Billing** — home for administrators, organization owners, and
-  auditors: portfolio metrics, an open-invoice queue, then organization,
-  project, and membership context.
+- **Acme Billing** — multi-panel home for administrators, organization
+  owners, and auditors: portfolio metrics, dual attention (open books +
+  sensitive flags), line composition, then live invoice notes, with
+  organization / project / membership context below.
 - **My Work** — home for project members and external contractors: assigned
   projects, invoices, membership timeline, and invoice mix chart.
 - **Projects** — project-first path: kanban portfolio, recent invoices, load
@@ -147,4 +148,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:cc5f41bcb57da34f680aa68c0cac859b25558a970be8c5ad624d224f5d2d4fcf -->
+<!-- dazzle-spec-brief: sha256:e2abc1f0b601b45f2c59cd91d21a10e46f4ecac3a45bb9db5aa715dbd1d276b3 -->

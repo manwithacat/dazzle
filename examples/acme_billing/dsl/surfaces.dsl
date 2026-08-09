@@ -407,8 +407,10 @@ surface membership_edit "Edit Membership":
 # =============================================================================
 
 workspace billing "Acme Billing":
-  # Goal B conversation + document: discussion trail with line composition.
-  purpose: "Live conversation, line composition, and portfolio for organizations, projects, invoices"
+  # Goal B command_density: Bill.com / Stripe multi-panel billing homes put
+  # dual attention (open books + sensitive flags) and composition above the
+  # conversation trail — not conversation-first fold theater.
+  purpose: "Multi-panel billing — metrics, open books, sensitive flags, composition, then live notes"
   stage: "simple_list"
   # Gate the management workspace to the org-management personas. admin
   # (cross-org), org_owner (their org), auditor (read-only review) all
@@ -419,56 +421,68 @@ workspace billing "Acme Billing":
   # to all authenticated users).
   access: persona(admin, org_owner, auditor)
 
-  # Goal B conversation spine FIRST — domain-true billing prose above fold.
-  live_conversation:
-    source: InvoiceNote
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: invoice_note_detail
-    empty: "No conversation yet — notes on invoices appear here"
-
-  # Metrics-first portfolio (story-to-composition) before dense entity lists.
+  # Metrics-first portfolio before attention panels.
   portfolio_metrics:
     source: Invoice
     display: metrics
     aggregate:
-      organizations: count(Organization)
-      projects: count(Project)
-      invoices: count(Invoice)
-      members: count(Membership)
+      open_books: count(Invoice where sensitive != true)
+      sensitive: count(Invoice where sensitive = true)
+      lines: count(LineItem)
       conversation: count(InvoiceNote)
     tones:
-      invoices: accent
+      open_books: accent
+      sensitive: destructive
       conversation: accent
 
-  ux:
-    as admin:
-      purpose: "See billing discussion before composition and portfolio queues"
-      focus: live_conversation, portfolio_metrics, composition, open_invoices
-    as org_owner:
-      purpose: "Invoice discussion and composition before org portfolio"
-      focus: live_conversation, portfolio_metrics, composition, open_invoices
-    as auditor:
-      purpose: "Review discussion trail with invoice portfolio"
-      focus: live_conversation, portfolio_metrics, composition, open_invoices
+  # Dual attention (fold share): standard open books + sensitive review.
+  open_invoices:
+    source: Invoice
+    filter: sensitive != true
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No open invoices on the books"
+
+  sensitive_flags:
+    source: Invoice
+    filter: sensitive = true
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No sensitive invoices flagged"
 
   # Goal B document composition: named line descriptions
   # (Bill.com / Stripe Invoicing peer — not header-only amount shells).
   composition:
     source: LineItem
     sort: created_at desc
-    limit: 8
+    limit: 4
     display: queue
     action: invoice_detail
     empty: "No line items yet — add lines to an invoice document"
 
-  open_invoices:
-    source: Invoice
+  # Goal B conversation spine AFTER dual attention + composition.
+  live_conversation:
+    source: InvoiceNote
     sort: created_at desc
-    limit: 8
+    limit: 6
     display: queue
-    empty: "No invoices found"
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on invoices appear here"
+
+  ux:
+    as admin:
+      purpose: "Multi-panel billing — dual attention and composition before live notes"
+      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+    as org_owner:
+      purpose: "Multi-panel billing — dual attention and composition before live notes"
+      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+    as auditor:
+      purpose: "Multi-panel review — dual attention and composition before live notes"
+      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
 
   # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:
