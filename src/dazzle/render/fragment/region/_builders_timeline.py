@@ -151,6 +151,7 @@ def _conversation_message(
     time_label: str = "",
     time_datetime: str = "",
     media_label: str = "",
+    drill_url: str = "",
 ) -> Message:
     """Build a Message row wrapping a Bubble for conversation stacks."""
     bubble = Bubble(text=text, from_=orient)  # type: ignore[arg-type]
@@ -165,6 +166,7 @@ def _conversation_message(
         time_datetime=time_datetime,
         media_label=media,
         from_=orient,  # type: ignore[arg-type]
+        drill_url=(drill_url or "").strip(),
     )
 
 
@@ -354,6 +356,11 @@ class _BuildersTimelineMixin:
         Static ``status_entries`` (``entries:``) dogfood the same spine when
         title is ``in``/``out``. Empty threads still mount scroller chrome
         with ``.dz-message-scroller__empty``.
+
+        #1303 / cycle 1811: optional ``detail_url_template`` (from region
+        ``action:``) resolves per-row ``drill_url`` so Message rows stamp
+        open-discovery hub drills (activity/timeline parity). Host gates
+        EDIT paths when UPDATE is denied.
         """
         title = _region_title(region)
         empty_msg = str(
@@ -362,10 +369,10 @@ class _BuildersTimelineMixin:
             or "No conversation yet."
         )
         messages: list[Message] = []
+        dict_items = [i for i in list(ctx.get("items", []) or []) if isinstance(i, dict)]
+        drill_by_id = _activity_drill_by_id(dict_items, str(ctx.get("detail_url_template") or ""))
 
-        for item in list(ctx.get("items", []) or []):
-            if not isinstance(item, dict):
-                continue
+        for item in dict_items:
             text = _activity_description(item)
             if not text:
                 continue
@@ -384,6 +391,7 @@ class _BuildersTimelineMixin:
                     time_label=time_label,
                     time_datetime=time_dt,
                     media_label=media,
+                    drill_url=drill_by_id.get(id(item), ""),
                 )
             )
 
@@ -408,6 +416,8 @@ class _BuildersTimelineMixin:
                 time_label = str(raw.get("time") or raw.get("time_label") or "").strip()
                 time_dt = str(raw.get("datetime") or raw.get("time_datetime") or "").strip()
                 media = str(raw.get("media") or "").strip()
+                # Static dogfood entries may carry an explicit drill_url.
+                static_drill = str(raw.get("drill_url") or "").strip()
                 messages.append(
                     _conversation_message(
                         text,
@@ -416,6 +426,7 @@ class _BuildersTimelineMixin:
                         time_label=time_label,
                         time_datetime=time_dt,
                         media_label=media,
+                        drill_url=static_drill,
                     )
                 )
 

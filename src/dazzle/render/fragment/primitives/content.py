@@ -116,6 +116,10 @@ class Message:
     Orientation via ``data-dz-from="in|out"`` (flex reverse for outbound).
     Compose under ``display: conversation`` (stack of Message rows).
 
+    Optional ``drill_url`` (#1303 / cycle 1811) — hub drill to note/detail
+    when the region has ``action:`` / ``detail_url_template``. Empty keeps
+    byte-stable chrome-only Message (no anchor).
+
     Dual-lock root: ``.dz-message`` (contracts/message.py).
     """
 
@@ -125,6 +129,7 @@ class Message:
     time_datetime: str = ""
     media_label: str = ""
     from_: Literal["in", "out"] | None = None
+    drill_url: str = ""
 
     def __post_init__(self) -> None:
         if not isinstance(self.bubble, Bubble):

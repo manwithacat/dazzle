@@ -65,6 +65,7 @@ from dazzle.render.fragment.primitives import (
     Tabs,
     Text,
 )
+from dazzle.render.open_discovery import hub_open_discovery_attrs
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -135,6 +136,11 @@ class _RenderLayoutMixin:
         Gallery spine: optional ``.dz-message__media`` chip, author/time meta,
         nested Bubble under ``.dz-message__body``. Orientation via
         ``data-dz-from`` (flex reverse for outbound). Root is contracts/message.py.
+
+        Cycle 1811 — optional ``drill_url`` stamps open-discovery hub attrs
+        (activity-feed parity): ``data-dz-message-drill`` anchor + chain on
+        the row host so agents attr-read note/detail hops from conversation
+        Message chrome without scraping bubble text.
         """
         orient = ctx.escape_attr(m.orientation)
         media = ""
@@ -155,10 +161,21 @@ class _RenderLayoutMixin:
             )
         meta = f'<div class="dz-message__meta">{"".join(meta_bits)}</div>' if meta_bits else ""
         bubble_html = self._emit_bubble(m.bubble, ctx)
+        body_inner = f"{meta}{bubble_html}"
+        drill = (m.drill_url or "").strip()
+        host_extra = ""
+        if drill:
+            link_attrs, host_attrs = hub_open_discovery_attrs(drill)
+            href = ctx.escape_attr(drill)
+            body_inner = (
+                f'<a href="{href}" class="dz-message__hub" data-dz-message-drill '
+                f"{link_attrs}>{body_inner}</a>"
+            )
+            host_extra = host_attrs
         return (
-            f'<div class="dz-message" data-dz-from="{orient}">'
+            f'<div class="dz-message" data-dz-from="{orient}"{host_extra}>'
             f"{media}"
-            f'<div class="dz-message__body">{meta}{bubble_html}</div>'
+            f'<div class="dz-message__body">{body_inner}</div>'
             f"</div>"
         )
 
