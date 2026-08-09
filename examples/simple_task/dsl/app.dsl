@@ -814,12 +814,13 @@ workspace admin_dashboard "Admin Dashboard":
   # admin desk is a reply surface, not only status tiles and title queues.
   purpose: "System-wide overview — live conversation, document composition, pressure queues"
 
-  # Goal B conversation spine FIRST — domain-true comment prose above fold.
+  # Goal B conversation spine FIRST — Message/Bubble chrome above fold
+  # (HTTP CONVERSATION whitelist + MessageScroller; not raw queue meta).
   live_conversation:
     source: TaskComment
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — task comments appear here"
 
@@ -954,7 +955,7 @@ workspace team_overview "Team Overview":
     source: TaskComment
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No team conversation yet — comments on tasks appear here"
 
@@ -1069,7 +1070,7 @@ workspace my_work "My Work":
     source: TaskComment
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — comments on your tasks appear here"
 

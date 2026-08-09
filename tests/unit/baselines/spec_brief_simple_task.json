@@ -434,7 +434,7 @@
         "admin"
       ],
       "contents": [
-        "queue of TaskComment",
+        "conversation of TaskComment",
         "metrics of Task",
         "metrics of User",
         "queue of TaskBrief",
@@ -452,7 +452,7 @@
         "manager"
       ],
       "contents": [
-        "queue of TaskComment",
+        "conversation of TaskComment",
         "metrics of Task",
         "queue of TaskBrief",
         "bar_chart of Task",
@@ -469,7 +469,7 @@
       "purpose": "Personal plate — live conversation, briefs on your work, board flow",
       "personas": [],
       "contents": [
-        "queue of TaskComment",
+        "conversation of TaskComment",
         "metrics of Task",
         "queue of TaskBrief",
         "kanban of Task",

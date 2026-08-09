@@ -26,6 +26,13 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
     assert "source: TaskComment" in text
     assert "conversation: count(TaskComment)" in text
     assert "focus: live_conversation" in text
+    # Goal B interesting_product: hero live threads use MessageScroller chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    for ws in ("admin_dashboard", "team_overview", "my_work"):
+        block = text.split(f"workspace {ws}", 1)[1]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, ws
+        assert "source: TaskComment" in region, ws
 
 
 def test_task_comment_seeds_have_domain_true_copy() -> None:
