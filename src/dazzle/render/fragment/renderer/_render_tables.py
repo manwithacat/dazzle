@@ -37,6 +37,7 @@ from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
 from dazzle.render.fragment.ingest import Progress as ProgressSeam
+from dazzle.render.fragment.ingest import ProgressBarModel as ProgressBarSeam
 from dazzle.render.fragment.ingest import ProgressStage as ProgressStageSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
@@ -50,6 +51,7 @@ from dazzle.render.fragment.ingest import (
     render_pivot_table,
     render_profile_card,
     render_progress,
+    render_progress_bar,
     render_queue_row,
     render_status_list_entry,
 )
@@ -1454,31 +1456,14 @@ class _RenderTablesMixin:
         Dual-lock root ``.dz-progress`` + ``role=progressbar`` (hm-core).
         Fill via ``--dz-progress-value`` on ``.dz-progress__bar``. Distinct
         from StageBar / progress-region (``display: progress``).
+        Sole-emitter: ``render_progress_bar`` / contracts/progress_bar.py.
         """
-        pct = p.percent
-        # Whole-number fill when exact; keep one decimal otherwise for ARIA.
-        if pct == int(pct):
-            pct_str = str(int(pct))
-            now_str = str(int(round(float(p.value))))
-        else:
-            pct_str = f"{pct:.1f}".rstrip("0").rstrip(".")
-            now_str = (
-                str(int(p.value))
-                if float(p.value) == int(p.value)
-                else f"{float(p.value):.1f}".rstrip("0").rstrip(".")
+        del ctx  # escape owned by ingest sole-emitter
+        return render_progress_bar(
+            ProgressBarSeam(
+                value=float(p.value),
+                label=(p.label or "Progress").strip() or "Progress",
+                tone=p.tone or "",
+                max_value=float(p.max_value),
             )
-        max_str = (
-            str(int(p.max_value))
-            if float(p.max_value) == int(p.max_value)
-            else f"{float(p.max_value):.1f}".rstrip("0").rstrip(".")
-        )
-        label = (p.label or "Progress").strip()
-        label_attr = ctx.escape_attr(label)
-        tone_attr = f' data-dz-tone="{ctx.escape_attr(p.tone)}"' if p.tone else ""
-        return (
-            f'<div class="dz-progress" role="progressbar" '
-            f'aria-label="{label_attr}" aria-valuenow="{now_str}" '
-            f'aria-valuemin="0" aria-valuemax="{max_str}"{tone_attr}>'
-            f'<div class="dz-progress__bar" style="--dz-progress-value:{pct_str}%"></div>'
-            f"</div>"
         )

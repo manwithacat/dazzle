@@ -201,6 +201,12 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "ProgressStage",
     ),
     (
+        "contracts/progress_bar.py",
+        "ProgressBarModel",
+        "dazzle.render.fragment.ingest",
+        "ProgressBarModel",
+    ),
+    (
         "contracts/radar.py",
         "Radar",
         "dazzle.render.fragment.ingest",

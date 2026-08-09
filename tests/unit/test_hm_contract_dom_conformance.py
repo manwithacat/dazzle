@@ -728,6 +728,25 @@ def test_progress_emission_conforms_to_progress_contract() -> None:
     assert "1 of 3 complete" in html
 
 
+def test_progress_bar_emission_conforms_to_progress_bar_contract() -> None:
+    """Real FragmentRenderer ProgressBar path satisfies contracts/progress_bar.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import ProgressBar
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    bar_mod = load_hm_module("contracts/progress_bar.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(ProgressBar(value=62, label="Storage used", tone="success"))
+    violations = kit.validate_dom(html, bar_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert 'class="dz-progress"' in html
+    assert 'role="progressbar"' in html
+    assert 'aria-label="Storage used"' in html
+    assert 'aria-valuenow="62"' in html
+    assert 'data-dz-tone="success"' in html
+    assert "--dz-progress-value:62%" in html
+
+
 def test_pagination_emission_conforms_to_pagination_contract() -> None:
     """Real FragmentRenderer Pagination path satisfies contracts/pagination.py."""
     pytest.importorskip("fastapi")

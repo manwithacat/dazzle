@@ -123,8 +123,9 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_metric_tile": "metrics",
     "_emit_profile_card": "profile_card",
     "_emit_related_group": "related_group",
-    "_emit_stage_bar": "progress-region",
-    "_emit_progress_bar": "progress",
+    # contracts/progress.py part=progress-region (StageBar); contracts/progress_bar.py part=progress
+    "_emit_stage_bar": "progress",
+    "_emit_progress_bar": "progress_bar",
     "_emit_toggle": "toggle",
     "_emit_toggle_field": "toggle",
     "_emit_slide_over": "drawer",

@@ -59,12 +59,60 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/progress_bar.py`
+
+- **Required root:** `.dz-progress` (part `progress`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-progress` | `—` | — |
+
+#### Ingestion model `ProgressBarModel`
+
+| Field | Type | Required |
+|---|---|---|
+| `value` | `number` | no |
+| `label` | `string` | no |
+| `tone` | `string ∈ ['', 'success', 'warning', 'destructive']` | no |
+| `max_value` | `number` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(p: ProgressBarModel) -> str:
+    """Model → dual-lock progress bar markup."""
+    pct = _pct_str(p.value, p.max_value)
+    now = (
+        str(int(p.value))
+        if float(p.value) == int(p.value)
+        else f"{float(p.value):.1f}".rstrip("0").rstrip(".")
+    )
+    max_s = (
+        str(int(p.max_value))
+        if float(p.max_value) == int(p.max_value)
+        else f"{float(p.max_value):.1f}".rstrip("0").rstrip(".")
+    )
+    label = html.escape(p.label or "Progress", quote=True)
+    tone_attr = f' data-dz-tone="{html.escape(p.tone, quote=True)}"' if p.tone else ""
+    return (
+        f'<div class="dz-progress" role="progressbar" aria-label="{label}" '
+        f'aria-valuenow="{now}" aria-valuemin="0" aria-valuemax="{max_s}"{tone_attr}>'
+        f'<div class="dz-progress__bar" style="--dz-progress-value:{pct}%"></div>'
+        f"</div>"
+    )
+```
+
+## Notes
+
+Dual-lock root is .dz-progress (contracts/progress_bar.py) + role=progressbar.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/progress_bar.py`

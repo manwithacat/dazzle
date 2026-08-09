@@ -3399,6 +3399,9 @@ def select(source: str, id: str) -> str:
             '<div class="hm-stack hm-measure">'
             '<div class="dz-progress" role="progressbar" aria-label="Storage used" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:62%"></div></div>'
             '<div class="dz-progress" data-dz-tone="success" role="progressbar" aria-label="Upload progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="dz-progress__bar" style="--dz-progress-value:100%"></div></div></div>',
+            notes="Dual-lock root is <code>.dz-progress</code> "
+            "(<code>contracts/progress_bar.py</code>) + <code>role=progressbar</code>.",
+            contracts=("contracts/progress_bar.py",),
         ),
         Hyperpart(
             "skeleton",

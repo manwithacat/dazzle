@@ -42,6 +42,7 @@ from dazzle.render.fragment.ingest.models import (
     PivotTable,
     ProfileCard,
     Progress,
+    ProgressBarModel,
     ProgressStage,
     QueueRow,
     Radar,
@@ -1035,6 +1036,11 @@ def progress_root_attrs(_p: Progress) -> str:
     return "data-dz-progress-region"
 
 
+def progress_bar_root_attrs(_p: ProgressBarModel) -> str:
+    """Root marker for the toned determinate progress bar (class-based)."""
+    return 'class="dz-progress" role="progressbar"'
+
+
 def radar_root_attrs(_r: Radar) -> str:
     return "data-dz-radar"
 
@@ -1409,6 +1415,34 @@ def render_progress(p: Progress) -> str:
         f"</div>"
         f'<div class="dz-progress-stages">{chips_html}</div>'
         f"{summary_html}"
+        f"</div>"
+    )
+
+
+def _progress_bar_pct_str(value: float, max_value: float) -> str:
+    pct = max(0.0, min(100.0, (float(value) / float(max_value)) * 100.0))
+    return str(int(pct)) if pct == int(pct) else f"{pct:.1f}".rstrip("0").rstrip(".")
+
+
+def render_progress_bar(p: ProgressBarModel) -> str:
+    """Model → toned determinate bar (matches HM contracts/progress_bar.py)."""
+    pct = _progress_bar_pct_str(p.value, p.max_value)
+    now = (
+        str(int(p.value))
+        if float(p.value) == int(p.value)
+        else f"{float(p.value):.1f}".rstrip("0").rstrip(".")
+    )
+    max_s = (
+        str(int(p.max_value))
+        if float(p.max_value) == int(p.max_value)
+        else f"{float(p.max_value):.1f}".rstrip("0").rstrip(".")
+    )
+    label = _html.escape(p.label or "Progress", quote=True)
+    tone_attr = f' data-dz-tone="{_html.escape(p.tone, quote=True)}"' if p.tone else ""
+    return (
+        f'<div class="dz-progress" role="progressbar" aria-label="{label}" '
+        f'aria-valuenow="{now}" aria-valuemin="0" aria-valuemax="{max_s}"{tone_attr}>'
+        f'<div class="dz-progress__bar" style="--dz-progress-value:{pct}%"></div>'
         f"</div>"
     )
 

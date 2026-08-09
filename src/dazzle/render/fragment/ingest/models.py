@@ -574,6 +574,21 @@ class Progress(BaseModel):
     total: int = 0
 
 
+# ── Progress bar seam copy (contracts/progress_bar.py) ────────────────
+
+
+ProgressBarTone = Literal["", "success", "warning", "destructive"]
+
+
+class ProgressBarModel(BaseModel):
+    """Toned determinate progress track — dual-lock unit for progress_bar."""
+
+    value: float = 0.0
+    label: str = "Progress"
+    tone: ProgressBarTone = ""
+    max_value: float = Field(default=100.0, gt=0)
+
+
 # ── Pagination seam copy (contracts/pagination.py) ───────────────────
 
 
