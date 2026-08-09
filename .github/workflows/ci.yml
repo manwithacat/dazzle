@@ -219,12 +219,42 @@ jobs:
       # fastapi[standard] anywhere in our deps, so we never install
       # fastar. Remove this suppression if/when Inspector retracts
       # the advisory.
+      # Network flake resilience (2026-08-09 / cimonitor): pip-audit queries
+      # live PyPI per package. A single ReadTimeout/handshake failure reds the
+      # whole main badge even when the dep tree is clean (run 31296179609 @
+      # d1e0ff056: Security Tests only, all other jobs green). Retry only on
+      # network-class errors; real advisory findings still hard-fail attempt 1.
       run: |
         uv pip install pip-audit
         uv pip freeze --exclude-editable > /tmp/audit-reqs.txt
-        pip-audit --strict --desc --no-deps --disable-pip \
-          --ignore-vuln MAL-2026-4750 \
-          -r /tmp/audit-reqs.txt
+        set +e
+        for attempt in 1 2 3; do
+          echo "=== pip-audit attempt $attempt / 3 ==="
+          out=$(mktemp)
+          pip-audit --strict --desc --no-deps --disable-pip \
+            --ignore-vuln MAL-2026-4750 \
+            -r /tmp/audit-reqs.txt 2>&1 | tee "$out"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -eq 0 ]; then
+            rm -f "$out"
+            exit 0
+          fi
+          if grep -qiE 'ReadTimeout|timed out|TimeoutError|ConnectionError|Connection reset|Temporary failure|NameResolutionError|SSLError|RemoteDisconnected|Max retries exceeded' "$out"; then
+            rm -f "$out"
+            if [ "$attempt" -lt 3 ]; then
+              sleep_s=$((attempt * 15))
+              echo "pip-audit network flake (rc=$rc); retry in ${sleep_s}s..."
+              sleep "$sleep_s"
+              continue
+            fi
+            echo "pip-audit exhausted network retries"
+            exit "$rc"
+          fi
+          echo "pip-audit real failure (not network); no retry"
+          rm -f "$out"
+          exit "$rc"
+        done
+        exit 1
 
   lint:
     runs-on: ubuntu-latest
