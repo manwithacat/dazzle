@@ -103,6 +103,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_confirm_gate_open_discovery_1805.py",
     # cycle 1806 — breadcrumb trail open discovery (parent list/detail crumbs)
     "tests/unit/test_breadcrumb_open_discovery_1806.py",
+    # cycle 1826 — bare /app/workspaces namespace redirect + crumb not linked
+    "tests/unit/test_workspaces_namespace_redirect_1826.py",
+    "tests/unit/test_breadcrumbs.py",
     # cycle 1811 — conversation Message open discovery (detail_url_template hub)
     "tests/unit/test_message_open_discovery_1811.py",
     # cycle 1816 — menubar + navigation-menu open discovery (chrome /app hops)
