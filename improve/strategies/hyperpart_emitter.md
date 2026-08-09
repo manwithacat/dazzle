@@ -94,3 +94,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Vendor-free plan canvas (no tile SDK); status → tone; location/name → label
 - Dogfood: fieldtest_hub `device_map`; simple_task `sample_map` static entries
 - Tests: `test_marker_emitter`
+
+## Reference ship: master-detail (2026-08-09)
+
+- `stage: dual_pane_flow` + LIST/DETAIL region pair → HM master-detail shell
+- Emission: `render_master_detail_shell` → `.dz-master-detail` + `data-dz-master-detail`
+- List rows: `dz-master-detail__item` + hx-get into detail pane (not full-page drill)
+- Controller: `dz-master-detail.js` owns `aria-current` + keyboard arrows
+- Dogfood: contact_manager `contacts` (`contact_list` + `contact_detail`)
+- Tests: `test_dual_pane_master_detail` + `test_master_detail_emitter`

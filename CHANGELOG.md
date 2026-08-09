@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- **master-detail hyperpart emitter path (catalogue live)** — declare existing `stage: dual_pane_flow` LIST+DETAIL shell (`.dz-master-detail`) as the first Dazzle path; catalogue planned→live; fleet signal; scenario + pick-a-surface; dogfood contact_manager contacts.
 - **marker + `display: map` hyperpart emitter** — `Marker` / `MapBoard` Fragment dual-lock
   (`.dz-marker` pin chrome on a vendor-free plan canvas); region builder from entity
   location/name + status tone or static entries; dogfood fieldtest_hub `device_map` +

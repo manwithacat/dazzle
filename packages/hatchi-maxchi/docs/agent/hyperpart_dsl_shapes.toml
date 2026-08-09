@@ -438,9 +438,9 @@ agent_surface = "pick-a-work-surface"
 id = "master-detail"
 class = "mode"
 layer = "surface"
-dsl = "dual-pane blueprint / mode bridge"
-status = "planned"
-job = "Use master-detail via dual-pane blueprint / mode bridge"
+dsl = "stage: dual_pane_flow + LIST/DETAIL pair"
+status = "live"
+job = "Use master-detail via stage dual_pane_flow LIST+DETAIL shell"
 agent_surface = "pick-a-surface"
 
 [[part]]

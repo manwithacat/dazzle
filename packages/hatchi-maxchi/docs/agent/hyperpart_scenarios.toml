@@ -303,3 +303,25 @@ severity = "low"
 residual_lane = "none"
 example_homes = ["fieldtest_hub engineering_dashboard.device_map", "simple_task sample_map"]
 scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_dual_pane_master_detail"
+hyperpart = "master-detail"
+authoring = "stage:dual_pane_flow"
+layer = "surface"
+job = "List + sibling detail on one workspace uses the HM master-detail shell, not two free cards."
+use_when = [
+  "workspace stage is dual_pane_flow",
+  "regions include display:list and display:detail (same source preferred)",
+  "operator selects a row and stays on the page while the pane fills",
+]
+refuse_when = [
+  "only multi-list dual_pane without a detail region (independent half-width cards)",
+  "full-page drill is the product job (omit dual_pane_flow; use action → surface)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["contact_manager contacts (contact_list + contact_detail)"]
+scanner = "catalogue_only"

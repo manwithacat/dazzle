@@ -43,7 +43,8 @@ SIGNALS: dict[str, object] = {
     "confirm": "always",  # hx-confirm on every delete row action
     "dialog": "always",  # detail drawer family
     "drawer": r"peek:\s*slide_over",
-    "master-detail": "exempt:gallery blueprint composition (no Dazzle mode yet)",
+    # stage: dual_pane_flow + LIST/DETAIL → .dz-master-detail shell (2026-08-09)
+    "master-detail": r"stage:\s*[\"']?dual_pane_flow",
     "controls": "always",  # checkboxes in forms
     # field options use `=` (widget=slider), not `:` — the colon-only
     # regex was an oracle lie: design_studio has used slider all along
