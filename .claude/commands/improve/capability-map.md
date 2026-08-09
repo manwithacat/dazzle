@@ -69,6 +69,10 @@ apply map patches with `{"apply":true}`.
 ---
 
 
+> **Cycle 1806 (2026-08-09).** residual=0 densify=0 tip CI green **31315713569** @b634e8e67. Campaign force **framework-ux** + require_mutation: **ship** breadcrumb trail open discovery — `breadcrumb_open_attr_suffix` (`data-dz-breadcrumb-drill` + VIEW `data-dz-open-*` on `/app/<entity>…` crumbs; Home/bare `/app` unstamped). Unit pin test_breadcrumb_open_discovery_1806 + ship-surface. open_discovery leaf **USED@1806**. budget 1. Explore **32/100**. Next: agent_acceptance / semgrep packs / framework edge; self-audit@1799 next~1814; capability-sweep@1795 next~1815.
+
+> **Cycle 1805 (2026-08-09).** residual=0 densify=0 tip green **31314529912** @45654e5a5. Campaign force **framework-ux** + require_mutation: **ship** ConfirmGate + workspace primary/overflow open discovery (`confirm_action_open_attrs` via=confirm|revoke|re-enable; `link_open_discovery_attr_suffix` on heading actions). Unit pin + ship-surface. open_discovery leaf **USED@1805**; `dazzle sentinel scan` **USED@1805** (sentinel findings=0; full semgrep packs still STALE — timeout). budget 1. Explore **31/100**. Next: agent_acceptance / semgrep packs / interesting other; self-audit@1799 next~1814; capability-sweep@1795 next~1815.
+
 > **Cycle 1804 (2026-08-09).** residual=0 densify=0 CI green **31313118349** @04c45e7f3. Campaign force story_walk **overridden** (residual=0 thrash ban / harness_only) → **framework process lint**: scoreboard `WI N` IGNORECASE matched English **win** (design_studio "pixels win" → false scoreboard_smells=2). Ship: case-sensitive `WI\s+[DNL]` + unit pin; fleet smells **0**. example product maturity **USED@1804**. budget 1. Explore **30/100**. Next: agent_acceptance / semgrep / framework edge; self-audit@1799 next~1814; capability-sweep@1795 next~1815.
 
 ## Registry
@@ -121,7 +125,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1805 | USED |
 | `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |

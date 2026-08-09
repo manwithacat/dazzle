@@ -201,6 +201,24 @@ def link_open_discovery_attr_suffix(href: str, *, data_action: str = "") -> str:
     return f" data-dz-ref-link-drill {drill_open_discovery_attrs(url)}"
 
 
+def breadcrumb_open_attr_suffix(href: str) -> str:
+    """Open-discovery attr suffix for breadcrumb trail hops.
+
+    Cycle 1806 — agents attr-read parent list/detail crumbs without scraping
+    labels. Marker ``data-dz-breadcrumb-drill`` + VIEW-style ``data-dz-open-*``
+    (``via=id`` → ``Open {Entity}``). Skips Home (``/`` / bare ``/app``),
+    fragment-only, and non-app paths — same gate as ref-link VIEW hops.
+    """
+    url = (href or "").strip()
+    if not url or url == "#" or url.startswith("#"):
+        return ""
+    path = url.split("?", 1)[0].strip()
+    segs = [s for s in path.strip("/").split("/") if s]
+    if not path.startswith("/app/") or len(segs) < 2 or segs[0] != "app":
+        return ""
+    return f" data-dz-breadcrumb-drill {drill_open_discovery_attrs(url)}"
+
+
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:
     """Primary dual-open attrs (link attrs, host chain attrs) for one hop."""
     via_field = (via or "id").strip() or "id"

@@ -57,7 +57,10 @@ from dazzle.render.fragment.primitives import (
     WorkspaceShell,
     WorkspaceToolbar,
 )
-from dazzle.render.open_discovery import link_open_discovery_attr_suffix
+from dazzle.render.open_discovery import (
+    breadcrumb_open_attr_suffix,
+    link_open_discovery_attr_suffix,
+)
 
 
 def _load_static(name: str) -> str:
@@ -359,13 +362,18 @@ class _RenderShellMixin:
         List items, links, and ``aria-current="page"`` are host-owned content;
         the dual-lock root is ``.dz-breadcrumb`` (contracts/breadcrumb.py).
         Separators are CSS-generated (chevrons) — markup stays list-clean.
+
+        Cycle 1806 — stamp ``data-dz-breadcrumb-drill`` + ``data-dz-open-*`` on
+        ``/app/<entity>…`` crumb links so agents attr-read trail hops without
+        scraping labels (Home / bare ``/app`` stay unstamped).
         """
         parts: list[str] = []
         for item in b.items:
             label = ctx.escape(item.label)
             if item.href:
                 href = ctx.escape_attr(item.href)
-                parts.append(f'<li><a href="{href}">{label}</a></li>')
+                open_extra = breadcrumb_open_attr_suffix(str(item.href))
+                parts.append(f'<li><a href="{href}"{open_extra}>{label}</a></li>')
             else:
                 parts.append(f'<li aria-current="page">{label}</li>')
         aria = ctx.escape_attr(b.aria_label)
