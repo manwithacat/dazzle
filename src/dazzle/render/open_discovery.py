@@ -201,13 +201,13 @@ def link_open_discovery_attr_suffix(href: str, *, data_action: str = "") -> str:
     return f" data-dz-ref-link-drill {drill_open_discovery_attrs(url)}"
 
 
-def breadcrumb_open_attr_suffix(href: str) -> str:
-    """Open-discovery attr suffix for breadcrumb trail hops.
+def _view_drill_open_attr_suffix(href: str, *, marker: str) -> str:
+    """VIEW-style open-discovery suffix for a chrome surface (marker varies).
 
-    Cycle 1806 — agents attr-read parent list/detail crumbs without scraping
-    labels. Marker ``data-dz-breadcrumb-drill`` + VIEW-style ``data-dz-open-*``
-    (``via=id`` → ``Open {Entity}``). Skips Home (``/`` / bare ``/app``),
-    fragment-only, and non-app paths — same gate as ref-link VIEW hops.
+    Cycle 1823 — collapse breadcrumb / command clone pair (clone ratchet).
+    Marker differs (``data-dz-breadcrumb-drill`` vs ``data-dz-command-drill``);
+    path gate and ``drill_open_discovery_attrs`` assembly are identical.
+    Skips Home (``/`` / bare ``/app``), fragment-only, and non-app paths.
     """
     url = (href or "").strip()
     if not url or url == "#" or url.startswith("#"):
@@ -216,7 +216,30 @@ def breadcrumb_open_attr_suffix(href: str) -> str:
     segs = [s for s in path.strip("/").split("/") if s]
     if not path.startswith("/app/") or len(segs) < 2 or segs[0] != "app":
         return ""
-    return f" data-dz-breadcrumb-drill {drill_open_discovery_attrs(url)}"
+    return f" {marker} {drill_open_discovery_attrs(url)}"
+
+
+def breadcrumb_open_attr_suffix(href: str) -> str:
+    """Open-discovery attr suffix for breadcrumb trail hops.
+
+    Cycle 1806 — agents attr-read parent list/detail crumbs without scraping
+    labels. Marker ``data-dz-breadcrumb-drill`` + VIEW-style ``data-dz-open-*``
+    (``via=id`` → ``Open {Entity}``). Skips Home (``/`` / bare ``/app``),
+    fragment-only, and non-app paths — same gate as ref-link VIEW hops.
+    """
+    return _view_drill_open_attr_suffix(href, marker="data-dz-breadcrumb-drill")
+
+
+def command_open_attr_suffix(href: str) -> str:
+    """Open-discovery attr suffix for command-palette result hops.
+
+    Cycle 1823 — agents attr-read ⌘K / palette destinations without scraping
+    labels. Marker ``data-dz-command-drill`` + VIEW-style ``data-dz-open-*``
+    (``via=id`` → ``Open {Entity}``). Same path gate as breadcrumb / ref-link
+    VIEW hops: requires ``/app/<entity>…``; skips bare ``/app``, fragment-only,
+    and non-app paths.
+    """
+    return _view_drill_open_attr_suffix(href, marker="data-dz-command-drill")
 
 
 def hub_open_discovery_attrs(drill_url: str, *, via: str = "id") -> tuple[str, str]:

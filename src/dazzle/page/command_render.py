@@ -13,6 +13,7 @@ from __future__ import annotations
 from dazzle.page.command_index import CommandEntry
 from dazzle.render.fragment.icon_html import lucide_icon_html
 from dazzle.render.html import esc
+from dazzle.render.open_discovery import command_open_attr_suffix
 
 __all__ = ["render_command_results"]
 
@@ -32,8 +33,11 @@ def render_command_results(entries: list[CommandEntry]) -> str:
         # hx-boost lets the anchor navigate via htmx (boosted) while staying a
         # real link — keyboard Enter and click both work, and it degrades to a
         # plain navigation with JS off.
+        # Cycle 1823 — open-discovery so agents attr-read palette hops.
+        open_extra = command_open_attr_suffix(e.url)
         parts.append(
-            f'<a class="dz-command__item" href="{esc(e.url, quote=True)}" hx-boost="true" role="option">'
+            f'<a class="dz-command__item" href="{esc(e.url, quote=True)}" '
+            f'hx-boost="true" role="option"{open_extra}>'
             f"{icon}<span>{esc(e.label)}</span></a>"
         )
     return "".join(parts)
