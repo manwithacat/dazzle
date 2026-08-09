@@ -25,7 +25,9 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: TaskComment" in text
     assert "conversation: count(TaskComment)" in text
-    assert "focus: live_conversation" in text
+    # command_density@1835 keeps live_conversation on the focus spine (not first).
+    assert "live_conversation" in text
+    assert "focus:" in text and "live_conversation" in text
     # Goal B interesting_product: hero live threads use MessageScroller chrome
     # (not queue meta) after the HTTP CONVERSATION wire-up.
     for ws in ("admin_dashboard", "team_overview", "my_work"):
@@ -33,6 +35,9 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
         region = block.split("live_conversation:", 1)[1][:400]
         assert "display: conversation" in region, ws
         assert "source: TaskComment" in region, ws
+        # Focus spine still names the conversation region.
+        ux = block.split("ux:", 1)[1][:800]
+        assert "live_conversation" in ux, ws
 
 
 def test_task_comment_seeds_have_domain_true_copy() -> None:

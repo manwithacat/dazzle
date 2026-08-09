@@ -158,37 +158,42 @@ A discrete unit of work to be completed by a team member.
 
 ### Workspace: Admin Dashboard
 
-**Purpose**: System-wide overview and management
+**Purpose**: Multi-panel admin — dual attention pressure before conversation
 
 **Regions**:
-- **Metrics**: Total tasks, by status (todo/in_progress/review/done)
+- **Metrics**: Total tasks, by status (todo/in_progress/review) + documents/conversation
 - **Team Metrics**: Total users, active users
-- **Urgent Tasks**: Priority = urgent, not done
-- **Overdue Tasks**: Past due date, not done
+- **Urgent Tasks**: Priority = urgent, not done (limit 4)
+- **Overdue Tasks**: Past due date, not done (limit 4)
+- **Composition**: Task brief headlines
+- **Live Conversation**: TaskComment Message trail (after dual attention)
 
 ---
 
 ### Workspace: Team Overview
 
-**Purpose**: Monitor team progress and workload
+**Purpose**: Multi-panel lead desk — review + plate dual attention before trail
 
 **Regions**:
-- **Metrics**: Total tasks, in progress, in review, completed today
-- **Needs Review**: Tasks awaiting approval
-- **Team Workload**: Currently in-progress tasks
-- **Unassigned**: Tasks needing assignment
+- **Metrics**: Total tasks, in progress, in review, done + documents/conversation
+- **Needs Review**: Tasks awaiting approval (limit 4)
+- **Plate By Person**: Open work kanban by assignee
+- **Composition**: Document brief headlines
+- **Live Conversation**: Team TaskComment trail (after dual attention)
+- **Team Roster**: Active teammates
 
 ---
 
 ### Workspace: My Work
 
-**Purpose**: Personal task view for individual contributors
+**Purpose**: Multi-panel personal plate — board + dues dual attention before trail
 
 **Regions**:
-- **My In Progress**: Current work items
-- **My To Do**: Upcoming tasks
-- **My In Review**: Awaiting approval
-- **My Completed**: Recent accomplishments
+- **My Summary**: Personal WIP / todo / review metrics
+- **My Board**: Personal status kanban
+- **My Upcoming**: Due-date timeline (limit 4)
+- **Composition**: Briefs on open work
+- **Live Conversation**: TaskComment trail (after dual attention)
 
 ---
 

@@ -29,20 +29,22 @@ context or decisions — each comment is always tied to its task and its author.
 
 **Administrators** have full system access for task and user management. They
 aim to manage all tasks, configure team settings, and view analytics. They
-land on the **Admin Dashboard** — task and team metrics plus urgent and
-overdue work queues — and also use the Task Board and Team Overview. They
-alone can add, change, or remove Team Member accounts.
+land on the **Admin Dashboard** — multi-panel pressure (urgent + overdue dual
+attention), document briefs, then live conversation — and also use the Task
+Board and Team Overview. They alone can add, change, or remove Team Member
+accounts.
 
 **Team Managers** oversee team tasks and assignments — assigning work,
 tracking progress, and reviewing completed work. They land on **Team
-Overview**: team metrics and review, unassigned, and in-progress queues —
-not a flat dump of every task. Like administrators, they can see every task
-and every Team Member.
+Overview**: multi-panel lead desk with review + plate dual attention, briefs,
+then conversation — not a flat dump of every task. Like administrators, they
+can see every task and every Team Member.
 
 **Team Members** work on assigned tasks: completing them, updating status,
-and requesting help. They land on **My Work** — personal metrics and WIP/todo
-queues, with completed history as a list. A Team Member sees only tasks where
-they are the assignee or the creator, and can update only those.
+and requesting help. They land on **My Work** — multi-panel personal plate
+(board + dues dual attention), briefs, then conversation. A Team Member sees
+only tasks where they are the assignee or the creator, and can update only
+those.
 
 ## Where work happens
 
@@ -50,15 +52,15 @@ Work is organised into job-shaped workspaces. The **Task Board** — shared by
 all three roles — has board metrics, dual kanban (status + assignee), due
 timeline, and urgent queue (no status chart / comment dump theater —
 empty_region honesty). The **Admin Dashboard** is the administrator home:
-metrics for tasks and users, plus urgent and overdue queues. The **Team
-Overview** is the manager home: live conversation, metrics, document briefs,
-review queue, team roster, and assignee plate kanban (status counts live in
-metrics — no flow chart / twin comment dump). **My Work** is each person's
-conversation trail, pressure strip, briefs, personal board, and due timeline
-(no twin comment dump). **Discussion** is the comment desk with trail, active
-cards, and status chart. **People** is the org-structure desk:
-role board + department queue, then roster, unassigned queue, plate-by-person,
-and department headcount mix.
+metrics, dual attention (urgent + overdue queues capped for fold share),
+document composition, then live conversation trail (command_density). The
+**Team Overview** is the manager home: metrics, dual attention (review queue +
+assignee plate kanban), briefs, then conversation (no flow chart / twin
+comment dump). **My Work** is each person's multi-panel plate: summary,
+board + dues dual attention, briefs, then conversation (no twin comment dump).
+**Discussion** is the comment desk with trail, active cards, and status chart.
+**People** is the org-structure desk: role board + department queue, then
+roster, unassigned queue, plate-by-person, and department headcount mix.
 
 ## How work flows through it
 
@@ -122,4 +124,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:e9429567e34b7255e345c0113e2410a9f94c8549a9f3d7b9404cc4ebcd4578da -->
+<!-- dazzle-spec-brief: sha256:97aa9190b024e59bc75c07d4db714a048d338dd69512f3d306b998fd20bfebfd -->

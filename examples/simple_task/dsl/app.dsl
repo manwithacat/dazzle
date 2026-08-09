@@ -807,19 +807,9 @@ workspace task_board "Task Board":
 
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
-  # Goal B conversation + document: discussion trail with briefs so the
-  # admin desk is a reply surface, not only status tiles and title queues.
-  purpose: "System-wide overview — live conversation, document composition, pressure queues"
-
-  # Goal B conversation spine FIRST — Message/Bubble chrome above fold
-  # (HTTP CONVERSATION whitelist + MessageScroller; not raw queue meta).
-  live_conversation:
-    source: TaskComment
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No conversation yet — task comments appear here"
+  # Goal B command_density (cycle 1835): dual attention (urgent + overdue)
+  # before document composition and conversation trail — peer admin ops dens.
+  purpose: "Multi-panel admin — pressure queues, briefs, then live conversation"
 
   metrics:
     source: Task
@@ -836,6 +826,52 @@ workspace admin_dashboard "Admin Dashboard":
       in_review: warning
       documents: accent
       conversation: accent
+
+  team_metrics:
+    source: User
+    display: metrics
+    aggregate:
+      total_users: count(User)
+      active_users: count(User where is_active = true)
+    tones:
+      active_users: positive
+
+  # Dual attention — urgent + overdue pressure above fold (caps for fold share).
+  urgent_tasks:
+    source: Task
+    filter: priority = urgent and status != done
+    sort: due_date asc
+    limit: 4
+    display: queue
+    action: task_edit
+    empty: "No urgent tasks"
+
+  overdue_tasks:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc
+    limit: 4
+    display: queue
+    action: task_edit
+    empty: "No overdue tasks"
+
+  # Goal B document spine — named brief headlines (not UUID shells).
+  composition:
+    source: TaskBrief
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: brief_detail
+    empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
+
+  # Conversation trail after dual attention + composition.
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No conversation yet — task comments appear here"
 
   # Hyperpart emitter dogfood: display: conversation → Message(.dz-message) + Bubble.
   sample_thread:
@@ -903,58 +939,14 @@ workspace admin_dashboard "Admin Dashboard":
 
   ux:
     as admin:
-      purpose: "See task discussion before document briefs and pressure queues"
-      focus: live_conversation, metrics, composition, urgent_tasks
-
-  team_metrics:
-    source: User
-    display: metrics
-    aggregate:
-      total_users: count(User)
-      active_users: count(User where is_active = true)
-    tones:
-      active_users: positive
-
-  # Goal B document spine — named brief headlines above fold (not UUID shells).
-  composition:
-    source: TaskBrief
-    sort: created_at desc
-    limit: 10
-    display: queue
-    action: brief_detail
-    empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
-
-  # Job queues — not bare CRUD lists (ST-014 pressure surfaces).
-  urgent_tasks:
-    source: Task
-    filter: priority = urgent and status != done
-    sort: due_date asc
-    limit: 10
-    display: queue
-    action: task_edit
-    empty: "No urgent tasks"
-
-  overdue_tasks:
-    source: Task
-    filter: due_date < today and status != done
-    sort: due_date asc
-    limit: 10
-    display: queue
-    action: task_edit
-    empty: "No overdue tasks"
+      purpose: "Multi-panel admin — dual attention pressure before conversation trail"
+      focus: metrics, urgent_tasks, overdue_tasks, composition, live_conversation
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
-  # Goal B conversation + document: discussion first, then briefs and review.
-  purpose: "Lead desk — live conversation, document briefs, review pressure, plate by person"
-
-  live_conversation:
-    source: TaskComment
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No team conversation yet — comments on tasks appear here"
+  # Goal B command_density (cycle 1835): dual attention (review + plate)
+  # before document composition and conversation trail.
+  purpose: "Multi-panel lead desk — review pressure, plate by person, briefs, then conversation"
 
   metrics:
     source: Task
@@ -975,34 +967,41 @@ workspace team_overview "Team Overview":
       documents: accent
       conversation: accent
 
-  # Goal B empty_region_honesty (cycle 1817)
-  ux:
-    as manager:
-      purpose: "Discussion + briefs + review + plate — no chart/twin comment void"
-      focus: live_conversation, metrics, composition, needs_review, team_roster, plate_by_person
-    as admin:
-      purpose: "Discussion + briefs + review + plate — no chart/twin comment void"
-      focus: live_conversation, metrics, composition, needs_review, team_roster, plate_by_person
+  # Dual attention — review queue + plate kanban before fold trail.
+  needs_review:
+    source: Task
+    filter: status = review
+    sort: updated_at asc
+    limit: 4
+    display: queue
+    action: task_edit
+    empty: "No tasks awaiting review"
+
+  plate_by_person:
+    source: Task
+    filter: status != done and assigned_to != null
+    display: kanban
+    group_by: assigned_to
+    sort: priority desc
+    action: task_edit
+    empty: "No assigned open work"
 
   # Goal B document composition — acceptance / brief headlines for Monday review.
   composition:
     source: TaskBrief
     sort: created_at desc
-    limit: 10
+    limit: 4
     display: queue
     action: brief_detail
     empty: "No document lines yet — briefs and acceptance criteria appear here"
 
-
-  # ST-018 review queue (one listish Task signal for the review job).
-  needs_review:
-    source: Task
-    filter: status = review
-    sort: updated_at asc
-    limit: 12
-    display: queue
-    action: task_edit
-    empty: "No tasks awaiting review"
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No team conversation yet — comments on tasks appear here"
 
   # People source — not another Task queue pad.
   team_roster:
@@ -1014,17 +1013,6 @@ workspace team_overview "Team Overview":
     display: queue
     action: user_detail
     empty: "No active teammates"
-
-  # Monday review: scan each person's plate without leaving the lead desk (ST-015).
-  plate_by_person:
-    source: Task
-    filter: status != done and assigned_to != null
-    display: kanban
-    group_by: assigned_to
-    sort: priority desc
-    action: task_edit
-    empty: "No assigned open work"
-
 
   lead_readiness:
     display: status_list
@@ -1042,18 +1030,20 @@ workspace team_overview "Team Overview":
         icon: "columns"
         state: positive
 
+  # Goal B empty_region_honesty + command_density focus spine
+  ux:
+    as manager:
+      purpose: "Multi-panel lead — review + plate dual attention before conversation trail"
+      focus: metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+    as admin:
+      purpose: "Multi-panel lead — review + plate dual attention before conversation trail"
+      focus: metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+
 workspace my_work "My Work":
   access: authenticated
-  # Goal B conversation + document: discussion trail with personal briefs.
-  purpose: "Personal plate — live conversation, briefs on your work, board flow"
-
-  live_conversation:
-    source: TaskComment
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No conversation yet — comments on your tasks appear here"
+  # Goal B command_density (cycle 1835): dual attention (board + dues)
+  # before document composition and conversation trail.
+  purpose: "Multi-panel personal plate — board flow, dues, briefs, then conversation"
 
   my_summary:
     source: Task
@@ -1070,28 +1060,7 @@ workspace my_work "My Work":
       documents: accent
       conversation: accent
 
-  # Goal B empty_region_honesty (cycle 1817)
-  ux:
-    as member:
-      purpose: "Conversation + briefs + board + dues — no twin comment dump"
-      focus: live_conversation, my_summary, composition, my_board, my_upcoming
-    as manager:
-      purpose: "Conversation + briefs + board + dues — no twin comment dump"
-      focus: live_conversation, my_summary, composition, my_board, my_upcoming
-    as admin:
-      purpose: "Conversation + briefs + board + dues — no twin comment dump"
-      focus: live_conversation, my_summary, composition, my_board, my_upcoming
-
-  # Goal B document spine on the member hero — brief headlines, not empty chrome.
-  composition:
-    source: TaskBrief
-    sort: created_at desc
-    limit: 10
-    display: queue
-    action: brief_detail
-    empty: "No briefs on open work yet — acceptance lines appear as teammates attach them"
-
-  # Kanban for personal flow — mode family distinct from listish queues.
+  # Dual attention — personal board + upcoming dues before trail.
   my_board:
     source: Task
     filter: assigned_to = current_user and status != done
@@ -1101,16 +1070,31 @@ workspace my_work "My Work":
     action: task_edit
     empty: "No open tasks assigned to you"
 
-  # Due-date timeline — another mode family on Task.
   my_upcoming:
     source: Task
     filter: assigned_to = current_user and due_date != null and status != done
     sort: due_date asc
-    limit: 15
+    limit: 4
     display: timeline
     action: task_edit
     empty: "No upcoming due dates on your work"
 
+  # Goal B document spine on the member hero — brief headlines, not empty chrome.
+  composition:
+    source: TaskBrief
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: brief_detail
+    empty: "No briefs on open work yet — acceptance lines appear as teammates attach them"
+
+  live_conversation:
+    source: TaskComment
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No conversation yet — comments on your tasks appear here"
 
   focus_hint:
     display: status_list
@@ -1128,8 +1112,18 @@ workspace my_work "My Work":
         icon: "layout-grid"
         state: positive
 
-# Fourth product workspace: discussion desk so list surfaces
-# no longer dominate vs job shells (comments as collaboration, not CRUD dump).
+  # Goal B empty_region_honesty + command_density focus spine
+  ux:
+    as member:
+      purpose: "Multi-panel personal plate — board + dues dual attention before conversation trail"
+      focus: my_summary, my_board, my_upcoming, composition, live_conversation
+    as manager:
+      purpose: "Multi-panel personal plate — board + dues dual attention before conversation trail"
+      focus: my_summary, my_board, my_upcoming, composition, live_conversation
+    as admin:
+      purpose: "Multi-panel personal plate — board + dues dual attention before conversation trail"
+      focus: my_summary, my_board, my_upcoming, composition, live_conversation
+
 workspace comments_desk "Discussion":
   purpose: "Recent task discussion across the team — threads, decisions, and open questions on live work"
   access: persona(admin, manager, member)

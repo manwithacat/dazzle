@@ -41,9 +41,10 @@ def test_team_overview_omits_flow_chart_and_twin_comment() -> None:
     assert "flow_chart:" not in block
     assert "recent_discussion:" not in block
     assert "display: bar_chart" not in block
+    # command_density@1835: dual attention before conversation trail
     assert (
-        "focus: live_conversation, metrics, composition, needs_review, team_roster, plate_by_person"
-        in block
+        "focus: metrics, needs_review, plate_by_person, composition, "
+        "live_conversation, team_roster" in block
     )
 
 
@@ -54,7 +55,8 @@ def test_my_work_omits_twin_comment_timeline() -> None:
     assert "my_board:" in block
     assert "my_upcoming:" in block
     assert "my_discussion:" not in block
-    assert "focus: live_conversation, my_summary, composition, my_board, my_upcoming" in block
+    # command_density@1835: dual attention before conversation trail
+    assert "focus: my_summary, my_board, my_upcoming, composition, live_conversation" in block
     assert block.count("display: timeline") == 1
 
 

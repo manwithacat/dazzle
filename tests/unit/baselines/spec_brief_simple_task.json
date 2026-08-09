@@ -427,49 +427,49 @@
       "name": "admin_dashboard",
       "title": "Admin Dashboard",
       "kind": "workspace",
-      "purpose": "System-wide overview — live conversation, document composition, pressure queues",
+      "purpose": "Multi-panel admin — pressure queues, briefs, then live conversation",
       "personas": [
         "admin"
       ],
       "contents": [
-        "conversation of TaskComment",
         "metrics of Task",
         "metrics of User",
-        "queue of TaskBrief",
         "queue of Task",
-        "queue of Task"
+        "queue of Task",
+        "queue of TaskBrief",
+        "conversation of TaskComment"
       ]
     },
     {
       "name": "team_overview",
       "title": "Team Overview",
       "kind": "workspace",
-      "purpose": "Lead desk — live conversation, document briefs, review pressure, plate by person",
+      "purpose": "Multi-panel lead desk — review pressure, plate by person, briefs, then conversation",
       "personas": [
         "admin",
         "manager"
       ],
       "contents": [
-        "conversation of TaskComment",
         "metrics of Task",
-        "queue of TaskBrief",
         "queue of Task",
-        "queue of User",
-        "kanban of Task"
+        "kanban of Task",
+        "queue of TaskBrief",
+        "conversation of TaskComment",
+        "queue of User"
       ]
     },
     {
       "name": "my_work",
       "title": "My Work",
       "kind": "workspace",
-      "purpose": "Personal plate — live conversation, briefs on your work, board flow",
+      "purpose": "Multi-panel personal plate — board flow, dues, briefs, then conversation",
       "personas": [],
       "contents": [
-        "conversation of TaskComment",
         "metrics of Task",
-        "queue of TaskBrief",
         "kanban of Task",
-        "timeline of Task"
+        "timeline of Task",
+        "queue of TaskBrief",
+        "conversation of TaskComment"
       ]
     },
     {
