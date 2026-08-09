@@ -275,7 +275,8 @@ surface user_edit "Edit User":
     field email "Email"
     field name "Name"
     field role "Role"
-    field is_active "Active"
+    # HM Switch — boolean settings / account on-off (hyperpart auto_seed drain)
+    field is_active "Active" widget=switch
 
 # ============================================================================
 # TICKET SURFACES
@@ -425,7 +426,8 @@ surface comment_create "Create Comment":
   section main "New Comment":
     field ticket "Ticket"
     field content "Comment"
-    field is_internal "Internal"
+    # HM Switch — internal note flag (settings-like boolean; not toggle mode press)
+    field is_internal "Internal" widget=switch
 
   ux:
     as customer:
@@ -438,7 +440,8 @@ surface comment_edit "Edit Comment":
 
   section main "Edit Comment":
     field content "Comment"
-    field is_internal "Internal"
+    # HM Switch — internal note flag (settings-like boolean)
+    field is_internal "Internal" widget=switch
 
   ux:
     as customer:
