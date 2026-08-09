@@ -274,9 +274,12 @@ search on Contact:
 # Goal B document depth: named engagement letters above fold (composition),
 # not only directory metrics + empty letter chrome.
 workspace home "Home":
-  # Goal B conversation + document + empty_region_honesty: notes + letters above
-  # fold; omit company bar chart / twin company dumps that read as empty theater.
-  purpose: "Relationship notes, engagement documents, and directory pulse — no empty-region theater"
+  # Goal B command_density (cycle 1830): peer CRM homes (HubSpot / Salesforce)
+  # put directory pulse + dual attention (who to call + letters in flight) above
+  # the note trail — not conversation owning the fold alone. Conversation stays,
+  # capped to share fold after dual queues + document composition.
+  # Also holds document + empty_region_honesty (no company bar / twin dumps).
+  purpose: "Multi-panel CRM — directory pulse, favourites to call, open letters, then relationship notes"
   access: persona(user, admin)
 
   directory_stats:
@@ -303,36 +306,37 @@ workspace home "Home":
       documents: accent
       awaiting_signature: positive
 
-  # Goal B conversation spine FIRST — newest relationship notes so above-fold
-  # stills show domain-true CRM prose (display_field: body).
-  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
-  live_conversation:
-    source: ContactNote
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: contact_note_detail
-    empty: "No conversation yet — notes on contacts and letters appear here"
-
-  # Goal B composition queue — named document titles (scope_summary).
-  composition:
-    source: EngagementLetter
-    filter: status = draft or status = sent
-    sort: effective_date desc
-    limit: 10
-    display: queue
-    action: engagement_letter_detail
-    empty: "No open engagement letters — draft an MSA, NDA, or retainer from a contact hub."
-
-  # ST-007 — favourites as a work queue, not buried in the full list sort.
+  # Dual attention A — favourites as a work queue (who to call), not buried
+  # in the full list sort. Cap at 4 so dual panels + composition + notes share fold.
   favourite_contacts:
     source: Contact
     filter: is_favorite = true
     sort: last_name asc, first_name asc
-    limit: 10
+    limit: 4
     display: queue
     action: contact_detail
     empty: "No favourites yet — star a contact from the directory."
+
+  # Dual attention B + Goal B composition — named document titles (scope_summary).
+  composition:
+    source: EngagementLetter
+    filter: status = draft or status = sent
+    sort: effective_date desc
+    limit: 4
+    display: queue
+    action: engagement_letter_detail
+    empty: "No open engagement letters — draft an MSA, NDA, or retainer from a contact hub."
+
+  # Goal B conversation spine AFTER dual attention — newest relationship notes
+  # so stills show domain-true CRM prose without owning the whole fold.
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
+  live_conversation:
+    source: ContactNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: contact_note_detail
+    empty: "No conversation yet — notes on contacts and letters appear here"
 
   recent_contacts:
     source: Contact
@@ -347,17 +351,17 @@ workspace home "Home":
   practice_context:
     display: status_list
     entries:
-      - title: "Notes first"
-        caption: "Relationship notes move letters and calls forward"
-        icon: "message-square"
+      - title: "Dual attention"
+        caption: "Favourites to call and letters in flight share the fold"
+        icon: "layout-dashboard"
         state: accent
       - title: "Engagement docs"
         caption: "MSAs, NDAs, and retainers open from composition"
         icon: "file-text"
         state: positive
-      - title: "Directory"
-        caption: "Favourites and A–Z live on Contacts"
-        icon: "users"
+      - title: "Notes trail"
+        caption: "Relationship notes follow pressure queues (Message chrome)"
+        icon: "message-square"
         state: positive
 
   find_contact:
@@ -369,12 +373,12 @@ workspace home "Home":
 
   ux:
     as user:
-      purpose: "Relationship notes and engagement documents — no empty company chart theater"
-      # Goal B empty_region_honesty: conversation + composition above fold; no twin dumps
-      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts, practice_context
+      purpose: "Multi-panel CRM — directory pulse, dual attention, letters, then notes"
+      # Goal B command_density: metrics → dual queues → conversation (no chart voids)
+      focus: directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
     as admin:
-      purpose: "Notes, letters, and directory pulse without bar-chart voids"
-      focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts, practice_context
+      purpose: "Full practice home — multi-panel attention before conversation trail"
+      focus: directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":

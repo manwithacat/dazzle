@@ -29,8 +29,8 @@ def test_home_omits_company_chart_theater() -> None:
     assert "company_contacts:" not in block
     assert "bar_chart" not in block
     assert (
-        "focus: live_conversation, directory_stats, engagement_docs, composition, favourite_contacts, practice_context"
-        in block
+        "focus: directory_stats, engagement_docs, favourite_contacts, composition, "
+        "live_conversation, practice_context" in block
     )
 
 

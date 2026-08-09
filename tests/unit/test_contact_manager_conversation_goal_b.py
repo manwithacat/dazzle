@@ -23,7 +23,9 @@ def test_home_declares_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: ContactNote" in text
     assert "conversation: count(ContactNote)" in text
-    assert "focus: live_conversation" in text
+    # Conversation remains on Home focus (after dual attention — command_density).
+    assert "live_conversation" in text
+    assert "focus:" in text and "live_conversation" in text.split("workspace home", 1)[1]
     # Goal B interesting_product: hero live threads use Message/Bubble chrome
     # (not queue meta) after the HTTP CONVERSATION wire-up.
     block = text.split("workspace home", 1)[1]

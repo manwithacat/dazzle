@@ -29,12 +29,12 @@ for overview, then **Contacts** for dual-pane browse.
 
 ## Where work happens
 
-**Home** is the welcome overview (empty-region honesty): directory metrics,
-engagement-document pulse, a **live relationship-notes** trail rendered as
-Message/Bubble conversation chrome (not a meta queue of note rows), a **composition**
-queue of named open letters (draft and sent), favourites, an always-filled
-practice context strip, and search — without company bar-chart voids or twin
-company dumps.
+**Home** is the multi-panel CRM overview (command density + empty-region honesty):
+directory metrics and engagement-document pulse first, then dual attention —
+**favourites to call** and a **composition** queue of named open letters (draft
+and sent) — then a **live relationship-notes** trail rendered as Message/Bubble
+conversation chrome (not a meta queue of note rows), an always-filled practice
+context strip, and search — without company bar-chart voids or twin company dumps.
 **Contacts** is the dual-pane browse surface: a favourites queue strip, the full
 contact list, and a detail panel for the selected contact (no favourite kanban
 theater under the list).
@@ -94,4 +94,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:df0ce0560bf4f4c77d3190df3529efa016298b03ad174b02c9c8bf48e7c5a425 -->
+<!-- dazzle-spec-brief: sha256:64561b41854b7bfdd6af37372daf0f6c5ecde05ff3b3efa05304201820c7fe67 -->
