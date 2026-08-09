@@ -46,11 +46,13 @@ browsed alongside them, through three dedicated screens.
 
 ## Where work happens
 
-**Support Dashboard** — supervisor home: classification metrics, open and
-in-progress queues, readiness strip, open pipeline board, and status chart.
+**Support Dashboard** — supervisor home: classification metrics, dual
+attention (high-severity + open), live AI replies, utility queues, and a
+readiness strip — no secondary open-board kanban or status bar chart.
 
-**Ticket Management** — agent home: pulse metrics, open queues, pipeline
-kanban, classification trail, and priority mix chart.
+**Ticket Management** — agent home: pulse metrics, AI reply trail, one open
+worklist, classification trail, and readiness — no twin open-only queue,
+pipeline kanban, or priority bar chart.
 
 **Classifications** — AI triage desk: classification metrics, latest queue,
 open ticket grid, classification trail, and open status chart.
@@ -123,4 +125,4 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:cc1fb78c49648a6a473071c2db486fcece331ad33f645b0b6c846fde00ccf952 -->
+<!-- dazzle-spec-brief: sha256:aa561e0e61e3e49086a323d727838d56566088b774c625df588dd326001f9ac6 -->

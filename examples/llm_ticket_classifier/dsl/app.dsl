@@ -291,7 +291,10 @@ surface classification_detail "Classification Detail":
 # homes put high-severity triage + open pressure above the AI reply trail —
 # multi-panel attention, not conversation-only / flat queue thrash above fold.
 workspace support_dashboard "Support Dashboard":
-  purpose: "Multi-panel AI triage — metrics, high-severity classifications, open queue, live AI replies"
+  # Goal B empty_region_honesty (cycle 1800): peer AI triage homes (Zendesk AI /
+  # Intercom Fin) keep multi-panel attention + AI reply trail — not a second
+  # open-board kanban and status bar chart that restate metrics as empty theater.
+  purpose: "Multi-panel AI triage — metrics, dual attention, live AI replies, readiness"
   stage: "command_center"
   access: persona(supervisor, support_agent, admin)
 
@@ -340,22 +343,12 @@ workspace support_dashboard "Support Dashboard":
     action: classification_detail
     empty: "No AI replies yet — classify a ticket to draft the thread"
 
-  ux:
-    as supervisor:
-      purpose: "Multi-panel AI triage — dual attention before live reply trail"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies
-    as support_agent:
-      purpose: "Multi-panel AI triage — dual attention before live reply trail"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies
-    as admin:
-      purpose: "Multi-panel AI triage — dual attention before live reply trail"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies
-
+  # One utility strip after the fold job — not twin dumps of the open queue.
   in_progress_queue:
     source: Ticket
     filter: status = in_progress
     sort: created_at desc
-    limit: 12
+    limit: 8
     display: queue
     action: ticket_detail
     empty: "Nothing in progress"
@@ -364,53 +357,41 @@ workspace support_dashboard "Support Dashboard":
   classifications:
     source: TicketClassification
     sort: classified_at desc
-    limit: 15
+    limit: 10
     display: timeline
     empty: "No classifications yet"
-
-  # Work-surface utility: priority assessments are a ranked pull queue.
-  priority_strip:
-    source: PriorityAssessment
-    sort: priority desc
-    limit: 12
-    display: queue
-    empty: "No priority assessments yet"
 
   triage_readiness:
     display: status_list
     entries:
       - title: "Open queue"
-        caption: "Clear open tickets before they age out of SLA"
+        caption: "Clear open tickets before they age out of SLA — dual attention above"
         icon: "inbox"
         state: warning
       - title: "AI classifications"
-        caption: "Review confidence before routing"
+        caption: "Review confidence before routing — live replies above"
         icon: "sparkles"
         state: accent
-      - title: "Priority assessments"
-        caption: "High-severity items surface on the priority desk"
-        icon: "alert-triangle"
+      - title: "In progress"
+        caption: "Claimed work sits in the utility queue — not a second status board"
+        icon: "loader"
         state: positive
 
-  open_board:
-    source: Ticket
-    filter: status != closed
-    display: kanban
-    group_by: status
-    sort: created_at desc
-    action: ticket_detail
-    empty: "No open tickets"
-
-  status_mix:
-    source: Ticket
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No tickets yet"
+  ux:
+    as supervisor:
+      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
+    as support_agent:
+      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
+    as admin:
+      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
+      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
 
 workspace ticket_management "Ticket Management":
-  purpose: "Manage individual tickets"
+  # Goal B empty_region_honesty: one open worklist + AI trail — not open_only twin
+  # queue, pipeline kanban, and priority bar chart restating the same rows.
+  purpose: "Agent ticket desk — AI replies, open worklist, classification trail"
   access: persona(support_agent, supervisor, admin)
 
   agent_pulse:
@@ -444,38 +425,35 @@ workspace ticket_management "Ticket Management":
     action: ticket_detail
     empty: "No open tickets in the system"
 
-  open_only:
-    source: Ticket
-    filter: status = open
-    sort: created_at desc
-    limit: 15
-    display: queue
-    action: ticket_detail
-    empty: "No brand-new open tickets"
-
-  pipeline_board:
-    source: Ticket
-    filter: status != closed
-    display: kanban
-    group_by: status
-    sort: created_at desc
-    action: ticket_detail
-    empty: "No open tickets"
-
   classification_trail:
     source: TicketClassification
     sort: classified_at desc
-    limit: 15
+    limit: 12
     display: timeline
     empty: "No classifications yet"
 
-  priority_mix:
-    source: PriorityAssessment
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(PriorityAssessment)
-    empty: "No priority assessments yet"
+  desk_readiness:
+    display: status_list
+    entries:
+      - title: "AI draft replies"
+        caption: "Suggested responses lead the desk — open a row for the ticket hub"
+        icon: "sparkles"
+        state: accent
+      - title: "Open worklist"
+        caption: "Non-closed tickets only — no twin open-only dump or status board"
+        icon: "inbox"
+        state: warning
+
+  ux:
+    as support_agent:
+      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
+      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
+    as supervisor:
+      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
+      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
+    as admin:
+      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
+      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
 
 # Third product workspace: classification-first desk so list
 # surfaces no longer dominate vs job shells (AI triage is the product value).
