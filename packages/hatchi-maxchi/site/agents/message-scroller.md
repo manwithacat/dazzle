@@ -103,7 +103,7 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 
 Dual-lock unit is the scroller root. Message children, live-region attrs, and
 scroll behaviour are host-owned. Class ``.dz-message-scroller`` is the stable
-substrate root (gallery CSS; no FragmentRenderer emit yet).
+substrate root (FragmentRenderer: ``MessageScroller`` under ``display: conversation``).
 """
 
 from contracts._kit import DomContract, Node

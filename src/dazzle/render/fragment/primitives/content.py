@@ -1,11 +1,14 @@
-"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton, Bubble, Message, HoverCard.
+"""Content primitives — Text, Heading, Icon, Badge, EmptyState, Skeleton,
+Bubble, Message, MessageScroller, HoverCard.
 
 These are the leaf-level visual primitives. They do not contain children
 (except EmptyState, which contains an optional action; Message nests a
-Bubble). Most apps' visible text routes through Text or Heading; status
-indicators route through Badge. Bubble is the chat speech shell (HM
-dual-lock ``.dz-bubble``). Message is the chat row (media + meta + bubble;
-HM dual-lock ``.dz-message``). HoverCard is the rich preview affordance
+Bubble; MessageScroller wraps Message rows). Most apps' visible text
+routes through Text or Heading; status indicators route through Badge.
+Bubble is the chat speech shell (HM dual-lock ``.dz-bubble``). Message is
+the chat row (media + meta + bubble; HM dual-lock ``.dz-message``).
+MessageScroller is the transcript viewport (HM dual-lock
+``.dz-message-scroller``). HoverCard is the rich preview affordance
 (HM dual-lock ``.dz-hover-card``)."""
 
 from __future__ import annotations
@@ -134,6 +137,39 @@ class Message:
         if self.from_ is not None:
             return self.from_
         return self.bubble.from_
+
+
+_MESSAGE_SCROLLER_SIZES = ("", "sm", "lg")
+
+
+@dataclass(frozen=True, slots=True)
+class MessageScroller:
+    """HM MessageScroller hyperpart — dual-lock ``.dz-message-scroller``.
+
+    Gallery spine: scrollable chat transcript viewport wrapping Message
+    rows (document order = chronological, newest last). Live-region
+    attrs and scroll behaviour are host-owned; no dedicated controller
+    (auto-scroll deferred — prefer append-at-end + optional host
+    scrollIntoView).
+
+    Authored via ``display: conversation`` (primary path).
+
+    Dual-lock root: ``.dz-message-scroller`` (contracts/message_scroller.py).
+    """
+
+    messages: tuple[Message, ...]
+    label: str = "Conversation"
+    size: Literal["", "sm", "lg"] = ""
+    empty_message: str = "No conversation yet."
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("MessageScroller requires non-empty label")
+        if self.size not in _MESSAGE_SCROLLER_SIZES:
+            raise ValueError(f"invalid MessageScroller size {self.size!r}; expected ''|sm|lg")
+        for msg in self.messages:
+            if not isinstance(msg, Message):
+                raise ValueError("MessageScroller.messages must be Message instances")
 
 
 @dataclass(frozen=True, slots=True)

@@ -698,7 +698,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "contracts/message_scroller.py",
         "message_scroller",
         True,
-    ),  # HM gallery message-scroller (no FragmentRenderer emit yet)
+    ),  # HM message-scroller → MessageScroller under display: conversation
     (
         "contracts/two_factor.py",
         "two_factor",

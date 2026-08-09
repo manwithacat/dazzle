@@ -1,6 +1,7 @@
-"""message hyperpart emitter — unit pins (cycle 1770).
+"""message-scroller hyperpart emitter — unit pins (cycle 1773).
 
-``display: conversation`` → stack of ``Message`` / ``.dz-message`` (nested Bubble).
+``display: conversation`` → ``MessageScroller`` / ``.dz-message-scroller``
+wrapping ``Message`` / ``.dz-message`` (nested Bubble).
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from pathlib import Path
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
-from dazzle.render.fragment import Bubble, FragmentRenderer, Message, Stack
+from dazzle.render.fragment import Bubble, FragmentRenderer, Message, MessageScroller
 from dazzle.render.fragment.region._builders_timeline import _BuildersTimelineMixin
 from dazzle.render.fragment.region._context import RegionContext
 
@@ -18,66 +19,56 @@ SIMPLE = ROOT / "examples" / "simple_task"
 SUPPORT = ROOT / "examples" / "support_tickets"
 
 
-def test_message_emit_mounts_dz_spine() -> None:
+def test_message_scroller_emit_mounts_dz_spine() -> None:
     html = FragmentRenderer().render(
-        Message(
-            bubble=Bubble(text="Can we reschedule?", from_="in"),
-            author="Maya Reyes",
-            time_label="10:02",
-            media_label="MR",
-        )
-    )
-    assert 'class="dz-message"' in html
-    assert 'data-dz-from="in"' in html
-    assert 'class="dz-message__media"' in html
-    assert "MR" in html
-    assert 'class="dz-message__author"' in html
-    assert "Maya Reyes" in html
-    assert 'class="dz-message__time"' in html
-    assert "10:02" in html
-    assert 'class="dz-bubble"' in html
-    assert "Can we reschedule?" in html
-
-
-def test_message_outbound_reverses_orientation() -> None:
-    html = FragmentRenderer().render(
-        Message(
-            bubble=Bubble(text="Hold sent.", from_="out", tone="danger"),
-            author="You",
-            media_label="You",
-        )
-    )
-    assert 'class="dz-message"' in html
-    assert 'data-dz-from="out"' in html
-    assert 'data-dz-tone="danger"' in html
-    assert "Hold sent." in html
-
-
-def test_message_inherits_bubble_orientation_when_from_omitted() -> None:
-    html = FragmentRenderer().render(Message(bubble=Bubble(text="Inbound", from_="in")))
-    assert 'data-dz-from="in"' in html
-    # No meta/media when empty
-    assert "dz-message__meta" not in html
-    assert "dz-message__media" not in html
-
-
-def test_conversation_stack_emits_message_rows() -> None:
-    html = FragmentRenderer().render(
-        Stack(
-            children=(
-                Message(bubble=Bubble(text="Hello", from_="in"), author="C"),
-                Message(bubble=Bubble(text="Hi back", from_="out"), author="A"),
+        MessageScroller(
+            messages=(
+                Message(
+                    bubble=Bubble(text="Can we reschedule?", from_="in"),
+                    author="Maya Reyes",
+                    time_label="10:02",
+                    media_label="MR",
+                ),
+                Message(
+                    bubble=Bubble(text="Thursday works.", from_="out"),
+                    author="You",
+                    media_label="You",
+                ),
             ),
-            gap="sm",
+            label="Conversation",
         )
     )
+    assert 'class="dz-message-scroller"' in html
+    assert "data-dz-message-scroller" in html
+    assert 'role="log"' in html
+    assert 'aria-live="polite"' in html
+    assert 'aria-label="Conversation"' in html
+    assert 'tabindex="0"' in html
     assert html.count('class="dz-message"') == 2
     assert html.count('class="dz-bubble"') == 2
-    assert 'data-dz-from="in"' in html
-    assert 'data-dz-from="out"' in html
+    assert "Can we reschedule?" in html
+    assert "Thursday works." in html
 
 
-def test_build_conversation_wraps_static_entries_in_message() -> None:
+def test_message_scroller_empty_affordance() -> None:
+    html = FragmentRenderer().render(MessageScroller(messages=(), empty_message="No messages yet."))
+    assert 'class="dz-message-scroller"' in html
+    assert 'class="dz-message-scroller__empty"' in html
+    assert "No messages yet." in html
+    assert 'class="dz-message"' not in html
+
+
+def test_message_scroller_size_attr() -> None:
+    html = FragmentRenderer().render(
+        MessageScroller(
+            messages=(Message(bubble=Bubble(text="Hi", from_="in")),),
+            size="sm",
+        )
+    )
+    assert 'data-dz-size="sm"' in html
+
+
+def test_build_conversation_wraps_in_message_scroller() -> None:
     class _A(_BuildersTimelineMixin):
         pass
 
@@ -93,16 +84,31 @@ def test_build_conversation_wraps_static_entries_in_message() -> None:
     surface = _A()._build_conversation(region, ctx)
     html = FragmentRenderer().render(surface)
     assert 'class="dz-message-scroller"' in html
-    assert 'class="dz-message"' in html
+    assert "data-dz-message-scroller" in html
     assert html.count('class="dz-message"') >= 2
     assert 'class="dz-bubble"' in html
     assert "Inbound note" in html
     assert "Outbound reply" in html
-    assert "Customer" in html
-    assert "Agent" in html
 
 
-def test_build_conversation_from_comment_items_message_rows() -> None:
+def test_build_conversation_empty_still_mounts_scroller() -> None:
+    class _A(_BuildersTimelineMixin):
+        pass
+
+    region = type("R", (), {"name": "live", "title": "Live thread", "empty_message": None})()
+    ctx: RegionContext = {
+        "items": [],
+        "status_entries": [],
+        "empty_message": "Quiet channel.",
+    }
+    surface = _A()._build_conversation(region, ctx)
+    html = FragmentRenderer().render(surface)
+    assert 'class="dz-message-scroller"' in html
+    assert "Quiet channel." in html
+    assert 'aria-label="Live thread"' in html
+
+
+def test_build_conversation_from_comment_items_scroller() -> None:
     class _A(_BuildersTimelineMixin):
         pass
 
@@ -118,13 +124,10 @@ def test_build_conversation_from_comment_items_message_rows() -> None:
     surface = _A()._build_conversation(region, ctx)
     html = FragmentRenderer().render(surface)
     assert 'class="dz-message-scroller"' in html
-    assert 'class="dz-message"' in html
     assert "Customer: site down" in html
     assert "Agent: investigating" in html
     assert 'data-dz-from="in"' in html
     assert 'data-dz-from="out"' in html
-    # media initials derived from author
-    assert "MR" in html or "M" in html
 
 
 def test_simple_task_sample_thread_is_conversation() -> None:
@@ -155,9 +158,9 @@ def test_support_tickets_live_conversation_is_conversation() -> None:
     assert getattr(display, "value", display) == "conversation"
 
 
-def test_dsl_shapes_message_live() -> None:
+def test_dsl_shapes_message_scroller_live() -> None:
     snap = shapes_snapshot()
     planned = set(snap.get("planned_ids") or [])
-    assert "message" not in planned
-    assert snap["next_planned"] != "message"
+    assert "message-scroller" not in planned
+    assert snap["next_planned"] != "message-scroller"
     assert snap["live"] >= 75

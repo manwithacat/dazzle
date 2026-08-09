@@ -84,11 +84,13 @@ from dazzle.render.fragment.primitives import (
     Marker,
     Menubar,
     Message,
+    MessageScroller,
     MetricsGrid,
     MetricTile,
     Modal,
     MoneyField,
     NavGroup,
+    NavigationMenu,
     NavItem,
     Page,
     Pagination,
@@ -247,6 +249,8 @@ class FragmentRenderer(
                 return self._emit_breadcrumb(fragment, ctx)
             case Menubar():
                 return self._emit_menubar(fragment, ctx)
+            case NavigationMenu():
+                return self._emit_navigation_menu(fragment, ctx)
             # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)
@@ -256,6 +260,8 @@ class FragmentRenderer(
                 return self._emit_bubble(fragment, ctx)
             case Message():
                 return self._emit_message(fragment, ctx)
+            case MessageScroller():
+                return self._emit_message_scroller(fragment, ctx)
             case HoverCard():
                 return self._emit_hover_card(fragment, ctx)
             case Marker():

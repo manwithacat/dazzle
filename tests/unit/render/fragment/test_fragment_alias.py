@@ -85,6 +85,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Menubar",
         "Bubble",
         "Message",
+        "MessageScroller",
         "HoverCard",
         "Marker",
         "MapBoard",

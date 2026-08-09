@@ -97,6 +97,7 @@ from dazzle.render.fragment import (
     MenubarAction,
     MenubarMenu,
     Message,
+    MessageScroller,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -405,6 +406,14 @@ def _sample_for(primitive_type: type) -> object:
             author="Maya",
             time_label="10:02",
             media_label="MR",
+        )
+    if primitive_type is MessageScroller:
+        return MessageScroller(
+            messages=(
+                Message(bubble=Bubble(text="Hello", from_="in"), author="Maya"),
+                Message(bubble=Bubble(text="Hi", from_="out"), author="You"),
+            ),
+            label="Thread",
         )
     if primitive_type is HoverCard:
         return HoverCard(trigger="@maya", title="Maya Reyes", description="Ops lead")

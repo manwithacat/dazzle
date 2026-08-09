@@ -4,7 +4,7 @@ Houses the timeline-family builders. Chronological / event-stream Surfaces:
 
   - _build_timeline       Timeline of TimelineEvents with rich fields
   - _build_activity_feed  chronological dot + bubble feed
-  - _build_conversation   stack of Message (+Bubble) hyperparts (display: conversation)
+  - _build_conversation   MessageScroller of Message (+Bubble) hyperparts (display: conversation)
   - _build_day_timeline   vertical scroll of slot cards (#1016)
   - _build_task_inbox     workflow-led prioritised due-action list (#1015)
 
@@ -25,10 +25,9 @@ from dazzle.render.fragment import (
     Bubble,
     DayTimelineRegion,
     DayTimelineSlot,
-    EmptyState,
     Fragment,
     Message,
-    Stack,
+    MessageScroller,
     Surface,
     TaskInboxItem,
     TaskInboxRegion,
@@ -338,14 +337,15 @@ class _BuildersTimelineMixin:
         return _wrap_surface(title, "report", body)
 
     def _build_conversation(self, region: Any, ctx: RegionContext) -> Surface:
-        """``display: conversation`` — stack of HM Message rows (Bubble inside).
+        """``display: conversation`` — MessageScroller of HM Message rows.
 
-        First emitter path for the **message** hyperpart (compose under
-        conversation). Live rows (``ctx["items"]``) map content/body to bubble
-        text; actor keys + timestamps fill meta; ``is_internal`` (or ``from`` /
+        Emitter path for **message-scroller** + **message** (+ nested Bubble).
+        Live rows (``ctx["items"]``) map content/body to bubble text; actor
+        keys + timestamps fill meta; ``is_internal`` (or ``from`` /
         ``direction`` in|out) picks orientation (internal notes → outbound).
         Static ``status_entries`` (``entries:``) dogfood the same spine when
-        title is ``in``/``out``.
+        title is ``in``/``out``. Empty threads still mount scroller chrome
+        with ``.dz-message-scroller__empty``.
         """
         title = _region_title(region)
         empty_msg = str(
@@ -411,12 +411,14 @@ class _BuildersTimelineMixin:
                     )
                 )
 
-        if not messages:
-            body_empty: Fragment = EmptyState(title=empty_msg, description="")
-            return _wrap_surface(title, "report", body_empty)
-
-        stack: Fragment = Stack(children=tuple(messages), gap="sm")
-        return _wrap_surface(title, "report", stack)
+        # Region title doubles as scroller aria-label when present.
+        scroller_label = title or "Conversation"
+        body: Fragment = MessageScroller(
+            messages=tuple(messages),
+            label=scroller_label,
+            empty_message=empty_msg,
+        )
+        return _wrap_surface(title, "report", body)
 
     def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: day_timeline` regions render as a vertical

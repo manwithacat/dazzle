@@ -53,6 +53,7 @@ from dazzle.render.fragment.primitives import (
     MapBoard,
     Marker,
     Message,
+    MessageScroller,
     Modal,
     Region,
     Row,
@@ -158,6 +159,26 @@ class _RenderLayoutMixin:
             f"{media}"
             f'<div class="dz-message__body">{meta}{bubble_html}</div>'
             f"</div>"
+        )
+
+    def _emit_message_scroller(self, s: MessageScroller, ctx: RenderContext) -> str:
+        """HM MessageScroller — dual-lock ``.dz-message-scroller`` transcript viewport.
+
+        Gallery spine: ``role=log`` + ``aria-live=polite`` + ``tabindex=0``;
+        optional ``data-dz-size``; Message children (or empty affordance).
+        Root is contracts/message_scroller.py.
+        """
+        label = ctx.escape_attr(s.label)
+        size_attr = f' data-dz-size="{ctx.escape_attr(s.size)}"' if s.size else ""
+        if not s.messages:
+            empty = f'<p class="dz-message-scroller__empty">{ctx.escape(s.empty_message)}</p>'
+            body = empty
+        else:
+            body = "".join(self._emit_message(m, ctx) for m in s.messages)
+        return (
+            f'<div class="dz-message-scroller" data-dz-message-scroller '
+            f'role="log" aria-label="{label}" aria-live="polite" tabindex="0"'
+            f"{size_attr}>{body}</div>"
         )
 
     def _emit_hover_card(self, h: HoverCard, ctx: RenderContext) -> str:

@@ -46,6 +46,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Where am I in the app (trail above main) | `breadcrumb` | Shell trail from route + title / `Breadcrumb` fragment |
 | Chat speech shell (inbound/outbound) | `bubble` | `display: conversation` / `Bubble` fragment |
 | Chat message row (media + meta + bubble) | `message` | `display: conversation` / `Message` fragment (nests Bubble) |
+| Chat transcript viewport (scrollable stack) | `message-scroller` | `display: conversation` / `MessageScroller` fragment (wraps Message) |
 | Multi-image stage strip (prev/next) | `carousel` | `display: carousel` / `Carousel` fragment |
 | Rich person/entity preview on hover | `hover-card` | Person chip compose guest / `HoverCard` fragment (no region verb) |
 | Map / plan pin chrome (label + tone) | `marker` | `display: map` / `Marker` fragment (host placement) |

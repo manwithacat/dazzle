@@ -474,9 +474,9 @@ agent_surface = "pick-a-work-surface"
 id = "message-scroller"
 class = "display"
 layer = "region"
-dsl = "display: conversation (primary)"
-status = "planned"
-job = "Use message-scroller via display: conversation (primary)"
+dsl = "display: conversation → MessageScroller (.dz-message-scroller) of Message+Bubble"
+status = "live"
+job = "Use message-scroller via display: conversation → MessageScroller (.dz-message-scroller) of Message+Bubble"
 agent_surface = "pick-a-work-surface"
 
 [[part]]
