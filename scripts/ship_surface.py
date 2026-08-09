@@ -150,6 +150,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_hr_records_org_structure_goal_b.py",
     # hr_records Goal B empty_region_honesty (cycle 1819 staff + my_team prune)
     "tests/unit/test_hr_records_empty_region_goal_b.py",
+    # hr_records Goal B command_density (cycle 1837 dual attention before trail)
+    "tests/unit/test_hr_records_command_density_goal_b.py",
     # fieldtest_hub Goal B conversation (cycle 1671 IssueNote + ops/triage trail)
     "tests/unit/test_fieldtest_conversation_goal_b.py",
     # fieldtest_hub Goal B command_density (cycle 1726 manager_ops dual attention)

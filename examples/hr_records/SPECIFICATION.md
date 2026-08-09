@@ -13,7 +13,10 @@ compensation, and who they report to. Because each fact carries the period it
 was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
-Staff desks also surface a **people notes** trail (PersonNote with display_field body) so HR conversation sits above warehouse queues — not only directory metrics.
+Staff desks are multi-panel command dens: dual attention pressure (active roster
++ recent starters on Staff Directory; level + department boards on My Team) sits
+above a **people notes** trail (PersonNote with display_field body) — not only
+directory metrics or conversation-first chrome.
 
 Four kinds of people use it — HR administrators, line managers, finance staff,
 and employees themselves — and what each of them can see is not left to
@@ -67,8 +70,9 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — shared entry: people notes, headcount metrics, current
-  staff and recent starters queues, plus department/role context hubs (no
+- **Staff Directory** — multi-panel staff home (command_density): headcount
+  metrics, dual attention (active roster + recent starters capped for fold
+  share), then people-notes trail, plus department/role context hubs (no
   under-fold status/dept bar theater). Employment history triple-opens
   assignment hub, person career hub, and role catalogue (`Employment|Person|Role`).
 - **Person Detail** — career desk: employment queue plus salary and reporting
@@ -79,9 +83,9 @@ dedicated screens — fourteen in all, from the staff directory to
   queue, reason chart, and people pull-queue to person hubs.
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
   timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
-- **My Team** — manager desk: level board + department assignments + reporting
-  lines (org structure), then capped people notes and a secondary report roster
-  (no redundant under-fold org bar charts).
+- **My Team** — multi-panel manager desk (command_density): dual attention
+  level + department boards, capped reporting pressure, then people-notes
+  trail and secondary report roster (no redundant under-fold org bar charts).
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
 - **Reporting** — span-of-control kanban by manager, department placement board,
   then active ManagerLink queue and people hubs (not a dept-name bar chart).
@@ -125,4 +129,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:511b71662bdfa357a339db09bb5a2e7af5d783cff3c9b859a439e832e9477ea5 -->
+<!-- dazzle-spec-brief: sha256:73efd0eeced7da138db0f81f3b95ed1c78a118cf1b22ae54653b619401556607 -->

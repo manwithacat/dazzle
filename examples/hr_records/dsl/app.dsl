@@ -834,20 +834,10 @@ surface managerlink_edit "End Reporting Line":
 
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
-  # Goal B conversation: people notes trail with directory pulse so the
-  # staff desk is an HR reply surface, not only warehouse queues.
-  purpose: "People notes, directory pulse, and current staff queues"
-
-  # Goal B conversation spine FIRST — newest HR notes so above-fold stills
-  # show domain-true people prose (display_field: body). Peer Workday /
-  # BambooHR put discussion on the first screen.
-  live_conversation:
-    source: PersonNote
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: person_note_detail
-    empty: "No conversation yet — notes on people and onboarding appear here"
+  # Goal B command_density (cycle 1837): dual attention (active roster +
+  # recent starters) before people-notes trail — peer Workday / BambooHR
+  # put headcount pressure above discussion chrome.
+  purpose: "Multi-panel staff home — headcount, dual attention pressure, then people notes trail"
 
   # Job strip — counts including conversation volume.
   headcount:
@@ -863,41 +853,54 @@ workspace staff_directory "Staff Directory":
       people: accent
       conversation: accent
 
-  ux:
-    as hr_admin:
-      purpose: "See people notes before the full directory queue"
-      focus: live_conversation, headcount, current_staff, recent_starters
-    as manager:
-      purpose: "Team-relevant people notes and directory pulse"
-      focus: live_conversation, headcount, current_staff, recent_starters
-    as finance:
-      purpose: "People notes and headcount before compensation hop"
-      focus: live_conversation, headcount, current_staff
-    as employee:
-      purpose: "Directory pulse and any visible people notes"
-      focus: live_conversation, headcount, current_staff
-
+  # Dual attention — active roster + onboarding starters above fold (caps
+  # for fold share with notes trail).
   current_staff:
     source: Person
+    filter: ended_at = null
+    sort: started_at desc
     display: queue
-    limit: 25
+    limit: 4
     action: person_detail
-    empty: "No people on record"
-    # TODO(#hr-temporal): `default_scope: where ended_at = null` on the
-    # Person entity would obviate this region-level filter. Today we'd
-    # need a `filter:` block here — but the example exists to demonstrate
-    # the gap, so the region is unfiltered and the list shows everyone.
+    empty: "No active people on record"
+    # TODO(#hr-temporal): entity default_scope for ended_at = null would
+    # make this region-level filter redundant; kept explicit for fold proof.
 
   # Work-surface utility: recent joiners are an onboarding pull queue, not inventory.
   recent_starters:
     source: Person
+    sort: started_at desc
     display: queue
-    limit: 15
+    limit: 4
     action: person_detail
     empty: "No recent joiners listed"
     # TODO(#hr-temporal): "filter: started_at > today - 90d" — date
     # arithmetic in filters isn't first-class for list region filters
     # outside aggregate where clauses.
+
+  # Conversation trail after dual attention — domain-true people prose
+  # (display_field: body). Cap so pressure queues keep above-fold share.
+  live_conversation:
+    source: PersonNote
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: person_note_detail
+    empty: "No conversation yet — notes on people and onboarding appear here"
+
+  ux:
+    as hr_admin:
+      purpose: "Multi-panel staff — dual attention pressure before notes trail"
+      focus: headcount, current_staff, recent_starters, live_conversation
+    as manager:
+      purpose: "Multi-panel team view — active roster + starters before notes"
+      focus: headcount, current_staff, recent_starters, live_conversation
+    as finance:
+      purpose: "Headcount dual attention before compensation hop"
+      focus: headcount, current_staff, recent_starters, live_conversation
+    as employee:
+      purpose: "Directory pulse and dual attention before any visible notes"
+      focus: headcount, current_staff, recent_starters, live_conversation
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:
@@ -934,7 +937,7 @@ workspace staff_directory "Staff Directory":
 
   # Cycle 1819 Goal B empty_region: drop twin people_cards + under-fold
   # dept/status bar-chart theater. Peer Workday/BambooHR homes lead with
-  # notes + staff queues; lifecycle status lives on employment list/detail
+  # dual attention + notes; lifecycle status lives on employment list/detail
   # (ST-001/ST-005). Secondary desks keep bar_chart for coverage.
 
 
@@ -1226,10 +1229,10 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  # Post-5.8 Goal B org_structure: peer HR tools (Workday / BambooHR / Lattice)
-  # show team by level and department with reporting lines — not conversation
-  # thrash + flat person dump + duplicate report queues above the fold.
-  purpose: "Org structure managers can parse — team by level and department, reporting lines, then notes"
+  # Goal B command_density + org_structure (cycle 1837): dual attention
+  # (level board + department board) before notes trail — peer Workday /
+  # BambooHR / Lattice put org pressure above conversation chrome.
+  purpose: "Multi-panel manager desk — dual attention org boards, reporting pressure, then notes"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1246,6 +1249,7 @@ workspace my_team "My Team":
       reporting_lines: positive
       conversation: accent
 
+  # Dual attention — level board + department board before fold trail.
   # Role-level board (enum columns ic1…m4) — career ladder shape at a glance.
   by_level:
     source: Role
@@ -1267,24 +1271,24 @@ workspace my_team "My Team":
     action: employment_detail
     empty: "No active employment rows"
 
-  # Who reports to whom — pull-to-open ManagerLink queue (not buried timeline).
+  # Who reports to whom — pull-to-open ManagerLink queue (capped for fold share).
   reporting_lines:
     source: ManagerLink
     sort: start_date desc
-    limit: 20
+    limit: 4
     display: queue
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
 
   ux:
     as manager:
-      purpose: "See team by level and department before conversation thrash"
-      focus: team_pulse, by_level, by_department, reporting_lines
+      purpose: "Multi-panel team — dual attention boards before conversation trail"
+      focus: team_pulse, by_level, by_department, reporting_lines, live_conversation
     as hr_admin:
-      purpose: "Org structure and reporting lines for manager-scope coaching"
-      focus: team_pulse, by_level, by_department, reporting_lines
+      purpose: "Multi-panel org coaching — dual attention before notes"
+      focus: team_pulse, by_level, by_department, reporting_lines, live_conversation
 
-  # Conversation capped after org regions (still present — not removed).
+  # Conversation trail after dual attention org boards.
   live_conversation:
     source: PersonNote
     sort: created_at desc
@@ -1293,11 +1297,11 @@ workspace my_team "My Team":
     action: person_note_detail
     empty: "No team conversation yet — notes on reports appear here"
 
-  # Flat report roster after hierarchy (secondary).
+  # Flat report roster after hierarchy (secondary, capped).
   reports:
     source: Person
     display: queue
-    limit: 12
+    limit: 4
     action: person_detail
     empty: "No people in scope"
 

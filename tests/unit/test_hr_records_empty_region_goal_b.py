@@ -20,7 +20,7 @@ def _workspace_block(name: str) -> str:
 
 
 def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
-    """Peer HR homes: notes + queues — not twin people cards or status bar charts."""
+    """Peer HR homes: dual attention + notes — not twin people cards or status bar charts."""
     block = _workspace_block("staff_directory")
     assert "live_conversation:" in block
     assert "headcount:" in block
@@ -33,7 +33,7 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "dept_mix:" not in block
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: live_conversation, headcount, current_staff, recent_starters" in block
+    assert "focus: headcount, current_staff, recent_starters, live_conversation" in block
 
 
 def test_my_team_omits_redundant_org_bar_charts() -> None:
@@ -46,7 +46,7 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "dept_mix:" not in block
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: team_pulse, by_level, by_department, reporting_lines" in block
+    assert "focus: team_pulse, by_level, by_department, reporting_lines, live_conversation" in block
 
 
 def test_hr_records_keeps_bar_chart_for_coverage() -> None:
