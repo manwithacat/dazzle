@@ -344,6 +344,16 @@ surface ticket_detail "Ticket Detail":
     show: Comment
     columns: content, author, is_internal, created_at
 
+  # Goal B document: named SLA waivers / breach letters on the ticket hub
+  # (peer Zendesk/Service Cloud document trail — not queue-only theater).
+  related waivers "SLA waivers":
+    display: queue
+    show: SlaWaiver
+    columns: breach_summary, status, signatory_name
+
+  ux:
+    purpose: "Ticket hub — summary, discussion trail, and named SLA waiver documents"
+
 surface ticket_create "Create Ticket":
   uses entity Ticket
   mode: create
@@ -457,9 +467,10 @@ surface comment_edit "Edit Comment":
 #   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
 
 workspace ticket_queue "Ticket Queue":
-  # Goal B conversation depth (improve cycle): peer support tools show the
-  # live customer↔agent thread on the triage home — not only ticket rows.
-  purpose: "Triage open work and the live conversation trail — reply where the thread already is"
+  # Goal B conversation + document: peer support tools (Zendesk / Service Cloud)
+  # put live thread copy and named waiver documents on the triage home — not
+  # only ticket rows.
+  purpose: "Triage open work, live conversation, and SLA waiver documents"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
 
@@ -473,10 +484,12 @@ workspace ticket_queue "Ticket Queue":
       in_progress: count(Ticket where status = in_progress)
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
+      documents: count(SlaWaiver)
     tones:
       critical: destructive
       in_progress: accent
       conversation: accent
+      documents: accent
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -488,6 +501,17 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No conversation yet — customer and agent notes appear here as the case moves"
+
+  # Goal B document composition — named waiver / breach titles above the fold
+  # (display_field: breach_summary), not UUID shells or empty document chrome.
+  composition:
+    source: SlaWaiver
+    filter: status = draft or status = sent
+    sort: breach_summary asc
+    limit: 8
+    display: queue
+    action: sla_waiver_detail
+    empty: "No open SLA waivers — draft a named waiver after a response-time breach"
 
   # ST-019 worklist — review queue with inline status transitions, not a CRUD table.
   # date_range: fleet dogfood for the date-range Hyperpart (filters created_at).
@@ -553,7 +577,9 @@ workspace manager_ops "Manager Ops":
   # Goal B command_density (cycle 1727): dual attention (critical + unassigned)
   # shares the fold with capped conversation — peer Zendesk/Intercom manager
   # homes are multi-panel pressure, not conversation-only above the fold.
-  purpose: "Multi-panel support ops — SLA pulse, dual queues, live conversation"
+  # Goal B document (cycle 1798): named SLA waiver composition after dual
+  # attention, before conversation — peer Service Cloud breach-letter trail.
+  purpose: "Multi-panel support ops — SLA pulse, dual queues, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -567,12 +593,14 @@ workspace manager_ops "Manager Ops":
       unassigned: count(Ticket where assigned_to = null and status = open)
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
+      documents: count(SlaWaiver)
     tones:
       critical_open: destructive
       unassigned: warning
       resolved: positive
       in_progress: accent
       conversation: accent
+      documents: accent
 
   # Static readiness strip — pairs with sla TicketResponseTime commitment.
   # Above dual queues so SLA narrative is visible before conversation trail.
@@ -595,6 +623,10 @@ workspace manager_ops "Manager Ops":
         caption: "Resolved tickets await customer confirmation or agent close"
         icon: "circle-check"
         state: positive
+      - title: "SLA waiver documents"
+        caption: "Named breach letters and credit memos live in composition — open a row for the waiver hub"
+        icon: "file-text"
+        state: accent
 
   # Dual attention (ST-028/029) — cap for fold share with conversation.
   # Unbounded queues + row hx-preload storm browser under pilot scroll.
@@ -616,8 +648,19 @@ workspace manager_ops "Manager Ops":
     action: ticket_edit
     empty: "Every open ticket has an assignee"
 
-  # Goal B conversation spine AFTER dual attention so manager hero stills
-  # show pressure queues + Message/Bubble chrome (not raw is_internal queue meta).
+  # Goal B document composition AFTER dual attention — named waiver titles
+  # (breach_summary) so manager stills show document body, not only queues.
+  composition:
+    source: SlaWaiver
+    filter: status = draft or status = sent
+    sort: breach_summary asc
+    limit: 4
+    display: queue
+    action: sla_waiver_detail
+    empty: "No open SLA waivers — draft a named waiver after a response-time breach"
+
+  # Goal B conversation spine AFTER dual attention + composition so manager
+  # hero stills show pressure queues, documents, and Message/Bubble chrome.
   # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
   live_conversation:
     source: Comment
@@ -629,8 +672,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — dual queues before conversation trail"
-      focus: team_metrics, sla_readiness, critical_queue, unassigned_queue, live_conversation
+      purpose: "Multi-panel support ops — dual queues and waiver documents before conversation trail"
+      focus: team_metrics, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
 
   resolution_funnel:
     source: Ticket

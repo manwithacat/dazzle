@@ -298,6 +298,30 @@ def test_support_tickets_comment_list_triple_open() -> None:
     ]
 
 
+def test_support_tickets_sla_waiver_list_dual_open() -> None:
+    """sla_waiver_list dual-open: waiver hub + parent Ticket (Goal B document)."""
+    appspec = load_project_appspec(SUPPORT)
+    surf = next(s for s in appspec.surfaces if s.name == "sla_waiver_list")
+    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
+        ("SlaWaiver", "id"),
+        ("Ticket", "ticket"),
+    ]
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    entity = appspec.get_entity("SlaWaiver")
+    cands = resolve_list_detail_url_candidates(surf, entity)
+    assert cands == [
+        "/app/slawaiver/{id}",
+        "/app/ticket/{ticket}",
+    ]
+    # Goal B document depth: breach_summary is the document title buyers scan.
+    assert getattr(entity, "display_field", None) == "breach_summary"
+    manager = next(w for w in appspec.workspaces if w.name == "manager_ops")
+    assert any(r.name == "composition" for r in manager.regions)
+    queue = next(w for w in appspec.workspaces if w.name == "ticket_queue")
+    assert any(r.name == "composition" for r in queue.regions)
+
+
 def test_invoice_ops_line_item_list_triple_open() -> None:
     """line_item_list triple-open: line hub, Invoice, Tenant (cycle 1608)."""
     appspec = load_project_appspec(INVOICE_OPS)

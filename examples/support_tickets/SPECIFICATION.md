@@ -47,10 +47,11 @@ per-agent inspection.
 **Support Managers** are team leads monitoring performance and handling
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: a
-multi-panel command home with team counts (including unassigned), an SLA
-readiness strip, dual attention queues (critical + unassigned, fold-capped), a
-live conversation trail, and a lifecycle funnel — not conversation-only above
-the fold, and not an empty personal assigned kanban. The team Ticket Queue and
+multi-panel command home with team counts (including unassigned and document
+volume), an SLA readiness strip, dual attention queues (critical + unassigned,
+fold-capped), a **composition** queue of named SLA waiver documents, a live
+conversation trail, and a lifecycle funnel — not conversation-only above the
+fold, and not an empty personal assigned kanban. The team Ticket Queue and
 Agent Console remain available. Managers alone can delete tickets or comments.
 
 **Administrators** oversee the operation from the Agent Console.
@@ -58,13 +59,16 @@ Agent Console remain available. Managers alone can delete tickets or comments.
 ## Where work happens
 
 Five workspaces organise the work. The **Ticket Queue** is the agent home for
-incoming tickets — summary metrics (including conversation volume), a **live
-conversation** queue of newest notes, a review queue, a kanban board of open
-statuses, and a recent-comment **timeline** (dated stream, not a flat list).
+incoming tickets — summary metrics (including conversation and document
+volume), a **live conversation** queue of newest notes, a **composition**
+queue of open SLA waivers (named breach titles), a review queue, a kanban
+board of open statuses, and a recent-comment **timeline** (dated stream, not a
+flat list).
 **Manager Ops** is the manager home for multi-panel support ops — metrics
-(critical, unassigned, conversation volume), SLA readiness, dual attention
-queues (critical + unassigned, limit 4 each) **before** a capped live
-conversation trail (limit 4), status funnel, and a short recent-ticket trail.
+(critical, unassigned, conversation, documents), SLA readiness, dual attention
+queues (critical + unassigned, limit 4 each), open **SLA waiver composition**
+(limit 4) **before** a capped live conversation trail (limit 4), status funnel,
+and a short recent-ticket trail.
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
@@ -149,4 +153,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:c7339ac8ce12cfb170807a03b7529a8359dc941838474a37f8a2b359cdf84582 -->
+<!-- dazzle-spec-brief: sha256:40579f5168aec5cfd9a2bd24ba24ea0105fe1413622ce15e3d8e88e92ed5d700 -->

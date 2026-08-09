@@ -38,8 +38,9 @@ def test_support_tickets_is_structurally_ok(pm) -> None:
     assert row.warehouse_density <= 0.70
     assert row.nav_list_share <= 0.70
     # Product lists only (platform _admin_* / *\_admin shells excluded).
-    assert row.list_surfaces == 3
-    assert row.open_via_lists == 3
+    # Goal B document (cycle 1798): SlaWaiver list for dual-open + composition.
+    assert row.list_surfaces == 4
+    assert row.open_via_lists == 4
     assert row.wi_G == 0.0
 
 
