@@ -136,6 +136,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_contact_manager_empty_region_goal_b.py",
     # domain_join_co Goal B conversation (cycle 1666 AnnouncementNote + home/board)
     "tests/unit/test_domain_join_conversation_goal_b.py",
+    # domain_join_co Goal B command_density (cycle 1831 dual attention before trail)
+    "tests/unit/test_domain_join_command_density_goal_b.py",
     # domain_join_co Goal B empty_region_honesty (cycle 1733 Team Board prune)
     "tests/unit/test_domain_join_empty_region_goal_b.py",
     # hr_records Goal B conversation (cycle 1668 PersonNote + staff trail)

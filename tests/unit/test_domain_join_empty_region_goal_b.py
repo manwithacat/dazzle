@@ -21,19 +21,20 @@ def _workspace_block(name: str) -> str:
 
 
 def test_announce_leads_with_conversation_not_duplicate_queues() -> None:
-    """Buyer board: pulse → conversation → feed; no empty twin queues/charts."""
+    """Buyer board: pulse → feed → context → conversation; no empty twin queues/charts."""
     block = _workspace_block("announce")
     assert "board_pulse:" in block
     assert "live_conversation:" in block
     assert "feed_queue:" in block
     assert "join_context:" in block
-    assert block.index("board_pulse:") < block.index("live_conversation:")
-    assert block.index("live_conversation:") < block.index("feed_queue:")
+    # command_density order: dual attention before conversation trail
+    assert block.index("board_pulse:") < block.index("feed_queue:")
+    assert block.index("feed_queue:") < block.index("live_conversation:")
     # Removed empty-region theater
     assert "feed_cards:" not in block
     assert "post_mix:" not in block
     assert "workspace_cards:" not in block
-    assert "focus: board_pulse, live_conversation, feed_queue, join_context" in block
+    assert "focus: board_pulse, feed_queue, join_context, live_conversation" in block
 
 
 def test_home_omits_duplicate_board_dumps() -> None:
@@ -43,7 +44,7 @@ def test_home_omits_duplicate_board_dumps() -> None:
     assert "announcement_queue:" in block
     assert "board_cards:" not in block
     assert "post_mix:" not in block
-    assert "focus: team_pulse, live_conversation" in block
+    assert "focus: team_pulse, announcement_queue, join_readiness, live_conversation" in block
 
 
 def test_publish_desk_drops_empty_chart() -> None:

@@ -244,9 +244,11 @@ surface workspace_detail "Workspace":
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
-  # Goal B conversation + empty_region_honesty: lead with discussion and
-  # readiness; omit duplicate board dumps / empty chart theater below fold.
-  purpose: "Admin desk — live discussion, join readiness, team pulse, and announcement queue"
+  # Goal B command_density (cycle 1831): peer Slack/Notion team homes put
+  # announcement pressure + join readiness above the discussion trail — not
+  # conversation alone owning the fold. Caps keep dual attention + notes sharing.
+  # Also holds conversation + empty_region_honesty (no twin board dumps/charts).
+  purpose: "Multi-panel team home — pulse, announcement queue, join readiness, then discussion"
   access: persona(admin, member)
 
   # Metrics honesty: count Announcement only (nested AnnouncementNote metrics
@@ -259,16 +261,16 @@ workspace home "Workspace Home":
     tones:
       announcements: accent
 
-  # Goal B conversation spine — newest team notes (display_field: body).
-  # display: conversation → MessageScroller / Message + Bubble (not queue meta).
-  live_conversation:
-    source: AnnouncementNote
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: announcement_note_detail
-    empty: "No conversation yet — team notes on announcements appear here"
+  # Dual attention A — posts to act on / skim (cap 4 for fold share).
+  announcement_queue:
+    source: Announcement
+    sort: title asc
+    limit: 4
+    display: queue
+    action: announcement_detail
+    empty: "No announcements yet — post one to keep the team informed"
 
+  # Dual attention B — always-filled join readiness (not seed-dependent chart).
   join_readiness:
     display: status_list
     entries:
@@ -285,13 +287,15 @@ workspace home "Workspace Home":
         icon: "megaphone"
         state: positive
 
-  announcement_queue:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: queue
-    action: announcement_detail
-    empty: "No announcements yet — post one to keep the team informed"
+  # Goal B conversation spine AFTER dual attention — newest team notes.
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta).
+  live_conversation:
+    source: AnnouncementNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: announcement_note_detail
+    empty: "No conversation yet — team notes on announcements appear here"
 
   # Awareness stream — one timeline, not a second identical queue dump.
   board_preview:
@@ -325,18 +329,18 @@ workspace home "Workspace Home":
 
   ux:
     as admin:
-      purpose: "Discussion and readiness before tenant roots — no empty chart theater"
-      focus: team_pulse, live_conversation, join_readiness, announcement_queue
+      purpose: "Multi-panel team home — pulse, posts, join readiness, then discussion"
+      focus: team_pulse, announcement_queue, join_readiness, live_conversation
     as member:
-      purpose: "Catch up on team discussion before opening posts"
-      focus: team_pulse, live_conversation, announcement_queue, board_preview
+      purpose: "Multi-panel catch-up — posts and readiness before discussion trail"
+      focus: team_pulse, announcement_queue, join_readiness, live_conversation
 
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
 workspace announce "Team Board":
-  # Goal B empty_region_honesty: one pulse + conversation + feed + filled
-  # context strip — no duplicate queues / empty bar / workspace voids.
-  purpose: "Announcement board — live discussion trail and posts without empty-region theater"
+  # Goal B command_density: pulse + feed queue + join context before conversation.
+  # empty_region_honesty: no duplicate queues / empty bar / workspace voids.
+  purpose: "Multi-panel board — pulse, post feed, join context, then discussion trail"
   access: persona(admin, member)
 
   board_pulse:
@@ -347,24 +351,16 @@ workspace announce "Team Board":
     tones:
       posts: accent
 
-  # display: conversation → Message/Bubble chrome for team board discussion.
-  live_conversation:
-    source: AnnouncementNote
-    sort: created_at desc
-    limit: 10
-    display: conversation
-    action: announcement_note_detail
-    empty: "No conversation yet — notes on published posts appear here"
-
+  # Dual attention A — post feed (cap 4 for fold share with conversation).
   feed_queue:
     source: Announcement
     sort: title asc
-    limit: 20
+    limit: 4
     display: queue
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
-  # Always-filled status strip (not a seed-dependent void).
+  # Dual attention B — always-filled status strip (not a seed-dependent void).
   join_context:
     display: status_list
     entries:
@@ -381,6 +377,15 @@ workspace announce "Team Board":
         icon: "message-square"
         state: positive
 
+  # Conversation AFTER dual attention so Message chrome shares the fold.
+  live_conversation:
+    source: AnnouncementNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: announcement_note_detail
+    empty: "No conversation yet — notes on published posts appear here"
+
   post_trail:
     source: Announcement
     sort: title asc
@@ -391,11 +396,11 @@ workspace announce "Team Board":
 
   ux:
     as admin:
-      purpose: "Team discussion and feed without duplicate empty regions"
-      focus: board_pulse, live_conversation, feed_queue, join_context
+      purpose: "Multi-panel board — feed and join context before discussion"
+      focus: board_pulse, feed_queue, join_context, live_conversation
     as member:
-      purpose: "Catch up — conversation and posts, no warehouse chrome"
-      focus: board_pulse, live_conversation, feed_queue, join_context
+      purpose: "Catch up — posts and context before conversation trail"
+      focus: board_pulse, feed_queue, join_context, live_conversation
 
 workspace publish_desk "Publish":
   purpose: "Admin publish desk — draft queue and live board pulse before posting"
