@@ -126,7 +126,6 @@ from dazzle.render.fragment.primitives.navigation import (
     Breadcrumb,
     Menubar,
     NavGroup,
-    NavigationMenu,
     NavItem,
     Sidebar,
     SkipLink,
@@ -159,7 +158,6 @@ Fragment = (
     | SkipLink
     | Breadcrumb
     | Menubar
-    | NavigationMenu
     # Content
     | Text
     | Heading

@@ -90,7 +90,6 @@ from dazzle.render.fragment.primitives import (
     Modal,
     MoneyField,
     NavGroup,
-    NavigationMenu,
     NavItem,
     Page,
     Pagination,
@@ -249,8 +248,6 @@ class FragmentRenderer(
                 return self._emit_breadcrumb(fragment, ctx)
             case Menubar():
                 return self._emit_menubar(fragment, ctx)
-            case NavigationMenu():
-                return self._emit_navigation_menu(fragment, ctx)
             # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)
