@@ -330,7 +330,10 @@ body { background: var(--colour-bg); color: var(--colour-text);
 
 Dual-lock unit is the toggle button root. Label content and size modifiers
 are host-owned. Selector ``[data-dz-toggle]`` is the stable substrate root
-(gallery CSS; state is ``aria-pressed``). No FragmentRenderer emit yet.
+(gallery CSS; state is ``aria-pressed``).
+
+Emitter: ``widget=toggle`` → ToggleField / free Toggle fragment
+(``button.dz-toggle[data-dz-toggle]`` + aria-pressed; ``dz-toggle.js``).
 &quot;&quot;&quot;</span>
 
 <span class="code__tok--kw">from</span> <span class="code__tok--name">contracts</span><span class="code__tok--op">.</span><span class="code__tok--name">_kit</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">,</span> <span class="code__tok--name">Node</span><span class="code__tok--op">,</span> <span class="code__tok--name">Present</span>
