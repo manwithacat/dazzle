@@ -1174,14 +1174,17 @@ surface task_edit "Edit Task":
 #   ST-037 triage queue · ST-040 team workload · ST-041 release metrics
 #   TR-17 manager focus: fleet KPIs + tester activity first
 workspace engineering_dashboard "Engineering Dashboard":
-  purpose: "Triage notes, fleet overview, and field-quality oversight"
+  # Goal B conversation (cycle 1797): peer field-quality tools (Jira / Linear /
+  # Zendesk) put triage discussion as Message/Bubble chrome above fold — not a
+  # meta queue of note rows. display: conversation → MessageScroller wire-up.
+  purpose: "Live triage conversation, fleet overview, and field-quality oversight"
   access: persona(engineer, manager)
 
   live_conversation:
     source: IssueNote
     sort: created_at desc
     limit: 6
-    display: queue
+    display: conversation
     action: issue_note_detail
     empty: "No conversation yet — notes on field issues appear here"
 
@@ -1518,12 +1521,13 @@ workspace manager_ops "Manager Ops":
     action: device_detail
     empty: "All registered devices are active"
 
-  # Conversation trail shares the fold — cap so dual attention stays visible.
+  # Goal B conversation shares the fold — Message/Bubble chrome (not queue meta);
+  # cap so dual attention stays visible (command_density + conversation).
   live_conversation:
     source: IssueNote
     sort: created_at desc
     limit: 4
-    display: queue
+    display: conversation
     action: issue_note_detail
     empty: "No conversation yet — notes on field issues appear here"
 
@@ -1544,7 +1548,7 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Quality pulse, critical issues, and device attention above fold — notes share the fold"
+      purpose: "Quality pulse, critical issues, and device attention above fold — live notes share the fold"
       focus: quality_strip, critical_issues, device_attention, live_conversation
     as admin:
       purpose: "Multi-panel field quality oversight — critical issues and device attention first"
@@ -1579,12 +1583,12 @@ workspace issue_triage "Issue Triage":
   purpose: "Triage notes, field photo evidence, then open/critical queues"
   access: persona(engineer, manager)
 
-  # Goal B conversation spine FIRST — domain-true mitigation prose above fold.
+  # Goal B conversation spine FIRST — Message/Bubble mitigation prose above fold.
   live_conversation:
     source: IssueNote
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: issue_note_detail
     empty: "No triage conversation yet — engineer notes on open issues appear here"
 

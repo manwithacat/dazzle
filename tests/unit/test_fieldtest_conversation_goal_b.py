@@ -21,10 +21,18 @@ def test_ops_and_triage_declare_live_conversation_spine() -> None:
     text = APP.read_text()
     assert "workspace manager_ops" in text
     assert "workspace issue_triage" in text
+    assert "workspace engineering_dashboard" in text
     assert "live_conversation:" in text
     assert "source: IssueNote" in text
     assert "conversation: count(IssueNote)" in text
     assert "focus: live_conversation" in text
+    # Goal B interesting_product: hero live threads use Message/Bubble chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    for ws in ("engineering_dashboard", "manager_ops", "issue_triage"):
+        block = text.split(f"workspace {ws}", 1)[1]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, ws
+        assert "source: IssueNote" in region, ws
 
 
 def test_issue_note_seeds_have_domain_true_field_copy() -> None:
