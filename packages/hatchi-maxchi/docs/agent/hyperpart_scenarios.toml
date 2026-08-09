@@ -305,6 +305,27 @@ example_homes = ["fieldtest_hub engineering_dashboard.device_map", "simple_task 
 scanner = "catalogue_only"
 
 [[scenario]]
+id = "app_chrome_menubar_strip"
+hyperpart = "menubar"
+authoring = "menubar: true"
+layer = "shell"
+job = "Desktop-style File/Edit/View command strip uses HM menubar, not sidebar or single menu."
+use_when = [
+  "product wants durable app chrome commands across pages",
+  "commands group into File/Edit/View-like menus (or nav groups)",
+]
+refuse_when = [
+  "product/site go-to IA (use navigation-menu / sidebar)",
+  "single host overflow actions (use menu)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["design_studio (menubar: true)"]
+scanner = "catalogue_only"
+
+[[scenario]]
 id = "workspace_dual_pane_master_detail"
 hyperpart = "master-detail"
 authoring = "stage:dual_pane_flow"

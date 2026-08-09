@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- **menubar hyperpart emitter** — `Menubar` / `MenubarMenu` / `MenubarAction` Fragment dual-lock (`.dz-menubar`); opt-in via `menubar: true` on the app block; shell mounts from nav groups in topbar leading; dogfood design_studio.
 - **master-detail hyperpart emitter path (catalogue live)** — declare existing `stage: dual_pane_flow` LIST+DETAIL shell (`.dz-master-detail`) as the first Dazzle path; catalogue planned→live; fleet signal; scenario + pick-a-surface; dogfood contact_manager contacts.
 - **marker + `display: map` hyperpart emitter** — `Marker` / `MapBoard` Fragment dual-lock
   (`.dz-marker` pin chrome on a vendor-free plan canvas); region builder from entity

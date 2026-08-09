@@ -2804,6 +2804,17 @@ def create_page_routes(
     # Compile all surfaces to template contexts
     page_contexts = compile_appspec_to_templates(appspec, app_prefix=app_prefix)
 
+    # App chrome menubar opt-in: ``menubar: true`` on the app block lands in
+    # app_config.features and stamps every page context for shell mount.
+    _app_cfg = getattr(appspec, "app_config", None)
+    _features = getattr(_app_cfg, "features", None) or {}
+    if isinstance(_features, dict) and _features.get("menubar"):
+        for _ctx in page_contexts.values():
+            if hasattr(_ctx, "shell_menubar"):
+                _ctx.shell_menubar = True
+            elif hasattr(_ctx, "extra") and isinstance(getattr(_ctx, "extra", None), dict):
+                _ctx.extra["menubar"] = True
+
     # Build route -> access config mapping from surface specs
     access_configs: dict[str, SurfaceAccessConfig] = {}
     for surface in appspec.surfaces:

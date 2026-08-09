@@ -122,6 +122,7 @@ from dazzle.render.fragment.primitives.interactive import (
 from dazzle.render.fragment.primitives.layout import AspectRatio, Grid, Row, Split, Stack
 from dazzle.render.fragment.primitives.navigation import (
     Breadcrumb,
+    Menubar,
     NavGroup,
     NavItem,
     Sidebar,
@@ -154,6 +155,7 @@ Fragment = (
     | NavItem
     | SkipLink
     | Breadcrumb
+    | Menubar
     # Content
     | Text
     | Heading

@@ -82,6 +82,7 @@ from dazzle.render.fragment.primitives import (
     ListRegion,
     MapBoard,
     Marker,
+    Menubar,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -243,6 +244,8 @@ class FragmentRenderer(
                 return self._emit_skip_link(fragment, ctx)
             case Breadcrumb():
                 return self._emit_breadcrumb(fragment, ctx)
+            case Menubar():
+                return self._emit_menubar(fragment, ctx)
             # Content
             case Icon():
                 return self._emit_icon(fragment, ctx)

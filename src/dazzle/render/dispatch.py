@@ -48,6 +48,7 @@ from dazzle.render.fragment import (
 )
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.escape import RawHTML
+from dazzle.render.menubar import build_shell_menubar
 
 if TYPE_CHECKING:
     from dazzle.core.ir.protocols import SurfaceLike
@@ -450,9 +451,13 @@ def build_app_chrome_page(
     title = f"{page_title} — {app_name}" if page_title else app_name
     sidebar = _build_sidebar_from_ctx(ctx)
     trailing = _build_account_trailing(ctx)
+    # HM menubar shell strip (hyperpart emitter): opt-in app chrome →
+    # dual-lock `.dz-menubar` in topbar leading (not product site nav).
+    menubar = build_shell_menubar(ctx)
     topbar = Topbar(
         title=app_name,
         show_sidebar_toggle=True,
+        leading=menubar,
         trailing=trailing,
     )
     # Phase 4 app-shell migration (v0.67.44): thread the contract

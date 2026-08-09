@@ -456,9 +456,9 @@ agent_surface = "shell"
 id = "menubar"
 class = "chrome"
 layer = "shell"
-dsl = "sitespec app chrome menubar"
-status = "planned"
-job = "Use menubar via sitespec app chrome menubar"
+dsl = "menubar: true (app chrome → topbar Menubar)"
+status = "live"
+job = "Use menubar via menubar: true app chrome topbar strip"
 agent_surface = "shell"
 
 [[part]]

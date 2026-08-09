@@ -103,3 +103,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Controller: `dz-master-detail.js` owns `aria-current` + keyboard arrows
 - Dogfood: contact_manager `contacts` (`contact_list` + `contact_detail`)
 - Tests: `test_dual_pane_master_detail` + `test_master_detail_emitter`
+
+## Reference ship: menubar (2026-08-09)
+
+- `menubar: true` on app block → app_config.features → shell mount
+- Fragment: `Menubar` / `MenubarMenu` / `MenubarAction` → dual-lock `.dz-menubar`
+- Shell: `build_shell_menubar` from nav groups (or File/Edit/View fallback) in topbar leading
+- Controller: `dz-menubar.js` exclusive open + outside/Escape dismiss
+- Dogfood: design_studio `menubar: true`
+- Tests: `test_menubar_emitter`

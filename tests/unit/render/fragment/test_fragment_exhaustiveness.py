@@ -93,6 +93,9 @@ from dazzle.render.fragment import (
     ListRegion,
     MapBoard,
     Marker,
+    Menubar,
+    MenubarAction,
+    MenubarMenu,
     MetricsGrid,
     MetricTile,
     Modal,
@@ -377,6 +380,15 @@ def _sample_for(primitive_type: type) -> object:
         return AccordionItem(title="Q", body="A")
     if primitive_type is AspectRatio:
         return AspectRatio(child=Text("frame"), ratio="16/9", width="10rem")
+    if primitive_type is Menubar:
+        return Menubar(
+            menus=(
+                MenubarMenu(
+                    label="File",
+                    actions=(MenubarAction(label="New", href="/new"),),
+                ),
+            )
+        )
     if primitive_type is Breadcrumb:
         return Breadcrumb(
             items=(

@@ -82,6 +82,7 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "Accordion",
         "AspectRatio",
         "Breadcrumb",
+        "Menubar",
         "Bubble",
         "HoverCard",
         "Marker",

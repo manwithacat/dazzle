@@ -42,6 +42,7 @@ from dazzle.render.fragment.primitives import (
     AppShell,
     Breadcrumb,
     ErrorPage,
+    Menubar,
     NavGroup,
     NavItem,
     Page,
@@ -365,6 +366,38 @@ class _RenderShellMixin:
                 parts.append(f'<li aria-current="page">{label}</li>')
         aria = ctx.escape_attr(b.aria_label)
         return f'<nav class="dz-breadcrumb" aria-label="{aria}"><ol>{"".join(parts)}</ol></nav>'
+
+    def _emit_menubar(self, m: Menubar, ctx: RenderContext) -> str:
+        """HM Menubar — dual-lock ``div.dz-menubar`` exclusive-open strip.
+
+        Each menu is a native ``details.dz-menubar__item``; ``dz-menubar.js``
+        owns exclusive open + outside/Escape dismiss. Panel actions are
+        host-owned links/buttons (``role=menuitem``).
+        """
+        menu_parts: list[str] = []
+        for menu in m.menus:
+            actions_html: list[str] = []
+            for action in menu.actions:
+                label = ctx.escape(action.label)
+                if action.href:
+                    href = ctx.escape_attr(action.href)
+                    actions_html.append(f'<a href="{href}" role="menuitem">{label}</a>')
+                else:
+                    actions_html.append(f'<button type="button" role="menuitem">{label}</button>')
+            menu_label = ctx.escape(menu.label)
+            menu_aria = ctx.escape_attr(menu.label)
+            menu_parts.append(
+                f'<details class="dz-menubar__item">'
+                f'<summary class="dz-menubar__trigger">{menu_label}</summary>'
+                f'<div class="dz-menubar__panel" role="menu" aria-label="{menu_aria}">'
+                f"{''.join(actions_html)}"
+                f"</div></details>"
+            )
+        aria = ctx.escape_attr(m.aria_label)
+        return (
+            f'<div class="dz-menubar" data-dz-menubar role="navigation" '
+            f'aria-label="{aria}">{"".join(menu_parts)}</div>'
+        )
 
     def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:
         """`<div class="dz-topbar">` with leading / title / trailing.

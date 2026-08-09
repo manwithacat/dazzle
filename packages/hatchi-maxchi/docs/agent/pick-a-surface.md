@@ -49,6 +49,7 @@ and appear on agent packs + `CONSUMER_MAP.md` › By recipe.
 | Rich person/entity preview on hover | `hover-card` | Person chip compose guest / `HoverCard` fragment (no region verb) |
 | Map / plan pin chrome (label + tone) | `marker` | `display: map` / `Marker` fragment (host placement) |
 | List + sibling detail on one workspace | `master-detail` | `stage: dual_pane_flow` + LIST/DETAIL pair shell |
+| App chrome File/Edit/View command strip | `menubar` | `menubar: true` on app block → topbar `Menubar` |
 | Wrapping actions | `cluster` / `toolbar` | Compose real children in HTML |
 
 ### Menus / panels / chrome strips

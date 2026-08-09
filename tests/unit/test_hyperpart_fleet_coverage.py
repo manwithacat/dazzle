@@ -127,7 +127,8 @@ SIGNALS: dict[str, object] = {
     "hover-card": r"ref\s+User",
     # display: carousel → Carousel → .dz-carousel (2026-08-08)
     "carousel": r"display:\s*carousel",
-    "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",
+    # menubar: true → shell Menubar → .dz-menubar (2026-08-09)
+    "menubar": r"menubar:\s*true",
     # display: conversation → Bubble stack → .dz-bubble (2026-08-08)
     "bubble": r"display:\s*conversation",
     "message": "exempt:no Dazzle emitter yet (gallery chat message row)",

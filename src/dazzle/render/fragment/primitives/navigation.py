@@ -51,6 +51,58 @@ class Breadcrumb:
 
 
 @dataclass(frozen=True, slots=True)
+class MenubarAction:
+    """One command inside a Menubar menu panel (link or button-shaped).
+
+    Prefer ``href`` for navigation; omit for a no-op / host-owned action label.
+    """
+
+    label: str
+    href: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("MenubarAction requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
+class MenubarMenu:
+    """One File / Edit / View-style top-level menubar entry (details/summary)."""
+
+    label: str
+    actions: tuple[MenubarAction, ...]
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("MenubarMenu requires a non-empty label")
+        if not self.actions:
+            raise ValueError("MenubarMenu requires at least one MenubarAction")
+
+
+@dataclass(frozen=True, slots=True)
+class Menubar:
+    """HM Menubar hyperpart — dual-lock ``div.dz-menubar`` app command strip.
+
+    Gallery spine: exclusive-open ``details`` items under ``[data-dz-menubar]``.
+    App chrome (File / Edit / View), not product site IA (that is navigation-menu)
+    and not a single overflow menu (that is menu).
+
+    Dual-lock root: ``[data-dz-menubar]`` (contracts/menubar.py).
+    Authoring: ``menubar: true`` on the app block → shell trail from nav groups
+    (see ``build_shell_menubar``).
+    """
+
+    menus: tuple[MenubarMenu, ...]
+    aria_label: str = "App"
+
+    def __post_init__(self) -> None:
+        if not self.menus:
+            raise ValueError("Menubar requires at least one MenubarMenu")
+        if not self.aria_label or not str(self.aria_label).strip():
+            raise ValueError("Menubar aria_label must be non-empty")
+
+
+@dataclass(frozen=True, slots=True)
 class NavItem:
     """Single navigation entry — typically a link to a workspace,
     surface, or external resource.

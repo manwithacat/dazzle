@@ -563,6 +563,10 @@ class PageContext(BaseModel):
     # Explicit: "app" | "product" | "wide" | "" (true full-bleed).
     content_measure: str | None = None
 
+    # App chrome menubar opt-in (``menubar: true`` on the app block → features).
+    # When True, ``build_app_chrome_page`` mounts HM Menubar in topbar leading.
+    shell_menubar: bool = False
+
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)
 

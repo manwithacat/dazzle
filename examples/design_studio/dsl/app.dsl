@@ -6,6 +6,9 @@ module design_studio.core
 
 app design_studio "Design Studio":
   security_profile: basic
+  # App chrome File/Edit-style strip — HM menubar dual-lock in topbar
+  # (hyperpart emitter; menus derive from persona nav groups).
+  menubar: true
 
 feedback_widget: enabled
 
