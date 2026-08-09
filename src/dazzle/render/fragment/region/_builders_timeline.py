@@ -385,10 +385,10 @@ class _BuildersTimelineMixin:
                     continue
                 # Prefer body as speech; caption is author when body is set,
                 # otherwise caption is legacy speech text (bubble dogfood).
-                body = str(raw.get("body") or raw.get("message") or "").strip()
+                speech = str(raw.get("body") or raw.get("message") or "").strip()
                 caption = str(raw.get("caption") or "").strip()
-                if body:
-                    text = body
+                if speech:
+                    text = speech
                     author = str(raw.get("author") or caption or "").strip()
                 else:
                     text = caption
@@ -415,8 +415,8 @@ class _BuildersTimelineMixin:
             body_empty: Fragment = EmptyState(title=empty_msg, description="")
             return _wrap_surface(title, "report", body_empty)
 
-        body: Fragment = Stack(children=tuple(messages), gap="sm")
-        return _wrap_surface(title, "report", body)
+        stack: Fragment = Stack(children=tuple(messages), gap="sm")
+        return _wrap_surface(title, "report", stack)
 
     def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:
         """`display: day_timeline` regions render as a vertical
