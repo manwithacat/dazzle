@@ -121,7 +121,8 @@ SIGNALS: dict[str, object] = {
     # shadcn parity placeholders — gallery surfaces; no DSL emitter yet
     # widget=switch → SwitchField → label.dz-switch + data-dz-switch (2026-08-07)
     "switch": r"widget\s*[:=]\s*switch",
-    "toggle": "exempt:no Dazzle emitter yet (gallery aria-pressed button shell)",
+    # widget=toggle → ToggleField → button.dz-toggle[data-dz-toggle] (2026-08-09)
+    "toggle": r"widget\s*[:=]\s*toggle(?![_\s-]*group)",
     # media field compose → .dz-aspect-ratio dual-lock (2026-08-08)
     "aspect-ratio": r"logo_url|preview_url|photo_url",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",

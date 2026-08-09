@@ -53,6 +53,8 @@ from dazzle.render.fragment.primitives import (
     Submit,
     SwitchField,
     TagsField,
+    Toggle,
+    ToggleField,
     ToggleGroupField,
     WidgetCombobox,
 )
@@ -582,6 +584,48 @@ class _RenderFormsMixin:
             f'<span class="dz-switch__track" aria-hidden="true"></span>'
             f"<span>{ctx.escape(s.label)}</span>"
             f"</label></div>"
+        )
+
+    def _emit_toggle(self, t: Toggle, ctx: RenderContext) -> str:
+        """HM Toggle — button.dz-toggle + data-dz-toggle + aria-pressed.
+
+        Dual-lock root: ``[data-dz-toggle]`` (contracts/toggle.py). Client
+        ``dz-toggle.js`` flips press state; no form POST on free Toggle.
+        """
+        pressed = "true" if t.pressed else "false"
+        size_attr = f' data-dz-size="{ctx.escape_attr(t.size)}"' if t.size else ""
+        disabled = " disabled" if t.disabled else ""
+        return (
+            f'<button type="button" class="dz-toggle" data-dz-toggle '
+            f'aria-pressed="{pressed}"{size_attr}{disabled}>'
+            f"{ctx.escape(t.label)}</button>"
+        )
+
+    def _emit_toggle_field(self, t: ToggleField, ctx: RenderContext) -> str:
+        """HM Toggle as form-authored control (`widget=toggle`).
+
+        Dual-lock root is the button. No ``data-dz-widget`` wrapper so
+        ``dz-toggle.js`` can flip ``aria-pressed`` (controller skips
+        ``[data-dz-widget]`` hosts). Hidden input carries SSR initial for
+        progressive form POST (name=true|false); hosts may re-sync on click.
+        """
+        name = ctx.escape_attr(t.name)
+        raw = str(t.initial_value or "").strip().lower()
+        pressed_on = raw in ("true", "1", "on", "yes")
+        pressed = "true" if pressed_on else "false"
+        size_attr = f' data-dz-size="{ctx.escape_attr(t.size)}"' if t.size else ""
+        # Hidden posts the SSR/initial state; client press does not auto-sync
+        # (toggle is chrome mode, not settings switch).
+        return (
+            f'<div class="dz-form-field" data-dz-field-widget="toggle">'
+            f'<span class="dz-field__label" id="field-{name}-label">'
+            f"{ctx.escape(t.label)}</span>"
+            f'<input type="hidden" id="field-{name}" name="{name}" '
+            f'value="{pressed}" data-dazzle-field="{name}">'
+            f'<button type="button" class="dz-toggle" data-dz-toggle '
+            f'aria-pressed="{pressed}" aria-labelledby="field-{name}-label"'
+            f"{size_attr}>{ctx.escape(t.label)}</button>"
+            f"</div>"
         )
 
     def _emit_toggle_group_field(self, t: ToggleGroupField, ctx: RenderContext) -> str:

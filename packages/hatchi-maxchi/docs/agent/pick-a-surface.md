@@ -30,6 +30,7 @@
 | Confirm irreversible action | `confirm-affordance` | Affordance | Existing `hx-*` of the action | `confirm` (hx-confirm) | custom modal stack |
 | Money as major display | `money-minor-units` | Field | Form posts **minor integer** | `money` | float string as source of truth |
 | Boolean settings / on-off preference | `boolean-settings` | Field | Form POST checkbox `true`/absent | **`switch`** (`widget=switch`) | plain checkbox group for multi-flags; bulk-select row checkbox; toolbar filter chip |
+| Toolbar mode press (aria-pressed, not settings track) | `mode-press` | Field / chrome | Client press / optional hidden SSR | **`toggle`** (`widget=toggle` / `Toggle` fragment) | switch (settings); toggle-group (exclusive segments) |
 | Small closed enum (2–5), high visual priority | `closed-enum-segments` | Field | Form POST radio value | **`toggle-group`** (`widget=toggle_group`) | combobox (large enums); tags (multi free-form); single `toggle` button |
 
 Recipe slugs are seeded on Hyperparts via `_RECIPE_SEED` in `site/registry.py`

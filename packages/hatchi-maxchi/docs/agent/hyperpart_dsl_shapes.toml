@@ -745,8 +745,8 @@ id = "toggle"
 class = "widget"
 layer = "field"
 dsl = "widget=toggle (aria-pressed, not switch)"
-status = "planned"
-job = "Use toggle via widget=toggle (aria-pressed, not switch)"
+status = "live"
+job = "Use toggle via widget=toggle / Toggle fragment (.dz-toggle aria-pressed)"
 agent_surface = "pick-a-surface"
 
 [[part]]

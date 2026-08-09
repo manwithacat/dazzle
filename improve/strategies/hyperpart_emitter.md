@@ -157,3 +157,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Distinct from `display: progress` / StageBar (progress-region stage chips)
 - Dogfood: simple_task `sample_progress`
 - Tests: `test_progress_bar_emitter`
+
+## Reference ship: toggle (2026-08-09)
+
+- `widget=toggle` → `ToggleField` → `button.dz-toggle[data-dz-toggle]` + `aria-pressed`
+- Fragment: `Toggle(label=…, pressed=…, size=…)` dual-lock pressable mode control
+- Client: `dz-toggle.js` flips press (skips `[data-dz-widget]` hosts)
+- Not switch (settings track) and not toggle-group (exclusive radios)
+- Dogfood: simple_task `user_edit` `is_starred`
+- Tests: `test_toggle_emitter`

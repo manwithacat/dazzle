@@ -177,6 +177,28 @@ example_homes = ["simple_task.user_edit.is_active"]
 scanner = "boolean_switch"
 
 [[scenario]]
+id = "mode_press_toggle"
+hyperpart = "toggle"
+authoring = "widget=toggle"
+layer = "field"
+job = "Toolbar-style mode press (aria-pressed button) — not settings switch track."
+use_when = [
+  "mode flag that is pressable (starred, bold, watch) with client-owned state",
+  "toolbar / chrome press control distinct from settings on-off",
+]
+refuse_when = [
+  "account settings on-off (prefer widget=switch)",
+  "exclusive multi-option segments (prefer widget=toggle_group)",
+  "native multi-flag checkbox groups (prefer controls)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "medium"
+residual_lane = "framework-ux"
+example_homes = ["simple_task.user_edit.is_starred"]
+scanner = "catalogue_only"
+
+[[scenario]]
 id = "closed_enum_toggle_group"
 hyperpart = "toggle-group"
 authoring = "widget=toggle_group"

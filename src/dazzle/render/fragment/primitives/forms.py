@@ -312,6 +312,58 @@ class SwitchField:
             raise ValueError("SwitchField requires a non-empty name")
 
 
+_TOGGLE_SIZES = ("", "sm")
+
+
+@dataclass(frozen=True, slots=True)
+class Toggle:
+    """HM Toggle hyperpart — dual-lock ``button.dz-toggle[data-dz-toggle]``.
+
+    Toolbar-style pressable mode control (Bold / Italic / Starred). State is
+    ``aria-pressed``; ``dz-toggle.js`` flips on click (no round-trip). Not a
+    form boolean — use :class:`SwitchField` for settings on/off.
+
+    Compose free, or author via ``widget=toggle`` → :class:`ToggleField`.
+    Dual-lock root: ``[data-dz-toggle]`` (contracts/toggle.py).
+    """
+
+    label: str
+    pressed: bool = False
+    size: Literal["", "sm"] = ""
+    disabled: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("Toggle requires a non-empty label")
+        if self.size not in _TOGGLE_SIZES:
+            raise ValueError(f"invalid Toggle size {self.size!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class ToggleField:
+    """HM Toggle hyperpart as a form-authored control (`widget=toggle`).
+
+    Pressable mode button (not switch track). Dual-lock root is the
+    ``button[data-dz-toggle]``. Client controller owns press flips; optional
+    hidden input carries SSR/initial value for progressive form POST when
+    ``name`` is set. Prefer :class:`SwitchField` for account settings booleans.
+    """
+
+    name: str
+    label: str
+    required: bool = False
+    initial_value: str = ""
+    size: Literal["", "sm"] = ""
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("ToggleField requires a non-empty name")
+        if not self.label or not str(self.label).strip():
+            raise ValueError("ToggleField requires a non-empty label")
+        if self.size not in _TOGGLE_SIZES:
+            raise ValueError(f"invalid ToggleField size {self.size!r}")
+
+
 @dataclass(frozen=True, slots=True)
 class ToggleGroupField:
     """HM toggle-group hyperpart (`widget=toggle_group`) — segmented exclusive

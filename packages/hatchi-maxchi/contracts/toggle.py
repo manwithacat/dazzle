@@ -2,7 +2,10 @@
 
 Dual-lock unit is the toggle button root. Label content and size modifiers
 are host-owned. Selector ``[data-dz-toggle]`` is the stable substrate root
-(gallery CSS; state is ``aria-pressed``). No FragmentRenderer emit yet.
+(gallery CSS; state is ``aria-pressed``).
+
+Emitter: ``widget=toggle`` → ToggleField / free Toggle fragment
+(``button.dz-toggle[data-dz-toggle]`` + aria-pressed; ``dz-toggle.js``).
 """
 
 from contracts._kit import DomContract, Node, Present

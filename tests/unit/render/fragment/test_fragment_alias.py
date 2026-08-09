@@ -133,6 +133,8 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "ColorField",
         "SliderField",
         "SwitchField",
+        "Toggle",
+        "ToggleField",
         "RichTextField",
         "FileUpload",
         "Submit",

@@ -164,6 +164,8 @@ from dazzle.render.fragment import (
     Timeline,
     TimelineEvent,
     TimeSeries,
+    Toggle,
+    ToggleField,
     ToggleGroupField,
     Toolbar,
     Topbar,
@@ -596,6 +598,10 @@ def _sample_for(primitive_type: type) -> object:
         return SliderField(name="sl", label="Slider")
     if primitive_type is SwitchField:
         return SwitchField(name="sw", label="Switch")
+    if primitive_type is Toggle:
+        return Toggle(label="Bold", pressed=True)
+    if primitive_type is ToggleField:
+        return ToggleField(name="is_starred", label="Starred", initial_value="true")
     if primitive_type is ToggleGroupField:
         return ToggleGroupField(
             name="tg", label="View", options=(("list", "List"), ("board", "Board"))

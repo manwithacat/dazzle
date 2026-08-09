@@ -125,6 +125,8 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_related_group": "related_group",
     "_emit_stage_bar": "progress-region",
     "_emit_progress_bar": "progress",
+    "_emit_toggle": "toggle",
+    "_emit_toggle_field": "toggle",
     "_emit_slide_over": "drawer",
     "_emit_bar_chart": "bar_chart",
     "_emit_bar_track": "bar_track",

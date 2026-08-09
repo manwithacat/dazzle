@@ -37,6 +37,8 @@ entity User "Team Member":
   department: str(50)
   avatar_url: str(500)
   is_active: bool=true
+  # Mode press dogfood — starred watchlist (aria-pressed toggle, not switch track)
+  is_starred: bool=false
   # #1619 rel.json_extension — tenant/UI bag only; identity stays typed columns
   preferences: json
   created_at: datetime auto_add
@@ -727,6 +729,8 @@ surface user_edit "Edit Team Member":
   section account "Account Status":
     # HM Switch hyperpart — boolean settings / account on-off (emitter package 2026-08-07)
     field is_active "Active" widget=switch
+    # HM Toggle hyperpart — pressable mode (aria-pressed), not settings switch
+    field is_starred "Starred" widget=toggle
 
   ux:
     purpose: "Update team member details"

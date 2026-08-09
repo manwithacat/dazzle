@@ -150,6 +150,8 @@ from dazzle.render.fragment.primitives.forms import (
     Submit,
     SwitchField,
     TagsField,
+    Toggle,
+    ToggleField,
     ToggleGroupField,
     WidgetCombobox,
 )
@@ -334,6 +336,8 @@ __all__ = [
     "ColorField",
     "SliderField",
     "SwitchField",
+    "Toggle",
+    "ToggleField",
     "ToggleGroupField",
     "RichTextField",
     "FileUpload",

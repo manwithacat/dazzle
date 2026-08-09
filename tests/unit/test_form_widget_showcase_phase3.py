@@ -138,6 +138,27 @@ def test_switch_widget_unchecked() -> None:
     assert " checked" not in html
 
 
+def test_toggle_widget_hm_anatomy() -> None:
+    """widget=toggle mounts HM Toggle spine (aria-pressed button, not switch)."""
+    from dazzle.render.fragment import ToggleField
+
+    fd = {
+        "name": "is_starred",
+        "label": "Starred",
+        "widget": "toggle",
+        "value": "true",
+    }
+    assert isinstance(_field_to_primitive(fd), ToggleField)
+    html = _render(fd)
+    assert 'data-dz-field-widget="toggle"' in html
+    assert 'class="dz-toggle"' in html
+    assert "data-dz-toggle" in html
+    assert 'aria-pressed="true"' in html
+    assert 'data-dz-widget="toggle"' not in html
+    assert "dz-switch" not in html
+    assert "Starred" in html
+
+
 def test_toggle_group_widget_hm_anatomy() -> None:
     fd = {
         "name": "priority",

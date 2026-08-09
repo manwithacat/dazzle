@@ -30,6 +30,7 @@ from dazzle.render.fragment import (
     SliderField,
     SwitchField,
     TagsField,
+    ToggleField,
     ToggleGroupField,
     WidgetCombobox,
 )
@@ -101,7 +102,7 @@ def field_context_to_dict(field: Any, initial_values: dict[str, Any]) -> dict[st
 
 def field_dict_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | ColorField | SliderField | SwitchField | ToggleGroupField | RichTextField":
+) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | ColorField | SliderField | SwitchField | ToggleField | ToggleGroupField | RichTextField":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -257,6 +258,13 @@ def field_dict_to_primitive(
         )
     if widget == "switch":
         return SwitchField(
+            name=name,
+            label=label,
+            required=required,
+            initial_value=widget_initial,
+        )
+    if widget == "toggle":
+        return ToggleField(
             name=name,
             label=label,
             required=required,

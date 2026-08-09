@@ -131,6 +131,8 @@ from dazzle.render.fragment.primitives import (
     Text,
     Timeline,
     TimeSeries,
+    Toggle,
+    ToggleField,
     ToggleGroupField,
     Toolbar,
     Topbar,
@@ -446,6 +448,10 @@ class FragmentRenderer(
                 return self._emit_slider_field(fragment, ctx)
             case SwitchField():
                 return self._emit_switch_field(fragment, ctx)
+            case Toggle():
+                return self._emit_toggle(fragment, ctx)
+            case ToggleField():
+                return self._emit_toggle_field(fragment, ctx)
             case ToggleGroupField():
                 return self._emit_toggle_group_field(fragment, ctx)
             case RichTextField():
