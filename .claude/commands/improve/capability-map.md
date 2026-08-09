@@ -41,6 +41,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 runs inventory + parallel dig recommenders; driver logs the three counts and may
 apply map patches with `{"apply":true}`.
 
+> **Cycle 1833 (2026-08-09).** **interesting_product** depth_id=**command_density** app=**project_tracker** — claim PENDING #1832. Dashboard dual attention (open_task_queue+composition) and My Tasks (assigned_queue+board) before live_conversation; caps 4; unit pin + ship_surface; SPEC fingerprint; recapture manager+member stills. dig receipt `20260809-project_tracker-command_density.json` PASS. budget 1. Explore **5/100**. Next: capability-sweep next~1835; agent_acceptance / journey / framework non-hop / interesting other; self-audit@1829 next~1844. AUD-010 DONE@1832.
+
 > **Cycle 1831 (2026-08-09).** **interesting_product** depth_id=**command_density** app=**domain_join_co** — dual attention on Home (announcement_queue+join_readiness) and Team Board (feed_queue+join_context) before live_conversation; caps 4; unit pin + ship_surface; SPEC fingerprint; recapture member stills. dig receipt `20260809-domain_join_co-command_density.json` PASS. budget 1. Explore **4/100**. Next: capability-sweep next~1835; agent_acceptance / journey / framework non-hop; self-audit@1829 next~1844. AUD-010 OPEN.
 
 > **Cycle 1830 (2026-08-09).** **interesting_product** depth_id=**command_density** app=**contact_manager** — dual attention (favourites+composition) before live_conversation; caps limit:4; unit pin + ship_surface; SPEC fingerprint; recapture home_user. dig receipt `20260809-contact_manager-command_density.json` PASS. smoke residual=6 stale-only suppressed. budget 1. Explore **3/100**. Next: agent_acceptance / journey / framework non-hop / interesting other; capability-sweep next~1835; self-audit@1829 next~1844. AUD-010 OPEN.
@@ -109,7 +111,7 @@ apply map patches with `{"apply":true}`.
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1820 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1833 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |

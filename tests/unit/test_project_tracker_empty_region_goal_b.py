@@ -20,7 +20,7 @@ def _workspace_block(name: str) -> str:
 
 
 def test_dashboard_omits_priority_mix_bar_chart() -> None:
-    """PM home: docs + conversation + queues + kanban — not priority chart void."""
+    """PM home: dual attention + conversation + kanban — not priority chart void."""
     block = _workspace_block("dashboard")
     assert "portfolio_metrics:" in block
     assert "composition:" in block
@@ -31,8 +31,8 @@ def test_dashboard_omits_priority_mix_bar_chart() -> None:
     assert "priority_mix:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow"
-        in block
+        "focus: portfolio_metrics, open_task_queue, composition, live_conversation, "
+        "project_overview, task_flow" in block
     )
     assert "ux:" in block
 
@@ -50,7 +50,7 @@ def test_project_board_omits_status_mix_bar_chart() -> None:
 
 
 def test_my_tasks_omits_chart_and_twin_comment_dump() -> None:
-    """Member desk: load + conversation + queue + board — not chart/twin timelines."""
+    """Member desk: load + dual attention + conversation — not chart/twin timelines."""
     block = _workspace_block("my_tasks")
     assert "load:" in block
     assert "live_conversation:" in block
@@ -60,7 +60,7 @@ def test_my_tasks_omits_chart_and_twin_comment_dump() -> None:
     assert "recent_discussion:" not in block
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
-    assert "focus: load, live_conversation, assigned_queue, board" in block
+    assert "focus: load, assigned_queue, board, live_conversation" in block
     assert "as member:" in block
 
 

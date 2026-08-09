@@ -294,12 +294,12 @@ entity Attachment "Attachment":
 
 workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
-  # Goal B conversation + document: peer PM tools (Linear / Asana / Jira) put
-  # named deliverables and discussion on the first screen — not only task piles.
-  # Goal B empty_region_honesty (cycle 1815): drop bar-chart priority mix theater
-  # that leaves a large void under the portfolio spine — metrics already encode
-  # open/critical load; keep composition + conversation + queues + kanban.
-  purpose: "Portfolio metrics, document composition, live discussion trail, and work queues"
+  # Goal B command_density (cycle 1833): peer PM tools (Linear / Asana / Jira)
+  # put open-work pressure + named deliverables above the discussion trail —
+  # not Message chrome alone owning the fold. Caps keep dual attention + notes
+  # sharing. Also holds conversation + document + empty_region_honesty (no
+  # priority chart void — metrics already encode open/critical load).
+  purpose: "Multi-panel portfolio — pulse, open work, deliverables, then discussion"
 
   portfolio_metrics:
     source: Task
@@ -316,35 +316,35 @@ workspace dashboard "Dashboard":
       documents: accent
       conversation: accent
 
-  # Goal B document spine on Home (not only Files desk) — human filenames as
-  # titles so hero stills read as document composition above the fold.
-  composition:
-    source: Attachment
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: attachment_view
-    empty: "No documents yet — upload a deliverable on a task"
-
-  # Goal B conversation spine — Message/Bubble chrome (HTTP CONVERSATION +
-  # MessageScroller), not queue meta. Peer PM tools put thread copy above fold.
-  live_conversation:
-    source: Comment
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No conversation yet — task discussion notes appear here as work moves"
-
-  # Work the pile — review queue before the visual board.
+  # Dual attention A — work the pile (cap 4 for fold share with conversation).
   open_task_queue:
     source: Task
     filter: status != done
     sort: priority desc, due_date asc
-    limit: 15
+    limit: 4
     display: queue
     action: task_edit
     empty: "No open tasks"
+
+  # Dual attention B — document composition on Home (not only Files desk).
+  # Human filenames as titles so hero stills read deliverables above the fold.
+  composition:
+    source: Attachment
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: attachment_view
+    empty: "No documents yet — upload a deliverable on a task"
+
+  # Goal B conversation spine AFTER dual attention — Message/Bubble chrome
+  # (HTTP CONVERSATION + MessageScroller), not queue meta.
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No conversation yet — task discussion notes appear here as work moves"
 
   project_overview:
     source: Project
@@ -361,14 +361,14 @@ workspace dashboard "Dashboard":
 
   ux:
     as admin:
-      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
-      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
+      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
+      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
     as manager:
-      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
-      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
+      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
+      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
     as member:
-      purpose: "Portfolio spine — docs, conversation, queues, board; no chart void"
-      focus: portfolio_metrics, composition, live_conversation, open_task_queue, project_overview, task_flow
+      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
+      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
 
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
@@ -421,10 +421,10 @@ workspace project_board "Project Board":
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
 workspace my_tasks "My Tasks":
-  # Goal B empty_region_honesty (cycle 1815): conversation + assigned queue +
-  # kanban is the member spine — drop bar-chart priority mix and twin comment
-  # timeline (live_conversation already shows Message chrome).
-  purpose: "Member desk — assigned work, live discussion, and due pressure"
+  # Goal B command_density (cycle 1833): peer personal work desks put assigned
+  # pressure + board flow above discussion trail — not Message chrome first.
+  # empty_region_honesty: drop bar-chart priority mix and twin comment timeline.
+  purpose: "Multi-panel member desk — load, assigned queue, board, then discussion"
   access: persona(admin, manager, member)
 
   load:
@@ -440,43 +440,44 @@ workspace my_tasks "My Tasks":
       review: warning
       conversation: accent
 
-  # Goal B: members land here — Message/Bubble conversation chrome so the desk
-  # is a reply surface, not only an assigned-task warehouse.
-  live_conversation:
-    source: Comment
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No conversation yet — notes on your tasks appear here"
-
+  # Dual attention A — assigned work pressure (cap 4 for fold share).
   assigned_queue:
     source: Task
     filter: status != done
     sort: priority desc, due_date asc
-    limit: 20
+    limit: 4
     display: queue
     # Open the task hub (status strip + discussion queue + files), not the
     # edit form — member pilot path for ST-003 (cycle 1502 acceptance).
     action: task_detail
     empty: "No open tasks"
 
+  # Dual attention B — status flow board (work shape, not a chart void).
   board:
     source: Task
     display: kanban
     group_by: status
     sort: priority desc
 
+  # Goal B conversation spine AFTER dual attention — Message/Bubble chrome.
+  live_conversation:
+    source: Comment
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No conversation yet — notes on your tasks appear here"
+
   ux:
     as admin:
-      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
-      focus: load, live_conversation, assigned_queue, board
+      purpose: "Multi-panel member desk — assigned + board before discussion trail"
+      focus: load, assigned_queue, board, live_conversation
     as manager:
-      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
-      focus: load, live_conversation, assigned_queue, board
+      purpose: "Multi-panel member desk — assigned + board before discussion trail"
+      focus: load, assigned_queue, board, live_conversation
     as member:
-      purpose: "Member spine — load, conversation, queue, board; no chart/twin dumps"
-      focus: load, live_conversation, assigned_queue, board
+      purpose: "Multi-panel member desk — assigned + board before discussion trail"
+      focus: load, assigned_queue, board, live_conversation
 
 workspace milestone_plan "Milestone Plan":
   purpose: "Schedule desk — milestones before drilling into task lists"
