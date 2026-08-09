@@ -348,6 +348,29 @@ example_homes = ["design_studio (menubar: true)"]
 scanner = "catalogue_only"
 
 [[scenario]]
+id = "sitespec_product_top_nav"
+hyperpart = "navigation-menu"
+authoring = "sitespec layout.nav"
+layer = "shell"
+job = "Public/product site go-to top nav uses HM navigation-menu dual-lock, not bare dz-nav-link or menubar."
+use_when = [
+  "sitespec defines layout.nav public or authenticated items",
+  "marketing/site pages need durable horizontal product IA",
+  "optional mega panels for Product/Resources-style branches",
+]
+refuse_when = [
+  "app File/Edit/View chrome (use menubar)",
+  "left-rail app navigation (use app-shell sidebar)",
+  "single host overflow actions (use menu)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = ["design_studio sitespec layout.nav (and all example site shells)"]
+scanner = "catalogue_only"
+
+[[scenario]]
 id = "workspace_dual_pane_master_detail"
 hyperpart = "master-detail"
 authoring = "stage:dual_pane_flow"

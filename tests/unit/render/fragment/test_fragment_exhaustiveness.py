@@ -103,6 +103,10 @@ from dazzle.render.fragment import (
     Modal,
     MoneyField,
     NavGroup,
+    NavigationMenu,
+    NavigationMenuBranch,
+    NavigationMenuGroup,
+    NavigationMenuLink,
     NavItem,
     Page,
     Pagination,
@@ -390,6 +394,33 @@ def _sample_for(primitive_type: type) -> object:
                     actions=(MenubarAction(label="New", href="/new"),),
                 ),
             )
+        )
+    if primitive_type is NavigationMenu:
+        return NavigationMenu(
+            items=(
+                NavigationMenuLink(label="Home", href="/"),
+                NavigationMenuBranch(
+                    label="Product",
+                    groups=(
+                        NavigationMenuGroup(
+                            links=(NavigationMenuLink(label="Apps", href="/apps"),),
+                        ),
+                    ),
+                ),
+            )
+        )
+    if primitive_type is NavigationMenuLink:
+        return NavigationMenuLink(label="Home", href="/")
+    if primitive_type is NavigationMenuGroup:
+        return NavigationMenuGroup(links=(NavigationMenuLink(label="Apps", href="/apps"),))
+    if primitive_type is NavigationMenuBranch:
+        return NavigationMenuBranch(
+            label="Product",
+            groups=(
+                NavigationMenuGroup(
+                    links=(NavigationMenuLink(label="Apps", href="/apps"),),
+                ),
+            ),
         )
     if primitive_type is Breadcrumb:
         return Breadcrumb(

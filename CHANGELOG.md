@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Added
+- **navigation-menu hyperpart emitter** — `NavigationMenu` Fragment dual-lock (`.dz-navigation-menu`); sitespec `layout.nav` mounts product top nav in site chrome; catalogue planned→live; dogfood all example sitespec public navs.
 - **message hyperpart emitter** — `Message` Fragment dual-lock (`.dz-message` row with optional media/meta + nested `Bubble`); `display: conversation` stacks Message rows; catalogue planned→live; dogfood support_tickets `live_conversation` + simple_task `sample_thread`.
 - **menubar hyperpart emitter** — `Menubar` / `MenubarMenu` / `MenubarAction` Fragment dual-lock (`.dz-menubar`); opt-in via `menubar: true` on the app block; shell mounts from nav groups in topbar leading; dogfood design_studio.
 - **master-detail hyperpart emitter path (catalogue live)** — declare existing `stage: dual_pane_flow` LIST+DETAIL shell (`.dz-master-detail`) as the first Dazzle path; catalogue planned→live; fleet signal; scenario + pick-a-surface; dogfood contact_manager contacts.

@@ -133,7 +133,9 @@ SIGNALS: dict[str, object] = {
     "bubble": r"display:\s*conversation",
     "message": r"display:\s*conversation",
     "message-scroller": r"display:\s*conversation",
-    "navigation-menu": "exempt:no Dazzle emitter yet (gallery top mega-nav shell)",
+    # sitespec layout.nav → NavigationMenu → .dz-navigation-menu (2026-08-09)
+    # Framework always emits for site chrome when nav items present (all examples).
+    "navigation-menu": "always",
     # display: map → MapBoard of Marker pins → .dz-marker (2026-08-09)
     "marker": r"display:\s*map",
     "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",

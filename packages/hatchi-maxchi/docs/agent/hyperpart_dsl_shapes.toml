@@ -501,9 +501,9 @@ agent_surface = "pick-a-surface"
 id = "navigation-menu"
 class = "chrome"
 layer = "shell"
-dsl = "sitespec top product nav"
-status = "planned"
-job = "Use navigation-menu via sitespec top product nav"
+dsl = "sitespec layout.nav → NavigationMenu (.dz-navigation-menu)"
+status = "live"
+job = "Use navigation-menu via sitespec layout.nav → NavigationMenu (.dz-navigation-menu)"
 agent_surface = "shell"
 
 [[part]]

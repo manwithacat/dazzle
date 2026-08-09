@@ -103,6 +103,75 @@ class Menubar:
 
 
 @dataclass(frozen=True, slots=True)
+class NavigationMenuLink:
+    """Top-level or panel link inside a NavigationMenu.
+
+    ``href=None`` emits a non-navigating span (rare host-owned placeholder).
+    ``current=True`` sets ``aria-current="page"`` on the anchor.
+    ``description`` becomes a ``<small>`` under the label in mega panels.
+    """
+
+    label: str
+    href: str | None = None
+    current: bool = False
+    description: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("NavigationMenuLink requires a non-empty label")
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationMenuGroup:
+    """One titled column inside a mega / branch panel."""
+
+    links: tuple[NavigationMenuLink, ...]
+    title: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.links:
+            raise ValueError("NavigationMenuGroup requires at least one NavigationMenuLink")
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationMenuBranch:
+    """Top-level details trigger with optional multi-column mega panel."""
+
+    label: str
+    groups: tuple[NavigationMenuGroup, ...]
+    mega: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.label or not str(self.label).strip():
+            raise ValueError("NavigationMenuBranch requires a non-empty label")
+        if not self.groups:
+            raise ValueError("NavigationMenuBranch requires at least one NavigationMenuGroup")
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationMenu:
+    """HM NavigationMenu hyperpart — dual-lock product/site top nav.
+
+    Gallery spine: ``nav.dz-navigation-menu[data-dz-navigation-menu]`` with
+    link items and optional ``details`` mega branches. Product go-to IA
+    (sitespec top nav), not app File/Edit/View menubar and not the app-shell
+    sidebar.
+
+    Dual-lock root: ``[data-dz-navigation-menu]`` (contracts/navigation_menu.py).
+    Authoring: sitespec ``layout.nav`` → ``build_site_navigation_menu``.
+    """
+
+    items: tuple[NavigationMenuLink | NavigationMenuBranch, ...]
+    aria_label: str = "Product"
+
+    def __post_init__(self) -> None:
+        if not self.items:
+            raise ValueError("NavigationMenu requires at least one item")
+        if not self.aria_label or not str(self.aria_label).strip():
+            raise ValueError("NavigationMenu aria_label must be non-empty")
+
+
+@dataclass(frozen=True, slots=True)
 class NavItem:
     """Single navigation entry — typically a link to a workspace,
     surface, or external resource.

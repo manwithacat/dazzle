@@ -121,3 +121,12 @@ Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
 - Live rows: actor keys + timestamps → meta; `is_internal` → outbound
 - Dogfood: support_tickets `live_conversation`; simple_task `sample_thread`
 - Tests: `test_message_emitter` (+ bubble pins still nest)
+
+## Reference ship: navigation-menu (2026-08-09)
+
+- Sitespec `layout.nav` → `NavigationMenu` → `.dz-navigation-menu` + `data-dz-navigation-menu`
+- Fragment: `NavigationMenu` / `NavigationMenuLink` / `NavigationMenuBranch` / `NavigationMenuGroup`
+- Shell: `build_site_navigation_menu` in site chrome (logo + dual-lock IA + CTA/theme)
+- Optional mega branches (`details` + `data-dz-layout=mega`); controller exclusive open
+- Dogfood: every example sitespec public nav (design_studio Home / Sign In)
+- Tests: `test_navigation_menu_emitter`

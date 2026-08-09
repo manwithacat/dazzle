@@ -44,6 +44,9 @@ from dazzle.render.fragment.primitives import (
     ErrorPage,
     Menubar,
     NavGroup,
+    NavigationMenu,
+    NavigationMenuBranch,
+    NavigationMenuLink,
     NavItem,
     Page,
     Sidebar,
@@ -397,6 +400,66 @@ class _RenderShellMixin:
         return (
             f'<div class="dz-menubar" data-dz-menubar role="navigation" '
             f'aria-label="{aria}">{"".join(menu_parts)}</div>'
+        )
+
+    def _emit_navigation_menu_link(self, link: NavigationMenuLink, ctx: RenderContext) -> str:
+        """Panel or top-level link anchor for NavigationMenu."""
+        label = ctx.escape(link.label)
+        desc = ""
+        if link.description:
+            desc = f"<small>{ctx.escape(link.description)}</small>"
+        current = ' aria-current="page"' if link.current else ""
+        if link.href:
+            href = ctx.escape_attr(link.href)
+            return f'<a href="{href}"{current}>{label}{desc}</a>'
+        return f"<span{current}>{label}{desc}</span>"
+
+    def _emit_navigation_menu(self, m: NavigationMenu, ctx: RenderContext) -> str:
+        """HM NavigationMenu — dual-lock product/site top nav."""
+        li_parts: list[str] = []
+        for item in m.items:
+            if isinstance(item, NavigationMenuBranch):
+                groups_html: list[str] = []
+                for group in item.groups:
+                    links_html = "".join(
+                        self._emit_navigation_menu_link(link, ctx) for link in group.links
+                    )
+                    title_html = ""
+                    if group.title:
+                        title_html = (
+                            f'<p class="dz-navigation-menu__group-title">'
+                            f"{ctx.escape(group.title)}</p>"
+                        )
+                    groups_html.append(
+                        f'<div class="dz-navigation-menu__group">{title_html}{links_html}</div>'
+                    )
+                layout_attr = ' data-dz-layout="mega"' if item.mega else ""
+                branch_label = ctx.escape(item.label)
+                li_parts.append(
+                    f'<li class="dz-navigation-menu__item">'
+                    f'<details class="dz-navigation-menu__branch">'
+                    f'<summary class="dz-navigation-menu__trigger">{branch_label}</summary>'
+                    f'<div class="dz-navigation-menu__panel"{layout_attr}>'
+                    f"{''.join(groups_html)}"
+                    f"</div></details></li>"
+                )
+            else:
+                label = ctx.escape(item.label)
+                current = ' aria-current="page"' if item.current else ""
+                if item.href:
+                    href = ctx.escape_attr(item.href)
+                    anchor = (
+                        f'<a class="dz-navigation-menu__link" href="{href}"{current}>{label}</a>'
+                    )
+                else:
+                    anchor = f'<span class="dz-navigation-menu__link"{current}>{label}</span>'
+                li_parts.append(f'<li class="dz-navigation-menu__item">{anchor}</li>')
+        aria = ctx.escape_attr(m.aria_label)
+        return (
+            f'<nav class="dz-navigation-menu" data-dz-navigation-menu '
+            f'aria-label="{aria}">'
+            f'<ul class="dz-navigation-menu__list">{"".join(li_parts)}</ul>'
+            f"</nav>"
         )
 
     def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:

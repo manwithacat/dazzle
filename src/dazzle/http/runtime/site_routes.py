@@ -453,14 +453,17 @@ def create_site_page_routes(
         sections = getattr(ctx, "sections", None) or []
         qa_personas = getattr(ctx, "qa_personas", None) or []
 
-        # --- Nav (site/includes/nav.html) ----------------------------
-        nav_links_html = "".join(
-            f'<a href="{_html_mod.escape(str(getattr(item, "href", "") or ""), quote=True)}" '  # nosemgrep
-            f'class="dz-nav-link">'
-            f"{_html_mod.escape(str(getattr(item, 'label', '') or ''), quote=False)}"
-            f"</a>"
-            for item in nav_items
+        # --- Nav (site/includes/nav.html → HM navigation-menu dual-lock) ---
+        from dazzle.render.fragment import FragmentRenderer
+        from dazzle.render.navigation_menu import build_site_navigation_menu
+
+        current_route_raw = str(getattr(ctx, "current_route", "") or "")
+        nav_menu = build_site_navigation_menu(
+            nav_items,
+            current_route=current_route_raw,
+            aria_label="Product",
         )
+        nav_menu_html = FragmentRenderer().render(nav_menu) if nav_menu is not None else ""
         if is_authenticated:
             dashboard_attr = _html_mod.escape(dashboard_url_raw, quote=True)
             cta_html = (
@@ -493,12 +496,15 @@ def create_site_page_routes(
                 '-5.646z" /></svg>'
                 "</button>"
             )
+        # Keep .dz-site-nav flex chrome (logo + IA + trailing CTA/theme);
+        # product links live in dual-lock .dz-navigation-menu (not bare .dz-nav-link).
         nav_html = (
-            '<header class="dz-site-header"><nav class="dz-site-nav">'
+            '<header class="dz-site-header"><div class="dz-site-nav">'
             f'<a href="/" class="dz-site-logo">{product_name}</a>'
+            f"{nav_menu_html}"
             '<div class="dz-nav-items">'
-            f"{nav_links_html}{cta_html}{theme_toggle_html}"
-            "</div></nav></header>"
+            f"{cta_html}{theme_toggle_html}"
+            "</div></div></header>"
         )
 
         # --- Page <h1> (#1108) ---------------------------------------
