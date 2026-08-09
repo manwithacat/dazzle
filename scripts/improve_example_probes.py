@@ -150,10 +150,14 @@ def _domain_cognition() -> tuple[str, str | None, int]:
 
 
 def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
-    """Hyperpart scenario + DSL-shape residual — planned emitters / shapes.
+    """Hyperpart scenario + DSL-shape residual — planned emitters / shapes / scenarios.
 
     Residual (forces framework-ux hyperpart_emitter):
-      max(planned_emitter rows across apps, planned DSL shapes in catalogue)
+      max(
+        planned_emitter rows across apps,
+        planned DSL shapes in catalogue,
+        live pick-matrix shapes missing a scenario row,
+      )
 
     *author_action* is reported only (product adopt), not residual_total.
     """
@@ -184,20 +188,28 @@ def _hyperpart_scenarios() -> tuple[str, str | None, int, str | None]:
 
     shapes = shapes_snapshot()
     planned_shapes = int(shapes.get("planned") or 0)
+    scenario_missing = int(shapes.get("scenario_missing") or 0)
     next_shape = shapes.get("next_planned")
-    # Programme residual: unfinished rational DSL shapes (emitters still to ship).
-    # This is *not* noise — planned catalogue rows are first-path emitter work.
-    residual = max(planned, planned_shapes)
+    next_scen = shapes.get("next_scenario_missing")
+    # Programme residual: unfinished rational DSL shapes (emitters still to ship)
+    # OR live pick-matrix shapes with no scenario (agents cannot discover the path).
+    residual = max(planned, planned_shapes, scenario_missing)
     if residual > 0 and force is None:
         force = "framework-ux hyperpart_emitter"
-    # Prefer an example app when a planned_emitter row names one; else the next
-    # planned catalogue id (aspect-ratio, accordion, …) so selection `nxt` is set
-    # and force= hyperpart_emitter wins over smoke thrash.
-    display_next = next_app or (str(next_shape) if residual > 0 and next_shape else None)
+    # Prefer an example app when a planned_emitter row names one; else next planned
+    # shape id; else next scenario-missing id so force= hyperpart_emitter wins over
+    # smoke thrash.
+    display_next = next_app
+    if display_next is None and residual > 0:
+        if planned_shapes > 0 and next_shape:
+            display_next = str(next_shape)
+        elif scenario_missing > 0 and next_scen:
+            display_next = str(next_scen)
     line = (
         f"hyperpart_scenarios apps={len(apps)} planned_emitter={planned} "
         f"author_action={author} dsl_shapes live={shapes.get('live', 0)} "
         f"planned={planned_shapes} chrome_only={shapes.get('chrome_only', 0)} "
+        f"scenario_missing={scenario_missing} "
         f"parts={shapes.get('count', 0)} next={display_next or '-'} "
         f"force={force or '-'}"
     )

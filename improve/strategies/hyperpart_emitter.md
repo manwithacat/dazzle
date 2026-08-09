@@ -13,12 +13,22 @@
 |----------|-------|--------|
 | `planned_emitter > 0` | `framework-ux hyperpart_emitter` | Domain wants a part with no DSL path yet — ship emitter package |
 | `dsl_shapes.planned > 0` | `framework-ux hyperpart_emitter` | **Programme residual** — catalogue still has unfinished first paths (not noise) |
+| `dsl_shapes.scenario_missing > 0` | `framework-ux hyperpart_emitter` | **Discovery residual** — live pick-matrix shape has no scenario row (agents cannot discover the path) |
 | `author_action` only | soft (not residual_total) | Optional product adopt dig; do not thrash quiet fleets |
 
-**Do honor** `force=framework-ux hyperpart_emitter` when either residual fires.
+**Do honor** `force=framework-ux hyperpart_emitter` when any residual fires.
 Do **not** skip shape drain because `planned_emitter=0` — that only means no
-domain-fit scanner row; planned catalogue ids (aspect-ratio, carousel, …) still need emitters.
-Prefer this over `agent_qa_smoke` when residual_total is shapes-only.
+domain-fit scanner row; planned catalogue ids still need emitters; scenario_missing
+ids need catalogue rows (`use_when` / `refuse_when` / authoring / example_homes).
+Prefer this over `agent_qa_smoke` when residual_total is shapes/scenarios-only.
+
+### Scenario discovery package (when `scenario_missing > 0`)
+
+1. Open `hyperpart_dsl_shapes.toml` for the next `scenario_missing` id.
+2. Add `[[scenario]]` in `hyperpart_scenarios.toml` (job-first `use_when`/`refuse_when`).
+3. Prefer `scanner = "catalogue_only"` until a real appspec heuristic exists.
+4. `status_if_fit = emit_covered` when the DSL path already ships; else keep planned/author_action.
+5. Prove: `shapes_snapshot().scenario_missing` drops; probe line shows `scenario_missing=0`.
 
 ## Emitter package (one PR / dig)
 

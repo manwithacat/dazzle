@@ -12,6 +12,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from dazzle.qa.hyperpart_scenarios import load_scenarios
+
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover
@@ -72,6 +74,16 @@ def load_shapes(path: Path | None = None) -> tuple[PartShape, ...]:
     return tuple(rows)
 
 
+# Agent pick surfaces that require a scenario row so domain-modelling agents
+# can discover when to use the shape (shell/always chrome is exempt).
+_SCENARIO_REQUIRED_SURFACES = frozenset({"pick-a-surface", "pick-a-work-surface"})
+
+
+def _scenario_covered_ids() -> set[str]:
+    """Hyperpart ids that have at least one scenario catalogue row."""
+    return {s.hyperpart for s in load_scenarios() if s.hyperpart}
+
+
 def shapes_snapshot() -> dict[str, Any]:
     rows = load_shapes()
     by_status: dict[str, int] = {}
@@ -82,8 +94,21 @@ def shapes_snapshot() -> dict[str, Any]:
         by_class[r.class_] = by_class.get(r.class_, 0) + 1
         if r.status == "planned":
             planned_ids.append(r.id)
+
+    covered = _scenario_covered_ids()
+    # Live pick-matrix parts without a scenario are invisible to agents even
+    # when the emitter is green — Phase-4 discovery residual (scenario_underused
+    # / missing scenario rows). chrome_only and shell surfaces are exempt.
+    scenario_missing_ids = sorted(
+        r.id
+        for r in rows
+        if r.status == "live"
+        and r.agent_surface in _SCENARIO_REQUIRED_SURFACES
+        and r.id not in covered
+    )
+
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "path": str(CATALOGUE_PATH.relative_to(REPO)) if CATALOGUE_PATH.is_file() else None,
         "count": len(rows),
         "by_status": by_status,
@@ -93,6 +118,9 @@ def shapes_snapshot() -> dict[str, Any]:
         "live": by_status.get("live", 0),
         "chrome_only": by_status.get("chrome_only", 0),
         "next_planned": planned_ids[0] if planned_ids else None,
+        "scenario_missing_ids": scenario_missing_ids,
+        "scenario_missing": len(scenario_missing_ids),
+        "next_scenario_missing": scenario_missing_ids[0] if scenario_missing_ids else None,
         "doctrine": (
             "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
         ),

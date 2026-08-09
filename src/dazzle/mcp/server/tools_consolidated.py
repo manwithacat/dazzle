@@ -1361,9 +1361,13 @@ def _tool_presentation() -> Tool:
             "vs wired; how_to_extend), opportunities (static person/queue scan + "
             "presentation_cognition; CLI: dazzle qa hyperpart-opportunities), "
             "residual (OCR hero stills for ref_as_repr dict/UUID chrome and "
-            "person_as_text Assigned To: prose when tesseract available). "
-            "Doctrine: docs/reference/hyperpart-presentation.md. Force: "
-            "/improve framework-ux hyperpart_presentation. Prefer before "
+            "person_as_text Assigned To: prose when tesseract available), "
+            "shapes (rational DSL authoring shapes + scenario_missing residual "
+            "for domain-modelling agents; optional id=/status= filters). "
+            "Doctrine: docs/reference/hyperpart-presentation.md + "
+            "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. "
+            "Force: /improve framework-ux hyperpart_presentation (OCR) or "
+            "hyperpart_emitter (planned shapes / scenario_missing). Prefer before "
             "claiming person/refs 'done' from residual floors alone. Complements "
             "product_quality(score) which folds presentation residual into "
             "residual_total."
@@ -1373,7 +1377,7 @@ def _tool_presentation() -> Tool:
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["cognition", "opportunities", "residual"],
+                    "enum": ["cognition", "opportunities", "residual", "shapes"],
                     "description": "Operation to perform",
                 },
                 "app": {
@@ -1381,6 +1385,20 @@ def _tool_presentation() -> Tool:
                     "description": (
                         "Showcase app name when project_path is examples/ "
                         "(or monorepo root with examples/<app>)."
+                    ),
+                },
+                "id": {
+                    "type": "string",
+                    "description": (
+                        "Optional hyperpart id when operation=shapes "
+                        "(returns one shape + its scenarios)."
+                    ),
+                },
+                "status": {
+                    "type": "string",
+                    "description": (
+                        "Optional shape status filter when operation=shapes "
+                        "(live|planned|chrome_only)."
                     ),
                 },
                 "project_root": {

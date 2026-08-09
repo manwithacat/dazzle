@@ -178,7 +178,7 @@ Selection order inside the lane: **product_maturity → demo_fleet → journey_d
 
 When felt residual is **presentation** (`ref_as_repr` / `person_as_text`), force
 **`framework-ux hyperpart_presentation`** (not `demo_fleet`). MCP:
-`presentation(operation=cognition|opportunities|residual)`; doctrine
+`presentation(operation=cognition|opportunities|residual|shapes)`; doctrine
 `hyperpart-presentation.md`; counter-prior `ref_as_repr`.
 
 **Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify

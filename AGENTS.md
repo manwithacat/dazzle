@@ -307,7 +307,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `pitch` | get |
 | `policy` | analyze, conflicts, coverage, simulate, access_matrix, verify_status |
 | `process` | list, inspect, list_runs, get_run, coverage |
-| `presentation` | cognition, opportunities, residual |
+| `presentation` | cognition, opportunities, residual, shapes |
 | `product_quality` | score |
 | `representation` | patterns, decide, classify, prove |
 | `rhythm` | get, list, coverage |

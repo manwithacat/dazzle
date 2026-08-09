@@ -1397,7 +1397,7 @@ def handle_representation(arguments: dict[str, Any]) -> str:
 
 
 def handle_presentation(arguments: dict[str, Any]) -> str:
-    """#1626 hyperpart presentation cognition / opportunities / residual."""
+    """#1626 hyperpart presentation cognition / opportunities / residual / shapes."""
     from .handlers.presentation import handle_presentation as _handle
 
     return _handle(arguments)

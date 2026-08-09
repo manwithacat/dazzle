@@ -112,7 +112,7 @@ catch presentation honesty.
 | `user_chip` + `present()` | Product **emit** |
 | `qa hyperpart-opportunities` | Observe host coverage |
 | `demo_fleet` / `product_quality` | Floors + **presentation residual** (OCR stills) |
-| MCP `presentation` | cognition / opportunities / residual for agents |
+| MCP `presentation` | cognition / opportunities / residual / shapes for agents |
 | counter-prior `ref_as_repr` | KG inoculation vs dict/UUID chrome |
 | Mid-dot R1 separators | Between segments; not a substitute for Avatar |
 
@@ -128,7 +128,7 @@ presentation process. Use the published surfaces:
 | Doctrine | `docs/reference/hyperpart-presentation.md` · KG doc page `hyperpart-presentation` | Rules + matrix |
 | Improve strategy | `/improve framework-ux hyperpart_presentation` · playbook `improve/strategies/hyperpart_presentation.md` | OBSERVE→PROVE loop |
 | Felt bar | CLI `dazzle demo quality` · MCP `product_quality(operation=score)` | residual_total + force path |
-| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|residual)` | Matrix honesty + still OCR residual |
+| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|residual\|shapes)` | Matrix honesty + still OCR residual + rational DSL shapes |
 | Opportunity scan | CLI `dazzle qa hyperpart-opportunities` · MCP `presentation(opportunities)` | Host emit coverage |
 | Counter-prior | MCP `knowledge(operation=counter_prior, id=ref_as_repr)` | Wrong vs right shape |
 | Recapture | `scripts/recapture_demo_fleet_1626.py --apps <app>` | Still proof after emit |

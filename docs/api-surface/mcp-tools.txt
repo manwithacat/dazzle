@@ -1081,12 +1081,16 @@ tool: policy
   }
 
 tool: presentation
-  description_hash: ff888a53e205
-  description_len: 657
+  description_hash: 31fe1c476e20
+  description_len: 929
   {
     "properties": {
       "app": {
         "description": "Showcase app name when project_path is examples/ (or monorepo root with examples/<app>).",
+        "type": "string"
+      },
+      "id": {
+        "description": "Optional hyperpart id when operation=shapes (returns one shape + its scenarios).",
         "type": "string"
       },
       "operation": {
@@ -1094,7 +1098,8 @@ tool: presentation
         "enum": [
           "cognition",
           "opportunities",
-          "residual"
+          "residual",
+          "shapes"
         ],
         "type": "string"
       },
@@ -1104,6 +1109,10 @@ tool: presentation
       },
       "project_root": {
         "description": "Path to one example app (dazzle.toml) or examples/ root. Defaults to the active MCP project.",
+        "type": "string"
+      },
+      "status": {
+        "description": "Optional shape status filter when operation=shapes (live|planned|chrome_only).",
         "type": "string"
       }
     },

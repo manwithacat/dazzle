@@ -219,3 +219,17 @@ class TestScan:
         report = build_opportunity_report(app="simple_task", opportunities=opps)
         assert report["residual"]["author_action"] == 0
         assert not report.get("auto_seed")
+
+
+def test_shapes_scenario_coverage_pick_matrix() -> None:
+    """Every live pick-matrix shape has a scenario (agent discovery residual)."""
+    from dazzle.qa.hyperpart_dsl_shapes import load_shapes, shapes_snapshot
+    from dazzle.qa.hyperpart_scenarios import load_scenarios
+
+    load_shapes.cache_clear()
+    load_scenarios.cache_clear()
+    snap = shapes_snapshot()
+    assert snap.get("schema_version", 0) >= 2
+    assert snap.get("scenario_missing", 0) == 0, snap.get("scenario_missing_ids")
+    assert snap.get("planned", 0) == 0
+    assert snap.get("live", 0) >= 80

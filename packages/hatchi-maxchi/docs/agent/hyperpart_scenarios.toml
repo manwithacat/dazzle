@@ -24,7 +24,7 @@
 #   scanner         — python scanner id that implements this row (or "catalogue_only")
 
 version = 1
-updated = "2026-08-07"
+updated = "2026-08-09"
 
 # ── Default emit (framework; no DSL) ─────────────────────────────────
 
@@ -459,4 +459,880 @@ ownership = "framework"
 severity = "low"
 residual_lane = "none"
 example_homes = ["simple_task sample_progress"]
+scanner = "catalogue_only"
+
+# ── Discovery batch (2026-08-09): pick-matrix live shapes without scenarios ──
+# Residual: shapes_snapshot.scenario_missing (agent pick surfaces only).
+# scanner=catalogue_only until domain scanners land; emit_covered documents the path.
+
+[[scenario]]
+id = "workspace_action_grid"
+hyperpart = "action-grid"
+authoring = "display: action_grid"
+layer = "region"
+job = "Present a grid of primary actions/operations the operator can launch."
+use_when = [
+  "many peer actions with equal weight",
+  "launcher / ops desk of named operations",
+]
+refuse_when = [
+  "single primary CTA (use button)",
+  "data rows to select (use list/queue)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_activity_awareness"
+hyperpart = "activity-feed"
+authoring = "display: activity_feed"
+layer = "region"
+job = "Acknowledge recent events/notifications in a feed — not a completion inbox."
+use_when = [
+  "operators need awareness of what changed",
+  "notifications / audit stream without stage columns",
+]
+refuse_when = [
+  "my next work ranked by SLA (use task_inbox)",
+  "stage pull (use kanban)",
+  "urgency pool (use queue)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_bar_chart"
+hyperpart = "bar-chart"
+authoring = "display: bar_chart"
+layer = "region"
+job = "Compare categorical magnitudes with bars."
+use_when = [
+  "category vs value comparison",
+  "ranked or grouped magnitudes",
+]
+refuse_when = [
+  "time series trend (use line_chart/area)",
+  "single percent fill (use progress_bar)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_bar_track"
+hyperpart = "bar-track"
+authoring = "display: bar_track"
+layer = "region"
+job = "Per-row labelled tracks against a shared max (not StageBar chips)."
+use_when = [
+  "many rows each with a value/max",
+  "league-style capacity bars",
+]
+refuse_when = [
+  "workflow stage chips (use display: progress)",
+  "single capacity % (use progress_bar)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_box_plot"
+hyperpart = "box-plot"
+authoring = "display: box_plot"
+layer = "region"
+job = "Spread/quartiles of a measure by category."
+use_when = [
+  "compare distributions not just means",
+  "outlier visibility",
+]
+refuse_when = [
+  "simple category totals (use bar_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "compose_conversation_bubble"
+hyperpart = "bubble"
+authoring = "display: conversation / Bubble fragment"
+layer = "region"
+job = "Speech bubble chrome inside conversation composition (not a standalone region verb)."
+use_when = [
+  "building conversation UI via display: conversation",
+  "compose Bubble fragment in custom packing",
+]
+refuse_when = [
+  "standalone region for non-chat content",
+  "identity card (use profile_card/avatar)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_bullet_chart"
+hyperpart = "bullet"
+authoring = "display: bullet"
+layer = "region"
+job = "Actual vs target performance for few KPIs."
+use_when = [
+  "actual against target/threshold",
+  "compact KPI with qualitative ranges",
+]
+refuse_when = [
+  "many categories (use bar_chart)",
+  "determinate single fill (use progress_bar)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "always_dashboard_card"
+hyperpart = "card"
+authoring = "dashboard KPI cards (framework)"
+layer = "region"
+job = "Dashboard card chrome hosts KPI/content regions — framework always-on."
+use_when = [
+  "workspace dashboard tiles",
+]
+refuse_when = [
+  "invent raw HTML card shells",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_chart_legend"
+hyperpart = "chart-legend"
+authoring = "display: pie | area | line_chart (+ legend)"
+layer = "region"
+job = "Chart series identity via legend chrome composed with pie/area/line regions."
+use_when = [
+  "multi-series chart needs series keys",
+  "pie slices need labels",
+]
+refuse_when = [
+  "no multi-series (legend optional)",
+  "tabular data alone (use list)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "form_single_select_combobox"
+hyperpart = "combobox"
+authoring = "widget=combobox"
+layer = "field"
+job = "Closed single-select on a form field with combobox (not remote FK typeahead)."
+use_when = [
+  "form POST single select",
+  "closed or allow-create catalogue set",
+]
+refuse_when = [
+  "remote FK search (use search-select / source=pack.op)",
+  "multi free labels (use tags)",
+  "in-cell grid enum (grid edit select)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_confirm_action_panel"
+hyperpart = "confirm-panel"
+authoring = "display: confirm_action_panel"
+layer = "region"
+job = "In-workspace confirmation of a destructive or irreversible action."
+use_when = [
+  "confirm copy + primary/cancel in region",
+  "stay in flow without modal",
+]
+refuse_when = [
+  "simple hx-confirm (use confirm chrome)",
+  "modal multi-step (use dialog)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "always_controls_pills"
+hyperpart = "controls"
+authoring = "native checkbox/radio controls pills"
+layer = "field"
+job = "Checkbox/radio control pills on forms — framework default chrome."
+use_when = [
+  "boolean/group options on forms without switch/toggle_group",
+]
+refuse_when = [
+  "settings on/off (prefer widget=switch)",
+  "2–5 closed enum visual (prefer toggle_group)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "form_date_range_field"
+hyperpart = "date-range"
+authoring = "date_range / date-range field"
+layer = "field"
+job = "Pick a start–end date range on a form or filter field."
+use_when = [
+  "report window / filter between two dates",
+]
+refuse_when = [
+  "single date (use date field)",
+  "timeline display of events (use timeline region)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_diagram"
+hyperpart = "diagram"
+authoring = "display: diagram"
+layer = "region"
+job = "Node/edge relationship diagram for structure."
+use_when = [
+  "topology / relationship structure is the job",
+]
+refuse_when = [
+  "tabular list of nodes (use list/tree)",
+  "geo map (use map)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "always_field_triad"
+hyperpart = "field"
+authoring = "label+control triad on forms"
+layer = "field"
+job = "Every form control uses the field triad (label, control, help/error)."
+use_when = [
+  "any form field render",
+]
+refuse_when = [
+  "custom bare inputs without field chrome",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "always_form_sections"
+hyperpart = "form-chrome"
+authoring = "section: on forms"
+layer = "form"
+job = "Form sections and errors use form-chrome, not ad-hoc panels."
+use_when = [
+  "create/edit surfaces with sections",
+]
+refuse_when = [
+  "workspace data regions (use display:*)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_funnel_chart"
+hyperpart = "funnel"
+authoring = "display: funnel_chart"
+layer = "region"
+job = "Conversion stages shrinking toward a goal."
+use_when = [
+  "pipeline conversion drop-off",
+  "ordered stage counts",
+]
+refuse_when = [
+  "interactive stage work (use kanban)",
+  "time trend (use line_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "always_grid_data_host"
+hyperpart = "grid"
+authoring = "list data table host (framework)"
+layer = "region"
+job = "Data table host for list/grid regions — framework always mounts grid spine."
+use_when = [
+  "list/table display of entity rows",
+]
+refuse_when = [
+  "card media browse (use display: grid / grid-list)",
+  "kanban cards (use kanban)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_card_grid"
+hyperpart = "grid-list"
+authoring = "display: grid"
+layer = "region"
+job = "Card/media grid of peer items (assets, devices, people)."
+use_when = [
+  "visual browse of similar items",
+  "thumbnails dominate over dense columns",
+]
+refuse_when = [
+  "dense multi-column compare (use list)",
+  "stage board (use kanban)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_heatmap"
+hyperpart = "heatmap"
+authoring = "display: heatmap"
+layer = "region"
+job = "Intensity matrix across two discrete axes."
+use_when = [
+  "two categorical axes + intensity",
+  "hotspot discovery",
+]
+refuse_when = [
+  "single-axis rank (use bar_chart)",
+  "geo placement (use map)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_histogram"
+hyperpart = "histogram"
+authoring = "display: histogram"
+layer = "region"
+job = "Distribution of a numeric measure across bins."
+use_when = [
+  "distribution shape matters",
+  "bucketed counts of one metric",
+]
+refuse_when = [
+  "category comparison (use bar_chart)",
+  "time trend (use line_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_stage_kanban"
+hyperpart = "kanban"
+authoring = "display: kanban"
+layer = "region"
+job = "Pull work across 3–7 workflow stages with WIP visible by column."
+use_when = [
+  "primary axis is stage progression",
+  "cheap stage mutation is the job",
+]
+refuse_when = [
+  "time order is primary (use timeline)",
+  "one person urgency inbox (use task_inbox)",
+  "dense multi-column admin (use list)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_dense_list"
+hyperpart = "list-region"
+authoring = "display: list"
+layer = "region"
+job = "Dense multi-field table for search, compare, and bulk admin."
+use_when = [
+  "many columns / filters / bulk actions",
+  "admin or search-heavy work",
+]
+refuse_when = [
+  "stage pull (use kanban)",
+  "map placement (use map)",
+  "conversation thread (use conversation)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_metrics_tiles"
+hyperpart = "metrics"
+authoring = "display: metrics"
+layer = "region"
+job = "KPI/metric tiles summarizing counts and rates for a workspace."
+use_when = [
+  "dashboard needs summary numbers",
+  "few KPIs above detail regions",
+]
+refuse_when = [
+  "full chart comparison (use bar_chart/line_chart)",
+  "row-level detail (use list)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_pdf_viewer"
+hyperpart = "pdf"
+authoring = "display: pdf_viewer"
+layer = "region"
+job = "Read or review a PDF document in-app."
+use_when = [
+  "document body is the work object",
+]
+refuse_when = [
+  "metadata list of docs (use list)",
+  "image carousel (use carousel)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_pivot_table"
+hyperpart = "pivot"
+authoring = "display: pivot_table"
+layer = "region"
+job = "Cross-tab aggregation of measures by row/column dims."
+use_when = [
+  "analyst cross-tabs",
+  "multi-dimension aggregates",
+]
+refuse_when = [
+  "simple list of records (use list)",
+  "single chart (use bar_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_profile_card"
+hyperpart = "profile-card"
+authoring = "display: profile_card"
+layer = "region"
+job = "Identity card for a person/org with avatar and key facts."
+use_when = [
+  "hero identity for one person/org",
+  "not a full form edit",
+]
+refuse_when = [
+  "edit form (use form surface)",
+  "person cell chip only (default avatar emit)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_stage_progress"
+hyperpart = "progress-region"
+authoring = "display: progress"
+layer = "region"
+job = "Multi-stage workflow chips (complete/active/empty) — StageBar, not percent bar."
+use_when = [
+  "ordered stages with state chips",
+  "wizard-like progress visibility",
+]
+refuse_when = [
+  "single percent capacity (use progress_bar)",
+  "per-row tracks (use bar_track)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_radar_chart"
+hyperpart = "radar"
+authoring = "display: radar"
+layer = "region"
+job = "Multi-axis profile comparison on a radar/spider chart."
+use_when = [
+  "few entities scored on many comparable axes",
+]
+refuse_when = [
+  "time series (use line_chart)",
+  "single metric rank (use bar_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "surface_related_tables_mode"
+hyperpart = "related-tables"
+authoring = "mode: view reverse FKs"
+layer = "surface"
+job = "Show reverse-FK related tables on a detail/view surface."
+use_when = [
+  "detail surface needs child/related entity tables",
+  "mode view with reverse FKs",
+]
+refuse_when = [
+  "primary work queue (use queue/list region)",
+  "dual-pane master-detail (use stage:dual_pane_flow)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_search_box"
+hyperpart = "search-box"
+authoring = "display: search_box"
+layer = "region"
+job = "Dedicated FTS/search region with results open-discovery."
+use_when = [
+  "search is a primary workspace job",
+  "results need open discovery chrome",
+]
+refuse_when = [
+  "inline filter on a list (use list filters)",
+  "command palette global jump (use command)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "form_remote_fk_search_select"
+hyperpart = "search-select"
+authoring = "source=pack.operation"
+layer = "field"
+job = "Remote FK typeahead via pack operation search + select."
+use_when = [
+  "field is ref/FK needing typeahead",
+  "source=pack.operation declared",
+]
+refuse_when = [
+  "closed local set (use combobox)",
+  "multi free tags (use tags)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "form_numeric_slider"
+hyperpart = "slider"
+authoring = "widget=slider"
+layer = "field"
+job = "Numeric range input with continuous slider control."
+use_when = [
+  "bounded numeric preference",
+  "visual continuum better than bare number",
+]
+refuse_when = [
+  "unbounded free number",
+  "boolean on/off (use switch)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_sparkline"
+hyperpart = "sparkline"
+authoring = "display: sparkline"
+layer = "region"
+job = "Inline micro trend without full chart chrome."
+use_when = [
+  "trend hint beside a metric/row",
+  "space-constrained dashboards",
+]
+refuse_when = [
+  "primary analysis chart (use line_chart)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_health_status_list"
+hyperpart = "status-list"
+authoring = "display: status_list"
+layer = "region"
+job = "At-a-glance health of services/resources with status chips."
+use_when = [
+  "fleet/service health glance",
+  "status is the primary signal",
+]
+refuse_when = [
+  "workflow stages (use kanban)",
+  "dense tabular admin (use list)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_tabbed_list"
+hyperpart = "tabs"
+authoring = "display: tabbed_list"
+layer = "region"
+job = "Switch peer list slices via tabs without leaving the workspace."
+use_when = [
+  "few peer slices of the same entity set",
+  "tab labels name filters/views",
+]
+refuse_when = [
+  "stage workflow (use kanban)",
+  "single list is enough",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "form_multi_label_tags"
+hyperpart = "tags"
+authoring = "widget=tags"
+layer = "field"
+job = "Multi free-form labels on a form field."
+use_when = [
+  "multi labels / chips from free text",
+  "comma-joined form POST",
+]
+refuse_when = [
+  "single closed enum (use combobox/toggle_group)",
+  "remote FK (use search-select)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_my_task_inbox"
+hyperpart = "task-inbox"
+authoring = "display: task_inbox"
+layer = "region"
+job = "My next work ranked by SLA/urgency for one operator."
+use_when = [
+  "personal work queue ranked by urgency",
+  "claim/complete is the path",
+]
+refuse_when = [
+  "team stage board (use kanban)",
+  "awareness feed (use activity_feed)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_time_series_chart"
+hyperpart = "time-series"
+authoring = "display: line_chart | area_chart"
+layer = "region"
+job = "Show trend over time with line or area charts."
+use_when = [
+  "primary axis is continuous time",
+  "trend/seasonality is the job",
+]
+refuse_when = [
+  "categorical rank (use bar_chart)",
+  "workflow stages (use kanban)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_event_timeline"
+hyperpart = "timeline"
+authoring = "display: timeline | day_timeline"
+layer = "region"
+job = "Read dated events in order (audit, payments, status changes) or day blocks."
+use_when = [
+  "primary axis is time",
+  "audit/payment/status history",
+]
+refuse_when = [
+  "stage columns are the job (use kanban)",
+  "live chat (use conversation)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "workspace_tree"
+hyperpart = "tree"
+authoring = "display: tree"
+layer = "region"
+job = "Hierarchical browse of nested entities."
+use_when = [
+  "parent/child nesting is primary",
+  "expand/collapse navigation",
+]
+refuse_when = [
+  "flat urgency pool (use queue)",
+  "stage board (use kanban)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
+scanner = "catalogue_only"
+
+[[scenario]]
+id = "surface_wizard_steps"
+hyperpart = "wizard"
+authoring = "experience step + sectioned create/edit"
+layer = "surface"
+job = "Multi-step create/edit experience with sectioned steps."
+use_when = [
+  "long create needs ordered steps",
+  "sectioned experience",
+]
+refuse_when = [
+  "single short form",
+  "workspace region progress chips alone (use display: progress)",
+]
+status_if_fit = "emit_covered"
+ownership = "framework"
+severity = "low"
+residual_lane = "none"
+example_homes = []
 scanner = "catalogue_only"

@@ -53,11 +53,15 @@ def test_next_prefers_structural_then_felt(probes, capsys) -> None:
         try:
             from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
 
-            planned = set(shapes_snapshot().get("planned_ids") or [])
+            snap = shapes_snapshot()
+            planned = set(snap.get("planned_ids") or [])
+            missing = set(snap.get("scenario_missing_ids") or [])
         except Exception:  # noqa: BLE001 — probe suite must stay lightweight
             planned = set()
-        assert is_app or out in planned, (
-            f"--next={out!r} is neither an examples/ app nor a planned DSL shape"
+            missing = set()
+        assert is_app or out in planned or out in missing, (
+            f"--next={out!r} is neither an examples/ app, planned DSL shape, "
+            f"nor scenario_missing id"
         )
         assert rc == 1
     else:

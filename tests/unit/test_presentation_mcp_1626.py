@@ -20,7 +20,7 @@ def test_presentation_tool_in_registry() -> None:
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "presentation" in tools
     ops = tools["presentation"].inputSchema["properties"]["operation"]["enum"]
-    assert set(ops) == {"cognition", "opportunities", "residual"}
+    assert set(ops) == {"cognition", "opportunities", "residual", "shapes"}
     # product_quality description mentions presentation residual
     assert "presentation" in tools["product_quality"].description.lower()
     assert "ref_as_repr" in tools["product_quality"].description or (
@@ -59,10 +59,26 @@ def test_presentation_residual_missing_app_errors() -> None:
     assert data.get("ok") is False or "error" in data or "required" in raw.lower()
 
 
+def test_presentation_shapes_handler() -> None:
+    from dazzle.mcp.server.handlers.presentation import presentation_shapes_handler
+
+    data = json.loads(presentation_shapes_handler(Path("."), {}))
+    assert data["ok"] is True
+    assert "snapshot" in data
+    assert "shapes" in data
+    assert data["snapshot"].get("scenario_missing", 0) == 0
+    assert data["snapshot"].get("planned", 0) == 0
+    assert len(data["shapes"]) >= 80
+    one = json.loads(presentation_shapes_handler(Path("."), {"id": "kanban"}))
+    assert one["ok"] is True
+    assert one.get("shape", {}).get("id") == "kanban"
+    assert one.get("scenarios")
+
+
 def test_agents_md_lists_presentation_ops() -> None:
     text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
     assert "`presentation`" in text
-    assert "cognition, opportunities, residual" in text
+    assert "cognition, opportunities, residual, shapes" in text
 
 
 def test_counter_prior_ref_as_repr_loads() -> None:
