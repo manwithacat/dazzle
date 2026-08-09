@@ -323,13 +323,13 @@ workspace dashboard "Dashboard":
     action: attachment_view
     empty: "No documents yet — upload a deliverable on a task"
 
-  # Goal B conversation spine — newest notes as pull-to-open queue so buyer
-  # stills show domain-true discussion copy with the document strip.
+  # Goal B conversation spine — Message/Bubble chrome (HTTP CONVERSATION +
+  # MessageScroller), not queue meta. Peer PM tools put thread copy above fold.
   live_conversation:
     source: Comment
     sort: created_at desc
     limit: 6
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — task discussion notes appear here as work moves"
 
@@ -426,13 +426,13 @@ workspace my_tasks "My Tasks":
       review: warning
       conversation: accent
 
-  # Goal B: members land here — surface newest notes so the desk is a reply
-  # surface, not only an assigned-task warehouse.
+  # Goal B: members land here — Message/Bubble conversation chrome so the desk
+  # is a reply surface, not only an assigned-task warehouse.
   live_conversation:
     source: Comment
     sort: created_at desc
     limit: 8
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — notes on your tasks appear here"
 
@@ -536,7 +536,7 @@ workspace discussion_desk "Discussion":
     source: Comment
     sort: created_at desc
     limit: 20
-    display: queue
+    display: conversation
     action: comment_detail
     empty: "No conversation yet — notes on open tasks appear here"
 

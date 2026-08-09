@@ -26,6 +26,13 @@ def test_dashboard_declares_live_conversation_spine() -> None:
     # Discussion desk + member my_tasks also carry the trail
     assert "workspace discussion_desk" in text
     assert "workspace my_tasks" in text
+    # Goal B interesting_product: hero live threads use MessageScroller chrome
+    # (not queue meta) after the HTTP CONVERSATION wire-up.
+    for ws in ("dashboard", "my_tasks", "discussion_desk"):
+        block = text.split(f"workspace {ws}", 1)[1]
+        region = block.split("live_conversation:", 1)[1][:400]
+        assert "display: conversation" in region, ws
+        assert "source: Comment" in region, ws
 
 
 def test_dashboard_declares_document_composition_spine() -> None:
