@@ -51,14 +51,17 @@ multi-panel command home with team counts (including unassigned and document
 volume), an SLA readiness strip, dual attention queues (critical + unassigned,
 fold-capped), a **composition** queue of named SLA waiver documents, a live
 conversation trail, and a lifecycle funnel — not conversation-only above the
-fold, and not an empty personal assigned kanban. The team Ticket Queue and
-Agent Console remain available. Managers alone can delete tickets or comments.
+fold, and not an empty personal assigned kanban. From the same Lead nav they
+open **People**: staff by role and department (Support, Escalations, Billing)
+before unassigned load — so reassignment is org-shaped, not a flat warehouse
+roster. The team Ticket Queue and Agent Console remain available. Managers
+alone can delete tickets or comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
 ## Where work happens
 
-Five workspaces organise the work. The **Ticket Queue** is the agent home for
+Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — summary metrics (including conversation and document
 volume), a **live conversation** queue of newest notes, a **composition**
 queue of open SLA waivers (named breach titles), a review queue, a kanban
@@ -69,6 +72,9 @@ flat list).
 queues (critical + unassigned, limit 4 each), open **SLA waiver composition**
 (limit 4) **before** a capped live conversation trail (limit 4), status funnel,
 and a short recent-ticket trail.
+**People** is the org-structure desk for managers and agents: active staff
+metrics, a role kanban, a department-sorted queue, a secondary roster, then
+unassigned open tickets and plate-by-person load — hierarchy before dump.
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
@@ -155,4 +161,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:5b4734e21f9a5e1fd844cf990de9b68943520b033cf147369d1a5a7c6cc4ff94 -->
+<!-- dazzle-spec-brief: sha256:0e43738629d8d64e97aaa708831af7e95084274859cc009ff5781a45f496fb8b -->

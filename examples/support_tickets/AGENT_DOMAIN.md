@@ -8,13 +8,14 @@
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
 **Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
-**Fingerprint:** `7d69926fe7e80ddb`
+**Fingerprint:** `7dcca07499f9b407`
 
 ## Personas (jobs)
 
 - **Agent** (`agent`, stable≈`agent`, grounded) — desk `agent_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
 - **Customer** (`customer`, stable≈`customer`, grounded) — desk `customer_desk` — role word in founder brief
+- **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
 
 ## Nouns (domain types)
 
@@ -24,19 +25,21 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Agent`, `Approval`, `Console`, `Dashboard`, `JavaScript`, `Op`, `Support`, `Tickets`, `Waiver`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `change`, `chosen`, `close`, `critical`, `data`, `datastore`, `declared`, `flat`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `shared`, `short`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `visibility`, `whole`, `work`
+`Administrator`, `Agent`, `Approval`, `Console`, `Dashboard`, `JavaScript`, `Lead`, `Op`, `Support`, `Tickets`, `Waiver`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `capped`, `change`, `chosen`, `close`, `critical`, `data`, `datastore`, `declared`, `department`, `document`, `durable`, `escalation`, `flat`, `fold`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `multi`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `role`, `shared`, `short`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `visibility`, `whole`, `work`
 
 ## Desks
 
 - **agent_desk** for `agent` (hypothesis) owner≈`assigned_to` — Job desk for Agent
 - **manager_desk** for `manager` (hypothesis) owner≈`assigned_to` — Job desk for Manager
 - **customer_desk** for `customer` (hypothesis) owner≈`assigned_to` — Job desk for Customer
+- **staff_desk** for `staff` (hypothesis) owner≈`assigned_to` — Job desk for Staff
 
 ## Demo spine (seed stories)
 
 - `agent`: Agent has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 - `manager`: Manager has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 - `customer`: Customer has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
+- `staff`: Staff has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 
 ## Open questions
 
@@ -65,7 +68,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "7d69926fe7e80ddb",
+  "source_sha256": "7dcca07499f9b407",
   "personas": [
     {
       "id_hint": "agent",
@@ -93,6 +96,15 @@ Support Tickets is a customer-support system that tracks customer issues from fi
       "stable_id_candidate": "customer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "staff",
+      "label": "Staff",
+      "job": "Internal team member",
+      "desk": "staff_desk",
+      "stable_id_candidate": "staff",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -146,6 +158,13 @@ Support Tickets is a customer-support system that tracks customer issues from fi
       "purpose": "Job desk for Customer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "staff",
+      "name": "staff_desk",
+      "purpose": "Job desk for Staff",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -164,6 +183,12 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     {
       "persona": "customer",
       "story": "Customer has seeded SupportTicket rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "SupportTicket"
+    },
+    {
+      "persona": "staff",
+      "story": "Staff has seeded SupportTicket rows for their desk",
       "min_rows": 1,
       "entity_hint": "SupportTicket"
     }
@@ -231,6 +256,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "Console",
     "Dashboard",
     "JavaScript",
+    "Lead",
     "Op",
     "Support",
     "Tickets",
@@ -240,6 +266,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "authenticated",
     "breach",
     "byte",
+    "capped",
     "change",
     "chosen",
     "close",
@@ -247,7 +274,12 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "data",
     "datastore",
     "declared",
+    "department",
+    "document",
+    "durable",
+    "escalation",
     "flat",
+    "fold",
     "framework",
     "informal",
     "kanban",
@@ -255,6 +287,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "live",
     "mature",
     "model",
+    "multi",
     "operation",
     "operational",
     "personal",
@@ -264,6 +297,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "resolved",
     "response",
     "review",
+    "role",
     "shared",
     "short",
     "signed",

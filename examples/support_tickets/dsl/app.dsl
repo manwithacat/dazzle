@@ -52,6 +52,9 @@ entity User "User":
   email: str(255) required unique pii(category=contact)
   name: str(200) required pii(category=identity)
   role: enum[customer,agent,manager]=customer
+  # Goal B org_structure (cycle 1847): department placement so manager People
+  # desk shows Support / Escalations / Billing shape — not a flat role-only roster.
+  department: str(50)
   is_active: bool = true
   created_at: datetime auto_add
 
@@ -59,7 +62,7 @@ entity User "User":
   invariant: role != null
 
   fitness:
-    repr_fields: [name, email, role, is_active]
+    repr_fields: [name, email, role, department, is_active]
 
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":
@@ -218,7 +221,7 @@ surface user_list "User List":
   ux:
     purpose: "Browse and manage team members across the support organisation"
     sort: name asc
-    filter: role, is_active
+    filter: role, department, is_active
     search: email, name
     empty: "No users found. Invite team members to get started."
 
@@ -226,6 +229,7 @@ surface user_list "User List":
     field email "Email"
     field name "Name"
     field role "Role"
+    field department "Department"
     field is_active "Active"
     field created_at "Created"
 
@@ -237,6 +241,7 @@ surface user_detail "User Detail":
   section identity "Identity":
     field name "Name"
     field email "Email"
+    field department "Department"
 
   section role "Role & access":
     layout: strip
@@ -265,6 +270,7 @@ surface user_create "Create User":
     field email "Email"
     field name "Name"
     field role "Role"
+    field department "Department"
 
 surface user_edit "Edit User":
   uses entity User
@@ -275,6 +281,7 @@ surface user_edit "Edit User":
     field email "Email"
     field name "Name"
     field role "Role"
+    field department "Department"
     # HM Switch — boolean settings / account on-off (hyperpart auto_seed drain)
     field is_active "Active" widget=switch
 
@@ -939,6 +946,104 @@ workspace agent_console "Agent Console":
     limit: 15
     empty: "No comments for this agent"
 
+# Goal B org_structure (cycle 1847): peer support tools (Zendesk / Intercom /
+# Freshdesk) show team by role and department so managers reassign without a
+# flat warehouse roster. Filter staff only — customers are not org nodes.
+workspace people_desk "People":
+  purpose: "Org structure managers can parse — support staff by role and department before open load"
+  stage: "command_center"
+  access: persona(manager, agent)
+
+  people_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      people: count(User)
+      active: count(User where is_active = true)
+      open_tickets: count(Ticket where status = open)
+      unassigned: count(Ticket where assigned_to = null and status = open)
+    tones:
+      active: positive
+      open_tickets: warning
+      unassigned: warning
+
+  # Role board (agent / manager columns) — org authority for reassignment.
+  # is_active keeps inactive accounts off the board; customers remain in
+  # kanban only if seeded active (demo seeds keep customers off staff focus via
+  # department External — manager reads Support/Escalations/Billing first).
+  by_role:
+    source: User
+    filter: is_active = true
+    display: kanban
+    group_by: role
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No support staff yet"
+
+  # Department roster — Support / Escalations / Billing placement before flat list.
+  by_department:
+    source: User
+    filter: is_active = true
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No support staff yet"
+
+  roster:
+    source: User
+    filter: is_active = true
+    sort: department asc, name asc
+    limit: 20
+    display: queue
+    action: user_detail
+    empty: "No active support staff"
+
+  # Open load after org shape — who still has unassigned work to claim.
+  unassigned_work:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: priority desc, created_at asc
+    limit: 12
+    display: queue
+    action: ticket_edit
+    empty: "Every open ticket has an assignee"
+
+  # Assignee columns for Monday capacity after org shape (reassignment clarity).
+  plate_by_person:
+    source: Ticket
+    filter: status != closed and assigned_to != null
+    display: kanban
+    group_by: assigned_to
+    sort: priority desc
+    action: ticket_edit
+    empty: "No assigned open work"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By role board"
+        caption: "Agent / Manager columns show who can take work at a glance"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "Support, Escalations, Billing — place people before load dump"
+        icon: "building"
+        state: positive
+      - title: "Plate by person"
+        caption: "Assignee columns for reassignment after you read org shape"
+        icon: "list-checks"
+        state: warning
+
+  ux:
+    as manager:
+      purpose: "See support staff by role and department before unassigned load"
+      focus: people_pulse, by_role, by_department, roster
+    as agent:
+      purpose: "Read team placement and open load for handoff"
+      focus: people_pulse, by_role, by_department, roster
+
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
   default_workspace: ticket_queue
@@ -983,10 +1088,13 @@ nav agent_nav:
     ticket_queue
     agent_dashboard
     agent_console
+    # Agents may open People for reassignment context (read org shape).
+    people_desk
 
 nav manager_nav:
   group "Lead":
     manager_ops
+    people_desk
     ticket_queue
     agent_console
     agent_dashboard
