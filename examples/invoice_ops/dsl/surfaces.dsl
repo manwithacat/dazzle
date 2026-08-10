@@ -116,7 +116,10 @@ surface supplier_list "Suppliers":
     field contact_email "Contact"
     field region "Region"
   ux:
-    purpose: "Browse suppliers — open supplier hub or hop to tenant root"
+    purpose: "Browse suppliers by region — open supplier hub or hop to tenant root"
+    filter: region
+    search: name, contact_email, region
+    sort: name asc
 
 surface supplier_detail "Supplier":
   uses entity Supplier
@@ -235,9 +238,14 @@ surface user_list "Users":
   section main:
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field tenant_id "Tenant"
   ux:
     purpose: "Team roster — open person hub or hop to tenant root"
+    sort: department asc, name asc
+    filter: department, job_title
+    search: name, email, department, job_title
 
 surface user_detail "User":
   uses entity User
@@ -245,6 +253,10 @@ surface user_detail "User":
   section identity "Identity":
     field name "Name"
     field email "Email"
+  section org "Org placement":
+    layout: strip
+    field job_title "Job Title"
+    field department "Department"
   section tenant_link "Tenant":
     layout: strip
     field tenant_id "Tenant"
@@ -253,7 +265,7 @@ surface user_detail "User":
     show: Invoice
     columns: invoice_number, amount, status
   ux:
-    purpose: "Person hub — identity and submitted-invoice pull queue"
+    purpose: "Person hub — identity, org placement, and submitted-invoice pull queue"
 
 # =============================================================================
 # LINE ITEM SURFACES
@@ -362,6 +374,8 @@ surface user_create "New User":
   section main:
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field tenant_id "Tenant"
 
 surface user_edit "Edit User":
@@ -370,6 +384,8 @@ surface user_edit "Edit User":
   section main:
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
 
 # =============================================================================
 # LINE ITEM CREATE SURFACE — requester adds line items to an invoice
@@ -767,8 +783,11 @@ workspace audit_review "Audit Review":
 
 # Sixth product workspace: supplier / vendor desk so list shells
 # no longer dominate vs job workspaces (vendors + bank refs, not bare CRUD).
+# Goal B org_structure (cycle 1863): peer AP tools (Tipalti / Bill.com / Coupa)
+# show vendor geography and multi-invoice supplier load before a flat A–Z
+# roster + status bar dump — buyers call suppliers by region and account load.
 workspace suppliers_desk "Suppliers":
-  purpose: "Vendor desk — supplier roster, bank refs, and recent invoices"
+  purpose: "Vendor org structure — region board and multi-invoice load before flat roster"
   access: persona(finance, tenant_admin, finance_admin, approver)
 
   vendor_pulse:
@@ -781,6 +800,29 @@ workspace suppliers_desk "Suppliers":
     tones:
       suppliers: accent
 
+  # Region board — geographic org of the vendor book (EMEA / AMER / APAC).
+  by_region:
+    source: Supplier
+    display: kanban
+    group_by: region
+    sort: name asc
+    limit: 24
+    action: supplier_detail
+    empty: "No suppliers in this region"
+
+  # Multi-invoice supplier placement — open AP load grouped by vendor before
+  # flat recents (not a warehouse A–Z dump of invoices).
+  by_supplier:
+    source: Invoice
+    filter: status != paid and status != rejected
+    display: kanban
+    group_by: supplier
+    sort: amount desc
+    limit: 30
+    action: invoice_detail
+    empty: "No open invoices by supplier"
+
+  # Secondary flat roster after hierarchy.
   roster:
     source: Supplier
     display: queue
@@ -798,31 +840,32 @@ workspace suppliers_desk "Suppliers":
   recent_invoices:
     source: Invoice
     sort: updated_at desc
-    limit: 15
+    limit: 12
     display: queue
     action: invoice_detail
     empty: "No invoices yet"
 
-  invoice_trail:
-    source: Invoice
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No invoice history"
-
-  invoice_status_mix:
-    source: Invoice
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices to chart"
+  ux:
+    as finance:
+      purpose: "Vendor org structure — region and multi-invoice load before flat roster"
+      focus: vendor_pulse, by_region, by_supplier, roster, bank_refs
+    as finance_admin:
+      purpose: "Vendor org structure — region board then supplier AP load"
+      focus: vendor_pulse, by_region, by_supplier, roster, bank_refs
+    as tenant_admin:
+      purpose: "Vendor org shape — region board then open invoices by supplier"
+      focus: vendor_pulse, by_region, by_supplier, roster
+    as approver:
+      purpose: "See which region and supplier carries open AP before flat recents"
+      focus: vendor_pulse, by_region, by_supplier, recent_invoices
 
 
 # Seventh product workspace: tenant admin people desk.
 workspace team_desk "Team":
-  purpose: "Tenant admin desk — people and tenant context"
+  # Goal B org_structure (cycle 1863): peer AP tools (Coupa / Bill.com / NetSuite)
+  # show finance staff by job title and department before open invoice load —
+  # admins reassign and audit from org shape, not a flat people dump.
+  purpose: "Org structure for AP — title and department before flat roster and open load"
   access: persona(tenant_admin, finance_admin, auditor)
 
   team_pulse:
@@ -831,42 +874,40 @@ workspace team_desk "Team":
     aggregate:
       people: count(User)
       suppliers: count(Supplier)
-      tenants: count(Tenant)
+      open_invoices: count(Invoice where status = submitted or status = approved)
     tones:
       people: accent
+      open_invoices: warning
 
+  # Title board — Requester / Approver / Finance / Auditor columns.
+  by_title:
+    source: User
+    display: kanban
+    group_by: job_title
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No titled staff yet"
+
+  # Department placement — AP / Treasury / Controllership / Audit before flat roster.
+  by_department:
+    source: User
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No staff placed in departments yet"
+
+  # Secondary flat roster (after hierarchy).
   people:
     source: User
     display: queue
-    sort: name asc
+    sort: department asc, name asc
     limit: 25
     action: user_detail
     empty: "No users yet"
 
-  suppliers:
-    source: Supplier
-    display: queue
-    sort: name asc
-    limit: 15
-    action: supplier_detail
-    empty: "No suppliers"
-
-  tenant_mix:
-    source: Tenant
-    display: bar_chart
-    group_by: name
-    aggregate:
-      count: count(Tenant)
-    empty: "No tenants"
-
-  invoice_trail:
-    source: Invoice
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No invoices yet"
-
+  # Open load after org shape — who owns pressure, not before hierarchy.
   open_invoices:
     source: Invoice
     filter: status = submitted or status = approved
@@ -875,6 +916,33 @@ workspace team_desk "Team":
     display: queue
     action: invoice_detail
     empty: "Nothing awaiting action"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By title board"
+        caption: "Requester / Approver / Finance / Auditor columns show who can act"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "AP / Treasury / Controllership / Audit placement before flat roster"
+        icon: "building-2"
+        state: positive
+      - title: "Open load last"
+        caption: "Submitted and approved invoices after you read org shape"
+        icon: "file-text"
+        state: warning
+
+  ux:
+    as tenant_admin:
+      purpose: "See staff by title and department before open invoice load"
+      focus: team_pulse, by_title, by_department, people
+    as finance_admin:
+      purpose: "Org structure for finance oversight — role board then department"
+      focus: team_pulse, by_title, by_department, people
+    as auditor:
+      purpose: "Read team org shape before open invoice pressure"
+      focus: team_pulse, by_title, by_department, people
 
 # Eighth product workspace: payment trail desk.
 workspace payments_trail "Payments":

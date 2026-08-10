@@ -82,9 +82,15 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   discussion trail rendered as Message/Bubble conversation chrome (not a meta
   queue of note rows) above the fold, metrics, review queues, and ops kanban
   (no lifecycle funnel, payment bar chart, or paid timeline voids).
-- **Suppliers** — vendor desk: roster grid, bank refs, invoice trail and
-  status mix chart.
-- **Team** — tenant admin people desk with supplier and tenant context.
+- **Suppliers** — vendor **org-structure** desk: after the vendor pulse it
+  shows a **region kanban** (EMEA / AMER / APAC) and a **multi-invoice supplier
+  load** board over open AP, then a flat roster, bank refs, and recent invoices
+  — without status bar-chart or twin invoice-timeline theater.
+- **Team** — AP **org-structure** desk: after the people pulse it shows a
+  **job-title kanban** (Requester / Approver / Finance Operator / Auditor) and a
+  **department** queue (Accounts Payable / Treasury / Controllership / Audit)
+  before the flat roster and open invoice load — without tenant bar-chart or
+  invoice-timeline theater under the fold.
 - **Payments** — payment-attempt trail with settle board and attempt health
   chart.
 - **Line Items** — composition desk: line metrics, line grid, draft/submitted
@@ -169,4 +175,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:6a0979d80ab082419e41d731f1da3e2690589825f473e57ce7968a2222ca63c5 -->
+<!-- dazzle-spec-brief: sha256:6d5c90a876a3aec2f13e7dabcf3f428fd8395e7111132fa89507a24d138ba4f7 -->

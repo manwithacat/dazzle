@@ -56,6 +56,10 @@ entity User "User":
   email: email required pii(category=contact)
   name: str(120) required pii(category=identity)
   tenant_id: ref Tenant required
+  # Goal B org_structure (cycle 1863): department + job title so Team desk shows
+  # AP / Treasury / Controllership / Audit shape — not a flat persona-only roster.
+  department: str(50)
+  job_title: str(80)
   created_at: datetime auto_add
 
   permit:
