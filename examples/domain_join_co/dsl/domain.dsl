@@ -35,12 +35,14 @@ persona member "Team Member":
 nav admin_nav:
   group "Workspace":
     home
+    team_home
     announce
     publish_desk
 
 nav member_nav:
   group "Team":
     announce
+    team_home
     home
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
@@ -174,6 +176,42 @@ entity WorkspaceDocument "Workspace Document":
 
   fitness:
     repr_fields: [workspace, headline, doc_kind, status, author]
+
+# Goal B org_structure: peer directory tools (Okta / Google Workspace Admin /
+# Microsoft Entra / Rippling) show joined staff by title and department so
+# admins place people after domain join — not a flat announcement-only roster.
+entity WorkspaceMember "Workspace Member":
+  intent: "Joined staff row for a workspace — department and job title so the Team desk shows org shape after verified-domain join"
+  domain: workplace
+  patterns: org_structure, directory
+  display_field: name
+  id: uuid pk
+  workspace: ref Workspace required
+  name: str(120) required
+  email: email required
+  department: str(50)
+  job_title: str(80)
+  status: enum[active, pending, offboarded]=active
+  created_at: datetime auto_add
+
+  permit:
+    create: role(admin)
+    read: role(admin) or role(member)
+    update: role(admin)
+    list: role(admin) or role(member)
+
+  scope:
+    list: workspace = current_tenant
+      as: admin, member
+    read: workspace = current_tenant
+      as: admin, member
+    create: workspace = current_tenant
+      as: admin
+    update: workspace = current_tenant
+      as: admin
+
+  fitness:
+    repr_fields: [workspace, name, department, job_title, status]
 
 # ── Surfaces (the guide overlays target these) ────────────────────────────────
 
@@ -312,6 +350,65 @@ surface workspace_document_edit "Edit Workspace Document":
   ux:
     purpose: "Update workspace document headline, kind, or status"
 
+# WorkspaceMember surfaces (Goal B org_structure)
+surface workspace_member_list "Team roster":
+  uses entity WorkspaceMember
+  mode: list
+  open: WorkspaceMember via id | Workspace via workspace
+  section main "Staff":
+    field name "Name"
+    field job_title "Job Title"
+    field department "Department"
+    field email "Email"
+    field workspace "Workspace"
+    field status "Status"
+  ux:
+    purpose: "Browse joined staff by title and department — open a member hub or parent workspace"
+    sort: department asc, name asc
+    filter: department, job_title, status
+    search: name, email, department, job_title
+    empty: "No joined staff yet — place people after domain join"
+
+surface workspace_member_detail "Workspace Member":
+  uses entity WorkspaceMember
+  mode: view
+  section summary "Member":
+    layout: strip
+    field name "Name"
+    field job_title "Job Title"
+    field department "Department"
+    field email "Email"
+    field workspace "Workspace"
+    field status "Status"
+    field created_at "Joined"
+  ux:
+    purpose: "Joined staff hub — title, department, and workspace placement"
+
+surface workspace_member_create "Add Workspace Member":
+  uses entity WorkspaceMember
+  mode: create
+  section main "New member":
+    field workspace "Workspace"
+    field name "Name"
+    field email "Email"
+    field job_title "Job Title"
+    field department "Department"
+    field status "Status"
+  ux:
+    purpose: "Place a joined employee on the workspace roster with title and department"
+
+surface workspace_member_edit "Edit Workspace Member":
+  uses entity WorkspaceMember
+  mode: edit
+  section main "Edit member":
+    field name "Name"
+    field email "Email"
+    field job_title "Job Title"
+    field department "Department"
+    field status "Status"
+  ux:
+    purpose: "Update joined staff title, department, or status"
+
 # Workspace hub — related announcements reverse hop (journey related + strip).
 surface workspace_list "Workspaces":
   uses entity Workspace
@@ -342,8 +439,13 @@ surface workspace_detail "Workspace":
     display: queue
     show: WorkspaceDocument
     columns: headline, doc_kind, status, author
+  # Goal B org_structure: joined staff placement on the workspace hub.
+  related staff "Staff":
+    display: queue
+    show: WorkspaceMember
+    columns: name, job_title, department, status
   ux:
-    purpose: "Workspace hub — identity strip, announcements, and workspace documents"
+    purpose: "Workspace hub — identity strip, announcements, documents, and joined staff"
 
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
@@ -582,3 +684,83 @@ workspace publish_desk "Publish":
     as admin:
       purpose: "Drafts and live posts before trail — no empty chart theater"
       focus: publish_pulse, draft_queue, live_cards, readiness
+
+# Goal B org_structure (cycle 1869): peer directory tools (Okta / Google
+# Workspace Admin / Microsoft Entra / Rippling) show joined staff by title and
+# department after domain join — not a flat announcement dump before placement.
+workspace team_home "Team":
+  purpose: "Org structure for the joined company — title and department before flat roster and board load"
+  access: persona(admin, member)
+
+  team_pulse:
+    source: WorkspaceMember
+    display: metrics
+    aggregate:
+      staff: count(WorkspaceMember)
+      announcements: count(Announcement)
+      documents: count(WorkspaceDocument)
+    tones:
+      staff: positive
+      announcements: accent
+      documents: accent
+
+  # Title board — Workspace Admin / IT Lead / People Ops / …
+  by_title:
+    source: WorkspaceMember
+    display: kanban
+    group_by: job_title
+    sort: name asc
+    limit: 40
+    action: workspace_member_detail
+    empty: "No titled staff yet"
+
+  # Department placement — IT / People Ops / Security / Facilities.
+  by_department:
+    source: WorkspaceMember
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: workspace_member_detail
+    empty: "No staff placed in departments yet"
+
+  # Secondary flat roster (after hierarchy).
+  people:
+    source: WorkspaceMember
+    display: queue
+    sort: department asc, name asc
+    limit: 25
+    action: workspace_member_detail
+    empty: "No joined staff yet"
+
+  # Board load after org shape — announcements members will read.
+  board_load:
+    source: Announcement
+    display: queue
+    sort: title asc
+    limit: 12
+    action: announcement_detail
+    empty: "No announcements yet"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By title board"
+        caption: "Admin / IT Lead / People Ops / Security columns show who can act after join"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "IT / People Ops / Security / Facilities before flat roster"
+        icon: "building-2"
+        state: positive
+      - title: "Board load last"
+        caption: "Announcements after you read org shape"
+        icon: "megaphone"
+        state: warning
+
+  ux:
+    as admin:
+      purpose: "See joined staff by title and department before board load"
+      focus: team_pulse, by_title, by_department, people
+    as member:
+      purpose: "Org structure for your company — title board then department"
+      focus: team_pulse, by_title, by_department, people

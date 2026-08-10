@@ -8,11 +8,15 @@ independently verified with the command shown beside it.*
 Domain Join Co is a workspace system built around verified-domain membership:
 a company's workspace is anchored to its verified email domain, employees join
 under it, and everything the team shares stays inside that boundary. The
-system manages three things — the Workspace itself, the root under which a
+system manages four things — the Workspace itself, the root under which a
 company operates and where members and their roles are declared;
 Announcements, the tenant-scoped posts a workspace admin publishes to keep the
-team informed; and Workspace Documents, named briefs, onboarding guides, join
-playbooks, policies, and decision logs buyers scan above the discussion trail.
+team informed; Workspace Documents, named briefs, onboarding guides, join
+playbooks, policies, and decision logs buyers scan above the discussion trail;
+and Workspace Members, joined staff with department and job title so the Team
+desk shows org shape (title kanban + department queue) before a flat roster or
+board load — peer directory tools (Okta / Google Workspace Admin / Microsoft
+Entra / Rippling) place people after domain join the same way.
 
 Two kinds of people use it: the workspace admin, who verifies the company
 domain, sets the join policy, approves join requests, and posts announcements;
@@ -41,6 +45,11 @@ guide, join playbook, policy, or decision — with domain-true headlines so team
 homes surface composition before discussion notes. Documents are tenant-scoped
 to their workspace and dual-open to the workspace hub.
 
+**Workspace Member.** A joined staff row on a workspace — name, email,
+department, and job title so admins and members read IT / People Ops /
+Security / Facilities placement and title columns before the announcement
+board. Staff rows are tenant-scoped and dual-open to the workspace hub.
+
 ## Who uses it
 
 - **Workspace Admin** — owns one workspace. Their aims: verify the company
@@ -57,6 +66,8 @@ to their workspace and dual-open to the workspace hub.
   queue and join-readiness dual attention, workspace document composition, then
   live discussion in Message chrome, board timeline, and tenant roots (no
   duplicate board dumps or empty chart theater).
+- **Team** — org structure desk: joined staff by job title (kanban) and
+  department placement before flat roster and board load (org_structure Goal B).
 - **Team Board** — multi-panel member home: board pulse, post feed and
   join-context dual attention, workspace document composition, then live
   discussion in Message chrome and post trail — without twin empty queues or
@@ -65,10 +76,12 @@ to their workspace and dual-open to the workspace hub.
   readiness strip, and publish trail (no empty posts chart).
 - **Announcement hub** — lifecycle strip (title, status, workspace) plus body
   and team discussion.
-- **Workspace hub** — identity strip, related announcements, and workspace
-  documents as pull queues.
+- **Workspace hub** — identity strip, related announcements, workspace
+  documents, and joined staff as pull queues.
 - **Workspace Document hub** — named letter with kind, status, workspace, and
   body for briefs, playbooks, and policies.
+- **Workspace Member hub** — joined staff strip with title, department, email,
+  and workspace placement.
 
 ## The technical foundation
 
@@ -106,4 +119,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Workspace Document lifecycle.** Workspace Documents move draft → published → archived under admin control (admin may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:feb08c8a127dd02ae555a7e3302c8e71c6b68bd7bb30a6e3b006578f136f2c94 -->
+<!-- dazzle-spec-brief: sha256:a46eaf202f933702a78f9dc5dd900f30b9a753d67ebf973d1c7d3d76b0b21a74 -->
