@@ -175,6 +175,42 @@ entity PriorityAssessment "Priority Assessment Result":
   priority: str(20) required
   reasoning: str(500)
 
+# Goal B org_structure (cycle 1869): peer support tools (Zendesk / Intercom /
+# Freshdesk / Gorgias) show agents by title and department so supervisors place
+# people and load — not a flat ticket-only roster with no staff hierarchy.
+entity SupportStaff "Support Staff":
+  intent: "Support org row — department and job title so the Team desk shows staffing shape before ticket load"
+  domain: support
+  patterns: org_structure, directory
+  display_field: name
+  id: uuid pk
+  name: str(120) required
+  email: email required pii(category=contact)
+  role: enum[support_agent, supervisor, admin]=support_agent
+  department: str(50)
+  job_title: str(80)
+  status: enum[active, onboarding, offboarded]=active
+  created_at: datetime auto_add
+
+  permit:
+    list: role(admin) or role(supervisor) or role(support_agent)
+    read: role(admin) or role(supervisor) or role(support_agent)
+    create: role(admin) or role(supervisor)
+    update: role(admin) or role(supervisor)
+
+  scope:
+    list: all
+      as: admin, supervisor, support_agent
+    read: all
+      as: admin, supervisor, support_agent
+    create: all
+      as: admin, supervisor
+    update: all
+      as: admin, supervisor
+
+  fitness:
+    repr_fields: [name, email, role, department, job_title, status]
+
 
 # =============================================================================
 # Surfaces
@@ -279,6 +315,53 @@ surface classification_detail "Classification Detail":
     field suggested_response "Suggested Response"
   ux:
     purpose: "Classification hub — triage labels, confidence strip, suggested reply"
+
+surface staff_list "Team roster":
+  uses entity SupportStaff
+  mode: list
+  open: SupportStaff via id
+  section main:
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field job_title "Job Title"
+    field department "Department"
+    field status "Status"
+  ux:
+    purpose: "Browse support staff by title and department"
+    sort: department asc, name asc
+    filter: department, job_title, role, status
+    search: name, email, department, job_title
+    empty: "No support staff in the roster yet"
+
+surface staff_detail "Team member":
+  uses entity SupportStaff
+  mode: view
+  section identity "Identity":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field job_title "Job Title"
+    field department "Department"
+  section lifecycle "Lifecycle":
+    layout: strip
+    field status "Status"
+    field created_at "Joined"
+  ux:
+    purpose: "Team member — org placement and role for staffing decisions"
+
+surface staff_create "Add Team Member":
+  uses entity SupportStaff
+  mode: create
+  section identity:
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field job_title "Job Title"
+    field department "Department"
+    field status "Status"
+  ux:
+    purpose: "Add a support staff row with title and department placement"
 
 
 # =============================================================================
@@ -571,6 +654,91 @@ workspace priority_desk "Priorities":
         icon: "tags"
         state: positive
 
+# Goal B org_structure (cycle 1869): peer AI support tools (Zendesk / Intercom /
+# Freshdesk / Gorgias) show agents by title and department before a flat people
+# dump — supervisors reassign and agents find owners from org shape, not a
+# ticket-only roster with no staffing hierarchy.
+workspace team_desk "Team":
+  purpose: "Org structure for support — title and department before flat roster and ticket load"
+  access: persona(supervisor, support_agent, admin)
+
+  team_pulse:
+    source: SupportStaff
+    display: metrics
+    aggregate:
+      people: count(SupportStaff)
+      open: count(Ticket where status = open)
+      classified: count(TicketClassification)
+    tones:
+      people: accent
+      open: warning
+      classified: positive
+
+  # Title board — Support Agent / Escalation Lead / Billing Specialist / …
+  by_title:
+    source: SupportStaff
+    display: kanban
+    group_by: job_title
+    sort: name asc
+    limit: 40
+    action: staff_detail
+    empty: "No titled support staff yet"
+
+  # Department placement — Frontline Support / Escalations / Billing Ops / AI Ops.
+  by_department:
+    source: SupportStaff
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: staff_detail
+    empty: "No staff placed in departments yet"
+
+  # Secondary flat roster (after hierarchy).
+  people:
+    source: SupportStaff
+    display: queue
+    sort: department asc, name asc
+    limit: 25
+    action: staff_detail
+    empty: "No support staff yet"
+
+  # Ticket load after org shape — who carries open work, not before hierarchy.
+  ticket_load:
+    source: Ticket
+    filter: status != closed
+    sort: created_at desc
+    limit: 15
+    display: queue
+    action: ticket_detail
+    empty: "No open tickets"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By title board"
+        caption: "Escalation Lead / Billing Specialist / AI Ops Reviewer columns show who can act"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "Frontline Support / Escalations / Billing Ops / AI Ops before flat roster"
+        icon: "building-2"
+        state: positive
+      - title: "Ticket load last"
+        caption: "Open work after you read org shape"
+        icon: "inbox"
+        state: warning
+
+  ux:
+    as supervisor:
+      purpose: "See support staff by title and department before ticket load"
+      focus: team_pulse, by_title, by_department, people
+    as support_agent:
+      purpose: "Org structure for the floor — role board then department"
+      focus: team_pulse, by_title, by_department, people
+    as admin:
+      purpose: "Read support org shape before open queue pressure"
+      focus: team_pulse, by_title, by_department, people
+
 persona support_agent "Support Agent":
   description: "Handle support tickets and view AI classifications"
   goals: "View and manage tickets", "Review AI classifications", "Update ticket status"
@@ -592,11 +760,13 @@ nav agent_nav:
     ticket_management
     classification_desk
     priority_desk
+    team_desk
     support_dashboard
 
 nav supervisor_nav:
   group "Oversight":
     support_dashboard
+    team_desk
     classification_desk
     priority_desk
     ticket_management

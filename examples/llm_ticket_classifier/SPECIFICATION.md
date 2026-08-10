@@ -7,9 +7,10 @@ independently verified with the command shown beside it.*
 
 The Support Ticket Classifier is a support-operations system that pairs a human
 support team with declared, AI-assisted analysis. It manages support tickets,
-the AI-produced classification attached to each ticket, and priority assessment
-results — so agents handle the work while supervisors watch both the ticket
-flow and how well the AI is performing.
+the AI-produced classification attached to each ticket, priority assessment
+results, and support staff org placement (department + job title on the Team
+desk) — so agents handle the work while supervisors watch both the ticket flow,
+staffing shape, and how well the AI is performing.
 
 What sets it apart is how the AI is wired in: every AI-assisted step — ticket
 classification, priority assessment, sentiment analysis, response suggestion —
@@ -31,8 +32,12 @@ stays attached to that ticket and can be reviewed against it.
 assessing a ticket's priority, giving the team a standing record of how urgency
 was judged.
 
+**Support staff.** Support Staff rows carry department and job title so the Team
+desk can show agents by title kanban and department placement (Frontline Support
+/ Escalations / Billing Ops / AI Ops) before a flat roster or open-ticket load.
+
 Tickets can be browsed and inspected in detail, and classifications can be
-browsed alongside them, through three dedicated screens.
+browsed alongside them, through dedicated screens plus the Team org desk.
 
 ## Who uses it
 
@@ -59,6 +64,9 @@ open ticket grid, classification trail, and open status chart.
 
 **Priorities** — severity desk: priority metrics, assessment queue, open work
 grid, assessment trail, and priority distribution chart.
+
+**Team** — org structure desk: staff metrics, title kanban, department queue,
+flat roster, then open ticket load — hierarchy before work dump.
 
 ## How work flows through it
 
@@ -125,4 +133,4 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:aa561e0e61e3e49086a323d727838d56566088b774c625df588dd326001f9ac6 -->
+<!-- dazzle-spec-brief: sha256:e0c5fb67f27ad68e4506385c92da97037e8125946b42dd7e573886ff06f6c748 -->

@@ -75,6 +75,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_llm_classifier_command_density_goal_b.py",
     # llm_ticket_classifier Goal B empty_region_honesty (cycle 1800 prune twin boards/charts)
     "tests/unit/test_llm_classifier_empty_region_goal_b.py",
+    # llm_ticket_classifier Goal B org_structure (cycle 1869 team title+dept boards)
+    "tests/unit/test_llm_classifier_org_structure_goal_b.py",
     "tests/unit/test_design_studio_conversation_goal_b.py",
     # design_studio Goal B media (cycle 1734 asset_catalog thumbs before palette)
     "tests/unit/test_design_studio_media_goal_b.py",
