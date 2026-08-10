@@ -22,18 +22,22 @@ def _workspace_block(name: str) -> str:
 def test_staff_directory_dual_attention_before_conversation() -> None:
     """Peer HR dens put active roster + starters above people-notes trail.
 
-    Order: headcount → current_staff → recent_starters → live_conversation.
+    Order: headcount → current_staff → recent_starters → composition → live_conversation.
     """
     block = _workspace_block("staff_directory")
     assert "headcount:" in block
     assert "current_staff:" in block
     assert "recent_starters:" in block
+    assert "composition:" in block
     assert "live_conversation:" in block
     assert block.index("headcount:") < block.index("current_staff:")
     assert block.index("current_staff:") < block.index("recent_starters:")
-    assert block.index("recent_starters:") < block.index("live_conversation:")
+    assert block.index("recent_starters:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
-    assert "focus: headcount, current_staff, recent_starters, live_conversation" in block
+    assert (
+        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in block
+    )
 
 
 def test_my_team_dual_attention_before_conversation() -> None:
@@ -42,12 +46,16 @@ def test_my_team_dual_attention_before_conversation() -> None:
     assert "team_pulse:" in block
     assert "\n  by_level:" in block
     assert "\n  by_department:" in block
+    assert "composition:" in block
     assert "live_conversation:" in block
     assert block.index("team_pulse:") < block.index("\n  by_level:")
     assert block.index("\n  by_level:") < block.index("\n  by_department:")
     assert block.index("\n  by_department:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
-    assert "focus: team_pulse, by_level, by_department, reporting_lines, live_conversation" in block
+    assert (
+        "focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation"
+        in block
+    )
 
 
 def test_attention_queues_capped_for_fold_share() -> None:

@@ -279,6 +279,52 @@ entity PersonNote "Person Note":
 
 
 # =============================================================================
+# HR DOCUMENT — document composition body on a Person (Goal B document)
+# =============================================================================
+#
+# Peer HR dens (Workday / BambooHR / Lattice) put named offer / policy /
+# promotion letters on staff homes — not only headcount queues and notes.
+# display_field drives composition titles so hero stills read as documents.
+# =============================================================================
+
+entity HrDocument "HR Document":
+  intent: "A named employment document on a Person — offer, policy ack, promotion letter, or contract buyers scan above the fold"
+  domain: hr
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  person: ref Person required
+  headline: str(200) required
+  doc_kind: enum[offer, policy, promo, contract, onboarding]=offer
+  body: text
+  status: enum[draft, issued, signed, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    list: role(hr_admin) or role(manager) or role(finance) or role(employee)
+    read: role(hr_admin) or role(manager) or role(finance) or role(employee)
+    create: role(hr_admin) or role(manager)
+    update: role(hr_admin) or role(manager)
+    delete: role(hr_admin)
+
+  scope:
+    list: all
+      as: hr_admin, manager, finance, employee
+    read: all
+      as: hr_admin, manager, finance, employee
+    create: all
+      as: hr_admin, manager
+    update: all
+      as: hr_admin, manager
+    delete: all
+      as: hr_admin
+
+  fitness:
+    repr_fields: [person, headline, doc_kind, status, author]
+
+
+# =============================================================================
 # EMPLOYMENT — temporal core (#1217 Pattern 7)
 # =============================================================================
 #
@@ -531,8 +577,13 @@ surface person_detail "Person":
     display: queue
     show: PersonNote
     columns: body, author, created_at
+  # Goal B document: named employment letters on the person hub.
+  related documents "Documents":
+    display: queue
+    show: HrDocument
+    columns: headline, doc_kind, status, created_at
   ux:
-    purpose: "Person hub — identity, tenure, employment, salary, reporting lines, and HR discussion"
+    purpose: "Person hub — identity, tenure, employment, salary, reporting, discussion, and HR documents"
 
 surface person_create "Add Person":
   uses entity Person
@@ -570,6 +621,78 @@ surface person_note_list "Person Notes":
     sort: created_at desc
     search: body, author
     empty: "No person notes yet"
+
+
+# HrDocument surfaces (Goal B document composition)
+surface hr_document_list "HR Documents":
+  uses entity HrDocument
+  mode: list
+  render: fragment
+  open: HrDocument via id | Person via person
+
+  section main "Documents":
+    field headline "Document"
+    field doc_kind "Kind"
+    field status "Status"
+    field person "Person"
+    field author "Author"
+    field created_at "When"
+
+  ux:
+    purpose: "Document composition queue — named employment letters; open a letter hub or hop to the Person"
+    filter: doc_kind, status
+    sort: created_at desc
+    search: headline, author
+    empty: "No HR documents yet — open a person hub to attach an offer or policy letter"
+
+surface hr_document_detail "HR Document":
+  uses entity HrDocument
+  mode: view
+  render: fragment
+
+  section summary "Document":
+    layout: strip
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+  section parties "Parties":
+    field person "Person"
+    field author "Author"
+    field created_at "Created"
+  section body "Body":
+    field body "Body"
+
+  ux:
+    purpose: "HR document hub — named letter, lifecycle strip, parties, and body in one place"
+
+surface hr_document_create "Add HR Document":
+  uses entity HrDocument
+  mode: create
+
+  section main "New document":
+    field person "Person"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+
+  ux:
+    purpose: "Attach a named employment document to a person"
+
+surface hr_document_edit "Edit HR Document":
+  uses entity HrDocument
+  mode: edit
+
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+
+  ux:
+    purpose: "Update employment document headline, kind, or status"
 
 surface person_note_detail "Person Note":
   uses entity PersonNote
@@ -834,12 +957,12 @@ surface managerlink_edit "End Reporting Line":
 
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
-  # Goal B command_density (cycle 1837): dual attention (active roster +
-  # recent starters) before people-notes trail — peer Workday / BambooHR
-  # put headcount pressure above discussion chrome.
-  purpose: "Multi-panel staff home — headcount, dual attention pressure, then people notes trail"
+  # Goal B command_density (cycle 1837) + document (cycle 1838): dual
+  # attention then named employment documents before people-notes trail —
+  # peer Workday / BambooHR put headcount + letters above discussion chrome.
+  purpose: "Multi-panel staff home — headcount, dual attention, document composition, then people notes"
 
-  # Job strip — counts including conversation volume.
+  # Job strip — counts including conversation + document volume.
   headcount:
     source: Person
     display: metrics
@@ -848,13 +971,15 @@ workspace staff_directory "Staff Directory":
       departments: count(Department)
       roles: count(Role)
       employment_rows: count(Employment)
+      documents: count(HrDocument)
       conversation: count(PersonNote)
     tones:
       people: accent
+      documents: accent
       conversation: accent
 
   # Dual attention — active roster + onboarding starters above fold (caps
-  # for fold share with notes trail).
+  # for fold share with documents + notes trail).
   current_staff:
     source: Person
     filter: ended_at = null
@@ -878,8 +1003,18 @@ workspace staff_directory "Staff Directory":
     # arithmetic in filters isn't first-class for list region filters
     # outside aggregate where clauses.
 
-  # Conversation trail after dual attention — domain-true people prose
-  # (display_field: body). Cap so pressure queues keep above-fold share.
+  # Goal B document composition AFTER dual attention — named offer/policy
+  # headlines (display_field: headline) before the notes trail.
+  composition:
+    source: HrDocument
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: hr_document_detail
+    empty: "No documents yet — attach an offer or policy letter on a person"
+
+  # Conversation trail after dual attention + documents — domain-true
+  # people prose (display_field: body). Cap so pressure + docs keep fold share.
   live_conversation:
     source: PersonNote
     sort: created_at desc
@@ -890,17 +1025,17 @@ workspace staff_directory "Staff Directory":
 
   ux:
     as hr_admin:
-      purpose: "Multi-panel staff — dual attention pressure before notes trail"
-      focus: headcount, current_staff, recent_starters, live_conversation
+      purpose: "Multi-panel staff — dual attention + documents before notes trail"
+      focus: headcount, current_staff, recent_starters, composition, live_conversation
     as manager:
-      purpose: "Multi-panel team view — active roster + starters before notes"
-      focus: headcount, current_staff, recent_starters, live_conversation
+      purpose: "Multi-panel team view — roster, starters, documents before notes"
+      focus: headcount, current_staff, recent_starters, composition, live_conversation
     as finance:
-      purpose: "Headcount dual attention before compensation hop"
-      focus: headcount, current_staff, recent_starters, live_conversation
+      purpose: "Headcount dual attention + documents before compensation hop"
+      focus: headcount, current_staff, recent_starters, composition, live_conversation
     as employee:
-      purpose: "Directory pulse and dual attention before any visible notes"
-      focus: headcount, current_staff, recent_starters, live_conversation
+      purpose: "Directory pulse, dual attention, and documents before notes"
+      focus: headcount, current_staff, recent_starters, composition, live_conversation
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:
@@ -1229,10 +1364,10 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  # Goal B command_density + org_structure (cycle 1837): dual attention
-  # (level board + department board) before notes trail — peer Workday /
-  # BambooHR / Lattice put org pressure above conversation chrome.
-  purpose: "Multi-panel manager desk — dual attention org boards, reporting pressure, then notes"
+  # Goal B command_density + org_structure (cycle 1837) + document (cycle 1838):
+  # dual attention org boards, then named employment documents, before notes —
+  # peer Workday / BambooHR / Lattice put org + letters above conversation chrome.
+  purpose: "Multi-panel manager desk — dual attention org boards, documents, reporting pressure, then notes"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1243,10 +1378,12 @@ workspace my_team "My Team":
       employment_rows: count(Employment)
       reporting_lines: count(ManagerLink)
       roles: count(Role)
+      documents: count(HrDocument)
       conversation: count(PersonNote)
     tones:
       people: accent
       reporting_lines: positive
+      documents: accent
       conversation: accent
 
   # Dual attention — level board + department board before fold trail.
@@ -1280,15 +1417,25 @@ workspace my_team "My Team":
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
 
+  # Goal B document composition AFTER dual attention / reporting — named
+  # employment letters before the notes trail.
+  composition:
+    source: HrDocument
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: hr_document_detail
+    empty: "No team documents yet — attach an offer or promo letter on a report"
+
   ux:
     as manager:
-      purpose: "Multi-panel team — dual attention boards before conversation trail"
-      focus: team_pulse, by_level, by_department, reporting_lines, live_conversation
+      purpose: "Multi-panel team — dual attention + documents before conversation trail"
+      focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation
     as hr_admin:
-      purpose: "Multi-panel org coaching — dual attention before notes"
-      focus: team_pulse, by_level, by_department, reporting_lines, live_conversation
+      purpose: "Multi-panel org coaching — dual attention + documents before notes"
+      focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation
 
-  # Conversation trail after dual attention org boards.
+  # Conversation trail after dual attention org boards + documents.
   live_conversation:
     source: PersonNote
     sort: created_at desc

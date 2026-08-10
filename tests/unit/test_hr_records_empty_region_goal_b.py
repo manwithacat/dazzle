@@ -33,7 +33,9 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "dept_mix:" not in block
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: headcount, current_staff, recent_starters, live_conversation" in block
+    assert (
+        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in block
+    )
 
 
 def test_my_team_omits_redundant_org_bar_charts() -> None:
@@ -42,11 +44,15 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "by_level:" in block
     assert "by_department:" in block
     assert "reporting_lines:" in block
+    assert "composition:" in block
     assert "live_conversation:" in block
     assert "dept_mix:" not in block
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: team_pulse, by_level, by_department, reporting_lines, live_conversation" in block
+    assert (
+        "focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation"
+        in block
+    )
 
 
 def test_hr_records_keeps_bar_chart_for_coverage() -> None:

@@ -44,8 +44,11 @@ def test_my_team_declares_level_and_dept_boards_before_conversation() -> None:
 
 def test_my_team_ux_focus_org_before_load() -> None:
     block = _my_team_block()
-    # Cycle 1837 command_density: dual attention boards before notes trail.
-    assert "focus: team_pulse, by_level, by_department, reporting_lines, live_conversation" in block
+    # Cycle 1837/1838: dual attention + documents before notes trail.
+    assert (
+        "focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation"
+        in block
+    )
     # Cycle 1819 empty_region: no under-fold bar theater (kanbans own org shape)
     assert "dept_mix:" not in block
     assert "role_mix_chart:" not in block

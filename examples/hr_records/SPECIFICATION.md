@@ -14,9 +14,11 @@ was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
 Staff desks are multi-panel command dens: dual attention pressure (active roster
-+ recent starters on Staff Directory; level + department boards on My Team) sits
-above a **people notes** trail (PersonNote with display_field body) — not only
-directory metrics or conversation-first chrome.
++ recent starters on Staff Directory; level + department boards on My Team) and
+**named employment documents** (HrDocument composition with display_field
+headline — offer / policy / promo / contract letters) sit above a **people notes**
+trail (PersonNote with display_field body) — not only directory metrics or
+conversation-first chrome.
 
 Four kinds of people use it — HR administrators, line managers, finance staff,
 and employees themselves — and what each of them can see is not left to
@@ -70,22 +72,25 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — multi-panel staff home (command_density): headcount
-  metrics, dual attention (active roster + recent starters capped for fold
-  share), then people-notes trail, plus department/role context hubs (no
-  under-fold status/dept bar theater). Employment history triple-opens
-  assignment hub, person career hub, and role catalogue (`Employment|Person|Role`).
+- **Staff Directory** — multi-panel staff home (command_density + document):
+  headcount metrics, dual attention (active roster + recent starters capped for
+  fold share), **document composition** (named HR letters), then people-notes
+  trail, plus department/role context hubs (no under-fold status/dept bar
+  theater). Employment history triple-opens assignment hub, person career hub,
+  and role catalogue (`Employment|Person|Role`).
 - **Person Detail** — career desk: employment queue plus salary and reporting
-  timelines, employment trail, and salary reason chart.
+  timelines, HR documents, discussion notes, employment trail, and salary
+  reason chart.
 - **Departments & Roles** — org pulse, department tree (nested under parent
   units), role queue, reporting trail, and roles-by-level chart.
 - **Compensation Review** — finance/HR salary desk: metrics, active salary
   queue, reason chart, and people pull-queue to person hubs.
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
   timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
-- **My Team** — multi-panel manager desk (command_density): dual attention
-  level + department boards, capped reporting pressure, then people-notes
-  trail and secondary report roster (no redundant under-fold org bar charts).
+- **My Team** — multi-panel manager desk (command_density + document): dual
+  attention level + department boards, capped reporting pressure, document
+  composition, then people-notes trail and secondary report roster (no
+  redundant under-fold org bar charts).
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
 - **Reporting** — span-of-control kanban by manager, department placement board,
   then active ManagerLink queue and people hubs (not a dept-name bar chart).
@@ -129,4 +134,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:73efd0eeced7da138db0f81f3b95ed1c78a118cf1b22ae54653b619401556607 -->
+<!-- dazzle-spec-brief: sha256:da489a6bcbe715b01ec72666b92ffedbae28224225c8d6ae8b9a88504bf060c9 -->

@@ -24,9 +24,11 @@ def test_staff_desks_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: PersonNote" in text
     assert "conversation: count(PersonNote)" in text
-    # Cycle 1837 command_density: notes trail after dual attention, still in focus.
+    # Cycle 1837/1838: notes trail after dual attention + documents, still in focus.
     assert "live_conversation" in text
-    assert "focus: headcount, current_staff, recent_starters, live_conversation" in text
+    assert (
+        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in text
+    )
 
 
 def test_person_note_seeds_have_domain_true_hr_copy() -> None:

@@ -177,8 +177,9 @@ Job homes lead with **metrics**, then the directory/salary work — not a bare
 staff table as the only region.
 
 ### Workspace: `staff_directory` (default landing for hr_admin + manager)
-- **People notes** trail first (Goal B conversation), then **headcount metrics**
-- **Staff list** — current employees (active Employment), columns: name, role, department, manager
+- **Multi-panel** (Goal B command_density + document): headcount metrics → dual
+  attention (active roster + recent starters) → **document composition**
+  (named offer / policy / promo letters) → people notes trail
 - Recent starters + department/role context hubs (no under-fold status/dept bar theater)
 - **Filters**: by department, by role level, by "starting in last 90 days", by "ended in last 90 days"
 - **Sort**: by name, by tenure (started_at desc), by department
@@ -190,6 +191,8 @@ staff table as the only region.
   - **Employment history** — timeline of Employment rows
   - **Salary history** — timeline of Salary rows (hr_admin + finance + self only)
   - **Reporting line** — current manager + (if applicable) current direct reports
+  - **Documents** — named HR letters (offer / policy / promo / contract)
+  - **Discussion** — people notes trail
 
 ### Workspace: `org_chart`
 - Department tree (uses Department.parent_department recursive descent)
