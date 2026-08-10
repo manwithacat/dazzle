@@ -166,6 +166,51 @@ entity IncidentNote "Incident Note":
   fitness:
     repr_fields: [alert, author, body]
 
+# =============================================================================
+# OPS DOCUMENT — runbook / postmortem composition (Goal B document)
+# =============================================================================
+#
+# Peer ops dens (PagerDuty / Datadog / Opsgenie) put named runbooks and
+# postmortems on the command desk — not only dual attention queues and notes.
+# display_field drives composition titles so hero stills read as documents.
+# =============================================================================
+
+entity OpsDocument "Ops Document":
+  intent: "A named operational document on a System — runbook, postmortem, status update, or SLO brief buyers scan above the fold"
+  domain: operations
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  system: ref System required
+  headline: str(200) required
+  doc_kind: enum[runbook, postmortem, status_page, slo_brief, playbook]=runbook
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    list: role(ops_engineer) or role(admin)
+    read: role(ops_engineer) or role(admin)
+    create: role(ops_engineer) or role(admin)
+    update: role(ops_engineer) or role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      as: ops_engineer, admin
+    read: all
+      as: ops_engineer, admin
+    create: all
+      as: ops_engineer, admin
+    update: all
+      as: ops_engineer, admin
+    delete: all
+      as: admin
+
+  fitness:
+    repr_fields: [system, headline, doc_kind, status, author]
+
 # v0.61.72 (#6) — single-row Integration entity for the
 # confirm_action_panel demo. AegisMark UX patterns roadmap item #6
 # uses this shape for the SIMS-sync opt-in: one record per tenant,
@@ -241,17 +286,18 @@ nav ops_nav:
 # =============================================================================
 
 workspace command_center "Command Center":
-  # Goal B command_density (cycle 1728): peer PagerDuty/Datadog ops homes put
-  # systems pressure + active alerts (+ health pulse) above a conversation trail —
-  # not a note list that owns the viewport. Conversation stays, capped to share fold.
-  purpose: "Multi-panel ops attention — health pulse, systems in trouble, active alerts, and live incident notes"
+  # Goal B command_density (cycle 1728) + document (cycle 1839): peer
+  # PagerDuty/Datadog ops homes put systems pressure + active alerts (+ health
+  # pulse), then named runbook/postmortem composition, above a conversation
+  # trail — not a note list that owns the viewport. Caps keep fold share.
+  purpose: "Multi-panel ops — health pulse, dual attention, runbook composition, then live incident notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
-  # Health pulse first — fleet counts with critical + conversation honesty.
+  # Health pulse first — fleet counts with critical + documents + conversation.
   health_summary:
     source: System
     display: metrics
@@ -263,14 +309,16 @@ workspace command_center "Command Center":
       total_systems: count(System)
       healthy_count: count(System where status = healthy)
       critical_count: count(System where status = critical)
+      documents: count(OpsDocument)
       conversation: count(IncidentNote)
     tones:
       healthy_count: positive
       critical_count: destructive
+      documents: accent
       conversation: accent
 
   # Fleet attention — non-healthy systems (degraded / critical / offline).
-  # Cap at 4 so metrics + dual panels + conversation share the fold.
+  # Cap at 4 so metrics + dual panels + documents + conversation share the fold.
   systems_attention:
     source: System
     filter: status != healthy
@@ -282,7 +330,7 @@ workspace command_center "Command Center":
     refresh: every 30s
 
   # Alert Feed - active alerts as an urgency queue (severity-sorted).
-  # Live-refreshes (#1391). Cap at 4 for fold with systems + conversation.
+  # Live-refreshes (#1391). Cap at 4 for fold with systems + documents + notes.
   active_alerts:
     source: Alert
     filter: status = active
@@ -291,9 +339,20 @@ workspace command_center "Command Center":
     display: queue
     refresh: every 30s
 
-  # Goal B conversation spine AFTER dual attention — newest operator notes so
-  # stills show domain-true mitigation prose without owning the whole fold.
-  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
+  # Goal B document composition AFTER dual attention — named runbooks /
+  # postmortems so hero stills read as documents before the notes trail.
+  composition:
+    source: OpsDocument
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: ops_document_detail
+    empty: "No ops documents yet — attach a runbook or postmortem on a system"
+    refresh: every 30s
+
+  # Goal B conversation spine AFTER dual attention + documents — newest
+  # operator notes so stills show domain-true mitigation prose without
+  # owning the whole fold. display: conversation → Message/Bubble chrome.
   live_conversation:
     source: IncidentNote
     sort: created_at desc
@@ -694,12 +753,12 @@ workspace command_center "Command Center":
   ux:
     as ops_engineer:
       scope: all
-      # Goal B command_density: health pulse + dual attention above conversation.
-      purpose: "Multi-panel ops — health pulse, systems pressure, active alerts, then incident notes"
-      focus: health_summary, systems_attention, active_alerts, live_conversation
+      # Goal B command_density + document: dual attention then runbooks before notes.
+      purpose: "Multi-panel ops — dual attention, runbook composition, then incident notes"
+      focus: health_summary, systems_attention, active_alerts, composition, live_conversation
     as admin:
-      purpose: "Full fleet command — multi-panel attention before conversation trail"
-      focus: health_summary, systems_attention, active_alerts, live_conversation
+      purpose: "Full fleet command — multi-panel attention, documents, then conversation trail"
+      focus: health_summary, systems_attention, active_alerts, composition, live_conversation
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
@@ -1115,8 +1174,14 @@ surface system_detail "System Detail":
     show: Alert
     columns: message, severity, status, triggered_at
 
+  # Goal B document: named runbooks / postmortems on the system hub.
+  related documents "Documents":
+    display: queue
+    show: OpsDocument
+    columns: headline, doc_kind, status, author
+
   ux:
-    purpose: "System hub — health strip and open alerts in one place"
+    purpose: "System hub — health strip, open alerts, and ops documents in one place"
 
 surface system_create "Register System":
   uses entity System
@@ -1243,6 +1308,77 @@ surface incident_note_create "Add Incident Note":
     field alert "Alert"
     field author "Author"
     field body "Note"
+
+# =============================================================================
+# OpsDocument surfaces (Goal B document composition)
+# =============================================================================
+
+surface ops_document_list "Ops Documents":
+  uses entity OpsDocument
+  mode: list
+  render: fragment
+  open: OpsDocument via id | System via system
+
+  section main "Documents":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field system "System"
+    field status "Status"
+    field author "Author"
+    field created_at "When"
+
+  ux:
+    purpose: "Document composition queue — named runbooks and postmortems; open a letter hub or hop to the System"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body
+    empty: "No ops documents yet — open a system hub to attach a runbook or postmortem"
+
+surface ops_document_detail "Ops Document":
+  uses entity OpsDocument
+  mode: view
+  render: fragment
+
+  section summary "Document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field system "System"
+    field author "Author"
+    field created_at "When"
+
+  section body "Body":
+    field body "Body"
+
+  ux:
+    purpose: "Ops document hub — named letter, lifecycle strip, system, and body in one place"
+
+surface ops_document_create "Add Ops Document":
+  uses entity OpsDocument
+  mode: create
+  render: fragment
+  section main "New document":
+    field system "System"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Attach a named runbook, postmortem, or SLO brief to a system"
+
+surface ops_document_edit "Edit Ops Document":
+  uses entity OpsDocument
+  mode: edit
+  render: fragment
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Update operational document headline, kind, or status"
 
 surface alert_ack "Acknowledge Alert":
   uses entity Alert

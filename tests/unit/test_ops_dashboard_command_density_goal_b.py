@@ -30,14 +30,18 @@ def test_command_center_declares_dual_attention_before_conversation() -> None:
 
 def test_command_center_caps_attention_queues_for_fold_share() -> None:
     block = _command_center_block()
-    # Caps keep dual panels + conversation sharing the fold (fieldtest pattern).
+    # Caps keep dual panels + documents + conversation sharing the fold.
     assert "limit: 4" in block
-    assert "focus: health_summary, systems_attention, active_alerts, live_conversation" in block
+    assert (
+        "focus: health_summary, systems_attention, active_alerts, composition, live_conversation"
+        in block
+    )
     assert "Multi-panel ops" in block or "multi-panel" in block.lower()
 
 
 def test_command_center_metrics_count_critical_and_conversation() -> None:
     block = _command_center_block()
     assert "critical_count: count(System where status = critical)" in block
+    assert "documents: count(OpsDocument)" in block
     assert "conversation: count(IncidentNote)" in block
     assert "source: IncidentNote" in block

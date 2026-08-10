@@ -124,6 +124,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_ops_dashboard_conversation_goal_b.py",
     # ops_dashboard Goal B command_density (cycle 1728 dual attention before trail)
     "tests/unit/test_ops_dashboard_command_density_goal_b.py",
+    # ops_dashboard Goal B document (cycle 1839 OpsDocument composition on command_center)
+    "tests/unit/test_ops_dashboard_document_goal_b.py",
     # invoice_ops Goal B conversation (cycle 1662 InvoiceNote + finance desks)
     "tests/unit/test_invoice_ops_conversation_goal_b.py",
     # invoice_ops Goal B document (cycle 1724 composition on finance_ops/my_invoices)
