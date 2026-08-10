@@ -36,16 +36,16 @@ def test_dashboard_declares_live_conversation_spine() -> None:
 
 
 def test_dashboard_declares_document_composition_spine() -> None:
-    """Goal B document: Home surfaces Attachment filenames (not only Files desk)."""
+    """Goal B document: Home surfaces named ProjectDocument headlines (not only Files desk)."""
     text = APP.read_text()
-    assert "entity Attachment" in text
-    assert "display_field: filename" in text
+    assert "entity ProjectDocument" in text
+    assert "display_field: headline" in text
     # Dashboard metrics + composition queue (hero still proof)
     dash = text.split("workspace dashboard", 1)[1].split("workspace project_board", 1)[0]
-    assert "documents: count(Attachment)" in dash
+    assert "documents: count(ProjectDocument)" in dash
     assert "composition:" in dash
-    assert "source: Attachment" in dash
-    assert "action: attachment_view" in dash
+    assert "source: ProjectDocument" in dash
+    assert "action: project_document_detail" in dash
 
 
 def test_comment_seeds_have_domain_true_discussion_copy() -> None:

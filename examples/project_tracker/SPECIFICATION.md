@@ -2,22 +2,23 @@
 
 ## Executive summary
 
-Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
+Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
 
 Three roles use it — Admin, Project Manager, and Team Member — and what each can see and do is not left to convention. Every role's permissions, for every kind of record and operation, are declared as machine-readable policy that compiles on demand into an auditable access matrix — permission review is something you run and diff, not something you eyeball — and the row-visibility rules can additionally be submitted to an SMT solver for formal verification. Access-controlled records are automatically filtered to what each user is permitted to see: a team member's task list, for instance, shows only the tasks assigned to them.
 
 ## What it does
 
-The product manages six kinds of thing, woven together:
+The product manages seven kinds of thing, woven together:
 
 - **Projects** — the top-level containers of work. Every Project has an owning Team Member.
 - **Milestones** — staging posts within a Project. Every Milestone belongs to its parent Project and moves through planning, active, and completed states.
 - **Tasks** — the units of work. Every Task belongs to a parent Project, can optionally sit under a Milestone, and records who it is assigned to and who created it. A Task travels a five-stage lifecycle from backlog to done.
 - **Comments** — the discussion. Every Comment is attached to a Task and names its author.
-- **Attachments** — the supporting files. Every Attachment is tied to a Task and records who uploaded it.
+- **Project documents** — named project documents (briefs, specs, proposals, status reports, decision logs) with domain-true headlines that buyers scan as composition above the discussion trail.
+- **Attachments** — supporting binary files on a Task (PDF exports, mockups) with human filenames.
 - **Team Members** — the people, referenced throughout as owners, assignees, authors, and uploaders.
 
-Around these, the product provides seventeen capabilities: browsing, creating, viewing, and editing Projects and Tasks; creating, listing, and editing Milestones and Comments; and listing, uploading, and viewing Attachments — opening an attachment presents the document in the built-in PDF viewer.
+Around these, the product provides the full working surface: browsing, creating, viewing, and editing Projects and Tasks; creating, listing, and editing Milestones and Comments; attaching and browsing Project Documents; and listing, uploading, and viewing Attachments — opening an attachment presents the file in the built-in PDF viewer.
 
 ## Who uses it
 
@@ -33,10 +34,10 @@ the **Project Board**. Both places stay available to everyone with access.
 ## Where work happens
 
 - **Dashboard** — multi-panel portfolio: task metrics (including document
-  count), dual attention (open-task queue + named deliverable composition)
-  before the live discussion trail, then project grid and task-flow kanban
-  (no priority chart theater — empty_region honesty; queues capped for fold
-  share).
+  count and conversation honesty), dual attention (open-task queue + named
+  project-document composition with domain-true headlines) before the live
+  discussion trail, then project grid and task-flow kanban (no priority chart
+  theater — empty_region honesty; queues capped for fold share).
 - **Project Board** — delivery board: board metrics, task kanban, unassigned
   queue, and milestone timeline (status counts live in metrics, not a chart).
 - **My Tasks** — multi-panel member desk: load metrics, dual attention
@@ -46,8 +47,8 @@ the **Project Board**. Both places stay available to everyone with access.
   milestone queue, active project grid, status mix chart, and open-work trail.
 - **Discussion** — cross-task comment pulse, timeline, open-task grid,
   in-flight kanban, and priority mix chart.
-- **Files** — attachment pulse, file grid, open-task timeline, urgent queue,
-  and status mix chart.
+- **Files** — document composition desk: project-document pulse and named
+  brief/spec composition, tasks needing evidence, and recent file uploads.
 - **People** — admin/manager org desk: team pulse, role board (kanban),
   department roster queue, project ownership queue, secondary roster,
   unassigned load, discussion trail, and department headcount chart.
@@ -85,4 +86,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:929554faa98d08b3a89fea1768ea2bf29736b9718260a9c771fa9f724d6eab6b -->
+<!-- dazzle-spec-brief: sha256:64df36f0b052eaee6ff41adf324b7279f9bb7fd4f842838ee30156c35fdf96d8 -->

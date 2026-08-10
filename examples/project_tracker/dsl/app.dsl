@@ -258,8 +258,8 @@ entity Comment "Comment":
     repr_fields: [task, author, body]
 
 entity Attachment "Attachment":
-  intent: "Supporting document on a task — filename is the document identity buyers scan, not a UUID shell"
-  # Goal B document depth: queue/timeline title is the human filename.
+  intent: "Supporting file on a task — binary evidence (PDF export, mockup) linked to work"
+  # Filename remains the identity on file queues; named briefs/specs live on ProjectDocument.
   display_field: filename
 
   id: uuid pk
@@ -286,6 +286,44 @@ entity Attachment "Attachment":
     delete: all
       as: admin, manager
 
+# Goal B document composition: named project briefs/specs/proposals buyers scan
+# as prose headlines (Linear/Jira/Asana docs) — not only file-attachment chrome.
+entity ProjectDocument "Project Document":
+  intent: "A named project document — brief, spec, proposal, status report, or decision log buyers scan above the discussion trail"
+  domain: project_delivery
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  project: ref Project required
+  headline: str(200) required
+  doc_kind: enum[brief, spec, proposal, status_report, decision]=brief
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    list: role(admin) or role(manager) or role(member)
+    read: role(admin) or role(manager) or role(member)
+    create: role(admin) or role(manager) or role(member)
+    update: role(admin) or role(manager)
+    delete: role(admin)
+
+  scope:
+    list: all
+      as: admin, manager, member
+    read: all
+      as: admin, manager, member
+    create: all
+      as: admin, manager, member
+    update: all
+      as: admin, manager
+    delete: all
+      as: admin
+
+  fitness:
+    repr_fields: [project, headline, doc_kind, status, author]
+
 # ── Workspaces ───────────────────────────────────────────────────────
 
 # Story-driven compositions (docs/guides/story-to-composition.md):
@@ -308,7 +346,7 @@ workspace dashboard "Dashboard":
       open_tasks: count(Task where status != done)
       in_progress: count(Task where status = in_progress)
       critical: count(Task where priority = critical and status != done)
-      documents: count(Attachment)
+      documents: count(ProjectDocument)
       conversation: count(Comment)
     tones:
       in_progress: accent
@@ -326,15 +364,15 @@ workspace dashboard "Dashboard":
     action: task_edit
     empty: "No open tasks"
 
-  # Dual attention B — document composition on Home (not only Files desk).
-  # Human filenames as titles so hero stills read deliverables above the fold.
+  # Dual attention B — Goal B document composition on Home.
+  # Named project briefs/specs (display_field: headline) before the notes trail.
   composition:
-    source: Attachment
+    source: ProjectDocument
     sort: created_at desc
     limit: 4
     display: queue
-    action: attachment_view
-    empty: "No documents yet — upload a deliverable on a task"
+    action: project_document_detail
+    empty: "No project documents yet — attach a brief or spec on a project"
 
   # Goal B conversation spine AFTER dual attention — Message/Bubble chrome
   # (HTTP CONVERSATION + MessageScroller), not queue meta.
@@ -585,32 +623,32 @@ workspace discussion_desk "Discussion":
     empty: "No open tasks"
 
 # Sixth product workspace: document composition desk (Goal B document depth).
-# Peer tools (Linear / Jira / Asana) show named deliverables above empty task
-# chrome — filenames + parent task context, not a blank "No attachments yet".
+# Peer tools (Linear / Jira / Asana) show named briefs/specs above empty task
+# chrome — prose headlines + parent project context, not a blank warehouse dump.
 workspace files_desk "Files":
-  purpose: "Document composition — named deliverables linked to tasks (not a warehouse dump)"
+  purpose: "Document composition — named project briefs/specs and file evidence (not a warehouse dump)"
   access: persona(admin, manager, member)
 
   files_pulse:
-    source: Attachment
+    source: ProjectDocument
     display: metrics
     aggregate:
-      documents: count(Attachment)
+      documents: count(ProjectDocument)
+      file_evidence: count(Attachment)
       open_tasks: count(Task where status != done)
       projects: count(Project where status = active)
     tones:
       documents: accent
       open_tasks: positive
 
-  # Document body first (Goal B): composition queue with human filenames as
-  # titles — pull open the attachment hub (PDF viewer path).
+  # Document body first (Goal B): composition queue with domain-true headlines.
   composition:
-    source: Attachment
+    source: ProjectDocument
     sort: created_at desc
     limit: 25
     display: queue
-    action: attachment_view
-    empty: "No documents yet — upload a deliverable on a task"
+    action: project_document_detail
+    empty: "No project documents yet — attach a brief or spec on a project"
 
   # Tasks still missing evidence (secondary pressure, under composition).
   needs_evidence:
@@ -774,6 +812,15 @@ surface project_detail "Project Detail":
     display: queue
     show: Milestone
     columns: name, status, end_date
+
+  # Goal B document: named briefs / specs / proposals on the project hub.
+  related documents "Documents":
+    display: queue
+    show: ProjectDocument
+    columns: headline, doc_kind, status, author
+
+  ux:
+    purpose: "Project hub — summary, tasks, milestones, and project documents in one place"
 
 surface task_list "Tasks":
   uses entity Task
@@ -972,6 +1019,77 @@ surface attachment_create "Upload Attachment":
     field task "Task"
     field file "File"
     field filename "Filename"
+
+# =============================================================================
+# ProjectDocument surfaces (Goal B document composition)
+# =============================================================================
+
+surface project_document_list "Project Documents":
+  uses entity ProjectDocument
+  mode: list
+  render: fragment
+  open: ProjectDocument via id | Project via project
+
+  section main "Documents":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field project "Project"
+    field status "Status"
+    field author "Author"
+    field created_at "When"
+
+  ux:
+    purpose: "Document composition queue — named briefs and specs; open a letter hub or hop to the Project"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body
+    empty: "No project documents yet — open a project hub to attach a brief or spec"
+
+surface project_document_detail "Project Document":
+  uses entity ProjectDocument
+  mode: view
+  render: fragment
+
+  section summary "Document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field project "Project"
+    field author "Author"
+    field created_at "When"
+
+  section body "Body":
+    field body "Body"
+
+  ux:
+    purpose: "Project document hub — named letter, lifecycle strip, project, and body in one place"
+
+surface project_document_create "Add Project Document":
+  uses entity ProjectDocument
+  mode: create
+  render: fragment
+  section main "New document":
+    field project "Project"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Attach a named brief, spec, proposal, or decision log to a project"
+
+surface project_document_edit "Edit Project Document":
+  uses entity ProjectDocument
+  mode: edit
+  render: fragment
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Update project document headline, kind, or status"
 
 # Cycle 1347 / PENDING #303 — User VIEW hub so kanban assignee FK hops
 # (/app/user/{id}) land on a real page after ref_route→detail_path fix (c1345).
