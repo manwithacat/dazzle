@@ -134,6 +134,40 @@ entity AnnouncementNote "Announcement Note":
   fitness:
     repr_fields: [announcement, author, body]
 
+# Goal B document composition: named workspace briefs/handbooks buyers scan above discussion trail.
+entity WorkspaceDocument "Workspace Document":
+  intent: "A named workspace document — brief, onboarding guide, join playbook, policy, or decision log buyers scan above the team discussion trail"
+  domain: workplace
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  workspace: ref Workspace required
+  headline: str(200) required
+  doc_kind: enum[brief, onboarding_guide, join_playbook, policy, decision]=brief
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    create: role(admin)
+    read: role(admin) or role(member)
+    update: role(admin)
+    list: role(admin) or role(member)
+
+  scope:
+    list: workspace = current_tenant
+      as: admin, member
+    read: workspace = current_tenant
+      as: admin, member
+    create: workspace = current_tenant
+      as: admin
+    update: workspace = current_tenant
+      as: admin
+
+  fitness:
+    repr_fields: [workspace, headline, doc_kind, status, author]
+
 # ── Surfaces (the guide overlays target these) ────────────────────────────────
 
 surface announcement_list "Announcements":
@@ -212,6 +246,65 @@ surface announcement_create "Post Announcement":
     field title "Title"
     field body "Body"
 
+# WorkspaceDocument surfaces (Goal B document composition)
+surface workspace_document_list "Workspace Documents":
+  uses entity WorkspaceDocument
+  mode: list
+  open: WorkspaceDocument via id | Workspace via workspace
+  section main "Documents":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field workspace "Workspace"
+    field status "Status"
+    field author "Author"
+    field created_at "When"
+  ux:
+    purpose: "Document composition queue — named briefs and handbooks; open a letter hub or hop to the Workspace"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body
+    empty: "No workspace documents yet — open a workspace hub to attach a brief or handbook"
+
+surface workspace_document_create "Add Workspace Document":
+  uses entity WorkspaceDocument
+  mode: create
+  section main "New document":
+    field workspace "Workspace"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Attach a named brief, onboarding guide, join playbook, policy, or decision log to a workspace"
+
+surface workspace_document_detail "Workspace Document":
+  uses entity WorkspaceDocument
+  mode: view
+  section summary "Document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field workspace "Workspace"
+    field author "Author"
+    field created_at "When"
+  section body "Body":
+    field body "Body"
+  ux:
+    purpose: "Workspace document hub — named letter, lifecycle strip, workspace, and body in one place"
+
+surface workspace_document_edit "Edit Workspace Document":
+  uses entity WorkspaceDocument
+  mode: edit
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Update workspace document headline, kind, or status"
+
 # Workspace hub — related announcements reverse hop (journey related + strip).
 surface workspace_list "Workspaces":
   uses entity Workspace
@@ -237,29 +330,34 @@ surface workspace_detail "Workspace":
     display: queue
     show: Announcement
     columns: title, status
+  # Goal B document: named briefs / handbooks on the workspace hub.
+  related documents "Documents":
+    display: queue
+    show: WorkspaceDocument
+    columns: headline, doc_kind, status, author
   ux:
-    purpose: "Workspace hub — identity strip and tenant-scoped announcement queue"
+    purpose: "Workspace hub — identity strip, announcements, and workspace documents"
 
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
-  # Goal B command_density (cycle 1831): peer Slack/Notion team homes put
-  # announcement pressure + join readiness above the discussion trail — not
-  # conversation alone owning the fold. Caps keep dual attention + notes sharing.
-  # Also holds conversation + empty_region_honesty (no twin board dumps/charts).
-  purpose: "Multi-panel team home — pulse, announcement queue, join readiness, then discussion"
+  # Goal B command_density (cycle 1831) + document (cycle 1844): peer Slack/Notion
+  # team homes put announcement pressure + join readiness + named docs above the
+  # discussion trail — not conversation alone owning the fold.
+  purpose: "Multi-panel team home — pulse, dual attention, workspace docs, then discussion"
   access: persona(admin, member)
 
-  # Metrics honesty: count Announcement only (nested AnnouncementNote metrics
-  # were ship-lying as 0 while the conversation queue was populated).
+  # Metrics honesty: count Announcement + documents (notes stay on conversation trail).
   team_pulse:
     source: Announcement
     display: metrics
     aggregate:
       announcements: count(Announcement)
+      documents: count(WorkspaceDocument)
     tones:
       announcements: accent
+      documents: accent
 
   # Dual attention A — posts to act on / skim (cap 4 for fold share).
   announcement_queue:
@@ -287,7 +385,16 @@ workspace home "Workspace Home":
         icon: "megaphone"
         state: positive
 
-  # Goal B conversation spine AFTER dual attention — newest team notes.
+  # Goal B document composition after dual attention — named briefs before notes.
+  composition:
+    source: WorkspaceDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: workspace_document_detail
+    empty: "No workspace documents yet — attach a brief or handbook on a workspace hub"
+
+  # Goal B conversation spine AFTER dual attention + docs — newest team notes.
   # display: conversation → MessageScroller / Message + Bubble (not queue meta).
   live_conversation:
     source: AnnouncementNote
@@ -329,18 +436,18 @@ workspace home "Workspace Home":
 
   ux:
     as admin:
-      purpose: "Multi-panel team home — pulse, posts, join readiness, then discussion"
-      focus: team_pulse, announcement_queue, join_readiness, live_conversation
+      purpose: "Multi-panel team home — pulse, posts, readiness, docs, then discussion"
+      focus: team_pulse, announcement_queue, join_readiness, composition, live_conversation
     as member:
-      purpose: "Multi-panel catch-up — posts and readiness before discussion trail"
-      focus: team_pulse, announcement_queue, join_readiness, live_conversation
+      purpose: "Multi-panel catch-up — posts, readiness, and docs before discussion trail"
+      focus: team_pulse, announcement_queue, join_readiness, composition, live_conversation
 
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
 workspace announce "Team Board":
-  # Goal B command_density: pulse + feed queue + join context before conversation.
+  # Goal B command_density + document: pulse + feed + context + docs before trail.
   # empty_region_honesty: no duplicate queues / empty bar / workspace voids.
-  purpose: "Multi-panel board — pulse, post feed, join context, then discussion trail"
+  purpose: "Multi-panel board — pulse, dual attention, workspace docs, then discussion trail"
   access: persona(admin, member)
 
   board_pulse:
@@ -348,8 +455,10 @@ workspace announce "Team Board":
     display: metrics
     aggregate:
       posts: count(Announcement)
+      documents: count(WorkspaceDocument)
     tones:
       posts: accent
+      documents: accent
 
   # Dual attention A — post feed (cap 4 for fold share with conversation).
   feed_queue:
@@ -377,7 +486,16 @@ workspace announce "Team Board":
         icon: "message-square"
         state: positive
 
-  # Conversation AFTER dual attention so Message chrome shares the fold.
+  # Goal B document composition after dual attention — named briefs before notes.
+  composition:
+    source: WorkspaceDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: workspace_document_detail
+    empty: "No workspace documents yet — attach a brief or handbook on a workspace hub"
+
+  # Conversation AFTER dual attention + docs so Message chrome shares the fold.
   live_conversation:
     source: AnnouncementNote
     sort: created_at desc
@@ -396,11 +514,11 @@ workspace announce "Team Board":
 
   ux:
     as admin:
-      purpose: "Multi-panel board — feed and join context before discussion"
-      focus: board_pulse, feed_queue, join_context, live_conversation
+      purpose: "Multi-panel board — feed, context, and docs before discussion"
+      focus: board_pulse, feed_queue, join_context, composition, live_conversation
     as member:
-      purpose: "Catch up — posts and context before conversation trail"
-      focus: board_pulse, feed_queue, join_context, live_conversation
+      purpose: "Catch up — posts, context, and docs before conversation trail"
+      focus: board_pulse, feed_queue, join_context, composition, live_conversation
 
 workspace publish_desk "Publish":
   purpose: "Admin publish desk — draft queue and live board pulse before posting"

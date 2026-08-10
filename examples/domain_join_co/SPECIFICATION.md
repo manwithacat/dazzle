@@ -8,10 +8,11 @@ independently verified with the command shown beside it.*
 Domain Join Co is a workspace system built around verified-domain membership:
 a company's workspace is anchored to its verified email domain, employees join
 under it, and everything the team shares stays inside that boundary. The
-system manages two things — the Workspace itself, the root under which a
-company operates and where members and their roles are declared, and
+system manages three things — the Workspace itself, the root under which a
+company operates and where members and their roles are declared;
 Announcements, the tenant-scoped posts a workspace admin publishes to keep the
-team informed.
+team informed; and Workspace Documents, named briefs, onboarding guides, join
+playbooks, policies, and decision logs buyers scan above the discussion trail.
 
 Two kinds of people use it: the workspace admin, who verifies the company
 domain, sets the join policy, approves join requests, and posts announcements;
@@ -35,6 +36,11 @@ An Announcement moves draft -> published -> archived under admin control; publis
 Announcements can be listed, read in detail, and posted through three
 dedicated screens.
 
+**Workspace Document.** A named letter on a workspace — brief, onboarding
+guide, join playbook, policy, or decision — with domain-true headlines so team
+homes surface composition before discussion notes. Documents are tenant-scoped
+to their workspace and dual-open to the workspace hub.
+
 ## Who uses it
 
 - **Workspace Admin** — owns one workspace. Their aims: verify the company
@@ -48,16 +54,21 @@ dedicated screens.
 ## Where work happens
 
 - **Workspace Home** — multi-panel admin landing: team pulse, announcement
-  queue and join-readiness dual attention, then live discussion in Message
-  chrome, board timeline, and tenant roots (no duplicate board dumps or empty
-  chart theater).
+  queue and join-readiness dual attention, workspace document composition, then
+  live discussion in Message chrome, board timeline, and tenant roots (no
+  duplicate board dumps or empty chart theater).
 - **Team Board** — multi-panel member home: board pulse, post feed and
-  join-context dual attention, then live discussion in Message chrome and post
-  trail — without twin empty queues or workspace voids.
+  join-context dual attention, workspace document composition, then live
+  discussion in Message chrome and post trail — without twin empty queues or
+  workspace voids.
 - **Publish** — admin publish desk: draft-only queue, published live cards,
   readiness strip, and publish trail (no empty posts chart).
-- **Announcement hub** — lifecycle strip (title, status, workspace) plus body.
-- **Workspace hub** — identity strip and related announcements as a pull queue.
+- **Announcement hub** — lifecycle strip (title, status, workspace) plus body
+  and team discussion.
+- **Workspace hub** — identity strip, related announcements, and workspace
+  documents as pull queues.
+- **Workspace Document hub** — named letter with kind, status, workspace, and
+  body for briefs, playbooks, and policies.
 
 ## The technical foundation
 
@@ -93,4 +104,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Announcement lifecycle.** Announcements move draft → published → archived (admin may return published to draft or republish archived).
 
-<!-- dazzle-spec-brief: sha256:7e24b4026c6d8cfa02232ffd270769efcf99757dc9c015c8e60f4a51bb84c3da -->
+<!-- dazzle-spec-brief: sha256:b486eaea8a18e67f70ff5583e51b503cb8a3f513e209cdfa822ca5ebabcd054d -->
