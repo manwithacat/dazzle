@@ -72,6 +72,9 @@ entity User "Team Member":
   name: str(100) required pii(category=identity)
   role: enum[admin,manager,member]=member
   department: str(50)
+  # Goal B media (cycle 1884): peer PM tools (Linear / Asana / Jira) put
+  # teammate headshot thumbs on the portfolio home — not name-only theater.
+  photo_url: url
   is_active: bool=true
   created_at: datetime auto_add
 
@@ -339,12 +342,24 @@ entity ProjectDocument "Project Document":
 
 workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
-  # Goal B command_density (cycle 1833): peer PM tools (Linear / Asana / Jira)
-  # put open-work pressure + named deliverables above the discussion trail —
-  # not Message chrome alone owning the fold. Caps keep dual attention + notes
-  # sharing. Also holds conversation + document + empty_region_honesty (no
-  # priority chart void — metrics already encode open/critical load).
-  purpose: "Multi-panel portfolio — pulse, open work, deliverables, then discussion"
+  # Goal B media (cycle 1884) + command_density (1833): peer PM tools
+  # (Linear / Asana / Jira) put teammate headshots first, then open-work
+  # pressure + named deliverables above the discussion trail. Caps keep dual
+  # attention + notes sharing. Also holds conversation + document +
+  # empty_region_honesty (no priority chart void — metrics encode load).
+  purpose: "Multi-panel portfolio — headshots, pulse, open work, deliverables, then discussion"
+
+  # Goal B media FIRST — portfolio home is a people shelf (photo_url thumbs).
+  # Newest department staff first so non-STABLE seeded faces win the fold;
+  # STABLE auth-mirror rows get photo_url via media enrichment (#1630).
+  media_shelf:
+    source: User
+    filter: is_active = true and department != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No teammate headshots yet — add photo URLs on team members"
 
   portfolio_metrics:
     source: Task
@@ -406,14 +421,14 @@ workspace dashboard "Dashboard":
 
   ux:
     as admin:
-      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
-      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
     as manager:
-      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
-      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
     as member:
-      purpose: "Multi-panel portfolio — open work + docs before discussion trail"
-      focus: portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
 
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
@@ -1107,6 +1122,7 @@ surface user_list "Team Members":
   access: persona(admin, manager, member)
 
   section main "Team":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
     field role "Role"
@@ -1126,6 +1142,7 @@ surface user_detail "Team Member Overview":
   access: persona(admin, manager, member)
 
   section identity "Identity":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
 
@@ -1158,6 +1175,7 @@ surface user_edit "Edit Team Member":
   access: persona(admin)
 
   section identity "Identity":
+    field photo_url "Photo URL"
     field name "Name"
     field email "Email"
 

@@ -30,7 +30,7 @@ def test_dashboard_dual_attention_before_conversation() -> None:
     assert block.index("open_task_queue:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: portfolio_metrics, open_task_queue, composition, live_conversation, "
+        "focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, "
         "project_overview, task_flow" in block
     )
     assert "Multi-panel" in block or "multi-panel" in block.lower()

@@ -31,7 +31,7 @@ def test_dashboard_omits_priority_mix_bar_chart() -> None:
     assert "priority_mix:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: portfolio_metrics, open_task_queue, composition, live_conversation, "
+        "focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, "
         "project_overview, task_flow" in block
     )
     assert "ux:" in block

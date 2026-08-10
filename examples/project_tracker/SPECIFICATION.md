@@ -33,7 +33,7 @@ the **Project Board**. Both places stay available to everyone with access.
 
 ## Where work happens
 
-- **Dashboard** — multi-panel portfolio: task metrics (including document
+- **Dashboard** — multi-panel portfolio: teammate **media shelf** headshots first, then task metrics (including document
   count and conversation honesty), dual attention (open-task queue + named
   project-document composition with domain-true headlines) before the live
   discussion trail, then project grid and task-flow kanban (no priority chart
@@ -88,4 +88,4 @@ bytes outside it without being explicitly listed (verify:
 
 **Project Document lifecycle.** Project Documents move draft → published → archived (member may publish; manager/admin archive; admin may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:00c9ad7992fd80ab65434434ac918e956a476bff5b45c0924601116499541da4 -->
+<!-- dazzle-spec-brief: sha256:72e577b863639a3f3a63f11955f1859c731cb27e5fd43aaeeeead5732c81bfa4 -->

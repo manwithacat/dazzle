@@ -39,7 +39,7 @@ def test_dashboard_declares_composition_after_dual_attention() -> None:
     assert block.index("open_task_queue:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: portfolio_metrics, open_task_queue, composition, live_conversation, "
+        "focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, "
         "project_overview, task_flow" in block
     )
 
