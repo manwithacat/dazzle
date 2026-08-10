@@ -32,6 +32,8 @@ Around these, the product provides the full working surface: engineers can brows
 
 **Incident Review** serves the same engineers for side-by-side pairs in change-management review: Alert metrics beside the live incident discussion trail (Message chrome), System metrics, and a confirm-action panel for the Integration connection.
 
+**Secondary product desks** (Systems, Alerts, Integrations, Active/Resolved Alerts) stay pressure-focused: metrics pulse plus pull queues (and a single close-out history timeline on Resolved Alerts). They deliberately omit under-fold status/severity bar charts and twin trail dumps — those analytical views live on Command Center, not every nav desk.
+
 **Incident Response** is a guided, step-by-step experience that walks a responder through three stages: triage, investigate, and acknowledge.
 
 ## How work flows through it
@@ -67,4 +69,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Ops Document lifecycle.** Ops Documents move draft → published → archived (ops_engineer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:15e025e48a5c435c4009a03ed70841f93e06482a68103bdbe189f187a49e119b -->
+<!-- dazzle-spec-brief: sha256:656e93cad8c1877995c7f8314c71fa00f46bce04b098bf1ea7985f0ee16fab4e -->

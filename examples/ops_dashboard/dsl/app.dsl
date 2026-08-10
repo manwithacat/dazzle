@@ -880,8 +880,11 @@ workspace incident_review "Incident Review":
       purpose: "Pair-strip review of pending incidents"
 
 # Third product workspace: systems portfolio desk.
+# Goal B empty_region_honesty (cycle 1852): peer Datadog/PagerDuty fleet desks
+# keep pulse + dual queues — not a second check timeline + status bar dump
+# (chart/timeline dogfood stays on command_center).
 workspace systems_desk "Systems":
-  purpose: "Fleet health desk — systems pulse, grid, queue, trail, and status mix"
+  purpose: "Fleet health desk — systems pulse, roster, and pressure queue"
   access: persona(ops_engineer, admin)
 
   fleet_pulse:
@@ -913,25 +916,9 @@ workspace systems_desk "Systems":
     action: system_detail
     empty: "No degraded or critical systems"
 
-  check_trail:
-    source: System
-    sort: last_check desc
-    limit: 15
-    display: timeline
-    action: system_detail
-    empty: "No systems yet"
-
-  status_mix:
-    source: System
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(System)
-    empty: "No systems yet"
-
 # Fourth product workspace: alerts-first on-call desk.
 workspace alerts_desk "Alerts":
-  purpose: "On-call desk — active and recent alerts without warehouse CRUD"
+  purpose: "On-call desk — active alerts and systems under pressure"
   access: persona(ops_engineer, admin)
 
   alert_pulse:
@@ -964,23 +951,8 @@ workspace alerts_desk "Alerts":
     action: system_detail
     empty: "No systems under pressure"
 
-  alert_trail:
-    source: Alert
-    sort: triggered_at desc
-    limit: 15
-    display: timeline
-    empty: "No alerts yet"
-
-  severity_mix:
-    source: Alert
-    display: bar_chart
-    group_by: severity
-    aggregate:
-      count: count(Alert)
-    empty: "No alerts yet"
-
 workspace integrations_desk "Integrations":
-  purpose: "Integration health — pending/live/revoked connectors and notes trail"
+  purpose: "Integration health — pending and live connectors"
   access: persona(ops_engineer, admin)
 
   integration_pulse:
@@ -1011,23 +983,8 @@ workspace integrations_desk "Integrations":
     display: queue
     empty: "No live integrations"
 
-  enable_trail:
-    source: Integration
-    sort: enabled_at desc
-    limit: 15
-    display: timeline
-    empty: "No integration activity yet"
-
-  status_mix:
-    source: Integration
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Integration)
-    empty: "No integrations yet"
-
 workspace active_alerts "Active Alerts":
-  purpose: "Alert pressure — unacknowledged active incidents without warehouse CRUD"
+  purpose: "Alert pressure — unacknowledged active incidents"
   access: persona(ops_engineer, admin)
 
   alert_pulse:
@@ -1051,37 +1008,8 @@ workspace active_alerts "Active Alerts":
     action: alert_detail
     empty: "No active alerts"
 
-  # Work-surface utility: active alerts are pull-to-ack work — queue beats grid.
-  active_grid:
-    source: Alert
-    filter: status = active
-    sort: severity desc, triggered_at asc
-    limit: 15
-    display: queue
-    action: alert_detail
-    empty: "No active alerts"
-
-  alert_trail:
-    source: Alert
-    filter: status = active or status = acknowledged
-    sort: triggered_at desc
-    limit: 15
-    display: timeline
-    action: alert_detail
-    empty: "No open alert activity yet"
-
-  severity_mix:
-    source: Alert
-    filter: status = active
-    display: bar_chart
-    group_by: severity
-    aggregate:
-      count: count(Alert)
-    empty: "No active alerts to chart"
-
-
 workspace resolved_alerts "Resolved Alerts":
-  purpose: "Close-out pressure — resolved incidents without warehouse CRUD"
+  purpose: "Close-out pressure — resolved incidents with one history strip"
   access: persona(ops_engineer, admin)
 
   resolved_pulse:
@@ -1105,7 +1033,7 @@ workspace resolved_alerts "Resolved Alerts":
     action: alert_detail
     empty: "No resolved alerts"
 
-  # Work-surface utility: resolved alerts are a dated history — timeline.
+  # One dated close-out history — not twin trail + severity bar theater.
   resolved_grid:
     source: Alert
     filter: status = resolved
@@ -1114,24 +1042,6 @@ workspace resolved_alerts "Resolved Alerts":
     display: timeline
     action: alert_detail
     empty: "No resolved alerts"
-
-  resolve_trail:
-    source: Alert
-    filter: status = resolved or status = acknowledged
-    sort: triggered_at desc
-    limit: 15
-    display: timeline
-    action: alert_detail
-    empty: "No close-out activity yet"
-
-  severity_mix:
-    source: Alert
-    filter: status = resolved
-    display: bar_chart
-    group_by: severity
-    aggregate:
-      count: count(Alert)
-    empty: "No resolved alerts to chart"
 
 
 surface system_list "Systems":

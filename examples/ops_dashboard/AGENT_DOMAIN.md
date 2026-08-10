@@ -8,7 +8,7 @@
 Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex
 
 **Source:** `/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md`
-**Fingerprint:** `3d0b291f2ae655b4`
+**Fingerprint:** `d14b5e466651fa82`
 
 ## Personas (jobs)
 
@@ -19,10 +19,11 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
 
 - **Alert** (grounded) owner≈`acknowledged_by` lifecycle: active → acknowledged → resolved — definitional sentence in founder brief (A X is …)
 - **Integration** (grounded) owner≈`acknowledged_by` lifecycle: off → pending → live — definitional sentence in founder brief (A X is …)
+- **Resolved** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Message`, `Op`, `Operations`, `PagerDuty`, `Playbook`, `Postmortem`, `System`, `analytical`, `auditable`, `backend`, `capped`, `confirm`, `create`, `degraded`, `detail`, `document`, `engineer`, `fold`, `glance`, `guided`, `healthy`, `incident`, `journey`, `live`, `mature`, `meta`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rule`, `step`, `team`, `technical`
+`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Message`, `Metric`, `Op`, `Operations`, `PagerDuty`, `Playbook`, `Postmortem`, `System`, `analytical`, `auditable`, `backend`, `capped`, `close`, `confirm`, `create`, `degraded`, `detail`, `document`, `engineer`, `fold`, `glance`, `guided`, `healthy`, `incident`, `journey`, `live`, `mature`, `meta`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rule`, `step`, `team`, `technical`
 
 ## Desks
 
@@ -60,7 +61,7 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
   "title": "Operations Dashboard \u2014 Specification",
   "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
   "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md",
-  "source_sha256": "3d0b291f2ae655b4",
+  "source_sha256": "d14b5e466651fa82",
   "personas": [
     {
       "id_hint": "engineer",
@@ -102,6 +103,13 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
         "pending",
         "live"
       ],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Resolved",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
       "owner_field_hint": "acknowledged_by"
     }
   ],
@@ -189,6 +197,7 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
     "Dazzle",
     "JavaScript",
     "Message",
+    "Metric",
     "Op",
     "Operations",
     "PagerDuty",
@@ -199,6 +208,7 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
     "auditable",
     "backend",
     "capped",
+    "close",
     "confirm",
     "create",
     "degraded",
