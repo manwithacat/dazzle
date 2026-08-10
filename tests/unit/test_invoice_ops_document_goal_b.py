@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B document — invoice_ops named AP packets + line composition."""
+"""Post-5.8 Goal B document — invoice_ops named AP packets + packet cover wall."""
 
 from __future__ import annotations
 
@@ -43,12 +43,17 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
         "payment_confirmation]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
+    assert "preview_url: url" in text
     assert "draft -> published:" in text
     assert "published -> archived:" in text
+    assert (
+        "preview_url"
+        in text.split("entity InvoiceDocument", 1)[1].split("fitness:", 1)[1].split("audit:", 1)[0]
+    )
 
 
 def test_ops_and_requester_homes_declare_document_composition() -> None:
-    """Goal B document: named packets on finance_ops; lines on my_invoices + desk."""
+    """Goal B document: packet covers first on finance_ops; lines on desks."""
     text = SURFACES.read_text()
     assert "workspace finance_ops" in text
     assert "workspace my_invoices" in text
@@ -56,18 +61,23 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "document_pulse:" in text
 
     ops = _workspace_block("finance_ops")
+    assert "packet_covers:" in ops
     assert "source: InvoiceDocument" in ops
+    assert "filter: preview_url != null" in ops
+    assert "display: grid" in ops
     assert "documents: count(InvoiceDocument)" in ops
     assert "action: invoice_document_detail" in ops
     assert "line_composition:" in ops
-    # Order: media → document pulse → named packets → dual attention → lines → conversation
-    assert ops.index("media_shelf:") < ops.index("document_pulse:")
+    # Order: packet covers → document pulse → named packets → dual attention → lines → conversation
+    assert ops.index("packet_covers:") < ops.index("document_pulse:")
     assert ops.index("document_pulse:") < ops.index("composition:")
     assert ops.index("composition:") < ops.index("awaiting_approval:")
     assert ops.index("awaiting_approval:") < ops.index("line_composition:")
     assert ops.index("line_composition:") < ops.index("live_conversation:")
+    # Peer refuse: no headshot-first media shelf on the money desk
+    assert "media_shelf:" not in ops
     assert (
-        "focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, "
+        "focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, "
         "ready_to_pay, line_composition, live_conversation" in ops
     )
 
@@ -83,6 +93,7 @@ def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
     assert 'surface invoice_document_detail "Invoice Document"' in text
     assert 'related documents "Documents"' in text
     assert "show: InvoiceDocument" in text
+    assert 'field preview_url "Cover"' in text
 
 
 def test_line_item_seeds_are_domain_true_descriptions() -> None:
@@ -108,6 +119,7 @@ def test_invoice_document_seeds_are_domain_true_headlines() -> None:
         "3c000000-0000-4000-8000-000000000004",
         "3c000000-0000-4000-8000-000000000005",
     }
+    with_cover = 0
     for row in rows:
         headline = str(row["headline"])
         assert len(headline) >= 16, headline
@@ -117,6 +129,12 @@ def test_invoice_document_seeds_are_domain_true_headlines() -> None:
         assert len(str(row.get("body") or "")) >= 24
         kinds.add(row["doc_kind"])
         statuses.add(row["status"])
+        url = str(row.get("preview_url") or "")
+        if url:
+            with_cover += 1
+            assert url.startswith("https://"), url
+            assert "placehold.co" in url
+    assert with_cover >= 8, "Goal B packet_cover_wall expects cover previews on packets"
     assert kinds >= {
         "remittance",
         "credit_memo",

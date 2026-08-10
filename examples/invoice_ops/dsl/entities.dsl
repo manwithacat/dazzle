@@ -325,6 +325,10 @@ entity InvoiceDocument "Invoice Document":
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
+  # Goal B document peer-pack (cycle 1892): packet cover preview — remittance /
+  # PO / tax certificate thumbs on finance_ops (Bill.com / Melio / Tipalti put
+  # packet visuals on the money desk, not teammate headshot shelves).
+  preview_url: url
   created_at: datetime auto_add
 
   # Domain residual status∄transitions: AP packets publish then archive.
@@ -354,7 +358,7 @@ entity InvoiceDocument "Invoice Document":
       as: requester, approver, finance, finance_admin, auditor, tenant_admin
 
   fitness:
-    repr_fields: [invoice, headline, doc_kind, status, author]
+    repr_fields: [invoice, headline, doc_kind, status, author, preview_url]
 
   audit: all
 

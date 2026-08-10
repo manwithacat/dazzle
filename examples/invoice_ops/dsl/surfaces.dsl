@@ -315,6 +315,7 @@ surface invoice_document_list "Invoice Documents":
   # Dual open: document hub first; parent Invoice document second.
   open: InvoiceDocument via id | Invoice via invoice
   section main:
+    field preview_url "Cover"
     field headline "Headline"
     field invoice "Invoice"
     field doc_kind "Kind"
@@ -332,6 +333,7 @@ surface invoice_document_detail "Invoice Document":
   uses entity InvoiceDocument
   mode: view
   section summary "Document":
+    field preview_url "Cover"
     field headline "Headline"
     field invoice "Invoice"
     field doc_kind "Kind"
@@ -343,7 +345,7 @@ surface invoice_document_detail "Invoice Document":
   section body "Body":
     field body "Body"
   ux:
-    purpose: "Invoice document hub — named packet, lifecycle strip, parent invoice, and body in one place"
+    purpose: "Invoice document hub — named packet, cover, lifecycle strip, parent invoice, and body in one place"
 
 surface invoice_document_create "Add Invoice Document":
   uses entity InvoiceDocument
@@ -353,6 +355,7 @@ surface invoice_document_create "Add Invoice Document":
     field headline "Headline"
     field doc_kind "Kind"
     field body "Body"
+    field preview_url "Cover URL"
     field status "Status"
     field author "Author"
   ux:
@@ -365,10 +368,11 @@ surface invoice_document_edit "Edit Invoice Document":
     field headline "Headline"
     field doc_kind "Kind"
     field body "Body"
+    field preview_url "Cover URL"
     field status "Status"
     field author "Author"
   ux:
-    purpose: "Update invoice document headline, kind, or status"
+    purpose: "Update invoice document headline, kind, cover, or status"
 
 # =============================================================================
 # INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine
@@ -482,24 +486,23 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  # Goal B media (cycle 1885) + conversation + document + empty_region
-  # (1820/1879): peer AP tools (Bill.com / Tipalti / Coupa) put teammate
-  # headshots first, then dual attention, named AP packets, line composition,
-  # and live discussion — not name-only ops theater or funnel voids.
-  purpose: "Day-to-day invoice throughput — headshots, dual attention, named packets, line composition, and live discussion"
+  # Goal B document peer-pack (cycle 1892) + conversation + empty_region:
+  # Bill.com / Melio / Tipalti put remittance / PO / tax packet covers on the
+  # money desk first — not teammate headshot shelves (peer refuse). Dual
+  # attention, line composition, and live discussion follow the packet wall.
+  purpose: "Day-to-day invoice throughput — packet covers, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
-  # Goal B media FIRST — finance ops home is a people shelf (photo_url thumbs).
-  # Newest department staff first so non-STABLE seeded faces win the fold;
-  # STABLE auth-mirror rows get photo_url via media enrichment (#1630).
-  media_shelf:
-    source: User
-    filter: department != null and photo_url != null
+  # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
+  # Peer money desks show remittance/PO cover thumbs before metrics and queues.
+  packet_covers:
+    source: InvoiceDocument
+    filter: preview_url != null
     display: grid
     sort: created_at desc
     limit: 4
-    action: user_detail
-    empty: "No teammate headshots yet — add photo URLs on team members"
+    action: invoice_document_detail
+    empty: "No packet covers yet — attach remittance or PO packets with cover previews"
 
   ops_metrics:
     source: Invoice
@@ -530,8 +533,8 @@ workspace finance_ops "Finance Operations":
       published: positive
       draft: warning
 
-  # Goal B document composition ABOVE dual attention — named remittance /
-  # credit memo / PO packets so hero stills read packet titles above the fold.
+  # Goal B document composition AFTER cover wall — named remittance /
+  # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
     source: InvoiceDocument
     sort: created_at desc
@@ -598,23 +601,23 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — headshots, document pulse, named packets, dual attention, then discussion"
-      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, document pulse, named packets, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as tenant_admin:
-      purpose: "AP ops — headshots, document pulse, named packets, dual attention, then discussion"
-      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, document pulse, named packets, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as finance:
-      purpose: "AP ops — headshots, named packets, then settle queues"
-      focus: media_shelf, ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
+      purpose: "AP ops — packet covers, named packets, then settle queues"
+      focus: packet_covers, ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
     as approver:
-      purpose: "AP ops — headshots, named packets, then review queue"
-      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
+      purpose: "AP ops — packet covers, named packets, then review queue"
+      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
     as auditor:
-      purpose: "AP ops — headshots, evidence packets with conversation spine"
-      focus: media_shelf, ops_metrics, document_pulse, composition, live_conversation, disputed_queue
+      purpose: "AP ops — packet covers, evidence packets with conversation spine"
+      focus: packet_covers, ops_metrics, document_pulse, composition, live_conversation, disputed_queue
     as requester:
-      purpose: "AP ops overview — headshots, packets, lines, and conversation"
-      focus: media_shelf, ops_metrics, composition, line_composition, live_conversation, awaiting_approval
+      purpose: "AP ops overview — packet covers, packets, lines, and conversation"
+      focus: packet_covers, ops_metrics, composition, line_composition, live_conversation, awaiting_approval
 
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.

@@ -79,11 +79,13 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   packets, live AP notes as Message/Bubble conversation chrome, then settle board
   (no payment-health chart or twin dispute trail under the fold).
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
-- **Finance Operations** — shared ops overview: teammate **media shelf** headshots
-  first, then dual attention (awaiting + ready), **named AP packets**
-  (InvoiceDocument composition) and line-item body, live discussion trail as
-  Message/Bubble conversation chrome, metrics, and ops kanban (no lifecycle
-  funnel, payment bar chart, or paid timeline voids).
+- **Finance Operations** — shared ops overview: **packet cover wall** first
+  (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
+  Melio / Tipalti money grain, not teammate headshot shelves), then dual
+  attention (awaiting + ready), **named AP packets** (InvoiceDocument
+  composition queue) and line-item body, live discussion trail as Message/Bubble
+  conversation chrome, metrics, and ops kanban (no lifecycle funnel, payment bar
+  chart, or paid timeline voids).
 - **Suppliers** — vendor **org-structure** desk: after the vendor pulse it
   shows a **region kanban** (EMEA / AMER / APAC) and a **multi-invoice supplier
   load** board over open AP, then a flat roster, bank refs, and recent invoices
@@ -177,4 +179,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:a6aad4d9df2d5a5b010244d52ab28c439a9bb1176533275e291916a8c92490af -->
+<!-- dazzle-spec-brief: sha256:bdaeebd1d35c541a54c2ca62fb0ff7f76446c30f15c4edf8dd190ccaaa56b14d -->
