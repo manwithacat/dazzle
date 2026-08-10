@@ -1,3 +1,9 @@
-{"id": "a1000000-0000-4000-8000-000000000003", "email": "admin@studio.test", "name": "Ada Admin", "role": "admin", "created_at": "2026-01-01T10:00:00"}
-{"id": "a1000000-0000-4000-8000-00000000000b", "email": "designer@studio.test", "name": "Priya Designer", "role": "designer", "created_at": "2026-01-01T10:00:00"}
-{"id": "a1000000-0000-4000-8000-00000000000c", "email": "reviewer@studio.test", "name": "Marcus Reviewer", "role": "reviewer", "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000003", "email": "admin@studio.test", "name": "Ada Admin", "role": "admin", "department": "Creative Ops", "job_title": "Studio Admin", "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-00000000000b", "email": "designer@studio.test", "name": "Priya Designer", "role": "designer", "department": "Brand Strategy", "job_title": "Brand Designer", "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-00000000000c", "email": "reviewer@studio.test", "name": "Marcus Reviewer", "role": "reviewer", "department": "Review QA", "job_title": "Review Lead", "created_at": "2026-01-01T10:00:00"}
+{"id": "b2000000-0000-4000-8000-000000000001", "email": "art.director@studio.test", "name": "Elena Art Director", "role": "designer", "department": "Creative Ops", "job_title": "Art Director", "created_at": "2026-01-02T09:00:00"}
+{"id": "b2000000-0000-4000-8000-000000000002", "email": "systems.lead@studio.test", "name": "Kai Systems", "role": "designer", "department": "Design Systems", "job_title": "Design Systems Lead", "created_at": "2026-01-02T09:15:00"}
+{"id": "b2000000-0000-4000-8000-000000000003", "email": "producer@studio.test", "name": "Sam Producer", "role": "designer", "department": "Creative Ops", "job_title": "Creative Producer", "created_at": "2026-01-02T09:30:00"}
+{"id": "b2000000-0000-4000-8000-000000000004", "email": "brand.strategist@studio.test", "name": "Nina Strategy", "role": "designer", "department": "Brand Strategy", "job_title": "Brand Strategist", "created_at": "2026-01-02T09:45:00"}
+{"id": "b2000000-0000-4000-8000-000000000005", "email": "systems.ic@studio.test", "name": "Owen Tokens", "role": "designer", "department": "Design Systems", "job_title": "Systems Designer", "created_at": "2026-01-02T10:00:00"}
+{"id": "b2000000-0000-4000-8000-000000000006", "email": "qa.reviewer@studio.test", "name": "Rita QA", "role": "reviewer", "department": "Review QA", "job_title": "QA Reviewer", "created_at": "2026-01-02T10:15:00"}

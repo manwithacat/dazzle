@@ -24,7 +24,10 @@ and `dazzle rbac prove` runs the formal check.
 **Brands and the people behind them.** A Brand is the organising anchor of the
 studio's work, recorded along with the User who created it. Users are the
 people working in the system — every brand, asset, and campaign can be traced
-back to its creator.
+back to its creator. Studio staff also carry department and job title so the
+**Team** desk can show Creative Ops / Design Systems / Brand Strategy / Review QA
+shape (title kanban + department queue) before a flat people dump — peer
+creative-ops tools (Figma, Adobe, Abstract, Frame.io) put org placement first.
 
 **Design assets under review.** A Design Asset is a piece of creative work that
 always belongs to a Brand and carries its creator. Each asset moves through an
@@ -84,6 +87,8 @@ records, and that grant is itself an explicit, auditable declaration.
 - **Publish Desk / Draft Studio / Review Pipeline / Active Campaigns** — secondary
   pressure desks keep pulse + work queues only (empty_region_honesty); no twin
   gallery/trail/status-bar thrash under the fold.
+- **Team** — org structure desk: studio staff by job title (kanban) and department
+  placement before flat roster and brand load (org_structure Goal B).
 
 ## How work flows through it
 
@@ -141,4 +146,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:117fb5cc6feee2bbbba154ced00fc0fe6ed406713158d043a046101646caaee9 -->
+<!-- dazzle-spec-brief: sha256:4b6ccc0fdd46db47ec5a00475bb7073429b8173602013ae3a453f7140a07693c -->

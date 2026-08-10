@@ -44,6 +44,7 @@ nav designer_nav:
     draft_studio
     review_pipeline
     active_campaigns
+    team_desk
 
 nav reviewer_nav:
   group "Review":
@@ -55,6 +56,7 @@ nav reviewer_nav:
     draft_studio
     review_pipeline
     active_campaigns
+    team_desk
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -64,6 +66,11 @@ entity User "User":
   email: str(200) unique required pii(category=contact)
   name: str(100) required pii(category=identity)
   role: enum[admin,designer,reviewer]=designer
+  # Goal B org_structure (cycle 1865): department + job title so Team desk shows
+  # Creative Ops / Design Systems / Brand Strategy / Review QA shape — not a flat
+  # persona-only roster (peer creative tools: Figma / Adobe / Abstract / Frame.io).
+  department: str(50)
+  job_title: str(80)
   created_at: datetime auto_add
 
   permit:
@@ -794,6 +801,89 @@ workspace active_campaigns "Active Campaigns":
     action: campaign_edit
     empty: "No active campaigns"
 
+# Goal B org_structure (cycle 1865): peer creative-ops tools (Figma / Adobe /
+# Abstract / Frame.io / Bynder) show studio staff by discipline and department
+# before a flat people dump — admins reassign and reviewers find owners from
+# org shape, not a three-row persona roster.
+workspace team_desk "Team":
+  purpose: "Org structure for the studio — title and department before flat roster and brand load"
+  access: persona(admin, designer, reviewer)
+
+  team_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      people: count(User)
+      brands: count(Brand)
+      in_review: count(Asset where status = review)
+    tones:
+      people: accent
+      in_review: warning
+
+  # Title board — Studio Admin / Art Director / Brand Designer / …
+  by_title:
+    source: User
+    display: kanban
+    group_by: job_title
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No titled studio staff yet"
+
+  # Department placement — Creative Ops / Design Systems / Brand Strategy / Review QA.
+  by_department:
+    source: User
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No staff placed in departments yet"
+
+  # Secondary flat roster (after hierarchy).
+  people:
+    source: User
+    display: queue
+    sort: department asc, name asc
+    limit: 25
+    action: user_detail
+    empty: "No users yet"
+
+  # Brand load after org shape — who owns brands, not before hierarchy.
+  brand_load:
+    source: Brand
+    sort: name asc
+    limit: 15
+    display: queue
+    action: brand_detail
+    empty: "No brands yet"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By title board"
+        caption: "Art Director / Brand Designer / Systems Lead / Reviewer columns show who can act"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "Creative Ops / Design Systems / Brand Strategy / Review QA before flat roster"
+        icon: "building-2"
+        state: positive
+      - title: "Brand load last"
+        caption: "Brand hubs after you read org shape"
+        icon: "palette"
+        state: warning
+
+  ux:
+    as admin:
+      purpose: "See studio staff by title and department before brand load"
+      focus: team_pulse, by_title, by_department, people
+    as designer:
+      purpose: "Org structure for creative ops — role board then department"
+      focus: team_pulse, by_title, by_department, people
+    as reviewer:
+      purpose: "Read team org shape before brand and review pressure"
+      focus: team_pulse, by_title, by_department, people
+
 
 surface brand_list "Brands":
   uses entity Brand
@@ -858,6 +948,22 @@ surface brand_detail "Brand Detail":
   ux:
     purpose: "Brand hub — logo, palette strip, assets, campaigns, and design documents"
 
+# Org roster for Team desk + dual-open creator hubs (Brand|User via created_by).
+surface user_list "Team":
+  uses entity User
+  mode: list
+  section main:
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field job_title "Job Title"
+    field department "Department"
+  ux:
+    purpose: "Browse studio staff by title and department"
+    sort: department asc, name asc
+    filter: department, job_title, role
+    search: name, email, department, job_title
+
 # Creator hub for brand_list dual-open (Brand|User via created_by) — ST-001 acceptance dig.
 surface user_detail "Team member":
   uses entity User
@@ -866,6 +972,8 @@ surface user_detail "Team member":
     field name "Name"
     field email "Email"
     field role "Role"
+    field job_title "Job Title"
+    field department "Department"
   section timeline "Timeline":
     field created_at "Joined"
   related brands "Brands authored":
@@ -874,7 +982,7 @@ surface user_detail "Team member":
     columns: name, logo_url, primary_color
 
   ux:
-    purpose: "Team member — brands authored with logo and palette chips"
+    purpose: "Team member — org placement, brands authored with logo and palette chips"
 
 surface asset_list "Assets":
   uses entity Asset
