@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B empty_region_honesty — acme_billing primary desks (cycle 1828)."""
+"""Post-5.8 Goal B empty_region_honesty — acme_billing desks (cycle 1828 + 1853)."""
 
 from __future__ import annotations
 
@@ -28,11 +28,13 @@ def test_billing_omits_membership_mix_under_fold() -> None:
     assert "composition:" in block
     assert "live_conversation:" in block
     assert "membership_mix:" not in block
-    assert "display: bar_chart" not in block
+    # Focus spine stays chart-free; bar_chart coverage may sit under fold.
     assert (
         "focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation"
         in block
     )
+    assert "invoice_by_project" not in block.split("focus:")[1].split("\n")[0]
+    assert "sensitive_share" not in block.split("focus:")[1].split("\n")[0]
 
 
 def test_my_work_omits_chart_and_membership_timeline() -> None:
@@ -99,8 +101,47 @@ def test_orgs_home_omits_project_trail_and_load_chart() -> None:
     assert "display: timeline" not in block
 
 
-def test_acme_billing_keeps_bar_chart_on_secondary_desks() -> None:
-    """Hero prune must not leave display: bar_chart fleet-uncovered in this app."""
+def test_sensitive_review_omits_trail_and_load_bar() -> None:
+    """Sensitivity desk: pulse + queue + project cards — not trail/bar thrash."""
+    block = _workspace_block("sensitive_review")
+    assert "sensitivity_pulse:" in block
+    assert "sensitive_queue:" in block
+    assert "project_cards:" in block
+    assert "invoice_trail:" not in block
+    assert "project_invoice_load:" not in block
+    assert "display: bar_chart" not in block
+    assert "display: timeline" not in block
+
+
+def test_public_billing_omits_trail_and_load_bar() -> None:
+    """Public desk: pulse + queue + project cards — not trail/bar thrash."""
+    block = _workspace_block("public_billing")
+    assert "public_pulse:" in block
+    assert "public_queue:" in block
+    assert "project_cards:" in block
+    assert "public_trail:" not in block
+    assert "project_load:" not in block
+    assert "display: bar_chart" not in block
+    assert "display: timeline" not in block
+
+
+def test_org_pulse_omits_people_trail_and_project_mix() -> None:
+    """Org pulse: metrics + org/project queues — not people timeline / mix bar."""
+    block = _workspace_block("org_pulse")
+    assert "pulse_metrics:" in block
+    assert "org_queue:" in block
+    assert "project_cards:" in block
+    assert "people_trail:" not in block
+    assert "project_mix:" not in block
+    assert "display: bar_chart" not in block
+    assert "display: timeline" not in block
+
+
+def test_acme_billing_hosts_bar_chart_coverage_under_billing() -> None:
+    """Secondary prune must not leave display: bar_chart uncovered in this app."""
+    block = _workspace_block("billing")
+    assert "invoice_by_project:" in block
+    assert "sensitive_share:" in block
+    assert block.count("display: bar_chart") >= 2
     text = SURFACES.read_text()
-    assert "display: bar_chart" in text
     assert text.count("display: bar_chart") >= 2

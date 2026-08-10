@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices
 
 **Source:** `/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md`
-**Fingerprint:** `d179e4aceb2e6883`
+**Fingerprint:** `7be3dea3f6c4b0de`
 
 ## Personas (jobs)
 
@@ -25,7 +25,7 @@
 
 ## Rejected chrome (not domain)
 
-`Acme`, `Acros`, `Administrator`, `Appear`, `Auditor`, `Beyond`, `Invoices`, `JavaScript`, `Op`, `Projects`, `assignment`, `auditable`, `boundary`, `break`, `command`, `contractor`, `data`, `declared`, `formal`, `framework`, `given`, `limited`, `live`, `matrix`, `mature`, `multi`, `person`, `product`, `read`, `record`, `review`, `rules`, `sensitive`, `signed`, `skeptic`, `technical`, `tenancy`, `visibility`, `work`
+`Acme`, `Acros`, `Administrator`, `Appear`, `Auditor`, `Beyond`, `Invoices`, `JavaScript`, `Op`, `Projects`, `assignment`, `auditable`, `boundary`, `break`, `command`, `contractor`, `data`, `declared`, `document`, `fold`, `formal`, `framework`, `given`, `informal`, `limited`, `live`, `matrix`, `mature`, `multi`, `person`, `product`, `pulse`, `read`, `record`, `review`, `rules`, `sensitive`, `signed`, `skeptic`, `technical`, `tenancy`, `visibility`, `work`
 
 ## Desks
 
@@ -42,6 +42,7 @@
 ## Open questions
 
 - `q1`: Can an invoice have multiple projects, or just one?
+- `q2`: Can a project have multiple invoices, or just one?
 
 ## Process candidates (hypothesis)
 
@@ -64,7 +65,7 @@
   "title": "Acme Billing \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices",
   "source_path": "/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md",
-  "source_sha256": "d179e4aceb2e6883",
+  "source_sha256": "7be3dea3f6c4b0de",
   "personas": [
     {
       "id_hint": "auditor",
@@ -185,6 +186,11 @@
       "id": "q1",
       "text": "Can an invoice have multiple projects, or just one?",
       "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a project have multiple invoices, or just one?",
+      "blocks_promote": false
     }
   ],
   "process_candidates": [
@@ -235,9 +241,12 @@
     "contractor",
     "data",
     "declared",
+    "document",
+    "fold",
     "formal",
     "framework",
     "given",
+    "informal",
     "limited",
     "live",
     "matrix",
@@ -245,6 +254,7 @@
     "multi",
     "person",
     "product",
+    "pulse",
     "read",
     "record",
     "review",

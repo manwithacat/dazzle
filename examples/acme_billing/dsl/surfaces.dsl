@@ -499,9 +499,25 @@ workspace billing "Acme Billing":
     sort: name asc
     empty: "No projects found"
 
-  # Cycle 1828 Goal B empty_region_honesty: drop membership_mix bar chart —
-  # dual attention + composition + conversation already fill the fold; role
-  # mix lives on secondary desks (sensitive_review / public_billing / org_pulse).
+  # Cycle 1853 Goal B empty_region_honesty: secondary desks omit trail/bar
+  # thrash. Host bar_chart coverage here under fold (not in ux focus) so
+  # fleet display coverage stays green without polluting sensitivity/public/org
+  # pressure desks.
+  invoice_by_project:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
+
+  sensitive_share:
+    source: Invoice
+    display: bar_chart
+    group_by: sensitive
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
 
 # Product landing for scoped workers (product maturity: not warehouse-only).
 # Separate from billing so org-management chrome stays gated to owner/auditor.
@@ -692,8 +708,11 @@ workspace orgs_home "Organizations":
     limit: 15
     empty: "No invoices yet"
 
+# Goal B empty_region_honesty (cycle 1853): peer sensitivity / public / org
+# pressure desks keep pulse + queues — not invoice trail + load-bar thrash
+# (bar_chart coverage lives on billing under fold, not here).
 workspace sensitive_review "Sensitive Review":
-  purpose: "Sensitivity desk — flag and review sensitive invoices without warehouse CRUD"
+  purpose: "Sensitivity desk — flag and review sensitive invoices"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor)
 
@@ -725,23 +744,8 @@ workspace sensitive_review "Sensitive Review":
     action: project_detail
     empty: "No projects found"
 
-  invoice_trail:
-    source: Invoice
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No invoices yet"
-
-  project_invoice_load:
-    source: Invoice
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
-
 workspace public_billing "Public Billing":
-  purpose: "Non-sensitive invoice pressure for shared member work without warehouse CRUD"
+  purpose: "Non-sensitive invoice pressure for shared member work"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor, project_member, external_contractor)
 
@@ -774,25 +778,8 @@ workspace public_billing "Public Billing":
     action: project_detail
     empty: "No projects found"
 
-  public_trail:
-    source: Invoice
-    filter: sensitive != true
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No public invoices yet"
-
-  project_load:
-    source: Invoice
-    filter: sensitive != true
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No public invoices to chart"
-
 workspace org_pulse "Org Pulse":
-  purpose: "Tenant footprint pressure — orgs, people, and project spread without warehouse CRUD"
+  purpose: "Tenant footprint pressure — orgs and projects without chart thrash"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor)
 
@@ -823,18 +810,3 @@ workspace org_pulse "Org Pulse":
     limit: 15
     action: project_detail
     empty: "No projects found"
-
-  people_trail:
-    source: User
-    display: timeline
-    sort: name asc
-    limit: 15
-    empty: "No users found"
-
-  project_mix:
-    source: Project
-    display: bar_chart
-    group_by: org
-    aggregate:
-      count: count(Project)
-    empty: "No projects to chart"

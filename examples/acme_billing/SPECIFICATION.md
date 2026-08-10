@@ -94,8 +94,12 @@ warehouse:
 - **Membership Ops** — access desk: membership metrics, roster grid, project
   queue, people trail, and role mix chart.
 - **Sensitive Review** — owner/auditor sensitivity desk: sensitive metrics,
-  sensitive queue, project cards, invoice trail, and project load chart
-  (secondary desk retains bar chart for fleet coverage).
+  sensitive queue, and project cards only (no invoice trail / load-bar thrash).
+- **Public Billing** — non-sensitive invoice pressure for shared members:
+  public pulse, public queue, and project cards (no public trail / load bar).
+- **Org Pulse** — tenant footprint: org metrics, org queue, and project cards
+  (no people timeline / project-mix bar). Chart coverage for display dogfood
+  lives under fold on **Acme Billing** (not in the multi-panel focus spine).
 
 ## How work flows through it
 
@@ -149,4 +153,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:d2a965664362ef28689a4b51f4522097806607738b2fe89eb91ed455d41a949b -->
+<!-- dazzle-spec-brief: sha256:f1d94ac49e6ced94f8c3fdbf54c35352233b5aea07e403e71ae5feefc3b70f80 -->
