@@ -37,7 +37,7 @@ def test_home_caps_attention_queues_for_fold_share() -> None:
     # Caps keep dual panels + composition + conversation sharing the fold.
     assert "limit: 4" in block
     assert (
-        "focus: directory_stats, engagement_docs, favourite_contacts, composition, "
+        "focus: media_shelf, directory_stats, engagement_docs, favourite_contacts, composition, "
         "live_conversation, practice_context" in block
     )
     assert "Multi-panel CRM" in block or "multi-panel" in block.lower()

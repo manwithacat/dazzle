@@ -29,7 +29,7 @@ def test_home_omits_company_chart_theater() -> None:
     assert "company_contacts:" not in block
     assert "bar_chart" not in block
     assert (
-        "focus: directory_stats, engagement_docs, favourite_contacts, composition, "
+        "focus: media_shelf, directory_stats, engagement_docs, favourite_contacts, composition, "
         "live_conversation, practice_context" in block
     )
 
@@ -40,7 +40,8 @@ def test_contacts_drops_favorite_kanban_theater() -> None:
     assert "contact_list:" in block
     assert "favorite_board:" not in block
     assert "display: kanban" not in block
-    assert "focus: favourites_queue, contact_list, contact_detail" in block
+    # Goal B media (cycle 1882): headshot shelf first, then favourites + dual-pane
+    assert "focus: media_shelf, favourites_queue, contact_list, contact_detail" in block
 
 
 def test_companies_drops_empty_bar_chart() -> None:

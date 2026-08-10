@@ -73,6 +73,9 @@ entity Contact "Contact":
   job_title: str(150)
   notes: text pii(category=freeform)
   is_favorite: bool=false
+  # Goal B media: HTTPS headshot on Contacts media shelf (peer HubSpot / Attio /
+  # Salesforce put faces on the directory — not name-only A–Z theater).
+  photo_url: url
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
@@ -83,7 +86,7 @@ entity Contact "Contact":
   index last_name,first_name
 
   fitness:
-    repr_fields: [first_name, last_name, email, company, is_favorite]
+    repr_fields: [first_name, last_name, email, company, is_favorite, photo_url]
 
 # Goal B conversation: peer CRM tools (HubSpot / Attio / Affinity) show
 # relationship notes as the row identity on the home desk — not only
@@ -116,6 +119,7 @@ surface contact_list "Contacts":
     field phone "Phone"
     field company "Company"
     field job_title "Job Title"
+    field photo_url "Photo"
     field is_favorite "Favorite"
 
   ux:
@@ -136,6 +140,7 @@ surface contact_detail "Contact Detail":
     field last_name "Last Name"
     field email "Email"
     field phone "Phone"
+    field photo_url "Photo"
 
   section employment "Employment":
     layout: strip
@@ -185,6 +190,7 @@ surface contact_create "Create Contact":
 
   section extras "Additional Info":
     field notes "Notes"
+    field photo_url "Photo URL"
 
   ux:
     purpose: "Add a new contact — name plus email or phone (at least one channel)"
@@ -209,6 +215,7 @@ surface contact_edit "Edit Contact":
 
   section extras "Additional Info":
     field notes "Notes"
+    field photo_url "Photo URL"
     # HM Switch — boolean settings / favorite on-off (boolean_settings_switch)
     field is_favorite "Favorite" widget=switch
 
@@ -275,13 +282,23 @@ search on Contact:
 # Goal B document depth: named engagement letters above fold (composition),
 # not only directory metrics + empty letter chrome.
 workspace home "Home":
-  # Goal B command_density (cycle 1830): peer CRM homes (HubSpot / Salesforce)
-  # put directory pulse + dual attention (who to call + letters in flight) above
-  # the note trail — not conversation owning the fold alone. Conversation stays,
-  # capped to share fold after dual queues + document composition.
+  # Goal B media + command_density: peer CRM homes (HubSpot / Attio / Salesforce)
+  # put headshot thumbs first, then directory pulse + dual attention (who to call
+  # + letters in flight) above the note trail — not conversation owning the fold.
   # Also holds document + empty_region_honesty (no company bar / twin dumps).
-  purpose: "Multi-panel CRM — directory pulse, favourites to call, open letters, then relationship notes"
+  purpose: "Multi-panel CRM — headshot shelf, directory pulse, favourites, open letters, then notes"
   access: persona(user, admin)
+
+  # Goal B media FIRST — CRM home is a people shelf (photo_url thumbs).
+  # Cap 2 so dual attention + docs share the above-fold command dens.
+  media_shelf:
+    source: Contact
+    filter: is_favorite = true
+    display: grid
+    sort: last_name asc, first_name asc
+    limit: 2
+    action: contact_detail
+    empty: "No favourite headshots yet — star contacts and set photo URLs"
 
   directory_stats:
     source: Contact
@@ -343,7 +360,7 @@ workspace home "Home":
     source: Contact
     sort: last_name asc, first_name asc
     limit: 8
-    # Home "who to call" is pull-next, not a photo grid.
+    # Recents stay pull-next cards — faces live on media_shelf above.
     display: queue
     action: contact_detail
     empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
@@ -352,6 +369,10 @@ workspace home "Home":
   practice_context:
     display: status_list
     entries:
+      - title: "Media shelf"
+        caption: "Favourite headshots open contact hubs above the fold"
+        icon: "image"
+        state: accent
       - title: "Dual attention"
         caption: "Favourites to call and letters in flight share the fold"
         icon: "layout-dashboard"
@@ -374,18 +395,20 @@ workspace home "Home":
 
   ux:
     as user:
-      purpose: "Multi-panel CRM — directory pulse, dual attention, letters, then notes"
-      # Goal B command_density: metrics → dual queues → conversation (no chart voids)
-      focus: directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
+      purpose: "Multi-panel CRM — headshots, directory pulse, dual attention, letters, then notes"
+      # Goal B media + command_density: faces → metrics → dual queues → conversation
+      focus: media_shelf, directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
     as admin:
-      purpose: "Full practice home — multi-panel attention before conversation trail"
-      focus: directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
+      purpose: "Full practice home — headshots then multi-panel attention before conversation trail"
+      focus: media_shelf, directory_stats, engagement_docs, favourite_contacts, composition, live_conversation, practice_context
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
   # #1626 P0-7: dual_pane_flow stage selects list+detail layout when the shell
   # supports it; captures may still show list-primary if selection is empty.
-  purpose: "Browse contacts (list + detail hub) — favourites strip and A–Z directory"
+  # Goal B media (cycle 1882): peer CRM directories (HubSpot / Attio / Salesforce)
+  # put headshot thumbs above the A–Z list — faces first, not name-only theater.
+  purpose: "Browse contacts — media shelf first, then favourites strip and A–Z dual-pane"
   access: persona(user, admin)
   stage: "dual_pane_flow"
 
@@ -395,6 +418,16 @@ workspace contacts "Contacts":
   # (panels type into #dz-search-results-*-input and expect the directory to
   # shrink). Home keeps find_contact FTS for overview lookup; dual_pane uses
   # one mental model — type in the list filter, rows shrink in place.
+
+  # Goal B media FIRST — directory is a people shelf (photo_url thumbs).
+  # Cap 6 so dual-pane list+detail still share the fold after faces.
+  media_shelf:
+    source: Contact
+    display: grid
+    sort: last_name asc, first_name asc
+    limit: 6
+    action: contact_detail
+    empty: "No headshots yet — add photo URLs on contacts"
 
   # Favourites strip above the A–Z list (ST-007).
   favourites_queue:
@@ -424,11 +457,11 @@ workspace contacts "Contacts":
 
   ux:
     as user:
-      purpose: "Favourites strip then A–Z dual-pane — no kanban theater under the list"
-      focus: favourites_queue, contact_list, contact_detail
+      purpose: "Headshot shelf then favourites and A–Z dual-pane — faces before name theater"
+      focus: media_shelf, favourites_queue, contact_list, contact_detail
     as admin:
-      purpose: "Favourites strip then A–Z dual-pane directory"
-      focus: favourites_queue, contact_list, contact_detail
+      purpose: "Headshot shelf then favourites and A–Z dual-pane directory"
+      focus: media_shelf, favourites_queue, contact_list, contact_detail
 
 # Third product workspace: org structure for CRM relationships.
 workspace companies "Companies":

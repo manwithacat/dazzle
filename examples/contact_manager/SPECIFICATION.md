@@ -29,15 +29,17 @@ for overview, then **Contacts** for dual-pane browse.
 
 ## Where work happens
 
-**Home** is the multi-panel CRM overview (command density + empty-region honesty):
-directory metrics and engagement-document pulse first, then dual attention —
+**Home** is the multi-panel CRM overview (Goal B media + command density +
+empty-region honesty): a **media shelf** of favourite headshot thumbs first,
+then directory metrics and engagement-document pulse, then dual attention —
 **favourites to call** and a **composition** queue of named open letters (draft
 and sent) — then a **live relationship-notes** trail rendered as Message/Bubble
 conversation chrome (not a meta queue of note rows), an always-filled practice
 context strip, and search — without company bar-chart voids or twin company dumps.
-**Contacts** is the dual-pane browse surface: a favourites queue strip, the full
-contact list, and a detail panel for the selected contact (no favourite kanban
-theater under the list).
+**Contacts** is the dual-pane browse surface: a **media shelf** of contact
+headshot thumbs first (Goal B media — faces before name theater), then a
+favourites queue strip, the full contact list, and a detail panel for the
+selected contact (no favourite kanban theater under the list).
 **Companies** is the CRM **org-structure** desk: after the directory pulse it
 shows a **job-title kanban** (Account Manager / Sales Director / Engineering /
 …) and a **company placement** queue over multi-person accounts, then a flat
@@ -96,4 +98,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:7d82d4e94434887e34a10ba0ef090dbaacf1f7b0cb9091a58869793ac8b11394 -->
+<!-- dazzle-spec-brief: sha256:b489ef620ec3c78fc3303d2aeafce6af9b91aeffba27d927294e23544602dbd7 -->

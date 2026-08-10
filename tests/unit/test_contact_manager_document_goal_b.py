@@ -37,7 +37,7 @@ def test_home_declares_composition_after_dual_attention() -> None:
     assert block.index("favourite_contacts:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: directory_stats, engagement_docs, favourite_contacts, composition, "
+        "focus: media_shelf, directory_stats, engagement_docs, favourite_contacts, composition, "
         "live_conversation, practice_context" in block
     )
 
