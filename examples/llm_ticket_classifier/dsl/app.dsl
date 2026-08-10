@@ -218,6 +218,49 @@ entity SupportStaff "Support Staff":
   fitness:
     repr_fields: [name, email, role, department, job_title, status]
 
+# Goal B document composition (cycle 1876): peer AI support tools (Zendesk /
+# Intercom / Freshdesk / Gorgias) show named case briefs, macros, and SLA notes
+# on the triage home before the AI reply trail — not conversation-only fold thrash.
+entity TicketDocument "Ticket Document":
+  intent: "A named support document on a Ticket — case brief, macro, SLA note, escalation plan, or resolution letter buyers scan above the AI reply trail"
+  domain: support
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  ticket: ref Ticket required
+  headline: str(200) required
+  doc_kind: enum[case_brief, macro, sla_note, escalation_plan, resolution]=case_brief
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  # Domain residual status∄transitions: support briefs publish then archive.
+  transitions:
+    draft -> published: role(admin) or role(supervisor)
+    published -> archived: role(admin) or role(supervisor)
+    draft -> archived: role(admin) or role(supervisor)
+    published -> draft: role(admin) or role(supervisor)
+
+  permit:
+    create: role(admin) or role(supervisor) or role(support_agent)
+    read: role(admin) or role(supervisor) or role(support_agent)
+    update: role(admin) or role(supervisor) or role(support_agent)
+    list: role(admin) or role(supervisor) or role(support_agent)
+
+  scope:
+    list: all
+      as: admin, supervisor, support_agent
+    read: all
+      as: admin, supervisor, support_agent
+    create: all
+      as: admin, supervisor, support_agent
+    update: all
+      as: admin, supervisor, support_agent
+
+  fitness:
+    repr_fields: [ticket, headline, doc_kind, status, author]
+
 
 # =============================================================================
 # Surfaces
@@ -276,6 +319,12 @@ surface ticket_detail "Ticket Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  # Goal B document: named case briefs / macros on the ticket hub.
+  related documents "Documents":
+    display: queue
+    show: TicketDocument
+    columns: headline, doc_kind, status, author
+
   # Ticket hub AI trail — suggested reply first (Goal B conversation), then
   # triage badges — ST-002 support-agent hub path (cycle 1504 journey_dogfood).
   related classifications "AI Classifications":
@@ -284,7 +333,7 @@ surface ticket_detail "Ticket Detail":
     columns: suggested_response, category, priority, sentiment, classified_at
 
   ux:
-    purpose: "Ticket hub — lifecycle strip and AI reply trail with triage labels"
+    purpose: "Ticket hub — lifecycle strip, case documents, and AI reply trail with triage labels"
 
 surface classification_list "Classifications":
   uses entity TicketClassification
@@ -370,6 +419,68 @@ surface staff_create "Add Team Member":
   ux:
     purpose: "Add a support staff row with title and department placement"
 
+# TicketDocument surfaces (Goal B document composition)
+surface ticket_document_list "Ticket Documents":
+  uses entity TicketDocument
+  mode: list
+  # Dual open: document hub first; parent Ticket hub second.
+  open: TicketDocument via id | Ticket via ticket
+  section main:
+    field headline "Headline"
+    field ticket "Ticket"
+    field doc_kind "Kind"
+    field status "Status"
+    field author "Author"
+    field created_at "Created"
+  ux:
+    purpose: "Scan case briefs and macros — open a row for the document or parent ticket"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body, author
+    empty: "No ticket documents yet — attach a case brief or macro on a ticket hub"
+
+surface ticket_document_detail "Ticket Document":
+  uses entity TicketDocument
+  mode: view
+  section summary "Document":
+    field headline "Headline"
+    field ticket "Ticket"
+    field doc_kind "Kind"
+    field author "Author"
+  section lifecycle "Lifecycle":
+    layout: strip
+    field status "Status"
+    field created_at "Created"
+  section body "Body":
+    field body "Body"
+  ux:
+    purpose: "Ticket document hub — named letter, lifecycle strip, parent ticket, and body in one place"
+
+surface ticket_document_create "Add Ticket Document":
+  uses entity TicketDocument
+  mode: create
+  section main "New document":
+    field ticket "Ticket"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+    field status "Status"
+    field author "Author"
+  ux:
+    purpose: "Attach a named case brief, macro, or SLA note to a ticket"
+
+surface ticket_document_edit "Edit Ticket Document":
+  uses entity TicketDocument
+  mode: edit
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+    field status "Status"
+    field author "Author"
+  ux:
+    purpose: "Update ticket document headline, kind, or status"
+
 
 # =============================================================================
 # Workspaces
@@ -381,10 +492,10 @@ surface staff_create "Add Team Member":
 # homes put high-severity triage + open pressure above the AI reply trail —
 # multi-panel attention, not conversation-only / flat queue thrash above fold.
 workspace support_dashboard "Support Dashboard":
-  # Goal B empty_region_honesty (cycle 1800): peer AI triage homes (Zendesk AI /
-  # Intercom Fin) keep multi-panel attention + AI reply trail — not a second
-  # open-board kanban and status bar chart that restate metrics as empty theater.
-  purpose: "Multi-panel AI triage — metrics, dual attention, live AI replies, readiness"
+  # Goal B empty_region_honesty (cycle 1800) + document (cycle 1876): peer AI
+  # triage homes keep multi-panel attention, named case documents, then AI reply
+  # trail — not a second open-board kanban / status chart restating metrics.
+  purpose: "Multi-panel AI triage — metrics, dual attention, case documents, live AI replies"
   stage: "command_center"
   access: persona(supervisor, support_agent, admin)
 
@@ -395,16 +506,16 @@ workspace support_dashboard "Support Dashboard":
       open: count(Ticket where status = open)
       high_severity: count(TicketClassification where priority = high or priority = critical)
       classified: count(TicketClassification)
-      in_progress: count(Ticket where status = in_progress)
+      documents: count(TicketDocument)
       conversation: count(TicketClassification)
     tones:
       open: warning
       high_severity: destructive
       classified: positive
-      in_progress: accent
+      documents: accent
       conversation: accent
 
-  # Dual attention (fold share with capped AI reply trail).
+  # Dual attention (fold share with documents + capped AI reply trail).
   high_severity:
     source: TicketClassification
     filter: priority = high or priority = critical
@@ -423,8 +534,18 @@ workspace support_dashboard "Support Dashboard":
     action: ticket_detail
     empty: "No open tickets"
 
-  # Goal B conversation spine AFTER dual attention — Message/Bubble chrome
-  # for AI suggested replies (display_field: suggested_response).
+  # Goal B document composition AFTER dual attention — named case briefs /
+  # macros so hero stills read as documents before the AI reply trail.
+  composition:
+    source: TicketDocument
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: ticket_document_detail
+    empty: "No ticket documents yet — attach a case brief or macro on a ticket hub"
+
+  # Goal B conversation spine AFTER dual attention + documents — Message/Bubble
+  # chrome for AI suggested replies (display_field: suggested_response).
   live_ai_replies:
     source: TicketClassification
     sort: classified_at desc
@@ -469,14 +590,14 @@ workspace support_dashboard "Support Dashboard":
 
   ux:
     as supervisor:
-      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
+      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
+      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
     as support_agent:
-      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
+      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
+      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
     as admin:
-      purpose: "Multi-panel AI triage — dual attention and AI replies, no empty chart theater"
-      focus: classification_metrics, high_severity, open_attention, live_ai_replies, triage_readiness
+      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
+      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
 
 workspace ticket_management "Ticket Management":
   # Goal B empty_region_honesty: one open worklist + AI trail — not open_only twin

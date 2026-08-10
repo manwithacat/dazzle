@@ -8,9 +8,11 @@ independently verified with the command shown beside it.*
 The Support Ticket Classifier is a support-operations system that pairs a human
 support team with declared, AI-assisted analysis. It manages support tickets,
 the AI-produced classification attached to each ticket, priority assessment
-results, and support staff org placement (department + job title on the Team
-desk) — so agents handle the work while supervisors watch both the ticket flow,
-staffing shape, and how well the AI is performing.
+results, named ticket documents (case briefs, macros, SLA notes, escalation
+plans, resolution letters), and support staff org placement (department + job
+title on the Team desk) — so agents handle the work while supervisors watch
+ticket flow, document composition, staffing shape, and how well the AI is
+performing.
 
 What sets it apart is how the AI is wired in: every AI-assisted step — ticket
 classification, priority assessment, sentiment analysis, response suggestion —
@@ -38,8 +40,13 @@ desk can show agents by title kanban and department placement (Frontline Support
 Staff status moves onboarding → active → offboarded under supervisor/admin
 control (rehire and re-onboarding paths included).
 
-Tickets can be browsed and inspected in detail, and classifications can be
-browsed alongside them, through dedicated screens plus the Team org desk.
+**Ticket Document.** A named letter on a ticket — case brief, macro, SLA note,
+escalation plan, or resolution letter — so the Support Dashboard and ticket hubs
+surface composition before AI reply notes. Documents attach to a specific ticket
+and move draft → published → archived under agent and supervisor control.
+
+Tickets can be browsed and inspected in detail, and classifications and documents
+can be browsed alongside them, through dedicated screens plus the Team org desk.
 
 ## Who uses it
 
@@ -54,8 +61,9 @@ browsed alongside them, through dedicated screens plus the Team org desk.
 ## Where work happens
 
 **Support Dashboard** — supervisor home: classification metrics, dual
-attention (high-severity + open), live AI replies, utility queues, and a
-readiness strip — no secondary open-board kanban or status bar chart.
+attention (high-severity + open), ticket document composition, live AI replies,
+utility queues, and a readiness strip — no secondary open-board kanban or status
+bar chart.
 
 **Ticket Management** — agent home: pulse metrics, AI reply trail, one open
 worklist, classification trail, and readiness — no twin open-only queue,
@@ -78,7 +86,8 @@ not free prose):
 - When a **Support Agent** works the open ticket queue, they see tickets sorted
   by age with a status filter, and opening a row hops to the ticket hub.
 - When a **Support Agent** opens a ticket hub, they see the summary, a lifecycle
-  strip for status, and the related AI classifications for that ticket.
+  strip for status, related ticket documents, and the related AI classifications
+  for that ticket.
 - When a **Support Supervisor** reviews the classification trail, opening a
   classification row hops back to the parent ticket hub so AI labels never
   float free of the work item.
@@ -135,4 +144,6 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:fffada54d8cd4cb9d546ba9c03d253d59f4c738cb0b7daa8f8f1ccf335c3a75a -->
+**Ticket Document lifecycle.** Ticket Documents move draft → published → archived under agent and supervisor control (supervisors may return published to draft).
+
+<!-- dazzle-spec-brief: sha256:7b5e1e3f12da5cc20e6d7b49ed771cc6648fcaa90275487b7f9a81564c7b4f96 -->

@@ -20,10 +20,11 @@ def _workspace_block(name: str) -> str:
 
 
 def test_support_dashboard_omits_status_board_and_chart_theater() -> None:
-    """Peer AI triage home: dual attention + replies, not open kanban / status bar."""
+    """Peer AI triage home: dual attention + docs + replies, not open kanban / status bar."""
     block = _workspace_block("support_dashboard")
     assert "high_severity:" in block
     assert "open_attention:" in block
+    assert "composition:" in block
     assert "live_ai_replies:" in block
     assert "triage_readiness:" in block
     assert "open_board:" not in block
@@ -31,7 +32,8 @@ def test_support_dashboard_omits_status_board_and_chart_theater() -> None:
     assert "priority_strip:" not in block
     assert "display: kanban" not in block
     assert "display: bar_chart" not in block
-    assert "no empty chart theater" in block.lower() or "no empty" in block.lower()
+    # Purpose language may cite documents; still no chart theater.
+    assert "multi-panel" in block.lower() or "case documents" in block.lower()
 
 
 def test_ticket_management_drops_twin_queues_and_priority_chart() -> None:
@@ -53,8 +55,9 @@ def test_ticket_management_drops_twin_queues_and_priority_chart() -> None:
 
 
 def test_command_density_spine_still_first() -> None:
-    """Empty-region prune must not reorder dual attention before conversation."""
+    """Empty-region prune must not reorder dual attention → docs → conversation."""
     block = _workspace_block("support_dashboard")
     assert block.index("high_severity:") < block.index("open_attention:")
-    assert block.index("open_attention:") < block.index("live_ai_replies:")
+    assert block.index("open_attention:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_ai_replies:")
     assert block.index("live_ai_replies:") < block.index("triage_readiness:")
