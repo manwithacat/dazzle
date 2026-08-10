@@ -292,6 +292,45 @@ entity IssueNote "Issue Note":
     repr_fields: [issue, author, body]
 
 
+
+
+# Goal B document composition: named test briefs/protocols buyers scan above triage notes.
+entity TestDocument "Test Document":
+  intent: "A named field-test document — brief, protocol, acceptance criteria, field plan, or decision log buyers scan above the triage discussion trail"
+  domain: quality
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  device: ref Device required
+  headline: str(200) required
+  doc_kind: enum[brief, protocol, acceptance_criteria, field_plan, decision]=brief
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    list: role(engineer) or role(manager) or role(tester) or role(admin)
+    read: role(engineer) or role(manager) or role(tester) or role(admin)
+    create: role(engineer) or role(manager) or role(admin)
+    update: role(engineer) or role(manager) or role(admin)
+    delete: role(engineer) or role(admin)
+
+  scope:
+    list: all
+      as: engineer, manager, tester, admin
+    read: all
+      as: engineer, manager, tester, admin
+    create: all
+      as: engineer, manager, admin
+    update: all
+      as: engineer, manager, admin
+    delete: all
+      as: engineer, admin
+
+  fitness:
+    repr_fields: [device, headline, doc_kind, status, author]
+
 # Entity: TestSession
 entity TestSession "Test Session":
   intent: "A logged episode of hands-on testing on a specific Device by a Tester, capturing duration, conditions, and observations"
@@ -535,8 +574,14 @@ surface device_detail "Device Detail":
     show: TestSession
     columns: environment, duration_minutes, logged_at
 
+  # Goal B document: named briefs / protocols on the device hub.
+  related documents "Documents":
+    display: queue
+    show: TestDocument
+    columns: headline, doc_kind, status, author
+
   ux:
-    purpose: "Device hub — production strip, assignment, issue queue, and session queue"
+    purpose: "Device hub — production strip, assignment, issues, sessions, and test documents"
 
     as engineer:
       scope: all
@@ -1165,6 +1210,75 @@ surface task_edit "Edit Task":
     as engineer:
       scope: all
 
+
+# TestDocument surfaces (Goal B document composition)
+surface test_document_list "Test Documents":
+  uses entity TestDocument
+  mode: list
+  render: fragment
+  open: TestDocument via id | Device via device
+
+  section main "Documents":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field device "Device"
+    field status "Status"
+    field author "Author"
+    field created_at "When"
+
+  ux:
+    purpose: "Document composition queue — named briefs and protocols; open a letter hub or hop to the Device"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body
+    empty: "No test documents yet — open a device hub to attach a brief or protocol"
+
+surface test_document_create "Add Test Document":
+  uses entity TestDocument
+  mode: create
+  render: fragment
+  section main "New document":
+    field device "Device"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Attach a named brief, protocol, acceptance criteria, field plan, or decision log to a device"
+
+surface test_document_detail "Test Document":
+  uses entity TestDocument
+  mode: view
+  render: fragment
+
+  section summary "Document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field device "Device"
+    field author "Author"
+    field created_at "When"
+
+  section body "Body":
+    field body "Body"
+
+  ux:
+    purpose: "Test document hub — named letter, lifecycle strip, device, and body in one place"
+
+surface test_document_edit "Edit Test Document":
+  uses entity TestDocument
+  mode: edit
+  render: fragment
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Update test document headline, kind, or status"
+
 # =============================================================================
 # WORKSPACES
 # =============================================================================
@@ -1174,21 +1288,14 @@ surface task_edit "Edit Task":
 #   ST-037 triage queue · ST-040 team workload · ST-041 release metrics
 #   TR-17 manager focus: fleet KPIs + tester activity first
 workspace engineering_dashboard "Engineering Dashboard":
-  # Goal B conversation (cycle 1797): peer field-quality tools (Jira / Linear /
-  # Zendesk) put triage discussion as Message/Bubble chrome above fold — not a
-  # meta queue of note rows. display: conversation → MessageScroller wire-up.
-  purpose: "Live triage conversation, fleet overview, and field-quality oversight"
+  # Goal B command_density + document (cycle 1843): peer field-quality tools
+  # (TestRail / qTest / Jira) put named test briefs/protocols after dual
+  # attention and above triage notes — not conversation alone owning the fold.
+  # Goal B conversation remains: display: conversation → MessageScroller.
+  purpose: "Multi-panel eng home — fleet pulse, dual attention, test docs, then triage notes"
   access: persona(engineer, manager)
 
-  live_conversation:
-    source: IssueNote
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: issue_note_detail
-    empty: "No conversation yet — notes on field issues appear here"
-
-  # Fleet overview KPI strip: total/active/prototype/recalled devices.
+  # Fleet overview KPI strip: total/active/prototype/recalled devices + docs.
   fleet_overview:
     source: Device
     display: metrics
@@ -1197,23 +1304,17 @@ workspace engineering_dashboard "Engineering Dashboard":
       active_devices: count(Device where status = active)
       prototype_devices: count(Device where status = prototype)
       recalled_devices: count(Device where status = recalled)
+      documents: count(TestDocument)
       conversation: count(IssueNote)
     tones:
       active_devices: positive
       recalled_devices: destructive
       prototype_devices: accent
+      documents: accent
       conversation: accent
 
-  ux:
-    as engineer:
-      purpose: "See triage discussion before fleet and issue queues"
-      focus: live_conversation, fleet_overview, triage_queue, critical_issues
-    as manager:
-      purpose: "Triage notes and fleet pulse"
-      focus: live_conversation, fleet_overview, triage_queue, critical_issues
-
   # TR-35: fleet status without click-through to /app/device — non-active
-  # devices as a review queue next to the KPI strip.
+  # devices as a review queue next to the KPI strip (dual attention A).
   device_attention:
     source: Device
     filter: status != active
@@ -1222,6 +1323,34 @@ workspace engineering_dashboard "Engineering Dashboard":
     display: queue
     action: device_detail
     empty: "All registered devices are active"
+
+  # Dual attention B — open triage pressure shares fold with device attention.
+  triage_pressure:
+    source: IssueReport
+    filter: status = open
+    sort: severity desc, reported_at desc
+    limit: 4
+    display: queue
+    action: issue_report_edit
+    empty: "No open reports to triage"
+
+  # Goal B document composition after dual attention — named briefs before notes.
+  composition:
+    source: TestDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: test_document_detail
+    empty: "No test documents yet — attach a brief or protocol on a device hub"
+
+  # Goal B conversation after dual attention + docs — Message/Bubble chrome.
+  live_conversation:
+    source: IssueNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: issue_note_detail
+    empty: "No conversation yet — notes on field issues appear here"
 
   tester_activity:
     source: TestSession
@@ -1399,13 +1528,12 @@ workspace engineering_dashboard "Engineering Dashboard":
 
   ux:
     as engineer:
-      purpose: "Triage field issues and ship firmware"
-      focus: triage_queue, critical_issues, metrics, all_tasks, firmware_releases
-
+      purpose: "Fleet pulse, dual attention, test docs, then triage notes — multi-panel eng home"
+      focus: fleet_overview, device_attention, triage_pressure, composition, live_conversation
     as manager:
-      # TR-17/TR-35: fleet KPIs + non-active device queue first (no /app/device hop).
-      purpose: "Fleet overview, tester activity, and product quality"
-      focus: fleet_overview, device_attention, metrics, tester_activity, critical_issues, all_tasks
+      # TR-17/TR-35 + Goal B document: fleet KPIs + dual attention + docs before notes.
+      purpose: "Fleet overview, dual attention, test documents, and triage notes"
+      focus: fleet_overview, device_attention, triage_pressure, composition, live_conversation
 
 # Workspace: Tester Dashboard
 # ST-042–044: personal metrics + assigned devices + open issues/tasks as queues
@@ -1479,15 +1607,14 @@ workspace tester_dashboard "Tester Dashboard":
 # nav for engineer/manager/tester (auto-discover still lists entities).
 
 workspace manager_ops "Manager Ops":
-  # Goal B command_density (cycle 1726): peer field-ops / Datadog-style homes
-  # put ≥2 attention panels above fold — critical issues + non-active devices —
-  # not a single conversation queue that eats the viewport. Caps match
-  # ops_dashboard command_center (conversation + systems + alerts share fold).
-  # Goal B conversation remains: domain-true IssueNote prose still on home.
-  purpose: "Multi-panel field ops — quality pulse, critical issues, device attention, and triage notes"
+  # Goal B command_density (cycle 1726) + document (cycle 1843): peer field-ops
+  # / TestRail-style homes put ≥2 attention panels then named test briefs above
+  # triage notes — not a single conversation queue that eats the viewport.
+  # Caps match ops_dashboard command_center fold share.
+  purpose: "Multi-panel field ops — quality pulse, dual attention, test docs, then triage notes"
   access: persona(manager, admin)
 
-  # Compact quality pulse first (open / critical / sessions).
+  # Compact quality pulse first (open / critical / sessions / documents).
   quality_strip:
     source: IssueReport
     display: metrics
@@ -1495,10 +1622,12 @@ workspace manager_ops "Manager Ops":
       open: count(IssueReport where status = open)
       critical: count(IssueReport where severity = critical and status != closed)
       sessions: count(TestSession)
+      documents: count(TestDocument)
       conversation: count(IssueNote)
     tones:
       open: warning
       critical: destructive
+      documents: accent
       conversation: accent
 
   # Attention panel 1 — critical open field issues (cap for fold share).
@@ -1521,8 +1650,17 @@ workspace manager_ops "Manager Ops":
     action: device_detail
     empty: "All registered devices are active"
 
+  # Goal B document composition after dual attention — named briefs before notes.
+  composition:
+    source: TestDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: test_document_detail
+    empty: "No test documents yet — attach a brief or protocol on a device hub"
+
   # Goal B conversation shares the fold — Message/Bubble chrome (not queue meta);
-  # cap so dual attention stays visible (command_density + conversation).
+  # cap so dual attention + docs stay visible (command_density + document).
   live_conversation:
     source: IssueNote
     sort: created_at desc
@@ -1539,20 +1677,22 @@ workspace manager_ops "Manager Ops":
       active_devices: count(Device where status = active)
       prototype_devices: count(Device where status = prototype)
       recalled_devices: count(Device where status = recalled)
+      documents: count(TestDocument)
       conversation: count(IssueNote)
     tones:
       active_devices: positive
       recalled_devices: destructive
       prototype_devices: accent
+      documents: accent
       conversation: accent
 
   ux:
     as manager:
-      purpose: "Quality pulse, critical issues, and device attention above fold — live notes share the fold"
-      focus: quality_strip, critical_issues, device_attention, live_conversation
+      purpose: "Quality pulse, dual attention, test docs above fold — live notes share the fold"
+      focus: quality_strip, critical_issues, device_attention, composition, live_conversation
     as admin:
-      purpose: "Multi-panel field quality oversight — critical issues and device attention first"
-      focus: quality_strip, critical_issues, device_attention, live_conversation
+      purpose: "Multi-panel field quality oversight — dual attention and test documents first"
+      focus: quality_strip, critical_issues, device_attention, composition, live_conversation
 
   tester_activity:
     source: TestSession

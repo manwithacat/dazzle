@@ -14,7 +14,9 @@ Four kinds of people work in it — Engineers, Field Testers, Managers, and Admi
 
 **Acting on what the field finds.** A Task is a remediation or investigation task spawned from field testing, created by one person and optionally assigned to another, with a lifecycle from open to completed. A Firmware Release is a versioned firmware build that can be rolled out to a Device batch, transitioning from draft to released to deprecated.
 
-Every one of these six kinds of record can be browsed, inspected in detail, created, and edited through dedicated screens — twenty-four capabilities in all, from the Device Dashboard and Issues to Log Test Session and Create Firmware Release.
+**Test documents.** Named field-test documents (briefs, protocols, acceptance criteria, field plans, decision logs) with domain-true headlines that buyers scan as composition above the triage notes trail — attached to a Device hub.
+
+Every one of these seven kinds of record can be browsed, inspected in detail, created, and edited through dedicated screens — from the Device Dashboard and Issues to Log Test Session, Create Firmware Release, and test-document composition.
 
 ## Who uses it
 
@@ -28,13 +30,14 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
 
 ## Where work happens
 
-- **Engineering Dashboard** — engineer home: fleet metrics, device-attention
-  and triage queues, critical issues and open tasks, then secondary views
-  (kanban boards, timelines, device tree, diagram, map, tester directory).
-- **Manager Ops** — manager home multi-panel command density: quality pulse
-  (open / critical / sessions), capped critical-issue and non-active device
-  attention queues, then triage notes and fleet KPIs — dual attention above
-  fold, not a single conversation list that owns the viewport.
+- **Engineering Dashboard** — multi-panel eng home (command_density + document):
+  fleet metrics (including document + conversation counts), dual attention
+  (non-active devices + open triage pressure), test-document composition with
+  domain-true headlines, then live triage notes and secondary views.
+- **Manager Ops** — manager home multi-panel command density + document: quality
+  pulse (open / critical / sessions / documents), dual attention (critical
+  issues + non-active devices), test-document composition, then triage notes —
+  dual attention and named briefs above fold, not a single conversation list.
 - **Issue Triage** — shared engineer/manager desk for open and critical field
   reports (severity-first queue and status board).
 - **Firmware Pipeline** — release desk: draft/live metrics, release grid and
@@ -87,4 +90,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:8c00d666ab3e839e1286e1cca9b22e5f522210ade0f2ccc93356be473aa7c36e -->
+<!-- dazzle-spec-brief: sha256:99101cadea4fe7dc68d16f14ed91f02f72d2b0ff779326ccf700b34e1bdbe1e0 -->

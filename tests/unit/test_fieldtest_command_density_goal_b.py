@@ -22,21 +22,26 @@ def test_manager_ops_declares_dual_attention_before_conversation() -> None:
     assert "critical_issues:" in block
     assert "device_attention:" in block
     assert "live_conversation:" in block
-    # Order: quality → critical → device → conversation (command density).
+    # Order: quality → critical → device → composition → conversation (command density).
     assert block.index("quality_strip:") < block.index("critical_issues:")
     assert block.index("critical_issues:") < block.index("device_attention:")
-    assert block.index("device_attention:") < block.index("live_conversation:")
+    assert block.index("device_attention:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_conversation:")
 
 
 def test_manager_ops_caps_attention_queues_for_fold_share() -> None:
     block = _manager_ops_block()
-    # Caps keep dual panels + conversation sharing the fold (ops_dashboard pattern).
+    # Caps keep dual panels + docs + conversation sharing the fold.
     assert "limit: 4" in block
-    assert "focus: quality_strip, critical_issues, device_attention, live_conversation" in block
+    assert (
+        "focus: quality_strip, critical_issues, device_attention, composition, "
+        "live_conversation" in block
+    )
     assert "Multi-panel field ops" in block or "multi-panel" in block.lower()
 
 
 def test_manager_ops_quality_strip_counts_critical_and_conversation() -> None:
     block = _manager_ops_block()
     assert "critical: count(IssueReport where severity = critical" in block
+    assert "documents: count(TestDocument)" in block
     assert "conversation: count(IssueNote)" in block

@@ -163,6 +163,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_fieldtest_conversation_goal_b.py",
     # fieldtest_hub Goal B command_density (cycle 1726 manager_ops dual attention)
     "tests/unit/test_fieldtest_command_density_goal_b.py",
+    # fieldtest_hub Goal B document (cycle 1843 TestDocument composition on eng/ops)
+    "tests/unit/test_fieldtest_document_goal_b.py",
     # simple_task Goal B conversation (cycle 1674 TaskComment live trail)
     "tests/unit/test_simple_task_conversation_goal_b.py",
     # simple_task Goal B command_density (cycle 1835 dual attention before trail)
