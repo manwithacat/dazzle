@@ -59,7 +59,11 @@ from dazzle.http.runtime.repository import RepositoryFactory
 from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 from dazzle.http.runtime.route_generator import RouteGenerator
 from dazzle.http.runtime.route_validator import validate_routes
-from dazzle.http.runtime.sa_schema import build_metadata, scoped_entity_names
+from dazzle.http.runtime.sa_schema import (
+    build_metadata,
+    ensure_missing_entity_columns,
+    scoped_entity_names,
+)
 from dazzle.http.runtime.search_schema import build_search_index_ddl
 from dazzle.http.runtime.security_middleware import apply_security_middleware
 from dazzle.http.runtime.service_generator import CRUDService, ServiceFactory
@@ -1085,8 +1089,6 @@ class DazzleBackendApp:
                     # Goal B / DSL field adds on existing local DBs: create_all
                     # does not ALTER tables. Add nullable missing columns so
                     # demo seed + qa trial do not 400 on schema drift.
-                    from dazzle.http.runtime.sa_schema import ensure_missing_entity_columns
-
                     ensure_missing_entity_columns(engine, metadata)
                     # #954 cycle 2 — apply tsvector + GIN index DDL after the
                     # base schema lands. Idempotent (IF NOT EXISTS); safe to
