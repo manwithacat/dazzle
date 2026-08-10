@@ -119,4 +119,6 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Workspace Document lifecycle.** Workspace Documents move draft → published → archived under admin control (admin may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:a46eaf202f933702a78f9dc5dd900f30b9a753d67ebf973d1c7d3d76b0b21a74 -->
+**Workspace Member lifecycle.** Joined staff move pending → active → offboarded under admin control (rejoin and re-invite paths included).
+
+<!-- dazzle-spec-brief: sha256:4f5646c940f8dbb1947da6be31d6d3bf5a4c725bde3cdb33b74d4d981277a2d7 -->

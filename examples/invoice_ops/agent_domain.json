@@ -3,7 +3,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "ea08f703d09ad6cc",
+  "source_sha256": "876490c15893ceda",
   "personas": [
     {
       "id_hint": "requester",
@@ -40,15 +40,6 @@
       "stable_id_candidate": "auditor",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "System administrator",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "staff",
@@ -89,7 +80,7 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Bank",
+      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -109,9 +100,23 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Auditor",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Bank",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Approver",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=article_noun)",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "requester"
     }
@@ -142,13 +147,6 @@
       "persona": "auditor",
       "name": "auditor_desk",
       "purpose": "Job desk for Auditor",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
       "owner_field_hint": "requester",
       "status": "hypothesis"
     },
@@ -186,12 +184,6 @@
       "entity_hint": "Invoice"
     },
     {
-      "persona": "admin",
-      "story": "Admin has seeded Invoice rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Invoice"
-    },
-    {
       "persona": "staff",
       "story": "Staff has seeded Invoice rows for their desk",
       "min_rows": 1,
@@ -213,42 +205,42 @@
   "process_candidates": [
     {
       "id_hint": "approval_flow",
-      "summary": "Invoice: requester submits, approver decides (approve/reject)",
+      "summary": "Payment: requester submits, approver decides (approve/reject)",
       "personas": [
         "requester",
         "approver"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "assignment",
-      "summary": "Invoice: auto or manager assignment to a worker",
+      "summary": "Payment: auto or manager assignment to a worker",
       "personas": [
         "manager",
         "member"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "settlement",
-      "summary": "Invoice: finance settles / pays after approval",
+      "summary": "Payment: finance settles / pays after approval",
       "personas": [
         "finance",
         "approver"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "triage",
-      "summary": "Invoice: intake triage before deep work",
+      "summary": "Payment: intake triage before deep work",
       "personas": [
         "agent",
         "manager"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     }
   ],
@@ -262,10 +254,9 @@
   "rejected_chrome": [
     "Account",
     "Administrator",
-    "Auditor",
+    "Controllership",
     "Desk",
     "Finally",
-    "Item",
     "Itemise",
     "JavaScript",
     "Long",
@@ -275,11 +266,13 @@
     "Requester",
     "Review",
     "Significant",
+    "Treasury",
     "Two",
     "approval",
     "approved",
     "attempt",
     "attempts",
+    "audit",
     "auditable",
     "built",
     "checker",
@@ -288,28 +281,34 @@
     "database",
     "declared",
     "discrete",
+    "finance",
     "flat",
+    "fold",
     "framework",
     "general",
     "human",
     "informal",
     "interrupted",
     "invoices",
+    "item",
     "lifecycle",
     "line",
     "live",
     "maker",
     "mature",
+    "meta",
     "model",
     "multi",
     "operation",
     "override",
+    "people",
     "product",
     "read",
     "roles",
     "rule",
     "signed",
     "technical",
-    "users"
+    "users",
+    "vendor"
   ]
 }

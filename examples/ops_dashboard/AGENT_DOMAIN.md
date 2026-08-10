@@ -8,11 +8,12 @@
 Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex
 
 **Source:** `/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md`
-**Fingerprint:** `d14b5e466651fa82`
+**Fingerprint:** `f6b62add4a6491b9`
 
 ## Personas (jobs)
 
 - **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
+- **Buyer** (`buyer`, stable≈`buyer`, grounded) — desk `buyer_desk` — Person who purchases
 - **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 
 ## Nouns (domain types)
@@ -23,16 +24,18 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Message`, `Metric`, `Op`, `Operations`, `PagerDuty`, `Playbook`, `Postmortem`, `System`, `analytical`, `auditable`, `backend`, `capped`, `close`, `confirm`, `create`, `degraded`, `detail`, `document`, `engineer`, `fold`, `glance`, `guided`, `healthy`, `incident`, `journey`, `live`, `mature`, `meta`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rule`, `step`, `team`, `technical`
+`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Message`, `Metric`, `Op`, `Operations`, `PagerDuty`, `Playbook`, `Postmortem`, `System`, `analytical`, `auditable`, `backend`, `capped`, `close`, `confirm`, `create`, `degraded`, `detail`, `document`, `engineer`, `flat`, `fleet`, `fold`, `glance`, `guided`, `healthy`, `incident`, `journey`, `live`, `mature`, `meta`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rule`, `step`, `team`, `technical`
 
 ## Desks
 
 - **engineer_desk** for `engineer` (hypothesis) owner≈`acknowledged_by` — Job desk for Engineer
+- **buyer_desk** for `buyer` (hypothesis) owner≈`acknowledged_by` — Job desk for Buyer
 - **admin_desk** for `admin` (hypothesis) owner≈`acknowledged_by` — Job desk for Admin
 
 ## Demo spine (seed stories)
 
 - `engineer`: Engineer has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
+- `buyer`: Buyer has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
 - `admin`: Admin has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
 
 ## Open questions
@@ -61,7 +64,7 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
   "title": "Operations Dashboard \u2014 Specification",
   "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
   "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md",
-  "source_sha256": "d14b5e466651fa82",
+  "source_sha256": "f6b62add4a6491b9",
   "personas": [
     {
       "id_hint": "engineer",
@@ -71,6 +74,15 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "buyer",
+      "label": "Buyer",
+      "job": "Person who purchases",
+      "desk": "buyer_desk",
+      "stable_id_candidate": "buyer",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "admin",
@@ -122,6 +134,13 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
       "status": "hypothesis"
     },
     {
+      "persona": "buyer",
+      "name": "buyer_desk",
+      "purpose": "Job desk for Buyer",
+      "owner_field_hint": "acknowledged_by",
+      "status": "hypothesis"
+    },
+    {
       "persona": "admin",
       "name": "admin_desk",
       "purpose": "Job desk for Admin",
@@ -133,6 +152,12 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
     {
       "persona": "engineer",
       "story": "Engineer has seeded Alert rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Alert"
+    },
+    {
+      "persona": "buyer",
+      "story": "Buyer has seeded Alert rows for their desk",
       "min_rows": 1,
       "entity_hint": "Alert"
     },
@@ -215,6 +240,8 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
     "detail",
     "document",
     "engineer",
+    "flat",
+    "fleet",
     "fold",
     "glance",
     "guided",

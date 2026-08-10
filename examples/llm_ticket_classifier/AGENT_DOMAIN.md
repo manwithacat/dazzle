@@ -8,12 +8,13 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,
 
 **Source:** `/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md`
-**Fingerprint:** `f0b78ad6fd55a118`
+**Fingerprint:** `d69451391bc51168`
 
 ## Personas (jobs)
 
 - **Agent** (`agent`, stable≈`agent`, grounded) — desk `agent_desk` — role word in founder brief
 - **Customer** (`customer`, stable≈`customer`, grounded) — desk `customer_desk` — role word in founder brief
+- **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
 
 ## Nouns (domain types)
 
@@ -25,17 +26,19 @@
 
 ## Rejected chrome (not domain)
 
-`Agent`, `Beyond`, `Dashboard`, `Data`, `Four`, `JavaScript`, `Priority`, `Readines`, `Result`, `Supervisor`, `Support`, `Their`, `administrative`, `auditable`, `command`, `confidence`, `declared`, `explicit`, `framework`, `human`, `inventory`, `lifecycle`, `live`, `mature`, `model`, `parent`, `product`, `record`, `related`, `response`, `specific`, `suggested`, `team`, `technical`, `work`
+`Agent`, `Beyond`, `Dashboard`, `Data`, `Escalation`, `Four`, `JavaScript`, `Op`, `Priority`, `Result`, `Support`, `Team`, `Their`, `administrative`, `auditable`, `command`, `confidence`, `declared`, `explicit`, `flat`, `framework`, `human`, `informal`, `inventory`, `lifecycle`, `live`, `mature`, `model`, `parent`, `product`, `readiness`, `record`, `related`, `response`, `specific`, `suggested`, `supervisor`, `technical`, `work`
 
 ## Desks
 
 - **agent_desk** for `agent` (hypothesis) owner≈`assigned_to` — Job desk for Agent
 - **customer_desk** for `customer` (hypothesis) owner≈`assigned_to` — Job desk for Customer
+- **staff_desk** for `staff` (hypothesis) owner≈`assigned_to` — Job desk for Staff
 
 ## Demo spine (seed stories)
 
 - `agent`: Agent has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 - `customer`: Customer has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
+- `staff`: Staff has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 
 ## Open questions
 
@@ -43,6 +46,7 @@ _None blocking._
 
 ## Process candidates (hypothesis)
 
+- **escalation** (hypothesis) entity≈`SupportTicket` personas=[agent, manager] — SupportTicket: worker escalates to manager when blocked or SLA risk
 - **assignment** (hypothesis) entity≈`SupportTicket` personas=[manager, agent] — SupportTicket: auto or manager assignment to a worker
 - **triage** (hypothesis) entity≈`SupportTicket` personas=[agent, manager] — SupportTicket: intake triage before deep work
 
@@ -62,7 +66,7 @@ _None blocking._
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
   "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
-  "source_sha256": "f0b78ad6fd55a118",
+  "source_sha256": "d69451391bc51168",
   "personas": [
     {
       "id_hint": "agent",
@@ -81,6 +85,15 @@ _None blocking._
       "stable_id_candidate": "customer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "staff",
+      "label": "Staff",
+      "job": "Internal team member",
+      "desk": "staff_desk",
+      "stable_id_candidate": "staff",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -153,6 +166,13 @@ _None blocking._
       "purpose": "Job desk for Customer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "staff",
+      "name": "staff_desk",
+      "purpose": "Job desk for Staff",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -167,10 +187,26 @@ _None blocking._
       "story": "Customer has seeded SupportTicket rows for their desk",
       "min_rows": 1,
       "entity_hint": "SupportTicket"
+    },
+    {
+      "persona": "staff",
+      "story": "Staff has seeded SupportTicket rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "SupportTicket"
     }
   ],
   "open_questions": [],
   "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "SupportTicket: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
     {
       "id_hint": "assignment",
       "summary": "SupportTicket: auto or manager assignment to a worker",
@@ -204,13 +240,14 @@ _None blocking._
     "Beyond",
     "Dashboard",
     "Data",
+    "Escalation",
     "Four",
     "JavaScript",
+    "Op",
     "Priority",
-    "Readines",
     "Result",
-    "Supervisor",
     "Support",
+    "Team",
     "Their",
     "administrative",
     "auditable",
@@ -218,8 +255,10 @@ _None blocking._
     "confidence",
     "declared",
     "explicit",
+    "flat",
     "framework",
     "human",
+    "informal",
     "inventory",
     "lifecycle",
     "live",
@@ -227,12 +266,13 @@ _None blocking._
     "model",
     "parent",
     "product",
+    "readiness",
     "record",
     "related",
     "response",
     "specific",
     "suggested",
-    "team",
+    "supervisor",
     "technical",
     "work"
   ]

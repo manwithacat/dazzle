@@ -30,6 +30,10 @@ def test_workspace_member_entity_declares_department_and_job_title() -> None:
     assert "department: str(50)" in block
     assert "job_title: str(80)" in block
     assert "workspace: ref Workspace required" in block
+    # Domain residual: status lifecycle (pending → active → offboarded)
+    assert "transitions:" in block
+    assert "pending -> active:" in block
+    assert "active -> offboarded:" in block
 
 
 def test_team_home_declares_title_board_and_dept_before_load() -> None:

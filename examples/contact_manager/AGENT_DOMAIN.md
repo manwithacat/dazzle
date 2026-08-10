@@ -7,7 +7,7 @@
 
 > **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi
 
-**Source:** `examples/contact_manager/SPEC.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md`
 **Fingerprint:** `d6cf91195521bcd6`
 
 ## Personas (jobs)
@@ -53,7 +53,7 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
   "version": 1,
   "title": "Contact Manager - Product Specification",
   "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi",
-  "source_path": "examples/contact_manager/SPEC.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md",
   "source_sha256": "d6cf91195521bcd6",
   "personas": [
     {

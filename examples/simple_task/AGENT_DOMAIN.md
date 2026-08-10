@@ -8,7 +8,7 @@
 Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it — Administrators, Team Managers, and Team Members — each seeing exactly the work
 
 **Source:** `/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md`
-**Fingerprint:** `8833b74e73c2c00e`
+**Fingerprint:** `fc6a3da50712e882`
 
 ## Personas (jobs)
 
@@ -23,7 +23,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Dashboard`, `Data`, `Discussion`, `JavaScript`, `Metric`, `Tasks`, `Team`, `approval`, `auditable`, `board`, `built`, `creator`, `database`, `declared`, `effort`, `explicit`, `flat`, `framework`, `human`, `interrupted`, `live`, `mature`, `model`, `organisation`, `overdue`, `precise`, `priority`, `product`, `review`, `rhythm`, `technical`, `visibility`, `whole`, `work`
+`Administrator`, `Dashboard`, `Data`, `Discussion`, `JavaScript`, `Metric`, `Tasks`, `Team`, `approval`, `auditable`, `board`, `brief`, `built`, `creator`, `database`, `declared`, `effort`, `explicit`, `flat`, `framework`, `human`, `interrupted`, `live`, `mature`, `model`, `organisation`, `overdue`, `precise`, `priority`, `product`, `review`, `rhythm`, `technical`, `visibility`, `whole`, `work`
 
 ## Desks
 
@@ -37,8 +37,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 ## Open questions
 
-- `q1`: Can a task have multiple users, or just one?
-- `q2`: Should users receive email/push notifications for key events?
+_None blocking._
 
 ## Process candidates (hypothesis)
 
@@ -61,7 +60,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   "title": "Team Task Manager \u2014 Specification",
   "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
   "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md",
-  "source_sha256": "8833b74e73c2c00e",
+  "source_sha256": "fc6a3da50712e882",
   "personas": [
     {
       "id_hint": "manager",
@@ -141,18 +140,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
       "entity_hint": "Task"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q1",
-      "text": "Can a task have multiple users, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Should users receive email/push notifications for key events?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "process_candidates": [
     {
       "id_hint": "escalation",
@@ -194,6 +182,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
     "approval",
     "auditable",
     "board",
+    "brief",
     "built",
     "creator",
     "database",
