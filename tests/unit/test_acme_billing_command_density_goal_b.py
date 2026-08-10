@@ -33,8 +33,10 @@ def test_billing_declares_dual_attention_before_conversation() -> None:
 def test_billing_caps_attention_for_fold_share() -> None:
     block = _billing_block()
     assert "limit: 4" in block
+    # Goal B media invoice_packets leads; dual attention + composition trail follow.
     assert (
-        "focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation"
+        "focus: invoice_packets, portfolio_metrics, open_invoices, "
+        "sensitive_flags, composition, live_conversation"
     ) in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
