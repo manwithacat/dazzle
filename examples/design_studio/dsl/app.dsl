@@ -415,6 +415,8 @@ workspace asset_catalog "Asset Catalog":
     sort: updated_at asc
     action: asset_edit
     empty: "No assets in the pipeline"
+  # Goal B empty_region_honesty (cycle 1856): host bar_chart dogfood under fold
+  # on the DAM catalog (not on every secondary pressure desk).
   status_mix:
     source: Asset
     display: bar_chart
@@ -422,6 +424,14 @@ workspace asset_catalog "Asset Catalog":
     aggregate:
       count: count(Asset)
     empty: "No assets yet"
+  # Timeline dogfood under fold — secondary desks stay pulse+queues only.
+  recent_activity:
+    source: Asset
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: asset_detail
+    empty: "No asset activity yet"
   ux:
     as designer:
       purpose: "See asset preview thumbs above fold before brand palette"
@@ -434,6 +444,8 @@ workspace asset_catalog "Asset Catalog":
       focus: media_grid, brand_palette, review_queue
 
 # Goal B media: brand desk is asset media shelf first, then compact logo identity.
+# empty_region_honesty (cycle 1856): drop asset_trail + campaign_mix thrash —
+# bar_chart/timeline dogfood lives on asset_catalog under fold.
 workspace brand_desk "Brand Desk":
   purpose: "Brand media identity — asset preview thumbs above fold, then logo shelf and campaigns"
   access: persona(admin, designer)
@@ -469,19 +481,6 @@ workspace brand_desk "Brand Desk":
     sort: name asc
     display: queue
     empty: "No active campaigns"
-  asset_trail:
-    source: Asset
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    empty: "No assets yet"
-  campaign_mix:
-    source: Campaign
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Campaign)
-    empty: "No campaigns yet"
   ux:
     as designer:
       purpose: "Asset media previews above fold before logo shelf and campaigns"
@@ -644,6 +643,8 @@ workspace campaign_desk "Campaigns":
       focus: campaign_creatives, campaign_pulse, active_queue, all_campaigns
 
 # Sixth product workspace: feedback trail desk.
+# empty_region_honesty (cycle 1856): pulse + conversation + in-review queue —
+# not twin note timeline + asset status bar dump (bar/timeline on asset_catalog).
 workspace feedback_desk "Feedback":
   purpose: "Critique trail — conversation on assets in review, not a warehouse dump of notes"
   access: persona(admin, designer, reviewer)
@@ -678,21 +679,7 @@ workspace feedback_desk "Feedback":
     action: asset_edit
     empty: "Nothing in review"
 
-  note_timeline:
-    source: Feedback
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No feedback yet"
-
-  asset_status_mix:
-    source: Asset
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No assets yet"
-
+# empty_region_honesty (cycle 1856): publish pressure = pulse + dual queues only.
 workspace publish_desk "Publish Desk":
   purpose: "Publish pressure — approved and live assets ready for campaigns"
   access: persona(admin, designer, reviewer)
@@ -729,23 +716,7 @@ workspace publish_desk "Publish Desk":
     action: asset_edit
     empty: "No published assets yet — approve and publish from the review path"
 
-  publish_trail:
-    source: Asset
-    filter: status = published or status = approved
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No publish activity yet"
-
-  status_mix:
-    source: Asset
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No assets yet"
-
+# empty_region_honesty (cycle 1856): one draft queue + metrics — not twin gallery/trail/bar.
 workspace draft_studio "Draft Studio":
   purpose: "Draft pressure — work still in draft before review"
   access: persona(admin, designer, reviewer)
@@ -770,34 +741,7 @@ workspace draft_studio "Draft Studio":
     action: asset_edit
     empty: "No draft assets"
 
-  # Work-surface utility: drafts awaiting polish are pull work — queue beats grid.
-  draft_gallery:
-    source: Asset
-    filter: status = draft
-    sort: updated_at asc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No draft assets"
-
-  draft_trail:
-    source: Asset
-    filter: status = draft
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No draft activity yet"
-
-  type_mix:
-    source: Asset
-    filter: status = draft
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No draft assets to chart"
-
+# empty_region_honesty (cycle 1856): one review queue + metrics — not twin gallery/trail/bar.
 workspace review_pipeline "Review Pipeline":
   purpose: "In-review asset pressure without warehouse CRUD"
   access: persona(admin, designer, reviewer)
@@ -823,35 +767,8 @@ workspace review_pipeline "Review Pipeline":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-  # Work-surface utility: review pull-work is a queue, not a visual dump.
-  review_gallery:
-    source: Asset
-    filter: status = review
-    sort: updated_at asc
-    limit: 15
-    display: queue
-    action: asset_edit
-    empty: "Nothing awaiting review"
-
-  review_trail:
-    source: Asset
-    filter: status = review
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No review activity yet"
-
-  type_mix:
-    source: Asset
-    filter: status = review
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No review assets to chart"
-
-# Goal B empty_region_honesty: live-campaign desk shares Campaign.jsonl seeds.
+# Goal B empty_region_honesty: live-campaign desk = pulse + one active queue
+# (cycle 1856 — no twin grid / trail / status bar; bar/timeline on asset_catalog).
 workspace active_campaigns "Active Campaigns":
   purpose: "Live-campaign pressure — active campaigns without warehouse CRUD"
   access: persona(admin, designer, reviewer)
@@ -876,33 +793,6 @@ workspace active_campaigns "Active Campaigns":
     display: queue
     action: campaign_edit
     empty: "No active campaigns"
-
-  # Work-surface utility: active campaigns are current work — queue beats grid.
-  active_grid:
-    source: Campaign
-    filter: status = active
-    sort: name asc
-    limit: 15
-    display: queue
-    action: campaign_edit
-    empty: "No active campaigns"
-
-  campaign_trail:
-    source: Campaign
-    filter: status = active or status = planning
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    action: campaign_edit
-    empty: "No campaign activity yet"
-
-  status_mix:
-    source: Campaign
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Campaign)
-    empty: "No campaigns to chart"
 
 
 surface brand_list "Brands":

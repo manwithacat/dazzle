@@ -67,19 +67,23 @@ records, and that grant is itself an explicit, auditable declaration.
   document count), dual attention (in-review + draft queues), design-document
   composition with domain-true headlines, then critique trail and brand pull-queue.
 - **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
-  thumbs above fold), compact logo identity shelf, active campaign queue, asset trail,
-  and campaign mix chart.
+  thumbs above fold), compact logo identity shelf, and active campaign queue
+  (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog).
 - **Review Desk** — multi-panel review home (command_density + document):
   review-load metrics (including document + conversation counts), dual attention
   (awaiting-review + draft queues), design-document composition, then live critique
   trail (Feedback copy), recently approved, and pipeline kanban.
 - **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
-  compact brand palette, review queue, pipeline kanban, and status mix chart.
+  compact brand palette, review queue, pipeline kanban; under-fold status mix chart
+  and recent-activity timeline host bar_chart/timeline dogfood for the studio.
 - **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
   compact schedule metrics, active briefs, and status board; campaign detail hubs show
   an assigned creative media wall (not a bare name table).
-- **Feedback** — feedback trail with notes queue, assets-in-review grid,
-  note timeline, and asset status chart.
+- **Feedback** — critique desk: conversation pulse, live notes queue, and
+  assets-in-review pull queue (no twin timeline or asset status bar dump).
+- **Publish Desk / Draft Studio / Review Pipeline / Active Campaigns** — secondary
+  pressure desks keep pulse + work queues only (empty_region_honesty); no twin
+  gallery/trail/status-bar thrash under the fold.
 
 ## How work flows through it
 
@@ -137,4 +141,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:db592b3ec1a6b043745aa5b28f13268b4c938121ea821d87b0774737b6c16cf6 -->
+<!-- dazzle-spec-brief: sha256:117fb5cc6feee2bbbba154ced00fc0fe6ed406713158d043a046101646caaee9 -->
