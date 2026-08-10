@@ -39,41 +39,42 @@ only comments that are not internal.
 
 **Support Agents** are first-line support handling incoming tickets. They aim
 to process tickets efficiently, keep within the response-time commitment, and
-escalate complex issues to managers. They land on the **Ticket Queue** — open
-pressure metrics, a review queue of open tickets, and a lifecycle kanban —
-with full visibility of tickets and conversations, plus the Agent Console for
-per-agent inspection.
+escalate complex issues to managers. They land on the **Ticket Queue** — a
+**media shelf** of agent headshots first, then open pressure metrics, a review
+queue of open tickets, and a lifecycle kanban — with full visibility of tickets
+and conversations, plus the Agent Console for per-agent inspection.
 
 **Support Managers** are team leads monitoring performance and handling
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: a
-multi-panel command home with team counts (including unassigned and document
-volume), an SLA readiness strip, dual attention queues (critical + unassigned,
-fold-capped), a **composition** queue of named SLA waiver documents, and a
-capped live conversation trail — not conversation-only above the fold, not a
-status-funnel / secondary ticket-trail thrash pair under the fold, and not an
-empty personal assigned kanban. From the same Lead nav they open **People**:
-staff by role and department (Support, Escalations, Billing) before unassigned
-load — so reassignment is org-shaped, not a flat warehouse roster. The team
-Ticket Queue and Agent Console remain available. Managers alone can delete
-tickets or comments.
+multi-panel command home with an agent **media shelf** (headshot thumbs) first,
+then team counts (including unassigned and document volume), an SLA readiness
+strip, dual attention queues (critical + unassigned, fold-capped), a
+**composition** queue of named SLA waiver documents, and a capped live
+conversation trail — not conversation-only above the fold, not a status-funnel
+/ secondary ticket-trail thrash pair under the fold, and not an empty personal
+assigned kanban. From the same Lead nav they open **People**: staff by role and
+department (Support, Escalations, Billing) before unassigned load — so
+reassignment is org-shaped, not a flat warehouse roster. The team Ticket Queue
+and Agent Console remain available. Managers alone can delete tickets or
+comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
 ## Where work happens
 
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
-incoming tickets — summary metrics (including conversation and document
-volume), a **live conversation** queue of newest notes, a **composition**
-queue of open SLA waivers (named breach titles), a review queue, a kanban
-board of open statuses, and a recent-comment **timeline** (dated stream, not a
-flat list).
-**Manager Ops** is the manager home for multi-panel support ops — metrics
-(critical, unassigned, conversation, documents), SLA readiness, dual attention
-queues (critical + unassigned, limit 4 each), open **SLA waiver composition**
-(limit 4) **before** a capped live conversation trail (limit 4) — no status
-funnel or secondary ticket timeline (empty_region honesty; avoids pilot
-scroll resource storms).
+incoming tickets — agent **media shelf** headshots first, then summary metrics
+(including conversation and document volume), a **live conversation** queue of
+newest notes, a **composition** queue of open SLA waivers (named breach titles),
+a review queue, a kanban board of open statuses, and a recent-comment
+**timeline** (dated stream, not a flat list).
+**Manager Ops** is the manager home for multi-panel support ops — agent
+**media shelf** first, then metrics (critical, unassigned, conversation,
+documents), SLA readiness, dual attention queues (critical + unassigned, limit
+4 each), open **SLA waiver composition** (limit 4) **before** a capped live
+conversation trail (limit 4) — no status funnel or secondary ticket timeline
+(empty_region honesty; avoids pilot scroll resource storms).
 **People** is the org-structure desk for managers and agents: active staff
 metrics, a role kanban, a department-sorted queue, a secondary roster, then
 unassigned open tickets and plate-by-person load — hierarchy before dump.
@@ -107,8 +108,8 @@ Eighteen authored scenarios pin the flows down; representative ones:
 - When a Support Agent resolves a ticket, its status becomes resolved and the
   customer is notified.
 - When a Support Manager reviews team performance on Manager Ops, they see
-  open, in-progress, critical, resolved, and conversation counts plus the
-  live note trail and critical/unassigned queues.
+  agent headshots first, then open, in-progress, critical, resolved, and
+  conversation counts plus the live note trail and critical/unassigned queues.
 - When a Support Manager reassigns a ticket, the chosen agent takes it over
   and the previous assignee is notified.
 - When the Administrator triages the full queue, they see every ticket
@@ -165,4 +166,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:7793a0ab9ca90b1e2b2f465e6af8fab90827e5b6d23dce64efb1de9a00346ffb -->
+<!-- dazzle-spec-brief: sha256:e4e6e23af61084edca4568ad95a762e493d886131167d9186796cc12bcb7447d -->

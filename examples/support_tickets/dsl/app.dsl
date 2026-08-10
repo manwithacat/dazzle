@@ -55,6 +55,9 @@ entity User "User":
   # Goal B org_structure (cycle 1847): department placement so manager People
   # desk shows Support / Escalations / Billing shape — not a flat role-only roster.
   department: str(50)
+  # Goal B media (cycle 1883): peer support tools (Zendesk / Intercom / Front)
+  # put agent headshot thumbs on queue/ops homes — not name-only roster theater.
+  photo_url: url
   is_active: bool = true
   created_at: datetime auto_add
 
@@ -62,7 +65,7 @@ entity User "User":
   invariant: role != null
 
   fitness:
-    repr_fields: [name, email, role, department, is_active]
+    repr_fields: [name, email, role, department, photo_url, is_active]
 
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":
@@ -226,6 +229,7 @@ surface user_list "User List":
     empty: "No users found. Invite team members to get started."
 
   section main "Users":
+    field photo_url "Photo"
     field email "Email"
     field name "Name"
     field role "Role"
@@ -239,6 +243,7 @@ surface user_detail "User Detail":
   render: fragment
 
   section identity "Identity":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
     field department "Department"
@@ -271,6 +276,7 @@ surface user_create "Create User":
     field name "Name"
     field role "Role"
     field department "Department"
+    field photo_url "Photo URL"
 
 surface user_edit "Edit User":
   uses entity User
@@ -282,6 +288,7 @@ surface user_edit "Edit User":
     field name "Name"
     field role "Role"
     field department "Department"
+    field photo_url "Photo URL"
     # HM Switch — boolean settings / account on-off (hyperpart auto_seed drain)
     field is_active "Active" widget=switch
 
@@ -474,12 +481,26 @@ surface comment_edit "Edit Comment":
 #   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
 
 workspace ticket_queue "Ticket Queue":
-  # Goal B conversation + document: peer support tools (Zendesk / Service Cloud)
-  # put live thread copy and named waiver documents on the triage home — not
-  # only ticket rows.
-  purpose: "Triage open work, live conversation, and SLA waiver documents"
+  # Goal B media (cycle 1883) + conversation + document: peer support tools
+  # (Zendesk / Intercom / Front) put agent headshots, live thread copy, and
+  # named waiver documents on the triage home — not only ticket rows.
+  purpose: "Team headshots, triage open work, live conversation, and SLA waiver documents"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
+
+  # Goal B media FIRST — triage home is a people shelf (agent photo_url thumbs).
+  # Sort newest first so seed-only roster (non-STABLE #1630) with placehold
+  # headshots win the fold — STABLE mirror users skip User.jsonl re-seed.
+  media_shelf:
+    source: User
+    # Department-placed staff only — drops trial-parent seed noise and bare
+    # auth shells without org placement (Goal B media shelf is a people desk).
+    filter: is_active = true and department != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No agent headshots yet — add photo URLs on team users"
 
   # Job primary: at-a-glance pressure (tones on critical).
   # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
@@ -580,15 +601,31 @@ workspace manager_ops "Manager Ops":
   # ST-027 team performance + SLA narrative; critical/unassigned queues for
   # ST-028/029. TR-52 moved managers off empty personal assigned lists — this
   # is the metrics-first home that matches the story.
+  # Goal B media (cycle 1883): agent headshot shelf first — peer Zendesk /
+  # Intercom / Front put faces on the ops home before pressure tiles.
   # Goal B conversation (cycle 1720): live thread volume on the command home.
   # Goal B command_density (cycle 1727): dual attention (critical + unassigned)
   # shares the fold with capped conversation — peer Zendesk/Intercom manager
   # homes are multi-panel pressure, not conversation-only above the fold.
   # Goal B document (cycle 1798): named SLA waiver composition after dual
   # attention, before conversation — peer Service Cloud breach-letter trail.
-  purpose: "Multi-panel support ops — SLA pulse, dual queues, waiver documents, live conversation"
+  purpose: "Multi-panel support ops — headshots, SLA pulse, dual queues, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
+
+  # Goal B media FIRST — manager home is a people shelf (agent photo_url thumbs).
+  # Newest-first so non-STABLE seeded agents (Riley/Sam/Jordan + placeholds)
+  # outrank STABLE auth-mirrored rows that skip User.jsonl photo_url (#1630).
+  media_shelf:
+    source: User
+    # Department-placed staff only — drops trial-parent seed noise and bare
+    # auth shells without org placement (Goal B media shelf is a people desk).
+    filter: is_active = true and department != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No agent headshots yet — add photo URLs on team users"
 
   team_metrics:
     source: Ticket
@@ -679,8 +716,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — dual queues and waiver documents before conversation trail"
-      focus: team_metrics, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
+      purpose: "Multi-panel support ops — headshots, dual queues and waiver documents before conversation trail"
+      focus: media_shelf, team_metrics, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

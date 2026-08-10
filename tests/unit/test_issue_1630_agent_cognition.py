@@ -57,10 +57,17 @@ def test_reset_and_load_skips_stable_users_before_seed() -> None:
             return _Resp(200, {"ok": True})
         if url == "/__test__/seed":
             fixtures = (kwargs.get("json") or {}).get("fixtures") or []
-            for f in fixtures:
-                if f.get("entity") == "User":
-                    rid = (f.get("data") or {}).get("id")
-                    assert rid not in STABLE_PERSONA_USER_IDS.values(), f
+            # First seed must skip STABLE User creates (#1630). Enrichment seed
+            # may re-post STABLE ids for photo_url upsert (Goal B media).
+            if not any(
+                f.get("entity") == "User"
+                and (f.get("data") or {}).get("id") in STABLE_PERSONA_USER_IDS.values()
+                for f in fixtures
+            ):
+                for f in fixtures:
+                    if f.get("entity") == "User":
+                        rid = (f.get("data") or {}).get("id")
+                        assert rid not in STABLE_PERSONA_USER_IDS.values(), f
             return _Resp(200, {"created": {f["id"]: {} for f in fixtures}})
         if url == "/__test__/authenticate":
             return _Resp(200, {"user_id": "x"})

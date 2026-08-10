@@ -286,6 +286,31 @@ def _base_report(
     }
 
 
+def _http_seed_only(
+    report: dict[str, Any],
+    *,
+    api_url: str,
+    secret: str,
+    fixtures: list[dict[str, Any]],
+    timeout: float,
+) -> bool:
+    """POST fixtures without reset (STABLE User media upsert after mirror)."""
+    headers = {"X-Test-Secret": secret, "Content-Type": "application/json"}
+    try:
+        with httpx.Client(base_url=api_url, timeout=timeout, headers=headers) as client:
+            seed_resp = client.post("/__test__/seed", json={"fixtures": fixtures})
+            report["steps"].append(_step("seed_stable_user_media", seed_resp))
+            if seed_resp.status_code != 200:
+                report["stable_media_seed_status"] = seed_resp.status_code
+                report["stable_media_seed_body"] = _clip(seed_resp.text)
+                return False
+            report["stable_media_created_count"] = _created_count(seed_resp)
+    except httpx.HTTPError as exc:
+        report["error"] = f"HTTP error talking to {api_url}: {exc}"
+        return False
+    return True
+
+
 def _http_reset_and_seed(
     report: dict[str, Any],
     *,
@@ -373,6 +398,52 @@ def _prepare_fixtures(
         if not _is_stable_persona_user_fixture(f["entity"], f.get("data") or {})
     ]
     return all_fixtures, fixtures, len(all_fixtures) - len(fixtures)
+
+
+def _stable_user_media_enrichment(
+    all_fixtures: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """STABLE User rows skipped on create (#1630) still carry Goal B media.
+
+    After reset mirrors auth→domain User, re-seed those fixtures so
+    ``/__test__/seed`` upserts ``photo_url`` (and other non-identity fields)
+    onto the mirrored rows. Only emit when the seed actually declares media
+    keys — identity-only STABLE rows stay skipped.
+    """
+    media_keys = ("photo_url", "avatar_url", "image_url", "thumbnail_url", "logo_url")
+    out: list[dict[str, Any]] = []
+    for f in all_fixtures:
+        if f.get("entity") != "User":
+            continue
+        data = f.get("data") or {}
+        if not _is_stable_persona_user_fixture("User", data):
+            continue
+        if not any(data.get(k) for k in media_keys):
+            continue
+        out.append(f)
+    return out
+
+
+def _maybe_enrich_stable_user_media(
+    report: dict[str, Any],
+    all_fixtures: list[dict[str, Any]],
+    *,
+    api_url: str,
+    secret: str,
+    timeout: float,
+) -> None:
+    """Second seed: upsert STABLE User media onto mirrored rows (Goal B). Soft-fail."""
+    enrich = _stable_user_media_enrichment(all_fixtures)
+    if not enrich:
+        return
+    if _http_seed_only(report, api_url=api_url, secret=secret, fixtures=enrich, timeout=timeout):
+        report["stable_user_media_enriched"] = len(enrich)
+        return
+    # Soft-fail: desks still ok; media may be empty on STABLE rows.
+    report["warning"] = (
+        (report.get("warning") or "")
+        + " stable_user_media_enrichment seed failed; non-STABLE media may still load."
+    ).strip()
 
 
 def _reset_only(report: dict[str, Any], *, api_url: str, secret: str, timeout: float) -> bool:
@@ -471,6 +542,9 @@ def reset_and_load(
     ):
         return report
 
+    _maybe_enrich_stable_user_media(
+        report, all_fixtures, api_url=api_url, secret=secret, timeout=timeout
+    )
     _finalize_verify(
         report,
         project_root,
