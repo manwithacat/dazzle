@@ -111,6 +111,21 @@ def test_stills_empty_hero_residual(tmp_path: Path) -> None:
     assert "empty_hero" in hero.reason
 
 
+def test_stills_lfs_pointer_skipped_as_absent(tmp_path: Path) -> None:
+    """Force-tracked LFS stubs on CI must not red empty-hero floors."""
+    shots = tmp_path / ".dazzle" / "qa" / "screenshots"
+    shots.mkdir(parents=True)
+    name = "task_board_manager_desktop_light.png"
+    pointer = (
+        "version https://git-lfs.github.com/spec/v1\n"
+        "oid sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "size 90000\n"
+    )
+    (shots / name).write_text(pointer, encoding="utf-8")
+    scores = score_stills(tmp_path, "simple_task")
+    assert not any(s.name == name for s in scores)
+
+
 def test_stills_non_trio_hero_floor(tmp_path: Path) -> None:
     """31 Jul: project board empty-shell stills must residual."""
     from dazzle.product_quality.stills import HERO_MIN_BYTES

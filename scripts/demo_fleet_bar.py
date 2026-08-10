@@ -255,7 +255,25 @@ def score_app(app: str) -> AppDemoBar:
     # P0-6 stale platform-only stills + empty-hero size floors
     shots = _shot_dir(app_dir)
     if shots is not None:
-        pngs = list(shots.glob("*.png"))
+        # Skip Git LFS pointer stubs (CI without lfs smudge) — same as absent.
+        def _usable(p: Path) -> bool:
+            try:
+                sz = p.stat().st_size
+            except OSError:
+                return False
+            if not p.is_file():
+                return False
+            if 80 <= sz <= 300:
+                try:
+                    if p.read_bytes()[:80].startswith(
+                        b"version https://git-lfs.github.com/spec/v1"
+                    ):
+                        return False
+                except OSError:
+                    return False
+            return True
+
+        pngs = [p for p in shots.glob("*.png") if _usable(p)]
         if pngs:
             product = [p for p in pngs if not p.name.startswith(PLATFORM_STILL_PREFIX)]
             if not product:
@@ -263,7 +281,7 @@ def score_app(app: str) -> AppDemoBar:
             # Empty-hero: known happy-path stills must not be empty-state theater
             for name, min_bytes in (HERO_MIN_BYTES.get(app) or {}).items():
                 path = shots / name
-                if not path.is_file():
+                if not _usable(path):
                     continue
                 size = path.stat().st_size
                 if size < min_bytes:

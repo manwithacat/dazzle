@@ -78,6 +78,31 @@ def _shot_dir(app_dir: Path) -> Path | None:
     return None
 
 
+def is_lfs_pointer(path: Path) -> bool:
+    """True when *path* is a Git LFS pointer (not smudged content).
+
+    CI checkouts without ``lfs: true`` leave ~100–200 byte pointers on disk.
+    Treat those as *absent* for empty-hero floors so force-tracked screenshots
+    under gitignored ``.dazzle/`` do not red the demo fleet bar.
+    """
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return False
+    if size < 80 or size > 300:
+        return False
+    try:
+        head = path.read_bytes()[:80]
+    except OSError:
+        return False
+    return head.startswith(b"version https://git-lfs.github.com/spec/v1")
+
+
+def is_usable_still(path: Path) -> bool:
+    """File exists and is real image bytes (not an LFS pointer stub)."""
+    return path.is_file() and not is_lfs_pointer(path)
+
+
 def score_stills(app_dir: Path, app_name: str) -> list[StillScore]:
     """Score known hero stills when present."""
     shots = _shot_dir(app_dir)
@@ -86,8 +111,8 @@ def score_stills(app_dir: Path, app_name: str) -> list[StillScore]:
     if shots is None:
         return out
 
-    # platform-only check
-    pngs = list(shots.glob("*.png"))
+    # platform-only check (ignore LFS pointer stubs — same as absent)
+    pngs = [p for p in shots.glob("*.png") if is_usable_still(p)]
     if pngs:
         product = [p for p in pngs if not p.name.startswith(PLATFORM_STILL_PREFIX)]
         if not product:
@@ -104,8 +129,8 @@ def score_stills(app_dir: Path, app_name: str) -> list[StillScore]:
 
     for name, min_b in floors.items():
         path = shots / name
-        if not path.is_file():
-            continue  # absent stills skipped (CI)
+        if not is_usable_still(path):
+            continue  # absent / LFS pointer skipped (CI)
         size = path.stat().st_size
         residual = size < min_b
         out.append(
