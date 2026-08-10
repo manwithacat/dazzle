@@ -42,7 +42,7 @@ dedicated screens.
 
 **Workspace Document.** A named letter on a workspace — brief, onboarding
 guide, join playbook, policy, or decision — with domain-true headlines so team
-homes surface composition before discussion notes. Documents are tenant-scoped
+homes surface composition before discussion notes. Documents carry optional cover previews so Workspace Home and the Team Board lead with a handbook cover wall (document thumbs, not headshots) before pulse and discussion. Documents are tenant-scoped
 to their workspace and dual-open to the workspace hub.
 
 **Workspace Member.** A joined staff row on a workspace — name, email,
@@ -121,4 +121,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Workspace Member lifecycle.** Joined staff move pending → active → offboarded under admin control (rejoin and re-invite paths included).
 
-<!-- dazzle-spec-brief: sha256:4f5646c940f8dbb1947da6be31d6d3bf5a4c725bde3cdb33b74d4d981277a2d7 -->
+<!-- dazzle-spec-brief: sha256:37eb0cde0d000ec88e0bd836f050d45b5e2972d387be419472596309bd6110d4 -->

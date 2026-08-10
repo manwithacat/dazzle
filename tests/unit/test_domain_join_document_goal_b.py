@@ -43,8 +43,8 @@ def test_home_declares_composition_after_dual_attention() -> None:
     assert block.index("join_readiness:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: team_pulse, announcement_queue, join_readiness, composition, "
-        "live_conversation" in block
+        "focus: handbook_covers, team_pulse, announcement_queue, join_readiness, "
+        "composition, live_conversation" in block
     )
 
 
@@ -55,7 +55,10 @@ def test_announce_declares_composition_after_dual_attention() -> None:
     assert "documents: count(WorkspaceDocument)" in block
     assert block.index("join_context:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert "focus: board_pulse, feed_queue, join_context, composition, live_conversation" in block
+    assert (
+        "focus: handbook_covers, board_pulse, feed_queue, join_context, "
+        "composition, live_conversation" in block
+    )
 
 
 def test_workspace_document_list_dual_open_and_workspace_hub() -> None:

@@ -34,7 +34,10 @@ def test_announce_leads_with_conversation_not_duplicate_queues() -> None:
     assert "feed_cards:" not in block
     assert "post_mix:" not in block
     assert "workspace_cards:" not in block
-    assert "focus: board_pulse, feed_queue, join_context, composition, live_conversation" in block
+    assert (
+        "focus: handbook_covers, board_pulse, feed_queue, join_context, "
+        "composition, live_conversation" in block
+    )
 
 
 def test_home_omits_duplicate_board_dumps() -> None:
@@ -45,8 +48,8 @@ def test_home_omits_duplicate_board_dumps() -> None:
     assert "board_cards:" not in block
     assert "post_mix:" not in block
     assert (
-        "focus: team_pulse, announcement_queue, join_readiness, composition, "
-        "live_conversation" in block
+        "focus: handbook_covers, team_pulse, announcement_queue, join_readiness, "
+        "composition, live_conversation" in block
     )
 
 

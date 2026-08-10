@@ -30,8 +30,8 @@ def test_home_dual_attention_before_conversation() -> None:
     assert block.index("announcement_queue:") < block.index("join_readiness:")
     assert block.index("join_readiness:") < block.index("live_conversation:")
     assert (
-        "focus: team_pulse, announcement_queue, join_readiness, composition, "
-        "live_conversation" in block
+        "focus: handbook_covers, team_pulse, announcement_queue, join_readiness, "
+        "composition, live_conversation" in block
     )
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
@@ -45,7 +45,10 @@ def test_announce_dual_attention_before_conversation() -> None:
     assert block.index("board_pulse:") < block.index("feed_queue:")
     assert block.index("feed_queue:") < block.index("join_context:")
     assert block.index("join_context:") < block.index("live_conversation:")
-    assert "focus: board_pulse, feed_queue, join_context, composition, live_conversation" in block
+    assert (
+        "focus: handbook_covers, board_pulse, feed_queue, join_context, "
+        "composition, live_conversation" in block
+    )
 
 
 def test_attention_queues_capped_for_fold_share() -> None:

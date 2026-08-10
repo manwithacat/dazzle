@@ -149,6 +149,9 @@ entity WorkspaceDocument "Workspace Document":
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
+  # Goal B media (novel vs headshot shelf): handbook cover preview — letter
+  # thumbs on the team home, not User photo chrome (peer: Notion/Confluence/Drive).
+  preview_url: url
   created_at: datetime auto_add
 
   # Domain residual status∄transitions (cycle 1845): workspace briefs publish then archive.
@@ -175,7 +178,7 @@ entity WorkspaceDocument "Workspace Document":
       as: admin
 
   fitness:
-    repr_fields: [workspace, headline, doc_kind, status, author]
+    repr_fields: [workspace, headline, doc_kind, status, author, preview_url]
 
 # Goal B org_structure: peer directory tools (Okta / Google Workspace Admin /
 # Microsoft Entra / Rippling) show joined staff by title and department so
@@ -304,6 +307,7 @@ surface workspace_document_list "Workspace Documents":
   mode: list
   open: WorkspaceDocument via id | Workspace via workspace
   section main "Documents":
+    field preview_url "Cover"
     field headline "Headline"
     field doc_kind "Kind"
     field workspace "Workspace"
@@ -327,6 +331,7 @@ surface workspace_document_create "Add Workspace Document":
     field status "Status"
     field body "Body"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Attach a named brief, onboarding guide, join playbook, policy, or decision log to a workspace"
 
@@ -339,6 +344,7 @@ surface workspace_document_detail "Workspace Document":
     field status "Status"
     field workspace "Workspace"
     field author "Author"
+    field preview_url "Cover"
     field created_at "When"
   section body "Body":
     field body "Body"
@@ -354,6 +360,7 @@ surface workspace_document_edit "Edit Workspace Document":
     field status "Status"
     field body "Body"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Update workspace document headline, kind, or status"
 
@@ -445,7 +452,7 @@ surface workspace_detail "Workspace":
   related documents "Documents":
     display: queue
     show: WorkspaceDocument
-    columns: headline, doc_kind, status, author
+    columns: preview_url, headline, doc_kind, status, author
   # Goal B org_structure: joined staff placement on the workspace hub.
   related staff "Staff":
     display: queue
@@ -458,11 +465,21 @@ surface workspace_detail "Workspace":
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
-  # Goal B command_density (cycle 1831) + document (cycle 1844): peer Slack/Notion
-  # team homes put announcement pressure + join readiness + named docs above the
-  # discussion trail — not conversation alone owning the fold.
-  purpose: "Multi-panel team home — pulse, dual attention, workspace docs, then discussion"
+  # Goal B media FIRST (cycle 1887) + command_density + document: peer
+  # Notion/Confluence/Drive put handbook cover thumbs above pulse and dual
+  # attention — not headshot shelves (portfolio ban headshot_shelf).
+  purpose: "Multi-panel team home — handbook covers, pulse, dual attention, docs, then discussion"
   access: persona(admin, member)
+
+  # Goal B media — recipe handbook_cover_wall (novel vs headshot_shelf).
+  handbook_covers:
+    source: WorkspaceDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: workspace_document_detail
+    empty: "No handbook covers yet — attach briefs with cover previews"
 
   # Metrics honesty: count Announcement + documents (notes stay on conversation trail).
   team_pulse:
@@ -552,19 +569,30 @@ workspace home "Workspace Home":
 
   ux:
     as admin:
-      purpose: "Multi-panel team home — pulse, posts, readiness, docs, then discussion"
-      focus: team_pulse, announcement_queue, join_readiness, composition, live_conversation
+      purpose: "Handbook cover wall first, then pulse, posts, readiness, and discussion"
+      focus: handbook_covers, team_pulse, announcement_queue, join_readiness, composition, live_conversation
     as member:
-      purpose: "Multi-panel catch-up — posts, readiness, and docs before discussion trail"
-      focus: team_pulse, announcement_queue, join_readiness, composition, live_conversation
+      purpose: "Handbook cover wall first, then posts, readiness, and discussion trail"
+      focus: handbook_covers, team_pulse, announcement_queue, join_readiness, composition, live_conversation
 
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
 workspace announce "Team Board":
-  # Goal B command_density + document: pulse + feed + context + docs before trail.
+  # Goal B media FIRST (cycle 1887) + command_density + document: handbook
+  # cover wall before pulse/feed — recipe handbook_cover_wall (not headshots).
   # empty_region_honesty: no duplicate queues / empty bar / workspace voids.
-  purpose: "Multi-panel board — pulse, dual attention, workspace docs, then discussion trail"
+  purpose: "Multi-panel board — handbook covers, pulse, dual attention, docs, then discussion trail"
   access: persona(admin, member)
+
+  # Goal B media — recipe handbook_cover_wall (novel vs headshot_shelf).
+  handbook_covers:
+    source: WorkspaceDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: workspace_document_detail
+    empty: "No handbook covers yet — attach briefs with cover previews"
 
   board_pulse:
     source: Announcement
@@ -630,11 +658,11 @@ workspace announce "Team Board":
 
   ux:
     as admin:
-      purpose: "Multi-panel board — feed, context, and docs before discussion"
-      focus: board_pulse, feed_queue, join_context, composition, live_conversation
+      purpose: "Handbook cover wall first, then feed, context, and discussion"
+      focus: handbook_covers, board_pulse, feed_queue, join_context, composition, live_conversation
     as member:
-      purpose: "Catch up — posts, context, and docs before conversation trail"
-      focus: board_pulse, feed_queue, join_context, composition, live_conversation
+      purpose: "Handbook cover wall first, then posts, context, and conversation trail"
+      focus: handbook_covers, board_pulse, feed_queue, join_context, composition, live_conversation
 
 workspace publish_desk "Publish":
   purpose: "Admin publish desk — draft queue and live board pulse before posting"
