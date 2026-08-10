@@ -27,7 +27,8 @@ def test_staff_desks_declare_live_conversation_spine() -> None:
     # Cycle 1837/1838: notes trail after dual attention + documents, still in focus.
     assert "live_conversation" in text
     assert (
-        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in text
+        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
+        in text
     )
 
 

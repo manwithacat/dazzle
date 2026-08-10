@@ -34,7 +34,8 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in block
+        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
+        in block
     )
 
 

@@ -14,7 +14,7 @@ was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
 Staff desks are multi-panel command dens: dual attention pressure (active roster
-+ recent starters on Staff Directory; level + department boards on My Team) and
++ recent starters on Staff Directory (headshot shelf first, then dual attention); level + department boards on My Team) and
 **named employment documents** (HrDocument composition with display_field
 headline — offer / policy / promo / contract letters) sit above a **people notes**
 trail (PersonNote with display_field body) — not only directory metrics or
@@ -38,7 +38,7 @@ employment records rather than directly, so a job change never overwrites
 history.
 
 **People and their histories.** A Person is a staff member, past or present —
-an identity record that notes when they started and, where applicable, when
+an identity record with optional headshot photo URLs for the staff home media shelf that notes when they started and, where applicable, when
 they left. The facts that vary over a career live in three effective-dated
 record types tied to that person:
 
@@ -136,4 +136,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:83a30bfc881f298bcc0d4f6613820b0347a1ae628a1a582b7a12fef3114a02b4 -->
+<!-- dazzle-spec-brief: sha256:0b4f3c10feb2df257cef2f68215aed2acabe80f4f2a6de2bf7d7d59406268b44 -->

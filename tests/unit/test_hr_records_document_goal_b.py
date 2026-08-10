@@ -51,7 +51,8 @@ def test_hero_desks_declare_composition_queue() -> None:
     assert staff.index("recent_starters:") < staff.index("composition:")
     assert staff.index("composition:") < staff.index("live_conversation:")
     assert (
-        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in staff
+        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
+        in staff
     )
 
     team = _workspace_block("my_team")

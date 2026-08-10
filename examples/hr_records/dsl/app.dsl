@@ -176,6 +176,9 @@ entity Person "Person":
   legal_name: str(200) required pii(category=identity)
   preferred_name: str(100) pii(category=identity)
   email: email required unique pii(category=contact)
+  # Goal B media (cycle 1879): peer HR tools (Workday / BambooHR / Personio)
+  # put headshot thumbs on the staff home — not name-only directory theater.
+  photo_url: url
   started_at: date required
   ended_at: date    # NULL = currently employed
 
@@ -551,6 +554,7 @@ surface person_list "People":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
+    field photo_url "Photo"
     field started_at "Started"
   ux:
     purpose: "Staff directory — open a row for the person career hub"
@@ -562,6 +566,7 @@ surface person_detail "Person":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
+    field photo_url "Photo"
   section tenure "Tenure":
     layout: strip
     field started_at "Started"
@@ -591,7 +596,7 @@ surface person_detail "Person":
     show: HrDocument
     columns: headline, doc_kind, status, created_at
   ux:
-    purpose: "Person hub — identity, tenure, employment, salary, reporting, discussion, and HR documents"
+    purpose: "Person hub — identity photo, tenure, employment, salary, reporting, discussion, and HR documents"
 
 surface person_create "Add Person":
   uses entity Person
@@ -600,6 +605,7 @@ surface person_create "Add Person":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
+    field photo_url "Photo URL"
     field started_at "Start date"
 
 surface person_edit "Edit Person":
@@ -609,6 +615,7 @@ surface person_edit "Edit Person":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
+    field photo_url "Photo URL"
     field ended_at "Ended"
 
 
@@ -965,10 +972,21 @@ surface managerlink_edit "End Reporting Line":
 
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
-  # Goal B command_density (cycle 1837) + document (cycle 1838): dual
-  # attention then named employment documents before people-notes trail —
-  # peer Workday / BambooHR put headcount + letters above discussion chrome.
-  purpose: "Multi-panel staff home — headcount, dual attention, document composition, then people notes"
+  # Goal B media (cycle 1879) + command_density (1837) + document (1838):
+  # headshot shelf first, then dual attention + employment documents before
+  # notes — peer Workday / BambooHR put pixels + letters above discussion.
+  purpose: "Multi-panel staff home — headshots, dual attention, document composition, then people notes"
+
+  # Goal B media FIRST — staff home is a people shelf (photo_url thumbs).
+  media_shelf:
+    source: Person
+    filter: ended_at = null
+    display: grid
+    sort: started_at desc
+    # Cap 2 so dual attention + docs share the above-fold command dens.
+    limit: 2
+    action: person_detail
+    empty: "No headshots yet — add photo URLs on people records"
 
   # Job strip — counts including conversation + document volume.
   headcount:
@@ -987,7 +1005,7 @@ workspace staff_directory "Staff Directory":
       conversation: accent
 
   # Dual attention — active roster + onboarding starters above fold (caps
-  # for fold share with documents + notes trail).
+  # for fold share with media + documents + notes trail).
   current_staff:
     source: Person
     filter: ended_at = null
@@ -1033,17 +1051,17 @@ workspace staff_directory "Staff Directory":
 
   ux:
     as hr_admin:
-      purpose: "Multi-panel staff — dual attention + documents before notes trail"
-      focus: headcount, current_staff, recent_starters, composition, live_conversation
+      purpose: "Multi-panel staff — headshots, dual attention, documents before notes"
+      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
     as manager:
-      purpose: "Multi-panel team view — roster, starters, documents before notes"
-      focus: headcount, current_staff, recent_starters, composition, live_conversation
+      purpose: "Multi-panel team view — headshots, roster, starters, documents before notes"
+      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
     as finance:
-      purpose: "Headcount dual attention + documents before compensation hop"
-      focus: headcount, current_staff, recent_starters, composition, live_conversation
+      purpose: "Headshots + headcount dual attention + documents before compensation hop"
+      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
     as employee:
-      purpose: "Directory pulse, dual attention, and documents before notes"
-      focus: headcount, current_staff, recent_starters, composition, live_conversation
+      purpose: "Directory headshots, dual attention, and documents before notes"
+      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:

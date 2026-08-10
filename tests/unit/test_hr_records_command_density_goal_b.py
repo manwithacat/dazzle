@@ -36,7 +36,8 @@ def test_staff_directory_dual_attention_before_conversation() -> None:
     assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
     assert (
-        "focus: headcount, current_staff, recent_starters, composition, live_conversation" in block
+        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
+        in block
     )
 
 
