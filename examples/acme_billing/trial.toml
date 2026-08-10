@@ -1,0 +1,110 @@
+# Qualitative trial scenarios for acme_billing.
+# Authoring dig (cycle 1857) — agent_acceptance_panel. Live panel next cycle.
+# Maps: stories ST-001…ST-011 (RBAC + portfolio journeys), SPEC multi-org billing.
+
+[[scenario]]
+name = "org_owner_portfolio"
+login_persona = "org_owner"
+time_budget_seconds = 720
+max_steps = 55
+token_budget = 800000
+
+user_identity = """
+You are Lena, owner of Acme Services — a 25-person professional services firm
+that invoices clients per project. You currently track projects in a spreadsheet
+and invoices in QuickBooks. You're evaluating this multi-org billing app for a
+two-week pilot: can you manage Acme's projects and open books without seeing
+Globex (another tenant) or drowning in warehouse CRUD?
+"""
+
+business_context = """
+Acme runs ~12 active projects and raises 30–50 invoices a month. You care that:
+(1) your org is the only tenant you can act on, (2) project → invoice drill-down
+is obvious, (3) sensitive invoices are visible to you as owner, and (4) the
+landing desk shows portfolio pressure — not a bare entity list. You will not
+pilot a tool that leaks cross-tenant data or forces spreadsheet mental math
+for open books.
+"""
+
+tasks = [
+    "Land on the app as org owner. Is this an answer-first billing portfolio (metrics/queues) or a warehouse of entity lists?",
+    "Confirm you only see Acme work — no Globex orgs/projects/invoices in normal navigation.",
+    "Open Projects (or projects home). Dual-open a project hub and its parent organization without losing context.",
+    "From the invoice desk or project hub, find open invoices with amounts; open one invoice hub.",
+    "As owner, can you see or reach sensitive invoices (flagged) that a contractor would not?",
+    "Create or attempt a project if the flow is discoverable — does org tenancy stick without manual tenant picking?",
+    "Decide: two-week pilot with your AP clerk, or stick to QuickBooks + spreadsheet?",
+]
+
+phases = [
+    "Orient — landing / billing desk pressure",
+    "Tenant honesty — Acme only",
+    "Portfolio hops — project dual-open + invoice hub",
+    "Sensitivity — owner can review sensitive books",
+    "Decide — score adoption criteria and submit_verdict",
+]
+
+adoption_criteria = [
+    "Landing shows billing portfolio pressure (not warehouse-only entity dumps)",
+    "Org-scoped visibility: Acme work only; no Globex leakage in normal paths",
+    "Project list dual-opens Project hub and Organization hub (not warehouse-only rows)",
+    "Invoice path shows amount and reaches an invoice hub from desk or project context",
+    "Owner can reach sensitive invoices that members/contractors should not see",
+    "Would run a two-week pilot as-is or with minor fixes",
+]
+
+stop_when = """
+Stop when you can score adoption_criteria. Call submit_verdict with
+recommend=yes|no|conditional and criteria_scores as Lena — pilot or not.
+"""
+
+
+[[scenario]]
+name = "auditor_readonly_review"
+login_persona = "auditor"
+time_budget_seconds = 500
+max_steps = 40
+token_budget = 800000
+
+user_identity = """
+You are Sam, an external auditor engaged by Acme for a quarterly books review.
+You must read invoices and project context but must not be able to create,
+edit, or delete financial records. You're checking whether this app is safe
+for a read-only audit seat.
+"""
+
+business_context = """
+You need a complete picture of Acme invoices (including sensitive) tied to
+projects, without mutation paths. Any write control that works for you is a
+hard pilot blocker. Cross-tenant Globex data must stay out of your view.
+"""
+
+tasks = [
+    "Land as auditor. Is the home desk oriented for review (queues/lists) rather than create-first?",
+    "List invoices for Acme projects. Can you read amounts and open invoice hubs?",
+    "Open a project hub for read-only invoice context.",
+    "Probe mutation: is create/edit/delete for invoices or projects absent or refused for auditor?",
+    "Confirm no Globex tenant leakage in lists you can open.",
+    "Verdict: safe read-only audit seat for a pilot engagement?",
+]
+
+phases = [
+    "Orient as auditor",
+    "Read path — invoices and project hubs",
+    "Mutation probe — no writes",
+    "Tenant honesty",
+    "Decide — submit_verdict",
+]
+
+adoption_criteria = [
+    "Auditor can list and open invoices/projects within Acme for review",
+    "Sensitive invoices are visible to auditor (read path)",
+    "Create/update/delete of invoices or projects is not available or is refused",
+    "No Globex (cross-tenant) data appears in normal auditor navigation",
+    "Would seat an audit engagement on this app as-is or with minor fixes",
+]
+
+stop_when = """
+Stop when you can score adoption_criteria. Call submit_verdict with
+recommend=yes|no|conditional and criteria_scores as Sam.
+"""
