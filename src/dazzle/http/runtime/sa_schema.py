@@ -715,7 +715,7 @@ def ensure_missing_entity_columns(
 
     # Quote identifiers for Postgres mixed-case entity tables ("User").
     def _qi(name: str) -> str:
-        return dialect.identifier_preparer.quote(name)
+        return str(dialect.identifier_preparer.quote(name))
 
     with engine.begin() as conn:
         for table in metadata.tables.values():
