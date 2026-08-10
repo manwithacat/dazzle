@@ -2,7 +2,7 @@
   "framework_id": "iso27001",
   "framework_name": "ISO/IEC 27001:2022",
   "framework_version": "2022",
-  "dsl_hash": "sha256:e271f9228c4e943b",
+  "dsl_hash": "sha256:7fd2cf53ea3b7380",
   "controls": [
     {
       "control_id": "A.5.1",

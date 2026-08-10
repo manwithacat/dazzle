@@ -147,6 +147,9 @@ entity Invoice "Invoice":
   amount: int required
   project: ref Project required
   sensitive: bool=false
+  # Goal B media (novel vs headshot shelf): invoice packet preview — PDF/page
+  # thumbs on the money desk, not User photo chrome (peer: Stripe/Chargebee).
+  preview_url: url
   created_at: datetime auto_add
 
   # create is admin-only: scope: create: does not support FK-path predicates (#1124),

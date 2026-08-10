@@ -421,7 +421,8 @@ workspace billing "Acme Billing":
   # Goal B command_density: Bill.com / Stripe multi-panel billing homes put
   # dual attention (open books + sensitive flags) and composition above the
   # conversation trail — not conversation-first fold theater.
-  purpose: "Multi-panel billing — metrics, open books, sensitive flags, composition, then live notes"
+  # Goal B media (novel): invoice packet preview wall FIRST — not headshot shelf.
+  purpose: "Multi-panel billing — invoice packet previews, metrics, open books, sensitive flags, composition, then live notes"
   stage: "simple_list"
   # Gate the management workspace to the org-management personas. admin
   # (cross-org), org_owner (their org), auditor (read-only review) all
@@ -431,6 +432,17 @@ workspace billing "Acme Billing":
   # previously this workspace had no access: declaration, so it was open
   # to all authenticated users).
   access: persona(admin, org_owner, auditor)
+
+  # Goal B media FIRST — invoice document thumbs (Stripe/Chargebee packet wall).
+  # Recipe: invoice_packet_preview — not headshot_shelf (portfolio ban).
+  invoice_packets:
+    source: Invoice
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: invoice_detail
+    empty: "No invoice packet previews yet"
 
   # Metrics-first portfolio before attention panels.
   portfolio_metrics:
@@ -486,14 +498,14 @@ workspace billing "Acme Billing":
 
   ux:
     as admin:
-      purpose: "Multi-panel billing — dual attention and composition before live notes"
-      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
     as org_owner:
-      purpose: "Multi-panel billing — dual attention and composition before live notes"
-      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
     as auditor:
-      purpose: "Multi-panel review — dual attention and composition before live notes"
-      focus: portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
 
   # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:

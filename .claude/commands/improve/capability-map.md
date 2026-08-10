@@ -58,7 +58,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1859 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1885 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -136,12 +136,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 1874 (2026-08-10).** **capability-sweep** (cadence ≥20 since 1854) + **github-prs** squash-merge Dependabot **#1647** (claude-code-action 1.0.183→1.0.187) @**6c3e440dc**. Tip CI **31389584604 green** @04487459c before merge. Inventory: **UNOWNED=0** **COGNITION_STALE…>
-
-> **Cycle 1854 (2026-08-10).** **capability-sweep** (cadence ≥19 since 1835; formal ≥20 due ~1855 — pulled early: tip CI **in_progress** blocks product push). Tip **19f411374** CI run **31362137058** (post-1853 acme empty_region). Inventory: **UNOWNED=0** **COGNITION_STALE_eff…>
-
-> **Cycle 1835 (2026-08-09).** **capability-sweep** (cadence ≥20 since 1815) + Goal B **command_density@simple_task** under aggressive require_mutation. Tip CI green **31338506198** @ff99d986e. Inventory: **UNOWNED=0** **COGNITION_STALE_eff≈24** **HYGIENE_STALE_eff≈30** (parti…>
-
-> **Cycle 1835 (2026-08-09).** **interesting_product** depth_id=**command_density** app=**simple_task** — claim PENDING #1834. Admin dual attention (urgent+overdue), Team (needs_review+plate), My Work (board+dues) before live_conversation; caps 4; unit pin + ship_surface; SPEC…>
-
-> **Cycle 1833 (2026-08-09).** **interesting_product** depth_id=**command_density** app=**project_tracker** — claim PENDING #1832. Dashboard dual attention (open_task_queue+composition) and My Tasks (assigned_queue+board) before live_conversation; caps 4; unit pin + ship_surfa…>
+> **Cycle 1885 (2026-08-10).** distill self-check PASS + Goal B media@acme_billing novel invoice_packet_preview (not headshot). Map diet holds (~148 lines). interesting_product USED@1885.
