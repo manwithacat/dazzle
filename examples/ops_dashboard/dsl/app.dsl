@@ -881,10 +881,12 @@ workspace incident_review "Incident Review":
 
 # Third product workspace: systems portfolio desk.
 # Goal B empty_region_honesty (cycle 1852): peer Datadog/PagerDuty fleet desks
-# keep pulse + dual queues — not a second check timeline + status bar dump
+# keep pulse + queues — not a second check timeline + status bar dump
 # (chart/timeline dogfood stays on command_center).
+# Goal B org_structure (cycle 1859): peer fleet tools show service-type and
+# health-status columns (org shape of the estate) before a flat roster dump.
 workspace systems_desk "Systems":
-  purpose: "Fleet health desk — systems pulse, roster, and pressure queue"
+  purpose: "Fleet org structure — service class and health columns before flat roster"
   access: persona(ops_engineer, admin)
 
   fleet_pulse:
@@ -898,11 +900,31 @@ workspace systems_desk "Systems":
       critical: destructive
       alerts: warning
 
+  # Org structure: service-type columns (api / web / database / cache / queue).
+  by_service_type:
+    source: System
+    display: kanban
+    group_by: service_type
+    sort: name asc
+    limit: 24
+    action: system_detail
+    empty: "No systems in this service class"
+
+  # Org structure: health-status columns before a flat alphabetical dump.
+  by_status:
+    source: System
+    display: kanban
+    group_by: status
+    sort: name asc
+    limit: 24
+    action: system_detail
+    empty: "No systems in this health state"
+
   systems_grid:
     source: System
     sort: name asc
     limit: 20
-    # Fleet roster is pull-to-open hubs, not a warehouse grid.
+    # Fleet roster is pull-to-open hubs after org boards, not a warehouse grid.
     display: queue
     action: system_detail
     empty: "No systems registered"
@@ -915,6 +937,16 @@ workspace systems_desk "Systems":
     display: queue
     action: system_detail
     empty: "No degraded or critical systems"
+
+  ux:
+    as ops_engineer:
+      scope: all
+      # Goal B org_structure: service-class + health columns before flat load.
+      purpose: "Fleet org structure — service class and health status before flat roster"
+      focus: fleet_pulse, by_service_type, by_status, systems_grid, pressure_queue
+    as admin:
+      purpose: "Full fleet org shape — service class and health before pressure"
+      focus: fleet_pulse, by_service_type, by_status, systems_grid, pressure_queue
 
 # Fourth product workspace: alerts-first on-call desk.
 workspace alerts_desk "Alerts":
