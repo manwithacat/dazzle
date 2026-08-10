@@ -41,8 +41,12 @@ not a bare field dump.
 concerns and to the User who reviewed it, so critique is never detached from
 the work or the reviewer.
 
-Brands, assets, campaigns, and feedback can each be browsed, inspected,
-created, and edited through dedicated screens — fifteen in all.
+**Design documents.** Named design documents (briefs, brand guides, art
+direction notes, creative specs, decision logs) with domain-true headlines that
+buyers scan as composition above the critique trail — attached to a Brand hub.
+
+Brands, assets, campaigns, feedback, and design documents can each be browsed,
+inspected, created, and edited through dedicated screens.
 
 ## Who uses it
 
@@ -52,21 +56,23 @@ created, and edited through dedicated screens — fifteen in all.
 
 Admins and designers land on the **Studio Dashboard**; reviewers land on the
 **Review Desk** so review pressure is first. Visibility of every kind of
-record — users, brands, assets, campaigns, and feedback — is governed by
-declared rules; under the current rules, all three roles can see all records,
-and that grant is itself an explicit, auditable declaration.
+record — users, brands, assets, campaigns, feedback, and design documents — is
+governed by declared rules; under the current rules, all three roles can see all
+records, and that grant is itself an explicit, auditable declaration.
 
 ## Where work happens
 
-- **Studio Dashboard** — multi-panel studio home (command_density): creative preview
-  thumbs above the fold, compact load metrics, dual attention (in-review + draft
-  queues capped for fold share), then critique trail and brand pull-queue.
+- **Studio Dashboard** — multi-panel studio home (command_density + document):
+  creative preview thumbs above the fold, compact load metrics (including
+  document count), dual attention (in-review + draft queues), design-document
+  composition with domain-true headlines, then critique trail and brand pull-queue.
 - **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
   thumbs above fold), compact logo identity shelf, active campaign queue, asset trail,
   and campaign mix chart.
-- **Review Desk** — multi-panel review home (command_density): review-load metrics
-  (including conversation count), dual attention (awaiting-review + draft queues),
-  then live critique trail (Feedback copy), recently approved, and pipeline kanban.
+- **Review Desk** — multi-panel review home (command_density + document):
+  review-load metrics (including document + conversation counts), dual attention
+  (awaiting-review + draft queues), design-document composition, then live critique
+  trail (Feedback copy), recently approved, and pipeline kanban.
 - **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
   compact brand palette, review queue, pipeline kanban, and status mix chart.
 - **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
@@ -129,4 +135,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:998fc8129b4643dcf8c94593c6d0f2f365477c504df234e4f827eff9a27d30e2 -->
+<!-- dazzle-spec-brief: sha256:9306441960aa904f7553f187d60e28d0cc62200df14982746765818c1fb7c6c5 -->

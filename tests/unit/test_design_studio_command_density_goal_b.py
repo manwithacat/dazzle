@@ -37,10 +37,12 @@ def test_studio_dashboard_dual_attention_before_conversation() -> None:
     assert block.index("media_shelf:") < block.index("portfolio:")
     assert block.index("portfolio:") < block.index("review_pressure:")
     assert block.index("review_pressure:") < block.index("draft_pressure:")
-    assert block.index("draft_pressure:") < block.index("live_conversation:")
+    assert block.index("draft_pressure:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
     assert (
-        "focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation" in block
+        "focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, "
+        "live_conversation" in block
     )
 
 
@@ -53,9 +55,12 @@ def test_review_desk_dual_attention_before_conversation() -> None:
     assert "live_conversation:" in block
     assert block.index("review_load:") < block.index("awaiting_review:")
     assert block.index("awaiting_review:") < block.index("draft_queue:")
-    assert block.index("draft_queue:") < block.index("live_conversation:")
+    assert block.index("draft_queue:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
-    assert "focus: review_load, awaiting_review, draft_queue, live_conversation" in block
+    assert (
+        "focus: review_load, awaiting_review, draft_queue, composition, live_conversation" in block
+    )
 
 
 def test_attention_queues_capped_for_fold_share() -> None:

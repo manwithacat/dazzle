@@ -35,7 +35,8 @@ def test_studio_dashboard_media_home_purpose_and_focus() -> None:
     # Media shelf still wins the fold; dual attention sits after metrics (cycle 1836).
     assert "media home" in block.lower() or "Multi-panel" in block or "multi-panel" in block.lower()
     assert (
-        "focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation" in block
+        "focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, "
+        "live_conversation" in block
     )
     assert "limit: 2" in block or "limit: 3" in block
     # Fold share: drop redundant timeline/chart wall on the home desk.

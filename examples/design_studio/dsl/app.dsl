@@ -241,6 +241,44 @@ entity Feedback "Design Feedback":
   fitness:
     repr_fields: [asset, reviewer, comment, rating]
 
+
+# Goal B document composition: named design briefs/guides buyers scan above critique trail.
+entity DesignDocument "Design Document":
+  intent: "A named design document — brief, brand guide, art direction, creative spec, or decision log buyers scan above the critique trail"
+  domain: design
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  brand: ref Brand required
+  headline: str(200) required
+  doc_kind: enum[brief, brand_guide, art_direction, creative_spec, decision]=brief
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  permit:
+    list: role(admin) or role(designer) or role(reviewer)
+    read: role(admin) or role(designer) or role(reviewer)
+    create: role(admin) or role(designer)
+    update: role(admin) or role(designer)
+    delete: role(admin)
+
+  scope:
+    list: all
+      as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin, designer
+    update: all
+      as: admin, designer
+    delete: all
+      as: admin
+
+  fitness:
+    repr_fields: [brand, headline, doc_kind, status, author]
+
 # ── Workspaces ───────────────────────────────────────────────────────
 
 # Story-driven: designer home = studio_dashboard; reviewer often uses review_desk
@@ -252,7 +290,7 @@ workspace studio_dashboard "Studio Dashboard":
   # Goal B media + command_density (cycle 1836): pixels first, then dual
   # attention (review + draft) before critique trail — peer creative ops dens
   # (Figma/Abstract/Frame.io) put multi-panel pressure above discussion.
-  purpose: "Multi-panel studio home — media shelf, dual attention pressure, then critique trail"
+  purpose: "Multi-panel studio home — media shelf, dual attention, design docs, then critique trail"
   # Goal B media home FIRST — portfolio is a visual shelf (preview_url thumbs).
   media_shelf:
     source: Asset
@@ -272,10 +310,12 @@ workspace studio_dashboard "Studio Dashboard":
       in_review: count(Asset where status = review)
       drafts: count(Asset where status = draft)
       brands: count(Brand)
+      documents: count(DesignDocument)
       conversation: count(Feedback)
     tones:
       in_review: warning
       drafts: accent
+      documents: accent
       conversation: accent
   # Dual attention — in-review + draft pressure above fold (tight caps for fold).
   review_pressure:
@@ -294,7 +334,17 @@ workspace studio_dashboard "Studio Dashboard":
     display: queue
     action: asset_edit
     empty: "No drafts in flight"
-  # Critique trail after dual attention — reply secondary to pressure queues.
+  # Dual attention B — Goal B document composition on Studio home.
+  # Named design briefs/guides (display_field: headline) before the critique trail.
+  composition:
+    source: DesignDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: design_document_detail
+    empty: "No design documents yet — attach a brief or brand guide on a brand hub"
+
+  # Critique trail after dual attention + docs — reply secondary to pressure queues.
   live_conversation:
     source: Feedback
     sort: created_at desc
@@ -312,14 +362,14 @@ workspace studio_dashboard "Studio Dashboard":
     empty: "No brands yet"
   ux:
     as designer:
-      purpose: "Multi-panel media home — thumbs, review+draft dual attention, then critique"
-      focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation
+      purpose: "Multi-panel media home — thumbs, dual attention, docs, then critique"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, live_conversation
     as admin:
-      purpose: "Multi-panel studio ops — media, dual attention, brands, then critique trail"
-      focus: media_shelf, portfolio, review_pressure, draft_pressure, brands, live_conversation
+      purpose: "Multi-panel studio ops — media, dual attention, docs, brands, then critique"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, brands, live_conversation
     as reviewer:
-      purpose: "Multi-panel review home — creatives, dual attention, then critique trail"
-      focus: media_shelf, portfolio, review_pressure, draft_pressure, live_conversation
+      purpose: "Multi-panel review home — creatives, dual attention, docs, then critique"
+      focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, live_conversation
 
 # Goal B media (cycle 1734): catalog is a visual media shelf — asset preview
 # thumbs must win the fold. Peer tools (Bynder / Frontify / Adobe CC) put
@@ -437,7 +487,7 @@ workspace review_desk "Review Desk":
   # Goal B command_density (cycle 1836): dual attention (awaiting + drafts)
   # before conversation trail. Conversation still present — after pressure queues
   # so buyer stills show multi-panel review ops (peer: Figma/Abstract review dens).
-  purpose: "Multi-panel review — dual attention pressure, then live critique trail"
+  purpose: "Multi-panel review — dual attention, design docs, then live critique trail"
   access: persona(admin, designer, reviewer)
   review_load:
     source: Asset
@@ -446,10 +496,12 @@ workspace review_desk "Review Desk":
       in_review: count(Asset where status = review)
       draft: count(Asset where status = draft)
       approved: count(Asset where status = approved)
+      documents: count(DesignDocument)
       conversation: count(Feedback)
     tones:
       in_review: warning
       approved: positive
+      documents: accent
       conversation: accent
 
   # Dual attention — in-review + draft pressure above fold (tight caps so both
@@ -471,7 +523,16 @@ workspace review_desk "Review Desk":
     action: asset_edit
     empty: "No drafts waiting to enter review"
 
-  # Goal B conversation spine after dual attention — domain-true critique copy.
+  # Goal B document composition after dual attention — named briefs before critique.
+  composition:
+    source: DesignDocument
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: design_document_detail
+    empty: "No design documents yet — attach a brief or brand guide on a brand hub"
+
+  # Goal B conversation spine after dual attention + docs — domain-true critique copy.
   live_conversation:
     source: Feedback
     sort: created_at desc
@@ -498,14 +559,14 @@ workspace review_desk "Review Desk":
 
   ux:
     as reviewer:
-      purpose: "Multi-panel review — dual attention pressure before critique trail"
-      focus: review_load, awaiting_review, draft_queue, live_conversation
+      purpose: "Multi-panel review — dual attention + docs before critique trail"
+      focus: review_load, awaiting_review, draft_queue, composition, live_conversation
     as designer:
-      purpose: "Multi-panel review — dual attention pressure before critique trail"
-      focus: review_load, awaiting_review, draft_queue, live_conversation
+      purpose: "Multi-panel review — dual attention + docs before critique trail"
+      focus: review_load, awaiting_review, draft_queue, composition, live_conversation
     as admin:
-      purpose: "Multi-panel review ops — dual attention pressure before critique trail"
-      focus: review_load, awaiting_review, draft_queue, live_conversation
+      purpose: "Multi-panel review ops — dual attention + docs before critique trail"
+      focus: review_load, awaiting_review, draft_queue, composition, live_conversation
 
 # Fifth product workspace: campaign desk vs bare campaign list.
 # Goal B media (cycle 1803): peer creative ops (Frame.io / Bynder / Adobe) put
@@ -890,8 +951,15 @@ surface brand_detail "Brand Detail":
     display: queue
     show: Campaign
     columns: name, status, start_date
+
+  # Goal B document: named briefs / brand guides on the brand hub.
+  related documents "Documents":
+    display: queue
+    show: DesignDocument
+    columns: headline, doc_kind, status, author
+
   ux:
-    purpose: "Brand hub — logo, palette strip, asset queue, and campaign queue"
+    purpose: "Brand hub — logo, palette strip, assets, campaigns, and design documents"
 
 # Creator hub for brand_list dual-open (Brand|User via created_by) — ST-001 acceptance dig.
 surface user_detail "Team member":
@@ -1101,3 +1169,72 @@ surface campaign_edit "Edit Campaign":
     field start_date "Start Date" widget=picker
     field end_date "End Date" widget=picker
     field budget "Budget"
+
+
+# DesignDocument surfaces (Goal B document composition)
+surface design_document_list "Design Documents":
+  uses entity DesignDocument
+  mode: list
+  render: fragment
+  open: DesignDocument via id | Brand via brand
+
+  section main "Documents":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field brand "Brand"
+    field status "Status"
+    field author "Author"
+    field created_at "When"
+
+  ux:
+    purpose: "Document composition queue — named briefs and brand guides; open a letter hub or hop to the Brand"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body
+    empty: "No design documents yet — open a brand hub to attach a brief or brand guide"
+
+surface design_document_create "Add Design Document":
+  uses entity DesignDocument
+  mode: create
+  render: fragment
+  section main "New document":
+    field brand "Brand"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Attach a named brief, brand guide, art direction, or decision log to a brand"
+
+surface design_document_detail "Design Document":
+  uses entity DesignDocument
+  mode: view
+  render: fragment
+
+  section summary "Document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field brand "Brand"
+    field author "Author"
+    field created_at "When"
+
+  section body "Body":
+    field body "Body"
+
+  ux:
+    purpose: "Design document hub — named letter, lifecycle strip, brand, and body in one place"
+
+surface design_document_edit "Edit Design Document":
+  uses entity DesignDocument
+  mode: edit
+  render: fragment
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field status "Status"
+    field body "Body"
+    field author "Author"
+  ux:
+    purpose: "Update design document headline, kind, or status"
