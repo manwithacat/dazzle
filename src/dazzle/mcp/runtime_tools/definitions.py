@@ -20,7 +20,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_dnr_entities",
             description="List all entities in the AppSpec with field summaries. AppSpec is auto-loaded when you select a project or call get_active_project.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -29,7 +29,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_dnr_entity",
             description="Get detailed EntitySpec for a specific entity",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {
@@ -43,7 +43,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_backend_services",
             description="List surfaces (from AppSpec) that drive backend service generation",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "entity_name": {
@@ -57,7 +57,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_backend_service_spec",
             description="Get the full SurfaceSpec JSON for a surface by name",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {
@@ -72,7 +72,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_dnr_components",
             description="List known Dazzle UI runtime components (primitives and patterns)",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "kind": {
@@ -87,7 +87,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_dnr_component_spec",
             description="Get the full UISpec ComponentSpec for a named component",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {
@@ -101,7 +101,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_workspace_layouts",
             description="List available workspace layout types (from UISpec LayoutSpec)",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -110,7 +110,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="create_uispec_component",
             description="Generate and register a new ComponentSpec in the UISpec",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {
@@ -137,7 +137,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="patch_uispec_component",
             description="Modify an existing ComponentSpec using JSON-patch operations",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "name": {
@@ -167,7 +167,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="compose_workspace",
             description="Create or update a WorkspaceSpec wiring components into a layout",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "workspace_name": {
@@ -207,7 +207,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_graphql_schema",
             description="Get the auto-generated GraphQL schema (SDL) from AppSpec entities. Requires strawberry-graphql to be installed.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "format": {
@@ -222,7 +222,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_graphql_types",
             description="List all GraphQL types generated from AppSpec entities with their fields.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -231,7 +231,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_adapters",
             description="List available external API adapter patterns and their use cases for the BFF layer.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -240,7 +240,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_adapter_guide",
             description="Get a guide for implementing an external API adapter with the BFF pattern.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "service_type": {
@@ -255,7 +255,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_channels",
             description="List all messaging channels configured in the DSL with their resolution status. Shows email, queue, and stream channels with detected providers.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -264,7 +264,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_channel_status",
             description="Get detailed status for a specific messaging channel including provider info, health status, and outbox statistics.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "channel_name": {
@@ -278,7 +278,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="list_messages",
             description="List message schemas defined in the DSL with their fields and validation rules.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "channel_name": {
@@ -292,7 +292,7 @@ def get_runtime_tools() -> list[Tool]:
         Tool(
             name="get_outbox_status",
             description="Get outbox statistics showing pending, processing, sent, and failed message counts.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],

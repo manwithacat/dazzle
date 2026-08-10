@@ -1655,7 +1655,7 @@ title = "Interesting SaaS Context (Post-5.8)"
 slug = "interesting-saas-context"
 order = 120.98
 handwritten = true
-intro = "Goal A harness vs Goal B interesting product; depth menu + still proof when residual=0. Antagonist doctrine 2026-08-02."
+intro = "Goal A harness vs Goal B interesting product; depth menu + portfolio pick + still proof when residual=0. Antagonist doctrine 2026-08-02."
 
 [pages.antagonist-report-post-5-8]
 title = "Antagonist Report Post-5.8"
@@ -1663,6 +1663,20 @@ slug = "antagonist-report-post-5-8"
 order = 120.99
 handwritten = true
 intro = "Short handoff: demote residual farming; force interesting_product depth pack under residual=0."
+
+[pages.agent-harness-distill]
+title = "Agent harness distill"
+slug = "agent-harness-distill"
+order = 120.991
+handwritten = true
+intro = "Overspecification evaluation: stems/ADRs/capability-map diet; oral history surfacing."
+
+[pages.mcp-2026-07-28-opportunity]
+title = "MCP 2026-07-28 opportunity"
+slug = "mcp-2026-07-28-opportunity"
+order = 120.992
+handwritten = true
+intro = "Python mcp SDK v2 / protocol 2026-07-28 stateless core — adoption notes for Dazzle MCP."
 
 [pages.fitness-methodology]
 title = "Fitness Methodology"

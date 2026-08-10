@@ -148,7 +148,7 @@ def test_agents_md_mcp_tools_table_matches_registry() -> None:
 
     stale_ops = []
     for name, tool in registry.items():
-        enum = (tool.inputSchema or {}).get("properties", {}).get("operation", {}).get("enum")
+        enum = (tool.input_schema or {}).get("properties", {}).get("operation", {}).get("enum")
         if not enum:
             continue
         listed = {op.strip() for op in table[name].split(",")}

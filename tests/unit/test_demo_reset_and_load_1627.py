@@ -73,10 +73,14 @@ def test_reset_and_load_http_roundtrip() -> None:
     mock_client = MagicMock()
     mock_client.__enter__ = lambda s: s
     mock_client.__exit__ = MagicMock(return_value=False)
-    mock_client.post.side_effect = [
-        _Resp(200, {"ok": True}),
-        _Resp(200, {"created": {"a": {}}}),
-    ]
+
+    def _post(path: str, **_kwargs: object) -> _Resp:
+        # reset + primary seed + optional Goal B stable User media enrich seed
+        if path == "/__test__/reset":
+            return _Resp(200, {"ok": True})
+        return _Resp(200, {"created": {"a": {}}})
+
+    mock_client.post.side_effect = _post
 
     with patch("dazzle.demo_data.test_mode_load.httpx.Client", return_value=mock_client):
         report = reset_and_load(

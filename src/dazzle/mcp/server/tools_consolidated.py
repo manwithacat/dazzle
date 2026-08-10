@@ -34,7 +34,7 @@ def get_dev_mode_tools() -> list[Tool]:
                 "selection), select (choose one by name), validate_all (validate "
                 "every project at once)."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "operation": {
@@ -72,7 +72,7 @@ def _tool_dsl() -> Tool:
     return Tool(
         name="dsl",
         description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief. 'brief' returns the deterministic stakeholder spec-brief (fact-only app facts + activated framework value-claims) consumed by the /spec-narrate skill. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -145,7 +145,7 @@ def _tool_api_pack() -> Tool:
     return Tool(
         name="api_pack",
         description="API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -185,7 +185,7 @@ def _tool_mock() -> Tool:
     return Tool(
         name="mock",
         description="Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -224,7 +224,7 @@ def _tool_db() -> Tool:
     return Tool(
         name="db",
         description="Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection).",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -244,7 +244,7 @@ def _tool_story() -> Tool:
     return Tool(
         name="story",
         description="Story operations: get, composition, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). composition maps the story⇄rhythm graph — which phase composes a story (and whether it is active), and which stories are declared but composed into no journey. scope_fidelity checks that implementing processes exercise all entities in story scope.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -292,7 +292,7 @@ def _tool_rhythm() -> Tool:
     return Tool(
         name="rhythm",
         description="Rhythm operations: get, list, coverage. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -320,7 +320,7 @@ def _tool_demo_data() -> Tool:
     return Tool(
         name="demo_data",
         description="Demo data operations: get. Retrieve the current demo data blueprint.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -345,7 +345,7 @@ def _tool_feedback() -> Tool:
             "Use 'list' to see open feedback, 'get' for detail, "
             "'triage' to mark as triaged, 'resolve' to close."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -386,7 +386,7 @@ def _tool_test_design() -> Tool:
     return Tool(
         name="test_design",
         description="Test design operations: get, gaps. Query test designs and identify coverage gaps.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -426,7 +426,7 @@ def _tool_sitespec() -> Tool:
     return Tool(
         name="sitespec",
         description="SiteSpec operations: get, validate, scaffold, coherence, review, advise. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Use 'advise' to get proactive layout improvement suggestions. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -489,7 +489,7 @@ def _tool_semantics() -> Tool:
     return Tool(
         name="semantics",
         description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -516,7 +516,7 @@ def _tool_process() -> Tool:
     return Tool(
         name="process",
         description="Process operations: list, inspect, list_runs, get_run, coverage",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -584,7 +584,7 @@ def _tool_status() -> Tool:
             "masked DB URL, STABLE persona ids, persona-home seed residual (#1629). "
             "activity = real-time MCP tool invocations (cursor polling)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -668,7 +668,7 @@ def _tool_knowledge() -> Tool:
             "non-trivial user-app Python, raw SQL, or shell scripts. "
             "Note: Static content also available via MCP Resources."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -749,7 +749,7 @@ def _tool_pitch() -> Tool:
     return Tool(
         name="pitch",
         description="Pitch deck operations: get. Retrieve the current pitchspec.",
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -775,7 +775,7 @@ def _tool_user_management() -> Tool:
             "reset_password, deactivate, list_sessions, revoke_session, config. "
             "Manage auth users and sessions in PostgreSQL."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -864,7 +864,7 @@ def _tool_user_profile() -> Tool:
             "get (return current profile context), "
             "reset (delete and return fresh default)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -902,7 +902,7 @@ def _tool_agent() -> Tool:
             "For data-shape judgement (exclusive FKs / poly_ref / JSONB) use "
             "the `representation` tool (#1617)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -938,7 +938,7 @@ def _tool_representation() -> Tool:
             "integrity gate). Prefer before inventing host poly or dual-lock "
             "open-via. Complements agent/story prove (behaviour) with shape prove."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -979,7 +979,7 @@ def _tool_bootstrap() -> Tool:
             "every entity must have permit:/forbid: access rules, verified via "
             "policy(operation='access_matrix') before the app is considered complete."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "spec_text": {
@@ -1011,7 +1011,7 @@ def _tool_domain() -> Tool:
             "promote (DSL hand-author checklist). Prefer over bootstrap/spec_analyze as cognition "
             "draft. DSL remains runtime SSOT. CLI: dazzle domain extract|show|gaps|research|promote."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1100,7 +1100,7 @@ def _tool_spec_analyze() -> Tool:
             "refine_spec (produce structured spec from all analyses). "
             "Counter-prior: bootstrap_pollution."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1155,7 +1155,7 @@ def _tool_graph() -> Tool:
             "triggers (show what fires when an entity event occurs), "
             "topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)"
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1260,7 +1260,7 @@ def _tool_discovery() -> Tool:
             "Capability discovery operations: "
             "coherence (persona-by-persona authenticated UX coherence score)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1289,7 +1289,7 @@ def _tool_e2e() -> Tool:
             "list_baselines (hash-tagged db snapshot files for an example). "
             "Process operations (start/stop) live in the CLI only."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1327,7 +1327,7 @@ def _tool_fitness() -> Tool:
             "a project). To regenerate the queue, use CLI: "
             "dazzle fitness triage."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1372,7 +1372,7 @@ def _tool_presentation() -> Tool:
             "product_quality(score) which folds presentation residual into "
             "residual_total."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1435,7 +1435,7 @@ def _tool_product_quality() -> Tool:
             "sales demo is empty-desk or dict-repr theater. CLI: dazzle demo "
             "quality. Related MCP: presentation (cognition/opportunities/residual)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1485,7 +1485,7 @@ def _tool_policy() -> Tool:
             "access_matrix (full RBAC access matrix from rbac module), "
             "verify_status (summary of last `dazzle rbac verify` run)"
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1542,7 +1542,7 @@ def _tool_composition() -> Tool:
             "computed CSS styles via Playwright getComputedStyle() for agent-driven "
             "layout diagnosis (zero LLM tokens)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1630,7 +1630,7 @@ def _tool_test_intelligence() -> Tool:
             "journey (most recent E2E journey analysis). "
             "Results are automatically persisted by dsl_test run_all."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1688,7 +1688,7 @@ def _tool_sentinel() -> Tool:
             "fuzz_summary (run a small mutation fuzz campaign and return the markdown report). "
             "Deterministic static analysis of the IR — no source code scanning."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1743,7 +1743,7 @@ def _tool_llm() -> Tool:
             "inspect_intent (detailed intent view with resolved model), "
             "get_config (module-level LLM configuration)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1776,7 +1776,7 @@ def _tool_param() -> Tool:
             "list (all declared params with defaults), "
             "get (specific param by key with type, constraints, scope)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1811,7 +1811,7 @@ def _tool_guide() -> Tool:
             "narrate (linear ordered narrative of one guide's steps — "
             "agent-readable equivalent of the rendered overlay sequence)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1841,7 +1841,7 @@ def _tool_conformance() -> Tool:
             "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering). "
             "monitor_status: return current runtime conformance monitor state (observations collected)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1876,7 +1876,7 @@ def _tool_compliance() -> Tool:
             "summary: quick compliance posture summary. "
             "review: generate review data for gap remediation."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {
@@ -1904,7 +1904,7 @@ def _tool_agent_commands() -> Tool:
             "get (rendered skill content for a command), "
             "check_updates (version comparison for sync)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 **PROJECT_PATH_SCHEMA,
@@ -1937,7 +1937,7 @@ def _tool_perf() -> Tool:
             "report: return heuristic findings (slow endpoints, N+1, etc.) as JSON. "
             "show: return the raw span tree for a run."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "operation": {

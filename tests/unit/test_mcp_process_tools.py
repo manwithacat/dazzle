@@ -508,7 +508,7 @@ class TestToolSchemas:
 
         tools = get_consolidated_tools()
         process_tool = next(t for t in tools if t.name == "process")
-        schema = process_tool.inputSchema
+        schema = process_tool.input_schema
         operations = schema["properties"]["operation"]["enum"]
 
         assert "list" in operations
@@ -531,9 +531,9 @@ class TestToolSchemas:
         from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
         for tool in get_consolidated_tools():
-            assert tool.inputSchema is not None
-            assert tool.inputSchema["type"] == "object"
-            assert "properties" in tool.inputSchema
+            assert tool.input_schema is not None
+            assert tool.input_schema["type"] == "object"
+            assert "properties" in tool.input_schema
 
 
 class TestHelperFunctions:

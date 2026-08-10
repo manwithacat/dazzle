@@ -1,0 +1,21 @@
+# R3 peer pack — Goal B context for hr_records
+
+app = "hr_records"
+peer = "BambooHR / Workday people directory (thin slice)"
+domain = "hr"
+
+above_fold = [
+  "Hierarchy people can parse (manager + reports), not only department bars",
+  "Person as Avatar / name — never dict-repr",
+  "Notes or documents only when domain-true (reviews, not fake chat)",
+]
+
+refuse = [
+  "Org structure that is only department metric tiles",
+  "Media headshot shelf with no reporting structure when org is claimed",
+]
+
+icon_depths = ["org_structure", "empty_region_honesty", "document"]
+surprise_prompts = [
+  "What one HR-true detail (span of control, location, level) would a people partner use?",
+]

@@ -111,6 +111,10 @@ FAIL means at least one DISCREPANCY was found (the cycle itself still completed)
 
 ## Hard rules
 
+- **Promote durable lore.** If the window reveals a rule agents re-learn every
+  week (depth waves, panel thrash, CI hold etiquette), add **one bullet** to
+  `improve/oral-history.md` in the same audit ship — do not leave it only in a
+  capability-map stamp.
 - **Audit the claim, not the taste.** Style opinions about audited commits are
   out of scope; only claim/reality mismatches count.
 - **Evidence or it didn't happen**: every DISCREPANCY needs a reproducible

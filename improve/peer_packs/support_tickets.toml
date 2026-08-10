@@ -1,0 +1,24 @@
+# R3 peer pack — Goal B context for support_tickets
+
+app = "support_tickets"
+peer = "Zendesk / Front / Intercom agent workspace"
+domain = "customer_support"
+
+above_fold = [
+  "Live conversation or comment trail on the ticket — not queue meta alone",
+  "Priority / SLA / assignee without leaving the desk",
+  "Multi-panel attention (critical + unassigned) if claiming command density",
+  "People / org only when it helps routing — not a decorative Team desk clone",
+]
+
+refuse = [
+  "Re-panel acceptance without product fix",
+  "Headshot shelf as the only media claim when tickets have no creative assets",
+  "Funnel chart theater on Manager Ops",
+]
+
+icon_depths = ["conversation", "command_density", "empty_region_honesty"]
+surprise_prompts = [
+  "What one support-true detail (SLA breach, escalation, customer tone) makes an agent lean in?",
+  "Does the first screen look like a real queue a lead would work?",
+]

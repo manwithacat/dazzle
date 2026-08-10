@@ -586,6 +586,7 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                     "require_mutation": bool(camp.get("require_mutation")),
                 }
             )
+            _attach_interesting_portfolio(decision, camp)
             return decision
 
         # Aggressive / multi-strategy campaigns: rotate high-leverage digs.
@@ -613,6 +614,8 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                     decision["reason"] = (
                         f"{decision.get('reason') or ''} residual=0_harness_ok"
                     ).strip()
+                if rot.get("strategy") == "interesting_product":
+                    _attach_interesting_portfolio(decision, camp)
                 return decision
 
         # Legacy single-prefer campaigns (e.g. land-l25-smoke always digs smoke).
@@ -672,6 +675,61 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     return decision
 
 
+def _attach_interesting_portfolio(
+    decision: dict[str, Any], camp: dict[str, Any] | None = None
+) -> None:
+    """Enrich interesting_product picks with portfolio recommend (best-effort)."""
+    camp = camp or {}
+    try:
+        from scripts.interesting_product_portfolio import snapshot as portfolio_snapshot
+    except Exception:  # noqa: BLE001 — policy isolation
+        try:
+            # When run as script, package path may differ
+            import interesting_product_portfolio as ipp  # type: ignore
+
+            portfolio_snapshot = ipp.snapshot
+        except Exception:  # noqa: BLE001
+            return
+    try:
+        max_depth = int(
+            camp.get("max_consecutive_same_depth")
+            or (load_policy().get("steady_state") or {}).get("max_consecutive_same_depth")
+            or 3
+        )
+        max_recipe = int(
+            camp.get("max_consecutive_same_recipe")
+            or (load_policy().get("steady_state") or {}).get("max_consecutive_same_recipe")
+            or 3
+        )
+        stack_t = int(
+            camp.get("stack_target")
+            or (load_policy().get("steady_state") or {}).get("stack_target")
+            or 3
+        )
+        snap = portfolio_snapshot(
+            max_same_depth=max_depth,
+            max_same_recipe=max_recipe,
+            stack_target=stack_t,
+        )
+    except Exception:  # noqa: BLE001
+        return
+    decision["portfolio_depth_streak"] = snap.depth_streak
+    decision["portfolio_depth_streak_id"] = snap.depth_streak_id
+    decision["portfolio_recipe_streak"] = snap.recipe_streak
+    decision["portfolio_recipe_streak_id"] = snap.recipe_streak_id
+    decision["portfolio_banned_depths"] = list(snap.banned_depths)
+    decision["portfolio_banned_recipes"] = list(snap.banned_recipes)
+    if snap.recommend:
+        decision["interesting_product_recommend"] = snap.recommend
+        app = snap.recommend.get("app")
+        depth = snap.recommend.get("depth_id")
+        if app and depth:
+            decision["force_args"] = f"example-apps interesting_product {app} {depth}"
+            decision["reason"] = (
+                f"{decision.get('reason') or 'interesting_product'} portfolio={app}/{depth}"
+            ).strip()
+
+
 def format_status(policy: dict[str, Any] | None = None) -> str:
     policy = policy or load_policy()
     d = pick(policy)
@@ -700,6 +758,51 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         )
     if d.get("harness_only"):
         lines.append("harness_only=1")
+    # Portfolio lines when Goal B is in play or residual green (best-effort).
+    if d.get("strategy") == "interesting_product" or (
+        d.get("product_residual_total") is not None
+        and int(d.get("product_residual_total") or 0) <= 0
+    ):
+        if (
+            not d.get("interesting_product_recommend")
+            and d.get("strategy") != "interesting_product"
+        ):
+            # Attach for operator visibility even when pick is elsewhere.
+            probe: dict[str, Any] = {"strategy": "interesting_product", "reason": "status"}
+            _attach_interesting_portfolio(probe, camp)
+            for k, v in probe.items():
+                if k.startswith("portfolio_") or k == "interesting_product_recommend":
+                    d.setdefault(k, v)
+        rec = d.get("interesting_product_recommend")
+        if rec:
+            lines.append(
+                f"interesting_product_recommend app={rec.get('app')} "
+                f"depth_id={rec.get('depth_id')} reason={rec.get('reason')}"
+            )
+        if d.get("portfolio_depth_streak") is not None:
+            lines.append(
+                f"portfolio_depth_streak={d.get('portfolio_depth_streak')}"
+                + (
+                    f" id={d.get('portfolio_depth_streak_id')}"
+                    if d.get("portfolio_depth_streak_id")
+                    else ""
+                )
+            )
+        if d.get("portfolio_recipe_streak"):
+            lines.append(
+                f"portfolio_recipe_streak={d.get('portfolio_recipe_streak')}"
+                + (
+                    f" id={d.get('portfolio_recipe_streak_id')}"
+                    if d.get("portfolio_recipe_streak_id")
+                    else ""
+                )
+            )
+        banned_d = d.get("portfolio_banned_depths") or []
+        banned_r = d.get("portfolio_banned_recipes") or []
+        if banned_d:
+            lines.append(f"portfolio_banned_depths={','.join(banned_d)}")
+        if banned_r:
+            lines.append(f"portfolio_banned_recipes={','.join(banned_r)}")
     return "\n".join(lines)
 
 

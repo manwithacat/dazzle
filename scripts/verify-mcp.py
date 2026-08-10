@@ -123,8 +123,7 @@ async def test_tool_registration() -> bool:
             "sitespec",
             "semantics",
             "process",
-            "dsl_test",
-            "e2e_test",
+            "e2e",
             "status",
             "knowledge",
         }
@@ -135,13 +134,8 @@ async def test_tool_registration() -> bool:
         print(f"  ✓ Consolidated mode: {len(published_names)} tools published")
         print(f"    Consolidated tools: {len(expected_consolidated_tools)} verified")
 
-        # Dev mode tools (only expected when in dev mode)
-        dev_mode_tools = {
-            "list_projects",
-            "select_project",
-            "get_active_project",
-            "validate_all_projects",
-        }
+        # Dev mode: single consolidated `project` tool (#1074), not four method tools.
+        dev_mode_tools = {"project"}
 
         # Check dev mode tools
         if is_dev_mode():

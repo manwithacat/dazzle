@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-13
+**Amended:** 2026-08-10 — MCP Python SDK v2 / protocol 2026-07-28
 
 ## Context
 
@@ -17,6 +18,8 @@ The key tension:
 1. MCP tool calls **block the Claude Code conversation thread** while they execute. Long-running operations (LLM calls, file generation, database writes) inserted into MCP freeze the agent.
 2. Anthropic guidance states MCP is intended for **context retrieval** — giving the model information, not doing work on its behalf.
 3. Without a clear rule, contributors placed operations inconsistently, making the system hard to reason about.
+
+**2026-08-10:** Upstream MCP is now a **stateless** request/response protocol (no transport session). Dazzle keeps **app** state (project root, KG, session dirs under `.dazzle/mcp-sessions/`) as explicit process handles. The boundary test is unchanged; long work still belongs on CLI (or future Tasks/MRTR), not MCP. Server implementation uses SDK v2 lowlevel `on_*` handlers — see `docs/reference/mcp-2026-07-28-opportunity.md`.
 
 ## Decision
 

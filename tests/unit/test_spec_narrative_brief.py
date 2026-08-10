@@ -179,5 +179,5 @@ def test_mcp_dsl_brief_op_in_registry_enum():
     from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
 
     dsl_tool = next(t for t in get_all_consolidated_tools() if t.name == "dsl")
-    enum = dsl_tool.inputSchema["properties"]["operation"]["enum"]
+    enum = dsl_tool.input_schema["properties"]["operation"]["enum"]
     assert "brief" in enum

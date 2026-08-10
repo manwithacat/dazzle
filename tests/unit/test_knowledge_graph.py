@@ -470,7 +470,7 @@ class TestKnowledgeGraphHandlers:
         mock_tool_1 = MagicMock()
         mock_tool_1.name = "user_management"
         mock_tool_1.description = "List, create, update, and delete users"
-        mock_tool_1.inputSchema = {
+        mock_tool_1.input_schema = {
             "type": "object",
             "properties": {
                 "operation": {"type": "string"},
@@ -482,7 +482,7 @@ class TestKnowledgeGraphHandlers:
         mock_tool_2 = MagicMock()
         mock_tool_2.name = "dsl"
         mock_tool_2.description = "Validate and inspect DSL files"
-        mock_tool_2.inputSchema = {
+        mock_tool_2.input_schema = {
             "type": "object",
             "properties": {
                 "operation": {"type": "string"},

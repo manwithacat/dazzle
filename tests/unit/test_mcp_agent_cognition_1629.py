@@ -16,7 +16,7 @@ def test_policy_consolidated_map_includes_access_matrix() -> None:
     from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
     tools = {t.name: t for t in get_consolidated_tools()}
-    ops = tools["policy"].inputSchema["properties"]["operation"]["enum"]
+    ops = tools["policy"].input_schema["properties"]["operation"]["enum"]
     assert "access_matrix" in ops
     assert "verify_status" in ops
     # Dispatch must not return unknown op for access_matrix
@@ -87,7 +87,7 @@ def test_status_tool_schema_includes_demo_world() -> None:
     from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
     tools = {t.name: t for t in get_consolidated_tools()}
-    ops = tools["status"].inputSchema["properties"]["operation"]["enum"]
+    ops = tools["status"].input_schema["properties"]["operation"]["enum"]
     assert "demo_world" in ops
     assert "runtime" in ops
 

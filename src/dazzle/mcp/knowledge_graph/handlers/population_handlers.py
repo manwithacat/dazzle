@@ -227,7 +227,9 @@ class PopulationHandlers:
                 operations = self._extract_operations_from_description(description)
 
                 # Extract input parameters
-                input_schema = tool.inputSchema or {}
+                input_schema = (
+                    getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", None) or {}
+                )
                 properties = input_schema.get("properties", {})
                 param_names = list(properties.keys())
 

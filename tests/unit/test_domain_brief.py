@@ -567,7 +567,7 @@ def test_mcp_tool_registered() -> None:
 
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "domain" in tools
-    ops = tools["domain"].inputSchema["properties"]["operation"]["enum"]
+    ops = tools["domain"].input_schema["properties"]["operation"]["enum"]
     assert "extract" in ops and "promote" in ops and "research" in ops
 
 

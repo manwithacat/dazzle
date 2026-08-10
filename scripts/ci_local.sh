@@ -151,7 +151,9 @@ cmd_security() {
   audit_ok=0
   for attempt in 1 2 3; do
     out=$(mktemp)
-    "$UV" run pip-audit --strict --desc --no-deps --disable-pip \
+    # Pin --python so `uv run` does not recreate the project venv with the
+    # host default (e.g. 3.14) and drop CI extras mid-tier1.
+    "$UV" run --python "$CI_PYTHON" pip-audit --strict --desc --no-deps --disable-pip \
       --ignore-vuln MAL-2026-4750 \
       -r /tmp/dazzle-audit-reqs.txt 2>&1 | tee "$out"
     rc=${PIPESTATUS[0]}

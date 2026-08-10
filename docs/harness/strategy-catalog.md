@@ -32,7 +32,7 @@ Lanes: `framework-ux` · `example-apps` · `trials` · `ux-converge` · `test-su
 | `agent_acceptance_panel` | Live trial / adoption criteria? | `trial_verdict_bar.py` + `qa trial` |
 | `agent_qa_smoke` | Smoke dig residual? | `qa_smoke_bar.py` |
 | `domain_lifecycle_priors` | Lifecycle / process priors stale? | `domain_cognition_bar.py` |
-| `interesting_product` | Residual clear — buyer-visible depth? | Goal B depth + stills (post-5.8) |
+| `interesting_product` | Residual clear — buyer-visible depth? | Goal B depth + portfolio + stills (post-5.8) |
 | `hyperpart_presentation` | Presentation residual (OCR smells)? | `presentation` / demo quality |
 | `visual_tier2_subagent` | Visual judgment on capture set? | after `dazzle qa capture` |
 

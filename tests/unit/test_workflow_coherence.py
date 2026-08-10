@@ -531,7 +531,7 @@ class TestModeRouting:
 
         tools = get_consolidated_tools()
         discovery_tool = next(t for t in tools if t.name == "discovery")
-        ops = discovery_tool.inputSchema["properties"]["operation"]["enum"]
+        ops = discovery_tool.input_schema["properties"]["operation"]["enum"]
         assert "coherence" in ops
 
     def test_unknown_mode_error(self) -> None:

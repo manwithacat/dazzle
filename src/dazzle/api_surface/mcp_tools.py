@@ -65,7 +65,8 @@ def snapshot_mcp_tools() -> str:
         lines.append(f"tool: {tool.name}")
         lines.append(f"  description_hash: {_description_hash(tool.description or '')}")
         lines.append(f"  description_len: {len(tool.description or '')}")
-        normalized = _normalize_schema(tool.inputSchema)
+        schema = getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", None)
+        normalized = _normalize_schema(schema)
         schema_text = json.dumps(normalized, indent=2, sort_keys=False)
         for schema_line in schema_text.splitlines():
             lines.append(f"  {schema_line}")

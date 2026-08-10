@@ -49,6 +49,10 @@ steady_state:
   # open-hop / dual-open dig cycles while residual_total=0, force
   # example-apps interesting_product (Goal B depth + still proof).
   max_consecutive_open_hop: 5
+  # Goal B portfolio (interesting_product_portfolio.py): anti-wave / anti-recipe.
+  max_consecutive_same_depth: 3
+  max_consecutive_same_recipe: 3
+  stack_target: 3
 
 campaigns:
   land-l25-smoke:
@@ -88,12 +92,17 @@ campaigns:
     # Post-5.8: open-hop monoculture under residual=0 → interesting_product.
     max_consecutive_open_hop: 5
     interesting_product_when_green: true
+    # Portfolio: ban same depth_id / recipe waves; prefer icon-app stacking.
+    max_consecutive_same_depth: 3
+    max_consecutive_same_recipe: 3
+    stack_target: 3
     success_criteria:
       - "Most dig cycles ship product or framework code (or seed actionable PENDING)"
       - "Friction found in digs is fixed in-cycle or next cycle — not re-logged forever"
       - "Drained queues (dual_lock depth 0) are skipped, not re-stamped as PASS"
       - "No isomorphic *_ops densify while densify_allowed=0 (#1637)"
       - "When residual=0, Goal B depth (interesting_product) after open-hop cap — still proof"
+      - "Goal B honors portfolio recommend (anti-wave / anti-recipe / stack) — not fleet-fill monoculture"
     prefer:
       lane: framework-ux
       strategy: explore

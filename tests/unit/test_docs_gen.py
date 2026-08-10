@@ -90,7 +90,7 @@ class TestMcpToolsInventory:
 
         out = generate_mcp_tools_inventory()
         tools = get_all_consolidated_tools()
-        total_ops = sum(len(_extract_operations(t.inputSchema)) for t in tools)
+        total_ops = sum(len(_extract_operations(t.input_schema)) for t in tools)
         assert f"**Live count:** {len(tools)} tools, {total_ops} operations." in out
 
 

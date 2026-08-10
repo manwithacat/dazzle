@@ -79,10 +79,11 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   packets, live AP notes as Message/Bubble conversation chrome, then settle board
   (no payment-health chart or twin dispute trail under the fold).
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
-- **Finance Operations** — shared ops overview: dual attention (awaiting + ready),
-  **named AP packets** (InvoiceDocument composition) and line-item body, live
-  discussion trail as Message/Bubble conversation chrome, metrics, and ops kanban
-  (no lifecycle funnel, payment bar chart, or paid timeline voids).
+- **Finance Operations** — shared ops overview: teammate **media shelf** headshots
+  first, then dual attention (awaiting + ready), **named AP packets**
+  (InvoiceDocument composition) and line-item body, live discussion trail as
+  Message/Bubble conversation chrome, metrics, and ops kanban (no lifecycle
+  funnel, payment bar chart, or paid timeline voids).
 - **Suppliers** — vendor **org-structure** desk: after the vendor pulse it
   shows a **region kanban** (EMEA / AMER / APAC) and a **multi-invoice supplier
   load** board over open AP, then a flat roster, bank refs, and recent invoices

@@ -76,8 +76,11 @@ snapshots are not gaps.
 | `example-apps story_walk` | `improve/strategies/story_walk.md` |
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` |
 | `example-apps hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` (recapture prove; emit fix prefers `framework-ux hyperpart_presentation`) |
-| `example-apps interesting_product` | `improve/strategies/interesting_product.md` — Goal B depth + still proof when residual=0 |
+| `example-apps interesting_product` | `improve/strategies/interesting_product.md` — Goal B depth + portfolio + still proof when residual=0 |
 | `example-apps depth` | alias of `interesting_product` |
+
+Goal B helpers: `scripts/interesting_product_portfolio.py --status`,
+`improve/peer_packs/`, `improve/oral-history.md`.
 
 ## Playbook
 

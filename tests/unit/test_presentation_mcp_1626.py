@@ -19,7 +19,7 @@ def test_presentation_tool_in_registry() -> None:
 
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "presentation" in tools
-    ops = tools["presentation"].inputSchema["properties"]["operation"]["enum"]
+    ops = tools["presentation"].input_schema["properties"]["operation"]["enum"]
     assert set(ops) == {"cognition", "opportunities", "residual", "shapes"}
     # product_quality description mentions presentation residual
     assert "presentation" in tools["product_quality"].description.lower()

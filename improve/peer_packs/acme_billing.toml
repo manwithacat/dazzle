@@ -1,0 +1,21 @@
+# R3 peer pack — Goal B context for acme_billing
+
+app = "acme_billing"
+peer = "Stripe Billing / Chargebee operator desk (thin slice)"
+domain = "billing"
+
+above_fold = [
+  "Open invoices with amount + status — not portfolio metrics alone",
+  "Line composition when claiming document depth",
+  "Multi-panel attention only when work rows are real",
+]
+
+refuse = [
+  "Headshot shelf as media depth on a pure billing desk — prefer document/money grain or invoice PDF thumbs",
+  "Metric theater as command density",
+]
+
+icon_depths = ["document", "command_density", "conversation"]
+surprise_prompts = [
+  "What one billing-true detail (dunning state, tax line, plan name) would a finance operator lean into?",
+]

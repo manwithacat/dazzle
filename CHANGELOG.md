@@ -1,6 +1,20 @@
 ## [Unreleased]
 
+## [0.111.0] - 2026-08-10
+
 ### Added
+- **MCP Python SDK v2 / protocol 2026-07-28** — full adoption of `mcp>=2,<3`:
+  lowlevel `Server` uses constructor `on_*` handlers (decorators removed);
+  result types (`ListToolsResult`, `CallToolResult`, …); snake_case fields
+  (`input_schema`, `mime_type`, `progress_token`); cache hints on
+  tools/resources/prompts lists; ADR-0002 amended; opportunity note in
+  `docs/reference/mcp-2026-07-28-opportunity.md`. App state (project root, KG,
+  `.dazzle/mcp-sessions/`) stays process-local — not protocol sessions.
+- **Goal B portfolio planner** — `scripts/interesting_product_portfolio.py`
+  depth×app coverage from unit pins, anti-wave / anti-recipe streaks, icon-app
+  stacking, peer packs under `improve/peer_packs/`; improve policy attaches
+  recommend on `interesting_product` force. Oral history:
+  `improve/oral-history.md`. Doctrine §6.2b in interesting-saas-context.
 - **Goal B conversation (domain_join_co)** — Workspace Home and Team Board
   `live_conversation` use `display: conversation` (Message/Bubble chrome) instead
   of queue meta rows; unit pin + SPEC fingerprint; member stills recaptured.

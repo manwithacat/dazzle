@@ -146,7 +146,29 @@ Closed list—agents **select**, not invent a twelfth chart:
 | `org_structure` | HR/org is hierarchy people can parse | Tree or reporting still already partially done—extend people, not only depts |
 | `empty_region_honesty` | No large void / skeleton theater | Secondary regions filled or omitted |
 
-**Refuse:** new example app to “fix” depth; metric tile proliferation; dual-open-only cycle labeled as depth.
+**Refuse:** new example app to “fix” depth; metric tile proliferation; dual-open-only cycle labeled as depth;
+same surface recipe on the Nth app while the portfolio planner bans that recipe.
+
+### 6.2b Portfolio pick (anti-wave / stacking — 2026-08)
+
+Closed menu alone produced **fleet-fill monoculture** (same `depth_id` + same
+recipe across every showcase). Selection pressure without inventing residual heat:
+
+| Control | Default | Machine surface |
+|---------|---------|-----------------|
+| Max consecutive same `depth_id` | 3 | `scripts/interesting_product_portfolio.py` |
+| Max consecutive same **recipe** | 3 | headshot_shelf, dual_attention, … |
+| Icon-app stacking | prefer apps with 1–2 depths before thin coat | ICON_APPS + coverage from unit pins |
+| Peer packs (R3) | when present | `improve/peer_packs/<app>.toml` |
+| Oral history | durable loop lessons | `improve/oral-history.md` |
+
+```bash
+uv run python scripts/interesting_product_portfolio.py --status
+uv run python scripts/interesting_product_portfolio.py --recommend
+```
+
+Policy attaches recommend onto `interesting_product` force args when residual=0.
+**No interestingness score** — only diversification and stacking constraints.
 
 ### 6.3 Interestingness prompts (force agent reflection before implement)
 

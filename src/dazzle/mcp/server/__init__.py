@@ -1,24 +1,46 @@
 """
-DAZZLE MCP Server implementation.
+DAZZLE MCP Server implementation (MCP Python SDK v2 / spec 2026-07-28).
 
-Implements the Model Context Protocol for DAZZLE using the official MCP SDK,
-exposing tools for DSL validation, inspection, and code generation.
+Low-level ``Server`` with constructor ``on_*`` handlers (decorators removed in
+SDK v2). App state (project root, KG, session dirs) remains process-local;
+protocol sessions are no longer required by the transport.
 
-Supports two modes:
-- Normal Mode: When running in a directory with dazzle.toml
-- Dev Mode: When running in the Dazzle development environment (has examples/, src/dazzle/)
+Supports:
+- Normal Mode: directory with dazzle.toml
+- Dev Mode: Dazzle development environment (examples/, src/dazzle/)
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from mcp.server import Server
+from mcp.server import Server, ServerRequestContext
+from mcp.server.caching import CacheHint
 from mcp.server.stdio import stdio_server
-from mcp.types import Resource, TextContent, Tool
-from pydantic import AnyUrl
+from mcp.types import (
+    CallToolRequestParams,
+    CallToolResult,
+    GetPromptRequestParams,
+    GetPromptResult,
+    ListPromptsResult,
+    ListResourcesResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    Prompt,
+    PromptArgument,
+    PromptMessage,
+    ReadResourceRequestParams,
+    ReadResourceResult,
+    Resource,
+    TextContent,
+    TextResourceContents,
+    Tool,
+)
 
 from dazzle.mcp.examples import get_example_metadata
 from dazzle.mcp.resources import create_resources
@@ -55,252 +77,253 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create the MCP server instance
 try:
     from dazzle._version import get_version
 
-    _dazzle_version: str | None = get_version()
+    _dazzle_version: str = get_version() or ""
 except Exception:
-    _dazzle_version = None
-
-server = Server("dazzle", version=_dazzle_version)
+    _dazzle_version = ""
 
 
 # ============================================================================
-# Tool Handler
+# Tool helpers (also used by tests / verify-mcp)
 # ============================================================================
 
 
-@server.list_tools()  # type: ignore[no-untyped-call]
 async def list_tools_handler() -> list[Tool]:
-    """List available DAZZLE tools."""
+    """List available DAZZLE tools (public helper for tests)."""
     logger.info("Using consolidated tools mode")
     return get_all_consolidated_tools()
 
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-    """Execute a DAZZLE tool."""
-    try:
-        ctx = server.request_context
-        session = ctx.session
-    except LookupError:
-        ctx = None
-        session = None
+async def _handle_list_tools(
+    ctx: ServerRequestContext,
+    params: PaginatedRequestParams | None,
+) -> ListToolsResult:
+    del ctx, params  # no pagination yet
+    return ListToolsResult(tools=await list_tools_handler())
 
-    # Extract progress token from request metadata (client may send one)
-    progress_token = None
-    if ctx is not None and ctx.meta is not None:
-        progress_token = getattr(ctx.meta, "progressToken", None)
 
-    # Try consolidated tools first
+async def _execute_tool(
+    name: str,
+    arguments: dict[str, Any],
+    *,
+    session: Any = None,
+    progress_token: str | int | None = None,
+) -> str:
+    """Dispatch one tool; return JSON/text payload string."""
     result = await dispatch_consolidated_tool(
         name, arguments or {}, session=session, progress_token=progress_token
     )
     if result is not None:
-        return [TextContent(type="text", text=result)]
+        return result
 
-    # Dev mode `project` tool (consolidated in #1074 — was 4 separate tools)
+    # Dev mode `project` tool (consolidated in #1074)
     if name == "project":
         op = (arguments or {}).get("operation", "")
         if op == "list":
-            result = list_projects()
-        elif op == "select":
-            result = select_project(arguments)
-        elif op == "get_active":
-            # Route through consolidated dispatch for roots-awareness.
-            # Strip the project-tool's operation key from the forwarded args
-            # so it doesn't shadow status tool's own operation enum.
+            return list_projects()
+        if op == "select":
+            return select_project(arguments)
+        if op == "get_active":
             forwarded = {k: v for k, v in (arguments or {}).items() if k != "operation"}
-            result = await dispatch_consolidated_tool(
-                "status", {"operation": "active_project", **forwarded}, session=session
+            routed = await dispatch_consolidated_tool(
+                "status",
+                {"operation": "active_project", **forwarded},
+                session=session,
             )
-            if result is None:
-                result = get_active_project_info()
-        elif op == "validate_all":
-            result = validate_all_projects()
-        else:
-            result = json.dumps(
-                {
-                    "error": (
-                        f"Unknown operation {op!r} for project tool. "
-                        "Valid: list, get_active, select, validate_all"
-                    )
-                }
-            )
-    else:
-        result = json.dumps({"error": f"Unknown tool: {name}"})
+            return routed if routed is not None else get_active_project_info()
+        if op == "validate_all":
+            return validate_all_projects()
+        return json.dumps(
+            {
+                "error": (
+                    f"Unknown operation {op!r} for project tool. "
+                    "Valid: list, get_active, select, validate_all"
+                )
+            }
+        )
 
-    return [TextContent(type="text", text=result)]
+    return json.dumps({"error": f"Unknown tool: {name}"})
+
+
+async def call_tool(name: str, arguments: dict[str, Any] | None = None) -> list[TextContent]:
+    """Execute a tool (public helper for tests — no protocol context)."""
+    text = await _execute_tool(name, arguments or {}, session=None, progress_token=None)
+    return [TextContent(type="text", text=text)]
+
+
+async def _handle_call_tool(
+    ctx: ServerRequestContext,
+    params: CallToolRequestParams,
+) -> CallToolResult:
+    progress_token = None
+    if ctx.meta and "progress_token" in ctx.meta:
+        progress_token = ctx.meta["progress_token"]
+    try:
+        text = await _execute_tool(
+            params.name,
+            params.arguments or {},
+            session=ctx.session,
+            progress_token=progress_token,
+        )
+        return CallToolResult(
+            content=[TextContent(type="text", text=text)],
+            is_error=False,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface tool failures as is_error
+        logger.exception("Tool %s failed", params.name)
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps({"error": str(exc)}))],
+            is_error=True,
+        )
 
 
 # ============================================================================
-# Resource Handlers
+# Resources
 # ============================================================================
 
 
-@server.list_resources()  # type: ignore[no-untyped-call]
-async def list_resources() -> list[Resource]:
-    """List available DAZZLE resources."""
-    resources = []
+def _resource(
+    uri: str,
+    name: str,
+    description: str,
+    mime_type: str = "text/plain",
+) -> Resource:
+    return Resource(uri=uri, name=name, description=description, mime_type=mime_type)
 
-    # Add documentation resources (always available)
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/glossary"),
-            name="DAZZLE Glossary (v0.2)",
-            description="Definitions of DAZZLE v0.2 terms (surface, persona, workspace, attention signals, etc.)",
-            mimeType="text/markdown",
-        )
-    )
 
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/quick-reference"),
-            name="DAZZLE Quick Reference",
-            description="DSL syntax quick reference with examples",
-            mimeType="text/markdown",
-        )
-    )
+async def list_resources_handler() -> list[Resource]:
+    """List resources (public helper)."""
+    resources: list[Resource] = [
+        _resource(
+            "dazzle://docs/glossary",
+            "DAZZLE Glossary (v0.2)",
+            "Definitions of DAZZLE v0.2 terms (surface, persona, workspace, attention signals, etc.)",
+            "text/markdown",
+        ),
+        _resource(
+            "dazzle://docs/quick-reference",
+            "DAZZLE Quick Reference",
+            "DSL syntax quick reference with examples",
+            "text/markdown",
+        ),
+        _resource(
+            "dazzle://docs/dsl-reference",
+            "DAZZLE DSL Reference (v0.2)",
+            "Complete DSL v0.2 reference documentation with UX semantic layer",
+            "text/markdown",
+        ),
+        _resource(
+            "dazzle://semantics/index",
+            "DAZZLE Semantic Concept Index (v0.2)",
+            "Structured index of all DSL v0.2 concepts with definitions, syntax, and examples",
+            "application/json",
+        ),
+        _resource(
+            "dazzle://examples/catalog",
+            "Example Projects Catalog",
+            "Catalog of example projects with metadata about features they demonstrate",
+            "application/json",
+        ),
+        _resource(
+            "dazzle://docs/context",
+            "DAZZLE Context",
+            "Quick reference context for Claude - key concepts, tools, and common workflows",
+            "text/markdown",
+        ),
+        _resource(
+            "dazzle://docs/patterns",
+            "DSL Patterns",
+            "Common DSL patterns with copy-paste examples (CRUD, dashboard, role-based access, etc.)",
+            "application/json",
+        ),
+        _resource(
+            "dazzle://docs/workflows",
+            "Workflow Guides",
+            "Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
+            "application/json",
+        ),
+        _resource(
+            "dazzle://user/profile",
+            "User Profile",
+            "Adaptive user profile with scored dimensions (technical depth, domain clarity, UX focus) and LLM guidance for adjusting communication register",
+            "application/json",
+        ),
+    ]
 
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/dsl-reference"),
-            name="DAZZLE DSL Reference (v0.2)",
-            description="Complete DSL v0.2 reference documentation with UX semantic layer",
-            mimeType="text/markdown",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://semantics/index"),
-            name="DAZZLE Semantic Concept Index (v0.2)",
-            description="Structured index of all DSL v0.2 concepts with definitions, syntax, and examples",
-            mimeType="application/json",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://examples/catalog"),
-            name="Example Projects Catalog",
-            description="Catalog of example projects with metadata about features they demonstrate",
-            mimeType="application/json",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/context"),
-            name="DAZZLE Context",
-            description="Quick reference context for Claude - key concepts, tools, and common workflows",
-            mimeType="text/markdown",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/patterns"),
-            name="DSL Patterns",
-            description="Common DSL patterns with copy-paste examples (CRUD, dashboard, role-based access, etc.)",
-            mimeType="application/json",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://docs/workflows"),
-            name="Workflow Guides",
-            description="Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
-            mimeType="application/json",
-        )
-    )
-
-    resources.append(
-        Resource(
-            uri=AnyUrl("dazzle://user/profile"),
-            name="User Profile",
-            description="Adaptive user profile with scored dimensions (technical depth, domain clarity, UX focus) and LLM guidance for adjusting communication register",
-            mimeType="application/json",
-        )
-    )
-
-    # Add project-specific resources if we have an active project
     project_path = get_active_project_path()
     if project_path and (project_path / "dazzle.toml").exists():
-        project_resources = create_resources(project_path)
-        resources.extend(
-            [
-                Resource(
-                    uri=r["uri"],
-                    name=r["name"],
-                    description=r["description"],
-                    mimeType=r.get("mimeType", "text/plain"),
+        for r in create_resources(project_path):
+            resources.append(
+                _resource(
+                    str(r["uri"]),
+                    str(r["name"]),
+                    str(r["description"]),
+                    str(r.get("mimeType") or r.get("mime_type") or "text/plain"),
                 )
-                for r in project_resources
-            ]
-        )
-
+            )
     return resources
 
 
-@server.read_resource()  # type: ignore[no-untyped-call]
+async def _handle_list_resources(
+    ctx: ServerRequestContext,
+    params: PaginatedRequestParams | None,
+) -> ListResourcesResult:
+    del ctx, params
+    return ListResourcesResult(resources=await list_resources_handler())
+
+
 async def read_resource(uri: str) -> str:
-    """Read a DAZZLE resource by URI."""
-    # MCP SDK passes AnyUrl (not a str subclass in Pydantic v2)
+    """Read a resource body by URI (public helper for tests)."""
     uri = str(uri)
 
-    # Documentation resources
     if uri == "dazzle://docs/glossary":
         return get_glossary()
 
-    elif uri == "dazzle://docs/quick-reference":
+    if uri == "dazzle://docs/quick-reference":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         quick_ref = docs_dir / "DAZZLE_DSL_QUICK_REFERENCE.md"
         if quick_ref.exists():
             return quick_ref.read_text(encoding="utf-8")
         return "Quick reference not found"
 
-    elif uri == "dazzle://docs/dsl-reference":
+    if uri == "dazzle://docs/dsl-reference":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         dsl_ref = docs_dir / "v0.2" / "DAZZLE_DSL_REFERENCE.md"
         if dsl_ref.exists():
             return dsl_ref.read_text(encoding="utf-8")
         return "DSL reference not found"
 
-    elif uri == "dazzle://docs/htmx-templates":
+    if uri == "dazzle://docs/htmx-templates":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         htmx_spec = docs_dir / "reference" / "htmx-templates.md"
         if htmx_spec.exists():
             return htmx_spec.read_text(encoding="utf-8")
         return "HTMX template specification not found"
 
-    elif uri == "dazzle://docs/runtime-capabilities":
+    if uri == "dazzle://docs/runtime-capabilities":
         docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
         rt_caps = docs_dir / "reference" / "runtime-capabilities.md"
         if rt_caps.exists():
             return rt_caps.read_text(encoding="utf-8")
         return "Runtime capabilities specification not found"
 
-    # Semantic resources
-    elif uri == "dazzle://semantics/index":
+    if uri == "dazzle://semantics/index":
         return json.dumps(get_semantic_index(), indent=2)
 
-    # Example resources
-    elif uri == "dazzle://examples/catalog":
+    if uri == "dazzle://examples/catalog":
         return json.dumps(get_example_metadata(), indent=2)
 
-    # Context and pattern resources
-    elif uri == "dazzle://docs/context":
+    if uri == "dazzle://docs/context":
         from dazzle.mcp.prompts import get_dazzle_context
 
         return get_dazzle_context()
 
-    elif uri == "dazzle://docs/patterns":
+    if uri == "dazzle://docs/patterns":
         return json.dumps(get_dsl_patterns(), indent=2)
 
-    elif uri == "dazzle://docs/workflows":
+    if uri == "dazzle://docs/workflows":
         from dazzle.mcp.cli_help import get_workflow_guide
 
         workflows = [
@@ -317,14 +340,13 @@ async def read_resource(uri: str) -> str:
         result = {name: get_workflow_guide(name) for name in workflows}
         return json.dumps(result, indent=2)
 
-    elif uri == "dazzle://user/profile":
+    if uri == "dazzle://user/profile":
         from dazzle.mcp.user_profile import load_profile, profile_to_context
 
         profile = load_profile()
         return json.dumps(profile_to_context(profile), indent=2)
 
-    # Project resources
-    elif uri.startswith("dazzle://project/"):
+    if uri.startswith("dazzle://project/"):
         project_path = get_active_project_path()
         if not project_path:
             return json.dumps({"error": "No active project"})
@@ -335,21 +357,20 @@ async def read_resource(uri: str) -> str:
                 return manifest_path.read_text(encoding="utf-8")
             return "Manifest not found"
 
-        elif uri == "dazzle://modules":
+        if uri == "dazzle://modules":
             return list_modules(project_path)
 
-        elif uri == "dazzle://entities":
+        if uri == "dazzle://entities":
             return get_entities(project_path)
 
-        elif uri == "dazzle://surfaces":
+        if uri == "dazzle://surfaces":
             return get_surfaces(project_path)
 
-    elif uri.startswith("dazzle://dsl/"):
+    if uri.startswith("dazzle://dsl/"):
         project_path = get_active_project_path()
         if not project_path:
             return json.dumps({"error": "No active project"})
 
-        # Extract file path from URI
         file_path = uri.replace("dazzle://dsl/", "")
         dsl_file = project_path / file_path
         if dsl_file.exists():
@@ -359,24 +380,45 @@ async def read_resource(uri: str) -> str:
     return f"Unknown resource: {uri}"
 
 
+def _mime_for_uri(uri: str) -> str:
+    if (
+        uri.endswith(".json")
+        or "/semantics/" in uri
+        or uri.endswith("/patterns")
+        or uri.endswith("/workflows")
+        or uri.endswith("/catalog")
+        or uri.endswith("/profile")
+    ):
+        return "application/json"
+    if "glossary" in uri or "reference" in uri or "context" in uri or uri.endswith(".md"):
+        return "text/markdown"
+    return "text/plain"
+
+
+async def _handle_read_resource(
+    ctx: ServerRequestContext,
+    params: ReadResourceRequestParams,
+) -> ReadResourceResult:
+    del ctx
+    uri = str(params.uri)
+    text = await read_resource(uri)
+    return ReadResourceResult(
+        contents=[
+            TextResourceContents(
+                uri=uri,
+                text=text,
+                mime_type=_mime_for_uri(uri),
+            )
+        ]
+    )
+
+
 # ============================================================================
-# Prompt Handlers
+# Prompts
 # ============================================================================
 
 
-@server.list_prompts()  # type: ignore[no-untyped-call]
-async def list_prompts() -> list[dict[str, Any]]:
-    """List available DAZZLE prompts."""
-    from dazzle.mcp.prompts import create_prompts
-
-    return create_prompts()
-
-
-@server.get_prompt()  # type: ignore[no-untyped-call]
-async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
-    """Get a DAZZLE prompt by name."""
-    args = arguments or {}
-
+def _prompt_text(name: str, args: dict[str, str]) -> str:
     if name == "validate":
         return """Please validate the DAZZLE project:
 
@@ -384,7 +426,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
 2. Report any validation errors found
 3. If valid, summarize the project structure (modules, entities, surfaces)"""
 
-    elif name == "review_dsl":
+    if name == "review_dsl":
         aspect = args.get("aspect", "all")
         return f"""Please review the DAZZLE DSL focusing on: {aspect}
 
@@ -398,7 +440,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Performance implications (if aspect=performance or all)
 4. Suggest specific improvements with examples"""
 
-    elif name == "code_review":
+    if name == "code_review":
         stack = args.get("stack", "base")
         return f"""Please review the generated code for stack: {stack}
 
@@ -411,11 +453,10 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Proper error handling
 4. Suggest improvements"""
 
-    elif name == "suggest_surfaces":
+    if name == "suggest_surfaces":
         entity_name = args.get("entity_name", "")
         if not entity_name:
             return "Error: entity_name argument required"
-
         return f"""Please suggest surface definitions for the {entity_name} entity:
 
 1. Use inspect_entity to examine the {entity_name} entity
@@ -427,7 +468,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Persona variants if needed
 4. Provide complete DSL code for the suggested surfaces"""
 
-    elif name == "optimize_dsl":
+    if name == "optimize_dsl":
         return """Please analyze the DSL and suggest optimizations:
 
 1. Use analyze_patterns to detect CRUD and integration patterns
@@ -439,7 +480,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Better use of UX semantics
 3. Suggest specific DSL improvements with before/after examples"""
 
-    elif name == "getting_started":
+    if name == "getting_started":
         return """Help the user get started with DAZZLE:
 
 1. Use get_workflow_guide("getting_started") to get the complete guide
@@ -451,7 +492,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
 3. Offer to help them customize the starter code for their use case
 4. Point them to lookup_concept("patterns") for common patterns they can use"""
 
-    elif name == "napkin_to_app":
+    if name == "napkin_to_app":
         spec_path = args.get("spec_path", "spec.md")
         return f"""Transform a narrative spec into a running DAZZLE application.
 
@@ -517,22 +558,110 @@ After each major section: `dsl(operation="validate")`
     return f"Unknown prompt: {name}"
 
 
+async def list_prompts() -> list[dict[str, Any]]:
+    """List prompts as plain dicts (legacy helper / tests)."""
+    from dazzle.mcp.prompts import create_prompts
+
+    return create_prompts()
+
+
+async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
+    """Get prompt body text (legacy helper / tests)."""
+    return _prompt_text(name, arguments or {})
+
+
+async def _handle_list_prompts(
+    ctx: ServerRequestContext,
+    params: PaginatedRequestParams | None,
+) -> ListPromptsResult:
+    del ctx, params
+    raw = await list_prompts()
+    prompts: list[Prompt] = []
+    for p in raw:
+        args = [
+            PromptArgument(
+                name=str(a["name"]),
+                description=str(a.get("description") or ""),
+                required=bool(a.get("required", False)),
+            )
+            for a in (p.get("arguments") or [])
+        ]
+        prompts.append(
+            Prompt(
+                name=str(p["name"]),
+                description=str(p.get("description") or ""),
+                arguments=args or None,
+            )
+        )
+    return ListPromptsResult(prompts=prompts)
+
+
+async def _handle_get_prompt(
+    ctx: ServerRequestContext,
+    params: GetPromptRequestParams,
+) -> GetPromptResult:
+    del ctx
+    args = {k: str(v) for k, v in (params.arguments or {}).items()}
+    text = _prompt_text(params.name, args)
+    return GetPromptResult(
+        description=f"DAZZLE prompt: {params.name}",
+        messages=[
+            PromptMessage(
+                role="user",
+                content=TextContent(type="text", text=text),
+            )
+        ],
+    )
+
+
+# ============================================================================
+# Server instance (SDK v2: handlers via constructor on_*)
+# ============================================================================
+
+# Cacheable list results (2026-07-28) — hosts may cache tool catalogs.
+_CacheableMethod = Literal[
+    "prompts/list",
+    "resources/list",
+    "resources/read",
+    "resources/templates/list",
+    "server/discover",
+    "tools/list",
+]
+_CACHE_HINTS: Mapping[_CacheableMethod, CacheHint] = {
+    "tools/list": CacheHint(ttl_ms=60_000),
+    "resources/list": CacheHint(ttl_ms=30_000),
+    "prompts/list": CacheHint(ttl_ms=60_000),
+}
+
+server = Server(
+    "dazzle",
+    version=_dazzle_version,
+    cache_hints=_CACHE_HINTS,
+    on_list_tools=_handle_list_tools,
+    on_call_tool=_handle_call_tool,
+    on_list_resources=_handle_list_resources,
+    on_read_resource=_handle_read_resource,
+    on_list_prompts=_handle_list_prompts,
+    on_get_prompt=_handle_get_prompt,
+)
+
+
 # ============================================================================
 # Server Entry Point
 # ============================================================================
 
 
 async def run_server(project_root: Path | None = None) -> None:
-    """Run the DAZZLE MCP server."""
+    """Run the DAZZLE MCP server over stdio."""
     if project_root:
         set_project_root(project_root)
         logger.info("Project root set to: %s", project_root)
     else:
         logger.info("Using default project root: %s", get_project_root())
 
-    # Multi-session isolation (#1628): default each process gets its own
-    # state under .dazzle/mcp-sessions/<id>/ (KG + activity). Exclusive
-    # fcntl lock only when DAZZLE_MCP_SHARED=1 (legacy shared KG).
+    # Multi-session isolation (#1628): each process gets its own state under
+    # .dazzle/mcp-sessions/<id>/ (app state handles, not protocol sessions).
+    # Exclusive fcntl lock only when DAZZLE_MCP_SHARED=1 (legacy shared KG).
     from .mcp_session import (
         ensure_mcp_session_id,
         exclusive_lock_required,
@@ -547,7 +676,7 @@ async def run_server(project_root: Path | None = None) -> None:
     state_dir = mcp_state_dir(root)
     state_dir.mkdir(parents=True, exist_ok=True)
     logger.info(
-        "MCP session=%s shared=%s state_dir=%s",
+        "MCP session=%s shared=%s state_dir=%s protocol=2026-07-28/sdk-v2",
         session_id,
         mcp_shared_mode(),
         state_dir,
@@ -555,9 +684,6 @@ async def run_server(project_root: Path | None = None) -> None:
 
     lock: ProcessLock | None = None
     if exclusive_lock_required():
-        # Shared mode: prevent two servers racing the SQLite WAL of the
-        # shared knowledge_graph.db. Stale holder (PID dead) is taken over;
-        # live conflict fails fast with structured stderr (exit 2).
         lock = ProcessLock(root, lock_path=mcp_lock_path(root))
         conflict = lock.acquire()
         if conflict is not None:
@@ -566,7 +692,6 @@ async def run_server(project_root: Path | None = None) -> None:
             print(message, file=sys.stderr)
             sys.exit(EXIT_LOCK_CONTENTION)
 
-    # Initialize dev mode detection
     init_dev_mode(root)
 
     if is_dev_mode():
@@ -578,23 +703,22 @@ async def run_server(project_root: Path | None = None) -> None:
     else:
         logger.info("Running in NORMAL MODE")
 
-    # Initialize knowledge graph first — needed by ActivityStore (SQLite backend)
     init_knowledge_graph(root)
     logger.info("Knowledge graph initialized")
 
-    # Initialize activity log (JSONL + SQLite store).
-    # Must run AFTER init_knowledge_graph so init_activity_store can
-    # attach to the KG. Without this ordering the SQLite store stays
-    # None and SQLite-backed readers (e.g. status.activity) see nothing.
     from .state import init_activity_log
 
     init_activity_log(root)
 
-    logger.info("Starting DAZZLE MCP server...")
+    logger.info("Starting DAZZLE MCP server (SDK v2)...")
     try:
         async with stdio_server() as (read_stream, write_stream):
             logger.info("stdio transport established, running server...")
-            await server.run(read_stream, write_stream, server.create_initialization_options())
+            await server.run(
+                read_stream,
+                write_stream,
+                server.create_initialization_options(),
+            )
     except Exception as e:
         logger.exception("Server error: %s", e)
         raise
@@ -606,9 +730,8 @@ async def run_server(project_root: Path | None = None) -> None:
 class DazzleMCPServer:
     """Class-based entry point for the MCP server.
 
-    A thin object wrapper over the module-level ``run_server`` for callers that
-    prefer an instantiable handle (``DazzleMCPServer(root).run()``); exported as
-    public API via ``dazzle.mcp``. Not a shim — both forms are supported.
+    Thin object wrapper over ``run_server`` for callers that prefer
+    ``DazzleMCPServer(root).run()``.
     """
 
     def __init__(self, project_root: Path | None = None):
@@ -618,7 +741,6 @@ class DazzleMCPServer:
         await run_server(self.project_root)
 
 
-# Export key items
 __all__ = [
     "server",
     "run_server",
@@ -632,4 +754,8 @@ __all__ = [
     "init_knowledge_graph",
     "call_tool",
     "list_tools_handler",
+    "list_resources_handler",
+    "read_resource",
+    "list_prompts",
+    "get_prompt",
 ]

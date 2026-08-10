@@ -1,0 +1,21 @@
+# R3 peer pack — Goal B context for design_studio
+
+app = "design_studio"
+peer = "Figma / Frame.io / Bynder creative ops"
+domain = "creative"
+
+above_fold = [
+  "Pixels first — thumbnails or strong visual wall, not asset meta tables alone",
+  "Campaign or brand context next to creatives",
+  "Critique / conversation on review desks when claiming conversation depth",
+]
+
+refuse = [
+  "Media depth that is only photo_url chips with no design content",
+  "Org structure Team desk clone with no creative hierarchy",
+]
+
+icon_depths = ["media", "conversation", "document"]
+surprise_prompts = [
+  "What one design-true detail (version, approval stamp, brand swatch) would a creative director notice?",
+]

@@ -163,7 +163,7 @@ def test_mcp_tool_registered() -> None:
 
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "product_quality" in tools
-    schema = tools["product_quality"].inputSchema
+    schema = tools["product_quality"].input_schema
     ops = schema["properties"]["operation"]["enum"]
     assert ops == ["score"]
 

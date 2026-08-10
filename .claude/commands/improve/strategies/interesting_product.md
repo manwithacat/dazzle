@@ -8,11 +8,15 @@
 **Umbrella:** post-5.8 Goal B (interesting SaaS) — antagonist 2026-08-02
 
 When **machine residual is green**, do **not** invent another dual-open hop and
-call it product. Load this pack: pick **one** depth from the closed menu, answer
-four prompts, implement so a **hero still** changes, recapture, stop.
+call it product. Load this pack: **honor the portfolio recommend**, pick **one**
+depth from the closed menu, answer four prompts (peer pack when present),
+implement so a **hero still** changes, recapture, stop.
 
 **Stills beat walk green.** Dual-open without recapture is **harness_only**
 (Goal A) — log it that way; never claim bake-off lift.
+
+**Oral history:** `improve/oral-history.md` (depth-wave monoculture, panel thrash,
+hyperpart coupling). Do not re-learn those by shipping another headshot shelf.
 
 ---
 
@@ -43,7 +47,8 @@ Skip when:
 | `empty_region_honesty` | No large void / skeleton | Secondary regions filled **or** omitted |
 
 **Refuse:** new example app to “fix” depth; metric tile proliferation;
-dual-open-only cycle labeled as depth; densify when `densify_allowed=0`.
+dual-open-only cycle labeled as depth; densify when `densify_allowed=0`;
+**same recipe on the Nth app** while portfolio bans that recipe.
 
 ---
 
@@ -55,33 +60,61 @@ dual-open-only cycle labeled as depth; densify when `densify_allowed=0`.
 uv run python scripts/improve_example_probes.py --status
 # residual_total should be 0 for this strategy
 uv run python scripts/improve_policy.py --status
+# includes interesting_product portfolio lines when residual green
+uv run python scripts/interesting_product_portfolio.py --status
 # open hero stills under examples/<app>/.dazzle/qa/screenshots/ — note mtimes
 ```
 
-### 2. SELECT (log before implement)
+### 2. SELECT (portfolio first, then four prompts)
 
-In the cycle log, answer **all four** (short):
+**2a. Portfolio (required)** — honor unless residual heat or red CI appears:
 
-1. **Peer:** What does a good commercial tool show on this desk’s first screen that we do not?
-2. **Surprise:** What one domain-true detail would make a founder lean in?
+```bash
+uv run python scripts/interesting_product_portfolio.py --recommend
+# → app depth_id # reason
+```
+
+Rules the planner enforces (also in policy status):
+
+| Rule | Meaning |
+|------|---------|
+| **Anti-wave** | After ≥3 tipward Goal B ships with the same `depth_id`, that depth is banned |
+| **Anti-recipe** | After ≥3 ships with the same surface recipe (e.g. `headshot_shelf`), that recipe is banned — implement a *different* expression or pick another depth |
+| **Icon stacking** | Prefer icon apps for a depth and apps with 1–2 depths already over thin fleet coat on every app |
+| **Peer pack** | If `improve/peer_packs/<app>.toml` exists, Peer prompt must use it |
+
+Override portfolio only with a one-line dig reason (e.g. `scenario_underused`
+emitter dogfood on a different home).
+
+**2b. Four prompts** (cycle log, short):
+
+1. **Peer:** From peer pack `above_fold` / named commercial peer — what do we lack?
+2. **Surprise:** One domain-true detail (pack `surprise_prompts` or better).
 3. **Still:** Which hero PNG will change, and what will a buyer see differently?
-4. **Harness:** Does this need new open-via, or only product surface?
-   (If only open-via → this is Goal A; set `harness_only: true` and do not claim Goal B.)
+4. **Harness:** New open-via only, or product surface?
+   (If only open-via → Goal A; `harness_only: true`.)
 
 Also log:
 
 ```text
 depth_id: conversation|document|media|command_density|org_structure|empty_region_honesty
 harness_only: false
-app: <showcase>
+app: <showcase>   # from portfolio recommend unless overridden
+recipe: <short tag or "novel">   # not the banned recipe
 still_paths: examples/<app>/.dazzle/qa/screenshots/<hero>_desktop_light.png
+portfolio_reason: <from --recommend>
 ```
 
 ### 3. IMPLEMENT
 
-* Prefer **framework-wide** depth primitive if the gap is cross-app
-* Else one showcase **icon app** with still proof
+* Prefer **framework-wide** depth primitive if the **same gap** appeared on ≥3 apps
+  this wave (stop painting; lift the primitive)
+* Else prefer **icon-app stacking** (2–3 depths coherent on one showcase) over
+  the next thin coat on a greenfield app
+* **scenario_underused:** if an emitter exists and few apps mount it, one icon
+  home + still beats a parallel custom region
 * Do **not** ship hop attrs alone under this strategy
+* Dig receipt notes must include `depth_id=<id>` (portfolio parses receipts)
 
 ### 4. PROVE
 
@@ -97,12 +130,14 @@ still_paths: examples/<app>/.dazzle/qa/screenshots/<hero>_desktop_light.png
 | Visible | Diff readable above fold without walk script |
 | Residual | May stay 0 — Goal B is not residual_total |
 | Score | Antagonist re-score only after recapture package |
+| Portfolio | Unit pin name `test_<app>_<depth>_goal_b.py` so coverage matrix updates |
 
 ### 5. RECORD
 
 * `harness_only: false` only if still changed and depth is visible
 * No “fleet improved” without antagonist re-score
 * No category leadership claims
+* If you learned a durable rule, one bullet in `improve/oral-history.md`
 
 ---
 

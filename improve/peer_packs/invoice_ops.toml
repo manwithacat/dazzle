@@ -1,0 +1,25 @@
+# R3 peer pack — Goal B context for invoice_ops / AP desks
+# Loaded by interesting_product SELECT; not a residual probe.
+
+app = "invoice_ops"
+peer = "Bill.com / Melio / Tipalti AP desk"
+domain = "accounts_payable"
+
+above_fold = [
+  "Open invoices with amount + due date + vendor — not a single KPI total",
+  "Line items or document packet reachable without a hunt",
+  "Payment / approval state visible on the work row",
+  "No large empty secondary region pretending to be a chart",
+]
+
+refuse = [
+  "Metric tile proliferation without work rows",
+  "Headshot shelf as media depth on a pure money desk (prefer document/money grain)",
+  "Dual-open hop labeled as document depth",
+]
+
+icon_depths = ["document", "command_density", "empty_region_honesty"]
+surprise_prompts = [
+  "What one vendor-true detail (PO match, tax line, dispute flag) would a controller lean into?",
+  "Would a human prefer this over a thin spreadsheet export?",
+]

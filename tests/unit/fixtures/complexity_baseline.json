@@ -583,7 +583,7 @@
       "_description_hash": 1,
       "_normalize_schema": 5,
       "diff_against_baseline": 4,
-      "snapshot_mcp_tools": 5
+      "snapshot_mcp_tools": 6
     },
     "mi_rank": "A"
   },
@@ -2794,6 +2794,7 @@
       "_render_feature_table": 2,
       "_render_index": 8,
       "_render_page": 5,
+      "_tool_input_schema": 2,
       "check_docs_coverage": 14,
       "generate_reference_docs": 7,
       "inject_readme_feature_table": 6,
@@ -7153,13 +7154,16 @@
       "_fail": 1,
       "_finalize_verify": 4,
       "_http_reset_and_seed": 4,
+      "_http_seed_only": 3,
       "_is_aggregate_display": 3,
       "_is_listish_display": 3,
       "_is_stable_persona_user_fixture": 6,
       "_list_total": 9,
+      "_maybe_enrich_stable_user_media": 4,
       "_prepare_fixtures": 4,
       "_probe_one_persona": 11,
       "_reset_only": 3,
+      "_stable_user_media_enrichment": 7,
       "_step": 1,
       "demo_ops_playbook": 1,
       "find_demo_data_dir": 3,
@@ -12231,7 +12235,7 @@
       "_user_can_mutate": 4,
       "_workspace_handler": 46,
       "build_app_page_context": 12,
-      "create_page_routes": 92,
+      "create_page_routes": 101,
       "gate_authored_primary_actions_for_principal": 5,
       "gate_detail_transitions": 2
     },
@@ -12663,14 +12667,14 @@
     "functions": {
       "ConstraintViolationError": 2,
       "ConstraintViolationError.__init__": 1,
-      "Repository": 10,
+      "Repository": 11,
       "Repository.__init__": 9,
       "Repository._convert_row_dict": 10,
       "Repository._model_to_row": 2,
       "Repository._python_to_db": 1,
       "Repository._read_on_conn": 2,
       "Repository._record_query": 2,
-      "Repository._row_to_model": 2,
+      "Repository._row_to_model": 7,
       "Repository._safe_row_to_model": 4,
       "Repository.aggregate": 11,
       "Repository.create": 17,
@@ -12878,6 +12882,7 @@
       "_tenant_table_args": 5,
       "_tenant_unique_fields": 5,
       "build_metadata": 45,
+      "ensure_missing_entity_columns": 12,
       "get_circular_ref_edges": 1,
       "get_sorted_table_names": 2,
       "scoped_entity_names": 4
@@ -12924,7 +12929,7 @@
       "_enforce_create_scope": 24,
       "_enforce_update_scope": 23,
       "_extract_cedar_row_filters": 18,
-      "_extract_condition_filters": 86,
+      "_extract_condition_filters": 96,
       "_resolve_predicate_filters": 10,
       "_resolve_scope_filters": 20,
       "_resolve_user_attribute": 15,
@@ -12933,7 +12938,7 @@
       "_should_bypass_tenant_filter": 7,
       "build_create_scope_probe": 4
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/http/runtime/search_routes.py": {
     "functions": {
@@ -13996,11 +14001,12 @@
       "RegionRenderInputs": 1,
       "RenderEnv": 1,
       "_active_list_search": 3,
+      "_apply_conversation_list_ctx": 4,
       "_apply_list_search_chrome": 2,
       "_build_card_adapter_ctx": 13,
       "_build_chart_adapter_ctx": 27,
       "_build_dashboard_adapter_ctx": 15,
-      "_build_list_adapter_ctx": 13,
+      "_build_list_adapter_ctx": 14,
       "_build_specialty_adapter_ctx": 15,
       "_entity_display_field": 2,
       "_gated_entity_detail_urls": 6,
@@ -15501,7 +15507,7 @@
       "PopulationHandlers._populate_workspaces": 7,
       "PopulationHandlers.handle_auto_populate": 12,
       "PopulationHandlers.handle_populate_from_appspec": 6,
-      "PopulationHandlers.handle_populate_mcp_tools": 6,
+      "PopulationHandlers.handle_populate_mcp_tools": 7,
       "PopulationHandlers.handle_populate_test_coverage": 5
     },
     "mi_rank": "A"
@@ -15745,10 +15751,20 @@
       "DazzleMCPServer": 3,
       "DazzleMCPServer.__init__": 2,
       "DazzleMCPServer.run": 1,
-      "call_tool": 16,
-      "get_prompt": 10,
+      "_execute_tool": 13,
+      "_handle_call_tool": 5,
+      "_handle_get_prompt": 3,
+      "_handle_list_prompts": 7,
+      "_handle_list_resources": 1,
+      "_handle_list_tools": 1,
+      "_handle_read_resource": 1,
+      "_mime_for_uri": 11,
+      "_prompt_text": 9,
+      "_resource": 1,
+      "call_tool": 2,
+      "get_prompt": 2,
       "list_prompts": 1,
-      "list_resources": 4,
+      "list_resources_handler": 6,
       "list_tools_handler": 1,
       "read_resource": 27,
       "run_server": 7
@@ -16256,11 +16272,14 @@
   },
   "dazzle/mcp/server/handlers/presentation.py": {
     "functions": {
+      "_filter_shape_table": 8,
       "_resolve_app_root": 6,
-      "handle_presentation": 12,
+      "_shape_detail": 6,
+      "handle_presentation": 13,
       "presentation_cognition_handler": 1,
       "presentation_opportunities_handler": 2,
-      "presentation_residual_handler": 6
+      "presentation_residual_handler": 6,
+      "presentation_shapes_handler": 9
     },
     "mi_rank": "A"
   },
@@ -18006,7 +18025,9 @@
     "functions": {
       "StillScore": 1,
       "_shot_dir": 3,
-      "score_stills": 10
+      "is_lfs_pointer": 5,
+      "is_usable_still": 2,
+      "score_stills": 12
     },
     "mi_rank": "A"
   },
@@ -18054,9 +18075,10 @@
     "functions": {
       "PartShape": 2,
       "PartShape.to_json": 1,
+      "_scenario_covered_ids": 3,
       "agent_shape_table": 2,
       "load_shapes": 14,
-      "shapes_snapshot": 5
+      "shapes_snapshot": 10
     },
     "mi_rank": "A"
   },
@@ -18102,7 +18124,7 @@
       "_surface_mode": 2,
       "_switch_author_action": 2,
       "_switch_emit_covered": 1,
-      "_switch_row_for_field": 7,
+      "_switch_row_for_field": 8,
       "catalogue_snapshot": 4,
       "load_scenarios": 7,
       "scan_boolean_switch": 14,
@@ -18663,7 +18685,8 @@
   "dazzle/render/breadcrumbs.py": {
     "functions": {
       "Crumb": 1,
-      "build_breadcrumb_trail": 8,
+      "_suppress_crumb_url": 4,
+      "build_breadcrumb_trail": 7,
       "build_shell_breadcrumb": 13,
       "crumbs_to_breadcrumb": 2
     },
@@ -18831,7 +18854,7 @@
   "dazzle/render/fragment/form_field.py": {
     "functions": {
       "field_context_to_dict": 34,
-      "field_dict_to_primitive": 56,
+      "field_dict_to_primitive": 57,
       "render_field_context": 1
     },
     "mi_rank": "A"
@@ -18893,6 +18916,7 @@
       "_heatmap_tone_attr": 6,
       "_hub_open_discovery_attrs": 1,
       "_jinja_num": 2,
+      "_progress_bar_pct_str": 2,
       "_progress_pct_str": 2,
       "_progress_stage_tone": 3,
       "_render_metric_delta_html": 14,
@@ -18929,6 +18953,7 @@
       "pipeline_root_attrs": 1,
       "pivot_root_attrs": 1,
       "profile_card_root_attrs": 1,
+      "progress_bar_root_attrs": 1,
       "progress_root_attrs": 1,
       "queue_row_root_attrs": 2,
       "radar_root_attrs": 1,
@@ -18958,6 +18983,7 @@
       "render_pivot_table": 8,
       "render_profile_card": 10,
       "render_progress": 3,
+      "render_progress_bar": 5,
       "render_queue_row": 5,
       "render_radar": 6,
       "render_search_box": 6,
@@ -19039,6 +19065,7 @@
       "ProfileCard": 5,
       "ProfileCard._identity_required": 4,
       "Progress": 1,
+      "ProgressBarModel": 1,
       "ProgressStage": 1,
       "QueueRow": 4,
       "QueueRow._title_nonempty": 3,
@@ -19134,8 +19161,21 @@
       "EmptyState": 1,
       "Heading": 3,
       "Heading.__post_init__": 2,
+      "HoverCard": 6,
+      "HoverCard.__post_init__": 5,
       "Icon": 3,
       "Icon.__post_init__": 2,
+      "MapBoard": 4,
+      "MapBoard.__post_init__": 3,
+      "Marker": 8,
+      "Marker.__post_init__": 7,
+      "Message": 4,
+      "Message.__post_init__": 4,
+      "Message.orientation": 2,
+      "MessageScroller": 7,
+      "MessageScroller.__post_init__": 6,
+      "Popover": 7,
+      "Popover.__post_init__": 6,
       "Skeleton": 3,
       "Skeleton.__post_init__": 2,
       "Text": 3,
@@ -19168,6 +19208,10 @@
       "CalendarGrid.__post_init__": 2,
       "CardPicker": 1,
       "CardPickerEntry": 1,
+      "Carousel": 5,
+      "Carousel.__post_init__": 4,
+      "CarouselSlide": 6,
+      "CarouselSlide.__post_init__": 5,
       "CohortStripCell": 3,
       "CohortStripCell.__post_init__": 2,
       "CohortStripLensTab": 3,
@@ -19244,6 +19288,9 @@
       "PivotTableRegion": 1,
       "ProfileCard": 5,
       "ProfileCard.__post_init__": 4,
+      "ProgressBar": 4,
+      "ProgressBar.__post_init__": 4,
+      "ProgressBar.percent": 1,
       "QueueBadgeColumn": 1,
       "QueueDateColumn": 1,
       "QueueMetaColumn": 1,
@@ -19330,6 +19377,10 @@
       "SwitchField.__post_init__": 2,
       "TagsField": 3,
       "TagsField.__post_init__": 2,
+      "Toggle": 5,
+      "Toggle.__post_init__": 4,
+      "ToggleField": 6,
+      "ToggleField.__post_init__": 5,
       "ToggleGroupField": 4,
       "ToggleGroupField.__post_init__": 3,
       "WidgetCombobox": 3,
@@ -19370,10 +19421,24 @@
       "Breadcrumb.__post_init__": 4,
       "BreadcrumbItem": 4,
       "BreadcrumbItem.__post_init__": 3,
+      "Menubar": 5,
+      "Menubar.__post_init__": 4,
+      "MenubarAction": 4,
+      "MenubarAction.__post_init__": 3,
+      "MenubarMenu": 5,
+      "MenubarMenu.__post_init__": 4,
       "NavGroup": 4,
       "NavGroup.__post_init__": 3,
       "NavItem": 3,
       "NavItem.__post_init__": 2,
+      "NavigationMenu": 5,
+      "NavigationMenu.__post_init__": 4,
+      "NavigationMenuBranch": 5,
+      "NavigationMenuBranch.__post_init__": 4,
+      "NavigationMenuGroup": 3,
+      "NavigationMenuGroup.__post_init__": 2,
+      "NavigationMenuLink": 4,
+      "NavigationMenuLink.__post_init__": 3,
       "Sidebar": 1,
       "SkipLink": 4,
       "SkipLink.__post_init__": 3,
@@ -19422,12 +19487,25 @@
   },
   "dazzle/render/fragment/region/_builders_metrics.py": {
     "functions": {
-      "_BuildersMetricsMixin": 20,
+      "_BuildersMetricsMixin": 15,
       "_BuildersMetricsMixin._build_accordion": 13,
+      "_BuildersMetricsMixin._build_carousel": 8,
+      "_BuildersMetricsMixin._build_map": 8,
       "_BuildersMetricsMixin._build_metrics": 26,
       "_BuildersMetricsMixin._build_pipeline_steps": 15,
       "_BuildersMetricsMixin._build_progress": 27,
-      "_BuildersMetricsMixin._build_status_list": 13
+      "_BuildersMetricsMixin._build_progress_bar": 8,
+      "_BuildersMetricsMixin._build_status_list": 13,
+      "_carousel_slides_from_entries": 15,
+      "_carousel_slides_from_items": 10,
+      "_carousel_src_from_item": 3,
+      "_coerce_marker_tone": 2,
+      "_entry_field": 4,
+      "_map_label_from_item": 3,
+      "_map_markers_from_entries": 4,
+      "_map_markers_from_items": 15,
+      "_map_tone_from_status": 1,
+      "_stable_map_xy": 2
     },
     "mi_rank": "A"
   },
@@ -19455,7 +19533,7 @@
       "_human_queue_meta_text": 4,
       "_outlier_badge": 2,
       "_queue_meta_raw": 10,
-      "_queue_row_meta_columns": 45,
+      "_queue_row_meta_columns": 55,
       "_rag_badge": 1,
       "_ref_dict_has_display_substance": 9
     },
@@ -19463,18 +19541,21 @@
   },
   "dazzle/render/fragment/region/_builders_timeline.py": {
     "functions": {
-      "_BuildersTimelineMixin": 21,
+      "_BuildersTimelineMixin": 24,
       "_BuildersTimelineMixin._build_activity_feed": 7,
-      "_BuildersTimelineMixin._build_conversation": 17,
+      "_BuildersTimelineMixin._build_conversation": 35,
       "_BuildersTimelineMixin._build_day_timeline": 16,
       "_BuildersTimelineMixin._build_task_inbox": 26,
       "_BuildersTimelineMixin._build_timeline": 33,
-      "_activity_actor_label": 9,
+      "_activity_actor_label": 12,
       "_activity_description": 4,
       "_activity_drill_by_id": 4,
       "_activity_empty_message": 3,
       "_activity_feed_rows": 6,
-      "_conversation_orientation": 12
+      "_conversation_message": 5,
+      "_conversation_orientation": 12,
+      "_conversation_time": 10,
+      "_media_initials": 5
     },
     "mi_rank": "A"
   },
@@ -19488,6 +19569,15 @@
     "functions": {
       "WorkspaceRegionAdapter": 7,
       "WorkspaceRegionAdapter.build": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/region/_progress_bar.py": {
+    "functions": {
+      "_coerce_progress_value": 7,
+      "_progress_tone": 4,
+      "progress_bars_from_entries": 12,
+      "progress_bars_from_items": 13
     },
     "mi_rank": "A"
   },
@@ -19570,8 +19660,8 @@
   },
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
-      "FragmentRenderer": 34,
-      "FragmentRenderer._emit": 117,
+      "FragmentRenderer": 37,
+      "FragmentRenderer._emit": 129,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -19648,6 +19738,8 @@
       "_RenderFormsMixin._emit_submit": 1,
       "_RenderFormsMixin._emit_switch_field": 4,
       "_RenderFormsMixin._emit_tags_field": 3,
+      "_RenderFormsMixin._emit_toggle": 4,
+      "_RenderFormsMixin._emit_toggle_field": 4,
       "_RenderFormsMixin._emit_toggle_group_field": 8,
       "_RenderFormsMixin._emit_widget_combobox": 3,
       "_RenderFormsMixin._form_field_a11y": 3,
@@ -19683,7 +19775,7 @@
   },
   "dazzle/render/fragment/renderer/_render_layout.py": {
     "functions": {
-      "_RenderLayoutMixin": 3,
+      "_RenderLayoutMixin": 4,
       "_RenderLayoutMixin._dztable_mount_attrs": 1,
       "_RenderLayoutMixin._emit": 1,
       "_RenderLayoutMixin._emit_aspect_ratio": 3,
@@ -19694,9 +19786,15 @@
       "_RenderLayoutMixin._emit_empty_state": 3,
       "_RenderLayoutMixin._emit_grid": 2,
       "_RenderLayoutMixin._emit_heading": 1,
+      "_RenderLayoutMixin._emit_hover_card": 4,
       "_RenderLayoutMixin._emit_icon": 1,
       "_RenderLayoutMixin._emit_lazy_tab_panel": 7,
+      "_RenderLayoutMixin._emit_map_board": 3,
+      "_RenderLayoutMixin._emit_marker": 4,
+      "_RenderLayoutMixin._emit_message": 11,
+      "_RenderLayoutMixin._emit_message_scroller": 4,
       "_RenderLayoutMixin._emit_modal": 1,
+      "_RenderLayoutMixin._emit_popover": 6,
       "_RenderLayoutMixin._emit_region": 5,
       "_RenderLayoutMixin._emit_row": 3,
       "_RenderLayoutMixin._emit_skeleton": 1,
@@ -19710,13 +19808,16 @@
   },
   "dazzle/render/fragment/renderer/_render_shell.py": {
     "functions": {
-      "_RenderShellMixin": 4,
+      "_RenderShellMixin": 5,
       "_RenderShellMixin._emit": 1,
       "_RenderShellMixin._emit_app_shell": 13,
-      "_RenderShellMixin._emit_breadcrumb": 3,
+      "_RenderShellMixin._emit_breadcrumb": 4,
       "_RenderShellMixin._emit_error_page": 2,
+      "_RenderShellMixin._emit_menubar": 4,
       "_RenderShellMixin._emit_nav_group": 4,
-      "_RenderShellMixin._emit_nav_item": 6,
+      "_RenderShellMixin._emit_nav_item": 7,
+      "_RenderShellMixin._emit_navigation_menu": 9,
+      "_RenderShellMixin._emit_navigation_menu_link": 4,
       "_RenderShellMixin._emit_page": 10,
       "_RenderShellMixin._emit_sidebar": 8,
       "_RenderShellMixin._emit_skip_link": 1,
@@ -19741,6 +19842,8 @@
       "_RenderTablesMixin._emit_action_grid": 3,
       "_RenderTablesMixin._emit_activity_feed": 5,
       "_RenderTablesMixin._emit_bar_track": 2,
+      "_RenderTablesMixin._emit_carousel": 7,
+      "_RenderTablesMixin._emit_carousel_slide": 11,
       "_RenderTablesMixin._emit_column_visibility_menu": 2,
       "_RenderTablesMixin._emit_data_list_scroll": 5,
       "_RenderTablesMixin._emit_detail_grid": 2,
@@ -19752,6 +19855,7 @@
       "_RenderTablesMixin._emit_pivot_table": 4,
       "_RenderTablesMixin._emit_pivot_table_region": 11,
       "_RenderTablesMixin._emit_profile_card": 1,
+      "_RenderTablesMixin._emit_progress_bar": 4,
       "_RenderTablesMixin._emit_queue_region": 17,
       "_RenderTablesMixin._emit_related_cards": 1,
       "_RenderTablesMixin._emit_related_cards_or_files": 4,
@@ -19815,6 +19919,31 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/render/menubar.py": {
+    "functions": {
+      "_actions_from_links": 15,
+      "_fallback_app_menus": 5,
+      "_feature_menubar_enabled": 5,
+      "_menus_from_legacy_nav": 11,
+      "_menus_from_nav_model": 10,
+      "build_shell_menubar": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/navigation_menu.py": {
+    "functions": {
+      "_branch_from": 8,
+      "_children_of": 5,
+      "_group_from": 12,
+      "_href_of": 4,
+      "_is_current": 5,
+      "_item_from": 3,
+      "_label_of": 4,
+      "_link_from": 8,
+      "build_site_navigation_menu": 7
+    },
+    "mi_rank": "A"
+  },
   "dazzle/render/onboarding/__init__.py": {
     "functions": {},
     "mi_rank": "A"
@@ -19862,6 +19991,11 @@
     "functions": {
       "_app_action_open_attrs": 10,
       "_app_link_open_kind": 9,
+      "_view_drill_open_attr_suffix": 10,
+      "breadcrumb_open_attr_suffix": 1,
+      "command_open_attr_suffix": 1,
+      "confirm_action_open_attr_suffix": 2,
+      "confirm_action_open_attrs": 5,
       "create_cta_open_attr_suffix": 2,
       "create_cta_open_attrs": 1,
       "drill_open_discovery_attrs": 1,
@@ -19870,7 +20004,8 @@
       "entity_label_from_detail_url": 13,
       "hub_open_discovery_attrs": 3,
       "link_open_discovery_attr_suffix": 14,
-      "open_hop_label": 13
+      "open_hop_label": 12,
+      "search_open_attr_suffix": 1
     },
     "mi_rank": "A"
   },
@@ -19927,6 +20062,7 @@
     "functions": {
       "_avatar_markup": 2,
       "_col_ref_entity": 8,
+      "_hover_preview_parts": 9,
       "_hue_for_name": 2,
       "_ref_id_from_value": 4,
       "_value_looks_like_person": 8,
@@ -19934,7 +20070,8 @@
       "looks_like_person_ref": 9,
       "ref_route_url": 7,
       "render_user_chip_html": 10,
-      "render_user_chip_linked_html": 1,
+      "render_user_chip_linked_html": 5,
+      "wrap_hover_card_preview": 4,
       "wrap_user_chip_link": 7
     },
     "mi_rank": "A"

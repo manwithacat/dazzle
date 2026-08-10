@@ -403,6 +403,14 @@ def _generate_auto_source(source: str) -> str:
     return generator()
 
 
+def _tool_input_schema(tool: Any) -> Any:
+    """MCP SDK v2 uses ``input_schema``; accept legacy ``inputSchema`` if present."""
+    schema = getattr(tool, "input_schema", None)
+    if schema is not None:
+        return schema
+    return getattr(tool, "inputSchema", None)
+
+
 def render_mcp_tools_inventory(tools: list[Any]) -> str:
     """Render the MCP tool inventory page from a list of tool objects.
 
@@ -416,8 +424,7 @@ def render_mcp_tools_inventory(tools: list[Any]) -> str:
 
     # Header tally — recomputed every build, never hand-edited.
     for tool in tools:
-        ops = _extract_operations(tool.inputSchema)
-        total_ops += len(ops)
+        total_ops += len(_extract_operations(_tool_input_schema(tool)))
 
     lines.append(
         f"**Live count:** {len(tools)} tools, {total_ops} operations. "
@@ -436,7 +443,7 @@ def render_mcp_tools_inventory(tools: list[Any]) -> str:
     lines.append("| Tool | Operations | Summary |")
     lines.append("|------|------------|---------|")
     for tool in tools:
-        ops = _extract_operations(tool.inputSchema)
+        ops = _extract_operations(_tool_input_schema(tool))
         op_count = f"{len(ops)}" if ops else "—"
         summary = _first_sentence(tool.description or "").rstrip(".")
         # mkdocs's default slugify lowercases and keeps underscores when they
@@ -455,12 +462,13 @@ def render_mcp_tools_inventory(tools: list[Any]) -> str:
         if desc:
             lines.append(desc)
             lines.append("")
-        ops = _extract_operations(tool.inputSchema)
+        schema = _tool_input_schema(tool)
+        ops = _extract_operations(schema)
         if ops:
             op_str = ", ".join(f"`{op}`" for op in ops)
             lines.append(f"**Operations ({len(ops)}):** {op_str}")
             lines.append("")
-        params = _extract_parameters(tool.inputSchema)
+        params = _extract_parameters(schema)
         if params:
             lines.append("**Parameters:**")
             lines.append("")
