@@ -169,6 +169,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_fieldtest_command_density_goal_b.py",
     # fieldtest_hub Goal B document (cycle 1843 TestDocument composition on eng/ops)
     "tests/unit/test_fieldtest_document_goal_b.py",
+    # fieldtest_hub Goal B org_structure (cycle 1848 tester_roster skill+region)
+    "tests/unit/test_fieldtest_org_structure_goal_b.py",
     # simple_task Goal B conversation (cycle 1674 TaskComment live trail)
     "tests/unit/test_simple_task_conversation_goal_b.py",
     # simple_task Goal B command_density (cycle 1835 dual attention before trail)
@@ -187,6 +189,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_support_tickets_conversation_goal_b.py",
     # support_tickets Goal B command_density (cycle 1727 manager_ops dual attention)
     "tests/unit/test_support_tickets_command_density_goal_b.py",
+    # support_tickets Goal B org_structure (cycle 1847 people_desk role+dept)
+    "tests/unit/test_support_tickets_org_structure_goal_b.py",
     # support_tickets Goal B document (cycle 1798 SlaWaiver composition + dual-open)
     "tests/unit/test_support_tickets_document_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_support_tickets_sla_waiver_list_dual_open",

@@ -8,7 +8,7 @@
 FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k
 
 **Source:** `/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md`
-**Fingerprint:** `187a95198e4ab5ef`
+**Fingerprint:** `909f6fbfe45f9a01`
 
 ## Personas (jobs)
 
@@ -27,7 +27,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Devices`, `Engineer`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Named`, `Op`, `Pipeline`, `Protocol`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `Tester`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `conversation`, `dazzle`, `document`, `evidence`, `explicit`, `fourth`, `informal`, `issues`, `live`, `logged`, `loop`, `mature`, `model`, `multi`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `triage`, `versioned`
+`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Devices`, `Engineer`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Named`, `Op`, `Pipeline`, `Protocol`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `Tester`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `conversation`, `dazzle`, `document`, `evidence`, `explicit`, `fourth`, `informal`, `issues`, `live`, `logged`, `loop`, `mature`, `model`, `multi`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `skill`, `specific`, `technical`, `triage`, `versioned`
 
 ## Desks
 
@@ -71,7 +71,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
   "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
-  "source_sha256": "187a95198e4ab5ef",
+  "source_sha256": "909f6fbfe45f9a01",
   "personas": [
     {
       "id_hint": "tester",
@@ -340,6 +340,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "representative",
     "roster",
     "signed",
+    "skill",
     "specific",
     "technical",
     "triage",

@@ -44,8 +44,10 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   board, related open tasks, and release status chart.
 - **Session Ops** — field session pulse for engineer/manager: session metrics,
   recent timeline, active device grid, open-report queue, environment chart.
-- **Tester Roster** — engineer/manager capacity desk: tester metrics, active
-  roster grid, unassigned device queue, session trail, and skill mix chart.
+- **Tester Roster** — engineer/manager org-structure desk: tester metrics, a
+  skill-tier board (casual / enthusiast / engineer), a region-sorted queue,
+  then flat roster and unassigned devices — hierarchy before dump, not a
+  skill-mix bar chart.
 - **Task Ops** — open-task desk: task metrics, open queue, status board, task
   trail, and status mix chart.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
@@ -92,4 +94,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:25408de94c51405a3f7cc2890561462c3f913ae76a2dd7300db43a083d7a9cff -->
+<!-- dazzle-spec-brief: sha256:2effdec04429c5aeaed7e068a33f9c8b421160dde582f82e89128786bd89844f -->

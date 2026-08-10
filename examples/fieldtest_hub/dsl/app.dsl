@@ -1898,7 +1898,10 @@ workspace field_kit "Field Kit":
     empty: "No open tasks"
 
 workspace tester_roster "Tester Roster":
-  purpose: "Field tester capacity — active roster, assignments, and session pulse"
+  # Goal B org_structure (cycle 1848): peer field-test tools (TestFlight /
+  # Beta programs / LabTrack) show testers by skill tier and region before a
+  # flat name dump — managers assign devices from org shape, not a warehouse list.
+  purpose: "Org structure for field capacity — skill and region before flat roster and unassigned devices"
   access: persona(engineer, manager)
 
   roster_metrics:
@@ -1913,11 +1916,32 @@ workspace tester_roster "Tester Roster":
       active: positive
       devices: accent
 
-  # Work-surface utility (cycle 1486 story_walk ST-047): roster is pull-to-open hubs.
+  # Skill board (casual / enthusiast / engineer) — capacity authority shape.
+  by_skill:
+    source: Tester
+    filter: active = true
+    display: kanban
+    group_by: skill_level
+    sort: name asc
+    limit: 40
+    action: tester_detail
+    empty: "No active testers"
+
+  # Region queue — location placement before flat roster (geo org for field kits).
+  by_location:
+    source: Tester
+    filter: active = true
+    display: queue
+    sort: location asc, name asc
+    limit: 40
+    action: tester_detail
+    empty: "No active testers"
+
+  # Secondary flat roster (after hierarchy) — still pull-to-open hubs (ST-047).
   active_testers:
     source: Tester
     filter: active = true
-    sort: name asc
+    sort: location asc, name asc
     limit: 25
     display: queue
     action: tester_detail
@@ -1940,13 +1964,29 @@ workspace tester_roster "Tester Roster":
     action: test_session_detail
     empty: "No test sessions logged"
 
-  skill_mix:
-    source: Tester
-    display: bar_chart
-    group_by: skill_level
-    aggregate:
-      count: count(Tester)
-    empty: "No testers yet"
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By skill board"
+        caption: "Casual / Enthusiast / Engineer columns show who can take hard kits"
+        icon: "users"
+        state: accent
+      - title: "Region queue"
+        caption: "Testers sorted by location before flat roster and unassigned devices"
+        icon: "map-pin"
+        state: positive
+      - title: "Unassigned devices"
+        caption: "Active devices without a tester — assign after you read org shape"
+        icon: "cpu"
+        state: warning
+
+  ux:
+    as manager:
+      purpose: "See testers by skill and region before unassigned device load"
+      focus: roster_metrics, by_skill, by_location, active_testers
+    as engineer:
+      purpose: "Read field capacity by skill tier and location before assignment"
+      focus: roster_metrics, by_skill, by_location, active_testers
 
 
 workspace device_fleet "Device Fleet":
