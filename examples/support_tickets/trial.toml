@@ -35,6 +35,8 @@ critical (customer can't use the product), half are medium, and the
 rest are feature requests or questions. You care about SLA — customers
 escalate to their account managers when tickets linger. A pilot fails
 if managers cannot see urgency and reassign work without tribal knowledge.
+Your team spans Support, Escalations, and Billing — reassignment should
+follow org shape (role + department), not a flat staff dump.
 """
 
 tasks = [
@@ -42,12 +44,14 @@ tasks = [
     "Skim the critical and unassigned queues. Can you act on a ticket without diving into a generic entity list?",
     "One customer just called about a 2-day-old ticket that hasn't been resolved. See if urgency is visible from the open/critical queues or metrics — not only by scrolling a flat table.",
     "Alex just asked for more tickets. From Manager Ops, can you see open/WIP/critical counts and find unassigned work to reassign?",
+    "Open the People desk from the nav. Can you see staff by role and by department before a flat roster or unassigned load — org shape, not a warehouse name list?",
     "Stress lightly: if a filter or empty state appears, can you tell why the list is empty and recover?",
 ]
 
 phases = [
     "Orient on Manager Ops — first impression and pressure signals",
     "Core jobs — queues, urgency, reassignment",
+    "Org structure — People desk role/department before load",
     "Light stress — empty/filter/error recovery if encountered",
     "Decide — score adoption criteria and submit_verdict",
 ]
@@ -57,6 +61,7 @@ adoption_criteria = [
     "Manager can find unassigned / critical work in under a minute",
     "Reassignment or handoff path is discoverable from the primary workspace",
     "Ticket queue triple-opens ticket hub, assignee hub, and creator hub (not a dead warehouse row)",
+    "People desk shows role and department hierarchy before flat roster / unassigned dump",
     "Empty or filtered states explain themselves (not a blank wall)",
     "Would run a two-week pilot with Alex on this tool as-is or with minor fixes",
 ]
