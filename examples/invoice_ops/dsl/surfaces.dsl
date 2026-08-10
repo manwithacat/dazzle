@@ -45,6 +45,12 @@ surface invoice_detail "Invoice":
     show: LineItem
     columns: description, quantity, unit_amount
     limit: 8
+  # Goal B document: named AP packets (remittance / credit memo / PO) on the hub.
+  related documents "Documents":
+    display: queue
+    show: InvoiceDocument
+    columns: headline, doc_kind, status, author
+    limit: 6
   related payments "Payment attempts":
     display: queue
     show: PaymentAttempt
@@ -57,7 +63,7 @@ surface invoice_detail "Invoice":
     columns: body, author, created_at
     limit: 5
   ux:
-    purpose: "Invoice document — header, line composition, discussion, and payment trail"
+    purpose: "Invoice document — header, line composition, named packets, discussion, and payment trail"
 
 surface invoice_create "New Invoice":
   uses entity Invoice
@@ -298,6 +304,71 @@ surface lineitem_detail "Line Item":
     purpose: "One line on an invoice document — hop to the parent invoice for composition + settlement"
 
 # =============================================================================
+# INVOICE DOCUMENT SURFACES (Goal B document composition — named AP packets)
+# =============================================================================
+
+surface invoice_document_list "Invoice Documents":
+  uses entity InvoiceDocument
+  mode: list
+  # Dual open: document hub first; parent Invoice document second.
+  open: InvoiceDocument via id | Invoice via invoice
+  section main:
+    field headline "Headline"
+    field invoice "Invoice"
+    field doc_kind "Kind"
+    field status "Status"
+    field author "Author"
+    field created_at "Created"
+  ux:
+    purpose: "Scan remittance, credit memos, and PO packets — open a row for the packet or parent invoice"
+    sort: created_at desc
+    filter: doc_kind, status
+    search: headline, body, author
+    empty: "No invoice documents yet — attach a remittance or PO packet on an invoice hub"
+
+surface invoice_document_detail "Invoice Document":
+  uses entity InvoiceDocument
+  mode: view
+  section summary "Document":
+    field headline "Headline"
+    field invoice "Invoice"
+    field doc_kind "Kind"
+    field author "Author"
+  section lifecycle "Lifecycle":
+    layout: strip
+    field status "Status"
+    field created_at "Created"
+  section body "Body":
+    field body "Body"
+  ux:
+    purpose: "Invoice document hub — named packet, lifecycle strip, parent invoice, and body in one place"
+
+surface invoice_document_create "Add Invoice Document":
+  uses entity InvoiceDocument
+  mode: create
+  section main "New document":
+    field invoice "Invoice"
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+    field status "Status"
+    field author "Author"
+  ux:
+    purpose: "Attach a named remittance, credit memo, or PO packet to an invoice"
+
+surface invoice_document_edit "Edit Invoice Document":
+  uses entity InvoiceDocument
+  mode: edit
+  section main "Edit document":
+    field headline "Headline"
+    field doc_kind "Kind"
+    field body "Body"
+    field status "Status"
+    field author "Author"
+  ux:
+    purpose: "Update invoice document headline, kind, or status"
+
+# =============================================================================
 # INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine
 # =============================================================================
 
@@ -407,10 +478,10 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  # Goal B conversation + document + empty_region (cycle 1820): AP desks lead
-  # with discussion, line composition, and job queues — not funnel/bar-chart
-  # voids or paid-timeline dumps under the fold (Bill.com / Tipalti peer).
-  purpose: "Day-to-day invoice throughput — live discussion, line composition, and queues that need a person"
+  # Goal B conversation + document + empty_region (cycle 1820/1879): AP desks
+  # lead with dual attention, named AP packets, line composition, then notes —
+  # not funnel/bar-chart voids (Bill.com / Tipalti / Coupa peer).
+  purpose: "Day-to-day invoice throughput — dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   ops_metrics:
@@ -427,63 +498,74 @@ workspace finance_ops "Finance Operations":
       conversation: accent
       approved: accent
 
-  # Goal B document metric — count LineItem from LineItem source (cross-entity
-  # count(LineItem) under source Invoice paints Documents: 0 theater).
+  # Goal B document metric — named AP packets only (InvoiceDocument source).
+  # Cross-entity count(LineItem) / count(Invoice) under this source paints 0
+  # theater; line body pulse lives on line_items_desk / my_invoices.
   document_pulse:
-    source: LineItem
+    source: InvoiceDocument
     display: metrics
     aggregate:
-      documents: count(LineItem)
-      open_invoices: count(Invoice where status != paid and status != rejected)
+      documents: count(InvoiceDocument)
+      published: count(InvoiceDocument where status = published)
+      draft: count(InvoiceDocument where status = draft)
     tones:
       documents: accent
-      open_invoices: warning
+      published: positive
+      draft: warning
 
-  # Goal B document spine on ops home (not only line_items_desk) — peer Bill.com
-  # / Tipalti put line descriptions above the fold with the discussion trail.
+  # Goal B document composition ABOVE dual attention — named remittance /
+  # credit memo / PO packets so hero stills read packet titles above the fold.
   composition:
-    source: LineItem
+    source: InvoiceDocument
     sort: created_at desc
-    limit: 10
+    limit: 5
     display: queue
-    action: invoice_detail
-    empty: "No line items yet — add lines to a draft invoice"
+    action: invoice_document_detail
+    empty: "No invoice documents yet — attach a remittance or PO packet on an invoice hub"
 
-  # Goal B conversation spine — newest AP notes (display_field: body).
-  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
-  live_conversation:
-    source: InvoiceNote
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: invoice_note_detail
-    empty: "No conversation yet — approval and payment notes appear here"
-
-  # Approver job — review queue with inline transitions when available.
+  # Dual attention after named packets (fold share with capped conversation).
   awaiting_approval:
     source: Invoice
     filter: status = submitted
     sort: amount desc
-    limit: 15
+    limit: 3
     display: queue
     action: invoice_detail
     empty: "Nothing awaiting approval"
 
-  # Finance job — settle approved invoices.
   ready_to_pay:
     source: Invoice
     filter: status = approved
     sort: amount desc
-    limit: 15
+    limit: 3
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
+
+  # Line body under dual attention (still domain-true composition, not warehouse).
+  line_composition:
+    source: LineItem
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No line items yet — add lines to a draft invoice"
+
+  # Goal B conversation spine AFTER packets + dual attention.
+  # display: conversation → MessageScroller / Message + Bubble (not queue meta rows).
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: invoice_note_detail
+    empty: "No conversation yet — approval and payment notes appear here"
 
   disputed_queue:
     source: Invoice
     filter: status = disputed
     sort: updated_at desc
-    limit: 15
+    limit: 8
     display: queue
     action: invoice_detail
     empty: "No disputes open"
@@ -499,23 +581,23 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — discussion, documents, and job queues (no chart voids)"
-      focus: ops_metrics, document_pulse, composition, live_conversation, awaiting_approval, ready_to_pay
+      purpose: "AP ops — document pulse, named packets, dual attention, then discussion"
+      focus: ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as tenant_admin:
-      purpose: "AP ops — discussion, documents, and job queues (no chart voids)"
-      focus: ops_metrics, document_pulse, composition, live_conversation, awaiting_approval, ready_to_pay
+      purpose: "AP ops — document pulse, named packets, dual attention, then discussion"
+      focus: ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as finance:
-      purpose: "AP ops — settle queues with conversation spine"
-      focus: ops_metrics, live_conversation, ready_to_pay, disputed_queue
+      purpose: "AP ops — named packets then settle queues"
+      focus: ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
     as approver:
-      purpose: "AP ops — review queue with conversation spine"
-      focus: ops_metrics, live_conversation, awaiting_approval, composition
+      purpose: "AP ops — named packets then review queue"
+      focus: ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
     as auditor:
-      purpose: "AP ops — evidence queues with conversation spine"
-      focus: ops_metrics, live_conversation, composition, disputed_queue
+      purpose: "AP ops — evidence packets with conversation spine"
+      focus: ops_metrics, document_pulse, composition, live_conversation, disputed_queue
     as requester:
-      purpose: "AP ops overview — composition and conversation"
-      focus: ops_metrics, composition, live_conversation, awaiting_approval
+      purpose: "AP ops overview — packets, lines, and conversation"
+      focus: ops_metrics, composition, line_composition, live_conversation, awaiting_approval
 
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.
@@ -601,7 +683,9 @@ workspace my_invoices "My Invoices":
       focus: my_pipeline, document_pulse, composition, drafts, in_flight, my_status_board
 
 workspace approval_desk "Approval Desk":
-  purpose: "Approver job — live discussion trail and the awaiting-approval queue"
+  # Goal B document (cycle 1879): peer AP approval homes (Bill.com / Coupa)
+  # put named remittance / PO packets above the discussion trail — not notes-only.
+  purpose: "Approver job — awaiting queue, named AP packets, then live discussion"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -616,23 +700,43 @@ workspace approval_desk "Approval Desk":
       approved: positive
       conversation: accent
 
-  # display: conversation → Message/Bubble chrome (not queue meta of note rows).
-  live_conversation:
-    source: InvoiceNote
+  # Honest document counts — source InvoiceDocument (not cross-entity under Invoice).
+  document_pulse:
+    source: InvoiceDocument
+    display: metrics
+    aggregate:
+      documents: count(InvoiceDocument)
+      published: count(InvoiceDocument where status = published)
+    tones:
+      documents: accent
+      published: positive
+
+  # Goal B document composition — named packets before conversation trail.
+  composition:
+    source: InvoiceDocument
     sort: created_at desc
-    limit: 10
-    display: conversation
-    action: invoice_note_detail
-    empty: "No conversation yet — notes on invoices in review appear here"
+    limit: 5
+    display: queue
+    action: invoice_document_detail
+    empty: "No invoice documents yet — attach a remittance or PO packet on an invoice hub"
 
   awaiting_approval:
     source: Invoice
     filter: status = submitted
     sort: amount desc
-    limit: 20
+    limit: 6
     display: queue
     action: invoice_detail
     empty: "Nothing awaiting approval"
+
+  # display: conversation → Message/Bubble chrome (not queue meta of note rows).
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on invoices in review appear here"
 
   approval_board:
     source: Invoice
@@ -653,16 +757,16 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — conversation + queue + board (no decision-timeline dump)"
-      focus: approval_load, live_conversation, awaiting_approval, approval_board
+      purpose: "Approval — named packets, queue, conversation (no decision-timeline dump)"
+      focus: approval_load, document_pulse, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — conversation + queue + board (no decision-timeline dump)"
-      focus: approval_load, live_conversation, awaiting_approval, approval_board
+      purpose: "Approval — named packets, queue, conversation (no decision-timeline dump)"
+      focus: approval_load, document_pulse, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
-  # Goal B command_density + empty_region (cycle 1820): dual attention before
-  # notes; drop payment_health bar chart and dispute_trail twin dump under fold.
-  purpose: "Multi-panel settlement — metrics, ready-to-pay, disputes, then live AP notes"
+  # Goal B command_density + document (cycle 1820/1879): dual attention then
+  # remittance / payment-confirmation packets before notes.
+  purpose: "Multi-panel settlement — dual attention, named packets, then live AP notes"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -677,12 +781,33 @@ workspace pay_desk "Pay Desk":
       disputed: destructive
       conversation: accent
 
-  # Dual attention (fold share with capped conversation spine).
+  # Honest document pulse (InvoiceDocument source — not cross-entity under Invoice).
+  document_pulse:
+    source: InvoiceDocument
+    display: metrics
+    aggregate:
+      documents: count(InvoiceDocument)
+      published: count(InvoiceDocument where status = published)
+    tones:
+      documents: accent
+      published: positive
+
+  # Goal B document composition — remittance / payment-confirmation packets
+  # above dual attention so hero stills show titles above the fold.
+  composition:
+    source: InvoiceDocument
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_document_detail
+    empty: "No invoice documents yet — attach remittance or payment confirmation"
+
+  # Dual attention after named packets.
   ready_to_pay:
     source: Invoice
     filter: status = approved
     sort: amount desc
-    limit: 4
+    limit: 3
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
@@ -691,28 +816,28 @@ workspace pay_desk "Pay Desk":
     source: Invoice
     filter: status = disputed
     sort: updated_at desc
-    limit: 4
+    limit: 3
     display: queue
     action: invoice_detail
     empty: "No disputes open"
 
-  # Goal B conversation spine AFTER dual attention.
+  # Goal B conversation spine AFTER packets + dual attention.
   # display: conversation → Message/Bubble chrome (not queue meta of note rows).
   live_conversation:
     source: InvoiceNote
     sort: created_at desc
-    limit: 6
+    limit: 5
     display: conversation
     action: invoice_note_detail
     empty: "No conversation yet — payment and dispute notes appear here"
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — dual attention before live AP notes"
-      focus: settle_metrics, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — packets, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
     as finance_admin:
-      purpose: "Multi-panel settlement — dual attention before live AP notes"
-      focus: settle_metrics, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — packets, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
 
   settle_board:
     source: Invoice

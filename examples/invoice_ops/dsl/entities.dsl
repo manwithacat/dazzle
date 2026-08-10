@@ -301,6 +301,59 @@ entity InvoiceNote "Invoice Note":
   audit: all
 
 # =============================================================================
+# INVOICE DOCUMENT — named AP packet on an Invoice (Goal B document depth)
+# =============================================================================
+# Peer Bill.com / Tipalti / Coupa put remittance advice, credit memos, PO
+# packets, and tax certificates on the AP home above the discussion trail —
+# not line composition alone as the only "document" surface.
+
+entity InvoiceDocument "Invoice Document":
+  intent: "A named AP document on an Invoice — remittance advice, credit memo, PO packet, tax certificate, or payment confirmation buyers scan above the discussion trail"
+  domain: accounts_payable
+  patterns: documentation, audit_trail
+  display_field: headline
+  id: uuid pk
+  tenant_id: ref Tenant required
+  invoice: ref Invoice required
+  headline: str(200) required
+  doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, payment_confirmation]=remittance
+  body: text
+  status: enum[draft, published, archived]=draft
+  author: str(120)
+  created_at: datetime auto_add
+
+  # Domain residual status∄transitions: AP packets publish then archive.
+  transitions:
+    draft -> published: role(approver) or role(finance) or role(finance_admin)
+    published -> archived: role(approver) or role(finance) or role(finance_admin)
+    draft -> archived: role(approver) or role(finance) or role(finance_admin)
+    published -> draft: role(approver) or role(finance) or role(finance_admin)
+
+  permit:
+    create: role(requester) or role(approver) or role(finance) or role(finance_admin)
+    read: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+    update: role(approver) or role(finance) or role(finance_admin)
+    delete: role(tenant_admin)
+    list: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
+
+  scope:
+    create: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin
+    read: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
+    update: tenant_id = current_user.tenant_id
+      as: approver, finance, finance_admin
+    delete: tenant_id = current_user.tenant_id
+      as: tenant_admin
+    list: tenant_id = current_user.tenant_id
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
+
+  fitness:
+    repr_fields: [invoice, headline, doc_kind, status, author]
+
+  audit: all
+
+# =============================================================================
 # PAYMENT ATTEMPT — one attempt to settle an approved invoice.
 # =============================================================================
 

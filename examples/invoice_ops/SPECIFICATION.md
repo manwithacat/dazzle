@@ -70,17 +70,18 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **My Invoices** — requester home: line-item composition (document body),
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
   (no status bar-chart or twin invoice timeline under the fold).
-- **Approval Desk** — approver home: live AP discussion as Message/Bubble
-  conversation chrome (not a meta queue of note rows), awaiting-approval queue,
-  approval board, and supplier context grid (no decision-timeline dump).
+- **Approval Desk** — approver home: awaiting-approval queue, **named AP packets**
+  (remittance / credit memo / PO / tax / payment confirmation) as document
+  composition, live AP discussion as Message/Bubble conversation chrome, approval
+  board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, capped
-  ready-to-pay and dispute attention panels, live AP notes as Message/Bubble
-  conversation chrome, then settle board (no payment-health chart or twin
-  dispute trail under the fold).
+  ready-to-pay and dispute attention panels, named remittance/payment-confirmation
+  packets, live AP notes as Message/Bubble conversation chrome, then settle board
+  (no payment-health chart or twin dispute trail under the fold).
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
-- **Finance Operations** — shared ops overview: line composition + live
-  discussion trail rendered as Message/Bubble conversation chrome (not a meta
-  queue of note rows) above the fold, metrics, review queues, and ops kanban
+- **Finance Operations** — shared ops overview: dual attention (awaiting + ready),
+  **named AP packets** (InvoiceDocument composition) and line-item body, live
+  discussion trail as Message/Bubble conversation chrome, metrics, and ops kanban
   (no lifecycle funnel, payment bar chart, or paid timeline voids).
 - **Suppliers** — vendor **org-structure** desk: after the vendor pulse it
   shows a **region kanban** (EMEA / AMER / APAC) and a **multi-invoice supplier
@@ -175,4 +176,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:6d5c90a876a3aec2f13e7dabcf3f428fd8395e7111132fa89507a24d138ba4f7 -->
+<!-- dazzle-spec-brief: sha256:ef3ff294bd52f0933c9b3d1cec74fa8eee4bb57ef25859f46de943a14696d26f -->
