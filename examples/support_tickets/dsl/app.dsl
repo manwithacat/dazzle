@@ -682,26 +682,16 @@ workspace manager_ops "Manager Ops":
       purpose: "Multi-panel support ops — dual queues and waiver documents before conversation trail"
       focus: team_metrics, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
 
-  resolution_funnel:
-    source: Ticket
-    display: funnel_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No tickets"
+  # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
+  # funnel_chart + ticket timeline below the fold still lazy-fetched every
+  # Manager Ops load and stacked with dual queues / composition / conversation
+  # under pilot scroll → browser ERR_INSUFFICIENT_RESOURCES + htmx Failed to
+  # fetch (recommend=unclear, ownership=harness). Peer manager homes (Zendesk /
+  # Intercom) keep pressure panels above the fold — not status funnel theater
+  # or a second ticket trail after live_conversation. Lifecycle kanban stays
+  # on agent_dashboard; funnel_chart coverage lives on agent_console.
 
-  recent_trail:
-    source: Ticket
-    sort: updated_at desc
-    limit: 6
-    display: timeline
-    action: ticket_detail
-    empty: "No tickets yet"
 
-  # Lifecycle kanban lives on agent_dashboard (my_assigned). Manager Ops
-  # stays metrics + SLA strip + dual attention + conversation (ST-027–029) —
-  # a second full open-board here doubled concurrent row preloads and
-  # thrash under trial scroll without adding reassignment clarity.
 
 workspace agent_dashboard "Agent Dashboard":
   # Personal agent view (assigned work + conversation). Manager team home is
@@ -945,6 +935,18 @@ workspace agent_console "Agent Console":
     sort: created_at desc
     limit: 15
     empty: "No comments for this agent"
+
+  # Cycle 1850: host display: funnel_chart here after pruning Manager Ops
+  # status-funnel theater (empty_region honesty + pilot resource storm).
+  # Same current_context re-scope pattern as progress / bar charts above.
+  agent_status_funnel:
+    source: Ticket
+    filter: assigned_to = current_context
+    display: funnel_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No tickets for this agent"
 
 # Goal B org_structure (cycle 1847): peer support tools (Zendesk / Intercom /
 # Freshdesk) show team by role and department so managers reassign without a

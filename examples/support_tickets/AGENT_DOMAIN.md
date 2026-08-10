@@ -8,7 +8,7 @@
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
 **Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
-**Fingerprint:** `7dcca07499f9b407`
+**Fingerprint:** `8cba30ac32c7b1b9`
 
 ## Personas (jobs)
 
@@ -25,7 +25,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Agent`, `Approval`, `Console`, `Dashboard`, `JavaScript`, `Lead`, `Op`, `Support`, `Tickets`, `Waiver`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `capped`, `change`, `chosen`, `close`, `critical`, `data`, `datastore`, `declared`, `department`, `document`, `durable`, `escalation`, `flat`, `fold`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `multi`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `role`, `shared`, `short`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `visibility`, `whole`, `work`
+`Administrator`, `Agent`, `Approval`, `Avoid`, `Console`, `Dashboard`, `JavaScript`, `Lead`, `Op`, `Support`, `Tickets`, `Waiver`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `capped`, `change`, `chosen`, `close`, `critical`, `data`, `datastore`, `declared`, `department`, `document`, `durable`, `escalation`, `flat`, `fold`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `multi`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `role`, `shared`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `visibility`, `whole`, `work`
 
 ## Desks
 
@@ -68,7 +68,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "7dcca07499f9b407",
+  "source_sha256": "8cba30ac32c7b1b9",
   "personas": [
     {
       "id_hint": "agent",
@@ -253,6 +253,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "Administrator",
     "Agent",
     "Approval",
+    "Avoid",
     "Console",
     "Dashboard",
     "JavaScript",
@@ -299,7 +300,6 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "review",
     "role",
     "shared",
-    "short",
     "signed",
     "solo",
     "static",

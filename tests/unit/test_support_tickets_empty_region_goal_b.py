@@ -67,4 +67,24 @@ def test_agent_console_hosts_progress_and_activity_feed_coverage() -> None:
     assert "display: progress" in block
     assert "agent_comment_activity:" in block
     assert "display: activity_feed" in block
+    assert "agent_status_funnel:" in block
+    assert "display: funnel_chart" in block
     assert "current_context" in block
+
+
+def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
+    """Manager Ops: dual queues + docs + conversation — not funnel/trail thrash."""
+    block = _workspace_block("manager_ops")
+    assert "critical_queue:" in block
+    assert "unassigned_queue:" in block
+    assert "composition:" in block
+    assert "live_conversation:" in block
+    assert "resolution_funnel:" not in block
+    assert "recent_trail:" not in block
+    assert "display: funnel_chart" not in block
+    assert "display: timeline" not in block
+    assert (
+        "focus: team_metrics, sla_readiness, critical_queue, "
+        "unassigned_queue, composition, live_conversation"
+    ) in block
+    assert "as manager:" in block

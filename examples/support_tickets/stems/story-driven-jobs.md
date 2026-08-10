@@ -15,9 +15,11 @@ ST-013–018 own surfaces.
   claim, not a single-status list (HMC-065); no funnel/progress chart theater
   or triple activity dumps (empty_region honesty cycle 1812).
 - Manager default: `manager_ops` = team metrics + status_list SLA strip +
-  critical/unassigned queues (limit 12) + funnel + short recent_trail
-  timeline (not an empty personal list; no second open-board kanban —
-  lifecycle board stays on agent_dashboard).
+  critical/unassigned queues (limit 4) + SLA waiver composition (limit 4) +
+  live conversation (limit 4) — no status funnel or secondary ticket trail
+  (empty_region honesty cycle 1850; funnel_chart coverage on agent_console).
+  Not an empty personal list; no second open-board kanban — lifecycle board
+  stays on agent_dashboard.
 - Customer default: `my_tickets` = my metrics + open/WIP queues + **one**
   case-history timeline + how-it-works (no bar-chart theater or twin dumps).
 - Comment streams on `ticket_queue` / `agent_dashboard` use **timeline**
