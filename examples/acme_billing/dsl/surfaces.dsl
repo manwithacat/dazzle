@@ -68,11 +68,16 @@ surface user_list "Users":
   section main "Users":
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field org "Organization"
     field created_at "Created"
 
   ux:
-    purpose: "Browse users — open a row for the user hub or parent Organization hub"
+    purpose: "Browse users by title and department — open a row for the user hub or parent Organization hub"
+    sort: department asc, name asc
+    filter: department, job_title, org
+    search: name, email, department, job_title
 
 surface user_detail "User":
   uses entity User
@@ -82,6 +87,8 @@ surface user_detail "User":
   section main "User Details":
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field org "Organization"
     field created_at "Created"
 
@@ -93,6 +100,8 @@ surface user_create "Create User":
   section main "New User":
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field org "Organization"
 
 surface user_edit "Edit User":
@@ -103,6 +112,8 @@ surface user_edit "Edit User":
   section main "User":
     field email "Email"
     field name "Name"
+    field job_title "Job Title"
+    field department "Department"
     field org "Organization"
 
 # =============================================================================
@@ -647,7 +658,10 @@ workspace invoices_home "Invoices":
 workspace team_home "Team":
   # Goal B empty_region_honesty (cycle 1828): people + membership queues —
   # prune role bar chart and twin roster timeline.
-  purpose: "Team desk — who has access to which projects"
+  # Goal B org_structure (cycle 1867): peer billing/ops tools (Chargebee /
+  # Stripe Billing / NetSuite / Coupa) show staff by title and department
+  # before a flat people dump and membership load.
+  purpose: "Org structure for the billing org — title and department before flat roster and membership load"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor)
 
@@ -660,20 +674,69 @@ workspace team_home "Team":
       people: count(User)
     tones:
       memberships: accent
+      people: positive
 
-  # Work-surface utility (cycle 1488 journey): people roster → pull-to-open users.
+  # Title board — Org Owner / Project Analyst / Lead Auditor / …
+  by_title:
+    source: User
+    display: kanban
+    group_by: job_title
+    sort: name asc
+    limit: 40
+    action: user_detail
+    empty: "No titled staff yet"
+
+  # Department placement — Finance / Delivery / Platform Ops / Audit.
+  by_department:
+    source: User
+    display: queue
+    sort: department asc, name asc
+    limit: 40
+    action: user_detail
+    empty: "No staff placed in departments yet"
+
+  # Secondary flat roster (after hierarchy).
   people:
     source: User
     display: queue
-    sort: name asc
+    sort: department asc, name asc
+    limit: 25
     action: user_detail
     empty: "No users found"
 
+  # Membership load after org shape — who can access which projects.
   membership_queue:
     source: Membership
     display: queue
     limit: 20
     empty: "No memberships yet"
+
+  org_hint:
+    display: status_list
+    entries:
+      - title: "By title board"
+        caption: "Org Owner / Analyst / Auditor / Contractor columns show who can act"
+        icon: "users"
+        state: accent
+      - title: "Department queue"
+        caption: "Finance / Delivery / Platform Ops / Audit before flat roster"
+        icon: "building-2"
+        state: positive
+      - title: "Membership load last"
+        caption: "Project memberships after you read org shape"
+        icon: "key"
+        state: warning
+
+  ux:
+    as admin:
+      purpose: "See billing staff by title and department before membership load"
+      focus: membership_pulse, by_title, by_department, people
+    as org_owner:
+      purpose: "Org structure for finance ops — title board then department"
+      focus: membership_pulse, by_title, by_department, people
+    as auditor:
+      purpose: "Read team org shape before membership and project access"
+      focus: membership_pulse, by_title, by_department, people
 
 # Fifth job desk: organization portfolio separate from billing shell
 workspace orgs_home "Organizations":

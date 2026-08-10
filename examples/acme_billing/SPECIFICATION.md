@@ -27,7 +27,9 @@ and `dazzle rbac prove` runs the formal check.
 model — the boundary within which everything else lives. A User is a person's
 record in the system, and every user belongs to an organization; that link is
 what the visibility rules resolve against when deciding what the signed-in
-person may see.
+person may see. Users also carry department and job title so the Team desk can
+show billing staff by title kanban and department placement before a flat
+roster or project-membership load (Finance / Delivery / Platform Ops / Audit).
 
 **Projects.** A Project always belongs to an Organization. Which projects a
 given person can see depends on their role — owners and auditors see their
@@ -153,4 +155,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:f1d94ac49e6ced94f8c3fdbf54c35352233b5aea07e403e71ae5feefc3b70f80 -->
+<!-- dazzle-spec-brief: sha256:24b2da79734e9e605bfd4ab32762841c0af0ef37746b4e430424ce909f406e6a -->

@@ -49,6 +49,11 @@ entity User "User":
   email: email required pii(category=contact)
   name: str(120) required pii(category=identity)
   org: ref Organization required
+  # Goal B org_structure (cycle 1867): department + job title so Team desk shows
+  # Finance / Delivery / Platform Ops / Audit shape — not a flat persona roster
+  # (peer billing tools: Chargebee / Stripe Billing / NetSuite / Coupa).
+  department: str(50)
+  job_title: str(80)
   created_at: datetime auto_add
 
   permit:
