@@ -32,6 +32,9 @@ def test_test_document_entity_is_document_composition() -> None:
     assert (
         "doc_kind: enum[brief, protocol, acceptance_criteria, field_plan, decision]=brief" in text
     )
+    assert "status: enum[draft, published, archived]=draft" in text
+    assert "draft -> published:" in text
+    assert "published -> archived:" in text
 
 
 def test_manager_ops_declares_composition_after_dual_attention() -> None:

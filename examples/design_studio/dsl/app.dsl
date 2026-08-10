@@ -257,6 +257,13 @@ entity DesignDocument "Design Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): design briefs publish then archive.
+  transitions:
+    draft -> published: role(admin) or role(designer)
+    published -> archived: role(admin) or role(designer)
+    draft -> archived: role(admin)
+    published -> draft: role(admin)
+
   permit:
     list: role(admin) or role(designer) or role(reviewer)
     read: role(admin) or role(designer) or role(reviewer)

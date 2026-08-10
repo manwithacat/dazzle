@@ -23,6 +23,9 @@ def test_project_document_entity_is_document_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert "doc_kind: enum[brief, spec, proposal, status_report, decision]=brief" in text
+    assert "status: enum[draft, published, archived]=draft" in text
+    assert "draft -> published:" in text
+    assert "published -> archived:" in text
 
 
 def test_dashboard_declares_composition_after_dual_attention() -> None:

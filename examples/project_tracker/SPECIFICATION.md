@@ -86,4 +86,6 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:64df36f0b052eaee6ff41adf324b7279f9bb7fd4f842838ee30156c35fdf96d8 -->
+**Project Document lifecycle.** Project Documents move draft → published → archived (member may publish; manager/admin archive; admin may return published to draft).
+
+<!-- dazzle-spec-brief: sha256:00c9ad7992fd80ab65434434ac918e956a476bff5b45c0924601116499541da4 -->

@@ -3,7 +3,7 @@
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
   "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
-  "source_sha256": "70110bba0b3471c8",
+  "source_sha256": "187a95198e4ab5ef",
   "personas": [
     {
       "id_hint": "tester",
@@ -31,6 +31,15 @@
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "System administrator",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -86,7 +95,11 @@
       "name": "TestSession",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "draft",
+        "published",
+        "archived"
+      ],
       "owner_field_hint": "assigned_to"
     }
   ],
@@ -111,6 +124,13 @@
       "purpose": "Job desk for Engineer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -129,6 +149,12 @@
     {
       "persona": "engineer",
       "story": "Engineer has seeded Device rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Device"
+    },
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Device rows for their desk",
       "min_rows": 1,
       "entity_hint": "Device"
     }
@@ -187,7 +213,7 @@
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
     "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
-    "4 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
+    "5 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Account",
@@ -197,7 +223,6 @@
     "Create",
     "Dashboard",
     "Data",
-    "Dazzle",
     "Devices",
     "Engineer",
     "Firmware",
@@ -205,8 +230,10 @@
     "JavaScript",
     "Kit",
     "Log",
+    "Named",
     "Op",
     "Pipeline",
+    "Protocol",
     "Release",
     "Report",
     "Session",
@@ -222,14 +249,20 @@
     "books",
     "budget",
     "command",
+    "conversation",
+    "dazzle",
+    "document",
     "evidence",
     "explicit",
     "fourth",
+    "informal",
     "issues",
     "live",
     "logged",
     "loop",
     "mature",
+    "model",
+    "multi",
     "operations",
     "physical",
     "problem",
@@ -241,7 +274,6 @@
     "signed",
     "specific",
     "technical",
-    "timeline",
     "triage",
     "versioned"
   ]

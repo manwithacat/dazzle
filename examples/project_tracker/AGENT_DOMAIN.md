@@ -5,10 +5,10 @@
 
 ## Summary
 
-Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
+Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working
 
 **Source:** `/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md`
-**Fingerprint:** `8b923a4553c0c493`
+**Fingerprint:** `f99244ce0b33a60c`
 
 ## Personas (jobs)
 
@@ -24,10 +24,11 @@ Project Tracker is a team project-management product. It organises work as Proje
 - **Project** (grounded) owner≈`owner` lifecycle: backlog → todo → in_progress → review → done → cancelled — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: progress → review → done — definitional sentence in founder brief (A X is …)
 - **TeamMember** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Discussion** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Board`, `Dashboard`, `Data`, `Dazzle`, `Discussion`, `JavaScript`, `People`, `Plan`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `command`, `declared`, `evidence`, `five`, `kanban`, `larger`, `live`, `mature`, `parent`, `product`, `signed`, `static`, `team`, `technical`
+`Board`, `Dashboard`, `Data`, `JavaScript`, `Mockup`, `People`, `Plan`, `Proposal`, `Review`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `chart`, `command`, `conversation`, `dazzle`, `decision`, `declared`, `document`, `five`, `informal`, `kanban`, `larger`, `live`, `mature`, `parent`, `product`, `queue`, `signed`, `spec`, `static`, `team`, `technical`
 
 ## Desks
 
@@ -37,18 +38,18 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 ## Demo spine (seed stories)
 
-- `admin`: Admin has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `manager`: Manager has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `member`: Member has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `admin`: Admin has seeded Project rows for their desk (min_rows=1, entity≈Project)
+- `manager`: Manager has seeded Project rows for their desk (min_rows=1, entity≈Project)
+- `member`: Member has seeded Project rows for their desk (min_rows=1, entity≈Project)
 
 ## Open questions
 
 - `q1`: Can a milestone have multiple tasks, or just one?
-- `q2`: Can a comment have multiple attachments, or just one?
-- `q3`: Can a project have multiple tasks, or just one?
-- `q4`: Can a milestone have multiple comments, or just one?
-- `q5`: Can a project have multiple milestones, or just one?
-- `q6`: Can a task have multiple attachments, or just one?
+- `q2`: Can a project have multiple tasks, or just one?
+- `q3`: Can a milestone have multiple comments, or just one?
+- `q4`: Can a project have multiple milestones, or just one?
+- `q5`: Can a task have multiple attachments, or just one?
+- `q6`: Should users receive email/push notifications for key events?
 
 ## Process candidates (hypothesis)
 
@@ -69,9 +70,9 @@ Project Tracker is a team project-management product. It organises work as Proje
 {
   "version": 1,
   "title": "Project Tracker \u2014 Specification",
-  "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces \u2014 a Dashboard for the overview and a Project Board for day-to-day task and milestone management.",
+  "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working",
   "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
-  "source_sha256": "8b923a4553c0c493",
+  "source_sha256": "f99244ce0b33a60c",
   "personas": [
     {
       "id_hint": "admin",
@@ -158,6 +159,13 @@ Project Tracker is a team project-management product. It organises work as Proje
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
+    },
+    {
+      "name": "Discussion",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
@@ -186,21 +194,21 @@ Project Tracker is a team project-management product. It organises work as Proje
   "demo_spine": [
     {
       "persona": "admin",
-      "story": "Admin has seeded Task rows for their desk",
+      "story": "Admin has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     },
     {
       "persona": "manager",
-      "story": "Manager has seeded Task rows for their desk",
+      "story": "Manager has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Task rows for their desk",
+      "story": "Member has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     }
   ],
   "open_questions": [
@@ -211,27 +219,27 @@ Project Tracker is a team project-management product. It organises work as Proje
     },
     {
       "id": "q2",
-      "text": "Can a comment have multiple attachments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q3",
       "text": "Can a project have multiple tasks, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
+      "id": "q3",
       "text": "Can a milestone have multiple comments, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q5",
+      "id": "q4",
       "text": "Can a project have multiple milestones, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q6",
+      "id": "q5",
       "text": "Can a task have multiple attachments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q6",
+      "text": "Should users receive email/push notifications for key events?",
       "blocks_promote": false
     }
   ],
@@ -268,28 +276,36 @@ Project Tracker is a team project-management product. It organises work as Proje
     "Board",
     "Dashboard",
     "Data",
-    "Dazzle",
-    "Discussion",
     "JavaScript",
+    "Mockup",
     "People",
     "Plan",
+    "Proposal",
+    "Review",
     "Tasks",
     "assignee",
     "auditable",
     "author",
     "built",
     "byte",
+    "chart",
     "command",
+    "conversation",
+    "dazzle",
+    "decision",
     "declared",
-    "evidence",
+    "document",
     "five",
+    "informal",
     "kanban",
     "larger",
     "live",
     "mature",
     "parent",
     "product",
+    "queue",
     "signed",
+    "spec",
     "static",
     "team",
     "technical"

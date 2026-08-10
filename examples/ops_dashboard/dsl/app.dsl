@@ -189,6 +189,13 @@ entity OpsDocument "Ops Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): docs move draft → published → archive.
+  transitions:
+    draft -> published: role(ops_engineer) or role(admin)
+    published -> archived: role(ops_engineer) or role(admin)
+    draft -> archived: role(admin)
+    published -> draft: role(admin)
+
   permit:
     list: role(ops_engineer) or role(admin)
     read: role(ops_engineer) or role(admin)

@@ -8,13 +8,14 @@
 FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k
 
 **Source:** `/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md`
-**Fingerprint:** `70110bba0b3471c8`
+**Fingerprint:** `187a95198e4ab5ef`
 
 ## Personas (jobs)
 
 - **Tester** (`tester`, stable≈`tester`, grounded) — desk `tester_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
 - **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
+- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 
 ## Nouns (domain types)
 
@@ -22,23 +23,25 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 - **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: draft → released → deprecated — definitional sentence in founder brief (A X is …)
 - **IssueReport** (grounded) owner≈`assigned_to` lifecycle: open → triaged → in_progress → fixed → verified → closed — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — definitional sentence in founder brief (A X is …)
-- **TestSession** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **TestSession** (grounded) owner≈`assigned_to` lifecycle: draft → published → archived — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Dazzle`, `Devices`, `Engineer`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Op`, `Pipeline`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `Tester`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `evidence`, `explicit`, `fourth`, `issues`, `live`, `logged`, `loop`, `mature`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `timeline`, `triage`, `versioned`
+`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Devices`, `Engineer`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Named`, `Op`, `Pipeline`, `Protocol`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `Tester`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `conversation`, `dazzle`, `document`, `evidence`, `explicit`, `fourth`, `informal`, `issues`, `live`, `logged`, `loop`, `mature`, `model`, `multi`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `triage`, `versioned`
 
 ## Desks
 
 - **tester_desk** for `tester` (hypothesis) owner≈`assigned_to` — Job desk for Tester
 - **manager_desk** for `manager` (hypothesis) owner≈`assigned_to` — Job desk for Manager
 - **engineer_desk** for `engineer` (hypothesis) owner≈`assigned_to` — Job desk for Engineer
+- **admin_desk** for `admin` (hypothesis) owner≈`assigned_to` — Job desk for Admin
 
 ## Demo spine (seed stories)
 
 - `tester`: Tester has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `manager`: Manager has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `engineer`: Engineer has seeded Device rows for their desk (min_rows=1, entity≈Device)
+- `admin`: Admin has seeded Device rows for their desk (min_rows=1, entity≈Device)
 
 ## Open questions
 
@@ -58,7 +61,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
 - process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
-- 4 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
+- 5 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -68,7 +71,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
   "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
-  "source_sha256": "70110bba0b3471c8",
+  "source_sha256": "187a95198e4ab5ef",
   "personas": [
     {
       "id_hint": "tester",
@@ -96,6 +99,15 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "System administrator",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -151,7 +163,11 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "name": "TestSession",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "draft",
+        "published",
+        "archived"
+      ],
       "owner_field_hint": "assigned_to"
     }
   ],
@@ -176,6 +192,13 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "purpose": "Job desk for Engineer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -194,6 +217,12 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     {
       "persona": "engineer",
       "story": "Engineer has seeded Device rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Device"
+    },
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Device rows for their desk",
       "min_rows": 1,
       "entity_hint": "Device"
     }
@@ -252,7 +281,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
     "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
-    "4 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
+    "5 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Account",
@@ -262,7 +291,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "Create",
     "Dashboard",
     "Data",
-    "Dazzle",
     "Devices",
     "Engineer",
     "Firmware",
@@ -270,8 +298,10 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "JavaScript",
     "Kit",
     "Log",
+    "Named",
     "Op",
     "Pipeline",
+    "Protocol",
     "Release",
     "Report",
     "Session",
@@ -287,14 +317,20 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "books",
     "budget",
     "command",
+    "conversation",
+    "dazzle",
+    "document",
     "evidence",
     "explicit",
     "fourth",
+    "informal",
     "issues",
     "live",
     "logged",
     "loop",
     "mature",
+    "model",
+    "multi",
     "operations",
     "physical",
     "problem",
@@ -306,7 +342,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "signed",
     "specific",
     "technical",
-    "timeline",
     "triage",
     "versioned"
   ]

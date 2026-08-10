@@ -65,4 +65,6 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:d950e61290917f03d669490ff005354d08d012c165b5e424e42e1091a921ec37 -->
+**Ops Document lifecycle.** Ops Documents move draft → published → archived (ops_engineer publishes; admin may archive or return published to draft).
+
+<!-- dazzle-spec-brief: sha256:15e025e48a5c435c4009a03ed70841f93e06482a68103bdbe189f187a49e119b -->

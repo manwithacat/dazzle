@@ -27,6 +27,9 @@ def test_workspace_document_entity_is_document_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert "doc_kind: enum[brief, onboarding_guide, join_playbook, policy, decision]=brief" in text
+    assert "status: enum[draft, published, archived]=draft" in text
+    assert "draft -> published:" in text
+    assert "published -> archived:" in text
 
 
 def test_home_declares_composition_after_dual_attention() -> None:

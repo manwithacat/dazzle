@@ -134,4 +134,6 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:da489a6bcbe715b01ec72666b92ffedbae28224225c8d6ae8b9a88504bf060c9 -->
+**HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
+
+<!-- dazzle-spec-brief: sha256:83a30bfc881f298bcc0d4f6613820b0347a1ae628a1a582b7a12fef3114a02b4 -->

@@ -301,6 +301,14 @@ entity HrDocument "HR Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): offers/policies issue → sign → archive.
+  transitions:
+    draft -> issued: role(hr_admin) or role(manager)
+    issued -> signed: role(hr_admin) or role(manager)
+    signed -> archived: role(hr_admin)
+    draft -> archived: role(hr_admin)
+    issued -> archived: role(hr_admin)
+
   permit:
     list: role(hr_admin) or role(manager) or role(finance) or role(employee)
     read: role(hr_admin) or role(manager) or role(finance) or role(employee)

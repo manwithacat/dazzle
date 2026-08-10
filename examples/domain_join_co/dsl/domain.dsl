@@ -149,6 +149,13 @@ entity WorkspaceDocument "Workspace Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): workspace briefs publish then archive.
+  transitions:
+    draft -> published: role(admin)
+    published -> archived: role(admin)
+    draft -> archived: role(admin)
+    published -> draft: role(admin)
+
   permit:
     create: role(admin)
     read: role(admin) or role(member)

@@ -27,6 +27,10 @@ def test_hr_document_entity_is_document_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert "doc_kind: enum[offer, policy, promo, contract, onboarding]=offer" in text
+    assert "status: enum[draft, issued, signed, archived]=draft" in text
+    assert "draft -> issued:" in text
+    assert "issued -> signed:" in text
+    assert "signed -> archived:" in text
 
 
 def test_hero_desks_declare_composition_queue() -> None:

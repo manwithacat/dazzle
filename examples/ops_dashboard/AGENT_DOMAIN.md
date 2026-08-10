@@ -8,32 +8,35 @@
 Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex
 
 **Source:** `/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md`
-**Fingerprint:** `8a77505fed77df08`
+**Fingerprint:** `3d0b291f2ae655b4`
 
 ## Personas (jobs)
 
 - **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
+- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 
 ## Nouns (domain types)
 
 - **Alert** (grounded) owner≈`acknowledged_by` lifecycle: active → acknowledged → resolved — definitional sentence in founder brief (A X is …)
-- **Integration** (grounded) owner≈`acknowledged_by` lifecycle: off → pending → live → revoked — definitional sentence in founder brief (A X is …)
+- **Integration** (grounded) owner≈`acknowledged_by` lifecycle: off → pending → live — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Operations`, `PagerDuty`, `System`, `auditable`, `backend`, `cohort`, `comparison`, `confirm`, `create`, `cross`, `degraded`, `detail`, `engineer`, `glance`, `guided`, `healthy`, `heatmap`, `incident`, `insight`, `journey`, `kanban`, `live`, `mature`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rich`, `rule`, `severity`, `step`, `team`, `technical`
+`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Message`, `Op`, `Operations`, `PagerDuty`, `Playbook`, `Postmortem`, `System`, `analytical`, `auditable`, `backend`, `capped`, `confirm`, `create`, `degraded`, `detail`, `document`, `engineer`, `fold`, `glance`, `guided`, `healthy`, `incident`, `journey`, `live`, `mature`, `meta`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rule`, `step`, `team`, `technical`
 
 ## Desks
 
 - **engineer_desk** for `engineer` (hypothesis) owner≈`acknowledged_by` — Job desk for Engineer
+- **admin_desk** for `admin` (hypothesis) owner≈`acknowledged_by` — Job desk for Admin
 
 ## Demo spine (seed stories)
 
 - `engineer`: Engineer has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
+- `admin`: Admin has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
 
 ## Open questions
 
-_None blocking._
+- `q1`: Should users receive email/push notifications for key events?
 
 ## Process candidates (hypothesis)
 
@@ -57,7 +60,7 @@ _None blocking._
   "title": "Operations Dashboard \u2014 Specification",
   "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
   "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md",
-  "source_sha256": "8a77505fed77df08",
+  "source_sha256": "3d0b291f2ae655b4",
   "personas": [
     {
       "id_hint": "engineer",
@@ -67,6 +70,15 @@ _None blocking._
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "System administrator",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -88,8 +100,7 @@ _None blocking._
       "lifecycle_hint": [
         "off",
         "pending",
-        "live",
-        "revoked"
+        "live"
       ],
       "owner_field_hint": "acknowledged_by"
     }
@@ -101,6 +112,13 @@ _None blocking._
       "purpose": "Job desk for Engineer",
       "owner_field_hint": "acknowledged_by",
       "status": "hypothesis"
+    },
+    {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "acknowledged_by",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -109,9 +127,21 @@ _None blocking._
       "story": "Engineer has seeded Alert rows for their desk",
       "min_rows": 1,
       "entity_hint": "Alert"
+    },
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Alert rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Alert"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Should users receive email/push notifications for key events?",
+      "blocks_promote": false
+    }
+  ],
   "process_candidates": [
     {
       "id_hint": "escalation",
@@ -158,29 +188,32 @@ _None blocking._
     "Data",
     "Dazzle",
     "JavaScript",
+    "Message",
+    "Op",
     "Operations",
     "PagerDuty",
+    "Playbook",
+    "Postmortem",
     "System",
+    "analytical",
     "auditable",
     "backend",
-    "cohort",
-    "comparison",
+    "capped",
     "confirm",
     "create",
-    "cross",
     "degraded",
     "detail",
+    "document",
     "engineer",
+    "fold",
     "glance",
     "guided",
     "healthy",
-    "heatmap",
     "incident",
-    "insight",
     "journey",
-    "kanban",
     "live",
     "mature",
+    "meta",
     "monitored",
     "operation",
     "operational",
@@ -190,9 +223,7 @@ _None blocking._
     "responder",
     "response",
     "review",
-    "rich",
     "rule",
-    "severity",
     "step",
     "team",
     "technical"

@@ -302,6 +302,13 @@ entity ProjectDocument "Project Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): briefs/specs publish then archive.
+  transitions:
+    draft -> published: role(admin) or role(manager) or role(member)
+    published -> archived: role(admin) or role(manager)
+    draft -> archived: role(admin)
+    published -> draft: role(admin)
+
   permit:
     list: role(admin) or role(manager) or role(member)
     read: role(admin) or role(manager) or role(member)

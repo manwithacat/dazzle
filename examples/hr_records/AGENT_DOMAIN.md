@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
-**Source:** `examples/hr_records/SPECIFICATION.md`
-**Fingerprint:** `c8c48b3e344dea3c`
+**Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md`
+**Fingerprint:** `2e7f275c82f437fa`
 
 ## Personas (jobs)
 
@@ -21,11 +21,12 @@
 - **Department** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Person** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Role** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **PersonNote** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Employment** (grounded) owner≈`owner` lifecycle: active → on_leave → terminated — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Card`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `detail`, `directory`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `informal`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `visual`, `work`
+`Beyond`, `Directory`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `dept`, `detail`, `document`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `informal`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `work`
 
 ## Desks
 
@@ -63,8 +64,8 @@ _None blocking._
   "version": 1,
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
-  "source_path": "examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "c8c48b3e344dea3c",
+  "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
+  "source_sha256": "2e7f275c82f437fa",
   "personas": [
     {
       "id_hint": "manager",
@@ -113,6 +114,13 @@ _None blocking._
       "name": "Role",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "PersonNote",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     },
@@ -203,7 +211,7 @@ _None blocking._
   ],
   "rejected_chrome": [
     "Beyond",
-    "Card",
+    "Directory",
     "JavaScript",
     "Link",
     "Machine",
@@ -220,8 +228,9 @@ _None blocking._
     "current",
     "currently",
     "data",
+    "dept",
     "detail",
-    "directory",
+    "document",
     "effective",
     "facts",
     "formal",
@@ -246,7 +255,6 @@ _None blocking._
     "technical",
     "time",
     "tree",
-    "visual",
     "work"
   ]
 }

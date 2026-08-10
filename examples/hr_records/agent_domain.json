@@ -2,8 +2,8 @@
   "version": 1,
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
-  "source_path": "examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "c8c48b3e344dea3c",
+  "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
+  "source_sha256": "2e7f275c82f437fa",
   "personas": [
     {
       "id_hint": "manager",
@@ -52,6 +52,13 @@
       "name": "Role",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "PersonNote",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     },
@@ -142,7 +149,7 @@
   ],
   "rejected_chrome": [
     "Beyond",
-    "Card",
+    "Directory",
     "JavaScript",
     "Link",
     "Machine",
@@ -159,8 +166,9 @@
     "current",
     "currently",
     "data",
+    "dept",
     "detail",
-    "directory",
+    "document",
     "effective",
     "facts",
     "formal",
@@ -185,7 +193,6 @@
     "technical",
     "time",
     "tree",
-    "visual",
     "work"
   ]
 }

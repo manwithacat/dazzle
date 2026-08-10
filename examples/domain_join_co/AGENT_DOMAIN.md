@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join
 
-**Source:** `examples/domain_join_co/SPECIFICATION.md`
-**Fingerprint:** `27694f1638cea03a`
+**Source:** `/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md`
+**Fingerprint:** `effc9deedeb3c4ed`
 
 ## Personas (jobs)
 
@@ -18,11 +18,12 @@
 
 - **Announcement** (grounded) owner≈`owner` lifecycle: draft → published → archived — definitional sentence in founder brief (A X is …)
 - **JoinCo** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Document** (grounded) owner≈`owner` lifecycle: draft → published → archived — appears in founder brief (source=capitalized_noun)
 - **Join** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Data`, `JavaScript`, `Readines`, `approve`, `auditable`, `board`, `clear`, `command`, `company`, `current`, `framework`, `home`, `live`, `mature`, `post`, `product`, `right`, `root`, `team`, `technical`, `tenant`, `verified`
+`Data`, `JavaScript`, `Message`, `Policie`, `Readines`, `approve`, `auditable`, `board`, `clear`, `command`, `company`, `current`, `discussion`, `framework`, `home`, `live`, `mature`, `named`, `playbook`, `product`, `right`, `root`, `team`, `technical`, `tenant`, `verified`
 
 ## Desks
 
@@ -46,7 +47,7 @@ _None blocking._
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
 - process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
-- 1 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
+- 2 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -55,8 +56,8 @@ _None blocking._
   "version": 1,
   "title": "Domain Join Co \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join",
-  "source_path": "examples/domain_join_co/SPECIFICATION.md",
-  "source_sha256": "27694f1638cea03a",
+  "source_path": "/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md",
+  "source_sha256": "effc9deedeb3c4ed",
   "personas": [
     {
       "id_hint": "admin",
@@ -85,6 +86,17 @@ _None blocking._
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Document",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [
+        "draft",
+        "published",
+        "archived"
+      ],
       "owner_field_hint": "owner"
     },
     {
@@ -130,11 +142,13 @@ _None blocking._
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
     "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
-    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
+    "2 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Data",
     "JavaScript",
+    "Message",
+    "Policie",
     "Readines",
     "approve",
     "auditable",
@@ -143,11 +157,13 @@ _None blocking._
     "command",
     "company",
     "current",
+    "discussion",
     "framework",
     "home",
     "live",
     "mature",
-    "post",
+    "named",
+    "playbook",
     "product",
     "right",
     "root",

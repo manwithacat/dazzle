@@ -90,4 +90,6 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:99101cadea4fe7dc68d16f14ed91f02f72d2b0ff779326ccf700b34e1bdbe1e0 -->
+**Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
+
+<!-- dazzle-spec-brief: sha256:25408de94c51405a3f7cc2890561462c3f913ae76a2dd7300db43a083d7a9cff -->

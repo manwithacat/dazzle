@@ -32,6 +32,9 @@ def test_design_document_entity_is_document_composition() -> None:
     assert (
         "doc_kind: enum[brief, brand_guide, art_direction, creative_spec, decision]=brief" in text
     )
+    assert "status: enum[draft, published, archived]=draft" in text
+    assert "draft -> published:" in text
+    assert "published -> archived:" in text
 
 
 def test_studio_dashboard_declares_composition_after_dual_attention() -> None:

@@ -1,9 +1,9 @@
 {
   "version": 1,
   "title": "Project Tracker \u2014 Specification",
-  "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces \u2014 a Dashboard for the overview and a Project Board for day-to-day task and milestone management.",
+  "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working",
   "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
-  "source_sha256": "8b923a4553c0c493",
+  "source_sha256": "f99244ce0b33a60c",
   "personas": [
     {
       "id_hint": "admin",
@@ -90,6 +90,13 @@
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
+    },
+    {
+      "name": "Discussion",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
@@ -118,21 +125,21 @@
   "demo_spine": [
     {
       "persona": "admin",
-      "story": "Admin has seeded Task rows for their desk",
+      "story": "Admin has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     },
     {
       "persona": "manager",
-      "story": "Manager has seeded Task rows for their desk",
+      "story": "Manager has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Task rows for their desk",
+      "story": "Member has seeded Project rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "Project"
     }
   ],
   "open_questions": [
@@ -143,27 +150,27 @@
     },
     {
       "id": "q2",
-      "text": "Can a comment have multiple attachments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q3",
       "text": "Can a project have multiple tasks, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
+      "id": "q3",
       "text": "Can a milestone have multiple comments, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q5",
+      "id": "q4",
       "text": "Can a project have multiple milestones, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q6",
+      "id": "q5",
       "text": "Can a task have multiple attachments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q6",
+      "text": "Should users receive email/push notifications for key events?",
       "blocks_promote": false
     }
   ],
@@ -200,28 +207,36 @@
     "Board",
     "Dashboard",
     "Data",
-    "Dazzle",
-    "Discussion",
     "JavaScript",
+    "Mockup",
     "People",
     "Plan",
+    "Proposal",
+    "Review",
     "Tasks",
     "assignee",
     "auditable",
     "author",
     "built",
     "byte",
+    "chart",
     "command",
+    "conversation",
+    "dazzle",
+    "decision",
     "declared",
-    "evidence",
+    "document",
     "five",
+    "informal",
     "kanban",
     "larger",
     "live",
     "mature",
     "parent",
     "product",
+    "queue",
     "signed",
+    "spec",
     "static",
     "team",
     "technical"

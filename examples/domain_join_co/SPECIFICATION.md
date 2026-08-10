@@ -104,4 +104,6 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Announcement lifecycle.** Announcements move draft → published → archived (admin may return published to draft or republish archived).
 
-<!-- dazzle-spec-brief: sha256:b486eaea8a18e67f70ff5583e51b503cb8a3f513e209cdfa822ca5ebabcd054d -->
+**Workspace Document lifecycle.** Workspace Documents move draft → published → archived under admin control (admin may return published to draft).
+
+<!-- dazzle-spec-brief: sha256:feb08c8a127dd02ae555a7e3302c8e71c6b68bd7bb30a6e3b006578f136f2c94 -->

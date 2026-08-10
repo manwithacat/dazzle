@@ -8,32 +8,35 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from
 
 **Source:** `/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md`
-**Fingerprint:** `fc0e9022e61d09ce`
+**Fingerprint:** `325bed39fd21a878`
 
 ## Personas (jobs)
 
+- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
 - **Designer** (`designer`, stable≈`designer`, grounded) — desk `designer_desk` — role word in founder brief
 - **Reviewer** (`reviewer`, stable≈`reviewer`, grounded) — desk `reviewer_desk` — role word in founder brief
 
 ## Nouns (domain types)
 
-- **Brand** (grounded) owner≈`created_by` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Campaign** (grounded) owner≈`created_by` lifecycle: planning → active → completed → cancelled — definitional sentence in founder brief (A X is …)
-- **DesignAsset** (grounded) owner≈`created_by` lifecycle: draft → review → approved → published → archived — definitional sentence in founder brief (A X is …)
-- **DesignFeedback** (grounded) owner≈`created_by` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Feedback** (grounded) owner≈`created_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Brand** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Campaign** (grounded) owner≈`assigned_to` lifecycle: planning → active → completed → cancelled — definitional sentence in founder brief (A X is …)
+- **DesignAsset** (grounded) owner≈`assigned_to` lifecycle: draft → review → approved → published → archived — definitional sentence in founder brief (A X is …)
+- **DesignFeedback** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Feedback** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Desk`, `JavaScript`, `Metric`, `Reviewer`, `Studio`, `asset`, `auditable`, `byte`, `command`, `creative`, `current`, `explicit`, `formal`, `framework`, `live`, `matrix`, `mature`, `people`, `product`, `record`, `review`, `skeptic`, `specific`, `static`, `technical`, `visibility`
+`Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Desk`, `JavaScript`, `Named`, `Reviewer`, `Studio`, `asset`, `assigned`, `auditable`, `bare`, `byte`, `command`, `creative`, `critique`, `current`, `document`, `explicit`, `fold`, `formal`, `framework`, `informal`, `live`, `matrix`, `mature`, `people`, `product`, `pull`, `record`, `review`, `schedule`, `skeptic`, `specific`, `static`, `technical`, `visibility`, `work`
 
 ## Desks
 
-- **designer_desk** for `designer` (hypothesis) owner≈`created_by` — Job desk for Designer
-- **reviewer_desk** for `reviewer` (hypothesis) owner≈`created_by` — Job desk for Reviewer
+- **admin_desk** for `admin` (hypothesis) owner≈`assigned_to` — Job desk for Admin
+- **designer_desk** for `designer` (hypothesis) owner≈`assigned_to` — Job desk for Designer
+- **reviewer_desk** for `reviewer` (hypothesis) owner≈`assigned_to` — Job desk for Reviewer
 
 ## Demo spine (seed stories)
 
+- `admin`: Admin has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 - `designer`: Designer has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 - `reviewer`: Reviewer has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 
@@ -44,7 +47,7 @@
 
 ## Process candidates (hypothesis)
 
-- **assignment** (hypothesis) entity≈`Campaign` personas=[manager, member] — Campaign: auto or manager assignment to a worker
+- **assignment** (hypothesis) entity≈`DesignAsset` personas=[manager, member] — DesignAsset: auto or manager assignment to a worker
 
 ## Research notes
 
@@ -62,8 +65,17 @@
   "title": "Design Studio \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from",
   "source_path": "/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md",
-  "source_sha256": "fc0e9022e61d09ce",
+  "source_sha256": "325bed39fd21a878",
   "personas": [
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "role word in founder brief"
+    },
     {
       "id_hint": "designer",
       "label": "Designer",
@@ -89,7 +101,7 @@
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "created_by"
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "Campaign",
@@ -101,7 +113,7 @@
         "completed",
         "cancelled"
       ],
-      "owner_field_hint": "created_by"
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "DesignAsset",
@@ -114,40 +126,53 @@
         "published",
         "archived"
       ],
-      "owner_field_hint": "created_by"
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "DesignFeedback",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "created_by"
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "Feedback",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
-      "owner_field_hint": "created_by"
+      "owner_field_hint": "assigned_to"
     }
   ],
   "desks": [
     {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
+    },
+    {
       "persona": "designer",
       "name": "designer_desk",
       "purpose": "Job desk for Designer",
-      "owner_field_hint": "created_by",
+      "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     },
     {
       "persona": "reviewer",
       "name": "reviewer_desk",
       "purpose": "Job desk for Reviewer",
-      "owner_field_hint": "created_by",
+      "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     }
   ],
   "demo_spine": [
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Brand rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Brand"
+    },
     {
       "persona": "designer",
       "story": "Designer has seeded Brand rows for their desk",
@@ -176,12 +201,12 @@
   "process_candidates": [
     {
       "id_hint": "assignment",
-      "summary": "Campaign: auto or manager assignment to a worker",
+      "summary": "DesignAsset: auto or manager assignment to a worker",
       "personas": [
         "manager",
         "member"
       ],
-      "entity_hint": "Campaign",
+      "entity_hint": "DesignAsset",
       "status": "hypothesis"
     }
   ],
@@ -202,30 +227,39 @@
     "Designer",
     "Desk",
     "JavaScript",
-    "Metric",
+    "Named",
     "Reviewer",
     "Studio",
     "asset",
+    "assigned",
     "auditable",
+    "bare",
     "byte",
     "command",
     "creative",
+    "critique",
     "current",
+    "document",
     "explicit",
+    "fold",
     "formal",
     "framework",
+    "informal",
     "live",
     "matrix",
     "mature",
     "people",
     "product",
+    "pull",
     "record",
     "review",
+    "schedule",
     "skeptic",
     "specific",
     "static",
     "technical",
-    "visibility"
+    "visibility",
+    "work"
   ]
 }
 ```

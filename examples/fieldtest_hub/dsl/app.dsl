@@ -309,6 +309,13 @@ entity TestDocument "Test Document":
   author: str(120)
   created_at: datetime auto_add
 
+  # Domain residual status∄transitions (cycle 1845): briefs/protocols publish then archive.
+  transitions:
+    draft -> published: role(engineer) or role(manager) or role(admin)
+    published -> archived: role(engineer) or role(manager) or role(admin)
+    draft -> archived: role(admin)
+    published -> draft: role(admin)
+
   permit:
     list: role(engineer) or role(manager) or role(tester) or role(admin)
     read: role(engineer) or role(manager) or role(tester) or role(admin)
