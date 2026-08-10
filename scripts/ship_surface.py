@@ -150,6 +150,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_contact_manager_empty_region_goal_b.py",
     # contact_manager Goal B document (cycle 1845 EngagementLetter composition pin)
     "tests/unit/test_contact_manager_document_goal_b.py",
+    # contact_manager Goal B org_structure (cycle 1861 companies title board + multi-person accounts)
+    "tests/unit/test_contact_manager_org_structure_goal_b.py",
     # domain_join_co Goal B conversation (cycle 1666 AnnouncementNote + home/board)
     "tests/unit/test_domain_join_conversation_goal_b.py",
     # domain_join_co Goal B command_density (cycle 1831 dual attention before trail)

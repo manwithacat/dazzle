@@ -44,10 +44,13 @@ def test_contacts_drops_favorite_kanban_theater() -> None:
 
 
 def test_companies_drops_empty_bar_chart() -> None:
+    """Companies stays org-first (title board + company queue) without bar theater."""
     block = _workspace_block("companies")
     assert "company_pulse:" in block
+    assert "by_title:" in block
     assert "by_company:" in block
     assert "company_context:" in block
     assert "company_chart:" not in block
     assert "bar_chart" not in block
-    assert "focus: company_pulse, by_company, recent_people, company_context" in block
+    # Goal B org_structure: role board before company placement before recents
+    assert "focus: company_pulse, by_title, by_company, recent_people" in block

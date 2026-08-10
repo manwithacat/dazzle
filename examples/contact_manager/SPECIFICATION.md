@@ -38,8 +38,10 @@ context strip, and search — without company bar-chart voids or twin company du
 **Contacts** is the dual-pane browse surface: a favourites queue strip, the full
 contact list, and a detail panel for the selected contact (no favourite kanban
 theater under the list).
-**Companies** is the company roll-up: pulse metrics, a company roster queue,
-recent people timeline, and context strip — without an empty group-by chart.
+**Companies** is the CRM **org-structure** desk: after the directory pulse it
+shows a **job-title kanban** (Account Manager / Sales Director / Engineering /
+…) and a **company placement** queue over multi-person accounts, then a flat
+recents timeline and context strip — without empty group-by bar-chart theater.
 Engagement letter rows dual-open the letter hub or the parent Contact hub.
 
 ## How work flows through it
@@ -94,4 +96,4 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 **Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:64561b41854b7bfdd6af37372daf0f6c5ecde05ff3b3efa05304201820c7fe67 -->
+<!-- dazzle-spec-brief: sha256:7d82d4e94434887e34a10ba0ef090dbaacf1f7b0cb9091a58869793ac8b11394 -->

@@ -115,13 +115,14 @@ surface contact_list "Contacts":
     field email "Email"
     field phone "Phone"
     field company "Company"
+    field job_title "Job Title"
     field is_favorite "Favorite"
 
   ux:
     purpose: "Browse and search contacts — Find by first name, last name, email, or company above the A–Z list; open a row for the contact hub"
     sort: last_name asc, first_name asc
-    filter: is_favorite
-    search: first_name, last_name, email, company
+    filter: is_favorite, company, job_title
+    search: first_name, last_name, email, company, job_title
     empty: "No contacts yet. Add your first contact!"
 
 # Detail view — contact hub (identity / employment / notes / engagement letters)
@@ -429,11 +430,13 @@ workspace contacts "Contacts":
       purpose: "Favourites strip then A–Z dual-pane directory"
       focus: favourites_queue, contact_list, contact_detail
 
-# Third product workspace: company-first job desk.
+# Third product workspace: org structure for CRM relationships.
 workspace companies "Companies":
-  # Goal B empty_region_honesty: one pulse + company roster + recent people —
-  # drop empty bar-chart group-by that duplicates the queue.
-  purpose: "Company roll-up — who works where before opening a person"
+  # Goal B org_structure (cycle 1861): peer CRM tools (HubSpot / Salesforce /
+  # Attio / Affinity) show contacts by job title and company placement before a
+  # flat recents dump — users call from org shape, not a warehouse A–Z list.
+  # Keeps empty_region_honesty: no bar-chart company_mix theater under the boards.
+  purpose: "Org structure buyers can parse — role board and company placement before flat recents"
   access: persona(user, admin)
 
   company_pulse:
@@ -447,6 +450,18 @@ workspace companies "Companies":
       companies: accent
       favourites: positive
 
+  # Title board — functional org (Account Manager / Sales Director / …).
+  by_title:
+    source: Contact
+    filter: job_title != null
+    display: kanban
+    group_by: job_title
+    sort: last_name asc, first_name asc
+    limit: 40
+    action: contact_detail
+    empty: "No titled contacts yet"
+
+  # Company placement queue — multi-person accounts before flat recents.
   by_company:
     source: Contact
     filter: company != null
@@ -457,6 +472,7 @@ workspace companies "Companies":
     action: contact_detail
     empty: "No company contacts yet"
 
+  # Secondary flat recents (after hierarchy) — still pull-to-open hubs.
   recent_people:
     source: Contact
     sort: updated_at desc
@@ -468,19 +484,23 @@ workspace companies "Companies":
   company_context:
     display: status_list
     entries:
-      - title: "Call by company"
-        caption: "Open a person from the company roster for the hub"
-        icon: "building-2"
+      - title: "By title board"
+        caption: "Account Manager / Sales / Engineering columns show who to call by role"
+        icon: "users"
         state: accent
+      - title: "Company placement"
+        caption: "Multi-person accounts sorted before flat recents"
+        icon: "building-2"
+        state: positive
       - title: "Star favourites"
-        caption: "Favourites surface on Home and Contacts"
+        caption: "Favourites still surface on Home and Contacts"
         icon: "star"
         state: positive
 
   ux:
     as user:
-      purpose: "Company roster without empty chart voids"
-      focus: company_pulse, by_company, recent_people, company_context
+      purpose: "See contacts by title and company before flat recents — org structure first"
+      focus: company_pulse, by_title, by_company, recent_people
     as admin:
-      purpose: "Who works where — roster first, no bar-chart theater"
-      focus: company_pulse, by_company, recent_people, company_context
+      purpose: "Org structure for the practice directory — role board then company placement"
+      focus: company_pulse, by_title, by_company, recent_people
