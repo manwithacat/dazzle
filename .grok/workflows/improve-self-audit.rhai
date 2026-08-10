@@ -92,15 +92,22 @@ sample_prompt += "You are the SAMPLE stage of Dazzle /improve self-audit. Repo r
 sample_prompt += "Use shell/git tools. Do NOT mutate the worktree (no stash/checkout/reset/merge).\n\n";
 sample_prompt += "1. Find the last self-audit in dev_docs/improve-log.md (search for 'lane: self-audit').\n";
 sample_prompt += "   Prefer an end SHA recorded there. Window = that SHA exclusive .. HEAD.\n";
-sample_prompt += "   If none: window = last 15 commits whose subject matches '^improve: cycle'.\n";
-sample_prompt += "2. List improve commits: git log --oneline --grep '^improve: cycle' <start>..HEAD\n";
+sample_prompt += "   If none: window = last 15 commits that look improve-related (see step 2).\n";
+sample_prompt += "2. List improve-relevant commits in the window (NOT only '^improve: cycle' — that is legacy and empty on modern tips):\n";
+sample_prompt += "   git log --oneline <start>..HEAD\n";
+sample_prompt += "   Include a commit if ANY of:\n";
+sample_prompt += "     - subject contains '(cycle N)' / '(cycle NNNN)'  (primary style: feat/fix … (cycle 1889))\n";
+sample_prompt += "     - subject matches '^improve:' (legacy)\n";
+sample_prompt += "     - SHA is named in an improve-log Cycle entry for this window\n";
+sample_prompt += "   Also: git log --oneline --grep '(cycle [0-9]' <start>..HEAD\n";
 sample_prompt += "3. Sample at most ";
 sample_prompt += max_commits.to_string();
 sample_prompt += " commits: if ≤N take all; if more take largest diffstat plus any that moved DONE/VERIFIED.\n";
 sample_prompt += "4. For each sampled commit, extract the matching improve-log.md cycle entry and any backlog\n";
 sample_prompt += "   rows it touched (also grep dev_docs/improve-backlog-archive.md if needed).\n";
 sample_prompt += "5. Return window_start, window_end (HEAD full SHA), commits[{sha,subject,log_excerpt,backlog_notes,diffstat_lines}].\n";
-sample_prompt += "Empty commits is valid only after you ran git log and found zero improve: commits.\n";
+sample_prompt += "Empty commits is valid ONLY after git log shows zero (cycle N) and zero ^improve: and no log-named SHAs.\n";
+sample_prompt += "If the window has feat/fix (cycle N) ships and you return empty commits, that is a SAMPLE BUG — re-run step 2.\n";
 
 let sample = agent(sample_prompt, #{
     label: "sample-window",

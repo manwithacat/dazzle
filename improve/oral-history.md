@@ -75,6 +75,11 @@ Doctrine source of truth remains
     in three places, stop and re-apply `docs/reference/agent-harness-distill.md`
     criteria — the loop must not re-inflate oral thrash.
 
+17. **Self-audit sample is not `^improve: cycle`.** Modern ships are
+    `feat/fix … (cycle N)`. Grepping only the legacy prefix empties the audit
+    window while real improve commits sit on HEAD (AUD-011 / cycle 1890). Sample
+    `(cycle N)` + `^improve:` + log-named SHAs.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

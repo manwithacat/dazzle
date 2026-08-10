@@ -58,7 +58,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1885 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1889 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -122,8 +122,8 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1886 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1886 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1890 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1890 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -136,4 +136,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 1886 (2026-08-10).** cimonitor: acme media focus pins + SPEC fingerprint after invoice_packet_preview. Map diet holds (~139 lines).
+> **Cycle 1890 (2026-08-10).** self-audit: fixed sample filter for `(cycle N)` subjects; product window CLEAN; media matrix full.

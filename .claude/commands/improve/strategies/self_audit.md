@@ -44,7 +44,17 @@ records its end SHA). Audit window = that SHA (exclusive) → `HEAD`. If no prio
 audit, window = the last 15 `improve:` commits.
 
 ```bash
-git log --oneline --grep '^improve: cycle' <last-audit-sha>..HEAD
+# Window = last self-audit end SHA (exclusive) → HEAD
+git log --oneline <last-audit-sha>..HEAD
+
+# Improve-relevant commits (conventional subjects + legacy prefix):
+#   - subject contains "(cycle N)" / "(cycle NNNN)"  ← primary post-2026-08 style
+#   - subject matches '^improve:'                      ← legacy
+#   - or the SHA is named in an improve-log Cycle entry inside the window
+# Do NOT require '^improve: cycle' alone — that filter is empty on modern tips
+# and falsely short-circuits the self-audit workflow.
+git log --oneline --grep '(cycle [0-9]' <last-audit-sha>..HEAD
+git log --oneline --grep '^improve:' <last-audit-sha>..HEAD
 ```
 
 ### 2. Sample
