@@ -45,6 +45,21 @@ def test_ticket_queue_live_conversation_uses_message_chrome() -> None:
     assert "source: Comment" in live
 
 
+def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
+    """Peer pack: discussion trail is content/author prose — not is_internal meta."""
+    text = APP.read_text()
+    block = text.split('surface ticket_detail "Ticket Detail":', 1)[1].split(
+        'surface ticket_create "Create Ticket":', 1
+    )[0]
+    discussion = block.split('related discussion "Discussion":', 1)[1].split("related waivers", 1)[
+        0
+    ]
+    assert "display: queue" in discussion
+    assert "show: Comment" in discussion
+    assert "columns: content, author, created_at" in discussion
+    assert "is_internal" not in discussion
+
+
 def test_comment_seeds_have_domain_true_support_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10
