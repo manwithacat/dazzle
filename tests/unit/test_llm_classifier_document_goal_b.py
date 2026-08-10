@@ -42,9 +42,11 @@ def test_support_dashboard_declares_composition_after_dual_attention() -> None:
     assert block.index("open_attention:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_ai_replies:")
     assert (
-        "focus: classification_metrics, high_severity, open_attention, "
-        "composition, live_ai_replies, triage_readiness" in block
+        "focus: case_brief_covers, classification_metrics, high_severity, "
+        "open_attention, composition, live_ai_replies, triage_readiness" in block
     )
+    # Media cover wall is first; composition remains after dual attention.
+    assert block.index("case_brief_covers:") < block.index("classification_metrics:")
 
 
 def test_ticket_document_list_dual_open_and_ticket_hub() -> None:

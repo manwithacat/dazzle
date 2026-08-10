@@ -33,12 +33,12 @@ def test_support_dashboard_declares_dual_attention_before_conversation() -> None
 def test_support_dashboard_caps_attention_for_fold_share() -> None:
     block = _support_dashboard_block()
     assert "limit: 4" in block
-    # Goal B document (cycle 1876): readiness after dual attention + docs + replies.
+    # Goal B media (cycle 1888) + document: covers first, then dual attention + docs + replies.
     assert (
-        "focus: classification_metrics, high_severity, open_attention, "
-        "composition, live_ai_replies, triage_readiness" in block
+        "focus: case_brief_covers, classification_metrics, high_severity, "
+        "open_attention, composition, live_ai_replies, triage_readiness" in block
     )
-    assert "Multi-panel AI triage" in block or "multi-panel" in block.lower()
+    assert "multi-panel" in block.lower() or "case brief cover" in block.lower()
     # Conversation spine uses Message chrome after dual attention + documents.
     replies = block.split("live_ai_replies:", 1)[1][:400]
     assert "display: conversation" in replies

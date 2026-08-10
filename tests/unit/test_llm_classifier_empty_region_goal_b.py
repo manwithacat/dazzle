@@ -49,8 +49,8 @@ def test_ticket_management_drops_twin_queues_and_priority_chart() -> None:
     assert "display: kanban" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness"
-        in block
+        "focus: case_brief_covers, agent_pulse, live_ai_replies, ticket_queue, "
+        "classification_trail, desk_readiness" in block
     )
 
 

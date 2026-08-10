@@ -233,6 +233,10 @@ entity TicketDocument "Ticket Document":
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
+  # Goal B media (novel vs headshot shelf): case brief cover preview — document
+  # thumbs on the triage home, not SupportStaff photo chrome (peer: Zendesk/Intercom
+  # side-conversations / Gorgias macros with visual attachments).
+  preview_url: url
   created_at: datetime auto_add
 
   # Domain residual status∄transitions: support briefs publish then archive.
@@ -259,7 +263,7 @@ entity TicketDocument "Ticket Document":
       as: admin, supervisor, support_agent
 
   fitness:
-    repr_fields: [ticket, headline, doc_kind, status, author]
+    repr_fields: [ticket, headline, doc_kind, status, author, preview_url]
 
 
 # =============================================================================
@@ -319,11 +323,11 @@ surface ticket_detail "Ticket Detail":
     field created_at "Created"
     field updated_at "Updated"
 
-  # Goal B document: named case briefs / macros on the ticket hub.
+  # Goal B document + media: named case briefs / macros with cover previews.
   related documents "Documents":
     display: queue
     show: TicketDocument
-    columns: headline, doc_kind, status, author
+    columns: preview_url, headline, doc_kind, status, author
 
   # Ticket hub AI trail — suggested reply first (Goal B conversation), then
   # triage badges — ST-002 support-agent hub path (cycle 1504 journey_dogfood).
@@ -426,6 +430,7 @@ surface ticket_document_list "Ticket Documents":
   # Dual open: document hub first; parent Ticket hub second.
   open: TicketDocument via id | Ticket via ticket
   section main:
+    field preview_url "Cover"
     field headline "Headline"
     field ticket "Ticket"
     field doc_kind "Kind"
@@ -447,6 +452,7 @@ surface ticket_document_detail "Ticket Document":
     field ticket "Ticket"
     field doc_kind "Kind"
     field author "Author"
+    field preview_url "Cover"
   section lifecycle "Lifecycle":
     layout: strip
     field status "Status"
@@ -466,6 +472,7 @@ surface ticket_document_create "Add Ticket Document":
     field body "Body"
     field status "Status"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Attach a named case brief, macro, or SLA note to a ticket"
 
@@ -478,6 +485,7 @@ surface ticket_document_edit "Edit Ticket Document":
     field body "Body"
     field status "Status"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Update ticket document headline, kind, or status"
 
@@ -492,12 +500,22 @@ surface ticket_document_edit "Edit Ticket Document":
 # homes put high-severity triage + open pressure above the AI reply trail —
 # multi-panel attention, not conversation-only / flat queue thrash above fold.
 workspace support_dashboard "Support Dashboard":
-  # Goal B empty_region_honesty (cycle 1800) + document (cycle 1876): peer AI
-  # triage homes keep multi-panel attention, named case documents, then AI reply
-  # trail — not a second open-board kanban / status chart restating metrics.
-  purpose: "Multi-panel AI triage — metrics, dual attention, case documents, live AI replies"
+  # Goal B media FIRST (cycle 1888) + empty_region_honesty + document: peer AI
+  # triage homes put case-brief cover thumbs above metrics and dual attention —
+  # not headshot shelves (portfolio ban headshot_shelf). Recipe case_brief_cover_wall.
+  purpose: "Multi-panel AI triage — case brief covers, metrics, dual attention, docs, live AI replies"
   stage: "command_center"
   access: persona(supervisor, support_agent, admin)
+
+  # Goal B media — recipe case_brief_cover_wall (novel vs headshot_shelf).
+  case_brief_covers:
+    source: TicketDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: ticket_document_detail
+    empty: "No case brief covers yet — attach briefs with cover previews"
 
   classification_metrics:
     source: Ticket
@@ -590,20 +608,30 @@ workspace support_dashboard "Support Dashboard":
 
   ux:
     as supervisor:
-      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
-      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
+      purpose: "Case brief cover wall first, then dual attention, docs, and AI replies"
+      focus: case_brief_covers, classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
     as support_agent:
-      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
-      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
+      purpose: "Case brief cover wall first, then dual attention, docs, and AI replies"
+      focus: case_brief_covers, classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
     as admin:
-      purpose: "Multi-panel AI triage — dual attention, case documents, then AI replies"
-      focus: classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
+      purpose: "Case brief cover wall first, then dual attention, docs, and AI replies"
+      focus: case_brief_covers, classification_metrics, high_severity, open_attention, composition, live_ai_replies, triage_readiness
 
 workspace ticket_management "Ticket Management":
-  # Goal B empty_region_honesty: one open worklist + AI trail — not open_only twin
-  # queue, pipeline kanban, and priority bar chart restating the same rows.
-  purpose: "Agent ticket desk — AI replies, open worklist, classification trail"
+  # Goal B media FIRST (cycle 1888) + empty_region_honesty: case brief cover wall
+  # before pulse and AI trail — recipe case_brief_cover_wall (not headshots).
+  purpose: "Agent ticket desk — case brief covers, AI replies, open worklist, classification trail"
   access: persona(support_agent, supervisor, admin)
+
+  # Goal B media — recipe case_brief_cover_wall (novel vs headshot_shelf).
+  case_brief_covers:
+    source: TicketDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: ticket_document_detail
+    empty: "No case brief covers yet — attach briefs with cover previews"
 
   agent_pulse:
     source: Ticket
@@ -657,14 +685,14 @@ workspace ticket_management "Ticket Management":
 
   ux:
     as support_agent:
-      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
-      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
+      purpose: "Case brief cover wall first, then AI replies and open worklist"
+      focus: case_brief_covers, agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
     as supervisor:
-      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
-      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
+      purpose: "Case brief cover wall first, then AI replies and open worklist"
+      focus: case_brief_covers, agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
     as admin:
-      purpose: "AI replies and open worklist — no twin queues or empty priority chart"
-      focus: agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
+      purpose: "Case brief cover wall first, then AI replies and open worklist"
+      focus: case_brief_covers, agent_pulse, live_ai_replies, ticket_queue, classification_trail, desk_readiness
 
 # Third product workspace: classification-first desk so list
 # surfaces no longer dominate vs job shells (AI triage is the product value).

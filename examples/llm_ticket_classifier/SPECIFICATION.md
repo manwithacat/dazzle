@@ -42,8 +42,11 @@ control (rehire and re-onboarding paths included).
 
 **Ticket Document.** A named letter on a ticket — case brief, macro, SLA note,
 escalation plan, or resolution letter — so the Support Dashboard and ticket hubs
-surface composition before AI reply notes. Documents attach to a specific ticket
-and move draft → published → archived under agent and supervisor control.
+surface composition before AI reply notes. Documents carry optional cover
+previews so Support Dashboard and Ticket Management lead with a case brief cover
+wall (document thumbs, not staff headshots) before metrics and dual attention.
+Documents attach to a specific ticket and move draft → published → archived
+under agent and supervisor control.
 
 Tickets can be browsed and inspected in detail, and classifications and documents
 can be browsed alongside them, through dedicated screens plus the Team org desk.
@@ -60,14 +63,14 @@ can be browsed alongside them, through dedicated screens plus the Team org desk.
 
 ## Where work happens
 
-**Support Dashboard** — supervisor home: classification metrics, dual
-attention (high-severity + open), ticket document composition, live AI replies,
-utility queues, and a readiness strip — no secondary open-board kanban or status
-bar chart.
+**Support Dashboard** — supervisor home: case brief cover wall first, then
+classification metrics, dual attention (high-severity + open), ticket document
+composition, live AI replies, utility queues, and a readiness strip — no
+secondary open-board kanban or status bar chart.
 
-**Ticket Management** — agent home: pulse metrics, AI reply trail, one open
-worklist, classification trail, and readiness — no twin open-only queue,
-pipeline kanban, or priority bar chart.
+**Ticket Management** — agent home: case brief cover wall first, then pulse
+metrics, AI reply trail, one open worklist, classification trail, and readiness
+— no twin open-only queue, pipeline kanban, or priority bar chart.
 
 **Classifications** — AI triage desk: classification metrics, latest queue,
 open ticket grid, classification trail, and open status chart.
@@ -146,4 +149,4 @@ touch is reviewable in one place. (Verify: `dazzle validate`.)
 
 **Ticket Document lifecycle.** Ticket Documents move draft → published → archived under agent and supervisor control (supervisors may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:7b5e1e3f12da5cc20e6d7b49ed771cc6648fcaa90275487b7f9a81564c7b4f96 -->
+<!-- dazzle-spec-brief: sha256:ff692454f6d3995d9d1e5e9a8ee9c757d01bafedc52c75eb55c27d76e0e0c70f -->
