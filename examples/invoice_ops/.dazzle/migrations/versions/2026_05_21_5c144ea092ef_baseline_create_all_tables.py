@@ -72,6 +72,9 @@ def upgrade() -> None:
         sa.Column("email", sa.Text(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("tenant_id", sa.Uuid(), nullable=False),
+        # Goal B org_structure (cycle 1863+): department + job title on Team desk
+        sa.Column("department", sa.Text(), nullable=True),
+        sa.Column("job_title", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["tenant_id"],

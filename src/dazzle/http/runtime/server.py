@@ -1082,6 +1082,12 @@ class DazzleBackendApp:
                 # and boot continues (the create-all-convenience invariant).
                 try:
                     metadata.create_all(engine)
+                    # Goal B / DSL field adds on existing local DBs: create_all
+                    # does not ALTER tables. Add nullable missing columns so
+                    # demo seed + qa trial do not 400 on schema drift.
+                    from dazzle.http.runtime.sa_schema import ensure_missing_entity_columns
+
+                    ensure_missing_entity_columns(engine, metadata)
                     # #954 cycle 2 — apply tsvector + GIN index DDL after the
                     # base schema lands. Idempotent (IF NOT EXISTS); safe to
                     # re-run on every dev boot.

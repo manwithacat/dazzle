@@ -690,6 +690,81 @@ def build_metadata(
     return metadata
 
 
+def ensure_missing_entity_columns(
+    engine: Any,
+    metadata: Any,
+) -> list[str]:
+    """ADD COLUMN for DSL fields absent from an existing live table (dev path).
+
+    ``metadata.create_all(checkfirst=True)`` only creates *missing tables*; it
+    never alters an existing table when the DSL gains a field (Goal B depth
+    ships, signable injects, …). Local demo DBs and ``qa trial --fresh-db``
+    then fail seed INSERT with ``column "X" of relation "Y" does not exist``.
+
+    This helper is the create_all twin for that case: for every table that
+    already exists, add nullable (or defaulted) columns present on the SA
+    metadata but missing live. Skips primary keys and NOT NULL columns without
+    a server default — those still need an Alembic revision (ADR-0017).
+
+    Idempotent (``IF NOT EXISTS``). Returns ``["Table.column", …]`` added.
+    """
+    sa = _ensure_sa()
+    insp = sa.inspect(engine)
+    dialect = engine.dialect
+    added: list[str] = []
+
+    # Quote identifiers for Postgres mixed-case entity tables ("User").
+    def _qi(name: str) -> str:
+        return dialect.identifier_preparer.quote(name)
+
+    with engine.begin() as conn:
+        for table in metadata.tables.values():
+            if not insp.has_table(table.name):
+                continue
+            live = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in live or col.primary_key:
+                    continue
+                has_default = col.server_default is not None or col.default is not None
+                if not col.nullable and not has_default:
+                    # Unsafe to backfill without a default — leave to Alembic.
+                    logger.debug(
+                        "ensure_missing_entity_columns: skip %s.%s (NOT NULL, no default)",
+                        table.name,
+                        col.name,
+                    )
+                    continue
+                col_type = col.type.compile(dialect=dialect)
+                # IF NOT EXISTS is Postgres 9.1+; SQLite ignores unknown syntax
+                # differently — use dialect-aware path for PG only.
+                if dialect.name == "postgresql":
+                    sql = (
+                        f"ALTER TABLE {_qi(table.name)} "
+                        f"ADD COLUMN IF NOT EXISTS {_qi(col.name)} {col_type}"
+                    )
+                else:
+                    # SQLite / others: try plain ADD; ignore duplicate-column errors.
+                    sql = f"ALTER TABLE {_qi(table.name)} ADD COLUMN {_qi(col.name)} {col_type}"
+                try:
+                    conn.execute(sa.text(sql))
+                    added.append(f"{table.name}.{col.name}")
+                    logger.info(
+                        "ensure_missing_entity_columns: added %s.%s (%s)",
+                        table.name,
+                        col.name,
+                        col_type,
+                    )
+                except Exception as exc:
+                    # Concurrent boot / already-added race — do not fail create_all.
+                    logger.warning(
+                        "ensure_missing_entity_columns: could not add %s.%s: %s",
+                        table.name,
+                        col.name,
+                        exc,
+                    )
+    return added
+
+
 def get_sorted_table_names(entities: list[EntitySpec]) -> list[str]:
     """Return entity/table names in topological (FK-dependency) order.
 

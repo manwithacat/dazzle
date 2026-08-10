@@ -625,12 +625,13 @@ class PostgresBackend:
         """
         from sqlalchemy import create_engine
 
-        from dazzle.http.runtime.sa_schema import build_metadata
+        from dazzle.http.runtime.sa_schema import build_metadata, ensure_missing_entity_columns
 
         metadata = build_metadata(entities, surfaces=surfaces)
         engine = create_engine(self._sa_url)
         try:
             metadata.create_all(engine, checkfirst=True)
+            ensure_missing_entity_columns(engine, metadata)
         finally:
             engine.dispose()
 
