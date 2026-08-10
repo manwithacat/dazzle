@@ -33,10 +33,10 @@ def test_command_center_caps_attention_queues_for_fold_share() -> None:
     # Caps keep dual panels + documents + conversation sharing the fold.
     assert "limit: 4" in block
     assert (
-        "focus: health_summary, systems_attention, active_alerts, composition, live_conversation"
-        in block
+        "focus: runbook_covers, health_summary, systems_attention, active_alerts, "
+        "composition, live_conversation" in block
     )
-    assert "Multi-panel ops" in block or "multi-panel" in block.lower()
+    assert "multi-panel" in block.lower() or "runbook cover" in block.lower()
 
 
 def test_command_center_metrics_count_critical_and_conversation() -> None:

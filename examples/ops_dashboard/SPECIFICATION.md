@@ -15,7 +15,7 @@ The product manages several kinds of thing:
 - **Systems** — the backend services being watched. Each System exists to have its operational health and response characteristics monitored, and carries a live status that moves between healthy, degraded, critical, and offline.
 - **Alerts** — time-bound operational incidents. Every Alert is tied to the System it was raised on, and stays open until it is acknowledged.
 - **Incident notes** — operator discussion on an Alert (mitigation prose that drives ack and resolve).
-- **Ops documents** — named operational documents on a System (runbooks, postmortems, status-page copy, SLO briefs, playbooks) that buyers scan as composition above the notes trail.
+- **Ops documents** — named operational documents on a System (runbooks, postmortems, status-page copy, SLO briefs, playbooks) with optional cover previews so Command Center and Incident Review lead with a runbook cover wall (document thumbs, not people headshots) before health pulse and dual attention; buyers also scan them as composition above the notes trail.
 - **Integrations** — the product's connections to outside services, such as PagerDuty.
 
 Around these, the product provides the full working surface: engineers can browse all Systems, drill into a System's detail (health strip, open alerts, and documents), register and edit Systems, raise Alerts, browse and inspect Alerts, attach runbooks/postmortems, and acknowledge an Alert in a single step.
@@ -28,7 +28,7 @@ Around these, the product provides the full working surface: engineers can brows
 
 ## Where work happens
 
-**Command Center** is the heart of the product: real-time multi-panel operations attention for the Operations Engineer. Above the fold it opens with a **health pulse** (fleet counts including critical, document volume, and conversation honesty), then a **systems needing attention** queue (degraded / critical / offline estate) and a capped severity-sorted **active alert** feed, then **document composition** (named runbooks / postmortems with domain-true headlines), with a capped **live incident notes** trail rendered as conversation Message/Bubble chrome (operator mitigation prose — not a meta queue of note rows) sharing the fold after dual attention and documents. Below that it still presents the full analytical layer — alert timeline, ack queue, task inbox; Systems as kanban, grid, and lists; bar charts, insight summary, comparison, heatmap, line/area/sparkline trends, day timeline; and System statistical views (histogram, radar, box plot, bullet/bar-track, profile cards, cohort strip).
+**Command Center** is the heart of the product: real-time multi-panel operations attention for the Operations Engineer. Above the fold it opens with a **runbook cover wall** (OpsDocument preview thumbs — not staff headshots), then a **health pulse** (fleet counts including critical, document volume, and conversation honesty), then a **systems needing attention** queue (degraded / critical / offline estate) and a capped severity-sorted **active alert** feed, then **document composition** (named runbooks / postmortems with domain-true headlines), with a capped **live incident notes** trail rendered as conversation Message/Bubble chrome (operator mitigation prose — not a meta queue of note rows) sharing the fold after dual attention and documents. Below that it still presents the full analytical layer — alert timeline, ack queue, task inbox; Systems as kanban, grid, and lists; bar charts, insight summary, comparison, heatmap, line/area/sparkline trends, day timeline; and System statistical views (histogram, radar, box plot, bullet/bar-track, profile cards, cohort strip).
 
 **Incident Review** serves the same engineers for side-by-side pairs in change-management review: Alert metrics beside the live incident discussion trail (Message chrome), System metrics, and a confirm-action panel for the Integration connection.
 
@@ -69,4 +69,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Ops Document lifecycle.** Ops Documents move draft → published → archived (ops_engineer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:0e6b34900d71c44f07933ba4f65d43e91d66d3dac879dee0f034223caa66c6ef -->
+<!-- dazzle-spec-brief: sha256:f1982e8296fce9c25ced7a488e4e92421c3a333a06d03bbc6724f0c0724c97cf -->

@@ -187,6 +187,10 @@ entity OpsDocument "Ops Document":
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
+  # Goal B media (novel vs headshot shelf): runbook cover preview — document
+  # thumbs on the command desk, not people chrome (peer: PagerDuty/Datadog
+  # runbook galleries and status-page asset shelves).
+  preview_url: url
   created_at: datetime auto_add
 
   # Domain residual status∄transitions (cycle 1845): docs move draft → published → archive.
@@ -216,7 +220,7 @@ entity OpsDocument "Ops Document":
       as: admin
 
   fitness:
-    repr_fields: [system, headline, doc_kind, status, author]
+    repr_fields: [system, headline, doc_kind, status, author, preview_url]
 
 # v0.61.72 (#6) — single-row Integration entity for the
 # confirm_action_panel demo. AegisMark UX patterns roadmap item #6
@@ -293,18 +297,29 @@ nav ops_nav:
 # =============================================================================
 
 workspace command_center "Command Center":
-  # Goal B command_density (cycle 1728) + document (cycle 1839): peer
-  # PagerDuty/Datadog ops homes put systems pressure + active alerts (+ health
-  # pulse), then named runbook/postmortem composition, above a conversation
-  # trail — not a note list that owns the viewport. Caps keep fold share.
-  purpose: "Multi-panel ops — health pulse, dual attention, runbook composition, then live incident notes"
+  # Goal B media FIRST (cycle 1889) + command_density + document: peer
+  # PagerDuty/Datadog put runbook cover thumbs above health pulse and dual
+  # attention — not headshot shelves (portfolio ban headshot_shelf).
+  # Recipe runbook_cover_wall.
+  purpose: "Multi-panel ops — runbook covers, health pulse, dual attention, composition, live incident notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
-  # Health pulse first — fleet counts with critical + documents + conversation.
+  # Goal B media — recipe runbook_cover_wall (novel vs headshot_shelf).
+  runbook_covers:
+    source: OpsDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: ops_document_detail
+    empty: "No runbook covers yet — attach runbooks with cover previews"
+    refresh: every 30s
+
+  # Health pulse — fleet counts with critical + documents + conversation.
   health_summary:
     source: System
     display: metrics
@@ -760,12 +775,12 @@ workspace command_center "Command Center":
   ux:
     as ops_engineer:
       scope: all
-      # Goal B command_density + document: dual attention then runbooks before notes.
-      purpose: "Multi-panel ops — dual attention, runbook composition, then incident notes"
-      focus: health_summary, systems_attention, active_alerts, composition, live_conversation
+      # Goal B media first (cycle 1889) + command_density + document.
+      purpose: "Runbook cover wall first, then dual attention, composition, and incident notes"
+      focus: runbook_covers, health_summary, systems_attention, active_alerts, composition, live_conversation
     as admin:
-      purpose: "Full fleet command — multi-panel attention, documents, then conversation trail"
-      focus: health_summary, systems_attention, active_alerts, composition, live_conversation
+      purpose: "Runbook cover wall first, then multi-panel attention, documents, and conversation"
+      focus: runbook_covers, health_summary, systems_attention, active_alerts, composition, live_conversation
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
@@ -778,11 +793,21 @@ workspace command_center "Command Center":
 # single column via the project's responsive rules.
 
 workspace incident_review "Incident Review":
-  # Goal B conversation: review desk pairs alert pressure with the live
-  # operator note trail (PagerDuty-style incident discussion).
-  purpose: "Incident review — alert pressure plus the live discussion trail"
+  # Goal B media FIRST (cycle 1889) + conversation: runbook cover wall before
+  # alert pressure and live operator notes — recipe runbook_cover_wall.
+  purpose: "Incident review — runbook covers, alert pressure, live discussion trail"
   stage: "pair_strip"
   access: persona(ops_engineer)
+
+  # Goal B media — recipe runbook_cover_wall (novel vs headshot_shelf).
+  runbook_covers:
+    source: OpsDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: ops_document_detail
+    empty: "No runbook covers yet — attach runbooks with cover previews"
 
   # Pair 1: alert overview + alert list
   alert_summary:
@@ -877,7 +902,8 @@ workspace incident_review "Incident Review":
   ux:
     as ops_engineer:
       scope: all
-      purpose: "Pair-strip review of pending incidents"
+      purpose: "Runbook cover wall first, then pair-strip review of pending incidents"
+      focus: runbook_covers, alert_summary, live_conversation, recent_alerts, system_overview, review_checklist
 
 # Third product workspace: systems portfolio desk.
 # Goal B empty_region_honesty (cycle 1852): peer Datadog/PagerDuty fleet desks
@@ -1123,11 +1149,11 @@ surface system_detail "System Detail":
     show: Alert
     columns: message, severity, status, triggered_at
 
-  # Goal B document: named runbooks / postmortems on the system hub.
+  # Goal B document + media: named runbooks / postmortems with cover previews.
   related documents "Documents":
     display: queue
     show: OpsDocument
-    columns: headline, doc_kind, status, author
+    columns: preview_url, headline, doc_kind, status, author
 
   ux:
     purpose: "System hub — health strip, open alerts, and ops documents in one place"
@@ -1269,6 +1295,7 @@ surface ops_document_list "Ops Documents":
   open: OpsDocument via id | System via system
 
   section main "Documents":
+    field preview_url "Cover"
     field headline "Headline"
     field doc_kind "Kind"
     field system "System"
@@ -1294,6 +1321,7 @@ surface ops_document_detail "Ops Document":
     field status "Status"
     field system "System"
     field author "Author"
+    field preview_url "Cover"
     field created_at "When"
 
   section body "Body":
@@ -1313,6 +1341,7 @@ surface ops_document_create "Add Ops Document":
     field status "Status"
     field body "Body"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Attach a named runbook, postmortem, or SLO brief to a system"
 
@@ -1326,6 +1355,7 @@ surface ops_document_edit "Edit Ops Document":
     field status "Status"
     field body "Body"
     field author "Author"
+    field preview_url "Cover URL"
   ux:
     purpose: "Update operational document headline, kind, or status"
 

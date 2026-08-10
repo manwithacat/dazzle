@@ -39,9 +39,11 @@ def test_command_center_declares_composition_after_dual_attention() -> None:
     assert block.index("active_alerts:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: health_summary, systems_attention, active_alerts, composition, live_conversation"
-        in block
+        "focus: runbook_covers, health_summary, systems_attention, active_alerts, "
+        "composition, live_conversation" in block
     )
+    # Media cover wall is first; composition remains after dual attention.
+    assert block.index("runbook_covers:") < block.index("health_summary:")
 
 
 def test_ops_document_list_dual_open_and_system_hub() -> None:
