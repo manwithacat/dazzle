@@ -38,20 +38,21 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   pulse (open / critical / sessions / documents), dual attention (critical
   issues + non-active devices), test-document composition, then triage notes —
   dual attention and named briefs above fold, not a single conversation list.
-- **Issue Triage** — shared engineer/manager desk for open and critical field
-  reports (severity-first queue and status board).
-- **Firmware Pipeline** — release desk: draft/live metrics, release grid and
-  board, related open tasks, and release status chart.
-- **Session Ops** — field session pulse for engineer/manager: session metrics,
-  recent timeline, active device grid, open-report queue, environment chart.
+- **Issue Triage** — shared engineer/manager desk: triage conversation, field
+  photo evidence, open and critical queues — not a twin critical timeline under
+  the same desk (empty_region_honesty).
+- **Firmware Pipeline** — release desk: draft/live metrics, release history,
+  status board, and open-task queue — not a release status bar dump.
+- **Device Fleet** — fleet pressure: active + recalled queues with pulse — not
+  twin device trail + status mix chart theater.
+- **Draft Releases** — unshipped builds: draft pulse + one pull queue — not twin
+  draft queues, trail, and status chart.
 - **Tester Roster** — engineer/manager org-structure desk: tester metrics, a
   skill-tier board (casual / enthusiast / engineer), a region-sorted queue,
   then flat roster and unassigned devices — hierarchy before dump, not a
-  skill-mix bar chart.
-- **Task Ops** — open-task desk: task metrics, open queue, status board, task
-  trail, and status mix chart.
+  skill-mix bar or session trail dump.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
-  their issues and tasks, session timeline.
+  their issues and tasks, session timeline (severity mix kept for personal dogfood).
 - **Field Kit** — tester road desk: assigned devices, recent sessions, open
   tasks and personal task kanban.
 
@@ -94,4 +95,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:2effdec04429c5aeaed7e068a33f9c8b421160dde582f82e89128786bd89844f -->
+<!-- dazzle-spec-brief: sha256:1557fecff7fc86f3300727384f41c1350b5ac8882b51d9eeed8b2292b5dacecb -->

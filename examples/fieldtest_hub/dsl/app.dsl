@@ -1717,17 +1717,15 @@ workspace manager_ops "Manager Ops":
     action: task_detail
     empty: "No open tasks"
 
-  fleet_status_mix:
-    source: Device
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Device)
-    empty: "No devices"
+  # empty_region_honesty (cycle 1855): multi-panel ops keeps pulse + dual attention
+  # + docs + notes + under-fold session/task boards — not a fleet status bar dump
+  # (bar_chart dogfood stays on engineering_dashboard / tester_dashboard).
 
 workspace issue_triage "Issue Triage":
-  # Goal B conversation + media: discussion trail with field photos.
-  purpose: "Triage notes, field photo evidence, then open/critical queues"
+  # Goal B conversation + media + empty_region_honesty (cycle 1855): discussion
+  # + field photos + open/critical queues — not a twin critical timeline under
+  # the same desk (history dogfood stays on engineering_dashboard).
+  purpose: "Triage notes, field photo evidence, then open and critical queues"
   access: persona(engineer, manager)
 
   # Goal B conversation spine FIRST — Message/Bubble mitigation prose above fold.
@@ -1789,17 +1787,10 @@ workspace issue_triage "Issue Triage":
     action: issue_report_detail
     empty: "No critical issues!"
 
-  critical_trail:
-    source: IssueReport
-    filter: severity = critical
-    sort: reported_at desc
-    limit: 12
-    display: timeline
-    action: issue_report_detail
-    empty: "No critical history"
-
 workspace firmware_pipeline "Firmware Pipeline":
-  purpose: "Ship firmware — release board, live drafts, and related tasks"
+  # Goal B empty_region_honesty (cycle 1855): peer ship desks keep pulse + board
+  # + one release history + open-task queue — not status bar dumps under the desk.
+  purpose: "Ship firmware — release board, live drafts, and related open tasks"
   access: persona(engineer, manager)
 
   release_metrics:
@@ -1830,22 +1821,15 @@ workspace firmware_pipeline "Firmware Pipeline":
     action: firmware_release_edit
     empty: "No firmware releases"
 
+  # Open ship work as a pull queue (not a second timeline twin of release history).
   release_tasks:
     source: Task
     filter: status != completed and status != cancelled
     sort: created_at desc
     limit: 15
-    display: timeline
+    display: queue
     action: task_detail
     empty: "No open tasks"
-
-  release_status_mix:
-    source: FirmwareRelease
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(FirmwareRelease)
-    empty: "No firmware releases"
 
 workspace field_kit "Field Kit":
   purpose: "Tester kit — assigned devices and recent sessions on the road"
@@ -1956,13 +1940,8 @@ workspace tester_roster "Tester Roster":
     action: device_detail
     empty: "Every active device has a tester"
 
-  session_trail:
-    source: TestSession
-    sort: logged_at desc
-    limit: 15
-    display: timeline
-    action: test_session_detail
-    empty: "No test sessions logged"
+  # empty_region_honesty (cycle 1855): org desk keeps hierarchy + unassigned load —
+  # not a session timeline dump (session history lives on eng home / tester home).
 
   org_hint:
     display: status_list
@@ -1990,7 +1969,10 @@ workspace tester_roster "Tester Roster":
 
 
 workspace device_fleet "Device Fleet":
-  purpose: "Fleet pressure — active/recalled/prototype devices and batch mix"
+  # Goal B empty_region_honesty (cycle 1855): peer fleet desks keep pulse + dual
+  # queues — not a twin device timeline + status bar dump (chart/timeline dogfood
+  # stays on engineering_dashboard).
+  purpose: "Fleet pressure — active and recalled devices without trail/bar thrash"
   access: persona(engineer, manager)
 
   fleet_metrics:
@@ -2024,23 +2006,9 @@ workspace device_fleet "Device Fleet":
     action: device_detail
     empty: "No recalled devices"
 
-  fleet_trail:
-    source: Device
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: device_detail
-    empty: "No devices yet"
-
-  status_mix:
-    source: Device
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Device)
-    empty: "No devices yet"
-
 workspace draft_releases "Draft Releases":
+  # Goal B empty_region_honesty (cycle 1855): one draft queue + pulse — not twin
+  # draft queues, draft trail, and status bar theater.
   purpose: "Draft firmware pressure — unshipped builds without warehouse CRUD"
   access: persona(engineer, manager)
 
@@ -2064,33 +2032,6 @@ workspace draft_releases "Draft Releases":
     display: queue
     action: firmware_release_edit
     empty: "No draft firmware releases"
-
-  # Work-surface utility: draft releases are pull-to-ship work — queue beats grid.
-  draft_grid:
-    source: FirmwareRelease
-    filter: status = draft
-    sort: version asc
-    limit: 15
-    display: queue
-    action: firmware_release_detail
-    empty: "No draft firmware releases"
-
-  draft_trail:
-    source: FirmwareRelease
-    filter: status = draft
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: firmware_release_detail
-    empty: "No draft release activity yet"
-
-  status_mix:
-    source: FirmwareRelease
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(FirmwareRelease)
-    empty: "No firmware releases to chart"
 
 ledger DeviceCost "Device Cost Account":
   intent: "Accrue repair and replacement expenses against the fleet of field devices"
