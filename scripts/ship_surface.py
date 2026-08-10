@@ -148,6 +148,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_invoice_ops_command_density_goal_b.py",
     # cycle 1820 — Goal B empty_region honesty @invoice_ops primary desks
     "tests/unit/test_invoice_ops_empty_region_goal_b.py",
+    # invoice_ops Goal B media (cycle 1884 concurrent)
+    "tests/unit/test_invoice_ops_media_goal_b.py",
     # invoice_ops Goal B org_structure (cycle 1863 team title+dept + suppliers region boards)
     "tests/unit/test_invoice_ops_org_structure_goal_b.py",
     # contact_manager Goal B conversation (cycle 1664 ContactNote + home trail)
@@ -199,6 +201,12 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_simple_task_org_structure_goal_b.py",
     # simple_task Goal B empty_region_honesty (cycle 1817 prune charts/twin dumps)
     "tests/unit/test_simple_task_empty_region_goal_b.py",
+    # simple_task Goal B media (cycle 1884 admin/team media_shelf headshots)
+    "tests/unit/test_simple_task_media_goal_b.py",
+    # framework null-default / null-filter (cycle 1884)
+    "tests/unit/test_scope_filters_null_ne.py",
+    # framework null-default / null-filter (cycle 1884)
+    "tests/unit/test_repository_null_bool_default.py",
     # acme_billing Goal B conversation (InvoiceNote live trail on billing desks)
     "tests/unit/test_acme_billing_conversation_goal_b.py",
     # acme_billing Goal B command_density (open+sensitive dual attention)

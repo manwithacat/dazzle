@@ -680,10 +680,26 @@ class Repository[T: BaseModel]:
         return {k: self._python_to_db(v, self._field_types.get(k)) for k, v in data.items()}
 
     def _row_to_model(self, row: Any) -> T:
-        """Convert database row to Pydantic model."""
+        """Convert database row to Pydantic model.
+
+        DB NULL on a non-required field with a model default (e.g. ``bool =
+        false``) must not fail validation — omit the key so Pydantic applies
+        the DSL default. Without this, Goal B media shelves and other User
+        regions soft-skip every row when optional toggles were never written
+        (cycle 1884 simple_task ``is_starred``).
+        """
         data = dict(row)
         converted = {k: _db_to_python(v, self._field_types.get(k)) for k, v in data.items()}
-        return self.model_class(**converted)
+        cleaned: dict[str, Any] = {}
+        fields = getattr(self.model_class, "model_fields", {}) or {}
+        for key, value in converted.items():
+            if value is None:
+                mf = fields.get(key)
+                if mf is not None and not mf.is_required():
+                    # Non-required with default/default_factory → omit NULL
+                    continue
+            cleaned[key] = value
+        return self.model_class(**cleaned)
 
     def _safe_row_to_model(self, row: Any) -> T | None:
         """Like ``_row_to_model`` but soft-skip rows that fail entity validation.

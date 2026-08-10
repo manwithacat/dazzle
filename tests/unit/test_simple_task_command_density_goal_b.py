@@ -22,32 +22,39 @@ def _workspace_block(name: str) -> str:
 def test_admin_dashboard_dual_attention_before_conversation() -> None:
     """Peer admin ops homes put urgent + overdue pressure above discussion trail."""
     block = _workspace_block("admin_dashboard")
+    assert "media_shelf:" in block
     assert "metrics:" in block
     assert "urgent_tasks:" in block
     assert "overdue_tasks:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
+    assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("metrics:") < block.index("urgent_tasks:")
     assert block.index("urgent_tasks:") < block.index("overdue_tasks:")
     assert block.index("overdue_tasks:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert "focus: metrics, urgent_tasks, overdue_tasks, composition, live_conversation" in block
+    assert (
+        "focus: media_shelf, metrics, urgent_tasks, overdue_tasks, "
+        "composition, live_conversation" in block
+    )
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
 
 def test_team_overview_dual_attention_before_conversation() -> None:
     block = _workspace_block("team_overview")
+    assert "media_shelf:" in block
     assert "metrics:" in block
     assert "needs_review:" in block
     assert "plate_by_person:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
+    assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("metrics:") < block.index("needs_review:")
     assert block.index("needs_review:") < block.index("plate_by_person:")
     assert block.index("plate_by_person:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: metrics, needs_review, plate_by_person, composition, "
+        "focus: media_shelf, metrics, needs_review, plate_by_person, composition, "
         "live_conversation, team_roster" in block
     )
 

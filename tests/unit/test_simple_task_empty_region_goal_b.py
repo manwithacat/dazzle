@@ -41,9 +41,9 @@ def test_team_overview_omits_flow_chart_and_twin_comment() -> None:
     assert "flow_chart:" not in block
     assert "recent_discussion:" not in block
     assert "display: bar_chart" not in block
-    # command_density@1835: dual attention before conversation trail
+    # media@1884 + command_density@1835: headshots then dual attention before trail
     assert (
-        "focus: metrics, needs_review, plate_by_person, composition, "
+        "focus: media_shelf, metrics, needs_review, plate_by_person, composition, "
         "live_conversation, team_roster" in block
     )
 

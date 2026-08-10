@@ -29,9 +29,9 @@ context or decisions — each comment is always tied to its task and its author.
 
 **Administrators** have full system access for task and user management. They
 aim to manage all tasks, configure team settings, and view analytics. They
-land on the **Admin Dashboard** — multi-panel pressure (urgent + overdue dual
+land on the **Admin Dashboard (teammate media shelf first)** — multi-panel pressure (urgent + overdue dual
 attention), document briefs, then live conversation — and also use the Task
-Board and Team Overview. They alone can add, change, or remove Team Member
+Board and Team Overview (teammate media shelf first). They alone can add, change, or remove Team Member
 accounts.
 
 **Team Managers** oversee team tasks and assignments — assigning work,
@@ -124,4 +124,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:97aa9190b024e59bc75c07d4db714a048d338dd69512f3d306b998fd20bfebfd -->
+<!-- dazzle-spec-brief: sha256:8817e493943a5eb92af8d90210b7d7a11c8102b400df6e6db1cdd464977d222b -->

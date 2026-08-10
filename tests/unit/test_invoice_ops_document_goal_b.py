@@ -60,13 +60,14 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "documents: count(InvoiceDocument)" in ops
     assert "action: invoice_document_detail" in ops
     assert "line_composition:" in ops
-    # Order: document pulse → named packets → dual attention → lines → conversation
+    # Order: media → document pulse → named packets → dual attention → lines → conversation
+    assert ops.index("media_shelf:") < ops.index("document_pulse:")
     assert ops.index("document_pulse:") < ops.index("composition:")
     assert ops.index("composition:") < ops.index("awaiting_approval:")
     assert ops.index("awaiting_approval:") < ops.index("line_composition:")
     assert ops.index("line_composition:") < ops.index("live_conversation:")
     assert (
-        "focus: ops_metrics, document_pulse, composition, awaiting_approval, "
+        "focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, "
         "ready_to_pay, line_composition, live_conversation" in ops
     )
 

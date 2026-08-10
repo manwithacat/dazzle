@@ -36,6 +36,9 @@ entity User "Team Member":
   role: enum[admin,manager,member]=member
   department: str(50)
   avatar_url: str(500)
+  # Goal B media (cycle 1884): peer task tools (Asana / Linear / Monday) put
+  # teammate headshot thumbs on lead/admin homes — not name-only roster theater.
+  photo_url: url
   is_active: bool=true
   # Mode press dogfood — starred watchlist (aria-pressed toggle, not switch track)
   is_starred: bool=false
@@ -76,7 +79,7 @@ entity User "Team Member":
       as: admin
 
   fitness:
-    repr_fields: [name, email, role, department, is_active]
+    repr_fields: [name, email, role, department, photo_url, is_active]
 
 # =============================================================================
 # Task Entity - with proper user relationships
@@ -632,6 +635,7 @@ surface user_list "Team Members":
   access: persona(admin, manager)
 
   section main "Team":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
     field role "Role"
@@ -665,6 +669,7 @@ surface user_detail "Team Member Overview":
   access: persona(admin, manager)
 
   section identity "Identity":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
 
@@ -706,6 +711,7 @@ surface user_create "Add Team Member":
     field email "Email"
     field role "Role"
     field department "Department"
+    field photo_url "Photo URL"
 
   ux:
     purpose: "Add a new team member"
@@ -719,6 +725,7 @@ surface user_edit "Edit Team Member":
   access: persona(admin)
 
   section identity "Identity":
+    field photo_url "Photo URL"
     field name "Name"
     field email "Email"
 
@@ -807,9 +814,23 @@ workspace task_board "Task Board":
 
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
-  # Goal B command_density (cycle 1835): dual attention (urgent + overdue)
-  # before document composition and conversation trail — peer admin ops dens.
-  purpose: "Multi-panel admin — pressure queues, briefs, then live conversation"
+  # Goal B media (cycle 1884) + command_density (cycle 1835): headshot shelf
+  # first, then dual attention (urgent + overdue) before composition trail.
+  purpose: "Multi-panel admin — team headshots, pressure queues, briefs, then live conversation"
+
+  # Goal B media FIRST — admin home is a people shelf (teammate photo_url thumbs).
+  # Newest-first so non-STABLE seeded roster (Fay/Gus/Hana + placeholds) win
+  # the fold — STABLE auth-mirrored rows may skip User.jsonl photo re-seed (#1630).
+  media_shelf:
+    source: User
+    # photo_url presence is the media contract — drops bootstrap shells without
+    # headshots (dept-only filter let NULL-created_at pollution win the fold).
+    filter: is_active = true and photo_url != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No teammate headshots yet — add photo URLs on team users"
 
   metrics:
     source: Task
@@ -939,14 +960,26 @@ workspace admin_dashboard "Admin Dashboard":
 
   ux:
     as admin:
-      purpose: "Multi-panel admin — dual attention pressure before conversation trail"
-      focus: metrics, urgent_tasks, overdue_tasks, composition, live_conversation
+      purpose: "Multi-panel admin — team headshots then dual attention before conversation trail"
+      focus: media_shelf, metrics, urgent_tasks, overdue_tasks, composition, live_conversation
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
-  # Goal B command_density (cycle 1835): dual attention (review + plate)
-  # before document composition and conversation trail.
-  purpose: "Multi-panel lead desk — review pressure, plate by person, briefs, then conversation"
+  # Goal B media (cycle 1884) + command_density (cycle 1835): headshot shelf
+  # first, then dual attention (review + plate) before composition trail.
+  purpose: "Multi-panel lead desk — team headshots, review pressure, plate by person, briefs, then conversation"
+
+  # Goal B media FIRST — lead home is a people shelf (teammate photo_url thumbs).
+  media_shelf:
+    source: User
+    # photo_url presence is the media contract — drops bootstrap shells without
+    # headshots (dept-only filter let NULL-created_at pollution win the fold).
+    filter: is_active = true and photo_url != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No teammate headshots yet — add photo URLs on team users"
 
   metrics:
     source: Task
@@ -1030,14 +1063,14 @@ workspace team_overview "Team Overview":
         icon: "columns"
         state: positive
 
-  # Goal B empty_region_honesty + command_density focus spine
+  # Goal B media + empty_region_honesty + command_density focus spine
   ux:
     as manager:
-      purpose: "Multi-panel lead — review + plate dual attention before conversation trail"
-      focus: metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+      purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
+      focus: media_shelf, metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
     as admin:
-      purpose: "Multi-panel lead — review + plate dual attention before conversation trail"
-      focus: metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+      purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
+      focus: media_shelf, metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
 
 workspace my_work "My Work":
   access: authenticated

@@ -428,6 +428,13 @@ def _extract_condition_filters(
             # so the existing persona scope applies unfiltered.
             if context_id:
                 _set_filter(field, context_id)
+        elif field and value is None and not context_only:
+            # `field = null` / `field != null` — was dropped because None is not
+            # str|int|float|bool (cycle 1884 Goal B media_shelf photo_url filter).
+            if op_val in ("=", "eq", "equals", "is"):
+                filters[f"{field}__isnull"] = True
+            elif op_val in ("!=", "ne", "not_equals", "is not"):
+                filters[f"{field}__isnull"] = False
         elif (
             field
             and isinstance(value, str | int | float | bool)
@@ -544,6 +551,14 @@ def _extract_condition_filters(
             # so the existing persona scope applies unfiltered.
             if context_id:
                 _set_filter(field, context_id)
+        elif field and raw_value is None and not context_only:
+            # IR `field = null` / `field != null` (literal None). Without this,
+            # Goal B media shelves with `photo_url != null` silently drop the
+            # clause and bootstrap pollution fills the grid (cycle 1884).
+            if op_val in ("=", "eq", "equals", "is"):
+                filters[f"{field}__isnull"] = True
+            elif op_val in ("!=", "ne", "not_equals", "is not"):
+                filters[f"{field}__isnull"] = False
         elif (
             field
             and isinstance(raw_value, str | int | float | bool)

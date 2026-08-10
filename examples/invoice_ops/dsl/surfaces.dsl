@@ -242,6 +242,7 @@ surface user_list "Users":
   # Dual open: person hub first, tenant root second (admin roster context).
   open: User via id | Tenant via tenant_id
   section main:
+    field photo_url "Photo"
     field email "Email"
     field name "Name"
     field job_title "Job Title"
@@ -257,6 +258,7 @@ surface user_detail "User":
   uses entity User
   mode: view
   section identity "Identity":
+    field photo_url "Photo"
     field name "Name"
     field email "Email"
   section org "Org placement":
@@ -443,6 +445,7 @@ surface user_create "New User":
   uses entity User
   mode: create
   section main:
+    field photo_url "Photo URL"
     field email "Email"
     field name "Name"
     field job_title "Job Title"
@@ -453,6 +456,7 @@ surface user_edit "Edit User":
   uses entity User
   mode: edit
   section main:
+    field photo_url "Photo URL"
     field email "Email"
     field name "Name"
     field job_title "Job Title"
@@ -478,11 +482,24 @@ surface lineitem_create "New Line Item":
 # Story-driven (docs/guides/story-to-composition.md): metrics + review
 # queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
-  # Goal B conversation + document + empty_region (cycle 1820/1879): AP desks
-  # lead with dual attention, named AP packets, line composition, then notes —
-  # not funnel/bar-chart voids (Bill.com / Tipalti / Coupa peer).
-  purpose: "Day-to-day invoice throughput — dual attention, named packets, line composition, and live discussion"
+  # Goal B media (cycle 1885) + conversation + document + empty_region
+  # (1820/1879): peer AP tools (Bill.com / Tipalti / Coupa) put teammate
+  # headshots first, then dual attention, named AP packets, line composition,
+  # and live discussion — not name-only ops theater or funnel voids.
+  purpose: "Day-to-day invoice throughput — headshots, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
+
+  # Goal B media FIRST — finance ops home is a people shelf (photo_url thumbs).
+  # Newest department staff first so non-STABLE seeded faces win the fold;
+  # STABLE auth-mirror rows get photo_url via media enrichment (#1630).
+  media_shelf:
+    source: User
+    filter: department != null and photo_url != null
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: user_detail
+    empty: "No teammate headshots yet — add photo URLs on team members"
 
   ops_metrics:
     source: Invoice
@@ -581,23 +598,23 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — document pulse, named packets, dual attention, then discussion"
-      focus: ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — headshots, document pulse, named packets, dual attention, then discussion"
+      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as tenant_admin:
-      purpose: "AP ops — document pulse, named packets, dual attention, then discussion"
-      focus: ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — headshots, document pulse, named packets, dual attention, then discussion"
+      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as finance:
-      purpose: "AP ops — named packets then settle queues"
-      focus: ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
+      purpose: "AP ops — headshots, named packets, then settle queues"
+      focus: media_shelf, ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
     as approver:
-      purpose: "AP ops — named packets then review queue"
-      focus: ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
+      purpose: "AP ops — headshots, named packets, then review queue"
+      focus: media_shelf, ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
     as auditor:
-      purpose: "AP ops — evidence packets with conversation spine"
-      focus: ops_metrics, document_pulse, composition, live_conversation, disputed_queue
+      purpose: "AP ops — headshots, evidence packets with conversation spine"
+      focus: media_shelf, ops_metrics, document_pulse, composition, live_conversation, disputed_queue
     as requester:
-      purpose: "AP ops overview — packets, lines, and conversation"
-      focus: ops_metrics, composition, line_composition, live_conversation, awaiting_approval
+      purpose: "AP ops overview — headshots, packets, lines, and conversation"
+      focus: media_shelf, ops_metrics, composition, line_composition, live_conversation, awaiting_approval
 
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.

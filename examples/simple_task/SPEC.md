@@ -47,7 +47,8 @@ Represents a team member who can be assigned tasks.
 | `name` | String(100) | Yes | - | Display name |
 | `role` | Enum | Yes | `member` | Access level: `admin`, `manager`, `member` |
 | `department` | String(50) | No | - | Organizational unit |
-| `avatar_url` | String(500) | No | - | Profile image URL |
+| `avatar_url` | String(500) | No | - | Legacy profile image URL (string) |
+| `photo_url` | URL | No | - | Goal B media headshot (HTTPS placehold / CDN) |
 | `is_active` | Boolean | Yes | `true` | Account status |
 | `created_at` | DateTime | Yes | Auto | Immutable creation timestamp |
 
@@ -158,9 +159,10 @@ A discrete unit of work to be completed by a team member.
 
 ### Workspace: Admin Dashboard
 
-**Purpose**: Multi-panel admin — dual attention pressure before conversation
+**Purpose**: Multi-panel admin — team headshots then dual attention pressure before conversation
 
 **Regions**:
+- **Media Shelf**: Active teammate headshot grid (`photo_url` thumbs, newest first, limit 4)
 - **Metrics**: Total tasks, by status (todo/in_progress/review) + documents/conversation
 - **Team Metrics**: Total users, active users
 - **Urgent Tasks**: Priority = urgent, not done (limit 4)
@@ -172,9 +174,10 @@ A discrete unit of work to be completed by a team member.
 
 ### Workspace: Team Overview
 
-**Purpose**: Multi-panel lead desk — review + plate dual attention before trail
+**Purpose**: Multi-panel lead desk — team headshots then review + plate dual attention before trail
 
 **Regions**:
+- **Media Shelf**: Active teammate headshot grid (`photo_url` thumbs, newest first, limit 4)
 - **Metrics**: Total tasks, in progress, in review, done + documents/conversation
 - **Needs Review**: Tasks awaiting approval (limit 4)
 - **Plate By Person**: Open work kanban by assignee

@@ -427,11 +427,12 @@
       "name": "admin_dashboard",
       "title": "Admin Dashboard",
       "kind": "workspace",
-      "purpose": "Multi-panel admin — pressure queues, briefs, then live conversation",
+      "purpose": "Multi-panel admin — team headshots, pressure queues, briefs, then live conversation",
       "personas": [
         "admin"
       ],
       "contents": [
+        "grid of User",
         "metrics of Task",
         "metrics of User",
         "queue of Task",
@@ -444,12 +445,13 @@
       "name": "team_overview",
       "title": "Team Overview",
       "kind": "workspace",
-      "purpose": "Multi-panel lead desk — review pressure, plate by person, briefs, then conversation",
+      "purpose": "Multi-panel lead desk — team headshots, review pressure, plate by person, briefs, then conversation",
       "personas": [
         "admin",
         "manager"
       ],
       "contents": [
+        "grid of User",
         "metrics of Task",
         "queue of Task",
         "kanban of Task",

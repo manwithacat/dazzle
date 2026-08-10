@@ -135,6 +135,30 @@
       ]
     },
     {
+      "name": "InvoiceDocument",
+      "title": "Invoice Document",
+      "intent": "A named AP document on an Invoice — remittance advice, credit memo, PO packet, tax certificate, or payment confirmation buyers scan above the discussion trail",
+      "lifecycle_states": [
+        "draft",
+        "published",
+        "archived"
+      ],
+      "relationships": [
+        {
+          "field": "tenant_id",
+          "target": "Tenant",
+          "target_title": "Tenant",
+          "required": true
+        },
+        {
+          "field": "invoice",
+          "target": "Invoice",
+          "target_title": "Invoice",
+          "required": true
+        }
+      ]
+    },
+    {
       "name": "PaymentAttempt",
       "title": "Payment Attempt",
       "intent": "One attempt to settle an approved invoice via the payment provider",
@@ -359,6 +383,30 @@
       "mode": "view"
     },
     {
+      "name": "invoice_document_list",
+      "title": "Invoice Documents",
+      "entity": "InvoiceDocument",
+      "mode": "list"
+    },
+    {
+      "name": "invoice_document_detail",
+      "title": "Invoice Document",
+      "entity": "InvoiceDocument",
+      "mode": "view"
+    },
+    {
+      "name": "invoice_document_create",
+      "title": "Add Invoice Document",
+      "entity": "InvoiceDocument",
+      "mode": "create"
+    },
+    {
+      "name": "invoice_document_edit",
+      "title": "Edit Invoice Document",
+      "entity": "InvoiceDocument",
+      "mode": "edit"
+    },
+    {
       "name": "invoice_edit",
       "title": "Edit Invoice",
       "entity": "Invoice",
@@ -488,7 +536,7 @@
       "name": "finance_ops",
       "title": "Finance Operations",
       "kind": "workspace",
-      "purpose": "Day-to-day invoice throughput — live discussion, line composition, and queues that need a person",
+      "purpose": "Day-to-day invoice throughput — headshots, dual attention, named packets, line composition, and live discussion",
       "personas": [
         "requester",
         "approver",
@@ -498,12 +546,14 @@
         "tenant_admin"
       ],
       "contents": [
+        "grid of User",
         "metrics of Invoice",
-        "metrics of LineItem",
+        "metrics of InvoiceDocument",
+        "queue of InvoiceDocument",
+        "queue of Invoice",
+        "queue of Invoice",
         "queue of LineItem",
         "conversation of InvoiceNote",
-        "queue of Invoice",
-        "queue of Invoice",
         "queue of Invoice",
         "kanban of Invoice"
       ]
@@ -530,15 +580,17 @@
       "name": "approval_desk",
       "title": "Approval Desk",
       "kind": "workspace",
-      "purpose": "Approver job — live discussion trail and the awaiting-approval queue",
+      "purpose": "Approver job — awaiting queue, named AP packets, then live discussion",
       "personas": [
         "approver",
         "finance_admin"
       ],
       "contents": [
         "metrics of Invoice",
-        "conversation of InvoiceNote",
+        "metrics of InvoiceDocument",
+        "queue of InvoiceDocument",
         "queue of Invoice",
+        "conversation of InvoiceNote",
         "kanban of Invoice",
         "queue of Supplier"
       ]
@@ -547,13 +599,15 @@
       "name": "pay_desk",
       "title": "Pay Desk",
       "kind": "workspace",
-      "purpose": "Multi-panel settlement — metrics, ready-to-pay, disputes, then live AP notes",
+      "purpose": "Multi-panel settlement — dual attention, named packets, then live AP notes",
       "personas": [
         "finance",
         "finance_admin"
       ],
       "contents": [
         "metrics of Invoice",
+        "metrics of InvoiceDocument",
+        "queue of InvoiceDocument",
         "queue of Invoice",
         "queue of Invoice",
         "conversation of InvoiceNote",
@@ -583,7 +637,7 @@
       "name": "suppliers_desk",
       "title": "Suppliers",
       "kind": "workspace",
-      "purpose": "Vendor desk — supplier roster, bank refs, and recent invoices",
+      "purpose": "Vendor org structure — region board and multi-invoice load before flat roster",
       "personas": [
         "finance",
         "tenant_admin",
@@ -592,18 +646,18 @@
       ],
       "contents": [
         "metrics of Supplier",
+        "kanban of Supplier",
+        "kanban of Invoice",
         "queue of Supplier",
         "queue of SupplierBankAccount",
-        "queue of Invoice",
-        "timeline of Invoice",
-        "bar_chart of Invoice"
+        "queue of Invoice"
       ]
     },
     {
       "name": "team_desk",
       "title": "Team",
       "kind": "workspace",
-      "purpose": "Tenant admin desk — people and tenant context",
+      "purpose": "Org structure for AP — title and department before flat roster and open load",
       "personas": [
         "tenant_admin",
         "finance_admin",
@@ -611,10 +665,9 @@
       ],
       "contents": [
         "metrics of User",
+        "kanban of User",
         "queue of User",
-        "queue of Supplier",
-        "bar_chart of Tenant",
-        "timeline of Invoice",
+        "queue of User",
         "queue of Invoice"
       ]
     },
@@ -690,6 +743,7 @@
       "Invoice",
       "LineItem",
       "InvoiceNote",
+      "InvoiceDocument",
       "PaymentAttempt"
     ],
     "persona_count": 6,
@@ -754,6 +808,10 @@
         "entity": "User",
         "operation": "read",
         "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
           "auditor",
           "tenant_admin"
         ],
@@ -779,6 +837,10 @@
         "entity": "User",
         "operation": "list",
         "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
           "auditor",
           "tenant_admin"
         ],
@@ -1025,6 +1087,61 @@
       },
       {
         "entity": "InvoiceNote",
+        "operation": "list",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceDocument",
+        "operation": "create",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceDocument",
+        "operation": "read",
+        "personas": [
+          "requester",
+          "approver",
+          "finance",
+          "finance_admin",
+          "auditor",
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceDocument",
+        "operation": "update",
+        "personas": [
+          "approver",
+          "finance",
+          "finance_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceDocument",
+        "operation": "delete",
+        "personas": [
+          "tenant_admin"
+        ],
+        "rule": "its tenant is the user's tenant"
+      },
+      {
+        "entity": "InvoiceDocument",
         "operation": "list",
         "personas": [
           "requester",

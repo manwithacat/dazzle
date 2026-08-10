@@ -60,26 +60,31 @@ entity User "User":
   # AP / Treasury / Controllership / Audit shape — not a flat persona-only roster.
   department: str(50)
   job_title: str(80)
+  # Goal B media (cycle 1885): peer AP tools (Bill.com / Tipalti / Coupa) put
+  # teammate headshot thumbs on the finance ops home — not name-only theater.
+  photo_url: url
   created_at: datetime auto_add
 
   permit:
     create: role(tenant_admin)
-    read: role(auditor) or role(tenant_admin)
+    # List/read open to AP roles so media_shelf + Team desk can show faces on
+    # shared finance_ops (create/update/delete stay tenant_admin-only).
+    read: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
     update: role(tenant_admin)
     delete: role(tenant_admin)
-    list: role(auditor) or role(tenant_admin)
+    list: role(requester) or role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
 
   scope:
     create: tenant_id = current_user.tenant_id
       as: tenant_admin
     read: tenant_id = current_user.tenant_id
-      as: auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
     update: tenant_id = current_user.tenant_id
       as: tenant_admin
     delete: tenant_id = current_user.tenant_id
       as: tenant_admin
     list: tenant_id = current_user.tenant_id
-      as: auditor, tenant_admin
+      as: requester, approver, finance, finance_admin, auditor, tenant_admin
 
   audit: all
 
