@@ -193,6 +193,13 @@ entity WorkspaceMember "Workspace Member":
   job_title: str(80)
   status: enum[active, pending, offboarded]=active
   created_at: datetime auto_add
+  # Domain residual status∄transitions (cycle 1871): invite → seat → offboard.
+  transitions:
+    pending -> active: role(admin)
+    active -> offboarded: role(admin)
+    pending -> offboarded: role(admin)
+    offboarded -> active: role(admin)
+    active -> pending: role(admin)
 
   permit:
     create: role(admin)

@@ -35,6 +35,8 @@ was judged.
 **Support staff.** Support Staff rows carry department and job title so the Team
 desk can show agents by title kanban and department placement (Frontline Support
 / Escalations / Billing Ops / AI Ops) before a flat roster or open-ticket load.
+Staff status moves onboarding → active → offboarded under supervisor/admin
+control (rehire and re-onboarding paths included).
 
 Tickets can be browsed and inspected in detail, and classifications can be
 browsed alongside them, through dedicated screens plus the Team org desk.
@@ -133,4 +135,4 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:e0c5fb67f27ad68e4506385c92da97037e8125946b42dd7e573886ff06f6c748 -->
+<!-- dazzle-spec-brief: sha256:fffada54d8cd4cb9d546ba9c03d253d59f4c738cb0b7daa8f8f1ccf335c3a75a -->

@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
 **Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `ea08f703d09ad6cc`
+**Fingerprint:** `876490c15893ceda`
 
 ## Personas (jobs)
 
@@ -16,7 +16,6 @@
 - **Approver** (`approver`, stable≈`approver`, grounded) — desk `approver_desk` — role word in founder brief
 - **Finance** (`finance`, stable≈`finance`, grounded) — desk `finance_desk` — role word in founder brief
 - **Auditor** (`auditor`, stable≈`auditor`, grounded) — desk `auditor_desk` — role word in founder brief
-- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 - **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
 
 ## Nouns (domain types)
@@ -24,13 +23,15 @@
 - **Invoice** (grounded) owner≈`requester` lifecycle: draft → submitted → approved → rejected → paid — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
-- **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=article_noun)
+- **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Auditor`, `Desk`, `Finally`, `Item`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `auditable`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `flat`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `product`, `read`, `roles`, `rule`, `signed`, `technical`, `users`
+`Account`, `Administrator`, `Controllership`, `Desk`, `Finally`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Treasury`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `audit`, `auditable`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `finance`, `flat`, `fold`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `item`, `lifecycle`, `line`, `live`, `maker`, `mature`, `meta`, `model`, `multi`, `operation`, `override`, `people`, `product`, `read`, `roles`, `rule`, `signed`, `technical`, `users`, `vendor`
 
 ## Desks
 
@@ -38,7 +39,6 @@
 - **approver_desk** for `approver` (hypothesis) owner≈`requester` — Job desk for Approver
 - **finance_desk** for `finance` (hypothesis) owner≈`requester` — Job desk for Finance
 - **auditor_desk** for `auditor` (hypothesis) owner≈`requester` — Job desk for Auditor
-- **admin_desk** for `admin` (hypothesis) owner≈`requester` — Job desk for Admin
 - **staff_desk** for `staff` (hypothesis) owner≈`requester` — Job desk for Staff
 
 ## Demo spine (seed stories)
@@ -47,7 +47,6 @@
 - `approver`: Approver has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `finance`: Finance has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `auditor`: Auditor has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
-- `admin`: Admin has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `staff`: Staff has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 
 ## Open questions
@@ -57,10 +56,10 @@
 
 ## Process candidates (hypothesis)
 
-- **approval_flow** (hypothesis) entity≈`Invoice` personas=[requester, approver] — Invoice: requester submits, approver decides (approve/reject)
-- **assignment** (hypothesis) entity≈`Invoice` personas=[manager, member] — Invoice: auto or manager assignment to a worker
-- **settlement** (hypothesis) entity≈`Invoice` personas=[finance, approver] — Invoice: finance settles / pays after approval
-- **triage** (hypothesis) entity≈`Invoice` personas=[agent, manager] — Invoice: intake triage before deep work
+- **approval_flow** (hypothesis) entity≈`Payment` personas=[requester, approver] — Payment: requester submits, approver decides (approve/reject)
+- **assignment** (hypothesis) entity≈`Payment` personas=[manager, member] — Payment: auto or manager assignment to a worker
+- **settlement** (hypothesis) entity≈`Payment` personas=[finance, approver] — Payment: finance settles / pays after approval
+- **triage** (hypothesis) entity≈`Payment` personas=[agent, manager] — Payment: intake triage before deep work
 
 ## Research notes
 
@@ -78,7 +77,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "ea08f703d09ad6cc",
+  "source_sha256": "876490c15893ceda",
   "personas": [
     {
       "id_hint": "requester",
@@ -115,15 +114,6 @@
       "stable_id_candidate": "auditor",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "System administrator",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "staff",
@@ -164,7 +154,7 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Bank",
+      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -184,9 +174,23 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Auditor",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Bank",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Approver",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=article_noun)",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "requester"
     }
@@ -217,13 +221,6 @@
       "persona": "auditor",
       "name": "auditor_desk",
       "purpose": "Job desk for Auditor",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
       "owner_field_hint": "requester",
       "status": "hypothesis"
     },
@@ -261,12 +258,6 @@
       "entity_hint": "Invoice"
     },
     {
-      "persona": "admin",
-      "story": "Admin has seeded Invoice rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Invoice"
-    },
-    {
       "persona": "staff",
       "story": "Staff has seeded Invoice rows for their desk",
       "min_rows": 1,
@@ -288,42 +279,42 @@
   "process_candidates": [
     {
       "id_hint": "approval_flow",
-      "summary": "Invoice: requester submits, approver decides (approve/reject)",
+      "summary": "Payment: requester submits, approver decides (approve/reject)",
       "personas": [
         "requester",
         "approver"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "assignment",
-      "summary": "Invoice: auto or manager assignment to a worker",
+      "summary": "Payment: auto or manager assignment to a worker",
       "personas": [
         "manager",
         "member"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "settlement",
-      "summary": "Invoice: finance settles / pays after approval",
+      "summary": "Payment: finance settles / pays after approval",
       "personas": [
         "finance",
         "approver"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     },
     {
       "id_hint": "triage",
-      "summary": "Invoice: intake triage before deep work",
+      "summary": "Payment: intake triage before deep work",
       "personas": [
         "agent",
         "manager"
       ],
-      "entity_hint": "Invoice",
+      "entity_hint": "Payment",
       "status": "hypothesis"
     }
   ],
@@ -337,10 +328,9 @@
   "rejected_chrome": [
     "Account",
     "Administrator",
-    "Auditor",
+    "Controllership",
     "Desk",
     "Finally",
-    "Item",
     "Itemise",
     "JavaScript",
     "Long",
@@ -350,11 +340,13 @@
     "Requester",
     "Review",
     "Significant",
+    "Treasury",
     "Two",
     "approval",
     "approved",
     "attempt",
     "attempts",
+    "audit",
     "auditable",
     "built",
     "checker",
@@ -363,29 +355,35 @@
     "database",
     "declared",
     "discrete",
+    "finance",
     "flat",
+    "fold",
     "framework",
     "general",
     "human",
     "informal",
     "interrupted",
     "invoices",
+    "item",
     "lifecycle",
     "line",
     "live",
     "maker",
     "mature",
+    "meta",
     "model",
     "multi",
     "operation",
     "override",
+    "people",
     "product",
     "read",
     "roles",
     "rule",
     "signed",
     "technical",
-    "users"
+    "users",
+    "vendor"
   ]
 }
 ```

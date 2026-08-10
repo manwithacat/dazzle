@@ -191,6 +191,13 @@ entity SupportStaff "Support Staff":
   job_title: str(80)
   status: enum[active, onboarding, offboarded]=active
   created_at: datetime auto_add
+  # Domain residual status∄transitions (cycle 1871): staff hire → seat → exit.
+  transitions:
+    onboarding -> active: role(admin) or role(supervisor)
+    active -> offboarded: role(admin) or role(supervisor)
+    onboarding -> offboarded: role(admin) or role(supervisor)
+    offboarded -> active: role(admin)
+    active -> onboarding: role(admin) or role(supervisor)
 
   permit:
     list: role(admin) or role(supervisor) or role(support_agent)

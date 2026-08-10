@@ -3,7 +3,7 @@
   "title": "Operations Dashboard \u2014 Specification",
   "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
   "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md",
-  "source_sha256": "d14b5e466651fa82",
+  "source_sha256": "f6b62add4a6491b9",
   "personas": [
     {
       "id_hint": "engineer",
@@ -13,6 +13,15 @@
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "buyer",
+      "label": "Buyer",
+      "job": "Person who purchases",
+      "desk": "buyer_desk",
+      "stable_id_candidate": "buyer",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "admin",
@@ -64,6 +73,13 @@
       "status": "hypothesis"
     },
     {
+      "persona": "buyer",
+      "name": "buyer_desk",
+      "purpose": "Job desk for Buyer",
+      "owner_field_hint": "acknowledged_by",
+      "status": "hypothesis"
+    },
+    {
       "persona": "admin",
       "name": "admin_desk",
       "purpose": "Job desk for Admin",
@@ -75,6 +91,12 @@
     {
       "persona": "engineer",
       "story": "Engineer has seeded Alert rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Alert"
+    },
+    {
+      "persona": "buyer",
+      "story": "Buyer has seeded Alert rows for their desk",
       "min_rows": 1,
       "entity_hint": "Alert"
     },
@@ -157,6 +179,8 @@
     "detail",
     "document",
     "engineer",
+    "flat",
+    "fleet",
     "fold",
     "glance",
     "guided",

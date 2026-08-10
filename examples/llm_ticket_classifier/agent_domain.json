@@ -3,7 +3,7 @@
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
   "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
-  "source_sha256": "f0b78ad6fd55a118",
+  "source_sha256": "d69451391bc51168",
   "personas": [
     {
       "id_hint": "agent",
@@ -22,6 +22,15 @@
       "stable_id_candidate": "customer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "staff",
+      "label": "Staff",
+      "job": "Internal team member",
+      "desk": "staff_desk",
+      "stable_id_candidate": "staff",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -94,6 +103,13 @@
       "purpose": "Job desk for Customer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "staff",
+      "name": "staff_desk",
+      "purpose": "Job desk for Staff",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -108,10 +124,26 @@
       "story": "Customer has seeded SupportTicket rows for their desk",
       "min_rows": 1,
       "entity_hint": "SupportTicket"
+    },
+    {
+      "persona": "staff",
+      "story": "Staff has seeded SupportTicket rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "SupportTicket"
     }
   ],
   "open_questions": [],
   "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "SupportTicket: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
     {
       "id_hint": "assignment",
       "summary": "SupportTicket: auto or manager assignment to a worker",
@@ -145,13 +177,14 @@
     "Beyond",
     "Dashboard",
     "Data",
+    "Escalation",
     "Four",
     "JavaScript",
+    "Op",
     "Priority",
-    "Readines",
     "Result",
-    "Supervisor",
     "Support",
+    "Team",
     "Their",
     "administrative",
     "auditable",
@@ -159,8 +192,10 @@
     "confidence",
     "declared",
     "explicit",
+    "flat",
     "framework",
     "human",
+    "informal",
     "inventory",
     "lifecycle",
     "live",
@@ -168,12 +203,13 @@
     "model",
     "parent",
     "product",
+    "readiness",
     "record",
     "related",
     "response",
     "specific",
     "suggested",
-    "team",
+    "supervisor",
     "technical",
     "work"
   ]

@@ -8,13 +8,15 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from
 
 **Source:** `/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md`
-**Fingerprint:** `325bed39fd21a878`
+**Fingerprint:** `12d37e021a31b281`
 
 ## Personas (jobs)
 
 - **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
 - **Designer** (`designer`, stable≈`designer`, grounded) — desk `designer_desk` — role word in founder brief
 - **Reviewer** (`reviewer`, stable≈`reviewer`, grounded) — desk `reviewer_desk` — role word in founder brief
+- **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
+- **Host** (`host`, stable≈`host`, grounded) — desk `host_desk` — Person who hosts/provides space
 
 ## Nouns (domain types)
 
@@ -26,19 +28,23 @@
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Desk`, `JavaScript`, `Named`, `Reviewer`, `Studio`, `asset`, `assigned`, `auditable`, `bare`, `byte`, `command`, `creative`, `critique`, `current`, `document`, `explicit`, `fold`, `formal`, `framework`, `informal`, `live`, `matrix`, `mature`, `people`, `product`, `pull`, `record`, `review`, `schedule`, `skeptic`, `specific`, `static`, `technical`, `visibility`, `work`
+`Abstract`, `Adobe`, `Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Frame`, `Goal`, `JavaScript`, `Named`, `Op`, `Reviewer`, `Strategy`, `Studio`, `System`, `asset`, `assigned`, `auditable`, `bare`, `byte`, `command`, `creative`, `critique`, `current`, `desk`, `document`, `draft`, `explicit`, `flat`, `fold`, `formal`, `framework`, `informal`, `live`, `matrix`, `mature`, `people`, `pipeline`, `product`, `pull`, `record`, `review`, `schedule`, `skeptic`, `specific`, `static`, `technical`, `visibility`, `work`
 
 ## Desks
 
 - **admin_desk** for `admin` (hypothesis) owner≈`assigned_to` — Job desk for Admin
 - **designer_desk** for `designer` (hypothesis) owner≈`assigned_to` — Job desk for Designer
 - **reviewer_desk** for `reviewer` (hypothesis) owner≈`assigned_to` — Job desk for Reviewer
+- **staff_desk** for `staff` (hypothesis) owner≈`assigned_to` — Job desk for Staff
+- **host_desk** for `host` (hypothesis) owner≈`assigned_to` — Job desk for Host
 
 ## Demo spine (seed stories)
 
 - `admin`: Admin has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 - `designer`: Designer has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 - `reviewer`: Reviewer has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
+- `staff`: Staff has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
+- `host`: Host has seeded Brand rows for their desk (min_rows=1, entity≈Brand)
 
 ## Open questions
 
@@ -65,7 +71,7 @@
   "title": "Design Studio \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from",
   "source_path": "/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md",
-  "source_sha256": "325bed39fd21a878",
+  "source_sha256": "12d37e021a31b281",
   "personas": [
     {
       "id_hint": "admin",
@@ -93,6 +99,24 @@
       "stable_id_candidate": "reviewer",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "staff",
+      "label": "Staff",
+      "job": "Internal team member",
+      "desk": "staff_desk",
+      "stable_id_candidate": "staff",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
+    },
+    {
+      "id_hint": "host",
+      "label": "Host",
+      "job": "Person who hosts/provides space",
+      "desk": "host_desk",
+      "stable_id_candidate": "host",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -164,6 +188,20 @@
       "purpose": "Job desk for Reviewer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
+    },
+    {
+      "persona": "staff",
+      "name": "staff_desk",
+      "purpose": "Job desk for Staff",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
+    },
+    {
+      "persona": "host",
+      "name": "host_desk",
+      "purpose": "Job desk for Host",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -182,6 +220,18 @@
     {
       "persona": "reviewer",
       "story": "Reviewer has seeded Brand rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Brand"
+    },
+    {
+      "persona": "staff",
+      "story": "Staff has seeded Brand rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Brand"
+    },
+    {
+      "persona": "host",
+      "story": "Host has seeded Brand rows for their desk",
       "min_rows": 1,
       "entity_hint": "Brand"
     }
@@ -218,6 +268,8 @@
     "2 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
+    "Abstract",
+    "Adobe",
     "Beyond",
     "Campaigns",
     "Catalog",
@@ -225,11 +277,15 @@
     "Data",
     "Design",
     "Designer",
-    "Desk",
+    "Frame",
+    "Goal",
     "JavaScript",
     "Named",
+    "Op",
     "Reviewer",
+    "Strategy",
     "Studio",
+    "System",
     "asset",
     "assigned",
     "auditable",
@@ -239,8 +295,11 @@
     "creative",
     "critique",
     "current",
+    "desk",
     "document",
+    "draft",
     "explicit",
+    "flat",
     "fold",
     "formal",
     "framework",
@@ -249,6 +308,7 @@
     "matrix",
     "mature",
     "people",
+    "pipeline",
     "product",
     "pull",
     "record",

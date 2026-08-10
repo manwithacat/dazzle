@@ -28,6 +28,10 @@ def test_support_staff_entity_declares_department_and_job_title() -> None:
     block = text[start:end]
     assert "department: str(50)" in block
     assert "job_title: str(80)" in block
+    # Domain residual: status lifecycle (onboarding → active → offboarded)
+    assert "transitions:" in block
+    assert "onboarding -> active:" in block
+    assert "active -> offboarded:" in block
 
 
 def test_team_desk_declares_title_board_and_dept_before_load() -> None:

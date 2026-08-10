@@ -3,7 +3,7 @@
   "title": "Team Task Manager \u2014 Specification",
   "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
   "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md",
-  "source_sha256": "8833b74e73c2c00e",
+  "source_sha256": "fc6a3da50712e882",
   "personas": [
     {
       "id_hint": "manager",
@@ -83,18 +83,7 @@
       "entity_hint": "Task"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q1",
-      "text": "Can a task have multiple users, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Should users receive email/push notifications for key events?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "process_candidates": [
     {
       "id_hint": "escalation",
@@ -136,6 +125,7 @@
     "approval",
     "auditable",
     "board",
+    "brief",
     "built",
     "creator",
     "database",
