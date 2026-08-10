@@ -70,6 +70,11 @@ Doctrine source of truth remains
 
 ---
 
+16. **Harness distill self-check.** After capability-sweep or self-audit, if the
+    map is growing multi-paragraph cycle digests again or Goal B is re-documented
+    in three places, stop and re-apply `docs/reference/agent-harness-distill.md`
+    criteria — the loop must not re-inflate oral thrash.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
@@ -88,7 +93,7 @@ Doctrine source of truth remains
 | Surface | Role |
 |---------|------|
 | `dev_docs/improve-log.md` | Per-cycle narrative (often local) |
-| `.claude/commands/improve/capability-map.md` | USED/STALE inventory stamps |
+| `.claude/commands/improve/capability-map.md` | Registry table only (Last-exercised); lore not here |
 | `.dazzle/improve-digs/*` | Dig receipts (depth_id in notes) |
 | `git log --grep='Goal B'` | Tip history of depth waves |
 | This file | Distilled rules agents must not rediscover |

@@ -323,12 +323,12 @@ Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`. **Grok preferred:** `/workflow improve-self-audit` (or `{"apply":true}` to write AUD/REGRESSION rows in-workflow).
-3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute STALE-effective (lag ≥20), and report **actionable digs** split by **Class** (`COGNITION` vs `HYGIENE`) — not a raw STALE count alone. Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt. **Grok preferred:** `/workflow improve-capability-sweep` (then log counts from the result).
+3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive inventory and reconcile `.claude/commands/improve/capability-map.md` **table only**: flag `UNOWNED`, recompute STALE-effective (lag ≥20), report **COGNITION vs HYGIENE** digs. Overwrite “Last sweep” one-liners (≤5); do **not** re-grow the map with ship narratives. Forceable via `/improve capability-sweep`. **Grok preferred:** `/workflow improve-capability-sweep`.
 3b. **Semgrep hygiene cadence**: if ≥20 cycles since the last log entry mentioning `semgrep hygiene` / `lane: … semgrep` (or none exists), **and** 0c–0c3 did not claim the cycle, prefer a short HYGIENE dig via `improve/strategies/semgrep_hygiene.md` before pure STALE re-stamps — especially when `dazzle sentinel scan` is STALE. Forceable via `/improve semgrep`. Does **not** preempt REGRESSION / CI / CodeQL / inbox / self-audit / capability-sweep.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
 5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
 6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.
-7. **Explore phase, cognition-directed (not lag-only STALE).** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat `USED` with lag ≥20 as **STALE-effective**). Read each row's **Class** (`COGNITION` | `HYGIENE` | `DRIVER` | `EXEMPT`).
+7. **Explore phase, cognition-directed (not lag-only STALE).** Consult `.claude/commands/improve/capability-map.md` (**registry table**). Recompute lag as `current_cycle − last-exercised` (treat `USED` with lag ≥20 as **STALE-effective**). Read each row's **Class** (`COGNITION` | `HYGIENE` | `DRIVER` | `EXEMPT`).
 
    **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey → felt → **story_walk** → **trial_verdict**/acceptance → **process_dig** incomplete contracts).
 
@@ -448,12 +448,11 @@ If the lane requires sub-strategy dispatch, the lane reads from
    from dazzle.cli.runtime_impl.ux_cycle_signals import mark_run
    mark_run(source="improve")
    ```
-5. **Stamp capability coverage**: in `improve/capability-map.md`, set `last-exercised = N`
-   for every capability the cycle actually invoked (the lane reports which), flip its
-   status toward `USED`, and recompute `STALE` (owned + `last-exercised` ≥20 cycles
-   behind N). This is the maintenance half of the capability-coverage rule — it keeps
-   the registry an honest picture of what the loop is really exercising. The commit in
-   step 6 includes `capability-map.md` when it changed.
+5. **Stamp capability coverage**: in `.claude/commands/improve/capability-map.md`,
+   set **Last-exercised = N** and Status → `USED` for capabilities this cycle invoked.
+   **Only the registry table** — never multi-paragraph cycle digests (those were oral
+   history thrash; durable rules go in `improve/oral-history.md`). Capability-sweep may
+   overwrite the short “Last sweep” block (≤5 one-liners). Commit the map when it changes.
 6. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
 7. **Push (only if this cycle ships code to origin)** — mandatory gate, never ad-hoc:
    ```bash

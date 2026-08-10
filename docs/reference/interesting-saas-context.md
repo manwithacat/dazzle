@@ -292,6 +292,10 @@ You can keep the fleet residual-green forever by inventing finer harness checks.
 | `INVESTIGATION_2026-08-02.md` | Evidence of still freeze + dual-open monoculture |
 | `REEVALUATION_FULL_2026-08-01.md` | Human score ~5.8 |
 | `HYPERPART_PRESENTATION_PROCESS.md` | Goal B chrome language (presentation) |
+| `improve/oral-history.md` | Loop lore (monocultures, thrash classes) |
+| `scripts/interesting_product_portfolio.py` | Portfolio pick / anti-wave / anti-recipe |
+| `antagonist-report-post-5-8.md` | Short handoff only — not a second doctrine |
+| `agent-harness-distill.md` | What we stopped loading and why |
 | `REPORT_FOR_DAZZLE_FULL_2026-08-01.md` | F1–F7 (hygiene; depth is F6-class) |
 
 **Upstream:** #1626 may close or demote for residual; open successor epic for interesting depth / context research if desired.

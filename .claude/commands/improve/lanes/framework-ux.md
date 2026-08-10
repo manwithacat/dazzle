@@ -207,7 +207,7 @@ Detailed playbook: `improve/strategies/api_surface_audit.md`. Counts against sha
 
 **No subagent — deterministic capability sweep.** Exercises the framework-ux-owned
 quality-intelligence capabilities the loop otherwise leaves idle (wired from
-`improve/capability-map.md`, Phase 4). Run against the fleet / a rotating sample:
+`.claude/commands/improve/capability-map.md`, Phase 4). Run against the fleet / a rotating sample:
 
 ```bash
 dazzle qa taste-panel                 # blind fleet-vs-dialect aesthetic parity (baseline: dev_docs/taste/)
@@ -220,7 +220,7 @@ dazzle composition audit              # cross-surface composition/style coherenc
 File real findings as `EX-NNN`/`API-NNN` rows (or a GitHub issue if framework-level).
 `taste-panel` regressions vs the baseline are the highest-signal — the blind aesthetic
 gate that shipped v0.87→v0.98 and had no lane exercising it. Stamp `last-exercised` for
-each capability run in `improve/capability-map.md`.
+each capability run in `.claude/commands/improve/capability-map.md`.
 
 Use when: `dazzle-updated` fired since last sweep (new release → re-check aesthetic +
 vitality), OR the driver's capability-coverage rule picked framework-ux to exercise a

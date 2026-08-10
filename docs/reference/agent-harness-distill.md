@@ -1,156 +1,76 @@
-# Agent harness distill evaluation (2026-08)
+# Agent harness distill
 
-**Audience:** Maintainers deciding what agents still need loaded
-**Stance:** Evaluate overspecification; prefer stems + gates over oral lore
-**Related:** `stems/epistemic-layout.md`, `improve/oral-history.md`, ADR-0002
+**Audience:** Maintainers + agents deciding what to *stop* loading
+**Success criterion (agent-facing):** Less duplicative / oral context, same
+judgement — gates and stems still win.
+**Related:** `stems/epistemic-layout.md`, `improve/oral-history.md`, ADR INDEX
 
-This is an evaluation, not a bulk deletion PR. Cuts should be deliberate and
-gated so we do not throw away hard-won counter-priors.
-
----
-
-## Volume snapshot (order of magnitude)
-
-| Surface | Scale | Notes |
-|---------|-------|--------|
-| `AGENTS.md` | ~540 lines | Entry + pointers; still dense |
-| `.claude/commands/improve.md` | ~640 lines | Driver; force table + schedule |
-| Improve strategies (×24) | ~3k lines total | Many are healthy playbooks |
-| Capability-map | ~1.7k lines | **Oral history dump** — stamps dominate |
-| Framework stems | 8 short stems | Healthy; already distilled |
-| HM stems | many, some 80–150 lines | Composition-heavy; may overlap docs |
-| ADRs | 54 files | Long tail; many still load-bearing |
-| Counter-priors | ~15 | High value, short |
-| Deferred decisions | few | Correct parking lot |
-
-**Hypothesis:** The harness is not overspecified in *stems*; it is overweight in
-**improve capability-map history**, **duplicated doctrine** (interesting SaaS
-said three times), and **2025-era MCP/CLI boundary prose** that agents re-read
-every session without new signal.
+This is not a human-docs polish exercise. The consumer is a coding agent that
+overweights any prose placed in always-on paths.
 
 ---
 
-## Keep (high signal / low volume)
+## Success criteria (agent consumer)
 
-- **Stems** (framework + HM): reconstruct judgement; do not merge into one blob.
-- **Counter-priors:** pathology list agents re-suggest; keep short and mean.
-- **Dig contracts / residual probes:** machine honesty under automation.
-- **Closed menus** (depth ids, presentation role×host): selection > invention.
-- **ADR-0002 MCP/CLI boundary intent** (“can the agent keep thinking?”) — still
-  true; *implementation* may move with MCP 2026-07-28 (see MCP note).
-- **Clean-breaks, dsl-first, four-layer-stack, rbac-and-scope.**
+| Criterion | Check |
+|-----------|--------|
+| **Map is a table, not a chat log** | capability-map ≪ 300 lines; no multi-KB cycle digests |
+| **One doctrine per topic** | Goal B: interesting-saas-context + playbook only; antagonist report ≤1 screen |
+| **ADRs are on-demand** | INDEX has Active set; agents not told to pre-load the ledger |
+| **Lore has a home** | Durable thrash classes → `improve/oral-history.md` once |
+| **Stamp rule is cheap** | Driver stamps Last-exercised cells only |
+| **Gates > prose** | Counter-priors / residual / dig contracts still enforce hard truths |
+| **No resurrected thrash** | Capability-sweep does not re-grow cycle-note archives |
 
----
-
-## Distill candidates (overspecified or counterproductive)
-
-### 1. Capability-map as conversation log
-
-**Problem:** USED@cycle stamps and multi-paragraph cycle digests are oral
-history that **expands forever** and crowds the map agents are told to read.
-
-**Distill:**
-
-- Keep a short inventory table (tool → lane → last USED cycle number only).
-- Move narrative rules to `improve/oral-history.md` (done for v0).
-- Cap stamp prose; capability-sweep should not append 1k tokens of “Next:”.
-
-### 2. Doctrine triple-copy
-
-Interesting SaaS lives in:
-
-- `docs/reference/interesting-saas-context.md` (canonical)
-- `interesting_product.md` strategy
-- `antagonist-report-post-5-8.md`
-- exemplar / operator guide snippets
-
-**Distill:** One canonical + one playbook + one-line pointers elsewhere.
-Antagonist short report can become a 20-line handoff.
-
-### 3. ADRs: archive vs active
-
-54 ADRs is fine as a ledger; it is bad as **must-read context**.
-
-**Distill:**
-
-- Mark **Active** vs **Historical** in `docs/adr/README` (or INDEX).
-- Active set for agents: clean-breaks, MCP/CLI boundary, frozen IR, RBAC layers,
-  SSR/HTMX, poly_ref if still hot, permit/scope.
-- Historical: early docs-site, one-off migration notes — link only when
-  changing that subsystem.
-
-Do **not** merge ADRs into stems. Stems are timeless; ADRs are dated decisions.
-
-### 4. HM stems vs gallery vs presentation process
-
-Some HM stems restate gallery aesthetics and host chrome already in
-`hyperpart-presentation.md`.
-
-**Distill:** Stem = judgement rule (≤40 lines). Long matrices stay in reference
-docs. Agents load stem first; open matrix only when implementing chrome.
-
-### 5. Pre-2026 MCP session folklore
-
-Process lock, session dirs, “MCP blocks Claude” guidance was necessary when
-transports held sessions and tools blocked the thread.
-
-**Distill:** Keep the **boundary test** (read vs side-effect / long work).
-Rewrite “MCP freezes the agent” as “long tools still need CLI or Tasks/MRTR”
-once on `mcp` v2 / 2026-07-28. See `docs/reference/mcp-2026-07-28-opportunity.md`.
-
-### 6. Improve strategy sprawl
-
-~24 strategies is mostly real lanes. Candidates to **fold**:
-
-- Near-duplicate hygiene: `semgrep_hygiene` cadence vs self_audit overlap messaging
-- Gallery vs hyperpart_coherence (shared “visual truth” language)
-
-Do not fold Goal B into product_maturity — different proof.
-
-### 7. Example-app agent packs
-
-Per-example `AGENT_DOMAIN.md` / stems are good when short. Audit for copy-paste
-of framework CLAUDE that **fights** current counter-priors (empty desk, metric
-theater). Prefer “inherit framework + 30 lines domain.”
+If an agent still needs a deleted paragraph to act correctly, **the gate or
+stem was wrong** — restore as a stem/counter-prior/gate, not as oral dump.
 
 ---
 
-## Oral history that was not surfaced (now partially fixed)
+## Done (2026-08-10)
 
-| Lore | Was only in… | Surfaced to |
-|------|----------------|-------------|
-| Depth wave monoculture | git log + operator memory | `improve/oral-history.md` + portfolio script |
-| Acceptance re-panel thrash | cycle stamps | oral-history |
-| Smoke stale suppress | improve-policy.yaml | already policy; oral-history |
-| LFS empty-hero | CI fails | oral-history |
-| ensure_missing columns | emergency fix ships | oral-history |
-| Peer packs underbuilt | doctrine §6 | `improve/peer_packs/` |
+| Surface | Before | After |
+|---------|--------|--------|
+| `.claude/commands/improve/capability-map.md` | ~1700 lines (cycle digests) | ~150 lines: vocab + registry + ≤5 sweep one-liners |
+| `docs/reference/antagonist-report-post-5-8.md` | Second full doctrine | Short pointer to interesting-saas-context |
+| `docs/adr/INDEX.md` | Flat must-scan ledger | **Active** table + historical full list |
+| `improve.md` stamp rule | Implied narrative stamps | Explicit: table only; lore → oral-history |
+| Path honesty | Mixed `improve/capability-map.md` | Canonical `.claude/commands/improve/…` |
+| MCP boundary (AGENTS) | Session-era freeze language | Stateless protocol + CLI for long work |
 
-**Process:** self-audit should ask “new durable rule?” → one bullet in
-oral-history same week.
-
----
-
-## Recommended sequence (no big-bang rewrite)
-
-1. **Done in this pass:** portfolio planner, peer packs, oral-history v0,
-   playbook SELECT rules.
-2. **Next:** capability-map stamp diet (table only + link oral-history).
-3. **Next:** ADR INDEX Active/Historical labels (no content rewrite).
-4. **Later:** MCP v2 migration spike (pin `<2` until then).
-5. **Later:** HM stem length pass (split matrix out of stems).
-6. **Avoid:** “one mega AGENTS.md” or deleting counter-priors.
+Not bulk-deleted (still high signal): stems, counter-priors, dig contracts,
+closed depth menu, strategy playbooks (action steps).
 
 ---
 
-## Overspecification test (use when editing guidance)
+## Still optional later
 
-Before adding a paragraph to agent-facing docs:
+| Candidate | Why wait |
+|-----------|----------|
+| HM stem length | Split matrix vs judgement when editing those stems |
+| AGENTS architecture table | Drift-gated; trim only with intentional gate update |
+| Strategy fold (gallery vs coherence) | Real lanes; not pure duplication |
+| Capability-map row count | Inventory itself is useful; only *prose* was thrash |
 
-1. Is it a **stem** (timeless judgement), **ADR** (dated decision),
-   **counter-prior** (pathology), **playbook step**, or **oral history**?
-2. Does a gate or probe already enforce it? Prefer gate > prose.
-3. Will this still be true after residual=0 / MCP v2 / next model generation?
-4. If agents ignore it today, is it wrong or unenforced? Fix enforcement first.
+---
 
-If the answer is “we said this three times already,” delete two copies.
+## Anti-patterns this pass removes
+
+1. **Capability-map as improve-log mirror** — re-told every ship; used as
+   “what to do next” instead of residual/policy/portfolio.
+2. **Doctrine triple-copy** — same Goal B rules in antagonist report +
+   doctrine + playbook (agent re-decides which is canonical).
+3. **ADR pre-load** — 50+ long paragraphs of subsystem history as if curriculum.
+4. **Session-MCP folklore** as always-on fear — “MCP freezes the agent” without
+   distinguishing long tools vs knowledge tools after stateless SDK.
+
+---
+
+## Maintenance rule
+
+When you learn a durable improve lesson:
+
+1. Prefer a **gate** or **probe residual**.
+2. Else one bullet in **`improve/oral-history.md`**.
+3. Else a **stem / counter-prior**.
+4. **Never** append another essay to capability-map.

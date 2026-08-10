@@ -263,7 +263,7 @@ inflating `actionable_count`. As of 2026-07-08 only `support_tickets` (`agent_da
 and `fieldtest_hub` (3 rhythms) carry rhythms, all at fidelity 1.0.
 
 Add new rows to backlog as `PENDING`. Increments shared budget by 1. Stamp
-`last-exercised` for the capabilities run this cycle in `improve/capability-map.md`
+`last-exercised` for the capabilities run this cycle in `.claude/commands/improve/capability-map.md`
 (driver Step 3).
 
 #### Tier 2 (when Tier 1 exhausted, medium cost): Visual quality

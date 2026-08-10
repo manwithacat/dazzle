@@ -60,7 +60,7 @@ is a real exploitable bug with a tight fix.
 
 ### 5. Stamp + log
 
-In `improve/capability-map.md` set **last-exercised** for this cycle on:
+In `.claude/commands/improve/capability-map.md` set **last-exercised** for this cycle on:
 
 - `dazzle sentinel scan` (HYGIENE)
 - `/semgrep` / `scripts/semgrep_diff.py` (add row if missing; HYGIENE)

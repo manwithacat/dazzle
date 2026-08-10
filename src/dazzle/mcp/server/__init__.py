@@ -20,8 +20,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 from mcp.server import Server, ServerRequestContext
-from mcp.server.caching import CacheHint
 from mcp.server.stdio import stdio_server
+
+try:
+    from mcp.server.caching import CacheHint
+except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover
+    CacheHint = None  # type: ignore[misc, assignment]
 from mcp.types import (
     CallToolRequestParams,
     CallToolResult,
@@ -627,16 +631,22 @@ _CacheableMethod = Literal[
     "server/discover",
     "tools/list",
 ]
-_CACHE_HINTS: Mapping[_CacheableMethod, CacheHint] = {
-    "tools/list": CacheHint(ttl_ms=60_000),
-    "resources/list": CacheHint(ttl_ms=30_000),
-    "prompts/list": CacheHint(ttl_ms=60_000),
-}
+
+
+def _cache_hints() -> Mapping[_CacheableMethod, Any] | None:
+    if CacheHint is None:
+        return None
+    return {
+        "tools/list": CacheHint(ttl_ms=60_000),
+        "resources/list": CacheHint(ttl_ms=30_000),
+        "prompts/list": CacheHint(ttl_ms=60_000),
+    }
+
 
 server = Server(
     "dazzle",
     version=_dazzle_version,
-    cache_hints=_CACHE_HINTS,
+    cache_hints=_cache_hints(),
     on_list_tools=_handle_list_tools,
     on_call_tool=_handle_call_tool,
     on_list_resources=_handle_list_resources,

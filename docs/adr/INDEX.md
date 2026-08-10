@@ -1,5 +1,43 @@
 # ADR Index
 
+Architectural Decision Records for Dazzle.
+
+## Agent load order (distill)
+
+**Do not load this whole file into context.** ADRs are a *ledger*. Open one ADR
+when a stem or gate points at it — not as pre-reading.
+
+### Active (open when the domain is live)
+
+| ADR | One line |
+|-----|----------|
+| [0002](0002-mcp-cli-boundary.md) | MCP reads/query vs CLI process/writes (SDK v2 still) |
+| [0003](0003-clean-breaks.md) | No shims; update callers same change |
+| [0004](0004-dsl-agent-first.md) | DSL optimized for agents / precision |
+| [0005](0005-runtime-services.md) | No new module-level singletons |
+| [0006](0006-frozen-ir.md) | IR immutable after parse |
+| [0007](0007-rbac-three-layers.md) | Static matrix + dynamic + audit |
+| [0008](0008-postgresql-only.md) | Postgres only |
+| [0009](0009-predicate-algebra.md) | Scope → predicate algebra |
+| [0010](0010-permit-scope-separation.md) | permit ≠ scope |
+| [0011](0011-ssr-htmx.md) | SSR + HTMX; no SPA |
+| [0023](0023-template-emission-patterns.md) | Fragment emission patterns |
+| [0038](0038-rendering-layer-boundary.md) | http → page → render → core |
+| [0041](0041-layer-rename-http-page.md) | Layer names |
+| [0042](0042-poly-ref-scoping.md) | `poly_ref` escape hatch |
+| [0053](0053-hm-frontend-ui-ownership.md) | Pages compose Hyperparts |
+| [0054](0054-htmx-swap-identity-contract.md) | HTMX swap identity |
+
+### Historical / subsystem-only
+
+Everything else below is **decision history**. Load only when editing that
+subsystem (migrations, ops platform retirement, CSRF disposition, etc.).
+Stems + counter-priors beat bulk ADR reading.
+
+---
+
+## Full ledger (newest first)
+
 Architectural Decision Records for the Dazzle project. Agent-scannable: each line is a decision that prevents a wrong proposal.
 
 - [0054](0054-htmx-swap-identity-contract.md) — *Accepted (2026-07-26).* **HTMX swap / identity contract.** Sole identity owner for persistent slots; innerHTML/innerMorph responses must be body-only (no re-wrap of `id` / `data-dz-region`); outer* may replace identity; nested region hooks are a contract violation. Orthogonal to dual-lock (part shape) and card-safety (nested `dz-card`). Complements ADR-0011/0053; HM decision 0012 + lint/gates.
@@ -7,7 +45,7 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0052](0052-scope-all-tenant-kind-subtree.md) — *Accepted (2026-07-07; #1541).* **`scope: all` on tenant-kind entities compiles to the partition-root subtree.** Tenant kinds (`tenant_host:` anchors, usually `entities_excluded` → NO fence) previously got `Tautology` from `all` = every row of every tenant (cross-trust leak reproduced live). Now READ/LIST `all` on a tenant kind compiles to `id = current_user.tenant_id OR <parent> = … OR <parent>.<parent> = …` walking the entity's own `tenant_host.parent` chain — the inverse of ADR-0036's self-or-ancestor expansion, bound by the same depth cap, fail-closed on broken/cyclic chains (partial legs = narrower, never broader; membership-less sessions hit the deny sentinel). `current_user.tenant_id` resolves to the #1463 membership partition root. Write-verb `all` keeps Tautology (subtree writes need the #1455 probe machinery — follow-up). Non-kind entities unchanged. Shipped with the #1541 observability fixes (scope/permit denials + swallowed fetch errors logged; errored fetch renders distinct copy).
 - [0051](0051-retire-orphaned-ops-platform.md) — *Accepted (2026-07-02; #1525).* **Retire the orphaned ops platform.** Delete the 12-module (~5,000 LOC) founder-cockpit cluster (`ops_integration` / `analytics_collector` / `ops_database` / `health_aggregator` / `api_tracker` / `api_middleware` / `email_templates` / `spec_versioning` / `system_entity_store` / `admin_api_routes` / `deploy_history` / `rollback_manager`) + `static/ops/` UI + the `OPS_DB` artifact class + the always-404 super-admin deploy/rollback buttons. `mount_ops_platform()` was never wired anywhere in history; its only consumer (the Founder Console) died in #703 when the admin workspace (#686) won; ADR-0050 already salvaged the one thesis-relevant capability (usage capture) by deliberate narrow rebuild. Every other capability has a modern substitute (`dazzle perf`, `/health`+Prometheus, admin workspace, `http/email/`, git+api-surface baselines, #1004 virtual-entity path). Kept: `sse_stream`/`sse_wiring` (live), `device_registry` (live). Salvage filed separately: narrow LLM-cost tracking on the ADR-0050 pattern (the one un-substituted capability). Follow-up: the `DeployHistory` admin entity now has no writer — removing it touches the admin-entity suite fleet-wide, deferred. **Rejected:** revive opt-in (registration+hardening cost for duplicated capabilities); keep-health-only (Prometheus covers it); tombstone (how it got lost the first time).
 - [0001](0001-docs-site.md) — MkDocs Material for docs. No wiki, no Docusaurus.
-- [0002](0002-mcp-cli-boundary.md) — MCP = stateless reads. CLI = process/writes. Don't block conversation with long ops.
+- [0002](0002-mcp-cli-boundary.md) — MCP = knowledge/query; CLI = process/writes. Protocol sessions gone (SDK v2); long work stays off MCP.
 - [0003](0003-clean-breaks.md) — No backward compat before v1.0. Delete freely, never create shims or wrappers.
 - [0004](0004-dsl-agent-first.md) — DSL optimized for AI agents. Precision and formal correctness over human ergonomics.
 - [0005](0005-runtime-services.md) — RuntimeServices dataclass on app.state. No new module-level singletons.

@@ -1,7 +1,7 @@
 # Strategy: owned_idle_exercise (driver-level)
 
 First-exercise (or re-exercise after long idle) an `OWNED-IDLE` capability from
-`improve/capability-map.md`. Invoked by driver Step 1 rule 7 when no
+`.claude/commands/improve/capability-map.md`. Invoked by driver Step 1 rule 7 when no
 UNOWNED/STALE work remains, or when an OWNED-IDLE row has never been stamped.
 
 **Force path:** `/improve <owning-lane>` then name the capability in the log, or

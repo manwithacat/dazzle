@@ -182,7 +182,7 @@ Dazzle has a single agent-first entrypoint for autonomous investigation, improve
 | `test-suite` | Test-suite redundancy-cluster collapse (#1530). One cluster family per cycle; parametrize-collapse with the nightly mutation floors as backstop |
 | `hm-convergence` | HM design ownership (drain complete 2026-07). Permanent floors: `test_hm_delegation_proof` + `test_hm_tailwind_reservoir` zero-floor; dual-locks / taste / vision tooling. Not a Tailwind drain lane anymore |
 
-The driver also maintains `improve/capability-map.md` — a registry mapping every
+The driver also maintains `.claude/commands/improve/capability-map.md` — a registry mapping every
 `dazzle` CLI/MCP/skill/loop capability to an owning lane + staleness, so the loop
 polices its own coverage (capability-coverage rule + capability-sweep cadence).
 
@@ -238,7 +238,7 @@ Five committed baselines under `docs/api-surface/` pin the framework's public AP
 ```bash
 dazzle inspect api dsl-constructs        # parser → IR class mapping
 dazzle inspect api ir-types              # 485 entries from dazzle.core.ir.__all__
-dazzle inspect api mcp-tools             # 32 MCP tool schemas
+dazzle inspect api mcp-tools             # consolidated MCP tool schemas
 dazzle inspect api public-helpers        # top-level __init__ exports
 dazzle inspect api runtime-urls          # AST walk of *_routes.py
 ```
@@ -274,7 +274,9 @@ Both lists are drift-gated against the directory trees by `tests/unit/test_docs_
 
 ## MCP / CLI Boundary
 
-MCP = stateless reads, CLI = process/writes (ADR-0002). Use `dazzle search <keyword>` to find commands.
+MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long work (ADR-0002).
+Protocol is **stateless** (SDK v2 / 2026-07-28); app state is explicit handles (project root), not transport sessions.
+Use `dazzle search <keyword>` to find commands.
 
 ### MCP Tools
 

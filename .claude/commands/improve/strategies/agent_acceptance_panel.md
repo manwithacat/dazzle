@@ -157,7 +157,7 @@ emit(source='agent_acceptance_panel', kind='app-fixed',
               'recommend': RECOMMEND, 'commit': SHA})
 ```
 
-Stamp `improve/capability-map.md` for `qa trial` / product_quality as USED.
+Stamp `.claude/commands/improve/capability-map.md` for `qa trial` / product_quality as USED.
 
 ## Hard rules
 
