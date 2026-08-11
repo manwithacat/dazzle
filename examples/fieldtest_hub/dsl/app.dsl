@@ -832,9 +832,12 @@ surface issue_report_detail "Issue Detail":
     field photo_url "Photo/Video"
     field resolution "Resolution"
 
-  # Goal B conversation: triage discussion pull queue on the issue hub.
+  # Goal B conversation (cycle 1899 hub wave): issue hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (ops/triage
+  # live_conversation parity). Peer Linear/Jira issue comments read as a
+  # content-first trail on the work item — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: IssueNote
     columns: body, author, created_at
 

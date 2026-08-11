@@ -35,6 +35,19 @@ def test_ops_and_triage_declare_live_conversation_spine() -> None:
         assert "source: IssueNote" in region, ws
 
 
+def test_issue_detail_discussion_uses_conversation_chrome() -> None:
+    """Issue hub Discussion is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = APP.read_text()
+    assert 'surface issue_report_detail "Issue Detail"' in text
+    block = text.split('surface issue_report_detail "Issue Detail"', 1)[1]
+    block = block.split("surface issue_report_create", 1)[0]
+    related = block.split('related discussion "Discussion"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: IssueNote" in related
+    assert "columns: body, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_issue_note_seeds_have_domain_true_field_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

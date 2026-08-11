@@ -261,8 +261,11 @@ surface user_detail "User Detail":
     show: Ticket
     columns: title, status, priority, assigned_to, created_at
 
+  # Goal B conversation (cycle 1899 hub wave): user hub comments use
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (ticket hub
+  # live_conversation parity). is_internal maps orientation only.
   related comments "Comments":
-    display: queue
+    display: conversation
     show: Comment
     columns: content, is_internal, created_at
 

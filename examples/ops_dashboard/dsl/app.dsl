@@ -1234,9 +1234,12 @@ surface alert_detail "Alert Detail":
     field message "Message"
     field acknowledged_by "Acknowledged By"
 
-  # Goal B conversation: operator notes pull queue on the alert hub.
+  # Goal B conversation (cycle 1899 hub wave): alert hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (ops desk
+  # live_conversation parity). Peer PagerDuty/Opsgenie notes read as a
+  # content-first trail on the alert — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: IncidentNote
     columns: body, author, created_at
 

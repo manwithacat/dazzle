@@ -33,6 +33,19 @@ def test_command_center_declares_live_conversation_spine() -> None:
         assert "source: IncidentNote" in region
 
 
+def test_alert_detail_discussion_uses_conversation_chrome() -> None:
+    """Alert hub Discussion is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = APP.read_text()
+    assert 'surface alert_detail "Alert Detail"' in text
+    block = text.split('surface alert_detail "Alert Detail"', 1)[1]
+    block = block.split("surface incident_note_list", 1)[0]
+    related = block.split('related discussion "Discussion"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: IncidentNote" in related
+    assert "columns: body, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_incident_note_seeds_have_domain_true_ops_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

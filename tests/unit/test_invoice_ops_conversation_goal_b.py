@@ -35,6 +35,19 @@ def test_finance_desks_declare_live_conversation_spine() -> None:
         assert "source: InvoiceNote" in region
 
 
+def test_invoice_detail_discussion_uses_conversation_chrome() -> None:
+    """Invoice hub Discussion is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = SURFACES.read_text()
+    assert 'surface invoice_detail "Invoice"' in text
+    block = text.split('surface invoice_detail "Invoice"', 1)[1]
+    block = block.split("surface invoice_create", 1)[0]
+    related = block.split('related discussion "Discussion"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: InvoiceNote" in related
+    assert "columns: body, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_invoice_note_seeds_have_domain_true_ap_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

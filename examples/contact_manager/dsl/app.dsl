@@ -161,9 +161,12 @@ surface contact_detail "Contact Detail":
     show: EngagementLetter
     columns: scope_summary, status, party, effective_date, signatory_name
 
-  # Goal B conversation: relationship notes pull queue on the contact hub.
+  # Goal B conversation (cycle 1899 hub wave): contact hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (Home
+  # live_conversation parity). Peer CRM relationship notes read as a
+  # content-first trail on the contact — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: ContactNote
     columns: body, author, created_at
 

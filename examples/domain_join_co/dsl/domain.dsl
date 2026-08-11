@@ -252,9 +252,10 @@ surface announcement_detail "Announcement":
     field workspace "Workspace"
   section body "Body":
     field body "Body"
-  # Goal B conversation: team discussion on the announcement hub.
+  # Goal B conversation (cycle 1899): announcement hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (not queue meta).
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: AnnouncementNote
     columns: body, author, created_at
   ux:

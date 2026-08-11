@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Changed
+- **Goal B conversation hub wave (cycle 1899)** — detail-hub Discussion /
+  Comments related groups switch from `display: queue` to
+  `RelatedDisplayMode.conversation` (Message/Bubble trail) on hr_records,
+  simple_task, contact_manager, fieldtest_hub, ops_dashboard, acme_billing,
+  invoice_ops, domain_join_co, and support_tickets user hub; unit pins;
+  acme_billing `expected/compliance-auditspec.json` dsl_hash refreshed.
+
 ### Added
 - **RelatedDisplayMode.conversation** — related entity groups on detail hubs
   render as MessageScroller of Message/Bubble chrome (workspace

@@ -434,10 +434,12 @@ surface task_detail "Task Detail":
     show: TaskBrief
     columns: headline, doc_kind, author
 
-  # Task hub discussion as pull roster queue (content-first), not warehouse
-  # table — ST-021 assignee overview / Monday-review path (cycle 1502 acceptance).
+  # Goal B conversation (cycle 1899 hub wave): task hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (admin/team desk
+  # live_conversation parity). Peer Monday/Asana task comments read as a
+  # content-first trail on the work item — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: TaskComment
     columns: content, author, created_at
 
@@ -690,8 +692,9 @@ surface user_detail "Team Member Overview":
     show: Task
     columns: title, status, priority, due_date
 
+  # Goal B conversation (cycle 1899): teammate hub comments as Message trail.
   related comments "Comments":
-    display: queue
+    display: conversation
     show: TaskComment
     columns: content, author, created_at
 

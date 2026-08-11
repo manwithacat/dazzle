@@ -234,9 +234,12 @@ surface invoice_detail "Invoice":
     show: LineItem
     columns: description, quantity, unit_amount
 
-  # Goal B conversation: billing discussion pull queue on the invoice hub.
+  # Goal B conversation (cycle 1899 hub wave): invoice hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (finance desk
+  # live_conversation parity). Peer billing tools show discussion copy as a
+  # content-first trail on the invoice — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: InvoiceNote
     columns: body, author, created_at
 

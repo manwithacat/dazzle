@@ -40,6 +40,19 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
         assert "live_conversation" in ux, ws
 
 
+def test_task_detail_discussion_uses_conversation_chrome() -> None:
+    """Task hub Discussion is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = APP.read_text()
+    assert 'surface task_detail "Task Detail"' in text
+    block = text.split('surface task_detail "Task Detail"', 1)[1]
+    block = block.split("surface task_comments", 1)[0]
+    related = block.split('related discussion "Discussion"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: TaskComment" in related
+    assert "columns: content, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_task_comment_seeds_have_domain_true_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

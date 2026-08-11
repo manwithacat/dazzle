@@ -32,6 +32,20 @@ def test_staff_desks_declare_live_conversation_spine() -> None:
     )
 
 
+def test_person_detail_discussion_uses_conversation_chrome() -> None:
+    """Person hub Discussion is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = APP.read_text()
+    assert 'surface person_detail "Person"' in text
+    block = text.split('surface person_detail "Person"', 1)[1]
+    block = block.split("surface person_create", 1)[0]
+    related = block.split('related discussion "Discussion"', 1)[1]
+    related = related.split("related ", 1)[0][:200]
+    assert "display: conversation" in related
+    assert "show: PersonNote" in related
+    assert "columns: body, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_person_note_seeds_have_domain_true_hr_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

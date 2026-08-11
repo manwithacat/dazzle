@@ -61,6 +61,35 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     assert discussion.index("content") < discussion.index("is_internal")
 
 
+def test_user_hub_comments_uses_conversation_chrome() -> None:
+    """User hub Comments is Message/Bubble trail (not queue meta) — cycle 1899."""
+    text = APP.read_text()
+    # User detail surface hosts related Comments on the person hub.
+    assert 'related comments "Comments"' in text
+    # Prefer user_detail / user view surface block.
+    for marker in (
+        'surface user_detail "User Detail"',
+        'surface user_detail "User"',
+        'surface user_view "User"',
+        "surface user_detail",
+    ):
+        if marker in text:
+            block = text.split(marker, 1)[1]
+            block = block.split("surface user_create", 1)[0]
+            if 'related comments "Comments"' not in block:
+                continue
+            related = block.split('related comments "Comments"', 1)[1][:240]
+            assert "display: conversation" in related
+            assert "show: Comment" in related
+            assert "display: queue" not in related
+            return
+    # Fallback: last related Comments before user_create is the hub.
+    before = text.split('surface user_create "Create User"', 1)[0]
+    related = before.rsplit('related comments "Comments"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: Comment" in related
+
+
 def test_comment_seeds_have_domain_true_support_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10

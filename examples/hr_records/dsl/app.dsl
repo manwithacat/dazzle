@@ -585,9 +585,12 @@ surface person_detail "Person":
     display: queue
     show: ManagerLink
     columns: report, manager, start_date, end_date
-  # Goal B conversation: people notes pull queue on the person hub.
+  # Goal B conversation (cycle 1899 hub wave): person hub Discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (staff desk
+  # live_conversation parity). Peer Lattice/Rippling people notes read as
+  # content-first trails on the person — not queue meta rows.
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: PersonNote
     columns: body, author, created_at
   # Goal B document: named employment letters on the person hub.
