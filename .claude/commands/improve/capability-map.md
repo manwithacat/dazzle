@@ -63,13 +63,13 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1918 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1906 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1925 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1633 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1915 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1924 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1925 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -136,5 +136,5 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 1921 (2026-08-11).** interesting_product document@invoice_ops dispute_reason_desk; tip CI green @37349d1cc; densify_allowed=0; next: tip CI then acceptance other / non-document peer / trial_verdict hr re-prove — not smoke thrash.
 > **Cycle 1924 (2026-08-11).** design_studio agent_acceptance_panel thrash (budget_exceeded unclear) + interesting_product empty_region@project_tracker discussion_desk_void_prune; tip CI green @3c668facd; densify_allowed=0.
+> **Cycle 1925 (2026-08-11).** agent_acceptance product fix: simple_task fitness.repr_fields identity chips + framework workspace_columns; hr_records person hub path re-verified (no thrash re-panel).

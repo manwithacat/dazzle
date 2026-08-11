@@ -274,6 +274,110 @@ def build_surface_columns(
     return columns
 
 
+def _kind_token(ft: Any) -> str:
+    kind = getattr(ft, "kind", None)
+    if kind is None:
+        return ""
+    if hasattr(kind, "value"):
+        return str(kind.value)
+    return str(kind)
+
+
+def _ref_entity_column(f: Any, ft: Any) -> dict[str, Any]:
+    """Workspace column for ref/belongs_to — resolved display name + detail route."""
+    rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+    ref_entity = getattr(ft, "ref_entity", None)
+    ref_route = _ref_detail_route(ref_entity)
+    return {
+        "key": rel_name,
+        "label": rel_name.replace("_", " ").title(),
+        "type": "ref",
+        "sortable": False,
+        "ref_route": ref_route,
+        "ref_entity": ref_entity or "",
+        "filter_ref_entity": ref_entity or "",
+    }
+
+
+def _apply_badge_column_meta(
+    col: dict[str, Any],
+    ft: Any,
+    kind_val: str,
+    enums: Any,
+    entity_spec: Any,
+) -> None:
+    """#1493 slice 2: semantic map + filter options for badge columns."""
+    _sem = status_tone_map(ft, enums, entity_spec.state_machine)
+    if _sem:
+        col["semantic_map"] = _sem
+    if kind_val == "enum":
+        ev = getattr(ft, "enum_values", None)
+        if ev:
+            col["filterable"] = True
+            col["filter_options"] = list(ev)
+        return
+    sm = entity_spec.state_machine
+    if not sm:
+        return
+    states = sm.states
+    if states:
+        col["filterable"] = True
+        col["filter_options"] = list(states)
+
+
+def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict[str, Any] | None:
+    """Map one entity field to a workspace column dict, or None if non-displayable."""
+    if f.name == "id":
+        return None
+    ft = f.type
+    kind_val = _kind_token(ft)
+    # Show ref/belongs_to columns with resolved display name; hide other relation types
+    if kind_val in ("ref", "belongs_to"):
+        return _ref_entity_column(f, ft)
+    if kind_val in ("uuid", "has_many", "has_one", "embeds"):
+        return None
+    if f.name.endswith("_id"):
+        return None
+    col_type = field_kind_to_col_type(f, entity_spec)
+    col_key = f"{f.name}_minor" if kind_val == "money" else f.name
+    col: dict[str, Any] = {
+        "key": col_key,
+        "label": f.name.replace("_", " ").title(),
+        "type": col_type,
+        "sortable": True,
+    }
+    if kind_val == "money":
+        col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
+    if col_type == "badge":
+        _apply_badge_column_meta(col, ft, kind_val, enums, entity_spec)
+    if col_type == "bool":
+        col["filterable"] = True
+        col["filter_options"] = ["true", "false"]
+    return col
+
+
+def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
+    """Author ``fitness.repr_fields`` when present — domain-essential card/list projection.
+
+    Accepts core IR entities (``.fitness.repr_fields``) and runtime BackendSpec
+    entities (metadata ``fitness_repr_fields`` after convert — cycle 1925).
+    """
+    raw: list[Any] = []
+    fitness = getattr(entity_spec, "fitness", None)
+    if fitness is not None:
+        raw = list(getattr(fitness, "repr_fields", None) or [])
+    if not raw:
+        meta = getattr(entity_spec, "metadata", None) or {}
+        if isinstance(meta, dict):
+            raw = list(meta.get("fitness_repr_fields") or [])
+    out: list[str] = []
+    for name in raw:
+        s = str(name or "").strip()
+        if s and s not in out:
+            out.append(s)
+    return out
+
+
 def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
     """Pre-compute the **full** (untruncated) auto-derived column list from an entity.
 
@@ -284,71 +388,53 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
     (ADR-0050 2d) applies ``resolve_column_economy_by_usage`` so a heavily-engaged
     field can survive. ``enums`` carries the shared `enum` blocks for badge
     `semantic:` maps (#1493 slice 2).
+
+    When the entity declares ``fitness.repr_fields``, that list is the authoritative
+    projection (order preserved) so workspace grid/queue cards do not dump raw
+    admin schema (email / is_active / photo_url labels) — cycle 1925 agency_lead.
+    Image/media fields present on the entity but omitted from repr are still
+    injected so Goal B media shelves keep thumbs without schema theater.
     """
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return columns
 
+    field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
+    preferred = _fitness_repr_field_names(entity_spec)
+
+    if preferred:
+        seen: set[str] = set()
+        # Media thumbs first when present so grid cards lead with pixels.
+        for f in entity_spec.fields:
+            if f.name in preferred:
+                continue
+            media = _media_col_type_for_field_name(f.name)
+            if media != "image":
+                continue
+            col = _field_to_entity_column(f, entity_spec, enums)
+            if col is None:
+                continue
+            key = str(col.get("key") or "")
+            if key and key not in seen:
+                columns.append(col)
+                seen.add(key)
+        for name in preferred:
+            f = field_map.get(name)
+            if f is None:
+                continue
+            col = _field_to_entity_column(f, entity_spec, enums)
+            if col is None:
+                continue
+            key = str(col.get("key") or "")
+            if key and key not in seen:
+                columns.append(col)
+                seen.add(key)
+        return columns
+
     for f in entity_spec.fields:
-        if f.name == "id":
-            continue
-        ft = f.type
-        kind = ft.kind
-        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-        # Show ref/belongs_to columns with resolved display name; hide other relation types
-        if kind_val in ("ref", "belongs_to"):
-            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-            ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = _ref_detail_route(ref_entity)
-            columns.append(
-                {
-                    "key": rel_name,
-                    "label": rel_name.replace("_", " ").title(),
-                    "type": "ref",
-                    "sortable": False,
-                    "ref_route": ref_route,
-                    "ref_entity": ref_entity or "",
-                    "filter_ref_entity": ref_entity or "",
-                }
-            )
-            continue
-        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
-            continue
-        if f.name.endswith("_id"):
-            continue
-        col_type = field_kind_to_col_type(f, entity_spec)
-        col_key = f.name
-        if kind_val == "money":
-            col_key = f"{f.name}_minor"
-        col: dict[str, Any] = {
-            "key": col_key,
-            "label": f.name.replace("_", " ").title(),
-            "type": col_type,
-            "sortable": True,
-        }
-        if kind_val == "money":
-            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
-        if col_type == "badge":
-            # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
-            _sem = status_tone_map(ft, enums, entity_spec.state_machine)
-            if _sem:
-                col["semantic_map"] = _sem
-            if kind_val == "enum":
-                ev = getattr(ft, "enum_values", None)
-                if ev:
-                    col["filterable"] = True
-                    col["filter_options"] = list(ev)
-            else:
-                sm = entity_spec.state_machine
-                if sm:
-                    states = sm.states
-                    if states:
-                        col["filterable"] = True
-                        col["filter_options"] = list(states)
-        if col_type == "bool":
-            col["filterable"] = True
-            col["filter_options"] = ["true", "false"]
-        columns.append(col)
+        col = _field_to_entity_column(f, entity_spec, enums)
+        if col is not None:
+            columns.append(col)
     return columns
 
 

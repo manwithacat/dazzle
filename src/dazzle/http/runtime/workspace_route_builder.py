@@ -15,6 +15,9 @@ from dazzle.core.ir import AppSpec, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.workspace_columns import (
+    _fitness_repr_field_names,
+)
+from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
 )
 from dazzle.http.runtime.workspace_columns import (
@@ -180,9 +183,18 @@ class WorkspaceRouteBuilder:
                     _entity_list_surfaces[_eref] = _surf
 
             def _columns_for_entity(entity_spec: Any, entity_name: str) -> list[dict[str, Any]]:
-                """Build columns using list surface projection if available."""
-                _ls = _entity_list_surfaces.get(entity_name)
+                """Build columns for workspace regions (grid/queue/list pads).
+
+                Prefer ``fitness.repr_fields`` when declared so media shelves and
+                team cards show identity chips (name/role/dept) instead of the
+                admin list surface dump (email / photo_url / is_active) —
+                cycle 1925 agency_lead. Fall back to list-surface projection,
+                then entity economy.
+                """
                 _enums = getattr(appspec, "enums", None)
+                if entity_spec and _fitness_repr_field_names(entity_spec):
+                    return _build_entity_columns(entity_spec, _enums)
+                _ls = _entity_list_surfaces.get(entity_name)
                 if _ls and entity_spec:
                     return _build_surface_columns(entity_spec, _ls, _enums)
                 return _build_entity_columns(entity_spec, _enums)

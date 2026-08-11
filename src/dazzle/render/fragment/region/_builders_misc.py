@@ -393,7 +393,13 @@ class _BuildersMiscMixin:
                 key = str(col.get("key") or "")
                 if not key or key == display_key:
                     continue
-                label = str(col.get("label") or key)
+                col_type = str(col.get("type") or "")
+                # Media/palette chrome is the value — "Photo Url:" / "Primary Color:"
+                # labels dump raw schema on person/brand cards (cycle 1925 agency_lead).
+                if col_type in ("image", "color"):
+                    label = ""
+                else:
+                    label = str(col.get("label") or key)
                 # GRID renders badges with default size (md, no border)
                 # per legacy macro call (no kwargs).
                 fields.append((label, _render_typed_value(item, col)))

@@ -807,6 +807,11 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
 
     # Build metadata
     metadata: dict[str, object] = {}
+    # Cycle 1925: thread fitness.repr_fields so workspace media/queue cards
+    # can project identity chips instead of admin list dumps (convert used to
+    # drop fitness entirely — agency_lead Photo Url/Email/Is Active theater).
+    if dazzle_entity.fitness is not None and dazzle_entity.fitness.repr_fields:
+        metadata["fitness_repr_fields"] = list(dazzle_entity.fitness.repr_fields)
 
     # Convert access rules if present (v0.7.0)
     access: EntityAccessSpec | None = None

@@ -27,6 +27,19 @@ def test_user_entity_declares_photo_url() -> None:
     assert "photo_url: url" in text
 
 
+def test_user_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1925 agency_lead: Team Overview cards must not dump Photo Url/Email/Is Active."""
+    text = APP.read_text()
+    start = text.index('entity User "Team Member"')
+    # Entity fitness block only (before Task entity).
+    block = text[start : text.index('entity Task "Task"')]
+    assert "repr_fields: [name, role, department]" in block
+    # Raw admin schema must stay off card repr (still available on list/detail).
+    assert "photo_url" not in block.split("repr_fields:")[1].split("\n")[0]
+    assert "email" not in block.split("repr_fields:")[1].split("\n")[0]
+    assert "is_active" not in block.split("repr_fields:")[1].split("\n")[0]
+
+
 def test_admin_dashboard_media_shelf_first() -> None:
     """Goal B media: teammate headshots win the Admin Dashboard fold before metrics."""
     block = _workspace_block("admin_dashboard")

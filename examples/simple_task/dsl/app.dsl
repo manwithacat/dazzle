@@ -79,7 +79,12 @@ entity User "Team Member":
       as: admin
 
   fitness:
-    repr_fields: [name, email, role, department, photo_url, is_active]
+    # Cycle 1925 agency_lead acceptance: queue/media cards must show clean
+    # name + role + department chips — not raw Photo Url / Email / Is Active
+    # schema labels (person_as_text theater on Team Overview Monday review).
+    # photo_url stays a typed field for media_shelf; email/is_active stay on
+    # list/detail/admin surfaces only.
+    repr_fields: [name, role, department]
 
 # =============================================================================
 # Task Entity - with proper user relationships

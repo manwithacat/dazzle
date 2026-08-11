@@ -105,3 +105,40 @@ def test_detail_field_value_emits_media_thumb() -> None:
     assert "dz-media-thumb" in html
     assert url in html
     assert 'class="dz-aspect-ratio"' in html
+
+
+def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
+    """Cycle 1925: fitness.repr_fields projects card columns (not raw schema dump)."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.workspace_columns import build_entity_columns
+
+    def _field(name: str, kind: str = "str") -> SimpleNamespace:
+        return SimpleNamespace(
+            name=name,
+            type=SimpleNamespace(kind=kind, enum_values=None, ref_entity=None, currency_code=None),
+        )
+
+    user = SimpleNamespace(
+        name="User",
+        fields=[
+            _field("id", "uuid"),
+            _field("email"),
+            _field("name"),
+            _field("role", "enum"),
+            _field("department"),
+            _field("photo_url"),
+            _field("is_active", "bool"),
+        ],
+        state_machine=None,
+        fitness=SimpleNamespace(repr_fields=["name", "role", "department"]),
+    )
+    # photo_url is image by name heuristic even if kind is str
+    cols = build_entity_columns(user)
+    keys = [c["key"] for c in cols]
+    assert "photo_url" in keys  # media inject
+    assert "name" in keys
+    assert "role" in keys
+    assert "department" in keys
+    assert "email" not in keys
+    assert "is_active" not in keys

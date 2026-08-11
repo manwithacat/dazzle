@@ -54,9 +54,10 @@ timeline, and urgent queue (no status chart / comment dump theater —
 empty_region honesty). The **Admin Dashboard** is the administrator home:
 metrics, dual attention (urgent + overdue queues capped for fold share),
 document composition, then live conversation trail (command_density). The
-**Team Overview** is the manager home: metrics, dual attention (review queue +
-assignee plate kanban), briefs, then conversation (no flow chart / twin
-comment dump). **My Work** is each person's multi-panel plate: summary,
+**Team Overview** is the manager home: teammate media shelf first, metrics,
+dual attention (review queue + assignee plate kanban), briefs, conversation,
+and a team roster — person cards show clean **name / role / department** chips
+(not raw Photo Url, Email, or Is Active schema labels; cycle 1925 agency_lead). **My Work** is each person's multi-panel plate: summary,
 board + dues dual attention, briefs, then conversation (no twin comment dump).
 **Discussion** is the comment desk with pulse, newest notes, time trail, and
 in-progress pull queue (empty_region honesty — no status bar-chart theater).

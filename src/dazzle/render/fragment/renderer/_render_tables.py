@@ -1257,12 +1257,17 @@ class _RenderTablesMixin:
                     value_html = ctx.escape(value)
                 else:
                     value_html = self._emit(value, ctx)  # type: ignore[arg-type]
-                fields_html += (
-                    f'<p class="dz-grid-cell-field">'
-                    f'<span class="dz-grid-cell-field-label">{ctx.escape(label)}:</span> '
-                    f"{value_html}"
-                    f"</p>"
-                )
+                # Empty label → media/palette chrome without "Photo Url:" schema dump
+                # (cycle 1925 agency_lead / Goal B media cards).
+                if label:
+                    fields_html += (
+                        f'<p class="dz-grid-cell-field">'
+                        f'<span class="dz-grid-cell-field-label">{ctx.escape(label)}:</span> '
+                        f"{value_html}"
+                        f"</p>"
+                    )
+                else:
+                    fields_html += f'<p class="dz-grid-cell-field">{value_html}</p>'
             # Trailing space inside `class="dz-grid-cell "` matches the
             # legacy `class="dz-grid-cell {{ attention_classes(...) }}"`
             # rendering when attention is empty — Jinja interpolates ""
