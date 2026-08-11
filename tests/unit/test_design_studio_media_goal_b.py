@@ -30,6 +30,8 @@ def test_asset_catalog_media_grid_before_brand_palette() -> None:
     assert "focus: media_grid, brand_palette, review_queue" in block
     # Cap palette so it cannot re-eat the fold after reorder
     assert "limit: 4" in block
+    # brand_swatch_wall: empty copy names palette swatches for buyers
+    assert "swatch" in block.lower() or "palette" in block.lower()
 
 
 def test_brand_desk_declares_asset_media_shelf() -> None:
@@ -37,10 +39,79 @@ def test_brand_desk_declares_asset_media_shelf() -> None:
     assert "asset_media:" in block
     assert "display: grid" in block
     assert "brand_media:" in block
-    # Pixels first: asset media grid before logo monogram queue
+    # Pixels first: asset media grid before palette swatch wall
     assert block.index("asset_media:") < block.index("brand_media:")
     assert block.index("brand_media:") < block.index("campaign_queue:")
+    # Carousel after fold pair so swatches stay buyer-visible
+    if "asset_carousel:" in block:
+        assert block.index("brand_media:") < block.index("asset_carousel:")
     assert "focus: asset_media, brand_media, campaign_queue" in block
+    # brand_swatch_wall: title / empty name palette swatches for still OCR
+    assert 'title: "Palette Swatches"' in block or "palette swatch" in block.lower()
+    assert "limit: 2" in block  # asset_media fold cap
+
+
+def test_brand_entity_fitness_includes_palette_swatches() -> None:
+    """Peer brand identity rows expose logo + Primary/Secondary/Accent for queues."""
+    text = APP.read_text()
+    start = text.index('entity Brand "Brand":')
+    end = text.index('entity Asset "Design Asset":', start)
+    block = text[start:end]
+    assert "primary_color: str(7)" in block
+    assert "secondary_color: str(7)" in block
+    assert "accent_color: str(7)" in block
+    assert "repr_fields: [name, logo_url, primary_color, secondary_color, accent_color]" in block
+
+
+def test_brand_list_and_hub_expose_full_palette_swatches() -> None:
+    """List + hub surfaces pin Primary/Secondary/Accent color widgets (still OCR)."""
+    text = APP.read_text()
+    list_start = text.index('surface brand_list "Brands":')
+    list_end = text.index('surface brand_create "New Brand":', list_start)
+    list_block = text[list_start:list_end]
+    assert 'field primary_color "Primary" widget=color' in list_block
+    assert 'field secondary_color "Secondary" widget=color' in list_block
+    assert 'field accent_color "Accent" widget=color' in list_block
+    assert "palette swatches" in list_block.lower()
+
+    detail_start = text.index('surface brand_detail "Brand Detail":')
+    detail_end = text.index('related assets "Assets":', detail_start)
+    detail_block = text[detail_start:detail_end]
+    assert 'section palette "Palette":' in detail_block
+    assert 'field primary_color "Primary" widget=color' in detail_block
+    assert 'field secondary_color "Secondary" widget=color' in detail_block
+    assert 'field accent_color "Accent" widget=color' in detail_block
+
+    # Creator hub related brands show full swatch columns (related supports multi-col)
+    assert "columns: name, logo_url, primary_color, secondary_color, accent_color" in text
+
+
+def test_brand_seeds_carry_hex_palette_tokens() -> None:
+    rows = [json.loads(line) for line in BRAND_SEEDS.read_text().splitlines() if line.strip()]
+    assert len(rows) >= 4
+    for row in rows:
+        for key in ("primary_color", "secondary_color", "accent_color"):
+            val = str(row.get(key) or "")
+            assert val.startswith("#") and len(val) == 7, (row.get("name"), key, val)
+
+
+def test_brand_entity_fallback_columns_keep_palette_swatches() -> None:
+    """Entity-fallback economy must keep logo + color types for brand_desk queues."""
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.http.runtime.workspace_columns import build_entity_columns
+
+    spec = load_project_appspec(ROOT / "examples" / "design_studio")
+    brand = spec.get_entity("Brand")
+    assert brand is not None
+    cols = build_entity_columns(brand)
+    keys = [c["key"] for c in cols]
+    types = {c["key"]: c["type"] for c in cols}
+    assert "name" in keys
+    assert "logo_url" in keys
+    assert types.get("logo_url") == "image"
+    for color_key in ("primary_color", "secondary_color", "accent_color"):
+        assert color_key in keys, keys
+        assert types[color_key] == "color", types
 
 
 def test_asset_seeds_carry_https_preview_thumbs() -> None:

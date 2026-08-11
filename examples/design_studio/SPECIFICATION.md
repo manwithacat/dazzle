@@ -73,15 +73,17 @@ records, and that grant is itself an explicit, auditable declaration.
   document count), dual attention (in-review + draft queues), design-document
   composition with domain-true headlines, then critique trail and brand pull-queue.
 - **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
-  thumbs above fold), compact logo identity shelf, and active campaign queue
-  (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog).
+  thumbs above fold), brand swatch wall (logo + Primary/Secondary/Accent palette
+  chips — peer Figma/Bynder identity, not name-only queues), and active campaign
+  queue (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog).
 - **Review Desk** — multi-panel review home (command_density + document):
   review-load metrics (including document + conversation counts), dual attention
   (awaiting-review + draft queues), design-document composition, then live critique
   trail (Feedback copy), recently approved, and pipeline kanban.
 - **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
-  compact brand palette, review queue, pipeline kanban; under-fold status mix chart
-  and recent-activity timeline host bar_chart/timeline dogfood for the studio.
+  compact brand palette with logo + Primary/Secondary/Accent swatch columns,
+  review queue, pipeline kanban; under-fold status mix chart and recent-activity
+  timeline host bar_chart/timeline dogfood for the studio.
 - **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
   compact schedule metrics, active briefs, and status board; campaign detail hubs show
   an assigned creative media wall (not a bare name table).
@@ -149,4 +151,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:4b6ccc0fdd46db47ec5a00475bb7073429b8173602013ae3a453f7140a07693c -->
+<!-- dazzle-spec-brief: sha256:f4b6cdf203b20a84e3ffe7f776639cc5ddbd59fc066c80c7e248c917890764c7 -->

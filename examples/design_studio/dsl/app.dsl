@@ -108,6 +108,11 @@ entity Brand "Brand":
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
+  # Goal B media peer-pack (cycle 1923): Figma / Bynder / Frontify put logo +
+  # palette swatches on brand identity rows — not name-only brand queues.
+  fitness:
+    repr_fields: [name, logo_url, primary_color, secondary_color, accent_color]
+
   permit:
     list: role(admin) or role(designer) or role(reviewer)
     read: role(admin) or role(designer) or role(reviewer)
@@ -406,14 +411,16 @@ workspace asset_catalog "Asset Catalog":
     limit: 12
     action: asset_detail
     empty: "No assets yet — upload or seed previews"
-  # Brand identity strip after pixels (cap so it cannot eat the fold).
+  # Goal B media recipe brand_swatch_wall (cycle 1923): Brand entity-fallback
+  # columns include logo + Primary/Secondary/Accent color types (salience keeps
+  # palette chips) so DAM buyers scan swatches after creatives — not name shells.
   brand_palette:
     source: Brand
     display: queue
     sort: name asc
     limit: 4
     action: brand_detail
-    empty: "No brands yet"
+    empty: "No brands yet — seed palette swatches on brand records"
   review_queue:
     source: Asset
     filter: status = review
@@ -457,30 +464,27 @@ workspace asset_catalog "Asset Catalog":
       purpose: "Scan creatives as pixels before brand meta"
       focus: media_grid, brand_palette, review_queue
 
-# Goal B media: brand desk is asset media shelf first, then compact logo identity.
+# Goal B media: brand desk is asset media shelf first, then brand swatch wall.
 # empty_region_honesty (cycle 1856): drop asset_trail + campaign_mix thrash —
 # bar_chart/timeline dogfood lives on asset_catalog under fold.
+# Recipe brand_swatch_wall (cycle 1923): peer Figma/Bynder put Primary/Secondary/
+# Accent chips next to logo identity — not a name-only brand queue.
 workspace brand_desk "Brand Desk":
-  purpose: "Brand media identity — asset preview thumbs above fold, then logo shelf and campaigns"
+  purpose: "Brand media identity — asset preview thumbs above fold, then palette swatch wall and campaigns"
   access: persona(admin, designer)
   # Goal B media shelf FIRST — logo/photo creatives as preview thumbs (pixels win).
+  # Cap 2 so palette swatch wall (Primary/Secondary/Accent) shares the fold
+  # after cycle 1923 brand_swatch_wall peer upgrade (not a full-fold media dump).
   asset_media:
     source: Asset
     filter: asset_type = logo or asset_type = photo or asset_type = illustration
     sort: created_at desc
-    limit: 8
+    limit: 2
     display: grid
     action: asset_detail
     empty: "No logo or photo assets yet"
-  # Hyperpart emitter dogfood: display: carousel → Carousel (.dz-carousel).
-  asset_carousel:
-    source: Asset
-    filter: asset_type = logo or asset_type = photo or asset_type = illustration
-    sort: created_at desc
-    limit: 6
-    display: carousel
-    empty: "No media slides yet"
-  # Logo + primary/secondary/accent swatches (compact — cap for fold share).
+  # Brand swatch wall IMMEDIATELY after pixels — entity-fallback Brand columns
+  # keep logo + Primary/Secondary/Accent color types (compact fold cap).
   # Metrics omitted on purpose: seed-noise period deltas are presentation residual.
   brand_media:
     source: Brand
@@ -488,7 +492,17 @@ workspace brand_desk "Brand Desk":
     sort: name asc
     limit: 3
     action: brand_detail
-    empty: "No brands yet"
+    title: "Palette Swatches"
+    empty: "No brand swatches yet — add logo + palette colors on brand records"
+  # Hyperpart emitter dogfood: display: carousel → Carousel (.dz-carousel).
+  # After fold pair (asset_media + brand_media) so swatches stay buyer-visible.
+  asset_carousel:
+    source: Asset
+    filter: asset_type = logo or asset_type = photo or asset_type = illustration
+    sort: created_at desc
+    limit: 4
+    display: carousel
+    empty: "No media slides yet"
   campaign_queue:
     source: Campaign
     filter: status = active
@@ -497,10 +511,10 @@ workspace brand_desk "Brand Desk":
     empty: "No active campaigns"
   ux:
     as designer:
-      purpose: "Asset media previews above fold before logo shelf and campaigns"
+      purpose: "Asset media previews above fold before palette swatch wall and campaigns"
       focus: asset_media, brand_media, campaign_queue
     as admin:
-      purpose: "Creative previews first, then brand logos and campaign schedule"
+      purpose: "Creative previews first, then brand palette swatches and campaign schedule"
       focus: asset_media, brand_media, campaign_queue
 
 workspace review_desk "Review Desk":
@@ -636,7 +650,8 @@ workspace campaign_desk "Campaigns":
     action: campaign_detail
     empty: "No campaigns yet"
 
-  # Brand context stays pull-to-open (not a palette wall competing with creatives).
+  # Brand context with palette swatches via entity-fallback columns
+  # (pull-to-open; creatives keep fold priority).
   brand_context:
     source: Brand
     sort: name asc
@@ -987,7 +1002,7 @@ surface user_detail "Team member":
   related brands "Brands authored":
     display: queue
     show: Brand
-    columns: name, logo_url, primary_color
+    columns: name, logo_url, primary_color, secondary_color, accent_color
 
   ux:
     purpose: "Team member — org placement, brands authored with logo and palette chips"
