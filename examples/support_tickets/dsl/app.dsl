@@ -351,14 +351,14 @@ surface ticket_detail "Ticket Detail":
     field updated_at "Updated"
     field resolved_at "Resolved"
 
-  # Goal B conversation peer-pack upgrade (cycle 1891): ticket hub discussion
-  # is content-first prose (peer Zendesk/Front/Intercom) — not is_internal
-  # meta column thrash. RelatedDisplayMode has no conversation yet; workspace
-  # Message chrome stays on ticket_queue/manager_ops live_conversation.
+  # Goal B conversation (cycle 1893): ticket hub discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (workspace
+  # live_conversation parity). is_internal maps orientation only — not
+  # meta thrash (peer Zendesk/Front/Intercom content-first trail).
   related discussion "Discussion":
-    display: queue
+    display: conversation
     show: Comment
-    columns: content, author, created_at
+    columns: content, author, created_at, is_internal
 
   # Goal B document: named SLA waivers / breach letters on the ticket hub
   # (peer Zendesk/Service Cloud document trail — not queue-only theater).
@@ -368,7 +368,7 @@ surface ticket_detail "Ticket Detail":
     columns: breach_summary, status, signatory_name
 
   ux:
-    purpose: "Ticket hub — summary, content-first discussion trail, and named SLA waiver documents"
+    purpose: "Ticket hub — summary, Message-chrome discussion trail, and named SLA waiver documents"
 
 surface ticket_create "Create Ticket":
   uses entity Ticket

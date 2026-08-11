@@ -46,7 +46,7 @@ def test_ticket_queue_live_conversation_uses_message_chrome() -> None:
 
 
 def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
-    """Peer pack: discussion trail is content/author prose — not is_internal meta."""
+    """Peer pack: discussion trail is Message chrome — is_internal orients only."""
     text = APP.read_text()
     block = text.split('surface ticket_detail "Ticket Detail":', 1)[1].split(
         'surface ticket_create "Create Ticket":', 1
@@ -54,10 +54,11 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     discussion = block.split('related discussion "Discussion":', 1)[1].split("related waivers", 1)[
         0
     ]
-    assert "display: queue" in discussion
+    assert "display: conversation" in discussion
     assert "show: Comment" in discussion
-    assert "columns: content, author, created_at" in discussion
-    assert "is_internal" not in discussion
+    assert "columns: content, author, created_at, is_internal" in discussion
+    # is_internal is orient-only (not queue meta thrash column lead).
+    assert discussion.index("content") < discussion.index("is_internal")
 
 
 def test_comment_seeds_have_domain_true_support_copy() -> None:

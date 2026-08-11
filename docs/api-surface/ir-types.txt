@@ -4321,6 +4321,7 @@ enum: RecordKind
 
 enum: RelatedDisplayMode
   members:
+    - CONVERSATION = 'conversation'
     - FILE_LIST = 'file_list'
     - QUEUE = 'queue'
     - STATUS_CARDS = 'status_cards'

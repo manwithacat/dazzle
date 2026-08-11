@@ -300,13 +300,15 @@ class RelatedGroup:
     """A group of related-entity tabs on a detail page (ADR-0049 Phase 2),
     rendered by `display` mode: `table` (tabs Hyperpart + per-tab table),
     `status_cards` (cards of the first 3 columns), `file_list` (file rows
-    of the first 2 columns), or `queue` (prioritised primary+meta rows for
-    pull work on a hub). Reproduces the legacy `_render_related_group`
-    content the substrate previously stubbed as a `Skeleton`."""
+    of the first 2 columns), `queue` (prioritised primary+meta rows for
+    pull work on a hub), or `conversation` (MessageScroller of Message
+    + Bubble chrome — content-first discussion trail). Reproduces the
+    legacy `_render_related_group` content the substrate previously
+    stubbed as a `Skeleton`."""
 
     group_id: str
     label: str
-    display: str  # "table" | "status_cards" | "file_list" | "queue"
+    display: str  # "table" | "status_cards" | "file_list" | "queue" | "conversation"
     tabs: tuple[RelatedTab, ...]
     is_auto: bool = False
 

@@ -72,6 +72,7 @@ from dazzle.render.fragment.primitives import (
     DetailGrid,
     GridRegion,
     ListRegion,
+    MessageScroller,
     MetricsGrid,
     MetricTile,
     PivotTable,
@@ -96,6 +97,9 @@ from dazzle.render.fragment.renderer._data_row import (
     slideover_panel_id,
 )
 from dazzle.render.fragment.renderer._helpers import _render_references
+from dazzle.render.fragment.renderer._related_conversation import (
+    related_conversation_messages,
+)
 from dazzle.render.open_discovery import create_cta_open_attr_suffix
 
 if TYPE_CHECKING:
@@ -415,9 +419,9 @@ class _RenderTablesMixin:
 
     def _emit_related_group(self, g: RelatedGroup, ctx: RenderContext) -> str:
         """Task 3a: render a related-entity group's real content (table /
-        status_cards / file_list / queue), reproducing the legacy detail
-        related-group renderers. Cells are pre-formatted value strings
-        (escaped here)."""
+        status_cards / file_list / queue / conversation), reproducing the
+        legacy detail related-group renderers. Cells are pre-formatted value
+        strings (escaped here)."""
         tabs = list(g.tabs)
         if g.display == "table":
             return self._emit_related_table(tabs, ctx)
@@ -425,7 +429,54 @@ class _RenderTablesMixin:
             return self._emit_related_cards(tabs, ctx)
         if g.display == "queue":
             return self._emit_related_queue(tabs, ctx)
+        if g.display == "conversation":
+            return self._emit_related_conversation(tabs, ctx)
         return self._emit_related_files(tabs, ctx)
+
+    def _emit_related_conversation_body(self, t: RelatedTab, ctx: RenderContext) -> str:
+        """Create-row + MessageScroller for one related conversation tab."""
+        parts = [self._related_create_row(t, ctx)]
+        messages = related_conversation_messages(t)
+        empty = f"No {t.label.lower()} found." if t.label else "No conversation yet."
+        scroller = MessageScroller(
+            messages=messages,
+            label=t.label or "Discussion",
+            empty_message=empty,
+        )
+        parts.append(self._emit_message_scroller(scroller, ctx))
+        parts.append(self._related_overflow_html(t, ctx, css_class="dz-related-overflow"))
+        return "".join(parts)
+
+    def _emit_related_conversation(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        """Related discussion trail — MessageScroller of Message + Bubble chrome.
+
+        RelatedDisplayMode.CONVERSATION (cycle 1893): hub discussion uses the
+        same HM Message path as workspace ``display: conversation`` so ticket
+        detail reads as content-first prose, not is_internal queue meta thrash.
+        Multi-tab strips ride HM tabs (parity table/queue).
+        """
+        if not tabs:
+            return ""
+        multi = len(tabs) > 1
+        if not multi:
+            return (
+                f'<div class="dz-related-group">'
+                f"{self._emit_related_conversation_body(tabs[0], ctx)}</div>"
+            )
+        parts = [
+            '<div class="dz-tabs" data-dz-tabs>',
+            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+        ]
+        for i, t in enumerate(tabs):
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
+            parts.append(
+                f"<div{panel_attrs}>"
+                f'<div class="dz-related-group">'
+                f"{self._emit_related_conversation_body(t, ctx)}"
+                f"</div></div>"
+            )
+        parts.append("</div>")
+        return "".join(parts)
 
     @staticmethod
     def _related_drill_attrs(drill: str, ctx: RenderContext) -> str:

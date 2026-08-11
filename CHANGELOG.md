@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Added
+- **RelatedDisplayMode.conversation** — related entity groups on detail hubs
+  render as MessageScroller of Message/Bubble chrome (workspace
+  `display: conversation` parity). Dogfood: support_tickets ticket hub
+  Discussion trail; `is_internal` orients outbound only (cycle 1893).
+
 ## [0.111.0] - 2026-08-10
 
 ### Added

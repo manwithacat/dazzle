@@ -3536,6 +3536,8 @@ class TestSurfaceParsing:
         assert group.show == ["SelfAssessmentReturn", "VATReturn"]
         # Cycle 1494/1496: QUEUE is a first-class related display mode.
         assert RelatedDisplayMode.QUEUE.value == "queue"
+        # Cycle 1893: CONVERSATION is a first-class related display mode.
+        assert RelatedDisplayMode.CONVERSATION.value == "conversation"
 
     def test_parse_surface_related_block(self):
         """Surface with a related block parses correctly."""
@@ -3602,6 +3604,41 @@ surface project_detail "Project Detail":
         assert group.display.value == "queue"
         assert group.show == ["Task"]
         assert group.columns == ["title", "status"]
+
+    def test_parse_surface_related_conversation(self):
+        """related display: conversation parses to CONVERSATION (cycle 1893)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Ticket "Ticket":
+  id: uuid pk
+  title: str(200) required
+
+entity Comment "Comment":
+  id: uuid pk
+  ticket: ref Ticket
+  content: text required
+  author: str(100)
+  is_internal: bool = false
+
+surface ticket_detail "Ticket Detail":
+  uses entity Ticket
+  mode: view
+  section main:
+    field title "Title"
+  related discussion "Discussion":
+    display: conversation
+    show: Comment
+    columns: content, author, created_at, is_internal
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert len(surface.related_groups) == 1
+        group = surface.related_groups[0]
+        assert group.display.value == "conversation"
+        assert group.show == ["Comment"]
+        assert group.columns == ["content", "author", "created_at", "is_internal"]
 
     def test_parse_surface_related_block_with_columns(self):
         """Related block may project columns for scannable tabs (#1600 P1)."""

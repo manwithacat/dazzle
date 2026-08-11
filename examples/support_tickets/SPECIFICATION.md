@@ -97,7 +97,10 @@ funnel/progress/feed live here, not on Manager Ops / Agent Dashboard heroes).
 
 A Support Ticket moves through a declared lifecycle: **open → in progress →
 resolved → closed**, and can be reopened from in progress back to open.
-Eighteen authored scenarios pin the flows down; representative ones:
+Opening a ticket hub shows a **Discussion** trail as Message/Bubble
+conversation chrome (content + author; internal notes orient outbound) —
+not an is_internal meta queue. Eighteen authored scenarios pin the flows
+down; representative ones:
 
 - When a Customer creates a support ticket, it is recorded as theirs and
   starts life as open.

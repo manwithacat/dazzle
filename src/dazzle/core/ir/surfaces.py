@@ -38,6 +38,10 @@ class RelatedDisplayMode(StrEnum):
     # Prioritised pull-work roster on a detail hub (journey cycle 1494).
     # Renders as a queue of primary+meta rows (not a warehouse table).
     QUEUE = "queue"
+    # Message/Bubble transcript on a detail hub (cycle 1893).
+    # Renders as MessageScroller of HM Message rows (workspace conversation
+    # parity) — content-first discussion, not is_internal meta thrash.
+    CONVERSATION = "conversation"
 
 
 class OpenViaTarget(BaseModel):

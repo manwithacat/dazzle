@@ -224,6 +224,64 @@ def test_queue_mode_renders_queue_rows() -> None:
     assert "Design" in html
 
 
+def _conversation_tab(**over: object) -> RelatedTabContext:
+    base: dict = {
+        "tab_id": "comments",
+        "label": "Discussion",
+        "entity_name": "Comment",
+        "api_endpoint": "/api/comment",
+        "filter_field": "ticket",
+        "columns": [
+            ColumnContext(key="content", label="Content"),
+            ColumnContext(key="author", label="Author"),
+            ColumnContext(key="created_at", label="Created At", type="datetime"),
+            ColumnContext(key="is_internal", label="Is Internal", type="bool"),
+        ],
+        "rows": [
+            {
+                "id": "c1",
+                "content": "Still blocked after the reset email.",
+                "author": "Casey Customer",
+                "created_at": "2026-07-12T10:15:00",
+                "is_internal": False,
+            },
+            {
+                "id": "c2",
+                "content": "Internal: force-expire both sessions.",
+                "author": "Alex Agent",
+                "created_at": "2026-07-12T10:44:00",
+                "is_internal": True,
+            },
+        ],
+        "total": 2,
+        "detail_url_template": "/comment/{id}",
+        "create_url": "/comment/create",
+    }
+    base.update(over)
+    return RelatedTabContext(**base)
+
+
+def test_conversation_mode_renders_message_chrome() -> None:
+    """Cycle 1893 — related display:conversation → Message/Bubble chrome."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Discussion",
+        display="conversation",
+        tabs=[_conversation_tab()],
+    )
+    html = _render(g)
+    assert "dz-skeleton" not in html
+    assert "dz-message-scroller" in html
+    assert 'class="dz-message"' in html or 'class="dz-message" ' in html
+    assert "dz-bubble" in html
+    assert "Still blocked after the reset email." in html
+    assert "Internal: force-expire both sessions." in html
+    # is_internal orients outbound internal notes; does not dump Yes/No as speech.
+    assert "force-expire" in html
+    assert 'data-dz-from="out"' in html
+    assert 'data-dz-from="in"' in html
+
+
 def test_queue_mode_labels_meta_with_column_headers() -> None:
     """Cycle 1498 — meta cells include header labels (Status: …)."""
     g = RelatedGroupContext(group_id="g1", label="Tasks", display="queue", tabs=[_tab()])
