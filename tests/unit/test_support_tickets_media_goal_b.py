@@ -50,7 +50,7 @@ def test_manager_ops_media_shelf_first() -> None:
     assert block.index("media_shelf:") < block.index("team_metrics:")
     assert block.index("media_shelf:") < block.index("critical_queue:")
     assert (
-        "focus: media_shelf, team_metrics, sla_readiness, critical_queue, "
+        "focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, "
         "unassigned_queue, composition, live_conversation" in block
     )
 

@@ -83,6 +83,10 @@ entity Ticket "Support Ticket":
   status: enum[open,in_progress,resolved,closed]=open
   priority: enum[low,medium,high,critical]=medium
   category: enum[bug,feature,inquiry,other]=other
+  # Goal B command_density peer-pack (cycle 1913): Zendesk/Front/Intercom
+  # manager dens surface first-response SLA pressure on work rows — not only
+  # priority labels or a static readiness caption strip.
+  sla_state: enum[on_track,at_risk,breached]=on_track
   created_by: ref User required
   assigned_to: ref User
   resolution: text
@@ -157,9 +161,10 @@ entity Ticket "Support Ticket":
       as: manager
 
   fitness:
-    repr_fields: [title, status, priority, category, assigned_to]
+    repr_fields: [title, status, priority, sla_state, category, assigned_to]
 
   index status, priority
+  index sla_state
   index created_by
   index assigned_to
 
@@ -266,7 +271,7 @@ surface user_detail "User Detail":
   related tickets "Tickets":
     display: queue
     show: Ticket
-    columns: title, status, priority, assigned_to, created_at
+    columns: title, status, priority, sla_state, assigned_to, created_at
 
   # Goal B conversation (cycle 1899 hub wave): user hub comments use
   # RelatedDisplayMode.conversation → Message/Bubble chrome (ticket hub
@@ -321,7 +326,7 @@ surface ticket_list "Tickets":
   ux:
     purpose: "Triage and resolve incoming support tickets — open a row for the ticket, assignee, or creator hub"
     sort: created_at desc
-    filter: status, priority, category
+    filter: status, priority, category, sla_state
     search: ticket_number, title
     empty: "No support tickets. All clear!"
 
@@ -330,6 +335,7 @@ surface ticket_list "Tickets":
     field title "Title"
     field status "Status"
     field priority "Priority"
+    field sla_state "SLA"
     field category "Category"
     field assigned_to "Assigned To"
     field created_by "Created By"
@@ -349,6 +355,7 @@ surface ticket_detail "Ticket Detail":
     layout: strip
     field status "Status"
     field priority "Priority"
+    field sla_state "SLA"
     field category "Category"
 
   section people "People":
@@ -392,12 +399,13 @@ surface ticket_create "Create Ticket":
 
   section triage "Triage":
     field priority "Priority"
+    field sla_state "SLA"
     field category "Category"
     field assigned_to "Assigned To"
 
   ux:
     as customer:
-      hide: assigned_to
+      hide: assigned_to, sla_state
 
 surface ticket_edit "Edit Ticket":
   uses entity Ticket
@@ -410,6 +418,7 @@ surface ticket_edit "Edit Ticket":
 
   section triage "Triage":
     field priority "Priority"
+    field sla_state "SLA"
     field category "Category"
     field assigned_to "Assigned To"
 
@@ -634,7 +643,10 @@ workspace manager_ops "Manager Ops":
   # homes are multi-panel pressure, not conversation-only above the fold.
   # Goal B document (cycle 1798): named SLA waiver composition after dual
   # attention, before conversation — peer Service Cloud breach-letter trail.
-  purpose: "Multi-panel support ops — headshots, SLA pulse, dual queues, waiver documents, live conversation"
+  # Goal B command_density peer upgrade (cycle 1913): live sla_state pressure
+  # (at_risk / breached) on metrics + a breach_risk queue — not static caption
+  # theater alone (recipe sla_breach_pressure; not headshot_shelf).
+  purpose: "Multi-panel support ops — headshots, SLA breach pressure, dual queues, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -645,10 +657,11 @@ workspace manager_ops "Manager Ops":
     source: User
     # Department-placed staff only — drops trial-parent seed noise and bare
     # auth shells without org placement (Goal B media shelf is a people desk).
+    # Cap 3 (cycle 1913): leave fold share for SLA breach pressure + dual queues.
     filter: is_active = true and department != null
     display: grid
     sort: created_at desc
-    limit: 4
+    limit: 3
     action: user_detail
     empty: "No agent headshots yet — add photo URLs on team users"
 
@@ -660,19 +673,34 @@ workspace manager_ops "Manager Ops":
       in_progress: count(Ticket where status = in_progress)
       critical_open: count(Ticket where priority = critical and status != closed)
       unassigned: count(Ticket where assigned_to = null and status = open)
+      at_risk: count(Ticket where sla_state = at_risk and status != closed)
+      breached: count(Ticket where sla_state = breached and status != closed)
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
       documents: count(SlaWaiver)
     tones:
       critical_open: destructive
       unassigned: warning
+      at_risk: warning
+      breached: destructive
       resolved: positive
       in_progress: accent
       conversation: accent
       documents: accent
 
+  # Live SLA pressure (cycle 1913) — peer Zendesk/Front show breach risk rows
+  # with sla_state grain, not only a static "4h breach" caption. Declared
+  # before the readiness strip so buyer stills see work rows above fold.
+  breach_risk:
+    source: Ticket
+    filter: (sla_state = at_risk or sla_state = breached) and status != closed
+    sort: created_at asc
+    limit: 4
+    display: queue
+    action: ticket_edit
+    empty: "No at-risk or breached tickets — first-response SLA is on track"
+
   # Static readiness strip — pairs with sla TicketResponseTime commitment.
-  # Above dual queues so SLA narrative is visible before conversation trail.
   sla_readiness:
     display: status_list
     entries:
@@ -680,6 +708,10 @@ workspace manager_ops "Manager Ops":
         caption: "Warning 2h · breach 4h · critical 8h (business hours)"
         icon: "clock"
         state: accent
+      - title: "SLA breach pressure"
+        caption: "At-risk and breached tickets surface in breach risk before priority-only queues"
+        icon: "timer"
+        state: warning
       - title: "Critical open"
         caption: "Priority critical tickets must stay assigned and progressing"
         icon: "triangle-alert"
@@ -688,10 +720,6 @@ workspace manager_ops "Manager Ops":
         caption: "Open tickets with no assignee block first response"
         icon: "user"
         state: warning
-      - title: "Resolved pending close"
-        caption: "Resolved tickets await customer confirmation or agent close"
-        icon: "circle-check"
-        state: positive
       - title: "SLA waiver documents"
         caption: "Named breach letters and credit memos live in composition — open a row for the waiver hub"
         icon: "file-text"
@@ -741,8 +769,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — headshots, dual queues and waiver documents before conversation trail"
-      focus: media_shelf, team_metrics, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
+      purpose: "Multi-panel support ops — SLA breach pressure + dual queues and waiver documents before conversation trail"
+      focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

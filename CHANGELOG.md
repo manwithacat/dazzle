@@ -9,6 +9,12 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B command_density SLA breach pressure (cycle 1913)** — support_tickets
+  Ticket gains `sla_state` (on_track/at_risk/breached); Manager Ops metrics count
+  at-risk + breached, live `breach_risk` queue before critical/unassigned dual
+  attention; list/detail/create/edit + hub columns surface SLA; seed mix; unit
+  pins; SPEC brief; manager stills recaptured. Recipe `sla_breach_pressure`
+  (not headshot_shelf; not conversation/document/media re-stack).
 - **Goal B media version + approval stamp (cycle 1912)** — design_studio Asset
   gains `version` + `approved_at`; list/detail/create/edit and brand/campaign hub
   asset columns surface revision; fitness `repr_fields` include version; seed mix

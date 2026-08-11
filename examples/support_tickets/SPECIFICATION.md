@@ -48,16 +48,17 @@ and conversations, plus the Agent Console for per-agent inspection.
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: a
 multi-panel command home with an agent **media shelf** (headshot thumbs) first,
-then team counts (including unassigned and document volume), an SLA readiness
-strip, dual attention queues (critical + unassigned, fold-capped), a
-**composition** queue of named SLA waiver documents, and a capped live
-conversation trail — not conversation-only above the fold, not a status-funnel
-/ secondary ticket-trail thrash pair under the fold, and not an empty personal
-assigned kanban. From the same Lead nav they open **People**: staff by role and
-department (Support, Escalations, Billing) before unassigned load — so
-reassignment is org-shaped, not a flat warehouse roster. The team Ticket Queue
-and Agent Console remain available. Managers alone can delete tickets or
-comments.
+then team counts (including unassigned, **at-risk / breached SLA** pressure, and
+document volume), an SLA readiness strip, a live **breach risk** queue of
+tickets whose first-response SLA is at risk or breached, dual attention queues
+(critical + unassigned, fold-capped), a **composition** queue of named SLA
+waiver documents, and a capped live conversation trail — not conversation-only
+above the fold, not a status-funnel / secondary ticket-trail thrash pair under
+the fold, and not an empty personal assigned kanban. From the same Lead nav
+they open **People**: staff by role and department (Support, Escalations,
+Billing) before unassigned load — so reassignment is org-shaped, not a flat
+warehouse roster. The team Ticket Queue and Agent Console remain available.
+Managers alone can delete tickets or comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
@@ -70,11 +71,14 @@ newest notes, a **composition** queue of open SLA waivers (named breach titles),
 a review queue, a kanban board of open statuses, and a recent-comment
 **timeline** (dated stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
-**media shelf** first, then metrics (critical, unassigned, conversation,
-documents), SLA readiness, dual attention queues (critical + unassigned, limit
+**media shelf** first, then metrics (critical, unassigned, at-risk, breached,
+conversation, documents), SLA readiness, a **breach risk** queue (at_risk /
+breached tickets, limit 4), dual attention queues (critical + unassigned, limit
 4 each), open **SLA waiver composition** (limit 4) **before** a capped live
 conversation trail (limit 4) — no status funnel or secondary ticket timeline
-(empty_region honesty; avoids pilot scroll resource storms).
+(empty_region honesty; avoids pilot scroll resource storms). Ticket rows carry
+an **SLA** state (`on_track` / `at_risk` / `breached`) so queue grain matches
+peer Zendesk / Front / Intercom first-response pressure.
 **People** is the org-structure desk for managers and agents: active staff
 metrics, a role kanban, a department-sorted queue, a secondary roster, then
 unassigned open tickets and plate-by-person load — hierarchy before dump.
@@ -111,8 +115,9 @@ down; representative ones:
 - When a Support Agent resolves a ticket, its status becomes resolved and the
   customer is notified.
 - When a Support Manager reviews team performance on Manager Ops, they see
-  agent headshots first, then open, in-progress, critical, resolved, and
-  conversation counts plus the live note trail and critical/unassigned queues.
+  agent headshots first, then open, in-progress, critical, at-risk, breached,
+  resolved, and conversation counts plus the breach-risk queue, critical/
+  unassigned queues, and live note trail.
 - When a Support Manager reassigns a ticket, the chosen agent takes it over
   and the previous assignee is notified.
 - When the Administrator triages the full queue, they see every ticket
@@ -169,4 +174,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:e4e6e23af61084edca4568ad95a762e493d886131167d9186796cc12bcb7447d -->
+<!-- dazzle-spec-brief: sha256:6430ec47d803e7a021d77e9580c1c4c965ab9235695373197ababb2fe4b2d25e -->
