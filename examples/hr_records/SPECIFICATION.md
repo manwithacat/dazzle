@@ -78,9 +78,10 @@ dedicated screens — fourteen in all, from the staff directory to
   trail, plus department/role context hubs (no under-fold status/dept bar
   theater). Employment history triple-opens assignment hub, person career hub,
   and role catalogue (`Employment|Person|Role`).
-- **Person Detail** — career desk: employment queue plus salary and reporting
-  timelines, HR documents, discussion notes, employment trail, and salary
-  reason chart.
+- **Career Desk** — fleet career timeline desk (employment + salary + reporting
+  timelines and salary reason chart). Opening a person from Staff Directory
+  lands the **Person** career hub (identity, related employment/salary/
+  reporting, documents, discussion) — not this desk under a colliding name.
 - **Departments & Roles** — org pulse, department tree (nested under parent
   units), role queue, reporting trail, and roles-by-level chart.
 - **Compensation Review** — finance/HR salary desk: metrics, active salary
@@ -136,4 +137,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:6ce1e38098fed714c64844dacae0f0545bb9e2e15081d3c59cb66783133d8f40 -->
+<!-- dazzle-spec-brief: sha256:0887c3d6d666593e2b6932f672cd1dee9d41047dccaf3d94034ec2f79458543a -->

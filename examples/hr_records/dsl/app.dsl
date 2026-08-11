@@ -44,7 +44,9 @@ persona finance "Finance":
 
 persona employee "Employee":
   description: "Read self only — own employment + salary history + current manager."
-  default_workspace: person_detail
+  # career_desk (not person_detail): workspace must not shadow surface person_detail
+  # so Staff Directory row open lands the Person career hub (/app/person/{id}).
+  default_workspace: career_desk
   uses nav employee_nav
 
 # Curated sidebars: workspace destinations only (prefer desks over bare entity lists).
@@ -53,7 +55,7 @@ nav hr_admin_nav:
     staff_directory
     my_team
     starters_desk
-    person_detail
+    career_desk
     reporting_desk
     active_staff
   group "Org & pay":
@@ -65,7 +67,7 @@ nav manager_nav:
   group "Team":
     my_team
     staff_directory
-    person_detail
+    career_desk
     org_chart
     reporting_desk
     active_staff
@@ -74,12 +76,12 @@ nav finance_nav:
   group "Compensation":
     compensation_review
     staff_directory
-    person_detail
+    career_desk
     active_staff
 
 nav employee_nav:
   group "My record":
-    person_detail
+    career_desk
     staff_directory
 
 
@@ -532,7 +534,7 @@ entity ManagerLink "Manager Link":
     # Manager sees outbound reporting lines (people they manage).
     # Mixed-field OR (manager=… or report=…) fail-closes at runtime (#1630) —
     # so do not combine directions in one predicate. Inbound "my manager" is
-    # visible on person_detail reporting_history for the manager's own row.
+    # visible on career_desk reporting_history for the manager's own row.
     read: manager = current_user
       as: manager
     list: manager = current_user
@@ -1119,7 +1121,10 @@ workspace staff_directory "Staff Directory":
   # (ST-001/ST-005). Secondary desks keep bar_chart for coverage.
 
 
-workspace person_detail "Person Detail":
+# Named career_desk (not person_detail) so region action: person_detail resolves
+# to surface person_detail — the Person entity hub — not a workspace that ignores
+# context_id and shows company-wide timelines (agent_acceptance cycle 1918).
+workspace career_desk "Career Desk":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Career timeline — employment + salary history side-by-side"
 

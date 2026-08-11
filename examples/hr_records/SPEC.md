@@ -185,14 +185,17 @@ staff table as the only region.
 - **Sort**: by name, by tenure (started_at desc), by department
 - For `manager` persona: scoped to own reports
 
-### Workspace: `person_detail`
-- **Header**: name, email, tenure, current role+department
-- **Tabs**:
-  - **Employment history** — timeline of Employment rows
-  - **Salary history** — timeline of Salary rows (hr_admin + finance + self only)
-  - **Reporting line** — current manager + (if applicable) current direct reports
-  - **Documents** — named HR letters (offer / policy / promo / contract)
-  - **Discussion** — people notes trail
+### Workspace: `career_desk` (fleet desk; not named `person_detail`)
+- **Note:** Row open from Staff Directory uses **surface** `person_detail`
+  (`/app/person/{id}` — Person career hub). The workspace is named
+  `career_desk` so it does not shadow that surface (agent_acceptance 1918).
+- **Header / timelines**: employment + salary + reporting history side-by-side
+- **Surface hub** (open a person): identity, tenure, related employment/salary/
+  reporting queues, documents, discussion
+
+### Surface: `person_detail` (Person entity hub)
+- Identity + tenure strip; related employment / salary / reporting / documents /
+  discussion (conversation chrome) for the opened person
 
 ### Workspace: `org_chart`
 - Department tree (uses Department.parent_department recursive descent)

@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **hr_records Staff Directory person open (cycle 1918)** — workspace renamed
+  `person_detail` → `career_desk` so region `action: person_detail` resolves to
+  the Person entity hub (`/app/person/{id}`) instead of a company-wide career
+  workspace that ignored `context_id` (agent_acceptance panel: recommend=no,
+  pilot-blocker story_gap). Nav + employee default_workspace retargeted; unit
+  pin; SPEC + SPECIFICATION brief refreshed.
 - **Cross-entity metric scope strip (cycle 1911)** — `count(OtherEntity)` on a
   metrics region no longer reuses the source entity's qualified
   `__scope_predicate` (which produced `FROM "InvoiceNote" WHERE ("Invoice"."tenant_id"…)`
