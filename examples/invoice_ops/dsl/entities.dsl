@@ -226,8 +226,10 @@ entity Invoice "Invoice":
 # =============================================================================
 
 entity LineItem "Line Item":
-  intent: "A single line on an invoice document — description + qty × unit amount"
+  intent: "A single line on an invoice document — description + qty × unit amount, tax code, and PO match grain controllers scan"
   # Goal B document depth: queue title is the line description, not a UUID shell.
+  # Peer Bill.com / Melio / Tipalti put tax line + PO match on composition rows
+  # (cycle 1900) — not description-only spreadsheet export theater.
   display_field: description
 
   id: uuid pk
@@ -236,6 +238,9 @@ entity LineItem "Line Item":
   description: str(200) required
   quantity: int=1
   unit_amount: decimal(15,2) required
+  # Controller-true document grain (peer AP match review).
+  tax_code: str(20) optional
+  po_match: enum[matched, partial, unmatched, not_applicable]=not_applicable
   created_at: datetime auto_add
 
   permit:

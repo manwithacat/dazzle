@@ -37,7 +37,8 @@ administrators can view or change them.
 **Invoices and their settlement.** An Invoice is a supplier's bill moving
 through an approval and payment lifecycle; it belongs to a tenant, names its
 supplier, and records who submitted it. Each invoice is itemised into Line
-Items. Settlement is tracked through Payment Attempts — each one a discrete
+Items — description, quantity, unit amount, tax code, and PO match status that
+controllers scan when reviewing composition. Settlement is tracked through Payment Attempts — each one a discrete
 attempt to settle an approved invoice via the payment provider, so the payment
 history of an invoice is a first-class record rather than a status flag.
 
@@ -97,8 +98,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   invoice-timeline theater under the fold.
 - **Payments** — payment-attempt trail with settle board and attempt health
   chart.
-- **Line Items** — composition desk: line metrics, line grid, draft/submitted
-  invoice queue, invoice trail, and status mix chart.
+- **Line Items** — composition desk: metrics with matched/unmatched counts, a
+  **PO match kanban**, tax-coded line body queue, and open invoice docs (not bare
+  spreadsheet export theater).
 - **Disputes** — finance/auditor dispute desk: dispute metrics, disputed queue,
   settle pipeline board, payment-attempt trail, and status mix chart.
 - **Bank Accounts** — supplier bank-ref desk: bank metrics, bank cards, ready-to-pay
@@ -179,4 +181,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:bdaeebd1d35c541a54c2ca62fb0ff7f76446c30f15c4edf8dd190ccaaa56b14d -->
+<!-- dazzle-spec-brief: sha256:56f7305dd318afbca6dc393ca67d8fea3b7e3b67b1016211d805b1ab4557092e -->

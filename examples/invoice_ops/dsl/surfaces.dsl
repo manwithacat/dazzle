@@ -43,7 +43,8 @@ surface invoice_detail "Invoice":
   related lines "Line items":
     display: queue
     show: LineItem
-    columns: description, quantity, unit_amount
+    # Goal B document peer-pack (cycle 1900): tax + PO match on composition rows.
+    columns: description, quantity, unit_amount, tax_code, po_match
     limit: 8
   # Goal B document: named AP packets (remittance / credit memo / PO) on the hub.
   related documents "Documents":
@@ -292,8 +293,10 @@ surface line_item_list "Line Items":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount" format: currency:GBP
+    field tax_code "Tax"
+    field po_match "PO Match"
   ux:
-    purpose: "Document lines — open a row for the line, parent invoice document, or tenant root"
+    purpose: "Document lines — tax + PO match grain; open a row for the line, parent invoice, or tenant root"
 
 # Explicit VIEW so related-table drills and synthetic #1421 detail routes
 # share one authored surface (substrate + sections) instead of an empty shell.
@@ -305,8 +308,10 @@ surface lineitem_detail "Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount" format: currency:GBP
+    field tax_code "Tax Code"
+    field po_match "PO Match"
   ux:
-    purpose: "One line on an invoice document — hop to the parent invoice for composition + settlement"
+    purpose: "One line on an invoice document — tax/PO match grain; hop to parent invoice for composition + settlement"
 
 # =============================================================================
 # INVOICE DOCUMENT SURFACES (Goal B document composition — named AP packets)
@@ -481,6 +486,8 @@ surface lineitem_create "New Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
+    field tax_code "Tax Code"
+    field po_match "PO Match"
 
 # ── Finance operations workspace (#1537) ─────────────────────────────────────
 # The app's home surface for fleet capture rounds: a persona-homed
@@ -1154,7 +1161,10 @@ workspace payments_trail "Payments":
 # Peer tools (Bill.com / Tipalti) show line composition with invoice numbers —
 # not UUID shells or bare CRUD lists.
 workspace line_items_desk "Line Items":
-  purpose: "Invoice document composition — line descriptions, qty × unit, open docs (not warehouse CRUD)"
+  # Goal B document peer-pack (cycle 1900): recipe line_tax_po_match —
+  # Bill.com / Melio controllers scan tax line + PO match boards, not bare
+  # description queues that feel like a spreadsheet export.
+  purpose: "Invoice document composition — tax + PO match grain, line body, open docs (not warehouse CRUD)"
   access: persona(requester, finance, finance_admin, auditor)
 
   line_pulse:
@@ -1162,15 +1172,26 @@ workspace line_items_desk "Line Items":
     display: metrics
     aggregate:
       lines: count(LineItem)
-      invoices: count(Invoice)
+      matched: count(LineItem where po_match = matched)
+      unmatched: count(LineItem where po_match = unmatched)
       open_invoices: count(Invoice where status != paid and status != rejected)
     tones:
       open_invoices: accent
       lines: positive
+      matched: positive
+      unmatched: destructive
 
-  # Document body first (Goal B): composition lines pull open the parent
-  # invoice document hub — description as title, invoice number + qty × unit
-  # as meta (framework ref display resolves invoice_number).
+  # Controller-true match board FIRST (still proof above the fold).
+  po_match_board:
+    source: LineItem
+    display: kanban
+    group_by: po_match
+    sort: unit_amount desc
+    action: invoice_detail
+    empty: "No line items yet — add lines to a draft invoice"
+
+  # Document body: composition lines pull open the parent invoice hub —
+  # description as title; tax + PO match travel on the line entity.
   composition:
     source: LineItem
     sort: created_at desc
@@ -1192,15 +1213,21 @@ workspace line_items_desk "Line Items":
   invoice_trail:
     source: Invoice
     sort: updated_at desc
-    limit: 15
+    limit: 12
     display: timeline
     action: invoice_detail
     empty: "No invoices yet"
 
-  invoice_status_mix:
-    source: Invoice
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices to chart"
+  ux:
+    as requester:
+      purpose: "Composition — PO match board, then line body (no bare spreadsheet theater)"
+      focus: line_pulse, po_match_board, composition, open_documents
+    as finance:
+      purpose: "Composition — PO match board, unmatched grain, then line body"
+      focus: line_pulse, po_match_board, composition, open_documents
+    as finance_admin:
+      purpose: "Composition — PO match board, unmatched grain, then line body"
+      focus: line_pulse, po_match_board, composition, open_documents
+    as auditor:
+      purpose: "Composition evidence — PO match board then line body"
+      focus: line_pulse, po_match_board, composition, open_documents

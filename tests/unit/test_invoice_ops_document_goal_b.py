@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B document — invoice_ops named AP packets + packet cover wall."""
+"""Post-5.8 Goal B document — invoice_ops named AP packets + line tax/PO match."""
 
 from __future__ import annotations
 
@@ -28,6 +28,9 @@ def test_line_item_display_field_is_description() -> None:
     assert 'entity LineItem "Line Item"' in text
     assert "display_field: description" in text
     assert "description: str(200) required" in text
+    # Peer-pack document grain (cycle 1900): tax + PO match on composition lines
+    assert "tax_code: str(20) optional" in text
+    assert "po_match: enum[matched, partial, unmatched, not_applicable]=not_applicable" in text
     # finance_admin must list/read composition on finance_ops home
     assert "role(finance_admin)" in text
     assert "finance_admin, auditor, tenant_admin" in text or "finance_admin" in text
@@ -81,9 +84,20 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
         "ready_to_pay, line_composition, live_conversation" in ops
     )
 
-    # Dedicated composition desk still presents LineItem body
-    assert "source: LineItem" in text.split("workspace line_items_desk", 1)[1]
+    # Dedicated composition desk: PO match board before line body (recipe line_tax_po_match)
+    lines_desk = _workspace_block("line_items_desk")
+    assert "po_match_board:" in lines_desk
+    assert "group_by: po_match" in lines_desk
+    assert "source: LineItem" in lines_desk
+    assert lines_desk.index("po_match_board:") < lines_desk.index("composition:")
+    assert "matched: count(LineItem where po_match = matched)" in lines_desk
+    assert "unmatched: count(LineItem where po_match = unmatched)" in lines_desk
+    assert "focus: line_pulse, po_match_board, composition, open_documents" in lines_desk
     assert "source: LineItem" in text.split("workspace my_invoices", 1)[1]
+
+    # Invoice hub related lines expose tax + PO match columns
+    hub = text.split('surface invoice_detail "Invoice"', 1)[1].split("surface ", 1)[0]
+    assert "columns: description, quantity, unit_amount, tax_code, po_match" in hub
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -99,12 +113,23 @@ def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
 def test_line_item_seeds_are_domain_true_descriptions() -> None:
     rows = [json.loads(line) for line in LINE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 12, "Goal B document expects composition lines across invoices"
+    matches: set[str] = set()
+    tax_codes: set[str] = set()
     for row in rows:
         desc = str(row["description"])
         assert len(desc) >= 12, desc
         assert " " in desc, f"line description should be human prose, not slug: {desc}"
         assert int(row["quantity"]) >= 1
         assert float(row["unit_amount"]) > 0
+        tax = str(row.get("tax_code") or "")
+        assert tax, f"tax_code required on demo line: {desc}"
+        assert tax.startswith("GB-"), tax
+        match = str(row.get("po_match") or "")
+        assert match in {"matched", "partial", "unmatched", "not_applicable"}, match
+        matches.add(match)
+        tax_codes.add(tax)
+    assert "matched" in matches and "unmatched" in matches, matches
+    assert len(tax_codes) >= 2, tax_codes
 
 
 def test_invoice_document_seeds_are_domain_true_headlines() -> None:
