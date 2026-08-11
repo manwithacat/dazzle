@@ -1,12 +1,13 @@
 # Story walk ST-006 — Agent inspects a single classification run
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-006
 # classification_list dual-open lands TicketClassification via id (cycle 1540)
+# Seed Classification id from .dazzle/demo_data/TicketClassification.jsonl
 
 persona: support_agent
 home_workspace: ticket_management
 
 scenes:
-  - id: land_st_006
+  - id: land_queue_st_006
     story: ST-006
     entry: /app/workspaces/ticket_management
     actions:
@@ -17,7 +18,22 @@ scenes:
         texts:
           - Ticket
           - Classif
+    expects: "Agent reaches classification trail from job workspace"
+
+  - id: classification_hub_st_006
+    story: ST-006
+    entry: /app/ticketclassification/ba5e6328-4eeb-55a1-9d43-7de63a18e930
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Classif
           - Category
           - Priority
           - Sentiment
-    expects: "Agent reaches classification trail from job workspace (dual-open list path to ST-006 hub)"
+          - Confidence
+          - Suggested
+          - job_cls
+    expects: "Classification hub shows triage labels, confidence, suggested response, llm_job audit id"

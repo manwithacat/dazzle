@@ -20,4 +20,21 @@ scenes:
           - Category
           - Priority
           - Sentiment
-    expects: "Authenticated supervisor sees classification trail / metrics cues"
+    expects: "Authenticated supervisor sees classification trail / metrics cues on support_dashboard"
+
+  - id: classification_list_st_003
+    story: ST-003
+    entry: /app/ticketclassification
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Classif
+          - Category
+          - Priority
+          - Sentiment
+          - account
+          - billing
+    expects: "Supervisor classification list shows triage columns and seed classification rows"

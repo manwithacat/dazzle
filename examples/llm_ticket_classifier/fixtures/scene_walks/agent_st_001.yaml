@@ -1,5 +1,6 @@
 # Story walk ST-001 — Support agent works the open ticket queue
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001
+# Seed Ticket id from .dazzle/demo_data/Ticket.jsonl (stable demo UUID)
 
 persona: support_agent
 home_workspace: ticket_management
@@ -20,3 +21,17 @@ scenes:
           - Subject
           - Open
     expects: "Authenticated support agent sees ticket queue cues on ticket_management"
+
+  - id: open_ticket_hub_st_001
+    story: ST-001
+    entry: /app/ticket/d7571f1c-d20e-5553-9314-38cc71310818
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Cannot login
+          - Status
+          - Open
+    expects: "Opening a ticket lands the detail hub (queue → hub hop)"

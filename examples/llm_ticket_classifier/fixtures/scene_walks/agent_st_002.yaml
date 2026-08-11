@@ -1,11 +1,12 @@
 # Story walk ST-002 — Support agent opens ticket hub with AI classifications
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002
+# Seed Ticket id from .dazzle/demo_data/Ticket.jsonl (stable demo UUID)
 
 persona: support_agent
 home_workspace: ticket_management
 
 scenes:
-  - id: land_st_002
+  - id: land_queue_st_002
     story: ST-002
     entry: /app/workspaces/ticket_management
     actions:
@@ -19,3 +20,20 @@ scenes:
           - Status
           - Subject
     expects: "Agent lands ticket queue from which ticket hubs with AI classifications open"
+
+  - id: ticket_hub_classifications_st_002
+    story: ST-002
+    entry: /app/ticket/d7571f1c-d20e-5553-9314-38cc71310818
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Cannot login
+          - Classif
+          - Category
+          - Priority
+          - Sentiment
+          - Lifecycle
+    expects: "Ticket hub shows summary/lifecycle and related AI classifications (pull-queue cues)"
