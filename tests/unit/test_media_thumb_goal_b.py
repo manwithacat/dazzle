@@ -142,3 +142,25 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
     assert "department" in keys
     assert "email" not in keys
     assert "is_active" not in keys
+
+
+def test_prefer_fitness_repr_only_for_card_like_displays() -> None:
+    """Cycle 1926: grid/media use fitness; queue/list keep list-surface ids."""
+    from dazzle.http.runtime.workspace_columns import prefer_fitness_repr_for_display
+
+    assert prefer_fitness_repr_for_display("grid") is True
+    assert prefer_fitness_repr_for_display("media_shelf") is True
+    assert prefer_fitness_repr_for_display("queue") is False
+    assert prefer_fitness_repr_for_display("list") is False
+    assert prefer_fitness_repr_for_display("timeline") is False
+    assert prefer_fitness_repr_for_display(None) is False
+
+
+def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
+    """#1304 agent_tickets queues must keep AAA-001 identity in fitness projection."""
+    from pathlib import Path
+
+    text = Path("examples/support_tickets/dsl/app.dsl").read_text(encoding="utf-8")
+    start = text.index('entity Ticket "Support Ticket"')
+    block = text[start : text.index("entity Comment")]
+    assert "ticket_number" in block.split("repr_fields:")[1].split("]")[0]

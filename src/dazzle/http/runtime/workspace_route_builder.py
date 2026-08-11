@@ -16,6 +16,7 @@ from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.workspace_columns import (
     _fitness_repr_field_names,
+    prefer_fitness_repr_for_display,
 )
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -182,17 +183,34 @@ class WorkspaceRouteBuilder:
                 if _eref and _mode == "list" and _eref not in _entity_list_surfaces:
                     _entity_list_surfaces[_eref] = _surf
 
-            def _columns_for_entity(entity_spec: Any, entity_name: str) -> list[dict[str, Any]]:
+            def _columns_for_entity(
+                entity_spec: Any,
+                entity_name: str,
+                *,
+                display: str | None = None,
+            ) -> list[dict[str, Any]]:
                 """Build columns for workspace regions (grid/queue/list pads).
 
-                Prefer ``fitness.repr_fields`` when declared so media shelves and
-                team cards show identity chips (name/role/dept) instead of the
-                admin list surface dump (email / photo_url / is_active) —
-                cycle 1925 agency_lead. Fall back to list-surface projection,
-                then entity economy.
+                **Card/gallery** displays (``grid`` / media): prefer
+                ``fitness.repr_fields`` so headshot shelves show identity chips
+                (name/role/dept) instead of the admin list-surface dump
+                (email / photo_url / is_active) — cycle 1925 agency_lead.
+
+                **Queue/list/timeline** pads: prefer the LIST surface so
+                identifying fields stay visible (e.g. ``ticket_number`` on
+                support_tickets ``agent_tickets``). Cycle 1926 CI repair —
+                1925's blanket fitness prefer stripped ticket # from queues
+                while count/rows stayed correct (#1304 postgres job).
+
+                Fall back to entity economy (which itself honors fitness
+                when no list surface).
                 """
                 _enums = getattr(appspec, "enums", None)
-                if entity_spec and _fitness_repr_field_names(entity_spec):
+                if (
+                    prefer_fitness_repr_for_display(display)
+                    and entity_spec
+                    and _fitness_repr_field_names(entity_spec)
+                ):
                     return _build_entity_columns(entity_spec, _enums)
                 _ls = _entity_list_surfaces.get(entity_name)
                 if _ls and entity_spec:
@@ -246,7 +264,9 @@ class WorkspaceRouteBuilder:
                                 require_auth=require_auth,
                                 auth_middleware=auth_middleware,
                                 precomputed_columns=_columns_for_entity(
-                                    _src_entity_spec, _src_name
+                                    _src_entity_spec,
+                                    _src_name,
+                                    display=getattr(ir_region, "display", None),
                                 ),
                                 auto_include=entity_auto_includes.get(_src_name, []),
                                 cedar_access_spec=getattr(_src_entity_spec, "access", None),
@@ -418,7 +438,11 @@ class WorkspaceRouteBuilder:
                                 _search_fields = _paths
                                 break
 
-                    _columns = _columns_for_entity(_entity_spec, _source)
+                    _columns = _columns_for_entity(
+                        _entity_spec,
+                        _source,
+                        display=getattr(ir_region, "display", None),
+                    )
 
                     _region_ctx = WorkspaceRegionContext(
                         ctx_region=ctx_region,

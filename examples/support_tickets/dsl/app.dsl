@@ -161,7 +161,9 @@ entity Ticket "Support Ticket":
       as: manager
 
   fitness:
-    repr_fields: [title, status, priority, sla_state, category, assigned_to]
+    # ticket_number first — queue/list identity (AAA-001) must survive fitness
+    # projection and agent_console 1-hop scoping asserts (#1304 / cycle 1926).
+    repr_fields: [ticket_number, title, status, priority, sla_state, category, assigned_to]
 
   index status, priority
   index sla_state

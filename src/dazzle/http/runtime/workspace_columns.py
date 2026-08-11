@@ -356,6 +356,26 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
     return col
 
 
+# Displays where fitness.repr_fields should win over LIST surface projection
+# (headshot shelves / card galleries — cycle 1925). Queue/list/timeline keep
+# list-surface identifiers (ticket_number) — cycle 1926.
+CARD_LIKE_DISPLAYS: frozenset[str] = frozenset(
+    {
+        "grid",
+        "media",
+        "gallery",
+        "card",
+        "cards",
+        "media_shelf",
+    }
+)
+
+
+def prefer_fitness_repr_for_display(display: str | None) -> bool:
+    """True when workspace region display is card/gallery (not queue/list)."""
+    return str(display or "").lower().strip() in CARD_LIKE_DISPLAYS
+
+
 def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
     """Author ``fitness.repr_fields`` when present — domain-essential card/list projection.
 
