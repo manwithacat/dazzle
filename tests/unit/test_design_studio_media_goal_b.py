@@ -57,3 +57,61 @@ def test_brand_seeds_carry_logo_urls() -> None:
     for row in rows:
         logo = str(row.get("logo_url") or "")
         assert logo.startswith("https://placehold.co/"), row.get("name")
+
+
+def test_asset_entity_declares_version_and_approval_stamp() -> None:
+    """Peer DAM tools (Figma / Frame.io / Bynder) put revision + approval on creatives."""
+    text = APP.read_text()
+    start = text.index('entity Asset "Design Asset":')
+    end = text.index('entity Campaign "Campaign":', start)
+    block = text[start:end]
+    assert "version: int=1" in block
+    assert "approved_at: datetime optional" in block
+    assert "repr_fields: [name, version, status, asset_type, brand]" in block
+
+
+def test_asset_surfaces_expose_version_and_approval_stamp() -> None:
+    text = APP.read_text()
+    list_start = text.index('surface asset_list "Assets":')
+    list_end = text.index('surface asset_create "New Asset":', list_start)
+    list_block = text[list_start:list_end]
+    assert 'field version "Version"' in list_block
+    assert 'field approved_at "Approved"' in list_block
+
+    detail_start = text.index('surface asset_detail "Asset Detail":')
+    detail_end = text.index('surface asset_edit "Edit Asset":', detail_start)
+    detail_block = text[detail_start:detail_end]
+    assert 'field version "Version"' in detail_block
+    assert 'field approved_at "Approved At"' in detail_block
+    # Production strip carries revision before status theater
+    prod = detail_block.split('section production "Production":', 1)[1][:400]
+    assert prod.index("version") < prod.index("status")
+
+
+def test_brand_and_campaign_hubs_surface_version_on_assets() -> None:
+    text = APP.read_text()
+    brand = text[
+        text.index('surface brand_detail "Brand Detail":') : text.index(
+            'surface brand_edit "Edit Brand":'
+        )
+        if 'surface brand_edit "Edit Brand":' in text
+        else text.index('surface asset_list "Assets":')
+    ]
+    # brand hub assets related group
+    assert "columns: name, version, status, asset_type, quality_score" in brand
+    assert "columns: preview_url, name, version, status, asset_type" in text
+
+
+def test_asset_seeds_carry_version_mix_and_approval_stamps() -> None:
+    rows = [json.loads(line) for line in ASSET_SEEDS.read_text().splitlines() if line.strip()]
+    assert len(rows) >= 8
+    versions = {int(r.get("version") or 0) for r in rows}
+    assert max(versions) >= 3, "Goal B media expects multi-revision seed mix"
+    assert 1 in versions
+    stamped = [r for r in rows if r.get("approved_at")]
+    assert len(stamped) >= 3
+    for r in stamped:
+        assert r.get("status") in ("approved", "published"), r.get("name")
+    # Still-visible revision markers on preview thumbs
+    with_v = [r for r in rows if f"v{r.get('version')}" in str(r.get("preview_url") or "").lower()]
+    assert len(with_v) >= 6, "preview thumbs should OCR-mark revision for still proof"

@@ -32,7 +32,10 @@ creative-ops tools (Figma, Adobe, Abstract, Frame.io) put org placement first.
 **Design assets under review.** A Design Asset is a piece of creative work that
 always belongs to a Brand and carries its creator. Each asset moves through an
 explicit life — draft, review, approved, published, archived — so the studio
-always knows exactly where a piece of work stands.
+always knows exactly where a piece of work stands. Peer creative-ops tools
+(Figma, Frame.io, Bynder) also put a **revision number** and **approval stamp**
+on the creative row — not status-only meta — so directors see version grain
+above the fold on media shelves and hubs.
 
 **Campaigns.** A Campaign also belongs to a Brand and records who created it,
 moving through its own life from planning to active to completed (or

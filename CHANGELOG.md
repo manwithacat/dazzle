@@ -9,6 +9,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B media version + approval stamp (cycle 1912)** — design_studio Asset
+  gains `version` + `approved_at`; list/detail/create/edit and brand/campaign hub
+  asset columns surface revision; fitness `repr_fields` include version; seed mix
+  multi-revision with approval stamps and placehold OCR `+vN`; unit pins; SPEC
+  brief; hero stills recaptured. Recipe `version_approval_stamp` (not headshot_shelf).
 - **Goal B document due-date AP work rows (cycle 1909)** — invoice_ops Invoice
   gains `due_date`; list/detail/create/edit expose amount + due + vendor; finance_ops
   and pay_desk gain past_due queues + metrics; dual-attention and boards sort by

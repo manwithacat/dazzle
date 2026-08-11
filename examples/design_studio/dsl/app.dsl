@@ -137,6 +137,10 @@ entity Asset "Design Asset":
   description: text
   asset_type: enum[logo,icon_glyph,illustration,photo,pattern,typography]=logo
   status: enum[draft,review,approved,published,archived]=draft
+  # Goal B media peer-pack (cycle 1912): Figma / Frame.io / Bynder put revision
+  # number + approval stamp on creative work — not status-only meta.
+  version: int=1
+  approved_at: datetime optional
   # Goal B media: HTTPS preview thumb on catalog cards (file binary stays optional).
   preview_url: url
   file: file
@@ -145,6 +149,9 @@ entity Asset "Design Asset":
   created_by: ref User
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  fitness:
+    repr_fields: [name, version, status, asset_type, brand]
 
   transitions:
     draft -> review
@@ -928,10 +935,11 @@ surface brand_detail "Brand Detail":
 
 
   # Pull-next asset roster (not status_cards warehouse) — ST-002 journey dig.
+  # Goal B media peer-pack (cycle 1912): version on creative rows.
   related assets "Assets":
     display: queue
     show: Asset
-    columns: name, status, asset_type, quality_score
+    columns: name, version, status, asset_type, quality_score
 
   # Pull-next campaign roster (not warehouse table) — ST-002 story_walk hub dig.
   related campaigns "Campaigns":
@@ -993,13 +1001,15 @@ surface asset_list "Assets":
     field name "Name"
     field preview_url "Preview"
     field asset_type "Type"
+    field version "Version"
     field status "Status"
+    field approved_at "Approved"
     field brand "Brand"
     field created_by "Created By"
     field tags "Tags"
     field quality_score "Quality"
   ux:
-    purpose: "Browse assets with preview thumbs — open a row for the asset, brand, or creator hub"
+    purpose: "Browse assets with preview thumbs, revision, and approval stamp — open asset, brand, or creator"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -1010,6 +1020,7 @@ surface asset_create "New Asset":
     field brand "Brand" widget=combobox
     field campaign "Campaign" widget=combobox
     field asset_type "Type"
+    field version "Version"
   section metadata:
     field tags "Tags" widget=tags
     field quality_score "Quality Score" widget=slider
@@ -1027,7 +1038,9 @@ surface asset_detail "Asset Detail":
   section production "Production":
     layout: strip
     field asset_type "Type"
+    field version "Version"
     field status "Status"
+    field approved_at "Approved At"
     field quality_score "Quality"
     field tags "Tags"
 
@@ -1038,7 +1051,7 @@ surface asset_detail "Asset Detail":
     columns: rating, comment, created_at
 
   ux:
-    purpose: "Asset hub — production strip and related feedback queue"
+    purpose: "Asset hub — revision + approval stamp on production strip, then feedback queue"
 
 surface asset_edit "Edit Asset":
   uses entity Asset
@@ -1047,9 +1060,11 @@ surface asset_edit "Edit Asset":
     field name "Name"
     field description "Description" widget=rich_text
     field campaign "Campaign" widget=combobox
+    field version "Version"
     field tags "Tags" widget=tags
     field quality_score "Quality" widget=slider
     field status "Status"
+    field approved_at "Approved At"
 
 surface campaign_create "New Campaign":
   uses entity Campaign
@@ -1083,7 +1098,7 @@ surface campaign_detail "Campaign Detail":
   related assets "Campaign assets":
     display: status_cards
     show: Asset
-    columns: preview_url, name, status, asset_type
+    columns: preview_url, name, version, status, asset_type
 
   ux:
     purpose: "Campaign hub — schedule strip and assigned creative cards with previews"
