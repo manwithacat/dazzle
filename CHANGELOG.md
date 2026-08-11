@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Fixed
+- **hr_records ST-004 story walk after career_desk rename (cycle 1919)** —
+  employee_st_004 walk still targeted workspace `person_detail` after 1918
+  rename → story_walk diverge residual + CI Python Tests red. Co-update
+  home_workspace/entry to `career_desk`; unit test accepts `diverge:` residual
+  class.
 - **hr_records Staff Directory person open (cycle 1918)** — workspace renamed
   `person_detail` → `career_desk` so region `action: person_detail` resolves to
   the Person entity hub (`/app/person/{id}`) instead of a company-wide career

@@ -1,13 +1,15 @@
 # Story walk ST-004 — Employee reviews own career timeline hub
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
+# home_workspace career_desk (renamed from person_detail @1918 so surface
+# person_detail is the Person hub; employee default_workspace matches).
 
 persona: employee
-home_workspace: person_detail
+home_workspace: career_desk
 
 scenes:
   - id: land_st_004
     story: ST-004
-    entry: /app/workspaces/person_detail
+    entry: /app/workspaces/career_desk
     actions:
       - type: navigate
       - type: assert_not_login

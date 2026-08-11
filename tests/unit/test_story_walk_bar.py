@@ -62,8 +62,14 @@ class TestStoryWalkBar:
         assert all(r.walk_count >= 1 for r in rows if r.landing_stories > 0)
         residual = [r for r in rows if r.is_residual]
         if residual:
+            # Residual classes score_app emits: coverage (no_walks / missing_walk),
+            # epistemic (live_unproven), pair consistency (diverge:*), persona gaps.
             assert any(
-                i == "no_walks" or i.startswith("missing_walk:") or i.startswith("live_unproven:")
+                i == "no_walks"
+                or i.startswith("missing_walk:")
+                or i.startswith("live_unproven:")
+                or i.startswith("diverge:")
+                or i.startswith("persona_no_walk:")
                 for r in residual
                 for i in r.issues
             )
