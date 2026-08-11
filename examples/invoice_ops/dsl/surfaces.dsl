@@ -19,9 +19,12 @@ surface invoice_list "Invoices":
     field due_date "Due"
     field currency "Currency"
     field status "Status"
+    # Goal B document (cycle 1921): dispute reason on the list row so controllers
+    # scan exception prose without opening every disputed hub (Bill.com peer).
+    field dispute_reason "Dispute"
     field submitted_by "Submitted By"
   ux:
-    purpose: "Browse invoices — amount, due date, and vendor on the work row; open hub, supplier, or submitter"
+    purpose: "Browse invoices — amount, due, vendor, and dispute reason on the work row; open hub, supplier, or submitter"
 
 surface invoice_detail "Invoice":
   uses entity Invoice
@@ -37,6 +40,8 @@ surface invoice_detail "Invoice":
     field status "Status"
     field po_number "PO Number"
     field due_date "Due Date"
+    # Dispute grain above the fold on the hub strip (not only buried review notes).
+    field dispute_reason "Dispute Reason"
   section review "Review notes":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
@@ -1264,3 +1269,76 @@ workspace line_items_desk "Line Items":
     as auditor:
       purpose: "Composition evidence — PO match board then line body"
       focus: line_pulse, po_match_board, composition, open_documents
+
+# Tenth product workspace: dedicated Disputes desk (SPEC + Goal B document).
+# Peer AP tools (Bill.com / Melio / Tipalti) give controllers a dispute home
+# where exception *reason* prose is the work grain — not status-only counts
+# buried under packet walls on finance_ops.
+workspace dispute_desk "Disputes":
+  # Recipe dispute_reason_desk (cycle 1921): dispute pulse + reason-bearing
+  # disputed queue before settle board / attempt trail / status mix.
+  purpose: "Dispute desk — exception reasons, disputed invoices, settle pipeline, and payment attempts"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  dispute_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      disputed: count(Invoice where status = disputed)
+      with_reason: count(Invoice where status = disputed and dispute_reason != null)
+      ready: count(Invoice where status = approved)
+      conversation: count(InvoiceNote)
+    tones:
+      disputed: destructive
+      with_reason: accent
+      ready: positive
+      conversation: accent
+
+  # Exception queue FIRST — Invoice.fitness.repr_fields carries dispute_reason
+  # so queue cards show why the invoice is blocked (still proof above the fold).
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 12
+    display: queue
+    action: invoice_detail
+    empty: "No open disputes — exceptions land here with reasons"
+
+  settle_pipeline:
+    source: Invoice
+    filter: status = approved or status = disputed or status = partially_paid
+    display: kanban
+    group_by: status
+    sort: due_date asc
+    action: invoice_detail
+    empty: "No invoices in the settle pipeline"
+
+  payment_attempts:
+    source: PaymentAttempt
+    display: timeline
+    sort: created_at desc
+    limit: 12
+    empty: "No payment attempts yet"
+
+  status_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
+
+  ux:
+    as finance:
+      purpose: "Disputes — reason-bearing exception queue, then settle pipeline"
+      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts
+    as finance_admin:
+      purpose: "Disputes — exception reasons and settle pipeline oversight"
+      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts
+    as auditor:
+      purpose: "Dispute evidence — exceptions, pipeline, and attempt trail"
+      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts, status_mix
+    as tenant_admin:
+      purpose: "Dispute oversight — exception queue and settle mix"
+      focus: dispute_pulse, disputed_queue, settle_pipeline, status_mix

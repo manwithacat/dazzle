@@ -222,6 +222,11 @@ entity Invoice "Invoice":
   publish InvoiceSubmitted when status changed
   publish InvoicePaid when status changed
 
+  # Goal B document peer-pack (cycle 1921): Bill.com / Melio / Tipalti put
+  # dispute reason prose on disputed work rows — not status-only queue meta.
+  fitness:
+    repr_fields: [invoice_number, supplier, amount, due_date, status, dispute_reason]
+
   audit: all
 
 # =============================================================================

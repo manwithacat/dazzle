@@ -58,6 +58,7 @@ nav approver_nav:
 nav finance_nav:
   group "Settle":
     pay_desk
+    dispute_desk
     payments_trail
     suppliers_desk
     finance_ops
@@ -66,6 +67,7 @@ nav finance_nav:
 nav auditor_nav:
   group "Audit":
     audit_review
+    dispute_desk
     finance_ops
     team_desk
     payments_trail
@@ -74,6 +76,7 @@ nav auditor_nav:
 nav tenant_admin_nav:
   group "Admin":
     finance_ops
+    dispute_desk
     team_desk
     suppliers_desk
     audit_review
@@ -82,6 +85,7 @@ nav finance_admin_nav:
   group "Oversight":
     finance_ops
     pay_desk
+    dispute_desk
     approval_desk
     audit_review
     payments_trail

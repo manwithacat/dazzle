@@ -31,6 +31,11 @@ def test_invoice_due_date_on_entity() -> None:
     assert "due_date: date optional" in inv
     assert "amount: decimal(15,2) required" in inv
     assert "supplier: ref Supplier required" in inv
+    # Goal B document peer-pack (cycle 1921): dispute reason on work rows
+    assert "dispute_reason: text optional" in inv
+    assert (
+        "repr_fields: [invoice_number, supplier, amount, due_date, status, dispute_reason]" in inv
+    )
 
 
 def test_line_item_display_field_is_description() -> None:
@@ -145,6 +150,41 @@ def test_invoice_seeds_mix_past_and_future_due_dates() -> None:
             future += 1
     assert past_open >= 3, past_open
     assert future >= 3, future
+
+
+def test_dispute_desk_exposes_reason_bearing_exception_queue() -> None:
+    """Goal B document recipe dispute_reason_desk — dedicated Disputes home."""
+    text = SURFACES.read_text()
+    assert 'workspace dispute_desk "Disputes"' in text
+    desk = _workspace_block("dispute_desk")
+    assert "dispute_pulse:" in desk
+    assert "disputed: count(Invoice where status = disputed)" in desk
+    assert "with_reason: count(Invoice where status = disputed and dispute_reason != null)" in desk
+    assert "disputed_queue:" in desk
+    assert "filter: status = disputed" in desk
+    assert "settle_pipeline:" in desk
+    assert "payment_attempts:" in desk
+    assert desk.index("dispute_pulse:") < desk.index("disputed_queue:")
+    assert desk.index("disputed_queue:") < desk.index("settle_pipeline:")
+    assert "focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts" in desk
+    # List + hub expose dispute reason (peer exception grain)
+    inv_list = text.split('surface invoice_list "Invoices"', 1)[1].split("surface ", 1)[0]
+    assert 'field dispute_reason "Dispute"' in inv_list
+    hub = text.split('surface invoice_detail "Invoice"', 1)[1].split("surface ", 1)[0]
+    assert 'field dispute_reason "Dispute Reason"' in hub
+    # Personas can reach the desk
+    personas = (ROOT / "examples/invoice_ops/dsl/personas.dsl").read_text()
+    assert "dispute_desk" in personas
+
+
+def test_disputed_invoice_seeds_carry_domain_true_reasons() -> None:
+    rows = [json.loads(line) for line in INVOICE_SEEDS.read_text().splitlines() if line.strip()]
+    disputed = [r for r in rows if str(r.get("status") or "") == "disputed"]
+    assert len(disputed) >= 3, len(disputed)
+    for row in disputed:
+        reason = str(row.get("dispute_reason") or "")
+        assert len(reason) >= 16, row.get("invoice_number")
+        assert " " in reason, reason
 
 
 def test_line_item_seeds_are_domain_true_descriptions() -> None:
