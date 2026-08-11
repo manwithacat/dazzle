@@ -507,7 +507,7 @@ workspace my_tasks "My Tasks":
     sort: priority desc, due_date asc
     limit: 4
     display: queue
-    # Open the task hub (status strip + discussion queue + files), not the
+    # Open the task hub (status strip + Message discussion trail + files), not the
     # edit form — member pilot path for ST-003 (cycle 1502 acceptance).
     action: task_detail
     empty: "No open tasks"
@@ -897,10 +897,12 @@ surface task_detail "Task Detail":
     field labels "Labels"
     field estimated_hours "Estimate"
 
-  # Task hub discussion as pull roster queue (body-first), not warehouse
-  # table — ST-003 member task hub path (cycle 1502 agent_acceptance_panel).
+  # Goal B conversation (cycle 1897): task hub discussion uses
+  # RelatedDisplayMode.conversation → Message/Bubble chrome (workspace
+  # live_conversation parity). Peer Linear/Jira/Asana show discussion copy
+  # as a content-first trail on the work item — not queue meta rows.
   related comments "Discussion":
-    display: queue
+    display: conversation
     show: Comment
     columns: body, author, created_at
 

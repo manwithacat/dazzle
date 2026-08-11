@@ -13,7 +13,7 @@ The product manages seven kinds of thing, woven together:
 - **Projects** — the top-level containers of work. Every Project has an owning Team Member.
 - **Milestones** — staging posts within a Project. Every Milestone belongs to its parent Project and moves through planning, active, and completed states.
 - **Tasks** — the units of work. Every Task belongs to a parent Project, can optionally sit under a Milestone, and records who it is assigned to and who created it. A Task travels a five-stage lifecycle from backlog to done.
-- **Comments** — the discussion. Every Comment is attached to a Task and names its author.
+- **Comments** — the discussion. Every Comment is attached to a Task and names its author. On the Task hub, Discussion renders as a Message/Bubble conversation trail (not a queue of meta rows); Dashboard, My Tasks, and Discussion desk share the same chrome.
 - **Project documents** — named project documents (briefs, specs, proposals, status reports, decision logs) with domain-true headlines that buyers scan as composition above the discussion trail.
 - **Attachments** — supporting binary files on a Task (PDF exports, mockups) with human filenames.
 - **Team Members** — the people, referenced throughout as owners, assignees, authors, and uploaders.

@@ -48,6 +48,21 @@ def test_dashboard_declares_document_composition_spine() -> None:
     assert "action: project_document_detail" in dash
 
 
+def test_task_detail_discussion_uses_conversation_chrome() -> None:
+    """Task hub Discussion is Message/Bubble trail (not queue meta) — cycle 1897."""
+    text = APP.read_text()
+    # Isolate task_detail surface block (before task_edit).
+    assert 'surface task_detail "Task Detail"' in text
+    block = text.split('surface task_detail "Task Detail"', 1)[1]
+    block = block.split("surface task_edit", 1)[0]
+    assert 'related comments "Discussion"' in block
+    related = block.split('related comments "Discussion"', 1)[1][:240]
+    assert "display: conversation" in related
+    assert "show: Comment" in related
+    assert "columns: body, author, created_at" in related
+    assert "display: queue" not in related
+
+
 def test_comment_seeds_have_domain_true_discussion_copy() -> None:
     rows = [json.loads(line) for line in COMMENT_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10
