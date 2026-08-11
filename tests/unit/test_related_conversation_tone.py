@@ -22,14 +22,25 @@ def test_conversation_roles_map_channel_and_escalation() -> None:
     assert roles == ["text", "author", "tone", "channel", "tone", "time", "orient"]
 
 
+def test_conversation_roles_map_note_phase_and_page_channel() -> None:
+    """Ops PagerDuty trail — note_phase → tone; page_channel → channel (cycle 1917)."""
+    roles = conversation_roles(("body", "author", "note_phase", "page_channel", "created_at"))
+    assert roles == ["text", "author", "tone", "channel", "time"]
+
+
 def test_conversation_bubble_tone_danger_values() -> None:
     assert conversation_bubble_tone("frustrated") == "danger"
     assert conversation_bubble_tone("urgent") == "danger"
     assert conversation_bubble_tone("raised") == "danger"
     assert conversation_bubble_tone("critical") == "danger"
+    assert conversation_bubble_tone("escalate") == "danger"
+    assert conversation_bubble_tone("mitigate") == "danger"
     assert conversation_bubble_tone("neutral") == ""
     assert conversation_bubble_tone("thankful") == ""
     assert conversation_bubble_tone("none") == ""
+    assert conversation_bubble_tone("observe") == ""
+    assert conversation_bubble_tone("ack") == ""
+    assert conversation_bubble_tone("resolve") == ""
 
 
 def test_related_conversation_messages_apply_danger_tone() -> None:
@@ -117,3 +128,36 @@ def test_related_conversation_skips_portal_channel_suffix() -> None:
     msgs = related_conversation_messages(tab)
     assert msgs[0].author == "Casey"
     assert msgs[1].author == "Casey · chat"
+
+
+def test_related_conversation_ops_phase_and_page_channel() -> None:
+    """Ops desk: note_phase escalate → danger; page_channel slack suffixes author."""
+    tab = RelatedTab(
+        tab_id="discussion",
+        label="Discussion",
+        headers=("body", "author", "note_phase", "page_channel", "created_at"),
+        rows=(
+            (
+                "Finance on bridge — escalate to PSP status.",
+                "admin",
+                "escalate",
+                "slack",
+                "2026-07-22T09:18:00",
+            ),
+            (
+                "Ack'd — holding page if error_rate stays high.",
+                "ops_engineer",
+                "ack",
+                "bridge",
+                "2026-07-22T10:12:00",
+            ),
+        ),
+        row_drill=("", ""),
+    )
+    msgs = related_conversation_messages(tab)
+    assert len(msgs) == 2
+    assert msgs[0].bubble.tone == "danger"
+    assert msgs[0].author == "admin · slack"
+    assert msgs[1].bubble.tone == ""
+    # bridge is ops default path — no author suffix (portal parity).
+    assert msgs[1].author == "ops_engineer"

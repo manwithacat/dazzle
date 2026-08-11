@@ -26,6 +26,7 @@ _CONV_ORIENT_KEYS = frozenset(
 )
 # Peer support tools (Zendesk/Front/Intercom) surface customer tone on the
 # trail — map these columns to Bubble danger when frustrated/urgent.
+# Ops desks (PagerDuty/Opsgenie) use note_phase / timeline phase similarly.
 _CONV_TONE_KEYS = frozenset(
     {
         "customer_tone",
@@ -37,9 +38,15 @@ _CONV_TONE_KEYS = frozenset(
         "escalation",
         "escalation_level",
         "escalated",
+        # Ops timeline phase (cycle 1917) — escalate/critical → danger.
+        "note_phase",
+        "phase",
+        "timeline_phase",
+        "incident_phase",
     }
 )
 # Inbound channel (portal/email/chat/phone) — append to author for trail label.
+# Ops page_channel (bridge/slack/pager/status_page) uses the same suffix path.
 _CONV_CHANNEL_KEYS = frozenset(
     {
         "channel",
@@ -47,6 +54,9 @@ _CONV_CHANNEL_KEYS = frozenset(
         "contact_channel",
         "via",
         "origin",
+        "page_channel",
+        "notify_channel",
+        "page",
     }
 )
 _CONV_ORIENT_OUT = frozenset({"yes", "true", "1", "out", "outbound", "internal", "agent"})
@@ -62,11 +72,15 @@ _CONV_TONE_DANGER = frozenset(
         "danger",
         "negative",
         "upset",
+        # Ops timeline lean-in phases (PagerDuty bridge trail).
+        "escalate",
+        "mitigate",
     }
 )
 # Channel values that are noise when default — skip author suffix.
 # ``portal`` is the product default inbound path (not a lean-in signal).
-_CONV_CHANNEL_SKIP = frozenset({"", "none", "unknown", "n/a", "na", "portal"})
+# ``bridge`` is the ops default page path (parity with portal skip).
+_CONV_CHANNEL_SKIP = frozenset({"", "none", "unknown", "n/a", "na", "portal", "bridge"})
 
 
 def _header_key(header: str) -> str:

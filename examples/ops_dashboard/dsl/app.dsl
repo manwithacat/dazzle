@@ -142,6 +142,12 @@ entity IncidentNote "Incident Note":
   alert: ref Alert required
   author: str(120) required
   body: text required
+  # Goal B conversation peer-pack (cycle 1917): PagerDuty / Opsgenie
+  # timeline notes label *phase* (observe→ack→mitigate→escalate→resolve)
+  # and *page channel* so the trail reads as a live bridge, not prose-only
+  # bubbles. Novel vs support_tickets tone/channel/escalation recipes.
+  note_phase: enum[observe,ack,mitigate,escalate,resolve]=observe
+  page_channel: enum[bridge,slack,pager,status_page]=bridge
   created_at: datetime auto_add
 
   permit:
@@ -164,7 +170,7 @@ entity IncidentNote "Incident Note":
       as: admin
 
   fitness:
-    repr_fields: [alert, author, body]
+    repr_fields: [alert, author, body, note_phase, page_channel]
 
 # =============================================================================
 # OPS DOCUMENT — runbook / postmortem composition (Goal B document)
@@ -309,11 +315,13 @@ workspace command_center "Command Center":
   live: on
 
   # Goal B media — recipe runbook_cover_wall (novel vs headshot_shelf).
+  # Cap 2 so dual attention + live conversation (phase/channel) share the fold
+  # after cycle 1917 timeline_phase_channel conversation peer upgrade.
   runbook_covers:
     source: OpsDocument
     filter: preview_url != null
     sort: created_at desc
-    limit: 6
+    limit: 2
     display: grid
     action: ops_document_detail
     empty: "No runbook covers yet — attach runbooks with cover previews"
@@ -793,23 +801,15 @@ workspace command_center "Command Center":
 # single column via the project's responsive rules.
 
 workspace incident_review "Incident Review":
-  # Goal B media FIRST (cycle 1889) + conversation: runbook cover wall before
-  # alert pressure and live operator notes — recipe runbook_cover_wall.
-  purpose: "Incident review — runbook covers, alert pressure, live discussion trail"
+  # Goal B conversation peer upgrade (cycle 1917): alert pressure + live
+  # operator trail with timeline phase + page channel above the fold first
+  # (recipe timeline_phase_channel). Runbook covers stay on-desk but capped
+  # so conversation Message chrome is buyer-visible (not buried under wall).
+  purpose: "Incident review — alert pressure, phase-labeled discussion trail, runbook covers"
   stage: "pair_strip"
   access: persona(ops_engineer)
 
-  # Goal B media — recipe runbook_cover_wall (novel vs headshot_shelf).
-  runbook_covers:
-    source: OpsDocument
-    filter: preview_url != null
-    sort: created_at desc
-    limit: 6
-    display: grid
-    action: ops_document_detail
-    empty: "No runbook covers yet — attach runbooks with cover previews"
-
-  # Pair 1: alert overview + alert list
+  # Pair 1: alert overview + live discussion (conversation depth proof)
   alert_summary:
     source: Alert
     display: metrics
@@ -822,14 +822,25 @@ workspace incident_review "Incident Review":
       resolved: positive
       conversation: accent
 
-  # display: conversation → Message/Bubble chrome for incident discussion.
+  # display: conversation → Message/Bubble chrome; note_phase → danger on
+  # escalate/mitigate; page_channel → author suffix (slack/pager/status_page).
   live_conversation:
     source: IncidentNote
     sort: created_at desc
-    limit: 10
+    limit: 8
     display: conversation
     action: incident_note_detail
     empty: "No conversation yet — notes on open incidents appear here"
+
+  # Goal B media — capped runbook cover strip (not a full-fold wall).
+  runbook_covers:
+    source: OpsDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 2
+    display: grid
+    action: ops_document_detail
+    empty: "No runbook covers yet — attach runbooks with cover previews"
 
   # Work-surface utility: triggered alerts are a dated stream — timeline.
   recent_alerts:
@@ -902,8 +913,8 @@ workspace incident_review "Incident Review":
   ux:
     as ops_engineer:
       scope: all
-      purpose: "Runbook cover wall first, then pair-strip review of pending incidents"
-      focus: runbook_covers, alert_summary, live_conversation, recent_alerts, system_overview, review_checklist
+      purpose: "Alert pressure + phase-labeled discussion first, then runbook covers"
+      focus: alert_summary, live_conversation, runbook_covers, recent_alerts, system_overview, review_checklist
 
 # Third product workspace: systems portfolio desk.
 # Goal B empty_region_honesty (cycle 1852): peer Datadog/PagerDuty fleet desks
@@ -1234,14 +1245,14 @@ surface alert_detail "Alert Detail":
     field message "Message"
     field acknowledged_by "Acknowledged By"
 
-  # Goal B conversation (cycle 1899 hub wave): alert hub Discussion uses
-  # RelatedDisplayMode.conversation → Message/Bubble chrome (ops desk
-  # live_conversation parity). Peer PagerDuty/Opsgenie notes read as a
-  # content-first trail on the alert — not queue meta rows.
+  # Goal B conversation (cycle 1899 hub wave + 1917 phase/channel): alert hub
+  # Discussion uses RelatedDisplayMode.conversation → Message/Bubble chrome
+  # (ops desk live_conversation parity). Peer PagerDuty/Opsgenie notes read as
+  # a content-first trail with timeline phase + page channel — not queue meta.
   related discussion "Discussion":
     display: conversation
     show: IncidentNote
-    columns: body, author, created_at
+    columns: body, author, note_phase, page_channel, created_at
 
   ux:
     purpose: "Inspect alert severity strip, operator discussion, and parent System hub"
@@ -1255,6 +1266,8 @@ surface incident_note_list "Incident Notes":
   section main "Notes":
     field body "Note"
     field author "Author"
+    field note_phase "Phase"
+    field page_channel "Channel"
     field alert "Alert"
     field created_at "When"
 
@@ -1263,6 +1276,7 @@ surface incident_note_list "Incident Notes":
     sort: created_at desc
     search: body, author
     empty: "No incident notes yet"
+    filter: note_phase, page_channel
 
 surface incident_note_detail "Incident Note":
   uses entity IncidentNote
@@ -1272,6 +1286,8 @@ surface incident_note_detail "Incident Note":
   section summary "Note":
     field body "Note"
     field author "Author"
+    field note_phase "Phase"
+    field page_channel "Channel"
     field alert "Alert"
     field created_at "When"
 
@@ -1286,6 +1302,8 @@ surface incident_note_create "Add Incident Note":
     field alert "Alert"
     field author "Author"
     field body "Note"
+    field note_phase "Phase"
+    field page_channel "Channel"
 
 # =============================================================================
 # OpsDocument surfaces (Goal B document composition)

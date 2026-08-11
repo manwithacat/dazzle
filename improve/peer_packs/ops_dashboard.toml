@@ -1,0 +1,24 @@
+# R3 peer pack — Goal B context for ops_dashboard
+
+app = "ops_dashboard"
+peer = "PagerDuty / Opsgenie / Datadog incident command desk"
+domain = "operations"
+
+above_fold = [
+  "Live incident notes with timeline phase (observe/ack/mitigate/escalate/resolve) — not prose-only bubbles",
+  "Page channel (bridge/slack/pager/status_page) on the trail so buyers see how updates ship",
+  "Dual attention (systems + active alerts) when claiming command density",
+  "Runbook/document covers only when claiming media — never headshot shelf as ops media",
+]
+
+refuse = [
+  "Headshot shelf as media depth on a pure ops desk",
+  "Metric tile theater without work rows or notes",
+  "Re-stack support_tickets tone/channel/escalation recipes on IncidentNote",
+]
+
+icon_depths = ["command_density", "conversation", "document"]
+surprise_prompts = [
+  "What one ops-true detail (note phase, page channel, runbook cover) would an on-call engineer lean into?",
+  "Does the first screen look like a live bridge a responder would work?",
+]

@@ -145,10 +145,11 @@ def _media_initials(author: str) -> str:
 
 
 def _conversation_bubble_tone(item: dict[str, Any]) -> str:
-    """Map customer_tone / escalation / sentiment → Bubble danger tone.
+    """Map customer_tone / escalation / note_phase / sentiment → Bubble danger.
 
     Peer Zendesk/Front/Intercom trails flag frustrated/urgent speech and
-    raised/critical escalations so agents lean in; neutral stays untoned.
+    raised/critical escalations so agents lean in; ops PagerDuty trails map
+    note_phase escalate/mitigate the same way. Neutral/observe stays untoned.
     """
     for key in (
         "customer_tone",
@@ -159,6 +160,10 @@ def _conversation_bubble_tone(item: dict[str, Any]) -> str:
         "escalation",
         "escalation_level",
         "escalated",
+        "note_phase",
+        "phase",
+        "timeline_phase",
+        "incident_phase",
     ):
         raw = item.get(key)
         if raw is None or raw == "":
@@ -412,19 +417,30 @@ class _BuildersTimelineMixin:
                 _activity_actor_label(item)
                 or str(item.get("user_name") or item.get("name") or "").strip()
             )
-            # Peer channel suffix (portal/email/chat/phone) on live trails.
+            # Peer channel suffix on live trails: support portal/email/chat/phone
+            # plus ops page_channel (bridge/slack/pager/status_page). Default
+            # paths (portal, bridge) stay unsuffixed.
             channel = (
                 str(
                     item.get("channel")
                     or item.get("source_channel")
                     or item.get("contact_channel")
+                    or item.get("page_channel")
+                    or item.get("notify_channel")
                     or ""
                 )
                 .strip()
                 .lower()
                 .replace(" ", "_")
             )
-            if channel and channel not in {"none", "unknown", "n/a", "na", "portal"}:
+            if channel and channel not in {
+                "none",
+                "unknown",
+                "n/a",
+                "na",
+                "portal",
+                "bridge",
+            }:
                 author = f"{author} · {channel}" if author else channel
             time_label, time_dt = _conversation_time(item)
             media = str(item.get("media") or item.get("initials") or "").strip()

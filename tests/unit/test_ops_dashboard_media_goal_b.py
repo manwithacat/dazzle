@@ -44,7 +44,8 @@ def test_command_center_runbook_covers_first() -> None:
     )
 
 
-def test_incident_review_runbook_covers_first() -> None:
+def test_incident_review_keeps_runbook_covers_not_headshot() -> None:
+    """Media claim: runbook thumbs still on desk (capped); conversation leads fold @1917."""
     block = _workspace_block(
         "incident_review",
         'workspace systems_desk "Systems":',
@@ -53,9 +54,12 @@ def test_incident_review_runbook_covers_first() -> None:
     assert "display: grid" in block
     assert "preview_url != null" in block
     assert "media_shelf:" not in block
-    assert block.index("runbook_covers:") < block.index("alert_summary:")
+    assert "photo_url" not in block
+    # Cycle 1917 conversation peer: alert + live trail share fold before covers.
+    assert block.index("alert_summary:") < block.index("runbook_covers:")
+    assert block.index("live_conversation:") < block.index("runbook_covers:")
     assert (
-        "focus: runbook_covers, alert_summary, live_conversation, recent_alerts, "
+        "focus: alert_summary, live_conversation, runbook_covers, recent_alerts, "
         "system_overview, review_checklist" in block
     )
 
