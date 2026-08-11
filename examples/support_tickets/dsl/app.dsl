@@ -187,6 +187,9 @@ entity Comment "Comment":
   # agents see how the speech arrived and whether it was raised past SLA.
   channel: enum[portal,email,chat,phone]=portal
   escalation: enum[none,raised,critical]=none
+  # Peer-pack upgrade (cycle 1922): Front / Intercom "needs reply" grain —
+  # ball_in_court says who must speak next (not tone/channel meta alone).
+  ball_in_court: enum[agent,customer,none]=none
   is_internal: bool = false
   created_at: datetime auto_add
 
@@ -220,7 +223,7 @@ entity Comment "Comment":
       as: manager
 
   fitness:
-    repr_fields: [ticket, author, content, customer_tone, channel, escalation, is_internal]
+    repr_fields: [ticket, author, content, customer_tone, channel, escalation, ball_in_court, is_internal]
 
 # ============================================================================
 # USER SURFACES
@@ -279,7 +282,7 @@ surface user_detail "User Detail":
   related comments "Comments":
     display: conversation
     show: Comment
-    columns: content, customer_tone, channel, escalation, is_internal, created_at
+    columns: content, customer_tone, channel, escalation, ball_in_court, is_internal, created_at
 
 surface user_create "Create User":
   uses entity User
@@ -375,8 +378,9 @@ surface ticket_detail "Ticket Detail":
   related discussion "Discussion":
     display: conversation
     show: Comment
-    # customer_tone + escalation → Bubble danger; channel labels the path
-    columns: content, author, customer_tone, channel, escalation, created_at, is_internal
+    # customer_tone + escalation → Bubble danger; channel labels the path;
+    # ball_in_court shows who must reply next (Front / Intercom needs-reply).
+    columns: content, author, customer_tone, channel, escalation, ball_in_court, created_at, is_internal
 
   # Goal B document: named SLA waivers / breach letters on the ticket hub
   # (peer Zendesk/Service Cloud document trail — not queue-only theater).
@@ -386,7 +390,7 @@ surface ticket_detail "Ticket Detail":
     columns: breach_summary, status, signatory_name
 
   ux:
-    purpose: "Ticket hub — Message-chrome discussion with tone, channel, escalation, and named SLA waiver documents"
+    purpose: "Ticket hub — Message-chrome discussion with tone, channel, escalation, needs-reply ball, and named SLA waiver documents"
 
 surface ticket_create "Create Ticket":
   uses entity Ticket
@@ -441,7 +445,7 @@ surface comment_list "Comment List":
   ux:
     purpose: "Scan recent comment activity — open hops to the note, parent ticket, or author"
     sort: created_at desc
-    filter: is_internal
+    filter: is_internal, ball_in_court
     search: content
     empty: "No comments yet. Start the conversation."
 
@@ -451,6 +455,7 @@ surface comment_list "Comment List":
     field customer_tone "Tone"
     field channel "Channel"
     field escalation "Escalation"
+    field ball_in_court "Ball in court"
     field is_internal "Internal"
     field ticket "Ticket"
     field created_at "Created"
@@ -467,6 +472,7 @@ surface comment_detail "Comment Detail":
     field customer_tone "Tone"
     field channel "Channel"
     field escalation "Escalation"
+    field ball_in_court "Ball in court"
     field is_internal "Internal"
     field created_at "Created"
 
@@ -481,12 +487,13 @@ surface comment_create "Create Comment":
     field customer_tone "Customer tone"
     field channel "Channel"
     field escalation "Escalation"
+    field ball_in_court "Ball in court"
     # HM Switch — internal note flag (settings-like boolean; not toggle mode press)
     field is_internal "Internal" widget=switch
 
   ux:
     as customer:
-      hide: is_internal, escalation
+      hide: is_internal, escalation, ball_in_court
 
 surface comment_edit "Edit Comment":
   uses entity Comment
@@ -498,12 +505,13 @@ surface comment_edit "Edit Comment":
     field customer_tone "Customer tone"
     field channel "Channel"
     field escalation "Escalation"
+    field ball_in_court "Ball in court"
     # HM Switch — internal note flag (settings-like boolean)
     field is_internal "Internal" widget=switch
 
   ux:
     as customer:
-      hide: is_internal, escalation
+      hide: is_internal, escalation, ball_in_court
 
 # =============================================================================
 # WORKSPACES - Composed views with stages
@@ -518,7 +526,7 @@ workspace ticket_queue "Ticket Queue":
   # Goal B media (cycle 1883) + conversation + document: peer support tools
   # (Zendesk / Intercom / Front) put agent headshots, live thread copy, and
   # named waiver documents on the triage home — not only ticket rows.
-  purpose: "Team headshots, triage open work, live conversation, and SLA waiver documents"
+  purpose: "Team headshots, needs-reply ball, triage open work, live conversation, and SLA waiver documents"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
 
@@ -546,12 +554,25 @@ workspace ticket_queue "Ticket Queue":
       in_progress: count(Ticket where status = in_progress)
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
+      needs_reply: count(Comment where ball_in_court = agent)
       documents: count(SlaWaiver)
     tones:
       critical: destructive
       in_progress: accent
       conversation: accent
+      needs_reply: warning
       documents: accent
+
+  # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
+  # — customer speech that still needs an agent reply, above the live trail.
+  needs_reply:
+    source: Comment
+    filter: ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "Nothing waiting on agents — every customer note has a reply path"
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -617,6 +638,10 @@ workspace ticket_queue "Ticket Queue":
   queue_readiness:
     display: status_list
     entries:
+      - title: "Needs reply"
+        caption: "Customer notes with ball in agent court — answer before the rest of the trail"
+        icon: "reply"
+        state: warning
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -629,6 +654,17 @@ workspace ticket_queue "Ticket Queue":
         caption: "First response warning at 2h — see Manager Ops for team SLA strip"
         icon: "clock"
         state: accent
+
+  ux:
+    as agent:
+      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
+    as manager:
+      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
+    as admin:
+      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
 
 
 workspace manager_ops "Manager Ops":
@@ -646,7 +682,7 @@ workspace manager_ops "Manager Ops":
   # Goal B command_density peer upgrade (cycle 1913): live sla_state pressure
   # (at_risk / breached) on metrics + a breach_risk queue — not static caption
   # theater alone (recipe sla_breach_pressure; not headshot_shelf).
-  purpose: "Multi-panel support ops — headshots, SLA breach pressure, dual queues, waiver documents, live conversation"
+  purpose: "Multi-panel support ops — headshots, SLA breach pressure, dual queues, needs-reply ball, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -677,6 +713,7 @@ workspace manager_ops "Manager Ops":
       breached: count(Ticket where sla_state = breached and status != closed)
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
+      needs_reply: count(Comment where ball_in_court = agent)
       documents: count(SlaWaiver)
     tones:
       critical_open: destructive
@@ -686,6 +723,7 @@ workspace manager_ops "Manager Ops":
       resolved: positive
       in_progress: accent
       conversation: accent
+      needs_reply: warning
       documents: accent
 
   # Live SLA pressure (cycle 1913) — peer Zendesk/Front show breach risk rows
@@ -756,6 +794,17 @@ workspace manager_ops "Manager Ops":
     action: sla_waiver_detail
     empty: "No open SLA waivers — draft a named waiver after a response-time breach"
 
+  # Peer-pack needs_reply_ball (cycle 1922) — manager sees who is waiting on
+  # agents before the mixed conversation trail (Front / Intercom grain).
+  needs_reply:
+    source: Comment
+    filter: ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No customer notes waiting on agents"
+
   # Goal B conversation spine AFTER dual attention + composition so manager
   # hero stills show pressure queues, documents, and Message/Bubble chrome.
   # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
@@ -769,8 +818,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA breach pressure + dual queues and waiver documents before conversation trail"
-      focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, unassigned_queue, composition, live_conversation
+      purpose: "Multi-panel support ops — SLA breach pressure, needs-reply ball, dual queues, and waiver documents before full conversation trail"
+      focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, unassigned_queue, composition, needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -789,7 +838,7 @@ workspace agent_dashboard "Agent Dashboard":
   # Goal B empty_region_honesty (cycle 1812): peer agent homes (Zendesk /
   # Intercom) lead with WIP board + close-out + one comment trail — not funnel
   # / progress chart theater or triple comment streams that render as voids.
-  purpose: "Personal WIP board with the conversation trail on your assigned cases"
+  purpose: "Personal WIP board with needs-reply ball and the conversation trail on your assigned cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
@@ -807,6 +856,16 @@ workspace agent_dashboard "Agent Dashboard":
     group_by: status
     action: ticket_edit
     empty: "No tickets assigned to you"
+
+  # Peer-pack needs_reply_ball — my plate of customer speech waiting on me.
+  needs_reply:
+    source: Comment
+    filter: ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No customer notes waiting on you — clear the ball before new claims"
 
   # Conversation on my plate — queue of recent notes (Goal B conversation depth).
   my_conversation:
@@ -838,11 +897,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + conversation trail — no funnel/progress chart theater"
-      focus: my_assigned, my_conversation, pending_resolution, recent_comments
+      purpose: "Personal WIP + needs-reply ball + conversation trail — no funnel/progress chart theater"
+      focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments
     as manager:
-      purpose: "Personal WIP + conversation trail — no funnel/progress chart theater"
-      focus: my_assigned, my_conversation, pending_resolution, recent_comments
+      purpose: "Personal WIP + needs-reply ball + conversation trail — no funnel/progress chart theater"
+      focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show

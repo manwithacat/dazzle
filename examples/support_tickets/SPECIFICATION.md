@@ -66,28 +66,33 @@ Managers alone can delete tickets or comments.
 
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
-(including conversation and document volume), a **live conversation** queue of
-newest notes, a **composition** queue of open SLA waivers (named breach titles),
-a review queue, a kanban board of open statuses, and a recent-comment
+(including conversation, **needs reply**, and document volume), a **needs
+reply** conversation region of customer notes whose **ball is in the agent
+court** (Front / Intercom "waiting on you" grain), a **live conversation** trail
+of newest notes, a **composition** queue of open SLA waivers (named breach
+titles), a review queue, a kanban board of open statuses, and a recent-comment
 **timeline** (dated stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, documents), SLA readiness, a **breach risk** queue (at_risk /
-breached tickets, limit 4), dual attention queues (critical + unassigned, limit
-4 each), open **SLA waiver composition** (limit 4) **before** a capped live
-conversation trail (limit 4) — no status funnel or secondary ticket timeline
-(empty_region honesty; avoids pilot scroll resource storms). Ticket rows carry
-an **SLA** state (`on_track` / `at_risk` / `breached`) so queue grain matches
-peer Zendesk / Front / Intercom first-response pressure.
+conversation, needs reply, documents), SLA readiness, a **breach risk** queue
+(at_risk / breached tickets, limit 4), dual attention queues (critical +
+unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
+**needs reply** ball (limit 4) **before** a capped live conversation trail
+(limit 4) — no status funnel or secondary ticket timeline (empty_region honesty;
+avoids pilot scroll resource storms). Ticket rows carry an **SLA** state
+(`on_track` / `at_risk` / `breached`) so queue grain matches peer Zendesk /
+Front / Intercom first-response pressure. Comment rows carry **ball in court**
+(`agent` / `customer` / `none`) so the trail shows who must speak next.
 **People** is the org-structure desk for managers and agents: active staff
 metrics, a role kanban, a department-sorted queue, a secondary roster, then
 unassigned open tickets and plate-by-person load — hierarchy before dump.
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
-kanban of assigned open tickets, a **my conversation** notes queue, a resolved
-close-out queue, and **one** recent-comment timeline (no funnel/progress chart
-theater or triple activity dumps — empty_region honesty).
+kanban of assigned open tickets, a **needs reply** ball of customer notes
+waiting on agents, a **my conversation** notes queue, a resolved close-out
+queue, and **one** recent-comment timeline (no funnel/progress chart theater or
+triple activity dumps — empty_region honesty).
 **My Tickets** is the customer's home: open/WIP counts, open and in-progress
 queues, one case-history timeline, and how-it-works guidance (no bar-chart
 theater or duplicate open/timeline dumps).
@@ -174,4 +179,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:6430ec47d803e7a021d77e9580c1c4c965ab9235695373197ababb2fe4b2d25e -->
+<!-- dazzle-spec-brief: sha256:1aa903a28f7c4b5562f7aecf04657214f6c12a9a71d555d56b766a42157721fb -->

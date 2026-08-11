@@ -34,7 +34,10 @@ def test_agent_dashboard_omits_funnel_progress_and_triple_comment_theater() -> N
     assert "display: funnel_chart" not in block
     assert "display: progress" not in block
     assert "display: activity_feed" not in block
-    assert "focus: my_assigned, my_conversation, pending_resolution, recent_comments" in block
+    assert (
+        "focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments"
+        in block
+    )
     assert "ux:" in block
     assert "as agent:" in block
     # Single comment timeline only
@@ -85,7 +88,7 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     assert "display: timeline" not in block
     assert (
         "focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, "
-        "unassigned_queue, composition, live_conversation"
+        "unassigned_queue, composition, needs_reply, live_conversation"
     ) in block
     assert "as manager:" in block
     assert "breach_risk:" in block

@@ -76,7 +76,7 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     assert "display: conversation" in discussion
     assert "show: Comment" in discussion
     assert (
-        "columns: content, author, customer_tone, channel, escalation, created_at, is_internal"
+        "columns: content, author, customer_tone, channel, escalation, ball_in_court, created_at, is_internal"
         in discussion
     )
     # is_internal is orient-only (not queue meta thrash column lead).
@@ -84,6 +84,7 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     assert discussion.index("customer_tone") < discussion.index("is_internal")
     assert discussion.index("channel") < discussion.index("is_internal")
     assert discussion.index("escalation") < discussion.index("is_internal")
+    assert discussion.index("ball_in_court") < discussion.index("is_internal")
 
 
 def test_user_hub_comments_uses_conversation_chrome() -> None:
@@ -117,12 +118,40 @@ def test_user_hub_comments_uses_conversation_chrome() -> None:
     assert "customer_tone" in related
 
 
+def test_comment_declares_ball_in_court() -> None:
+    """Peer pack conversation upgrade (cycle 1922) — needs-reply ball grain."""
+    text = APP.read_text()
+    block = text.split('entity Comment "Comment":', 1)[1].split("entity ", 1)[0]
+    assert "ball_in_court: enum[agent,customer,none]=none" in block
+    fitness = block.split("fitness:", 1)[1].split("\n\n", 1)[0]
+    assert "ball_in_court" in fitness
+
+
+def test_hero_desks_declare_needs_reply_ball() -> None:
+    """Front / Intercom needs-reply region on triage + agent + manager homes."""
+    text = APP.read_text()
+    for ws, nxt in (
+        ("workspace ticket_queue", "workspace manager_ops"),
+        ("workspace manager_ops", "workspace agent_dashboard"),
+        ("workspace agent_dashboard", "workspace my_tickets"),
+    ):
+        block = text.split(ws, 1)[1].split(nxt, 1)[0]
+        assert "\n  needs_reply:\n" in block, ws
+        assert "ball_in_court = agent" in block, ws
+        # Region body (skip metric keys named needs_reply: count(...)).
+        region = block.split("\n  needs_reply:\n", 1)[1][:500]
+        assert "display: conversation" in region, ws
+        assert "source: Comment" in region, ws
+    assert "needs_reply: count(Comment where ball_in_court = agent)" in text
+
+
 def test_comment_seeds_have_domain_true_support_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10
     tones = set()
     channels = set()
     escalations = set()
+    balls = set()
     for row in rows:
         body = str(row.get("content") or "")
         assert len(body) >= 24, body
@@ -136,8 +165,18 @@ def test_comment_seeds_have_domain_true_support_copy() -> None:
         esc = str(row.get("escalation") or "none")
         assert esc in {"none", "raised", "critical"}, esc
         escalations.add(esc)
+        ball = str(row.get("ball_in_court") or "none")
+        assert ball in {"agent", "customer", "none"}, ball
+        balls.add(ball)
     # Peer pack: mix includes lean-in tones (not all neutral).
     assert tones & {"frustrated", "urgent"}
     # Channel + escalation peer mix (not all portal / none).
     assert channels - {"portal"}
     assert escalations & {"raised", "critical"}
+    # Needs-reply ball: customer speech waiting on agents + agent replies.
+    assert "agent" in balls
+    assert "customer" in balls
+    agent_public = [
+        r for r in rows if r.get("ball_in_court") == "agent" and r.get("is_internal") is False
+    ]
+    assert len(agent_public) >= 3
