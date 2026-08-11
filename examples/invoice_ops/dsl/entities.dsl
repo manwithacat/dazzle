@@ -178,6 +178,9 @@ entity Invoice "Invoice":
   amount: decimal(15,2) required
   currency: str(3)="GBP"
   po_number: str(40) optional
+  # Goal B document peer-pack (cycle 1909): Bill.com / Melio / Tipalti put
+  # amount + due date + vendor on open work rows — not status-only KPI theater.
+  due_date: date optional
   status: enum[draft,submitted,approved,partially_paid,rejected,disputed,paid]=draft
   submitted_by: ref User optional
   rejection_reason: text optional

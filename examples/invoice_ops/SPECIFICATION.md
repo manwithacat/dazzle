@@ -36,9 +36,10 @@ administrators can view or change them.
 
 **Invoices and their settlement.** An Invoice is a supplier's bill moving
 through an approval and payment lifecycle; it belongs to a tenant, names its
-supplier, and records who submitted it. Each invoice is itemised into Line
-Items — description, quantity, unit amount, tax code, and PO match status that
-controllers scan when reviewing composition. Settlement is tracked through Payment Attempts — each one a discrete
+supplier, records a due date for SLA pressure, and records who submitted it.
+Each invoice is itemised into Line Items — description, quantity, unit amount,
+tax code, and PO match status that controllers scan when reviewing composition.
+Settlement is tracked through Payment Attempts — each one a discrete
 attempt to settle an approved invoice via the payment provider, so the payment
 history of an invoice is a first-class record rather than a status flag.
 
@@ -181,4 +182,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:56f7305dd318afbca6dc393ca67d8fea3b7e3b67b1016211d805b1ab4557092e -->
+<!-- dazzle-spec-brief: sha256:b09496b2db6489f5149add06acff8728cf38308d82f895dcc6fb111ac6c50fba -->

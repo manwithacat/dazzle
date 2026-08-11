@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Changed
+- **Goal B document due-date AP work rows (cycle 1909)** — invoice_ops Invoice
+  gains `due_date`; list/detail/create/edit expose amount + due + vendor; finance_ops
+  and pay_desk gain past_due queues + metrics; dual-attention and boards sort by
+  due date; seed mix past/future; unit pins; SPEC brief; hero stills recaptured.
 - **Goal B conversation channel + escalation trail (cycle 1907)** —
   support_tickets Comment gains `channel` (portal/email/chat/phone) and
   `escalation` (none/raised/critical); ticket/user hub Discussion columns

@@ -14,12 +14,14 @@ surface invoice_list "Invoices":
   open: Invoice via id | Supplier via supplier | User via submitted_by
   section main:
     field invoice_number "Number"
+    field supplier "Supplier"
     field amount "Amount" format: currency:GBP
+    field due_date "Due"
     field currency "Currency"
     field status "Status"
     field submitted_by "Submitted By"
   ux:
-    purpose: "Browse invoices — open invoice hub, supplier context, or submitter hub"
+    purpose: "Browse invoices — amount, due date, and vendor on the work row; open hub, supplier, or submitter"
 
 surface invoice_detail "Invoice":
   uses entity Invoice
@@ -29,10 +31,12 @@ surface invoice_detail "Invoice":
     field supplier "Supplier"
     field amount "Amount" format: currency:GBP
     field currency "Currency"
+    field due_date "Due Date"
   section status "Status":
     layout: strip
     field status "Status"
     field po_number "PO Number"
+    field due_date "Due Date"
   section review "Review notes":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
@@ -77,6 +81,8 @@ surface invoice_create "New Invoice":
     field supplier "Supplier"
     field amount "Amount"
     field currency "Currency"
+    field due_date "Due Date"
+    field po_number "PO Number"
 
 surface invoice_note_list "Invoice Notes":
   uses entity InvoiceNote
@@ -394,6 +400,8 @@ surface invoice_edit "Edit Invoice":
     field supplier "Supplier"
     field amount "Amount"
     field currency "Currency"
+    field due_date "Due Date"
+    field po_number "PO Number"
     field status "Status"
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
@@ -500,7 +508,8 @@ workspace finance_ops "Finance Operations":
   # Bill.com / Melio / Tipalti put remittance / PO / tax packet covers on the
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
-  purpose: "Day-to-day invoice throughput — packet covers, dual attention, named packets, line composition, and live discussion"
+  # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
+  purpose: "Day-to-day invoice throughput — packet covers, past-due pressure, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -520,10 +529,12 @@ workspace finance_ops "Finance Operations":
     aggregate:
       submitted: count(Invoice where status = submitted)
       approved: count(Invoice where status = approved)
+      past_due: count(Invoice where due_date < today and status != paid and status != rejected and status != draft)
       disputed: count(Invoice where status = disputed)
       conversation: count(InvoiceNote)
     tones:
       submitted: warning
+      past_due: destructive
       disputed: destructive
       conversation: accent
       approved: accent
@@ -554,10 +565,11 @@ workspace finance_ops "Finance Operations":
     empty: "No invoice documents yet — attach a remittance or PO packet on an invoice hub"
 
   # Dual attention after named packets (fold share with capped conversation).
+  # Goal B document (cycle 1909): sort by due_date so SLA pressure is visible.
   awaiting_approval:
     source: Invoice
     filter: status = submitted
-    sort: amount desc
+    sort: due_date asc
     limit: 3
     display: queue
     action: invoice_detail
@@ -566,11 +578,21 @@ workspace finance_ops "Finance Operations":
   ready_to_pay:
     source: Invoice
     filter: status = approved
-    sort: amount desc
+    sort: due_date asc
     limit: 3
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
+
+  # Peer AP desks put past-due open invoices above the fold (amount + due + vendor).
+  past_due:
+    source: Invoice
+    filter: due_date < today and status != paid and status != rejected and status != draft
+    sort: due_date asc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No past-due open invoices"
 
   # Line body under dual attention (still domain-true composition, not warehouse).
   line_composition:
@@ -605,29 +627,29 @@ workspace finance_ops "Finance Operations":
     filter: status != draft
     display: kanban
     group_by: status
-    sort: amount desc
+    sort: due_date asc
     action: invoice_detail
     empty: "No invoices in the pipeline"
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, document pulse, named packets, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, past-due pressure, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as tenant_admin:
-      purpose: "AP ops — packet covers, document pulse, named packets, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, past-due pressure, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, ready_to_pay, line_composition, live_conversation
     as finance:
-      purpose: "AP ops — packet covers, named packets, then settle queues"
-      focus: packet_covers, ops_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
+      purpose: "AP ops — packet covers, past-due settle pressure, then settle queues"
+      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
     as approver:
-      purpose: "AP ops — packet covers, named packets, then review queue"
-      focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, live_conversation
+      purpose: "AP ops — packet covers, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, live_conversation
     as auditor:
       purpose: "AP ops — packet covers, evidence packets with conversation spine"
-      focus: packet_covers, ops_metrics, document_pulse, composition, live_conversation, disputed_queue
+      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, live_conversation, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
-      focus: packet_covers, ops_metrics, composition, line_composition, live_conversation, awaiting_approval
+      focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
 
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.
@@ -753,7 +775,7 @@ workspace approval_desk "Approval Desk":
   awaiting_approval:
     source: Invoice
     filter: status = submitted
-    sort: amount desc
+    sort: due_date asc
     limit: 6
     display: queue
     action: invoice_detail
@@ -773,7 +795,7 @@ workspace approval_desk "Approval Desk":
     filter: status = submitted or status = approved or status = rejected
     display: kanban
     group_by: status
-    sort: amount desc
+    sort: due_date asc
     action: invoice_detail
     empty: "No invoices in the approval pipeline"
 
@@ -804,10 +826,12 @@ workspace pay_desk "Pay Desk":
     display: metrics
     aggregate:
       ready: count(Invoice where status = approved)
+      past_due: count(Invoice where due_date < today and status != paid and status != rejected and status != draft)
       disputed: count(Invoice where status = disputed)
       conversation: count(InvoiceNote)
     tones:
       ready: accent
+      past_due: destructive
       disputed: destructive
       conversation: accent
 
@@ -832,15 +856,24 @@ workspace pay_desk "Pay Desk":
     action: invoice_document_detail
     empty: "No invoice documents yet — attach remittance or payment confirmation"
 
-  # Dual attention after named packets.
+  # Dual attention after named packets — due_date first (SLA settle pressure).
   ready_to_pay:
     source: Invoice
     filter: status = approved
-    sort: amount desc
+    sort: due_date asc
     limit: 3
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
+
+  past_due:
+    source: Invoice
+    filter: due_date < today and status != paid and status != rejected and status != draft
+    sort: due_date asc
+    limit: 3
+    display: queue
+    action: invoice_detail
+    empty: "No past-due open invoices"
 
   disputed_queue:
     source: Invoice
@@ -863,18 +896,18 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — packets, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — packets, past-due pressure, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
     as finance_admin:
-      purpose: "Multi-panel settlement — packets, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, composition, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — packets, past-due pressure, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
 
   settle_board:
     source: Invoice
     filter: status = approved or status = disputed or status = paid
     display: kanban
     group_by: status
-    sort: updated_at desc
+    sort: due_date asc
     action: invoice_detail
     empty: "No invoices in settle pipeline"
 

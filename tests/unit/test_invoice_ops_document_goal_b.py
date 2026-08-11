@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B document — invoice_ops named AP packets + line tax/PO match."""
+"""Post-5.8 Goal B document — invoice_ops named AP packets + line tax/PO match + due date."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ ENTITIES = ROOT / "examples/invoice_ops/dsl/entities.dsl"
 SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
 LINE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/LineItem.jsonl"
 DOC_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/InvoiceDocument.jsonl"
+INVOICE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Invoice.jsonl"
 
 
 def _workspace_block(name: str) -> str:
@@ -21,6 +22,15 @@ def _workspace_block(name: str) -> str:
     if nxt == -1:
         return text[start:]
     return text[start : start + 1 + nxt]
+
+
+def test_invoice_due_date_on_entity() -> None:
+    """Peer Bill.com / Melio / Tipalti: amount + due date + vendor on work rows."""
+    text = ENTITIES.read_text()
+    inv = text.split('entity Invoice "Invoice"', 1)[1].split("entity ", 1)[0]
+    assert "due_date: date optional" in inv
+    assert "amount: decimal(15,2) required" in inv
+    assert "supplier: ref Supplier required" in inv
 
 
 def test_line_item_display_field_is_description() -> None:
@@ -71,18 +81,31 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "documents: count(InvoiceDocument)" in ops
     assert "action: invoice_document_detail" in ops
     assert "line_composition:" in ops
-    # Order: packet covers → document pulse → named packets → dual attention → lines → conversation
+    # Order: packet covers → document pulse → named packets → dual attention → past_due region
     assert ops.index("packet_covers:") < ops.index("document_pulse:")
     assert ops.index("document_pulse:") < ops.index("composition:")
-    assert ops.index("composition:") < ops.index("awaiting_approval:")
-    assert ops.index("awaiting_approval:") < ops.index("line_composition:")
+    # Region marker (not the ops_metrics aggregate line past_due: count(...))
+    past_due_region = ops.index("\n  past_due:\n")
+    assert ops.index("composition:") < past_due_region
+    assert past_due_region < ops.index("line_composition:")
     assert ops.index("line_composition:") < ops.index("live_conversation:")
+    assert "past_due: count(Invoice where due_date < today" in ops
+    assert "sort: due_date asc" in ops
     # Peer refuse: no headshot-first media shelf on the money desk
     assert "media_shelf:" not in ops
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, composition, awaiting_approval, "
-        "ready_to_pay, line_composition, live_conversation" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, composition, past_due, "
+        "awaiting_approval, ready_to_pay, line_composition, live_conversation" in ops
     )
+
+    # List / hub expose amount + due + vendor (peer above_fold)
+    inv_list = text.split('surface invoice_list "Invoices"', 1)[1].split("surface ", 1)[0]
+    assert 'field supplier "Supplier"' in inv_list
+    assert 'field due_date "Due"' in inv_list
+    assert 'field amount "Amount"' in inv_list
+    hub = text.split('surface invoice_detail "Invoice"', 1)[1].split("surface ", 1)[0]
+    assert 'field due_date "Due Date"' in hub
+    assert "columns: description, quantity, unit_amount, tax_code, po_match" in hub
 
     # Dedicated composition desk: PO match board before line body (recipe line_tax_po_match)
     lines_desk = _workspace_block("line_items_desk")
@@ -95,10 +118,6 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "focus: line_pulse, po_match_board, composition, open_documents" in lines_desk
     assert "source: LineItem" in text.split("workspace my_invoices", 1)[1]
 
-    # Invoice hub related lines expose tax + PO match columns
-    hub = text.split('surface invoice_detail "Invoice"', 1)[1].split("surface ", 1)[0]
-    assert "columns: description, quantity, unit_amount, tax_code, po_match" in hub
-
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
     text = SURFACES.read_text()
@@ -108,6 +127,24 @@ def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
     assert 'related documents "Documents"' in text
     assert "show: InvoiceDocument" in text
     assert 'field preview_url "Cover"' in text
+
+
+def test_invoice_seeds_mix_past_and_future_due_dates() -> None:
+    rows = [json.loads(line) for line in INVOICE_SEEDS.read_text().splitlines() if line.strip()]
+    assert len(rows) >= 12
+    past_open = 0
+    future = 0
+    for row in rows:
+        due = str(row.get("due_date") or "")
+        assert due, f"due_date required on demo invoice: {row.get('invoice_number')}"
+        assert len(due) == 10 and due[4] == "-", due
+        status = str(row.get("status") or "")
+        if due < "2026-08-11" and status not in {"paid", "rejected", "draft"}:
+            past_open += 1
+        if due >= "2026-08-11":
+            future += 1
+    assert past_open >= 3, past_open
+    assert future >= 3, future
 
 
 def test_line_item_seeds_are_domain_true_descriptions() -> None:
