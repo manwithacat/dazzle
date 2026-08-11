@@ -432,10 +432,11 @@ workspace dashboard "Dashboard":
 
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
-  # Goal B empty_region_honesty (cycle 1815): kanban + unassigned + milestones
-  # are the board spine; drop project_status_mix bar chart (metrics already
-  # surface todo/in_progress/done — chart is redundant void risk).
-  purpose: "Task and milestone management"
+  # Goal B empty_region_honesty (cycle 1815): drop project_status_mix bar chart.
+  # Goal B command_density (cycle 1906): peer Linear/Jira boards put dual
+  # attention (unassigned + overdue) beside the kanban — managers lean into
+  # claim work and past-due pressure, not status chart theater.
+  purpose: "Multi-panel board — kanban + unassigned + overdue before milestones"
 
   board_metrics:
     source: Task
@@ -443,10 +444,16 @@ workspace project_board "Project Board":
     aggregate:
       todo: count(Task where status = todo)
       in_progress: count(Task where status = in_progress)
-      done: count(Task where status = done)
+      review: count(Task where status = review)
+      unassigned: count(Task where assigned_to = null and status != done)
+      overdue: count(Task where due_date < today and status != done)
+      critical: count(Task where priority = critical and status != done)
     tones:
       in_progress: accent
-      done: positive
+      review: warning
+      unassigned: warning
+      overdue: destructive
+      critical: destructive
 
   task_board:
     source: Task
@@ -454,14 +461,25 @@ workspace project_board "Project Board":
     group_by: status
     sort: priority desc
 
+  # Dual attention A — claim work (unowned open cards).
   unassigned_queue:
     source: Task
     filter: assigned_to = null and status != done
     sort: priority desc
-    limit: 10
+    limit: 5
     display: queue
-    action: task_edit
+    action: task_detail
     empty: "Every open task has an assignee"
+
+  # Dual attention B — past-due pressure (Linear/Jira manager lean-in).
+  overdue_queue:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc, priority desc
+    limit: 5
+    display: queue
+    action: task_detail
+    empty: "Nothing past due"
 
   milestones:
     source: Milestone
@@ -470,14 +488,14 @@ workspace project_board "Project Board":
 
   ux:
     as admin:
-      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
-      focus: board_metrics, task_board, unassigned_queue, milestones
+      purpose: "Multi-panel board — unassigned + overdue dual attention; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, overdue_queue, milestones
     as manager:
-      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
-      focus: board_metrics, task_board, unassigned_queue, milestones
+      purpose: "Multi-panel board — unassigned + overdue dual attention; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, overdue_queue, milestones
     as member:
-      purpose: "Board spine — kanban, unassigned, milestones; no status chart theater"
-      focus: board_metrics, task_board, unassigned_queue, milestones
+      purpose: "Multi-panel board — unassigned + overdue dual attention; no status chart theater"
+      focus: board_metrics, task_board, unassigned_queue, overdue_queue, milestones
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
 workspace my_tasks "My Tasks":

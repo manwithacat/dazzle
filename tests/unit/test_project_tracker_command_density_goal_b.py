@@ -55,3 +55,26 @@ def test_attention_queues_capped_for_fold_share() -> None:
     assert "limit: 4" in mine
     assert "display: conversation" in home
     assert "display: conversation" in mine
+
+
+def test_project_board_dual_attention_unassigned_and_overdue() -> None:
+    """Peer Linear/Jira boards: claim work + past-due pressure beside kanban."""
+    block = _workspace_block("project_board")
+    assert "board_metrics:" in block
+    assert "task_board:" in block
+    assert "unassigned_queue:" in block
+    assert "overdue_queue:" in block
+    assert "milestones:" in block
+    assert "filter: assigned_to = null and status != done" in block
+    assert "filter: due_date < today and status != done" in block
+    assert "unassigned: count(Task where assigned_to = null and status != done)" in block
+    assert "overdue: count(Task where due_date < today and status != done)" in block
+    assert "critical: count(Task where priority = critical and status != done)" in block
+    # Order: metrics → kanban → unassigned → overdue → milestones
+    assert block.index("board_metrics:") < block.index("task_board:")
+    assert block.index("task_board:") < block.index("unassigned_queue:")
+    assert block.index("unassigned_queue:") < block.index("overdue_queue:")
+    assert block.index("overdue_queue:") < block.index("milestones:")
+    assert "focus: board_metrics, task_board, unassigned_queue, overdue_queue, milestones" in block
+    assert "Multi-panel" in block or "multi-panel" in block.lower()
+    assert "dual attention" in block.lower()

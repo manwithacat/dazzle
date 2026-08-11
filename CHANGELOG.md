@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Changed
+- **Goal B command_density project_board dual attention (cycle 1906)** —
+  project_tracker Project Board gains unassigned + overdue dual-attention
+  queues (Linear/Jira lean-in), pressure metrics (review/unassigned/overdue/
+  critical), seed due dates, unit pins; SPEC brief refreshed; hero stills
+  recaptured. Acceptance panel (manager_board) ran first — harness-only
+  ERR_INSUFFICIENT_RESOURCES; product mutation shipped same dig.
 - **Goal B document peer-pack acme_billing (cycle 1904)** — Invoice gains
   `dunning_state` (none→collections) with billing `dunning_board` kanban +
   `in_dunning` metric; LineItem gains `tax_code` + `plan_name` (Stripe/Chargebee

@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
+Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day kanban with unassigned and overdue dual attention plus milestones.
 
 Three roles use it — Admin, Project Manager, and Team Member — and what each can see and do is not left to convention. Every role's permissions, for every kind of record and operation, are declared as machine-readable policy that compiles on demand into an auditable access matrix — permission review is something you run and diff, not something you eyeball — and the row-visibility rules can additionally be submitted to an SMT solver for formal verification. Access-controlled records are automatically filtered to what each user is permitted to see: a team member's task list, for instance, shows only the tasks assigned to them.
 
@@ -88,4 +88,4 @@ bytes outside it without being explicitly listed (verify:
 
 **Project Document lifecycle.** Project Documents move draft → published → archived (member may publish; manager/admin archive; admin may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:72e577b863639a3f3a63f11955f1859c731cb27e5fd43aaeeeead5732c81bfa4 -->
+<!-- dazzle-spec-brief: sha256:6a5c202d19edac28f923ca81b7460c91c494405565fc009df542824d7321d8d0 -->

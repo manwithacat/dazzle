@@ -38,15 +38,16 @@ def test_dashboard_omits_priority_mix_bar_chart() -> None:
 
 
 def test_project_board_omits_status_mix_bar_chart() -> None:
-    """Board desk: metrics + kanban + unassigned + milestones — not status chart."""
+    """Board desk: metrics + kanban + dual attention + milestones — not status chart."""
     block = _workspace_block("project_board")
     assert "board_metrics:" in block
     assert "task_board:" in block
     assert "unassigned_queue:" in block
+    assert "overdue_queue:" in block
     assert "milestones:" in block
     assert "project_status_mix:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: board_metrics, task_board, unassigned_queue, milestones" in block
+    assert "focus: board_metrics, task_board, unassigned_queue, overdue_queue, milestones" in block
 
 
 def test_my_tasks_omits_chart_and_twin_comment_dump() -> None:
