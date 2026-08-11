@@ -51,7 +51,7 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation"
+        "focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
         in block
     )
 

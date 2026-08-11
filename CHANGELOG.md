@@ -9,6 +9,12 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B org_structure work_location grain (cycle 1914)** — hr_records Person
+  gains `work_location` (london_hq/manchester/remote_uk/hybrid/client_site);
+  My Team + Reporting desks add `by_location` kanban + remote/hybrid metrics;
+  list/detail/create/edit + fitness repr surface place grain; seed mix; unit
+  pins; SPEC brief; hero stills recaptured. Recipe `work_location_grain`
+  (not headshot_shelf; not media/document/conversation/command_density re-stack).
 - **Goal B command_density SLA breach pressure (cycle 1913)** — support_tickets
   Ticket gains `sla_state` (on_track/at_risk/breached); Manager Ops metrics count
   at-risk + breached, live `breach_risk` queue before critical/unassigned dual

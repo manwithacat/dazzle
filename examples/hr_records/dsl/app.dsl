@@ -179,6 +179,10 @@ entity Person "Person":
   # Goal B media (cycle 1879): peer HR tools (Workday / BambooHR / Personio)
   # put headshot thumbs on the staff home — not name-only directory theater.
   photo_url: url
+  # Goal B org_structure peer upgrade (cycle 1914): work_location grain —
+  # BambooHR / Workday people partners parse HQ vs remote vs hybrid, not only
+  # level/dept boards. Recipe work_location_grain (not headshot_shelf).
+  work_location: enum[london_hq,manchester,remote_uk,hybrid,client_site]=london_hq
   started_at: date required
   ended_at: date    # NULL = currently employed
 
@@ -240,6 +244,12 @@ entity Person "Person":
       as: employee
     list: id = current_user
       as: employee
+
+  fitness:
+    # Location + name first so org boards and list rows read place grain.
+    repr_fields: [legal_name, preferred_name, work_location, email, started_at]
+
+  index work_location
 
   audit: all
 
@@ -553,11 +563,12 @@ surface person_list "People":
   section main:
     field legal_name "Legal name"
     field preferred_name "Preferred name"
+    field work_location "Work location"
     field email "Email"
     field photo_url "Photo"
     field started_at "Started"
   ux:
-    purpose: "Staff directory — open a row for the person career hub"
+    purpose: "Staff directory — open a row for the person career hub (location grain)"
 
 surface person_detail "Person":
   uses entity Person
@@ -567,6 +578,7 @@ surface person_detail "Person":
     field preferred_name "Preferred name"
     field email "Email"
     field photo_url "Photo"
+    field work_location "Work location"
   section tenure "Tenure":
     layout: strip
     field started_at "Started"
@@ -609,6 +621,7 @@ surface person_create "Add Person":
     field preferred_name "Preferred name"
     field email "Email"
     field photo_url "Photo URL"
+    field work_location "Work location"
     field started_at "Start date"
 
 surface person_edit "Edit Person":
@@ -619,6 +632,7 @@ surface person_edit "Edit Person":
     field preferred_name "Preferred name"
     field email "Email"
     field photo_url "Photo URL"
+    field work_location "Work location"
     field ended_at "Ended"
 
 
@@ -1393,10 +1407,11 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  # Goal B command_density + org_structure (cycle 1837) + document (cycle 1838):
-  # dual attention org boards, then named employment documents, before notes —
-  # peer Workday / BambooHR / Lattice put org + letters above conversation chrome.
-  purpose: "Multi-panel manager desk — dual attention org boards, documents, reporting pressure, then notes"
+  # Goal B command_density + org_structure (cycle 1837) + document (cycle 1838)
+  # + work_location_grain (cycle 1914): level/dept/location org boards, then
+  # named employment documents, before notes — peer Workday / BambooHR put
+  # place grain + letters above conversation chrome.
+  purpose: "Multi-panel manager desk — level/dept/location org boards, documents, reporting pressure, then notes"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1407,11 +1422,15 @@ workspace my_team "My Team":
       employment_rows: count(Employment)
       reporting_lines: count(ManagerLink)
       roles: count(Role)
+      remote_uk: count(Person where work_location = remote_uk and ended_at = null)
+      hybrid: count(Person where work_location = hybrid and ended_at = null)
       documents: count(HrDocument)
       conversation: count(PersonNote)
     tones:
       people: accent
       reporting_lines: positive
+      remote_uk: warning
+      hybrid: accent
       documents: accent
       conversation: accent
 
@@ -1437,6 +1456,18 @@ workspace my_team "My Team":
     action: employment_detail
     empty: "No active employment rows"
 
+  # Goal B org_structure peer upgrade (cycle 1914): work_location board —
+  # people partners lean into HQ vs Manchester vs remote/hybrid columns.
+  by_location:
+    source: Person
+    filter: ended_at = null
+    display: kanban
+    group_by: work_location
+    sort: legal_name asc
+    limit: 40
+    action: person_detail
+    empty: "No active people with work locations yet"
+
   # Who reports to whom — pull-to-open ManagerLink queue (capped for fold share).
   reporting_lines:
     source: ManagerLink
@@ -1458,11 +1489,11 @@ workspace my_team "My Team":
 
   ux:
     as manager:
-      purpose: "Multi-panel team — dual attention + documents before conversation trail"
-      focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel team — level/dept/location + documents before conversation trail"
+      focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation
     as hr_admin:
-      purpose: "Multi-panel org coaching — dual attention + documents before notes"
-      focus: team_pulse, by_level, by_department, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel org coaching — level/dept/location + documents before notes"
+      focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation
 
   # Conversation trail after dual attention org boards + documents.
   live_conversation:
@@ -1485,8 +1516,12 @@ workspace my_team "My Team":
     display: status_list
     entries:
       - title: "Org structure"
-        caption: "Level board and department assignments before notes"
+        caption: "Level, department, and work-location boards before notes"
         icon: "network"
+        state: accent
+      - title: "Work location grain"
+        caption: "HQ / Manchester / remote / hybrid columns a people partner uses"
+        icon: "map-pin"
         state: accent
       - title: "Reporting lines"
         caption: "ManagerLink also lives on the Reporting desk"
@@ -1547,7 +1582,7 @@ workspace starters_desk "New Starters":
 # put span-of-control people columns first — not a flat link table + dept-name
 # bar chart theater. Full recursive tree remains TODO #hr-hierarchy.
 workspace reporting_desk "Reporting":
-  purpose: "People hierarchy — span of control by manager, active lines, then roster (not only department units)"
+  purpose: "People hierarchy — span of control, department + work-location placement, active lines (not only department units)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1558,9 +1593,13 @@ workspace reporting_desk "Reporting":
       people: count(Person)
       departments: count(Department)
       roles: count(Role)
+      remote_uk: count(Person where work_location = remote_uk and ended_at = null)
+      hybrid: count(Person where work_location = hybrid and ended_at = null)
     tones:
       links: accent
       people: positive
+      remote_uk: warning
+      hybrid: accent
 
   # Span of control — columns are managers; cards are report→manager lines.
   # Buyer-true org parse without recursive descendant DSL.
@@ -1584,6 +1623,17 @@ workspace reporting_desk "Reporting":
     action: employment_detail
     empty: "No active employment rows"
 
+  # Cycle 1914: work_location board — place grain next to span-of-control.
+  by_location:
+    source: Person
+    filter: ended_at = null
+    display: kanban
+    group_by: work_location
+    sort: legal_name asc
+    limit: 40
+    action: person_detail
+    empty: "No active people with work locations yet"
+
   active_links:
     source: ManagerLink
     sort: start_date desc
@@ -1595,10 +1645,10 @@ workspace reporting_desk "Reporting":
   ux:
     as hr_admin:
       purpose: "Parse span of control and department placement before flat link thrash"
-      focus: reporting_pulse, span_of_control, by_department, active_links
+      focus: reporting_pulse, span_of_control, by_department, by_location, active_links
     as manager:
       purpose: "See who sits under each manager and open a reporting line"
-      focus: reporting_pulse, span_of_control, active_links, people_cards
+      focus: reporting_pulse, span_of_control, by_department, by_location, active_links
 
   # Work-surface utility: reporting desk people are open-person queue, not inventory grid.
   people_cards:
