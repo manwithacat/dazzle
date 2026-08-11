@@ -3,7 +3,7 @@
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "ce90ec2d925d3a4f",
+  "source_sha256": "eda1fd53db18abc1",
   "personas": [
     {
       "id_hint": "agent",
@@ -190,6 +190,8 @@
     "Avoid",
     "Console",
     "Dashboard",
+    "Front",
+    "Intercom",
     "JavaScript",
     "Lead",
     "Message",
@@ -197,6 +199,7 @@
     "Support",
     "Tickets",
     "Waiver",
+    "Zendesk",
     "agent",
     "associated",
     "auditable",

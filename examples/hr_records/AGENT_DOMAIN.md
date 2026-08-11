@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
 **Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md`
-**Fingerprint:** `2e7f275c82f437fa`
+**Fingerprint:** `9da0b54ad44d9041`
 
 ## Personas (jobs)
 
@@ -65,7 +65,7 @@ _None blocking._
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
   "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "2e7f275c82f437fa",
+  "source_sha256": "9da0b54ad44d9041",
   "personas": [
     {
       "id_hint": "manager",
