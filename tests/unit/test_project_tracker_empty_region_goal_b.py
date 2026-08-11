@@ -65,8 +65,32 @@ def test_my_tasks_omits_chart_and_twin_comment_dump() -> None:
     assert "as member:" in block
 
 
+def test_discussion_desk_omits_twin_dump_kanban_and_priority_chart() -> None:
+    """Cycle 1924 empty_region: one conversation spine + open work — not chart theater."""
+    block = _workspace_block("discussion_desk")
+    assert "discussion_pulse:" in block
+    assert "live_conversation:" in block
+    assert "open_tasks:" in block
+    # Twin dumps / voids pruned
+    assert "\n  recent:" not in block
+    assert "open_flow:" not in block
+    assert "priority_mix:" not in block
+    assert "display: bar_chart" not in block
+    assert "display: timeline" not in block
+    assert "display: kanban" not in block
+    # Single conversation chrome + pull queue
+    assert block.count("display: conversation") == 1
+    assert "focus: discussion_pulse, live_conversation, open_tasks" in block
+    assert "as manager:" in block
+    assert "as member:" in block
+
+
 def test_project_tracker_keeps_bar_chart_on_secondary_desks() -> None:
     """Hero prune must not leave display: bar_chart fleet-uncovered in this app."""
     text = APP.read_text()
     assert "display: bar_chart" in text
     assert text.count("display: bar_chart") >= 2
+    # Coverage lives on People / Milestone Plan — not the Discussion trail desk.
+    people = _workspace_block("people_desk")
+    plan = _workspace_block("milestone_plan")
+    assert "display: bar_chart" in people or "display: bar_chart" in plan

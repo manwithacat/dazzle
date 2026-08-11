@@ -607,7 +607,10 @@ workspace milestone_plan "Milestone Plan":
 # Fifth product workspace: discussion desk vs bare comment list.
 workspace discussion_desk "Discussion":
   # Goal B conversation depth: dedicated trail desk mirrors Linear/Jira activity.
-  purpose: "Live discussion trail across tasks — reply where the conversation already is"
+  # Goal B empty_region_honesty (cycle 1924): one live trail + open-work pull
+  # queue — drop twin timeline dump, duplicate kanban, and priority bar chart
+  # voids (recipe discussion_desk_void_prune; peer Linear/Asana activity desks).
+  purpose: "Live discussion trail across tasks — one conversation spine, not chart or twin dumps"
   access: persona(admin, manager, member)
 
   discussion_pulse:
@@ -619,6 +622,7 @@ workspace discussion_desk "Discussion":
     tones:
       conversation: accent
 
+  # Single conversation spine (Message chrome) — no twin timeline dump below.
   live_conversation:
     source: Comment
     sort: created_at desc
@@ -627,40 +631,26 @@ workspace discussion_desk "Discussion":
     action: comment_detail
     empty: "No conversation yet — notes on open tasks appear here"
 
-  recent:
-    source: Comment
-    sort: created_at desc
-    limit: 25
-    display: timeline
-    action: comment_detail
-    empty: "No comments yet"
-
+  # Open work is pull-next context for the trail — not a second board wall.
   open_tasks:
     source: Task
     filter: status != done
     sort: priority desc
     limit: 15
-    # Open work is pull-next, not a card wall.
     display: queue
     action: task_detail
     empty: "No open tasks"
 
-  open_flow:
-    source: Task
-    filter: status != done
-    display: kanban
-    group_by: status
-    sort: priority desc
-    empty: "No open tasks"
-
-  priority_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+  ux:
+    as manager:
+      purpose: "Read the live trail and pull the next open task — no chart theater"
+      focus: discussion_pulse, live_conversation, open_tasks
+    as member:
+      purpose: "Join the discussion and see which open tasks still need a reply"
+      focus: discussion_pulse, live_conversation, open_tasks
+    as admin:
+      purpose: "Fleet conversation volume with open work — one spine, not twin dumps"
+      focus: discussion_pulse, live_conversation, open_tasks
 
 # Sixth product workspace: document composition desk (Goal B document depth).
 # Peer tools (Linear / Jira / Asana) show named briefs/specs above empty task

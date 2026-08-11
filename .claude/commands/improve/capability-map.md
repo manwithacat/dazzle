@@ -58,7 +58,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1921 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1924 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1918 | USED |
@@ -69,7 +69,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1915 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1918 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1924 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -137,3 +137,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
 > **Cycle 1921 (2026-08-11).** interesting_product document@invoice_ops dispute_reason_desk; tip CI green @37349d1cc; densify_allowed=0; next: tip CI then acceptance other / non-document peer / trial_verdict hr re-prove — not smoke thrash.
+> **Cycle 1924 (2026-08-11).** design_studio agent_acceptance_panel thrash (budget_exceeded unclear) + interesting_product empty_region@project_tracker discussion_desk_void_prune; tip CI green @3c668facd; densify_allowed=0.

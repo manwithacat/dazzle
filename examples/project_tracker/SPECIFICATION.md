@@ -45,8 +45,9 @@ the **Project Board**. Both places stay available to everyone with access.
   dump / priority chart).
 - **Milestone Plan** — manager schedule desk: milestone metrics, open
   milestone queue, active project grid, status mix chart, and open-work trail.
-- **Discussion** — cross-task comment pulse, timeline, open-task grid,
-  in-flight kanban, and priority mix chart.
+- **Discussion** — cross-task comment pulse, one live conversation spine,
+  and open-task pull queue (no twin timeline dump, kanban twin, or priority
+  chart theater — empty_region honesty, cycle 1924).
 - **Files** — document composition desk: project-document pulse and named
   brief/spec composition, tasks needing evidence, and recent file uploads.
 - **People** — admin/manager org desk: team pulse, role board (kanban),
@@ -88,4 +89,4 @@ bytes outside it without being explicitly listed (verify:
 
 **Project Document lifecycle.** Project Documents move draft → published → archived (member may publish; manager/admin archive; admin may return published to draft).
 
-<!-- dazzle-spec-brief: sha256:6a5c202d19edac28f923ca81b7460c91c494405565fc009df542824d7321d8d0 -->
+<!-- dazzle-spec-brief: sha256:ba4acb9a39d8b8c9fc9e18b9f682f85aa7fd3b459bad3f713cbf9deb0b5e7160 -->
