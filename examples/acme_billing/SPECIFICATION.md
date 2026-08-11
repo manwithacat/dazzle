@@ -155,4 +155,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:54b703c188fe1ddb7a31d19828035c2802562561c5aef2187c9c83c4c195d293 -->
+<!-- dazzle-spec-brief: sha256:cac3c9d501f4658d60079098453da38159c4f52df983099473968e76b8fa74aa -->

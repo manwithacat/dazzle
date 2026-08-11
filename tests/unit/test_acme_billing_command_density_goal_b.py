@@ -21,22 +21,24 @@ def test_billing_declares_dual_attention_before_conversation() -> None:
     assert "portfolio_metrics:" in block
     assert "open_invoices:" in block
     assert "sensitive_flags:" in block
+    assert "dunning_board:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    # Order: metrics → open → sensitive → composition → conversation.
+    # Order: metrics → open → sensitive → dunning → composition → conversation.
     assert block.index("portfolio_metrics:") < block.index("open_invoices:")
     assert block.index("open_invoices:") < block.index("sensitive_flags:")
-    assert block.index("sensitive_flags:") < block.index("composition:")
+    assert block.index("sensitive_flags:") < block.index("dunning_board:")
+    assert block.index("dunning_board:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
 
 
 def test_billing_caps_attention_for_fold_share() -> None:
     block = _billing_block()
     assert "limit: 4" in block
-    # Goal B media invoice_packets leads; dual attention + composition trail follow.
+    # Goal B media invoice_packets leads; dual attention + dunning + composition trail.
     assert (
         "focus: invoice_packets, portfolio_metrics, open_invoices, "
-        "sensitive_flags, composition, live_conversation"
+        "sensitive_flags, dunning_board, composition, live_conversation"
     ) in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
@@ -45,6 +47,7 @@ def test_billing_metrics_count_open_sensitive_and_conversation() -> None:
     block = _billing_block()
     assert "open_books: count(Invoice where sensitive != true)" in block
     assert "sensitive: count(Invoice where sensitive = true)" in block
+    assert "in_dunning: count(Invoice where dunning_state != none)" in block
     assert "conversation: count(InvoiceNote)" in block
     assert "filter: sensitive != true" in block
     assert "filter: sensitive = true" in block

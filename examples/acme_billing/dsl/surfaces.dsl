@@ -197,6 +197,7 @@ surface invoice_list "Invoices":
     field number "Number"
     field amount "Amount"
     field project "Project"
+    field dunning_state "Dunning"
     field sensitive "Sensitive"
     field created_at "Created"
 
@@ -221,6 +222,7 @@ surface invoice_detail "Invoice":
     field number "Number"
     field amount "Amount"
     field project "Project"
+    field dunning_state "Dunning"
 
   section flags "Flags":
     layout: strip
@@ -228,11 +230,11 @@ surface invoice_detail "Invoice":
     field created_at "Created"
 
   # Document composition (Goal B): line items are the invoice body, not a
-  # warehouse table — named descriptions + qty × unit (cents).
+  # warehouse table — named descriptions + qty × unit (cents) + tax/plan grain.
   related lines "Line items":
     display: queue
     show: LineItem
-    columns: description, quantity, unit_amount
+    columns: description, quantity, unit_amount, tax_code, plan_name
 
   # Goal B conversation (cycle 1899 hub wave): invoice hub Discussion uses
   # RelatedDisplayMode.conversation → Message/Bubble chrome (finance desk
@@ -255,6 +257,7 @@ surface invoice_create "Create Invoice":
     field number "Number"
     field amount "Amount"
     field project "Project"
+    field dunning_state "Dunning"
     field sensitive "Sensitive"
 
 surface invoice_edit "Edit Invoice":
@@ -266,6 +269,7 @@ surface invoice_edit "Edit Invoice":
     field number "Number"
     field amount "Amount"
     field project "Project"
+    field dunning_state "Dunning"
     field sensitive "Sensitive"
 
 
@@ -329,6 +333,8 @@ surface line_item_list "Line Items":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit (¢)"
+    field tax_code "Tax"
+    field plan_name "Plan"
     field invoice "Invoice"
 
   ux:
@@ -343,6 +349,8 @@ surface line_item_detail "Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit (¢)"
+    field tax_code "Tax Code"
+    field plan_name "Plan"
     field invoice "Invoice"
     field created_at "Created"
 
@@ -359,6 +367,8 @@ surface line_item_create "Create Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit (¢)"
+    field tax_code "Tax Code"
+    field plan_name "Plan"
 
 surface line_item_edit "Edit Line Item":
   uses entity LineItem
@@ -370,6 +380,8 @@ surface line_item_edit "Edit Line Item":
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit (¢)"
+    field tax_code "Tax Code"
+    field plan_name "Plan"
 
 # =============================================================================
 # MEMBERSHIP SURFACES
@@ -448,17 +460,20 @@ workspace billing "Acme Billing":
     empty: "No invoice packet previews yet"
 
   # Metrics-first portfolio before attention panels.
+  # Goal B document peer-pack (cycle 1904): dunning + plan grain on the fold.
   portfolio_metrics:
     source: Invoice
     display: metrics
     aggregate:
       open_books: count(Invoice where sensitive != true)
       sensitive: count(Invoice where sensitive = true)
+      in_dunning: count(Invoice where dunning_state != none)
       lines: count(LineItem)
       conversation: count(InvoiceNote)
     tones:
       open_books: accent
       sensitive: destructive
+      in_dunning: warning
       conversation: accent
 
   # Dual attention (fold share): standard open books + sensitive review.
@@ -480,7 +495,18 @@ workspace billing "Acme Billing":
     action: invoice_detail
     empty: "No sensitive invoices flagged"
 
-  # Goal B document composition: named line descriptions
+  # Goal B document peer-pack: dunning board — collections columns buyers scan.
+  dunning_board:
+    source: Invoice
+    filter: dunning_state != none
+    sort: created_at desc
+    limit: 12
+    display: kanban
+    group_by: dunning_state
+    action: invoice_detail
+    empty: "No invoices in dunning — healthy books"
+
+  # Goal B document composition: named line descriptions + tax/plan columns
   # (Bill.com / Stripe Invoicing peer — not header-only amount shells).
   composition:
     source: LineItem
@@ -501,14 +527,14 @@ workspace billing "Acme Billing":
 
   ux:
     as admin:
-      purpose: "Invoice packet wall first, then dual attention and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as org_owner:
-      purpose: "Invoice packet wall first, then dual attention and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as auditor:
-      purpose: "Invoice packet wall first, then dual attention and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, composition, live_conversation
+      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
+      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
 
   # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:

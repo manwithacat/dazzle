@@ -32,7 +32,7 @@ def test_billing_omits_membership_mix_under_fold() -> None:
     # Goal B media invoice_packets leads the fold (cycle 1885).
     assert (
         "focus: invoice_packets, portfolio_metrics, open_invoices, "
-        "sensitive_flags, composition, live_conversation" in block
+        "sensitive_flags, dunning_board, composition, live_conversation" in block
     )
     assert "invoice_by_project" not in block.split("focus:")[1].split("\n")[0]
     assert "sensitive_share" not in block.split("focus:")[1].split("\n")[0]

@@ -16,8 +16,13 @@ def test_line_item_entity_is_document_composition() -> None:
     assert 'entity LineItem "Line Item"' in text
     assert "display_field: description" in text
     assert "unit_amount: int required" in text
+    # Peer-pack document grain (cycle 1904): tax + plan on composition lines
+    assert "tax_code: str(20) optional" in text
+    assert "plan_name: str(80) optional" in text
     # Invoice number is the document title for refs
     assert "display_field: number" in text
+    # Peer-pack dunning state on the invoice header
+    assert "dunning_state: enum[none, reminder_1, reminder_2, final, collections]=none" in text
 
 
 def test_billing_workspace_declares_composition_queue() -> None:
@@ -27,11 +32,28 @@ def test_billing_workspace_declares_composition_queue() -> None:
     assert "source: LineItem" in text
     assert 'related lines "Line items"' in text
     assert "show: LineItem" in text
+    assert "columns: description, quantity, unit_amount, tax_code, plan_name" in text
+    # Cycle 1904 peer-pack: dunning board + in_dunning metric above conversation
+    assert "dunning_board:" in text
+    assert "group_by: dunning_state" in text
+    assert "in_dunning: count(Invoice where dunning_state != none)" in text
+    block_start = text.index('workspace billing "Acme Billing":')
+    rest = text[block_start + 1 :]
+    nxt = rest.find("\nworkspace ")
+    block = text[block_start : block_start + 1 + nxt] if nxt != -1 else text[block_start:]
+    assert block.index("dunning_board:") < block.index("composition:")
+    assert block.index("composition:") < block.index("live_conversation:")
+    assert (
+        "focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, "
+        "dunning_board, composition, live_conversation" in block
+    )
 
 
 def test_line_item_seeds_are_domain_true_descriptions() -> None:
     rows = [json.loads(line) for line in LINE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 12, "Goal B document expects composition lines across invoices"
+    tax_codes = set()
+    plans = set()
     for row in rows:
         desc = str(row["description"])
         assert len(desc) >= 12, desc
@@ -41,6 +63,22 @@ def test_line_item_seeds_are_domain_true_descriptions() -> None:
         # Invoice.jsonl uses 00000005- / 00000006- prefixes; LineItem uses 00000009-
         assert row["invoice"].startswith("0000000")
         assert str(row["id"]).startswith("00000009-")
+        # Peer-pack tax + plan grain on every seed line
+        assert row.get("tax_code"), f"missing tax_code on {row['id']}"
+        assert row.get("plan_name"), f"missing plan_name on {row['id']}"
+        tax_codes.add(row["tax_code"])
+        plans.add(row["plan_name"])
+    assert len(tax_codes) >= 3, tax_codes
+    assert len(plans) >= 4, plans
+
+
+def test_invoice_seeds_include_dunning_mix() -> None:
+    inv_path = ROOT / "examples/acme_billing/dsl/seeds/demo_data/Invoice.jsonl"
+    rows = [json.loads(line) for line in inv_path.read_text().splitlines() if line.strip()]
+    states = {r.get("dunning_state", "none") for r in rows}
+    assert "none" in states
+    assert states & {"reminder_1", "reminder_2", "final", "collections"}, states
+    assert any(r.get("dunning_state") not in (None, "none") for r in rows)
 
 
 def test_demo_personas_bind_domain_user_org() -> None:

@@ -147,6 +147,9 @@ entity Invoice "Invoice":
   amount: int required
   project: ref Project required
   sensitive: bool=false
+  # Goal B document peer-pack (cycle 1904): Stripe/Chargebee dunning state so
+  # operators lean into collections work — not amount shells alone.
+  dunning_state: enum[none, reminder_1, reminder_2, final, collections]=none
   # Goal B media (novel vs headshot shelf): invoice packet preview — PDF/page
   # thumbs on the money desk, not User photo chrome (peer: Stripe/Chargebee).
   preview_url: url
@@ -192,7 +195,7 @@ entity Invoice "Invoice":
 # =============================================================================
 
 entity LineItem "Line Item":
-  intent: "A single line on an invoice document — description + qty × unit amount (cents). Peer tools (Bill.com / Stripe Invoicing) show named composition lines, not header-only amounts."
+  intent: "A single line on an invoice document — description + qty × unit amount (cents). Peer tools (Bill.com / Stripe Invoicing) show named composition lines with tax + plan grain, not header-only amounts."
   # Goal B: queue title is the human line description, not a UUID shell.
   display_field: description
 
@@ -201,6 +204,10 @@ entity LineItem "Line Item":
   description: str(200) required
   quantity: int=1
   unit_amount: int required
+  # Goal B document peer-pack (cycle 1904): tax line + plan name — finance
+  # operators lean into these (Stripe Billing / Chargebee), not description alone.
+  tax_code: str(20) optional
+  plan_name: str(80) optional
   created_at: datetime auto_add
 
   # Same role surface as Invoice read/list; create stays admin-only (no

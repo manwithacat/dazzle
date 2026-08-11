@@ -1,6 +1,16 @@
 ## [Unreleased]
 
 ### Changed
+- **Goal B document peer-pack acme_billing (cycle 1904)** — Invoice gains
+  `dunning_state` (none→collections) with billing `dunning_board` kanban +
+  `in_dunning` metric; LineItem gains `tax_code` + `plan_name` (Stripe/Chargebee
+  grain) on hub columns and list/detail/create/edit; seed mix; unit pins;
+  SPEC + compliance auditspec + RBAC matrix refreshed; hero stills recaptured.
+- **Goal B conversation customer tone (cycle 1902)** — support_tickets Comment
+  gains `customer_tone` (neutral/frustrated/urgent/thankful); ticket/user hub
+  Discussion columns surface tone; framework maps frustrated/urgent → Bubble
+  `danger` on RelatedDisplayMode.conversation + display:conversation timelines;
+  unit pins + seed mix.
 - **Goal B conversation hub wave (cycle 1899)** — detail-hub Discussion /
   Comments related groups switch from `display: queue` to
   `RelatedDisplayMode.conversation` (Message/Bubble trail) on hr_records,
