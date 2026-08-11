@@ -42,6 +42,7 @@ from dazzle.render.fragment.region._shared import (
     _render_typed_value,
     _wrap_surface,
 )
+from dazzle.render.fragment.renderer._related_conversation import conversation_bubble_tone
 
 # Body fields for activity-feed description (first non-empty wins).
 # Comment entities use `content`; generic feeds often use description/title.
@@ -143,6 +144,28 @@ def _media_initials(author: str) -> str:
     return "".join(w[0] for w in words[:2]).upper()
 
 
+def _conversation_bubble_tone(item: dict[str, Any]) -> str:
+    """Map customer_tone / sentiment row fields → Bubble danger tone.
+
+    Peer Zendesk/Front/Intercom trails flag frustrated/urgent customer speech
+    so agents lean in; neutral/thankful stay untoned.
+    """
+    for key in (
+        "customer_tone",
+        "tone",
+        "sentiment",
+        "customer_sentiment",
+        "mood",
+    ):
+        raw = item.get(key)
+        if raw is None or raw == "":
+            continue
+        tone = conversation_bubble_tone(str(raw))
+        if tone:
+            return tone
+    return ""
+
+
 def _conversation_message(
     text: str,
     orient: str,
@@ -152,9 +175,14 @@ def _conversation_message(
     time_datetime: str = "",
     media_label: str = "",
     drill_url: str = "",
+    bubble_tone: str = "",
 ) -> Message:
     """Build a Message row wrapping a Bubble for conversation stacks."""
-    bubble = Bubble(text=text, from_=orient)  # type: ignore[arg-type]
+    bubble = Bubble(
+        text=text,
+        from_=orient,  # type: ignore[arg-type]
+        tone=bubble_tone or "",  # type: ignore[arg-type]
+    )
     author_s = author.strip()
     if not author_s:
         author_s = "Agent" if orient == "out" else "Customer"
@@ -392,6 +420,7 @@ class _BuildersTimelineMixin:
                     time_datetime=time_dt,
                     media_label=media,
                     drill_url=drill_by_id.get(id(item), ""),
+                    bubble_tone=_conversation_bubble_tone(item),
                 )
             )
 

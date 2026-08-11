@@ -175,6 +175,9 @@ entity Comment "Comment":
   ticket: ref Ticket required
   author: ref User required
   content: text required pii(category=freeform)
+  # Goal B conversation peer-pack (cycle 1902): Zendesk/Front/Intercom
+  # trails surface customer tone so agents lean into frustrated/urgent speech.
+  customer_tone: enum[neutral,frustrated,urgent,thankful]=neutral
   is_internal: bool = false
   created_at: datetime auto_add
 
@@ -208,7 +211,7 @@ entity Comment "Comment":
       as: manager
 
   fitness:
-    repr_fields: [ticket, author, content, is_internal]
+    repr_fields: [ticket, author, content, customer_tone, is_internal]
 
 # ============================================================================
 # USER SURFACES
@@ -267,7 +270,7 @@ surface user_detail "User Detail":
   related comments "Comments":
     display: conversation
     show: Comment
-    columns: content, is_internal, created_at
+    columns: content, customer_tone, is_internal, created_at
 
 surface user_create "Create User":
   uses entity User
@@ -361,7 +364,8 @@ surface ticket_detail "Ticket Detail":
   related discussion "Discussion":
     display: conversation
     show: Comment
-    columns: content, author, created_at, is_internal
+    # customer_tone → Bubble danger on frustrated/urgent (framework wire-up)
+    columns: content, author, customer_tone, created_at, is_internal
 
   # Goal B document: named SLA waivers / breach letters on the ticket hub
   # (peer Zendesk/Service Cloud document trail — not queue-only theater).
@@ -371,7 +375,7 @@ surface ticket_detail "Ticket Detail":
     columns: breach_summary, status, signatory_name
 
   ux:
-    purpose: "Ticket hub — summary, Message-chrome discussion trail, and named SLA waiver documents"
+    purpose: "Ticket hub — summary, Message-chrome discussion trail with customer tone, and named SLA waiver documents"
 
 surface ticket_create "Create Ticket":
   uses entity Ticket
@@ -431,6 +435,7 @@ surface comment_list "Comment List":
   section main "Comments":
     field content "Comment"
     field author "Author"
+    field customer_tone "Tone"
     field is_internal "Internal"
     field ticket "Ticket"
     field created_at "Created"
@@ -444,6 +449,7 @@ surface comment_detail "Comment Detail":
     field ticket "Ticket"
     field author "Author"
     field content "Comment"
+    field customer_tone "Tone"
     field is_internal "Internal"
     field created_at "Created"
 
@@ -455,6 +461,7 @@ surface comment_create "Create Comment":
   section main "New Comment":
     field ticket "Ticket"
     field content "Comment"
+    field customer_tone "Customer tone"
     # HM Switch — internal note flag (settings-like boolean; not toggle mode press)
     field is_internal "Internal" widget=switch
 
@@ -469,6 +476,7 @@ surface comment_edit "Edit Comment":
 
   section main "Edit Comment":
     field content "Comment"
+    field customer_tone "Customer tone"
     # HM Switch — internal note flag (settings-like boolean)
     field is_internal "Internal" widget=switch
 
