@@ -9,6 +9,14 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B empty_region_honesty secondary fill (cycle 1916)** — simple_task
+  Discussion drops status bar-chart theater (pulse + notes trail + in-progress
+  queue); People desk promotes unassigned + plate-by-person into focus and
+  drops twin department/load bars, flat roster, and capacity_hint status_list
+  theater; bar_chart gallery coverage moves under Admin Dashboard (not in
+  focus spine); unit pins; SPEC brief; hero stills recaptured. Recipe
+  `secondary_fill_not_chart` (not headshot_shelf; not media/document/
+  conversation/command_density/org_structure re-stack).
 - **Goal B org_structure work_location grain (cycle 1914)** — hr_records Person
   gains `work_location` (london_hq/manchester/remote_uk/hybrid/client_site);
   My Team + Reporting desks add `by_location` kanban + remote/hybrid metrics;

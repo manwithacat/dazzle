@@ -1,4 +1,4 @@
-"""Post-5.8 Goal B empty_region_honesty — simple_task primary desks (cycle 1817)."""
+"""Post-5.8 Goal B empty_region_honesty — simple_task desks (cycle 1817 + 1916 peer)."""
 
 from __future__ import annotations
 
@@ -58,6 +58,49 @@ def test_my_work_omits_twin_comment_timeline() -> None:
     # command_density@1835: dual attention before conversation trail
     assert "focus: my_summary, my_board, my_upcoming, composition, live_conversation" in block
     assert block.count("display: timeline") == 1
+
+
+def test_comments_desk_omits_status_mix_bar_chart() -> None:
+    """Discussion: pulse + notes trail + WIP queue — not status bar theater (cycle 1916)."""
+    block = _workspace_block("comments_desk")
+    assert "comment_pulse:" in block
+    assert "recent:" in block
+    assert "comment_trail:" in block
+    assert "active_tasks:" in block
+    assert "status_mix:" not in block
+    assert "display: bar_chart" not in block
+    assert "focus: comment_pulse, recent, comment_trail, active_tasks" in block
+
+
+def test_people_desk_fills_load_omits_chart_voids() -> None:
+    """People: org shape then unassigned + plate — not twin bar / capacity_hint theater."""
+    block = _workspace_block("people_desk")
+    assert "people_pulse:" in block
+    assert "by_role:" in block
+    assert "by_department:" in block
+    assert "unassigned_work:" in block
+    assert "plate_by_person:" in block
+    assert "dept_mix:" not in block
+    assert "load_mix:" not in block
+    assert "capacity_hint:" not in block
+    assert "roster:" not in block
+    assert "display: bar_chart" not in block
+    assert "focus: people_pulse, by_role, by_department, unassigned_work, plate_by_person" in block
+
+
+def test_admin_dashboard_keeps_bar_chart_coverage_under_fold() -> None:
+    """Bars dogfood under admin (not in focus) after secondary-desk prune."""
+    block = _workspace_block("admin_dashboard")
+    assert "status_mix:" in block
+    assert "priority_mix:" in block
+    assert block.count("display: bar_chart") >= 2
+    assert (
+        "focus: media_shelf, metrics, urgent_tasks, overdue_tasks, composition, "
+        "live_conversation" in block
+    )
+    # Bars must not hijack the admin pressure spine.
+    assert "status_mix" not in block.split("focus:")[1].split("\n")[0]
+    assert "priority_mix" not in block.split("focus:")[1].split("\n")[0]
 
 
 def test_simple_task_keeps_bar_chart_for_coverage() -> None:

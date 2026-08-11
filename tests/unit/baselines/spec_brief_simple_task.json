@@ -438,7 +438,9 @@
         "queue of Task",
         "queue of Task",
         "queue of TaskBrief",
-        "conversation of TaskComment"
+        "conversation of TaskComment",
+        "bar_chart of Task",
+        "bar_chart of Task"
       ]
     },
     {
@@ -478,7 +480,7 @@
       "name": "comments_desk",
       "title": "Discussion",
       "kind": "workspace",
-      "purpose": "Recent task discussion across the team — threads, decisions, and open questions on live work",
+      "purpose": "Live discussion trail + in-progress work — notes and next tasks, not status chart voids",
       "personas": [
         "admin",
         "manager",
@@ -488,15 +490,14 @@
         "metrics of TaskComment",
         "queue of TaskComment",
         "timeline of TaskComment",
-        "queue of Task",
-        "bar_chart of Task"
+        "queue of Task"
       ]
     },
     {
       "name": "people_desk",
       "title": "People",
       "kind": "workspace",
-      "purpose": "Org structure people can parse — team by role and department, then open load",
+      "purpose": "Org shape then open load — role/dept people, unassigned queue, plate by person (no chart voids)",
       "personas": [
         "admin",
         "manager"
@@ -505,12 +506,9 @@
         "metrics of User",
         "kanban of User",
         "queue of User",
-        "queue of User",
         "queue of Task",
         "kanban of Task",
-        "kanban of Task",
-        "bar_chart of User",
-        "bar_chart of Task"
+        "kanban of Task"
       ]
     }
   ],

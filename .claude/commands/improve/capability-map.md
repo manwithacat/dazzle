@@ -58,7 +58,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1914 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 1916 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1716 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
@@ -136,4 +136,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 1915 (2026-08-11).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff≈17 HYGIENE_STALE_eff≈39 (post-stamp); tip CI green 31471354534 @a891b42e4; densify_allowed=0; dual_lock=0; next digs: agent_acceptance **other** / empty_region peer (anti-wave) / gallery+sentinel hygiene / demo_world MCP. Not stale smoke thrash.
+> **Cycle 1916 (2026-08-11).** interesting_product empty_region@simple_task secondary fill; tip CI green @d6192bab3 before ship; densify_allowed=0; next: agent_acceptance other / gallery+sentinel / non-empty_region peer — not smoke thrash.

@@ -58,9 +58,11 @@ document composition, then live conversation trail (command_density). The
 assignee plate kanban), briefs, then conversation (no flow chart / twin
 comment dump). **My Work** is each person's multi-panel plate: summary,
 board + dues dual attention, briefs, then conversation (no twin comment dump).
-**Discussion** is the comment desk with trail, active cards, and status chart.
+**Discussion** is the comment desk with pulse, newest notes, time trail, and
+in-progress pull queue (empty_region honesty — no status bar-chart theater).
 **People** is the org-structure desk: role board + department queue, then
-roster, unassigned queue, plate-by-person, and department headcount mix.
+unassigned work and plate-by-person capacity (no twin department/load bar
+voids or static capacity-hint theater under the fold).
 
 ## How work flows through it
 
@@ -124,4 +126,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:8817e493943a5eb92af8d90210b7d7a11c8102b400df6e6db1cdd464977d222b -->
+<!-- dazzle-spec-brief: sha256:53e3a099fc1f53e4188a3e467404ef72e244d6d364a84dbabef80a69e7ac7173 -->

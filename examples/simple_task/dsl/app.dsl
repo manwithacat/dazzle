@@ -961,6 +961,27 @@ workspace admin_dashboard "Admin Dashboard":
         body: "38"
         icon: "warning"
 
+  # Gallery / display coverage (cycle 1916): status + priority bars live here
+  # under-fold — not on Discussion/People secondary desks (empty_region honesty).
+  # Not in admin focus spine (pressure queues remain above fold).
+  status_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
   ux:
     as admin:
       purpose: "Multi-panel admin — team headshots then dual attention before conversation trail"
@@ -1160,8 +1181,11 @@ workspace my_work "My Work":
       purpose: "Multi-panel personal plate — board + dues dual attention before conversation trail"
       focus: my_summary, my_board, my_upcoming, composition, live_conversation
 
+# Goal B empty_region_honesty (cycle 1916 peer upgrade): Discussion is a
+# conversation + live-work desk (Linear / Asana activity), not status-chart
+# theater under a thin trail. Bars dogfood under Admin Dashboard below focus.
 workspace comments_desk "Discussion":
-  purpose: "Recent task discussion across the team — threads, decisions, and open questions on live work"
+  purpose: "Live discussion trail + in-progress work — notes and next tasks, not status chart voids"
   access: persona(admin, manager, member)
 
   comment_pulse:
@@ -1169,9 +1193,11 @@ workspace comments_desk "Discussion":
     display: metrics
     aggregate:
       comments: count(TaskComment)
-      tasks: count(Task)
+      in_progress: count(Task where status = in_progress)
+      open_tasks: count(Task where status != done)
     tones:
       comments: accent
+      in_progress: warning
 
   # Conversation spine: newest notes as a pull-to-open queue (author + task + body).
   recent:
@@ -1199,20 +1225,23 @@ workspace comments_desk "Discussion":
     action: task_detail
     empty: "No tasks in progress"
 
-  status_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks"
+  ux:
+    as admin:
+      purpose: "Discussion pulse, newest notes, trail, then in-progress pull — no status bar theater"
+      focus: comment_pulse, recent, comment_trail, active_tasks
+    as manager:
+      purpose: "See the conversation trail and live WIP without chart voids"
+      focus: comment_pulse, recent, comment_trail, active_tasks
+    as member:
+      purpose: "Catch up on notes and in-progress work"
+      focus: comment_pulse, recent, comment_trail, active_tasks
 
-# Fifth product workspace: people/roster desk.
-# Goal B org_structure: peer task tools (Linear / Asana / Notion) show team by
-# role and department — not a flat warehouse roster above an unassigned dump.
+# Goal B empty_region_honesty (cycle 1916): People desk fills secondary fold with
+# unassigned + plate-by-person work (Linear/Asana capacity scan) — not twin
+# department/load bar charts or static capacity_hint status_list theater.
+# Goal B org_structure still holds: role board + department queue first.
 workspace people_desk "People":
-  purpose: "Org structure people can parse — team by role and department, then open load"
+  purpose: "Org shape then open load — role/dept people, unassigned queue, plate by person (no chart voids)"
   access: persona(admin, manager)
 
   people_pulse:
@@ -1222,9 +1251,11 @@ workspace people_desk "People":
       people: count(User)
       active: count(User where is_active = true)
       open_tasks: count(Task where status != done)
+      unassigned: count(Task where assigned_to = null and status != done)
     tones:
       active: positive
       open_tasks: accent
+      unassigned: warning
 
   # Role board (enum columns admin/manager/member) — org authority shape.
   by_role:
@@ -1246,16 +1277,6 @@ workspace people_desk "People":
     limit: 40
     action: user_detail
     empty: "No team members yet"
-
-  # Secondary flat roster (after hierarchy) — sorted by department.
-  roster:
-    source: User
-    filter: is_active = true
-    sort: department asc, name asc
-    limit: 20
-    display: queue
-    action: user_detail
-    empty: "No active teammates"
 
   unassigned_work:
     source: Task
@@ -1285,45 +1306,10 @@ workspace people_desk "People":
     action: task_detail
     empty: "No tasks in progress or review"
 
-  # Department headcount mix (org shape at a glance).
-  dept_mix:
-    source: User
-    filter: is_active = true
-    display: bar_chart
-    group_by: department
-    aggregate:
-      count: count(User)
-    empty: "No team members yet"
-
-  load_mix:
-    source: Task
-    filter: status != done and assigned_to != null
-    display: bar_chart
-    group_by: assigned_to
-    aggregate:
-      count: count(Task)
-    empty: "No assigned open tasks"
-
-  capacity_hint:
-    display: status_list
-    entries:
-      - title: "By role board"
-        caption: "Admin / Manager / Member columns show org authority at a glance"
-        icon: "users"
-        state: accent
-      - title: "Department queue"
-        caption: "People sorted by dept before flat roster and unassigned load"
-        icon: "building"
-        state: positive
-      - title: "Plate by person"
-        caption: "Assignee columns for Monday capacity scan after org shape"
-        icon: "list-checks"
-        state: warning
-
   ux:
     as manager:
-      purpose: "See team by role and department before unassigned load"
-      focus: people_pulse, by_role, by_department, roster
+      purpose: "Org shape then unassigned + plate capacity — no department bar voids"
+      focus: people_pulse, by_role, by_department, unassigned_work, plate_by_person
     as admin:
-      purpose: "Org structure and role board before open-task load"
-      focus: people_pulse, by_role, by_department, roster
+      purpose: "Role/dept people then open load (unassigned + plate) without chart theater"
+      focus: people_pulse, by_role, by_department, unassigned_work, plate_by_person

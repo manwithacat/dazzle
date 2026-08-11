@@ -25,19 +25,22 @@ def test_people_desk_declares_role_board_and_dept_before_unassigned() -> None:
     assert "group_by: role" in block
     assert "by_department:" in block
     assert "unassigned_work:" in block
-    # Order: pulse → role board → department queue → roster → unassigned
+    assert "plate_by_person:" in block
+    # Order: pulse → role → department → unassigned → plate
+    # (cycle 1916: roster/chart voids dropped; load fills secondary fold)
     assert block.index("people_pulse:") < block.index("by_role:")
     assert block.index("by_role:") < block.index("by_department:")
-    assert block.index("by_department:") < block.index("roster:")
-    assert block.index("roster:") < block.index("unassigned_work:")
+    assert block.index("by_department:") < block.index("unassigned_work:")
+    assert block.index("unassigned_work:") < block.index("plate_by_person:")
 
 
 def test_people_desk_ux_focus_org_before_load() -> None:
     block = _people_desk_block()
-    assert "focus: people_pulse, by_role, by_department, roster" in block
-    assert "dept_mix:" in block
-    assert "group_by: department" in block
-    assert "org structure" in block.lower() or "Org structure" in block
+    assert "focus: people_pulse, by_role, by_department, unassigned_work, plate_by_person" in block
+    # empty_region@1916: no department/load bar theater on people desk
+    assert "dept_mix:" not in block
+    assert "load_mix:" not in block
+    assert "org shape" in block.lower() or "org structure" in block.lower()
 
 
 def test_user_seeds_span_multiple_departments() -> None:
