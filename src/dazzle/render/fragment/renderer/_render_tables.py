@@ -443,7 +443,9 @@ class _RenderTablesMixin:
             label=t.label or "Discussion",
             empty_message=empty,
         )
-        parts.append(self._emit_message_scroller(scroller, ctx))
+        # Recurse via dispatcher (not cross-mixin _emit_message_scroller) so
+        # mypy + tables mixin contract stay green — layout owns Message chrome.
+        parts.append(self._emit(scroller, ctx))
         parts.append(self._related_overflow_html(t, ctx, css_class="dz-related-overflow"))
         return "".join(parts)
 
