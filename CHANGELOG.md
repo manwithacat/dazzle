@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+- **Cross-entity metric scope strip (cycle 1911)** — `count(OtherEntity)` on a
+  metrics region no longer reuses the source entity's qualified
+  `__scope_predicate` (which produced `FROM "InvoiceNote" WHERE ("Invoice"."tenant_id"…)`
+  → Postgres UndefinedTable → silent 0). Same #901/#1250 family; destination RLS
+  still applies. Unit pin; invoice_ops domain reextract after due_date SPEC;
+  demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
+
 ### Changed
 - **Goal B document due-date AP work rows (cycle 1909)** — invoice_ops Invoice
   gains `due_date`; list/detail/create/edit expose amount + due + vendor; finance_ops

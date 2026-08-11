@@ -3,7 +3,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "876490c15893ceda",
+  "source_sha256": "4de6cd637a659311",
   "personas": [
     {
       "id_hint": "requester",
@@ -87,16 +87,10 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Payment",
+      "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [
-        "pending",
-        "processing",
-        "completed",
-        "failed",
-        "refunded"
-      ],
+      "lifecycle_hint": [],
       "owner_field_hint": "requester"
     },
     {
@@ -107,17 +101,23 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Bank",
+      "name": "Approver",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "requester"
     },
     {
-      "name": "Approver",
+      "name": "Payment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded"
+      ],
       "owner_field_hint": "requester"
     }
   ],
@@ -214,6 +214,16 @@
       "status": "hypothesis"
     },
     {
+      "id_hint": "escalation",
+      "summary": "Payment: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Payment",
+      "status": "hypothesis"
+    },
+    {
       "id_hint": "assignment",
       "summary": "Payment: auto or manager assignment to a worker",
       "personas": [
@@ -261,11 +271,13 @@
     "JavaScript",
     "Long",
     "Manage",
+    "Melio",
     "Metric",
     "Operator",
     "Requester",
     "Review",
     "Significant",
+    "Tipalti",
     "Treasury",
     "Two",
     "approval",
@@ -274,6 +286,7 @@
     "attempts",
     "audit",
     "auditable",
+    "bill",
     "built",
     "checker",
     "command",
@@ -296,7 +309,6 @@
     "live",
     "maker",
     "mature",
-    "meta",
     "model",
     "multi",
     "operation",
@@ -304,6 +316,7 @@
     "people",
     "product",
     "read",
+    "record",
     "roles",
     "rule",
     "signed",

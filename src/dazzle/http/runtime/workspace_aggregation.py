@@ -201,6 +201,40 @@ def _materialize_predicate_params(
     return resolved
 
 
+def _scope_filters_for_aggregate(
+    scope_filters: dict[str, Any] | None,
+    *,
+    region_source: str | None,
+    aggregate_entity: str | None,
+) -> dict[str, Any] | None:
+    """Drop source-entity-qualified ``__scope_predicate`` for cross-entity metrics.
+
+    Region RBAC compiles scope against the workspace region ``source:`` entity.
+    Cross-entity counts (e.g. ``count(InvoiceNote)`` on an Invoice metrics tile)
+    would otherwise emit ``FROM "InvoiceNote" WHERE ("Invoice"."tenant_id" = …)``
+    → Postgres ``UndefinedTable`` → swallowed 0 (#901 family). Same root cause
+    as the cohort FK path strip (#1250 / #1231). Destination entity RLS still
+    applies via session GUC; same-entity aggregates keep the predicate.
+    """
+    if not scope_filters:
+        return scope_filters
+    if (
+        not region_source
+        or not aggregate_entity
+        or region_source == aggregate_entity
+        or "__scope_predicate" not in scope_filters
+    ):
+        return scope_filters
+    out = dict(scope_filters)
+    out.pop("__scope_predicate", None)
+    logger.debug(
+        "cross-entity aggregate %s←%s: stripping source __scope_predicate",
+        aggregate_entity,
+        region_source,
+    )
+    return out or None
+
+
 def _build_aggregate_filters(
     where: Any,  # ConditionExpr | str | None — strings retire when current_bucket migrates
     scope_filters: dict[str, Any] | None,
@@ -1345,8 +1379,13 @@ def _prior_period_task(
         agg_repo = repositories.get(entity_name)
         if not agg_repo:
             return None
+        metric_scope = _scope_filters_for_aggregate(
+            prior_window,
+            region_source=source_entity,
+            aggregate_entity=entity_name,
+        )
         return _fetch_count_metric(
-            metric_name, agg_repo, ref.where, prior_window, source_entity=entity_name
+            metric_name, agg_repo, ref.where, metric_scope, source_entity=entity_name
         )
     # Scalar grain (sum/avg/min/max) — #1491 L4.
     if ref.column is None and ref.expression is None:
@@ -1357,13 +1396,18 @@ def _prior_period_task(
     agg_repo = repositories.get(agg_entity)
     if not agg_repo:
         return None
+    metric_scope = _scope_filters_for_aggregate(
+        prior_window,
+        region_source=source_entity,
+        aggregate_entity=agg_entity,
+    )
     return _fetch_scalar_metric(
         metric_name,
         ref.func,
         ref.column,
         agg_repo,
         ref.where,
-        prior_window,
+        metric_scope,
         source_entity=agg_entity,
         expression=ref.expression,
         expression_alias=ref.entity,
@@ -1421,6 +1465,11 @@ async def _compute_aggregate_metrics(
             if agg_repo is None:
                 sync_results[metric_name] = 0
                 continue
+            metric_scope = _scope_filters_for_aggregate(
+                scope_filters,
+                region_source=source_entity,
+                aggregate_entity=entity_name,
+            )
             async_tasks.append(
                 (
                     metric_name,
@@ -1428,7 +1477,7 @@ async def _compute_aggregate_metrics(
                         metric_name,
                         agg_repo,
                         ref.where,
-                        scope_filters,
+                        metric_scope,
                         source_entity=entity_name,
                     ),
                 )
@@ -1451,6 +1500,11 @@ async def _compute_aggregate_metrics(
             if agg_repo is None:
                 sync_results[metric_name] = 0
                 continue
+            metric_scope = _scope_filters_for_aggregate(
+                scope_filters,
+                region_source=source_entity,
+                aggregate_entity=agg_entity,
+            )
             async_tasks.append(
                 (
                     metric_name,
@@ -1460,7 +1514,7 @@ async def _compute_aggregate_metrics(
                         ref.column,
                         agg_repo,
                         ref.where,
-                        scope_filters,
+                        metric_scope,
                         source_entity=agg_entity,
                         expression=ref.expression,
                         expression_alias=ref.entity,

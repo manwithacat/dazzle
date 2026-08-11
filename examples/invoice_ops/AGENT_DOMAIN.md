@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
 **Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `876490c15893ceda`
+**Fingerprint:** `4de6cd637a659311`
 
 ## Personas (jobs)
 
@@ -24,14 +24,14 @@
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
-- **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Controllership`, `Desk`, `Finally`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Treasury`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `audit`, `auditable`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `finance`, `flat`, `fold`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `item`, `lifecycle`, `line`, `live`, `maker`, `mature`, `meta`, `model`, `multi`, `operation`, `override`, `people`, `product`, `read`, `roles`, `rule`, `signed`, `technical`, `users`, `vendor`
+`Account`, `Administrator`, `Controllership`, `Desk`, `Finally`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Melio`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Tipalti`, `Treasury`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `audit`, `auditable`, `bill`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `finance`, `flat`, `fold`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `item`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `people`, `product`, `read`, `record`, `roles`, `rule`, `signed`, `technical`, `users`, `vendor`
 
 ## Desks
 
@@ -57,6 +57,7 @@
 ## Process candidates (hypothesis)
 
 - **approval_flow** (hypothesis) entity≈`Payment` personas=[requester, approver] — Payment: requester submits, approver decides (approve/reject)
+- **escalation** (hypothesis) entity≈`Payment` personas=[member, manager] — Payment: worker escalates to manager when blocked or SLA risk
 - **assignment** (hypothesis) entity≈`Payment` personas=[manager, member] — Payment: auto or manager assignment to a worker
 - **settlement** (hypothesis) entity≈`Payment` personas=[finance, approver] — Payment: finance settles / pays after approval
 - **triage** (hypothesis) entity≈`Payment` personas=[agent, manager] — Payment: intake triage before deep work
@@ -77,7 +78,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "876490c15893ceda",
+  "source_sha256": "4de6cd637a659311",
   "personas": [
     {
       "id_hint": "requester",
@@ -161,16 +162,10 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Payment",
+      "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [
-        "pending",
-        "processing",
-        "completed",
-        "failed",
-        "refunded"
-      ],
+      "lifecycle_hint": [],
       "owner_field_hint": "requester"
     },
     {
@@ -181,17 +176,23 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Bank",
+      "name": "Approver",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "requester"
     },
     {
-      "name": "Approver",
+      "name": "Payment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded"
+      ],
       "owner_field_hint": "requester"
     }
   ],
@@ -288,6 +289,16 @@
       "status": "hypothesis"
     },
     {
+      "id_hint": "escalation",
+      "summary": "Payment: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Payment",
+      "status": "hypothesis"
+    },
+    {
       "id_hint": "assignment",
       "summary": "Payment: auto or manager assignment to a worker",
       "personas": [
@@ -335,11 +346,13 @@
     "JavaScript",
     "Long",
     "Manage",
+    "Melio",
     "Metric",
     "Operator",
     "Requester",
     "Review",
     "Significant",
+    "Tipalti",
     "Treasury",
     "Two",
     "approval",
@@ -348,6 +361,7 @@
     "attempts",
     "audit",
     "auditable",
+    "bill",
     "built",
     "checker",
     "command",
@@ -370,7 +384,6 @@
     "live",
     "maker",
     "mature",
-    "meta",
     "model",
     "multi",
     "operation",
@@ -378,6 +391,7 @@
     "people",
     "product",
     "read",
+    "record",
     "roles",
     "rule",
     "signed",
