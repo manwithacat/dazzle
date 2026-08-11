@@ -33,6 +33,20 @@ _CONV_TONE_KEYS = frozenset(
         "sentiment",
         "customer_sentiment",
         "mood",
+        # Escalation column (raised/critical) also drives Bubble danger.
+        "escalation",
+        "escalation_level",
+        "escalated",
+    }
+)
+# Inbound channel (portal/email/chat/phone) — append to author for trail label.
+_CONV_CHANNEL_KEYS = frozenset(
+    {
+        "channel",
+        "source_channel",
+        "contact_channel",
+        "via",
+        "origin",
     }
 )
 _CONV_ORIENT_OUT = frozenset({"yes", "true", "1", "out", "outbound", "internal", "agent"})
@@ -43,11 +57,16 @@ _CONV_TONE_DANGER = frozenset(
         "urgent",
         "angry",
         "escalated",
+        "raised",
+        "critical",
         "danger",
         "negative",
         "upset",
     }
 )
+# Channel values that are noise when default — skip author suffix.
+# ``portal`` is the product default inbound path (not a lean-in signal).
+_CONV_CHANNEL_SKIP = frozenset({"", "none", "unknown", "n/a", "na", "portal"})
 
 
 def _header_key(header: str) -> str:
@@ -59,8 +78,9 @@ def conversation_roles(headers: tuple[str, ...]) -> list[str]:
 
     Roles: ``text`` (bubble body), ``author``, ``time``, ``orient``
     (inbound/outbound from is_internal / direction), ``tone`` (customer
-    sentiment → Bubble danger). Unknown headers stay empty — is_internal
-    never becomes bubble text.
+    sentiment / escalation → Bubble danger), ``channel`` (path suffix on
+    author). Unknown headers stay empty — is_internal never becomes bubble
+    text.
     """
     roles: list[str] = []
     for h in headers:
@@ -81,6 +101,8 @@ def conversation_roles(headers: tuple[str, ...]) -> list[str]:
             roles.append("orient")
         elif key in _CONV_TONE_KEYS:
             roles.append("tone")
+        elif key in _CONV_CHANNEL_KEYS:
+            roles.append("channel")
         else:
             roles.append("")
     if "text" not in roles:
@@ -102,11 +124,19 @@ def conversation_orient(raw: str) -> str:
 
 
 def conversation_bubble_tone(raw: str) -> str:
-    """Map customer tone / sentiment cells → Bubble tone (``\"\"`` | ``danger``)."""
+    """Map customer tone / escalation cells → Bubble tone (``\"\"`` | ``danger``)."""
     s = str(raw or "").strip().lower().replace(" ", "_").replace("-", "_")
     if s in _CONV_TONE_DANGER:
         return "danger"
     return ""
+
+
+def conversation_channel_label(raw: str) -> str:
+    """Normalize inbound channel for author suffix (empty when noise/default)."""
+    s = str(raw or "").strip().lower().replace(" ", "_").replace("-", "_")
+    if s in _CONV_CHANNEL_SKIP:
+        return ""
+    return s
 
 
 def conversation_time_label(raw: str) -> tuple[str, str]:
@@ -138,16 +168,17 @@ def _apply_conversation_role(
     time_raw: str,
     orient: str,
     bubble_tone: str,
-) -> tuple[str, str, str, str, str]:
+    channel: str,
+) -> tuple[str, str, str, str, str, str]:
     """Apply one non-empty cell to conversation field slots (first-write wins)."""
     if role == "text":
-        return (val if not text else text), author, time_raw, orient, bubble_tone
+        return (val if not text else text), author, time_raw, orient, bubble_tone, channel
     if role == "author":
-        return text, (val if not author else author), time_raw, orient, bubble_tone
+        return text, (val if not author else author), time_raw, orient, bubble_tone, channel
     if role == "time":
-        return text, author, (val if not time_raw else time_raw), orient, bubble_tone
+        return text, author, (val if not time_raw else time_raw), orient, bubble_tone, channel
     if role == "orient":
-        return text, author, time_raw, conversation_orient(val), bubble_tone
+        return text, author, time_raw, conversation_orient(val), bubble_tone, channel
     if role == "tone":
         return (
             text,
@@ -155,8 +186,18 @@ def _apply_conversation_role(
             time_raw,
             orient,
             (conversation_bubble_tone(val) if not bubble_tone else bubble_tone),
+            channel,
         )
-    return text, author, time_raw, orient, bubble_tone
+    if role == "channel":
+        return (
+            text,
+            author,
+            time_raw,
+            orient,
+            bubble_tone,
+            (conversation_channel_label(val) if not channel else channel),
+        )
+    return text, author, time_raw, orient, bubble_tone, channel
 
 
 def conversation_row_fields(
@@ -165,24 +206,28 @@ def conversation_row_fields(
     """Extract (text, author, time_raw, orient, bubble_tone) from one related row.
 
     Returns None when the row has no speech text (skip empty bubbles).
+    Channel is folded into the author label (``Name · chat``) when present.
     """
     text = ""
     author = ""
     time_raw = ""
     orient = "in"
     bubble_tone = ""
+    channel = ""
     for j, cell in enumerate(row):
         role = roles[j] if j < len(roles) else ""
         val = str(cell or "").strip()
         if not val:
             continue
-        text, author, time_raw, orient, bubble_tone = _apply_conversation_role(
-            role, val, text, author, time_raw, orient, bubble_tone
+        text, author, time_raw, orient, bubble_tone, channel = _apply_conversation_role(
+            role, val, text, author, time_raw, orient, bubble_tone, channel
         )
     if not text:
         return None
     if not author:
         author = "Agent" if orient == "out" else "Customer"
+    if channel:
+        author = f"{author} · {channel}"
     return text, author, time_raw, orient, bubble_tone
 
 
@@ -197,6 +242,8 @@ def related_conversation_messages(t: RelatedTab) -> tuple[Message, ...]:
         text, author, time_raw, orient, bubble_tone = fields
         time_label, time_dt = conversation_time_label(time_raw)
         drill = t.row_drill[i] if t.row_drill and i < len(t.row_drill) else ""
+        # Initials from bare author (strip channel suffix for media chip).
+        author_base = author.split(" · ", 1)[0] if " · " in author else author
         messages.append(
             Message(
                 bubble=Bubble(
@@ -207,7 +254,7 @@ def related_conversation_messages(t: RelatedTab) -> tuple[Message, ...]:
                 author=author,
                 time_label=time_label,
                 time_datetime=time_dt,
-                media_label=conversation_initials(author),
+                media_label=conversation_initials(author_base),
                 from_=orient,  # type: ignore[arg-type]
                 drill_url=(drill or "").strip(),
             )

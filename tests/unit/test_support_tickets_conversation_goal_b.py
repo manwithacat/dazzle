@@ -53,6 +53,17 @@ def test_comment_declares_customer_tone() -> None:
     assert "customer_tone" in block.split("fitness:", 1)[1].split("\n\n", 1)[0]
 
 
+def test_comment_declares_channel_and_escalation() -> None:
+    """Peer pack conversation upgrade (cycle 1907) — channel + escalation."""
+    text = APP.read_text()
+    block = text.split('entity Comment "Comment":', 1)[1].split("entity ", 1)[0]
+    assert "channel: enum[portal,email,chat,phone]=portal" in block
+    assert "escalation: enum[none,raised,critical]=none" in block
+    fitness = block.split("fitness:", 1)[1].split("\n\n", 1)[0]
+    assert "channel" in fitness
+    assert "escalation" in fitness
+
+
 def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     """Peer pack: discussion trail is Message chrome — is_internal orients only."""
     text = APP.read_text()
@@ -64,10 +75,15 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     ]
     assert "display: conversation" in discussion
     assert "show: Comment" in discussion
-    assert "columns: content, author, customer_tone, created_at, is_internal" in discussion
+    assert (
+        "columns: content, author, customer_tone, channel, escalation, created_at, is_internal"
+        in discussion
+    )
     # is_internal is orient-only (not queue meta thrash column lead).
     assert discussion.index("content") < discussion.index("is_internal")
     assert discussion.index("customer_tone") < discussion.index("is_internal")
+    assert discussion.index("channel") < discussion.index("is_internal")
+    assert discussion.index("escalation") < discussion.index("is_internal")
 
 
 def test_user_hub_comments_uses_conversation_chrome() -> None:
@@ -105,6 +121,8 @@ def test_comment_seeds_have_domain_true_support_copy() -> None:
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 10
     tones = set()
+    channels = set()
+    escalations = set()
     for row in rows:
         body = str(row.get("content") or "")
         assert len(body) >= 24, body
@@ -112,5 +130,14 @@ def test_comment_seeds_have_domain_true_support_copy() -> None:
         tone = str(row.get("customer_tone") or "neutral")
         assert tone in {"neutral", "frustrated", "urgent", "thankful"}, tone
         tones.add(tone)
+        channel = str(row.get("channel") or "portal")
+        assert channel in {"portal", "email", "chat", "phone"}, channel
+        channels.add(channel)
+        esc = str(row.get("escalation") or "none")
+        assert esc in {"none", "raised", "critical"}, esc
+        escalations.add(esc)
     # Peer pack: mix includes lean-in tones (not all neutral).
     assert tones & {"frustrated", "urgent"}
+    # Channel + escalation peer mix (not all portal / none).
+    assert channels - {"portal"}
+    assert escalations & {"raised", "critical"}

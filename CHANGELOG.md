@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Changed
+- **Goal B conversation channel + escalation trail (cycle 1907)** —
+  support_tickets Comment gains `channel` (portal/email/chat/phone) and
+  `escalation` (none/raised/critical); ticket/user hub Discussion columns
+  surface both; framework maps raised/critical → Bubble `danger` and
+  non-portal channels → author suffix on related + live conversation;
+  seed mix + unit pins; hero stills recaptured.
 - **Goal B command_density project_board dual attention (cycle 1906)** —
   project_tracker Project Board gains unassigned + overdue dual-attention
   queues (Linear/Jira lean-in), pressure metrics (review/unassigned/overdue/

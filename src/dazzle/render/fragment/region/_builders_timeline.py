@@ -145,10 +145,10 @@ def _media_initials(author: str) -> str:
 
 
 def _conversation_bubble_tone(item: dict[str, Any]) -> str:
-    """Map customer_tone / sentiment row fields → Bubble danger tone.
+    """Map customer_tone / escalation / sentiment → Bubble danger tone.
 
-    Peer Zendesk/Front/Intercom trails flag frustrated/urgent customer speech
-    so agents lean in; neutral/thankful stay untoned.
+    Peer Zendesk/Front/Intercom trails flag frustrated/urgent speech and
+    raised/critical escalations so agents lean in; neutral stays untoned.
     """
     for key in (
         "customer_tone",
@@ -156,6 +156,9 @@ def _conversation_bubble_tone(item: dict[str, Any]) -> str:
         "sentiment",
         "customer_sentiment",
         "mood",
+        "escalation",
+        "escalation_level",
+        "escalated",
     ):
         raw = item.get(key)
         if raw is None or raw == "":
@@ -409,6 +412,20 @@ class _BuildersTimelineMixin:
                 _activity_actor_label(item)
                 or str(item.get("user_name") or item.get("name") or "").strip()
             )
+            # Peer channel suffix (portal/email/chat/phone) on live trails.
+            channel = (
+                str(
+                    item.get("channel")
+                    or item.get("source_channel")
+                    or item.get("contact_channel")
+                    or ""
+                )
+                .strip()
+                .lower()
+                .replace(" ", "_")
+            )
+            if channel and channel not in {"none", "unknown", "n/a", "na", "portal"}:
+                author = f"{author} · {channel}" if author else channel
             time_label, time_dt = _conversation_time(item)
             media = str(item.get("media") or item.get("initials") or "").strip()
             messages.append(
