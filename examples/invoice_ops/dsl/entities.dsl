@@ -322,11 +322,11 @@ entity InvoiceNote "Invoice Note":
 # INVOICE DOCUMENT — named AP packet on an Invoice (Goal B document depth)
 # =============================================================================
 # Peer Bill.com / Tipalti / Coupa put remittance advice, credit memos, PO
-# packets, and tax certificates on the AP home above the discussion trail —
-# not line composition alone as the only "document" surface.
+# packets, tax certificates, and goods receipts on the AP home above the
+# discussion trail — not line composition alone as the only "document" surface.
 
 entity InvoiceDocument "Invoice Document":
-  intent: "A named AP document on an Invoice — remittance advice, credit memo, PO packet, tax certificate, or payment confirmation buyers scan above the discussion trail"
+  intent: "A named AP document on an Invoice — remittance advice, credit memo, PO packet, tax certificate, payment confirmation, or goods receipt buyers scan above the discussion trail"
   domain: accounts_payable
   patterns: documentation, audit_trail
   display_field: headline
@@ -334,7 +334,7 @@ entity InvoiceDocument "Invoice Document":
   tenant_id: ref Tenant required
   invoice: ref Invoice required
   headline: str(200) required
-  doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, payment_confirmation]=remittance
+  doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, payment_confirmation, goods_receipt]=remittance
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)

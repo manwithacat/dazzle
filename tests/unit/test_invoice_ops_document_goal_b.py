@@ -58,7 +58,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "headline: str(200) required" in text
     assert (
         "doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, "
-        "payment_confirmation]=remittance" in text
+        "payment_confirmation, goods_receipt]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
     assert "preview_url: url" in text
@@ -114,9 +114,16 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("po_packets:")
     assert ops.index("po_packets:") < ops.index("tax_certificates:")
     assert ops.index("tax_certificates:") < ops.index("composition:")
+    # Cycle 1967: goods receipt three-way match after draft, focused above fold
+    # Region marker (not the document_pulse aggregate key goods_receipts: count(...)).
+    assert "\n  goods_receipts:\n" in ops
+    assert "filter: doc_kind = goods_receipt" in ops
+    assert "goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)" in ops
+    assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
+    assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, "
-        "tax_certificates, composition, past_due, awaiting_approval" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, "
+        "po_packets, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -156,6 +163,27 @@ def test_pay_desk_draft_packet_release_gate() -> None:
         "focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, composition, "
         "past_due, ready_to_pay" in desk
     )
+
+
+def test_finance_ops_and_approval_goods_receipt_match() -> None:
+    """Cycle 1967: Coupa/Tipalti three-way match goods receipts on ops + approve."""
+    ops = _workspace_block("finance_ops")
+    assert "goods_receipts:" in ops
+    region = ops.split("\n  goods_receipts:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = goods_receipt" in region
+    assert "display: queue" in region
+    assert "goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)" in ops
+    desk = _workspace_block("approval_desk")
+    assert "goods_receipts:" in desk
+    assert "filter: doc_kind = goods_receipt" in desk
+    assert "goods_receipts" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    gr = [r for r in rows if r.get("doc_kind") == "goods_receipt"]
+    assert len(gr) >= 2
+    for r in gr:
+        assert len(str(r.get("headline") or "")) >= 16
+        assert r.get("preview_url")
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -321,7 +349,7 @@ def test_approval_desk_tax_certificate_watch() -> None:
     assert desk.index("po_packets:") < desk.index("tax_certificates:")
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert (
-        "focus: approval_load, document_pulse, po_packets, tax_certificates, composition, "
+        "focus: approval_load, document_pulse, goods_receipts, po_packets, composition, "
         "awaiting_approval, live_conversation" in desk
     )
 
@@ -349,8 +377,9 @@ def test_approval_and_ops_po_packet_watch() -> None:
     assert desk.index("document_pulse:") < desk.index("po_packets:")
     assert desk.index("po_packets:") < desk.index("tax_certificates:")
     assert desk.index("tax_certificates:") < desk.index("composition:")
+    assert desk.index("\n  goods_receipts:\n") < desk.index("po_packets:")
     assert (
-        "focus: approval_load, document_pulse, po_packets, tax_certificates, composition, "
+        "focus: approval_load, document_pulse, goods_receipts, po_packets, composition, "
         "awaiting_approval, live_conversation" in desk
     )
 

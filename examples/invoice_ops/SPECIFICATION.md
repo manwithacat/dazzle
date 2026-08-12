@@ -72,10 +72,11 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **My Invoices** — requester home: line-item composition (document body),
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
   (no status bar-chart or twin invoice timeline under the fold).
-- **Approval Desk** — approver home: a **tax certificate watch** of reverse-charge
+- **Approval Desk** — approver home: a **goods receipt** three-way match watch
+  (cycle 1967 peer-pack), a **tax certificate watch** of reverse-charge
   certs (cycle 1959 peer-pack), a **PO packet watch** of signed PO covers
   (cycle 1965 peer-pack), awaiting-approval queue, **named AP packets**
-  (remittance / credit memo / PO / tax / payment confirmation) as document
+  (remittance / credit memo / PO / tax / payment confirmation / goods receipt) as document
   composition, live AP discussion as Message/Bubble conversation chrome, approval
   board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
@@ -89,9 +90,10 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   composition first (remittance / PO / tax), then disputed work and payment-attempt
   trail (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
 - **Finance Operations** — shared ops overview: **packet cover wall** first
-  (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
+  (InvoiceDocument.preview_url remittance / PO / tax / goods-receipt thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), document pulse
-  with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **tax certificate watch**
+  with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **goods receipt watch**
+  (doc_kind=goods_receipt three-way match slips — cycle 1967), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
   (doc_kind=po_packet signed PO covers — cycle 1965), then dual attention (awaiting + ready), **named
   AP packets** (InvoiceDocument composition queue) and line-item body, live
@@ -194,4 +196,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:c62634c4d1fd18f7246e4ce5eaf89811d76b06ed0a86be56545c68150679366d -->
+<!-- dazzle-spec-brief: sha256:64a256fbc3f23b2a6740545281fd1e37d4b6778827065927e8ad7a1b2495ad74 -->

@@ -556,12 +556,14 @@ workspace finance_ops "Finance Operations":
       draft: count(InvoiceDocument where status = draft)
       tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
       po_packs: count(InvoiceDocument where doc_kind = po_packet)
+      goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)
     tones:
       documents: accent
       published: positive
       draft: warning
       tax_certs: accent
       po_packs: accent
+      goods_receipts: accent
 
   # Peer-pack document upgrade (cycle 1957): Bill.com / Melio / Tipalti
   # "release gate" — draft remittance/credit packets must publish before
@@ -599,6 +601,18 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No tax certificates on file — attach reverse-charge certs before approve"
+
+  # Peer-pack document upgrade (cycle 1967): Coupa / Tipalti / Bill.com
+  # three-way match — goods receipts close PO+invoice before approve
+  # (recipe goods_receipt_match; not PO/tax/payment packet re-stack).
+  goods_receipts:
+    source: InvoiceDocument
+    filter: doc_kind = goods_receipt
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No goods receipts on file — attach receiving slips for three-way match"
 
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
@@ -679,20 +693,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, goods receipt + PO/tax watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, po_packets, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, goods receipt + PO/tax watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, po_packets, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, goods receipt + PO/tax watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, po_packets, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, goods receipt + PO/tax watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, po_packets, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, PO packet + tax cert watch, draft gate, evidence packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, goods receipt + PO/tax watch, draft gate, evidence packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, goods_receipts, po_packets, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -785,7 +799,8 @@ workspace approval_desk "Approval Desk":
   # put named remittance / PO packets above the discussion trail — not notes-only.
   # Cycle 1959: tax certificate watch before approve (reverse-charge lean-in).
   # Cycle 1965: PO packet watch — signed PO cover before approve (Coupa lean-in).
-  purpose: "Approver job — tax cert + PO packet watch, awaiting queue, named AP packets, then live discussion"
+  # Cycle 1967: goods receipt three-way match before approve (Tipalti lean-in).
+  purpose: "Approver job — goods receipt + PO/tax watch, awaiting queue, named AP packets, then live discussion"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -809,11 +824,24 @@ workspace approval_desk "Approval Desk":
       published: count(InvoiceDocument where status = published)
       tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
       po_packs: count(InvoiceDocument where doc_kind = po_packet)
+      goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)
     tones:
       documents: accent
       published: positive
       tax_certs: accent
       po_packs: accent
+      goods_receipts: accent
+
+  # Peer-pack goods_receipt_match (cycle 1967) — three-way match receipts before
+  # approve (Coupa / Tipalti / Bill.com; not PO/tax/payment re-stack).
+  goods_receipts:
+    source: InvoiceDocument
+    filter: doc_kind = goods_receipt
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No goods receipts — attach receiving slips for three-way match"
 
   # Peer-pack po_packet_watch (cycle 1965) — signed PO covers before approve
   # (Bill.com / Coupa / Tipalti; not tax_cert or payment_confirmation re-stack).
@@ -884,11 +912,11 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — PO packet watch, tax certs, named packets, queue, conversation"
-      focus: approval_load, document_pulse, po_packets, tax_certificates, composition, awaiting_approval, live_conversation
+      purpose: "Approval — goods receipt + PO/tax watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — PO packet watch, tax certs, named packets, queue, conversation"
-      focus: approval_load, document_pulse, po_packets, tax_certificates, composition, awaiting_approval, live_conversation
+      purpose: "Approval — goods receipt + PO/tax watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then
