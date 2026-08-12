@@ -63,3 +63,23 @@ def test_pick_display_key_skips_image_columns() -> None:
     assert _pick_display_key(cols, preferred="description") == "description"
     # preferred still wins even when not in columns
     assert _pick_display_key(cols[:3], preferred="description") == "description"
+
+
+def test_field_kit_declares_field_evidence_media_first() -> None:
+    """Cycle 1944: road kit puts field photo grid before assignment queues."""
+    text = APP_DSL.read_text()
+    start = text.index('workspace field_kit "Field Kit":')
+    end = text.find("\nworkspace ", start + 1)
+    block = text[start:] if end < 0 else text[start:end]
+    assert "field_evidence:" in block
+    assert "source: IssueReport" in block
+    assert "photo_url != null" in block
+    assert "display: grid" in block
+    assert "reported_by_id = current_user" in block
+    assert "evidence: count(IssueReport" in block
+    assert block.index("kit_pulse:") < block.index("field_evidence:")
+    assert block.index("field_evidence:") < block.index("assigned_devices:")
+    assert (
+        "focus: kit_pulse, field_evidence, assigned_devices, recent_sessions, my_open_tasks"
+        in block
+    )

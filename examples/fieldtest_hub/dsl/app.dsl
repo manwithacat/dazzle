@@ -1841,7 +1841,11 @@ workspace firmware_pipeline "Firmware Pipeline":
     empty: "No open tasks"
 
 workspace field_kit "Field Kit":
-  purpose: "Tester kit — assigned devices and recent sessions on the road"
+  # Goal B media peer-pack upgrade (cycle 1944): road testers scan field photo
+  # evidence before device queues — peer field tools put pixels first, not meta
+  # lists alone (recipe road_kit_evidence; ban headshot_shelf; not document/
+  # conversation re-stack after 1940–1942).
+  purpose: "Tester kit — field photo evidence, assigned devices, and sessions on the road"
   access: persona(tester)
 
   kit_pulse:
@@ -1851,16 +1855,28 @@ workspace field_kit "Field Kit":
       assigned: count(Device where assigned_tester_id = current_user)
       open_tasks: count(Task where assigned_to_id = current_user and status != completed)
       sessions: count(TestSession where tester_id = current_user)
+      evidence: count(IssueReport where reported_by_id = current_user and photo_url != null)
     tones:
       open_tasks: accent
       assigned: positive
+      evidence: accent
+
+  # Goal B media FIRST — my field photos (preview thumbs) before assignment dump.
+  field_evidence:
+    source: IssueReport
+    filter: reported_by_id = current_user and photo_url != null
+    sort: reported_at desc
+    limit: 8
+    display: grid
+    action: issue_report_detail
+    empty: "No field photos yet — attach evidence when you file an issue"
 
   # Work-surface utility (cycle 1486 story_walk): field kit assignments → queue.
   assigned_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
-    limit: 20
+    limit: 12
     display: queue
     action: device_detail
     empty: "No devices assigned to you yet"
@@ -1869,7 +1885,7 @@ workspace field_kit "Field Kit":
     source: TestSession
     filter: tester_id = current_user
     sort: logged_at desc
-    limit: 15
+    limit: 10
     display: timeline
     empty: "No test sessions logged"
 
@@ -1877,7 +1893,7 @@ workspace field_kit "Field Kit":
     source: Task
     filter: assigned_to_id = current_user and status != completed
     sort: created_at desc
-    limit: 10
+    limit: 8
     display: queue
     action: task_detail
     empty: "No open tasks"
@@ -1889,6 +1905,11 @@ workspace field_kit "Field Kit":
     group_by: status
     action: task_detail
     empty: "No open tasks"
+
+  ux:
+    as tester:
+      purpose: "Road kit — field photo evidence first, then devices, sessions, and open tasks"
+      focus: kit_pulse, field_evidence, assigned_devices, recent_sessions, my_open_tasks
 
 workspace tester_roster "Tester Roster":
   # Goal B org_structure (cycle 1848): peer field-test tools (TestFlight /

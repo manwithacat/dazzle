@@ -55,7 +55,8 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   not a skill-mix bar or session trail dump.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
   their issues and tasks, session timeline (severity mix kept for personal dogfood).
-- **Field Kit** — tester road desk: assigned devices, recent sessions, open
+- **Field Kit** — tester road desk: field photo evidence first (cycle 1944 media
+  peer-pack), then assigned devices, recent sessions, open
   tasks and personal task kanban.
 
 ## How work flows through it
@@ -97,4 +98,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:5d05f6d7b2ff3b25bb4f439f2eefa3d05094596abe9f37a3fbdf92ba928b968c -->
+<!-- dazzle-spec-brief: sha256:8132856b7082182c1f61ae97487d30066a5336f3f38ef5a0ff5fc5cf73263d12 -->
