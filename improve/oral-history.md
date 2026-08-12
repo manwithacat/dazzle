@@ -80,6 +80,11 @@ Doctrine source of truth remains
     window while real improve commits sit on HEAD (AUD-011 / cycle 1890). Sample
     `(cycle N)` + `^improve:` + log-named SHAs.
 
+18. **Self-audit cadence is hard preemption.** When ≥15 cycles since
+    `lane: self-audit`, run it this cycle — do not arithmetic-defer with
+    “next~N” seeds past the due point while CI-poll thrash burns cycles
+    (1920→1949 was 29 late). Hand-audit if the workflow Sample agent stalls.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
