@@ -40,7 +40,9 @@ only comments that are not internal.
 **Support Agents** are first-line support handling incoming tickets. They aim
 to process tickets efficiently, keep within the response-time commitment, and
 escalate complex issues to managers. They land on the **Ticket Queue** — a
-**media shelf** of agent headshots first, then open pressure metrics, a review
+**media shelf** of agent headshots with clean **name / role / department**
+chips (not Photo Url / Email / Is Active schema labels — cycle 1933) first,
+then open pressure metrics, a review
 queue of open tickets, and a lifecycle kanban — with full visibility of tickets
 and conversations, plus the Agent Console for per-agent inspection.
 

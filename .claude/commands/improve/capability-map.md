@@ -69,7 +69,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1915 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1931 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1933 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -142,3 +142,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 > **Cycle 1928 (2026-08-12).** agent_acceptance: fitness.repr_fields authoritative on all workspace pads; Device serial_number; tip CI green @12ed783af.
 > **Cycle 1929 (2026-08-12).** cimonitor: fitness.repr skips column economy (ticket_number #1304).
 > **Cycle 1931 (2026-08-12).** agent_acceptance contact_manager identity chips; tip CI green @f7fc02c05.
+> **Cycle 1933 (2026-08-12).** agent_acceptance support_tickets User identity chips; tip CI green @298b1ba0e.

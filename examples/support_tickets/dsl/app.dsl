@@ -65,7 +65,11 @@ entity User "User":
   invariant: role != null
 
   fitness:
-    repr_fields: [name, email, role, department, photo_url, is_active]
+    # Cycle 1933 agent_acceptance: agent media shelves / people queues show
+    # identity chips (name/role/dept) — not Photo Url / Email / Is Active
+    # schema dump (peer simple_task 1925/1928, contact_manager 1931).
+    # photo_url still media-injects; email/is_active stay on list/detail.
+    repr_fields: [name, role, department]
 
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":

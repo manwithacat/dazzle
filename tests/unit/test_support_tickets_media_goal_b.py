@@ -64,3 +64,15 @@ def test_user_seeds_have_https_photo_urls() -> None:
         url = str(r["photo_url"])
         assert url.startswith("https://"), url
         assert "placehold.co" in url
+
+
+def test_user_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1933: agent media/people cards skip Photo Url/Email/Is Active."""
+    text = APP.read_text()
+    start = text.index('entity User "User"')
+    block = text[start : text.index("entity Ticket")]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "name" in line and "role" in line and "department" in line
+    assert "photo_url" not in line
+    assert "email" not in line
+    assert "is_active" not in line
