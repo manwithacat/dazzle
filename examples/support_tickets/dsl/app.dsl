@@ -567,6 +567,7 @@ workspace ticket_queue "Ticket Queue":
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
+      chat_live: count(Comment where channel = chat and is_internal = false)
       documents: count(SlaWaiver)
     tones:
       critical: destructive
@@ -576,6 +577,7 @@ workspace ticket_queue "Ticket Queue":
       awaiting_customer: accent
       hot_speech: destructive
       thankful_recovery: positive
+      chat_live: accent
       documents: accent
 
   # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
@@ -624,6 +626,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No thankful recovery notes yet — closeout wins land here after a fix lands"
+
+  # Peer-pack conversation upgrade (cycle 1960): Intercom/Front live chat path —
+  # channel=chat public speech so agents lean into real-time channel grain
+  # (recipe chat_channel_trail; not tone/ball re-stack).
+  chat_live:
+    source: Comment
+    filter: channel = chat and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No live chat notes — portal/email/phone still carry the rest of the trail"
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -705,6 +719,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Warm closeout speech after a fix — lean into wins before the full trail"
         icon: "heart"
         state: positive
+      - title: "Live chat"
+        caption: "Chat-channel notes in real time — lean into Intercom-style live path before the full trail"
+        icon: "messages-square"
+        state: accent
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -720,14 +738,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
+      purpose: "Triage home — both-ball + hot speech + chat channel + thankful recovery"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, chat_live, live_conversation
     as manager:
-      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
+      purpose: "Triage home — both-ball + hot speech + chat channel + thankful recovery"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, chat_live, live_conversation
     as admin:
-      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
+      purpose: "Triage home — both-ball + hot speech + chat channel + thankful recovery"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, chat_live, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -868,6 +886,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No customer notes waiting on agents"
 
+  # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
+  chat_live:
+    source: Comment
+    filter: channel = chat and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No live chat notes for the team — other channels still carry the trail"
+
   # Goal B conversation spine AFTER dual attention + composition so manager
   # hero stills show pressure queues, documents, and Message/Bubble chrome.
   # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
@@ -881,8 +909,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA breach pressure, needs-reply ball, dual queues, and waiver documents before full conversation trail"
-      focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, unassigned_queue, composition, needs_reply, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, live chat path, dual queues, docs"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, composition, needs_reply, chat_live, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

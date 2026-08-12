@@ -76,7 +76,7 @@ whose **ball is in the customer court** (cycle 1955 peer-pack; park these — do
 re-thrash as open agent work), a **hot speech** conversation region of
 frustrated/urgent tone or raised escalation (cycle 1940 peer-pack; not ball-only),
 a **thankful recovery** conversation region of warm closeout speech after a fix
-(cycle 1958 peer-pack; not heat re-stack), a **live conversation** trail of newest
+(cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **live conversation** trail of newest
 notes, a **composition** queue of open SLA waivers (named breach titles), a review
 queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
@@ -189,4 +189,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:4102e89233fca685eef6a05621956aa9f896335070dd8009cade4a63994d67b2 -->
+<!-- dazzle-spec-brief: sha256:780298b89249334e7dcfc49bb92fe7a1f889bb86fe6f7969f36b9c2aaa40ae37 -->

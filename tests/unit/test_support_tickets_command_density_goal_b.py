@@ -45,8 +45,8 @@ def test_manager_ops_caps_attention_queues_for_fold_share() -> None:
     # Caps keep dual panels + composition + conversation sharing the fold.
     assert "limit: 4" in block
     assert (
-        "focus: media_shelf, team_metrics, breach_risk, sla_readiness, critical_queue, "
-        "unassigned_queue, composition, needs_reply, live_conversation" in block
+        "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
+        "unassigned_queue, composition, needs_reply, chat_live, live_conversation" in block
     )
     assert "Multi-panel support ops" in block or "multi-panel" in block.lower()
     assert (

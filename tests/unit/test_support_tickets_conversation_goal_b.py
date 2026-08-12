@@ -199,9 +199,10 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     hot = block.index("\n  hot_speech:\n")
     live = block.index("\n  live_conversation:\n")
     thankful = block.index("\n  thankful_recovery:\n")
-    assert needs < awaiting < hot < thankful < live
+    chat = block.index("\n  chat_live:\n")
+    assert needs < awaiting < hot < thankful < chat < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, chat_live, live_conversation"
         in block
     )
 
@@ -230,7 +231,7 @@ def test_ticket_queue_thankful_recovery_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     assert "thankful_recovery: count(Comment where customer_tone = thankful" in block
-    region = block.split("\n  thankful_recovery:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    region = block.split("\n  thankful_recovery:\n", 1)[1].split("\n  chat_live:", 1)[0]
     assert "source: Comment" in region
     assert "customer_tone = thankful" in region
     assert "display: conversation" in region
@@ -240,3 +241,18 @@ def test_ticket_queue_thankful_recovery_trail() -> None:
         "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
         in agent
     )
+
+
+def test_ticket_queue_chat_live_trail() -> None:
+    """Cycle 1960: Intercom/Front live chat channel trail."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "chat_live: count(Comment where channel = chat" in block
+    region = block.split("\n  chat_live:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: Comment" in region
+    assert "channel = chat" in region
+    assert "display: conversation" in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  chat_live:\n" in manager
+    assert "channel = chat" in manager
+    assert "chat_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
