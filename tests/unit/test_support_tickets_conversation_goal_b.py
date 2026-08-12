@@ -202,7 +202,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     chat = block.index("\n  chat_live:\n")
     assert needs < awaiting < hot < thankful < chat < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, chat_live, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, hot_speech, chat_live, phone_live, live_conversation"
         in block
     )
 
@@ -248,7 +248,7 @@ def test_ticket_queue_chat_live_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     assert "chat_live: count(Comment where channel = chat" in block
-    region = block.split("\n  chat_live:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    region = block.split("\n  chat_live:\n", 1)[1].split("\n  phone_live:", 1)[0]
     assert "source: Comment" in region
     assert "channel = chat" in region
     assert "display: conversation" in region
@@ -256,3 +256,17 @@ def test_ticket_queue_chat_live_trail() -> None:
     assert "\n  chat_live:\n" in manager
     assert "channel = chat" in manager
     assert "chat_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+
+
+def test_ticket_queue_phone_live_trail() -> None:
+    """Cycle 1963: Zendesk phone-channel trail."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "phone_live: count(Comment where channel = phone" in block
+    region = block.split("\n  phone_live:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: Comment" in region
+    assert "channel = phone" in region
+    assert "display: conversation" in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  phone_live:\n" in manager
+    assert "phone_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
