@@ -65,3 +65,25 @@ def test_region_action_person_detail_resolves_to_entity_hub() -> None:
     )
     bad = region_row_drill_url("person_detail", collided)
     assert bad == "/app/workspaces/person_detail?context_id={id}"
+
+
+def test_staff_directory_headcount_shows_assignment_status_mix() -> None:
+    """Acceptance 1946: active / on_leave / terminated visible on staff home strip."""
+    block = _workspace_block("staff_directory")
+    assert "headcount:" in block
+    # Status-mix aggregates (not only employment_rows count theater)
+    assert "status = active" in block
+    assert "status = on_leave" in block
+    assert "status = terminated" in block
+    assert "end_date = null" in block
+
+
+def test_person_hub_tenure_end_date_label_has_no_sql_null_jargon() -> None:
+    """Person hub End date label must not expose NULL = active SQL speak."""
+    text = APP.read_text()
+    assert 'field ended_at "Ended (NULL = active)"' not in text
+    # person_detail surface tenure section
+    idx = text.find('surface person_detail "Person"')
+    assert idx >= 0
+    block = text[idx : idx + 1200]
+    assert 'field ended_at "End date"' in block

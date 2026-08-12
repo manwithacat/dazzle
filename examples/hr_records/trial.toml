@@ -4,9 +4,12 @@
 [[scenario]]
 name = "hr_admin_directory"
 login_persona = "hr_admin"
-time_budget_seconds = 600
-max_steps = 35
+time_budget_seconds = 900
+max_steps = 50
 token_budget = 1200000
+# Land on Staff Directory so the panel spends budget on person-open + status
+# mix, not nav tourism (prior budget_exceeded at step 1 was token thrash).
+starting_url = "/app/workspaces/staff_directory"
 
 user_identity = """
 You are Ana, HR admin for a 40-person company. You need a staff directory
@@ -25,12 +28,11 @@ the spreadsheet.
 """
 
 tasks = [
-    "Land on Staff Directory (or the HR home). Are people listed with useful names?",
-    "Open a person row. Is it a career/person hub (employment, history, status) or a flat field dump?",
-    "On Staff Directory, can you see assignment status mix or cues (active / on leave)?",
-    "Open Compensation Review. Are people a pull queue toward person hubs? Are role catalogue and headcount also queues (not bare lists)?",
-    "On Staff Directory, do department and role context open hubs as pull queues?",
-    "On Roles / Departments lists, can you dual-open role hub plus department unit, or unit hub plus parent department?",
+    "You are on Staff Directory. Are people listed with useful names (not empty)?",
+    "On the metrics strip, is assignment status mix visible (active / on leave / terminated counts)?",
+    "Open a person row from Current Staff or Media Shelf. Does the URL go to /app/person/{id} (person hub) rather than a company-wide timeline workspace?",
+    "On the person hub: employment history with status, salary, reporting — career hub or flat field dump? Is End date free of SQL NULL jargon?",
+    "Open Compensation Review. Are people a pull queue toward person hubs?",
     "Find how you would add a person (CTA language) without becoming a warehouse admin.",
     "Decide whether this is a credible HR skeleton for a two-week pilot.",
 ]

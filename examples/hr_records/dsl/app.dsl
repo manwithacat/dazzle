@@ -587,7 +587,9 @@ surface person_detail "Person":
   section tenure "Tenure":
     layout: strip
     field started_at "Started"
-    field ended_at "Ended (NULL = active)"
+    # Pilot-facing label (acceptance 1946): blank end date = still employed —
+    # never surface SQL NULL jargon on the person hub.
+    field ended_at "End date"
   # Person hub pull queues (RelatedDisplayMode.QUEUE) — role/amount-first
   # career roster, not warehouse tables (cycle 1506 story_walk / ST-002 path).
   related employment "Employment history":
@@ -1010,7 +1012,8 @@ workspace staff_directory "Staff Directory":
     action: person_detail
     empty: "No headshots yet — add photo URLs on people records"
 
-  # Job strip — counts including conversation + document volume.
+  # Job strip — headcount + assignment status mix (acceptance criteria:
+  # active / on leave / terminated visible without hunting employment rows).
   headcount:
     source: Person
     display: metrics
@@ -1018,11 +1021,16 @@ workspace staff_directory "Staff Directory":
       people: count(Person)
       departments: count(Department)
       roles: count(Role)
-      employment_rows: count(Employment)
+      active: count(Employment where status = active and end_date = null)
+      on_leave: count(Employment where status = on_leave and end_date = null)
+      terminated: count(Employment where status = terminated)
       documents: count(HrDocument)
       conversation: count(PersonNote)
     tones:
       people: accent
+      active: accent
+      on_leave: warning
+      terminated: danger
       documents: accent
       conversation: accent
 
