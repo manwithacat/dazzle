@@ -554,10 +554,12 @@ workspace finance_ops "Finance Operations":
       documents: count(InvoiceDocument)
       published: count(InvoiceDocument where status = published)
       draft: count(InvoiceDocument where status = draft)
+      tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
     tones:
       documents: accent
       published: positive
       draft: warning
+      tax_certs: accent
 
   # Peer-pack document upgrade (cycle 1957): Bill.com / Melio / Tipalti
   # "release gate" — draft remittance/credit packets must publish before
@@ -570,6 +572,18 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No draft packets — every remittance and credit memo is published or archived"
+
+  # Peer-pack document upgrade (cycle 1959): Bill.com / Tipalti reverse-charge
+  # tax certificates controllers lean into before approve/settle
+  # (recipe tax_certificate_watch; not draft_packet re-stack).
+  tax_certificates:
+    source: InvoiceDocument
+    filter: doc_kind = tax_certificate
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No tax certificates on file — attach reverse-charge certs before approve"
 
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
@@ -650,20 +664,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft release gate, past-due, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, ready_to_pay, live_conversation
+      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft release gate, past-due, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, ready_to_pay, live_conversation
+      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft release gate, past-due settle pressure, then settle queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
+      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft release gate, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, live_conversation
+      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, draft release gate, evidence packets with conversation spine"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, live_conversation, disputed_queue
+      purpose: "AP ops — packet covers, tax cert watch, draft gate, evidence packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -754,7 +768,8 @@ workspace my_invoices "My Invoices":
 workspace approval_desk "Approval Desk":
   # Goal B document (cycle 1879): peer AP approval homes (Bill.com / Coupa)
   # put named remittance / PO packets above the discussion trail — not notes-only.
-  purpose: "Approver job — awaiting queue, named AP packets, then live discussion"
+  # Cycle 1959: tax certificate watch before approve (reverse-charge lean-in).
+  purpose: "Approver job — tax cert watch, awaiting queue, named AP packets, then live discussion"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -776,9 +791,22 @@ workspace approval_desk "Approval Desk":
     aggregate:
       documents: count(InvoiceDocument)
       published: count(InvoiceDocument where status = published)
+      tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
     tones:
       documents: accent
       published: positive
+      tax_certs: accent
+
+  # Peer-pack tax_certificate_watch (cycle 1959) — reverse-charge certs before
+  # approve (Bill.com / Tipalti controller lean-in; not composition re-stack).
+  tax_certificates:
+    source: InvoiceDocument
+    filter: doc_kind = tax_certificate
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No tax certificates — attach reverse-charge certs before approve"
 
   # Goal B document composition — named packets before conversation trail.
   composition:
@@ -826,11 +854,11 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — named packets, queue, conversation (no decision-timeline dump)"
-      focus: approval_load, document_pulse, composition, awaiting_approval, live_conversation
+      purpose: "Approval — tax cert watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, tax_certificates, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — named packets, queue, conversation (no decision-timeline dump)"
-      focus: approval_load, document_pulse, composition, awaiting_approval, live_conversation
+      purpose: "Approval — tax cert watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, tax_certificates, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then

@@ -102,9 +102,14 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "filter: status = draft" in ops
     assert ops.index("document_pulse:") < ops.index("draft_packets:")
     assert ops.index("draft_packets:") < ops.index("composition:")
+    assert "tax_certificates:" in ops
+    assert "filter: doc_kind = tax_certificate" in ops
+    assert ops.index("draft_packets:") < ops.index("tax_certificates:")
+    assert ops.index("tax_certificates:") < ops.index("composition:")
+    assert "tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)" in ops
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, "
-        "past_due, awaiting_approval, ready_to_pay, live_conversation" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, "
+        "composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -293,3 +298,20 @@ def test_audit_review_declares_evidence_packets_before_trail() -> None:
     # Chart stays under-fold (not focus spine)
     assert "audit_mix:" in block
     assert "audit_mix" not in block.split("focus:")[1].split("\n")[0]
+
+
+def test_approval_desk_tax_certificate_watch() -> None:
+    """Cycle 1959: reverse-charge tax certs before approve (Bill.com/Tipalti)."""
+    desk = _workspace_block("approval_desk")
+    assert "tax_certificates:" in desk
+    region = desk.split("\n  tax_certificates:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = tax_certificate" in region
+    assert "display: queue" in region
+    assert "tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)" in desk
+    assert desk.index("document_pulse:") < desk.index("tax_certificates:")
+    assert desk.index("tax_certificates:") < desk.index("composition:")
+    assert (
+        "focus: approval_load, document_pulse, tax_certificates, composition, "
+        "awaiting_approval, live_conversation" in desk
+    )

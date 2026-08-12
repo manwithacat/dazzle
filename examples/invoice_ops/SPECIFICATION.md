@@ -72,7 +72,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **My Invoices** — requester home: line-item composition (document body),
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
   (no status bar-chart or twin invoice timeline under the fold).
-- **Approval Desk** — approver home: awaiting-approval queue, **named AP packets**
+- **Approval Desk** — approver home: a **tax certificate watch** of reverse-charge
+  certs (cycle 1959 peer-pack), awaiting-approval queue, **named AP packets**
   (remittance / credit memo / PO / tax / payment confirmation) as document
   composition, live AP discussion as Message/Bubble conversation chrome, approval
   board, and supplier context grid (no decision-timeline dump).
@@ -88,8 +89,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **Finance Operations** — shared ops overview: **packet cover wall** first
   (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), document pulse
-  with draft count, a **draft packet release gate** (status=draft packets before
-  dual attention — cycle 1957), then dual attention (awaiting + ready), **named
+  with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **tax certificate watch**
+  (doc_kind=tax_certificate reverse-charge certs — cycle 1959), then dual attention (awaiting + ready), **named
   AP packets** (InvoiceDocument composition queue) and line-item body, live
   discussion trail as Message/Bubble conversation chrome, metrics, and ops
   kanban (no lifecycle funnel, payment bar chart, or paid timeline voids).
@@ -190,4 +191,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:a25c00919f1480f2916d83e40e18a3c5c621ff30f66c4db1f63e00433db9d98e -->
+<!-- dazzle-spec-brief: sha256:0a89f42ab59ea5848edd9eb513ecf8c0a9096fbf68b61a74a14d84f168ffa618 -->
