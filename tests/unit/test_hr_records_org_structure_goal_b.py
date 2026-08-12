@@ -91,30 +91,40 @@ def test_my_team_reporting_lines_are_queue_not_only_timeline() -> None:
 
 
 def test_reporting_desk_span_of_control_before_flat_queue() -> None:
-    """Peer HR tools show span-of-control people columns, not only a link table."""
+    """Peer HR tools show filled report→manager span + placement boards (not empty kanban void)."""
     block = _reporting_desk_block()
     assert "\n  span_of_control:" in block
-    assert "group_by: manager" in block
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block
     assert "group_by: work_location" in block
+    assert "group_by: department" in block
     assert "display: kanban" in block
-    assert "\n  active_links:" in block
-    # People hierarchy before flat queue / dept-name bar theater
+    # Cycle 1946 empty_region: span is a filled ManagerLink queue, not empty group_by:manager kanban
+    span_start = block.index("\n  span_of_control:")
+    span_end = block.index("\n  by_department:", span_start)
+    span = block[span_start:span_end]
+    assert "display: queue" in span
+    assert "action: managerlink_detail" in span
+    assert "group_by: manager" not in span
+    assert "filter: end_date = null" in span
+    # People hierarchy before dept-name bar theater
     assert block.index("reporting_pulse:") < block.index("\n  span_of_control:")
     assert block.index("\n  span_of_control:") < block.index("\n  by_department:")
     assert block.index("\n  by_department:") < block.index("\n  by_location:")
-    assert block.index("\n  by_location:") < block.index("\n  active_links:")
     assert "dept_mix:" not in block
     assert "bar_chart" not in block
+    assert "\n  active_links:" not in block
+    assert "people_cards:" not in block
 
 
 def test_reporting_desk_ux_focus_org_people() -> None:
     block = _reporting_desk_block()
+    assert "focus: reporting_pulse, span_of_control, by_department, by_location" in block
     assert (
-        "focus: reporting_pulse, span_of_control, by_department, by_location, active_links" in block
+        "span of control" in block.lower()
+        or "Span of control" in block
+        or "report→manager" in block
     )
-    assert "span of control" in block.lower() or "Span of control" in block
     assert "remote_uk: count(Person where work_location = remote_uk" in block
 
 

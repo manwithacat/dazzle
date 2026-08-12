@@ -1586,11 +1586,14 @@ workspace starters_desk "New Starters":
     empty: "No salary rows yet"
 
 # Eighth product workspace: reporting-line desk.
-# Post-5.8 Goal B org_structure (cycle 1802): peer Workday / Lattice / BambooHR
-# put span-of-control people columns first — not a flat link table + dept-name
-# bar chart theater. Full recursive tree remains TODO #hr-hierarchy.
+# Post-5.8 Goal B org_structure (cycle 1802) + empty_region_honesty (cycle 1946):
+# peer Workday / Lattice / BambooHR put real report→manager lines above the fold.
+# Cycle 1946: span_of_control was a group_by:manager kanban that rendered a
+# giant empty void while Links metric counted 8 — honesty is a filled queue of
+# active ManagerLink rows + department/location placement boards (not empty
+# kanban theater). Full recursive tree remains TODO #hr-hierarchy.
 workspace reporting_desk "Reporting":
-  purpose: "People hierarchy — span of control, department + work-location placement, active lines (not only department units)"
+  purpose: "People hierarchy — filled report→manager span, department + work-location placement (no empty span void)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1609,14 +1612,15 @@ workspace reporting_desk "Reporting":
       remote_uk: warning
       hybrid: accent
 
-  # Span of control — columns are managers; cards are report→manager lines.
-  # Buyer-true org parse without recursive descendant DSL.
+  # Span of control — active report→manager lines as a pull queue (fitness
+  # shows report + manager names). Queue fills when Links>0; empty kanban
+  # group_by:manager was a buyer-visible void (cycle 1946 still proof).
   span_of_control:
     source: ManagerLink
+    filter: end_date = null
     sort: start_date desc
-    limit: 40
-    display: kanban
-    group_by: manager
+    limit: 12
+    display: queue
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
 
@@ -1627,7 +1631,7 @@ workspace reporting_desk "Reporting":
     display: kanban
     group_by: department
     sort: start_date desc
-    limit: 40
+    limit: 24
     action: employment_detail
     empty: "No active employment rows"
 
@@ -1638,45 +1642,30 @@ workspace reporting_desk "Reporting":
     display: kanban
     group_by: work_location
     sort: legal_name asc
-    limit: 40
+    limit: 24
     action: person_detail
     empty: "No active people with work locations yet"
 
-  active_links:
-    source: ManagerLink
-    sort: start_date desc
-    display: queue
-    limit: 20
-    action: managerlink_detail
-    empty: "No reporting lines yet — assign a manager to a person"
-
   ux:
     as hr_admin:
-      purpose: "Parse span of control and department placement before flat link thrash"
-      focus: reporting_pulse, span_of_control, by_department, by_location, active_links
+      purpose: "Filled reporting lines + department/location placement — no empty span theater"
+      focus: reporting_pulse, span_of_control, by_department, by_location
     as manager:
-      purpose: "See who sits under each manager and open a reporting line"
-      focus: reporting_pulse, span_of_control, by_department, by_location, active_links
+      purpose: "See report→manager lines and open a reporting line or person hub"
+      focus: reporting_pulse, span_of_control, by_department, by_location
 
-  # Work-surface utility: reporting desk people are open-person queue, not inventory grid.
-  people_cards:
-    source: Person
-    display: queue
-    limit: 15
-    action: person_detail
-    empty: "No people on record"
-
+  # Dated link history under the fold (not a second empty primary region).
   link_trail:
     source: ManagerLink
     display: timeline
-    limit: 12
+    limit: 8
     empty: "No reporting lines yet"
 
   org_readiness:
     display: status_list
     entries:
       - title: "Span of control"
-        caption: "Kanban columns are managers — open a card for report and manager hubs"
+        caption: "Active ManagerLink queue — open a row for report and manager hubs"
         icon: "network"
         state: accent
       - title: "Temporal links"

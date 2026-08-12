@@ -64,3 +64,23 @@ def test_hr_records_keeps_bar_chart_for_coverage() -> None:
     # Secondary desks still host lifecycle / level mix charts
     assert "workspace org_chart" in text or "role_level_mix:" in text
     assert "workspace compensation_review" in text or "reason_mix:" in text
+
+
+def test_reporting_desk_span_is_filled_queue_not_empty_kanban() -> None:
+    """Cycle 1946: Links metric with empty span kanban is dishonest — queue fills when links exist."""
+    block = _workspace_block("reporting_desk")
+    span_start = block.index("\n  span_of_control:")
+    span_end = block.index("\n  by_department:", span_start)
+    span = block[span_start:span_end]
+    assert "display: queue" in span
+    assert "source: ManagerLink" in span
+    assert "action: managerlink_detail" in span
+    assert "group_by: manager" not in span
+    assert "display: kanban" not in span
+    # No second primary link region competing for fold as empty twin
+    assert "\n  active_links:" not in block
+    assert "people_cards:" not in block
+    assert "focus: reporting_pulse, span_of_control, by_department, by_location" in block
+    # Placement boards still present for org shape (not only metrics)
+    assert "\n  by_department:" in block
+    assert "\n  by_location:" in block

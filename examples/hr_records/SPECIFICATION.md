@@ -95,8 +95,9 @@ dedicated screens — fourteen in all, from the staff directory to
   composition, then people-notes trail and secondary report roster (no
   redundant under-fold org bar charts).
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
-- **Reporting** — span-of-control kanban by manager, department placement board,
-  then active ManagerLink queue and people hubs (not a dept-name bar chart).
+- **Reporting** — filled active ManagerLink span queue (report→manager), then
+  department + work-location placement boards (not an empty span kanban void
+  or dept-name bar chart theater).
 
 ## The technical foundation
 
@@ -139,4 +140,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:0887c3d6d666593e2b6932f672cd1dee9d41047dccaf3d94034ec2f79458543a -->
+<!-- dazzle-spec-brief: sha256:29bc3e562619f6d400c272483730ccd14832e9822821e9c35b0278d92f191411 -->
