@@ -68,14 +68,16 @@ Managers alone can delete tickets or comments.
 
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
-(including conversation, **needs reply**, **hot speech**, and document volume),
-a **needs reply** conversation region of customer notes whose **ball is in the
-agent court** (Front / Intercom "waiting on you" grain), a **hot speech**
-conversation region of frustrated/urgent tone or raised escalation (cycle 1940
-peer-pack; not ball-only), a **live conversation** trail of newest notes, a
-**composition** queue of open SLA waivers (named breach titles), a review queue,
-a kanban board of open statuses, and a recent-comment **timeline** (dated
-stream, not a flat list).
+(including conversation, **needs reply**, **awaiting customer**, **hot speech**,
+and document volume), a **needs reply** conversation region of customer notes
+whose **ball is in the agent court** (Front / Intercom "waiting on you" grain),
+an **awaiting customer** conversation region of outbound notes whose **ball is
+in the customer court** (cycle 1955 peer-pack; park these — do not re-thrash as
+open agent work), a **hot speech** conversation region of frustrated/urgent tone
+or raised escalation (cycle 1940 peer-pack; not ball-only), a **live conversation**
+trail of newest notes, a **composition** queue of open SLA waivers (named breach
+titles), a review queue, a kanban board of open statuses, and a recent-comment
+**timeline** (dated stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
 conversation, needs reply, documents), SLA readiness, a **breach risk** queue
@@ -94,9 +96,10 @@ Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
 kanban of assigned open tickets, a **needs reply** ball of customer notes
-waiting on agents, a **my conversation** notes queue, a resolved close-out
-queue, and **one** recent-comment timeline (no funnel/progress chart theater or
-triple activity dumps — empty_region honesty).
+waiting on agents, an **awaiting customer** trail of outbound notes parked for
+the customer (cycle 1955), a **my conversation** notes queue, a resolved
+close-out queue, and **one** recent-comment timeline (no funnel/progress chart
+theater or triple activity dumps — empty_region honesty).
 **My Tickets** is the customer's home: open/WIP counts, open and in-progress
 queues, one case-history timeline, and how-it-works guidance (no bar-chart
 theater or duplicate open/timeline dumps).
@@ -183,4 +186,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:23efac87323ba8086eb223b5caabbcb67af5fb8a3f641ccebd7f7ea29b74dd15 -->
+<!-- dazzle-spec-brief: sha256:32ff68070f2763a752b9d2bd1a246aee439e5cf5aa28145faa32c5f2da24e329 -->

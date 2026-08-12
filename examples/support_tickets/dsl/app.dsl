@@ -553,6 +553,7 @@ workspace ticket_queue "Ticket Queue":
   # Job primary: at-a-glance pressure (tones on critical).
   # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
   # Cycle 1940 conversation peer-pack: tone/escalation heat (not ball-only).
+  # Cycle 1955: awaiting_customer complements needs_reply (both ball sides).
   queue_metrics:
     source: Ticket
     display: summary
@@ -562,6 +563,7 @@ workspace ticket_queue "Ticket Queue":
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       documents: count(SlaWaiver)
     tones:
@@ -569,6 +571,7 @@ workspace ticket_queue "Ticket Queue":
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      awaiting_customer: accent
       hot_speech: destructive
       documents: accent
 
@@ -582,6 +585,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "Nothing waiting on agents — every customer note has a reply path"
+
+  # Peer-pack conversation upgrade (cycle 1955): Front / Intercom "waiting on
+  # customer" — agent speech that kicked the ball back; do not re-thrash these
+  # threads as open agent work (recipe awaiting_customer_trail).
+  awaiting_customer:
+    source: Comment
+    filter: ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "Nothing waiting on customers — every outbound note is closed or still on us"
 
   # Peer-pack conversation upgrade (cycle 1940): Zendesk/Front "heated" trail —
   # frustrated/urgent tone or raised/critical escalation, not ball_in_court alone
@@ -663,6 +678,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Customer notes with ball in agent court — answer before the rest of the trail"
         icon: "reply"
         state: warning
+      - title: "Awaiting customer"
+        caption: "Outbound notes with ball in customer court — park these; do not re-answer as open work"
+        icon: "hourglass"
+        state: accent
       - title: "Hot speech"
         caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
         icon: "flame"
@@ -682,14 +701,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
+      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
     as manager:
-      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
+      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
     as admin:
-      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
+      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
 
 
 workspace manager_ops "Manager Ops":
@@ -863,7 +882,7 @@ workspace agent_dashboard "Agent Dashboard":
   # Goal B empty_region_honesty (cycle 1812): peer agent homes (Zendesk /
   # Intercom) lead with WIP board + close-out + one comment trail — not funnel
   # / progress chart theater or triple comment streams that render as voids.
-  purpose: "Personal WIP board with needs-reply ball and the conversation trail on your assigned cases"
+  purpose: "Personal WIP board with both-ball conversation (needs-reply + awaiting-customer) on claimed cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
@@ -891,6 +910,17 @@ workspace agent_dashboard "Agent Dashboard":
     display: conversation
     action: comment_detail
     empty: "No customer notes waiting on you — clear the ball before new claims"
+
+  # Peer-pack awaiting_customer_trail (cycle 1955) — notes I (or the desk)
+  # kicked back; park until the customer answers (not open agent thrash).
+  awaiting_customer:
+    source: Comment
+    filter: ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "Nothing waiting on customers from this desk"
 
   # Conversation on my plate — queue of recent notes (Goal B conversation depth).
   my_conversation:
@@ -922,11 +952,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + needs-reply ball + conversation trail — no funnel/progress chart theater"
-      focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments
+      purpose: "Personal WIP + both-ball conversation (needs-reply + awaiting-customer) — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution
     as manager:
-      purpose: "Personal WIP + needs-reply ball + conversation trail — no funnel/progress chart theater"
-      focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments
+      purpose: "Personal WIP + both-ball conversation (needs-reply + awaiting-customer) — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show

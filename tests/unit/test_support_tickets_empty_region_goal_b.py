@@ -35,9 +35,11 @@ def test_agent_dashboard_omits_funnel_progress_and_triple_comment_theater() -> N
     assert "display: progress" not in block
     assert "display: activity_feed" not in block
     assert (
-        "focus: my_assigned, needs_reply, my_conversation, pending_resolution, recent_comments"
+        "focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution"
         in block
     )
+    # recent_comments stays on the desk as secondary trail (not focus thrash).
+    assert "recent_comments:" in block
     assert "ux:" in block
     assert "as agent:" in block
     # Single comment timeline only

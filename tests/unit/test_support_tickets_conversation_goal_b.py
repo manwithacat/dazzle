@@ -195,10 +195,30 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     assert "display: conversation" in region
     assert "hot_speech: count(Comment" in block
     needs = block.index("\n  needs_reply:\n")
+    awaiting = block.index("\n  awaiting_customer:\n")
     hot = block.index("\n  hot_speech:\n")
     live = block.index("\n  live_conversation:\n")
-    assert needs < hot < live
+    assert needs < awaiting < hot < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue"
+        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue"
         in block
+    )
+
+
+def test_ticket_queue_awaiting_customer_trail() -> None:
+    """Cycle 1955: Front/Intercom waiting-on-customer ball complements needs_reply."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "awaiting_customer: count(Comment where ball_in_court = customer)" in block
+    region = block.split("\n  awaiting_customer:\n", 1)[1].split("\n  hot_speech:", 1)[0]
+    assert "source: Comment" in region
+    assert "ball_in_court = customer" in region
+    assert "is_internal = false" in region
+    assert "display: conversation" in region
+    agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
+    assert "\n  awaiting_customer:\n" in agent
+    assert "ball_in_court = customer" in agent
+    assert (
+        "focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution"
+        in agent
     )
