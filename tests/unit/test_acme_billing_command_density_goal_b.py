@@ -51,3 +51,40 @@ def test_billing_metrics_count_open_sensitive_and_conversation() -> None:
     assert "conversation: count(InvoiceNote)" in block
     assert "filter: sensitive != true" in block
     assert "filter: sensitive = true" in block
+
+
+def _invoices_home_block() -> str:
+    text = SURFACES.read_text()
+    start = text.index('workspace invoices_home "Invoices":')
+    end = text.index('workspace team_home "Team":', start)
+    return text[start:end]
+
+
+def test_invoices_home_dual_attention_before_conversation() -> None:
+    """Cycle 1937 peer-pack: invoice desk puts open + dunning above the note trail."""
+    block = _invoices_home_block()
+    assert "invoice_pulse:" in block
+    assert "open_bills:" in block
+    assert "dunning_queue:" in block
+    assert "live_conversation:" in block
+    # Order: pulse → open books → dunning pressure → conversation.
+    assert block.index("invoice_pulse:") < block.index("open_bills:")
+    assert block.index("open_bills:") < block.index("dunning_queue:")
+    assert block.index("dunning_queue:") < block.index("live_conversation:")
+    assert "filter: sensitive != true" in block
+    assert "filter: dunning_state != none" in block
+    assert "group_by: dunning_state" in block
+    assert "Multi-panel" in block or "multi-panel" in block.lower()
+    assert "focus: invoice_pulse, open_bills, dunning_queue, live_conversation" in block
+
+
+def test_invoices_home_pulse_counts_dunning_and_open_books() -> None:
+    block = _invoices_home_block()
+    assert "open_books: count(Invoice where sensitive != true)" in block
+    assert "in_dunning: count(Invoice where dunning_state != none)" in block
+    assert "sensitive: count(Invoice where sensitive = true)" in block
+    assert "conversation: count(InvoiceNote)" in block
+    # Caps keep dual attention + conversation sharing the fold.
+    assert "limit: 8" in block
+    assert "limit: 12" in block
+    assert "limit: 6" in block

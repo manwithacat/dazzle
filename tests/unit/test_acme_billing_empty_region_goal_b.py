@@ -63,17 +63,19 @@ def test_projects_home_omits_load_chart_and_twin_trail() -> None:
 
 
 def test_invoices_home_omits_status_mix_and_bill_timeline() -> None:
-    """Invoice desk: conversation + board + projects — not status chart / twin timeline."""
+    """Invoice desk: dual attention + conversation — not status chart / twin timeline."""
     block = _workspace_block("invoices_home")
     assert "live_conversation:" in block
     assert "invoice_pulse:" in block
     assert "open_bills:" in block
+    assert "dunning_queue:" in block
     assert "projects_context:" in block
     assert "bill_timeline:" not in block
     assert "invoice_status_mix:" not in block
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
-    assert "focus: live_conversation, invoice_pulse, open_bills" in block
+    # Cycle 1937 command_density: pulse + dual attention before conversation.
+    assert "focus: invoice_pulse, open_bills, dunning_queue, live_conversation" in block
 
 
 def test_team_home_omits_role_chart_and_roster_timeline() -> None:

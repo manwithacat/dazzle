@@ -639,60 +639,81 @@ workspace projects_home "Projects":
 # Third product workspace: invoice-first job desk so entity
 # lists no longer dominate product shell count vs workspaces.
 workspace invoices_home "Invoices":
-  # Goal B conversation + empty_region_honesty: discussion + open bills board —
-  # no status bar chart or twin bill timeline under the fold (cycle 1828).
-  purpose: "Invoice desk — live conversation, cash context, open bills"
+  # Goal B command_density peer-pack upgrade (cycle 1937): Stripe/Chargebee
+  # invoice desks put cash pulse + dual attention (lifecycle board + dunning
+  # pressure) above the note trail — not conversation-first with thin underfold
+  # (cycle 1828 empty_region honesty kept: no status bar / twin timeline theater).
+  purpose: "Multi-panel invoice desk — cash pulse, dual attention, then discussion"
   stage: "simple_list"
   access: persona(admin, org_owner, auditor, project_member)
 
-  live_conversation:
-    source: InvoiceNote
-    sort: created_at desc
-    limit: 8
-    display: queue
-    action: invoice_note_detail
-    empty: "No conversation yet — notes on open bills appear here"
-
+  # Pulse first: open books + collections pressure + discussion volume.
+  # (Invoice has no status field — open books = non-sensitive; peer billing home.)
   invoice_pulse:
     source: Invoice
     display: metrics
     aggregate:
-      invoices: count(Invoice)
-      projects: count(Project)
-      organizations: count(Organization)
+      open_books: count(Invoice where sensitive != true)
+      in_dunning: count(Invoice where dunning_state != none)
+      sensitive: count(Invoice where sensitive = true)
       conversation: count(InvoiceNote)
     tones:
-      invoices: accent
+      open_books: accent
+      in_dunning: warning
+      sensitive: warning
       conversation: accent
 
-  ux:
-    as admin:
-      purpose: "See invoice discussion before open bills"
-      focus: live_conversation, invoice_pulse, open_bills
-    as org_owner:
-      purpose: "Billing discussion and open bills"
-      focus: live_conversation, invoice_pulse, open_bills
-    as auditor:
-      purpose: "Review discussion trail with open bills"
-      focus: live_conversation, invoice_pulse, open_bills
-    as project_member:
-      purpose: "Discussion on invoices in your scope"
-      focus: live_conversation, invoice_pulse, open_bills
-
+  # Dual attention panel 1 — open books queue (work rows, not metric theater).
   open_bills:
     source: Invoice
-    display: kanban
-    group_by: status
+    filter: sensitive != true
     sort: created_at desc
-    empty: "No open invoices"
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No open invoices — books clear"
 
-  # Work-surface utility (cycle 1488 journey): project context → pull queue.
+  # Dual attention panel 2 — collections pressure by dunning_state grain.
+  dunning_queue:
+    source: Invoice
+    filter: dunning_state != none
+    sort: created_at desc
+    limit: 12
+    display: kanban
+    group_by: dunning_state
+    action: invoice_detail
+    empty: "No invoices in dunning — healthy collections"
+
+  # Conversation AFTER dual attention — notes share the fold, not lead it.
+  live_conversation:
+    source: InvoiceNote
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_note_detail
+    empty: "No conversation yet — notes on open bills appear here"
+
+  # Work-surface utility (cycle 1488 journey): project context under-fold.
   projects_context:
     source: Project
     display: queue
     sort: name asc
     action: project_detail
     empty: "No projects found"
+
+  ux:
+    as admin:
+      purpose: "Cash pulse + dual attention (open + dunning) before discussion — multi-panel billing desk"
+      focus: invoice_pulse, open_bills, dunning_queue, live_conversation
+    as org_owner:
+      purpose: "Cash pulse + dual attention (open + dunning) before discussion — multi-panel billing desk"
+      focus: invoice_pulse, open_bills, dunning_queue, live_conversation
+    as auditor:
+      purpose: "Cash pulse + dual attention (open + dunning) before discussion — multi-panel billing desk"
+      focus: invoice_pulse, open_bills, dunning_queue, live_conversation
+    as project_member:
+      purpose: "Open books + dunning pressure in your scope before discussion"
+      focus: invoice_pulse, open_bills, dunning_queue, live_conversation
 
 # Fourth product workspace: team membership desk separate from
 # org portfolio / projects / invoices — lowers list:workspace ratio.

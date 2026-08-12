@@ -25,7 +25,12 @@ def test_billing_desks_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: InvoiceNote" in text
     assert "conversation: count(InvoiceNote)" in text
-    assert "focus: live_conversation" in text
+    # Conversation remains on focus spines (may trail dual attention — cycle 1937).
+    assert "live_conversation" in text
+    assert "focus:" in text
+    inv = text[text.index('workspace invoices_home "Invoices"') : text.index("workspace team_home")]
+    assert "live_conversation" in inv
+    assert "live_conversation" in inv.split("focus:")[1].split("\n")[0]
 
 
 def test_invoice_detail_discussion_uses_conversation_chrome() -> None:

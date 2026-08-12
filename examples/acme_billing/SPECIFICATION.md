@@ -88,8 +88,10 @@ warehouse:
   projects and invoices only (no status chart / membership timeline voids).
 - **Projects** — project-first path: kanban portfolio and recent invoices
   (no load chart / twin project trail).
-- **Invoices** — invoice desk with live conversation, status board, and
-  projects context (no status mix chart / twin bill timeline).
+- **Invoices** — multi-panel invoice desk: cash pulse, dual attention (open
+  lifecycle board + dunning pressure), then live conversation — not
+  conversation-first with thin underfold (cycle 1937 command_density peer-pack;
+  no status mix chart / twin bill timeline).
 - **Team** — people queue and membership queue (no role chart / twin roster).
 - **Organizations** — org portfolio roster and open bills queue (no project
   trail / invoice-load chart voids).
@@ -155,4 +157,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:cac3c9d501f4658d60079098453da38159c4f52df983099473968e76b8fa74aa -->
+<!-- dazzle-spec-brief: sha256:debdc3ddba4063809420acbec3023420f9fc9167fff20f71d00ade3df5f50ff3 -->
