@@ -50,7 +50,7 @@ def test_finance_ops_packet_covers_first() -> None:
     assert "media_shelf:" not in block
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "credit_memos, composition, past_due, awaiting_approval" in block
+        "dispute_packets, credit_memos, composition, past_due, awaiting_approval" in block
     )
 
 

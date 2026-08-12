@@ -514,7 +514,7 @@ workspace finance_ops "Finance Operations":
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
   # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
-  purpose: "Day-to-day invoice throughput — packet covers, draft gate, tax certs, PO packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
+  purpose: "Day-to-day invoice throughput — packet covers, draft gate, tax certs, PO packets, dispute packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -559,6 +559,7 @@ workspace finance_ops "Finance Operations":
       goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       remittances: count(InvoiceDocument where doc_kind = remittance)
+      dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
       documents: accent
       published: positive
@@ -568,6 +569,7 @@ workspace finance_ops "Finance Operations":
       goods_receipts: accent
       credit_memos: warning
       remittances: accent
+      dispute_packets: destructive
 
   # Peer-pack document upgrade (cycle 1957): Bill.com / Melio / Tipalti
   # "release gate" — draft remittance/credit packets must publish before
@@ -641,6 +643,18 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No remittance advice on file — attach SEPA/ACH remittance covers before settle"
+
+  # Peer-pack document upgrade (cycle 1978): Bill.com / Melio / Tipalti dispute
+  # evidence packets — GRN mismatch / missing tax cert / closed PO covers before
+  # re-approve (recipe dispute_packet_watch; not remittance/credit/goods re-stack).
+  dispute_packets:
+    source: InvoiceDocument
+    filter: doc_kind = dispute_packet
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No dispute packets on file — attach exception evidence when invoices are disputed"
 
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
@@ -721,20 +735,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, remittance + credit memo watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, remittance + credit memo watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, remittance + credit memo watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, remittance + credit memo watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, remittance + credit memo watch, draft gate, evidence packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, remittance + dispute packet watch, draft gate, evidence packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1502,7 +1516,9 @@ workspace line_items_desk "Line Items":
 workspace dispute_desk "Disputes":
   # Recipe dispute_reason_desk (cycle 1921): dispute pulse + reason-bearing
   # disputed queue before settle board / attempt trail / status mix.
-  purpose: "Dispute desk — exception reasons, disputed invoices, settle pipeline, and payment attempts"
+  # Cycle 1978: dispute_packet_watch — named evidence packets (GRN / tax / PO)
+  # before the exception queue (Bill.com / Melio / Tipalti controller lean-in).
+  purpose: "Dispute desk — evidence packets, exception reasons, disputed invoices, settle pipeline, and payment attempts"
   access: persona(finance, finance_admin, auditor, tenant_admin)
 
   dispute_pulse:
@@ -1519,7 +1535,33 @@ workspace dispute_desk "Disputes":
       ready: positive
       conversation: accent
 
-  # Exception queue FIRST — Invoice.fitness.repr_fields carries dispute_reason
+  # Honest document counts on the dispute home (InvoiceDocument source only).
+  document_pulse:
+    source: InvoiceDocument
+    display: metrics
+    aggregate:
+      dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
+      published: count(InvoiceDocument where status = published)
+      draft: count(InvoiceDocument where status = draft)
+      documents: count(InvoiceDocument)
+    tones:
+      dispute_packets: destructive
+      published: positive
+      draft: warning
+      documents: accent
+
+  # Peer-pack dispute_packet_watch (cycle 1978): evidence covers before the
+  # reason-bearing exception queue (not remittance/credit re-stack on ops).
+  dispute_packets:
+    source: InvoiceDocument
+    filter: doc_kind = dispute_packet
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_document_detail
+    empty: "No dispute packets — attach GRN mismatch, tax, or closed-PO evidence"
+
+  # Exception queue — Invoice.fitness.repr_fields carries dispute_reason
   # so queue cards show why the invoice is blocked (still proof above the fold).
   disputed_queue:
     source: Invoice
@@ -1556,14 +1598,14 @@ workspace dispute_desk "Disputes":
 
   ux:
     as finance:
-      purpose: "Disputes — reason-bearing exception queue, then settle pipeline"
-      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts
+      purpose: "Disputes — evidence packets, reason-bearing queue, then settle pipeline"
+      focus: dispute_pulse, document_pulse, dispute_packets, disputed_queue, settle_pipeline, payment_attempts
     as finance_admin:
-      purpose: "Disputes — exception reasons and settle pipeline oversight"
-      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts
+      purpose: "Disputes — evidence packets, exception reasons, settle pipeline oversight"
+      focus: dispute_pulse, document_pulse, dispute_packets, disputed_queue, settle_pipeline, payment_attempts
     as auditor:
-      purpose: "Dispute evidence — exceptions, pipeline, and attempt trail"
-      focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts, status_mix
+      purpose: "Dispute evidence — packets, exceptions, pipeline, and attempt trail"
+      focus: dispute_pulse, document_pulse, dispute_packets, disputed_queue, settle_pipeline, payment_attempts
     as tenant_admin:
-      purpose: "Dispute oversight — exception queue and settle mix"
-      focus: dispute_pulse, disputed_queue, settle_pipeline, status_mix
+      purpose: "Dispute oversight — evidence packets, exception queue, and settle mix"
+      focus: dispute_pulse, document_pulse, dispute_packets, disputed_queue, settle_pipeline

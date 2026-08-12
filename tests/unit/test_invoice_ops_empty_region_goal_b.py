@@ -39,7 +39,7 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
     assert "display: timeline" not in block
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "credit_memos, composition, past_due, awaiting_approval" in block
+        "dispute_packets, credit_memos, composition, past_due, awaiting_approval" in block
     )
 
 

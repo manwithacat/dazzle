@@ -58,7 +58,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "headline: str(200) required" in text
     assert (
         "doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, "
-        "payment_confirmation, goods_receipt]=remittance" in text
+        "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
     assert "preview_url: url" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "credit_memos, composition, past_due, awaiting_approval" in ops
+        "dispute_packets, credit_memos, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -270,7 +270,11 @@ def test_dispute_desk_exposes_reason_bearing_exception_queue() -> None:
     assert "payment_attempts:" in desk
     assert desk.index("dispute_pulse:") < desk.index("disputed_queue:")
     assert desk.index("disputed_queue:") < desk.index("settle_pipeline:")
-    assert "focus: dispute_pulse, disputed_queue, settle_pipeline, payment_attempts" in desk
+    # Cycle 1978: dispute_packet_watch on focus spine before settle trail
+    assert (
+        "focus: dispute_pulse, document_pulse, dispute_packets, disputed_queue, "
+        "settle_pipeline, payment_attempts" in desk
+    )
     # List + hub expose dispute reason (peer exception grain)
     inv_list = text.split('surface invoice_list "Invoices"', 1)[1].split("surface ", 1)[0]
     assert 'field dispute_reason "Dispute"' in inv_list
@@ -279,6 +283,47 @@ def test_dispute_desk_exposes_reason_bearing_exception_queue() -> None:
     # Personas can reach the desk
     personas = (ROOT / "examples/invoice_ops/dsl/personas.dsl").read_text()
     assert "dispute_desk" in personas
+
+
+def test_finance_ops_and_dispute_desk_dispute_packet_watch() -> None:
+    """Cycle 1978: Bill.com/Melio/Tipalti dispute evidence packets on ops + dispute desk."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  dispute_packets:\n" in ops
+    region = ops.split("\n  dispute_packets:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = dispute_packet" in region
+    assert "display: queue" in region
+    assert "dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)" in ops
+    assert "dispute_packets" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    assert ops.index("\n  remittances:\n") < ops.index("\n  dispute_packets:\n")
+    assert ops.index("\n  dispute_packets:\n") < ops.index("composition:")
+
+    desk = _workspace_block("dispute_desk")
+    assert "document_pulse:" in desk
+    assert "\n  dispute_packets:\n" in desk
+    d_region = desk.split("\n  dispute_packets:\n", 1)[1].split("\n  disputed_queue:", 1)[0]
+    assert "source: InvoiceDocument" in d_region
+    assert "doc_kind = dispute_packet" in d_region
+    assert "display: queue" in d_region
+    assert "dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)" in desk
+    assert desk.index("document_pulse:") < desk.index("\n  dispute_packets:\n")
+    assert desk.index("\n  dispute_packets:\n") < desk.index("disputed_queue:")
+    assert "dispute_packets" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    packs = [r for r in rows if r.get("doc_kind") == "dispute_packet"]
+    assert len(packs) >= 3, len(packs)
+    disputed_invoices = {
+        "3c000000-0000-4000-8000-000000000008",
+        "3c000000-0000-4000-8000-000000000015",
+        "3c000000-0000-4000-8000-000000000018",
+    }
+    linked = {str(r.get("invoice")) for r in packs}
+    assert disputed_invoices <= linked, linked
+    for r in packs:
+        assert len(str(r.get("headline") or "")) >= 16
+        assert r.get("preview_url")
+        assert str(r.get("status")) == "published"
 
 
 def test_disputed_invoice_seeds_carry_domain_true_reasons() -> None:
@@ -324,6 +369,10 @@ def test_invoice_document_seeds_are_domain_true_headlines() -> None:
         "3c000000-0000-4000-8000-000000000003",
         "3c000000-0000-4000-8000-000000000004",
         "3c000000-0000-4000-8000-000000000005",
+        # Disputed invoices (cycle 1978 dispute_packet evidence)
+        "3c000000-0000-4000-8000-000000000008",
+        "3c000000-0000-4000-8000-000000000015",
+        "3c000000-0000-4000-8000-000000000018",
     }
     with_cover = 0
     for row in rows:

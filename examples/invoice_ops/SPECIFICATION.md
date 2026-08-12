@@ -76,9 +76,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (cycle 1967 peer-pack), a **tax certificate watch** of reverse-charge
   certs (cycle 1959 peer-pack), a **PO packet watch** of signed PO covers
   (cycle 1965 peer-pack), awaiting-approval queue, **named AP packets**
-  (remittance / credit memo / PO / tax / payment confirmation / goods receipt) as document
-  composition, live AP discussion as Message/Bubble conversation chrome, approval
-  board, and supplier context grid (no decision-timeline dump).
+  (remittance / credit memo / PO / tax / payment confirmation / goods receipt /
+  dispute packet) as document composition, live AP discussion as Message/Bubble
+  conversation chrome, approval board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
   publish before the settle batch), a **remittance advice watch** of SEPA/ACH covers
@@ -97,7 +97,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **goods receipt watch**
   (doc_kind=goods_receipt three-way match slips — cycle 1967), a **credit memo watch**
   (doc_kind=credit_memo VAT/short-ship credits — cycle 1971), a **remittance advice watch**
-  (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **tax certificate watch**
+  (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
+  (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
   (doc_kind=po_packet signed PO covers — cycle 1965), then dual attention (awaiting + ready), **named
   AP packets** (InvoiceDocument composition queue) and line-item body, live
@@ -118,7 +119,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   **PO match kanban**, tax-coded line body queue, and open invoice docs (not bare
   spreadsheet export theater).
 - **Disputes** — finance/auditor/admin dispute desk (`dispute_desk`): dispute
-  metrics (open + with-reason counts), **reason-bearing disputed queue**
+  metrics (open + with-reason counts), document pulse with **dispute packet**
+  count, a **dispute packet watch** of GRN/tax/closed-PO evidence covers
+  (doc_kind=dispute_packet — cycle 1978 peer-pack), **reason-bearing disputed queue**
   (`Invoice.dispute_reason` via fitness.repr_fields + list/hub fields — peer
   Bill.com / Melio / Tipalti exception grain), settle pipeline kanban, payment
   attempt trail, and status mix chart.
@@ -200,4 +203,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:5ac91f26f1b0d83b2103d301c6b29990d15f3d3da1752feb405f9668b9ae631f -->
+<!-- dazzle-spec-brief: sha256:136cde805eb2903b38b35459058aed8b24d465da22d3569e28f57bf670ac4548 -->
