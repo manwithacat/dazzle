@@ -138,3 +138,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 > **Cycle 1924 (2026-08-11).** design_studio agent_acceptance_panel thrash (budget_exceeded unclear) + interesting_product empty_region@project_tracker discussion_desk_void_prune; tip CI green @3c668facd; densify_allowed=0.
 > **Cycle 1925 (2026-08-11).** agent_acceptance product fix: simple_task fitness.repr_fields identity chips + framework workspace_columns; hr_records person hub path re-verified (no thrash re-panel).
+> **Cycle 1926 (2026-08-12).** cimonitor: #1304 postgres agent_tickets ticket_number restored — fitness only for card/gallery displays.
