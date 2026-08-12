@@ -30,7 +30,9 @@ for overview, then **Contacts** for dual-pane browse.
 ## Where work happens
 
 **Home** is the multi-panel CRM overview (Goal B media + command density +
-empty-region honesty): a **media shelf** of favourite headshot thumbs first,
+empty-region honesty): a **media shelf** of favourite headshot thumbs with
+clean **name / company / phone** chips (not Photo Url / Email / Is Favorite
+schema labels — cycle 1931), first,
 then directory metrics and engagement-document pulse, then dual attention —
 **favourites to call** and a **composition** queue of named open letters (draft
 and sent) — then a **live relationship-notes** trail rendered as Message/Bubble

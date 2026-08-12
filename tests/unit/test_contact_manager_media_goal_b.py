@@ -61,3 +61,16 @@ def test_contact_seeds_have_https_photo_urls() -> None:
         url = str(r["photo_url"])
         assert url.startswith("https://"), url
         assert "placehold.co" in url
+
+
+def test_contact_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1931: Home/Contacts cards must not dump Photo Url/Email/Is Favorite."""
+    text = APP.read_text()
+    start = text.index('entity Contact "Contact"')
+    block = text[start : text.index("entity ContactNote")]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "first_name" in line and "last_name" in line
+    assert "company" in line and "phone" in line
+    assert "photo_url" not in line
+    assert "email" not in line
+    assert "is_favorite" not in line

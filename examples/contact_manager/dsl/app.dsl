@@ -86,7 +86,11 @@ entity Contact "Contact":
   index last_name,first_name
 
   fitness:
-    repr_fields: [first_name, last_name, email, company, is_favorite, photo_url]
+    # Cycle 1931 agent_acceptance: workspace media/queue cards use identity
+    # chips (name + company + phone) — not Photo Url / Email / Is Favorite
+    # admin schema dump (peer simple_task agency_lead 1925/1928). photo_url
+    # still injects as media thumb; email/is_favorite stay on list/detail.
+    repr_fields: [first_name, last_name, company, phone]
 
 # Goal B conversation: peer CRM tools (HubSpot / Attio / Affinity) show
 # relationship notes as the row identity on the home desk — not only
