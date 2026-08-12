@@ -79,7 +79,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
-  publish before the settle batch), capped ready-to-pay and past-due attention
+  publish before the settle batch), a **payment confirmation trail** of batch
+  ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
   panels, named remittance/payment-confirmation packets, live AP notes as
   Message/Bubble conversation chrome, then settle board (no payment-health chart
   or twin dispute trail under the fold).
@@ -191,4 +192,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:0a89f42ab59ea5848edd9eb513ecf8c0a9096fbf68b61a74a14d84f168ffa618 -->
+<!-- dazzle-spec-brief: sha256:31dc0a6393ec741e822ba0275460b75c0f467bab9e84f761fd838c4da4fef0ae -->

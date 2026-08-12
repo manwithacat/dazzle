@@ -137,7 +137,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     """Cycle 1957: Bill.com/Melio draft packets must publish before settle batch."""
     desk = _workspace_block("pay_desk")
     assert "draft_packets:" in desk
-    region = desk.split("\n  draft_packets:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = desk.split("\n  draft_packets:\n", 1)[1].split("\n  payment_confirmations:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: status = draft" in region
     assert "display: queue" in region
@@ -146,8 +146,8 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, composition, past_due, "
-        "ready_to_pay, live_conversation" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, composition, "
+        "past_due, ready_to_pay" in desk
     )
 
 
@@ -314,4 +314,21 @@ def test_approval_desk_tax_certificate_watch() -> None:
     assert (
         "focus: approval_load, document_pulse, tax_certificates, composition, "
         "awaiting_approval, live_conversation" in desk
+    )
+
+
+def test_pay_desk_payment_confirmation_trail() -> None:
+    """Cycle 1961: Bill.com/Melio payment confirmation trail on settle desk."""
+    desk = _workspace_block("pay_desk")
+    assert "payment_confirmations:" in desk
+    region = desk.split("\n  payment_confirmations:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = payment_confirmation" in region
+    assert "display: queue" in region
+    assert "pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)" in desk
+    assert desk.index("draft_packets:") < desk.index("payment_confirmations:")
+    assert desk.index("payment_confirmations:") < desk.index("composition:")
+    assert (
+        "focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, "
+        "composition, past_due, ready_to_pay" in desk
     )

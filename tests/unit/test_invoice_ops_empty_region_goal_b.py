@@ -90,8 +90,8 @@ def test_pay_desk_omits_payment_health_and_dispute_trail() -> None:
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, composition, past_due, "
-        "ready_to_pay, live_conversation" in block
+        "focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, composition, "
+        "past_due, ready_to_pay" in block
     )
 
 

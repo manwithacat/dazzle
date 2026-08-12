@@ -864,7 +864,8 @@ workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then
   # remittance / payment-confirmation packets before notes.
   # Cycle 1957: draft packet release gate before ready_to_pay (peer AP settle).
-  purpose: "Multi-panel settlement — draft release gate, dual attention, named packets, then live AP notes"
+  # Cycle 1961: payment confirmation trail (proof of settle before/after batch).
+  purpose: "Multi-panel settlement — draft gate, payment confirmations, dual attention, then live AP notes"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -889,10 +890,12 @@ workspace pay_desk "Pay Desk":
       documents: count(InvoiceDocument)
       published: count(InvoiceDocument where status = published)
       draft: count(InvoiceDocument where status = draft)
+      pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)
     tones:
       documents: accent
       published: positive
       draft: warning
+      pay_confirms: positive
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
   # credit memos before releasing the settle batch (not composition re-stack).
@@ -904,6 +907,18 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No draft packets blocking release — publish remittances before the settle batch"
+
+  # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
+  # Tipalti put payment confirmations on the settle desk so controllers lean
+  # into batch proof (not draft_packet or tax_cert re-stack).
+  payment_confirmations:
+    source: InvoiceDocument
+    filter: doc_kind = payment_confirmation
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No payment confirmations yet — attach batch ACKs after SEPA/ACH release"
 
   # Goal B document composition — remittance / payment-confirmation packets
   # above dual attention so hero stills show titles above the fold.
@@ -955,11 +970,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft release gate, past-due, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
+      purpose: "Multi-panel settlement — draft gate, payment confirmations, past-due, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, composition, past_due, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft release gate, past-due, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
+      purpose: "Multi-panel settlement — draft gate, payment confirmations, past-due, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, payment_confirmations, composition, past_due, ready_to_pay
 
   settle_board:
     source: Invoice
