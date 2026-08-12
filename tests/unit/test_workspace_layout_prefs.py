@@ -587,7 +587,7 @@ class TestApplyPersonaFocus:
         assert result.regions[1].name == "find_contact"
 
     def test_focus_fold_capped_at_max(self) -> None:
-        """Many focus names expand fold but stay under thrash cap (6)."""
+        """Many focus names expand fold but stay under thrash cap (4)."""
         from types import SimpleNamespace
 
         from dazzle.page.runtime.workspace_renderer import (
@@ -642,7 +642,7 @@ class TestApplyPersonaFocus:
         ctx = build_workspace_context(ws)
         assert ctx.fold_count == 3  # command_center stage default
         result = apply_persona_focus(ctx, ["user"])
-        assert result.fold_count == 6  # _MAX_FOCUS_FOLD
+        assert result.fold_count == 4  # _MAX_FOCUS_FOLD (cycle 1950)
         assert [r.name for r in result.regions][:8] == focus
 
 

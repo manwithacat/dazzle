@@ -35,10 +35,8 @@ def test_staff_directory_dual_attention_before_conversation() -> None:
     assert block.index("recent_starters:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
-    assert (
-        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
-        in block
-    )
+    # Cycle 1950: focus ≤4 for fold thrash; dual attention still before docs/notes order.
+    assert "focus: media_shelf, headcount, current_staff, recent_starters" in block
 
 
 def test_my_team_dual_attention_before_conversation() -> None:

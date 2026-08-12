@@ -87,3 +87,24 @@ def test_person_hub_tenure_end_date_label_has_no_sql_null_jargon() -> None:
     assert idx >= 0
     block = text[idx : idx + 1200]
     assert 'field ended_at "End date"' in block
+
+
+def test_staff_directory_persona_focus_capped_for_trial_fold() -> None:
+    """Cycle 1950: staff_directory focus ≤4 so fold expand avoids thrash.
+
+    Six focus names + _MAX_FOCUS_FOLD storm nested Playwright (htmx
+    ERR_INSUFFICIENT_RESOURCES). Keep shelf + metrics + dual attention
+    eager; docs/notes remain on desk but not all focus-eager.
+    """
+    block = _workspace_block("staff_directory")
+    # ux block only (before department_context)
+    ux = block.split("ux:", 1)[1].split("department_context:", 1)[0]
+    for line in ux.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("focus:"):
+            continue
+        names = [p.strip() for p in stripped.removeprefix("focus:").split(",") if p.strip()]
+        assert 1 <= len(names) <= 4, names
+        assert "media_shelf" in names
+        assert "headcount" in names
+        assert "current_staff" in names

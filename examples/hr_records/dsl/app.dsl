@@ -1080,18 +1080,23 @@ workspace staff_directory "Staff Directory":
     empty: "No conversation yet — notes on people and onboarding appear here"
 
   ux:
+    # Focus ≤4 (cycle 1950): full 6-name focus expanded fold to _MAX and
+    # stormed nested Playwright (ERR_INSUFFICIENT_RESOURCES / htmx Failed
+    # to fetch). Keep acceptance-critical shelf + status mix + dual
+    # attention eager; composition + conversation remain on the desk but
+    # intersect-once after scroll (still in region list above org queues).
     as hr_admin:
       purpose: "Multi-panel staff — headshots, dual attention, documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
+      focus: media_shelf, headcount, current_staff, recent_starters
     as manager:
       purpose: "Multi-panel team view — headshots, roster, starters, documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
+      focus: media_shelf, headcount, current_staff, recent_starters
     as finance:
       purpose: "Headshots + headcount dual attention + documents before compensation hop"
-      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
+      focus: media_shelf, headcount, current_staff, recent_starters
     as employee:
       purpose: "Directory headshots, dual attention, and documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation
+      focus: media_shelf, headcount, current_staff, recent_starters
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:

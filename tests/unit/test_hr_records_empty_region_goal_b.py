@@ -33,10 +33,9 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "dept_mix:" not in block
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
-    assert (
-        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
-        in block
-    )
+    # Cycle 1950: focus ≤4 — composition/notes remain regions, not focus-eager.
+    assert "focus: media_shelf, headcount, current_staff, recent_starters" in block
+    assert "composition:" in block
 
 
 def test_my_team_omits_redundant_org_bar_charts() -> None:

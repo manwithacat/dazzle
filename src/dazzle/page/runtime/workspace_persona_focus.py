@@ -15,8 +15,11 @@ from typing import Any
 
 # Cap eager regions after focus lead so persona intent wins over stage
 # STAGE_FOLD defaults without re-opening command_center / dual_pane thrash
-# (nested Playwright storms when fold ≥6–8 concurrent region GETs).
-_MAX_FOCUS_FOLD = 6
+# (nested Playwright storms when fold ≥6 concurrent region GETs + preload —
+# hr_records staff_directory trial 2026-08-12: ERR_INSUFFICIENT_RESOURCES).
+# Cycle 1950: lower 6→4 so multi-focus Goal B desks still lead without
+# flooding Chromium under nested qa trial.
+_MAX_FOCUS_FOLD = 4
 
 
 def collect_workspace_persona_overrides(
@@ -109,7 +112,8 @@ def apply_persona_focus(
     often cap at 3 while authors list 4 focus regions (e.g. contact_manager
     home: directory_stats + find_contact + favourites + recent) — without
     expansion the last focus card stayed intersect-once. Cap at
-    ``_MAX_FOCUS_FOLD`` to avoid re-opening multi-queue thrash.
+    ``_MAX_FOCUS_FOLD`` (4 since cycle 1950) so 6-name Goal B focus lists
+    still lead order without 6 concurrent region GETs under Playwright.
     """
     persona_focus = getattr(ctx, "persona_focus", None) or {}
     persona_purposes = getattr(ctx, "persona_purposes", None) or {}

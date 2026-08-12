@@ -50,10 +50,8 @@ def test_hero_desks_declare_composition_queue() -> None:
     assert "documents: count(HrDocument)" in staff
     assert staff.index("recent_starters:") < staff.index("composition:")
     assert staff.index("composition:") < staff.index("live_conversation:")
-    assert (
-        "focus: media_shelf, headcount, current_staff, recent_starters, composition, live_conversation"
-        in staff
-    )
+    # Cycle 1950: composition stays on desk after dual attention; not all focus-eager.
+    assert "focus: media_shelf, headcount, current_staff, recent_starters" in staff
 
     team = _workspace_block("my_team")
     assert "composition:" in team

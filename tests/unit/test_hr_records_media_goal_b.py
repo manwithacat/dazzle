@@ -46,10 +46,10 @@ def test_staff_directory_media_shelf_first() -> None:
     assert "display: grid" in block
     assert block.index("media_shelf:") < block.index("headcount:")
     assert block.index("media_shelf:") < block.index("current_staff:")
-    assert (
-        "focus: media_shelf, headcount, current_staff, recent_starters, "
-        "composition, live_conversation" in block
-    )
+    # Cycle 1950: focus ≤4 (media leads; docs/notes still on desk, not all eager).
+    assert "focus: media_shelf, headcount, current_staff, recent_starters" in block
+    assert "composition:" in block
+    assert "live_conversation:" in block
 
 
 def test_person_seeds_have_https_photo_urls() -> None:
