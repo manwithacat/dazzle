@@ -136,7 +136,9 @@ entity Device "Device":
   index assigned_tester_id
 
   fitness:
-    repr_fields: [name, model, status, firmware_version, assigned_tester_id]
+    # serial_number first — queue/list identity (unique serial) must survive
+    # fitness workspace projection (cycle 1928; peer of Ticket.ticket_number).
+    repr_fields: [serial_number, name, model, status, firmware_version, assigned_tester_id]
 
 # Entity: Tester
 entity Tester "Tester":

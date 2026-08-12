@@ -69,7 +69,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1915 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1915 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1925 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1928 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1754 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 1675 | STALE |
@@ -139,3 +139,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 > **Cycle 1924 (2026-08-11).** design_studio agent_acceptance_panel thrash (budget_exceeded unclear) + interesting_product empty_region@project_tracker discussion_desk_void_prune; tip CI green @3c668facd; densify_allowed=0.
 > **Cycle 1925 (2026-08-11).** agent_acceptance product fix: simple_task fitness.repr_fields identity chips + framework workspace_columns; hr_records person hub path re-verified (no thrash re-panel).
 > **Cycle 1926 (2026-08-12).** cimonitor: #1304 postgres agent_tickets ticket_number restored — fitness only for card/gallery displays.
+> **Cycle 1928 (2026-08-12).** agent_acceptance: fitness.repr_fields authoritative on all workspace pads; Device serial_number; tip CI green @12ed783af.

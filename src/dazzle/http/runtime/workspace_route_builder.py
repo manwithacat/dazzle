@@ -16,7 +16,6 @@ from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.workspace_columns import (
     _fitness_repr_field_names,
-    prefer_fitness_repr_for_display,
 )
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -191,26 +190,20 @@ class WorkspaceRouteBuilder:
             ) -> list[dict[str, Any]]:
                 """Build columns for workspace regions (grid/queue/list pads).
 
-                **Card/gallery** displays (``grid`` / media): prefer
-                ``fitness.repr_fields`` so headshot shelves show identity chips
-                (name/role/dept) instead of the admin list-surface dump
-                (email / photo_url / is_active) — cycle 1925 agency_lead.
+                When ``fitness.repr_fields`` is declared it is the authoritative
+                workspace projection for **all** pads (grid, queue, kanban) —
+                cycle 1925 agency_lead identity chips; cycle 1928 re-affirms
+                queues too so team_roster / by_department do not fall back to
+                admin LIST dumps (Photo Url / Email / Is Active).
 
-                **Queue/list/timeline** pads: prefer the LIST surface so
-                identifying fields stay visible (e.g. ``ticket_number`` on
-                support_tickets ``agent_tickets``). Cycle 1926 CI repair —
-                1925's blanket fitness prefer stripped ticket # from queues
-                while count/rows stayed correct (#1304 postgres job).
-
-                Fall back to entity economy (which itself honors fitness
-                when no list surface).
+                Authors must put identifying fields in repr (e.g. Ticket
+                ``ticket_number`` — #1304 / cycle 1926). LIST surface is used
+                only when fitness is unset. ``display`` is reserved for future
+                shape-specific overrides.
                 """
+                del display  # reserved; fitness is authoritative when set
                 _enums = getattr(appspec, "enums", None)
-                if (
-                    prefer_fitness_repr_for_display(display)
-                    and entity_spec
-                    and _fitness_repr_field_names(entity_spec)
-                ):
+                if entity_spec and _fitness_repr_field_names(entity_spec):
                     return _build_entity_columns(entity_spec, _enums)
                 _ls = _entity_list_surfaces.get(entity_name)
                 if _ls and entity_spec:

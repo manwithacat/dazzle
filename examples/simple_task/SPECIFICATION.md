@@ -56,8 +56,10 @@ metrics, dual attention (urgent + overdue queues capped for fold share),
 document composition, then live conversation trail (command_density). The
 **Team Overview** is the manager home: teammate media shelf first, metrics,
 dual attention (review queue + assignee plate kanban), briefs, conversation,
-and a team roster — person cards show clean **name / role / department** chips
-(not raw Photo Url, Email, or Is Active schema labels; cycle 1925 agency_lead). **My Work** is each person's multi-panel plate: summary,
+and a team roster — person cards and roster rows show clean **name / role /
+department** chips (not raw Photo Url, Email, or Is Active schema labels;
+cycles 1925/1928 agency_lead — fitness.repr_fields on all workspace pads).
+**My Work** is each person's multi-panel plate: summary,
 board + dues dual attention, briefs, then conversation (no twin comment dump).
 **Discussion** is the comment desk with pulse, newest notes, time trail, and
 in-progress pull queue (empty_region honesty — no status bar-chart theater).

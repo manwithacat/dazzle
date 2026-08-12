@@ -144,16 +144,14 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
     assert "is_active" not in keys
 
 
-def test_prefer_fitness_repr_only_for_card_like_displays() -> None:
-    """Cycle 1926: grid/media use fitness; queue/list keep list-surface ids."""
+def test_prefer_fitness_repr_helper_documents_card_like_displays() -> None:
+    """CARD_LIKE helper remains for shape docs; fitness is authoritative when set (1928)."""
     from dazzle.http.runtime.workspace_columns import prefer_fitness_repr_for_display
 
     assert prefer_fitness_repr_for_display("grid") is True
     assert prefer_fitness_repr_for_display("media_shelf") is True
+    # Helper still classifies queue as non-card; route_builder uses fitness for queues too.
     assert prefer_fitness_repr_for_display("queue") is False
-    assert prefer_fitness_repr_for_display("list") is False
-    assert prefer_fitness_repr_for_display("timeline") is False
-    assert prefer_fitness_repr_for_display(None) is False
 
 
 def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
@@ -164,3 +162,25 @@ def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
     start = text.index('entity Ticket "Support Ticket"')
     block = text[start : text.index("entity Comment")]
     assert "ticket_number" in block.split("repr_fields:")[1].split("]")[0]
+
+
+def test_fieldtest_device_repr_includes_serial_number() -> None:
+    """Device queues must keep unique serial in fitness projection (cycle 1928)."""
+    from pathlib import Path
+
+    text = Path("examples/fieldtest_hub/dsl/app.dsl").read_text(encoding="utf-8")
+    start = text.index('entity Device "Device"')
+    block = text[start : text.index("entity Tester")]
+    assert "serial_number" in block.split("repr_fields:")[1].split("]")[0]
+
+
+def test_simple_task_user_repr_excludes_admin_schema_on_roster() -> None:
+    """agency_lead: team_roster/by_department use fitness chips, not Photo Url dump."""
+    from pathlib import Path
+
+    text = Path("examples/simple_task/dsl/app.dsl").read_text(encoding="utf-8")
+    start = text.index('entity User "Team Member"')
+    block = text[start : text.index('entity Task "Task"')]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "name" in line and "role" in line and "department" in line
+    assert "photo_url" not in line and "email" not in line and "is_active" not in line
