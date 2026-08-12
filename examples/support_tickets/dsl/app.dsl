@@ -532,7 +532,7 @@ workspace ticket_queue "Ticket Queue":
   # Goal B media (cycle 1883) + conversation + document: peer support tools
   # (Zendesk / Intercom / Front) put agent headshots, live thread copy, and
   # named waiver documents on the triage home — not only ticket rows.
-  purpose: "Team headshots, needs-reply ball, triage open work, live conversation, and SLA waiver documents"
+  purpose: "Team headshots, needs-reply ball, hot tone/escalation speech, live trail, and SLA waiver documents"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
 
@@ -552,6 +552,7 @@ workspace ticket_queue "Ticket Queue":
 
   # Job primary: at-a-glance pressure (tones on critical).
   # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
+  # Cycle 1940 conversation peer-pack: tone/escalation heat (not ball-only).
   queue_metrics:
     source: Ticket
     display: summary
@@ -561,12 +562,14 @@ workspace ticket_queue "Ticket Queue":
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       documents: count(SlaWaiver)
     tones:
       critical: destructive
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      hot_speech: destructive
       documents: accent
 
   # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
@@ -579,6 +582,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "Nothing waiting on agents — every customer note has a reply path"
+
+  # Peer-pack conversation upgrade (cycle 1940): Zendesk/Front "heated" trail —
+  # frustrated/urgent tone or raised/critical escalation, not ball_in_court alone
+  # (recipe tone_escalation_heat; not needs_reply_ball re-stack).
+  hot_speech:
+    source: Comment
+    filter: (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No heated customer speech — tone and escalation are quiet"
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -648,6 +663,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Customer notes with ball in agent court — answer before the rest of the trail"
         icon: "reply"
         state: warning
+      - title: "Hot speech"
+        caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
+        icon: "flame"
+        state: destructive
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -663,14 +682,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
+      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
     as manager:
-      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
+      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
     as admin:
-      purpose: "Triage home — needs-reply ball before full conversation trail and open work"
-      focus: media_shelf, queue_metrics, needs_reply, live_conversation, composition, open_queue, critical_now
+      purpose: "Triage home — needs-reply + hot tone/escalation before full trail and open work"
+      focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue
 
 
 workspace manager_ops "Manager Ops":

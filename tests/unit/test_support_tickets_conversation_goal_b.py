@@ -180,3 +180,25 @@ def test_comment_seeds_have_domain_true_support_copy() -> None:
         r for r in rows if r.get("ball_in_court") == "agent" and r.get("is_internal") is False
     ]
     assert len(agent_public) >= 3
+
+
+def test_ticket_queue_hot_speech_before_live_trail() -> None:
+    """Cycle 1940: tone/escalation heat region before full conversation trail."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    # Region block (not the metrics aggregate key).
+    region = block.split("\n  hot_speech:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: Comment" in region
+    assert "customer_tone = frustrated" in region
+    assert "customer_tone = urgent" in region
+    assert "escalation != none" in region
+    assert "display: conversation" in region
+    assert "hot_speech: count(Comment" in block
+    needs = block.index("\n  needs_reply:\n")
+    hot = block.index("\n  hot_speech:\n")
+    live = block.index("\n  live_conversation:\n")
+    assert needs < hot < live
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, hot_speech, live_conversation, composition, open_queue"
+        in block
+    )

@@ -68,12 +68,14 @@ Managers alone can delete tickets or comments.
 
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
-(including conversation, **needs reply**, and document volume), a **needs
-reply** conversation region of customer notes whose **ball is in the agent
-court** (Front / Intercom "waiting on you" grain), a **live conversation** trail
-of newest notes, a **composition** queue of open SLA waivers (named breach
-titles), a review queue, a kanban board of open statuses, and a recent-comment
-**timeline** (dated stream, not a flat list).
+(including conversation, **needs reply**, **hot speech**, and document volume),
+a **needs reply** conversation region of customer notes whose **ball is in the
+agent court** (Front / Intercom "waiting on you" grain), a **hot speech**
+conversation region of frustrated/urgent tone or raised escalation (cycle 1940
+peer-pack; not ball-only), a **live conversation** trail of newest notes, a
+**composition** queue of open SLA waivers (named breach titles), a review queue,
+a kanban board of open statuses, and a recent-comment **timeline** (dated
+stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
 conversation, needs reply, documents), SLA readiness, a **breach risk** queue
@@ -181,4 +183,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:1aa903a28f7c4b5562f7aecf04657214f6c12a9a71d555d56b766a42157721fb -->
+<!-- dazzle-spec-brief: sha256:23efac87323ba8086eb223b5caabbcb67af5fb8a3f641ccebd7f7ea29b74dd15 -->
