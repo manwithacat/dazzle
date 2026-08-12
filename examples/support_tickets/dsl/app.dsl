@@ -555,6 +555,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1940 conversation peer-pack: tone/escalation heat (not ball-only).
   # Cycle 1955: awaiting_customer complements needs_reply (both ball sides).
   # Cycle 1958: thankful recovery complements hot_speech (warm closeout trail).
+  # Cycle 1966: internal collab notes (is_internal) — non-channel peer grain.
   queue_metrics:
     source: Ticket
     display: summary
@@ -569,6 +570,7 @@ workspace ticket_queue "Ticket Queue":
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
+      internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
       critical: destructive
@@ -580,6 +582,7 @@ workspace ticket_queue "Ticket Queue":
       thankful_recovery: positive
       chat_live: accent
       phone_live: warning
+      internal_notes: accent
       documents: accent
 
   # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
@@ -652,6 +655,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No phone-channel notes — chat/portal/email still carry the rest of the trail"
+
+  # Peer-pack conversation upgrade (cycle 1966): Zendesk/Front internal collab —
+  # agent/manager side notes (is_internal) so triage stills show private handoff
+  # grain, not another public channel filter (recipe internal_collab_trail).
+  internal_notes:
+    source: Comment
+    filter: is_internal = true
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No internal collab notes — agent handoffs and side research land here"
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -741,6 +756,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Phone-channel notes from voice intake — lean into Zendesk phone grain before the full trail"
         icon: "phone"
         state: warning
+      - title: "Internal collab"
+        caption: "Private agent/manager notes — lean into Zendesk internal handoffs before the public trail"
+        icon: "lock"
+        state: accent
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -756,14 +775,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — both-ball + hot speech + chat/phone channel paths"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, chat_live, phone_live, live_conversation
+      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
+      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
     as manager:
-      purpose: "Triage home — both-ball + hot speech + chat/phone channel paths"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, chat_live, phone_live, live_conversation
+      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
+      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
     as admin:
-      purpose: "Triage home — both-ball + hot speech + chat/phone channel paths"
-      focus: media_shelf, queue_metrics, needs_reply, hot_speech, chat_live, phone_live, live_conversation
+      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
+      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -813,6 +832,7 @@ workspace manager_ops "Manager Ops":
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
       critical_open: destructive
@@ -823,6 +843,7 @@ workspace manager_ops "Manager Ops":
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      internal_notes: accent
       documents: accent
 
   # Live SLA pressure (cycle 1913) — peer Zendesk/Front show breach risk rows
@@ -924,6 +945,17 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No phone-channel notes for the team — chat and email still carry the trail"
 
+  # Peer-pack internal_collab_trail (cycle 1966) — private agent/manager handoffs
+  # (is_internal) on the ops home; not another public channel filter.
+  internal_notes:
+    source: Comment
+    filter: is_internal = true
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No internal collab notes for the team — side research and handoffs land here"
+
   # Goal B conversation spine AFTER dual attention + composition so manager
   # hero stills show pressure queues, documents, and Message/Bubble chrome.
   # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
@@ -937,8 +969,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, chat/phone paths, dual queues, docs"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, chat_live, phone_live, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, internal collab, dual queues, docs"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, internal_notes, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -1007,6 +1039,16 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "No thankful recovery notes on your plate yet"
 
+  # Peer-pack internal_collab_trail (cycle 1966) — private notes on my plate.
+  internal_notes:
+    source: Comment
+    filter: is_internal = true
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: comment_detail
+    empty: "No internal collab notes on your plate — handoffs and side research land here"
+
   # Conversation on my plate — queue of recent notes (Goal B conversation depth).
   my_conversation:
     source: Comment
@@ -1037,11 +1079,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + both-ball + thankful recovery — no funnel theater"
-      focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution
+      purpose: "Personal WIP + both-ball + internal collab — no funnel theater"
+      focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution
     as manager:
-      purpose: "Personal WIP + both-ball + thankful recovery — no funnel theater"
-      focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution
+      purpose: "Personal WIP + both-ball + internal collab — no funnel theater"
+      focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show

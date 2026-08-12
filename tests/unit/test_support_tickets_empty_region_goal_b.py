@@ -35,7 +35,7 @@ def test_agent_dashboard_omits_funnel_progress_and_triple_comment_theater() -> N
     assert "display: progress" not in block
     assert "display: activity_feed" not in block
     assert (
-        "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
+        "focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution"
         in block
     )
     # recent_comments stays on the desk as secondary trail (not focus thrash).
@@ -90,7 +90,7 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     assert "display: timeline" not in block
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, chat_live, phone_live, live_conversation"
+        "unassigned_queue, needs_reply, internal_notes, live_conversation"
     ) in block
     assert "as manager:" in block
     assert "breach_risk:" in block

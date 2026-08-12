@@ -69,23 +69,24 @@ Managers alone can delete tickets or comments.
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
 (including conversation, **needs reply**, **awaiting customer**, **hot speech**,
-**thankful recovery**, and document volume), a **needs reply** conversation region
+**thankful recovery**, channel paths, **internal notes**, and document volume), a **needs reply** conversation region
 of customer notes whose **ball is in the agent court** (Front / Intercom "waiting
 on you" grain), an **awaiting customer** conversation region of outbound notes
 whose **ball is in the customer court** (cycle 1955 peer-pack; park these — do not
 re-thrash as open agent work), a **hot speech** conversation region of
 frustrated/urgent tone or raised escalation (cycle 1940 peer-pack; not ball-only),
 a **thankful recovery** conversation region of warm closeout speech after a fix
-(cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), a **live conversation** trail of newest
+(cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), an **internal collab** conversation region of `is_internal` agent/manager notes (cycle 1966 peer-pack; non-channel handoff grain), a **live conversation** trail of newest
 notes, a **composition** queue of open SLA waivers (named breach titles), a review
 queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, documents), SLA readiness, a **breach risk** queue
+conversation, needs reply, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
-**needs reply** ball (limit 4) **before** a capped live conversation trail
+**needs reply** ball (limit 4), an **internal collab** trail of private notes
+(limit 4) **before** a capped live conversation trail
 (limit 4) — no status funnel or secondary ticket timeline (empty_region honesty;
 avoids pilot scroll resource storms). Ticket rows carry an **SLA** state
 (`on_track` / `at_risk` / `breached`) so queue grain matches peer Zendesk /
@@ -98,7 +99,8 @@ Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
 kanban of assigned open tickets, a **needs reply** ball of customer notes
-waiting on agents, an **awaiting customer** trail of outbound notes parked for
+waiting on agents, an **internal collab** trail of private notes (cycle 1966),
+an **awaiting customer** trail of outbound notes parked for
 the customer (cycle 1955), a **thankful recovery** trail of warm closeout speech
 (cycle 1958), a **my conversation** notes queue, a resolved close-out queue, and
 **one** recent-comment timeline (no funnel/progress chart theater or triple
@@ -189,4 +191,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:3fa8b48a4bf9d072a3103a96087a2d1e03cfbadd1bdcb9775399ffdb6de23ba0 -->
+<!-- dazzle-spec-brief: sha256:7bcebae042f2ec06d17ce2f9a3c4a629b68976c1319dc5c62744ee9c71f978f9 -->

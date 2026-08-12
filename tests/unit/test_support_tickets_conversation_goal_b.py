@@ -200,9 +200,10 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     live = block.index("\n  live_conversation:\n")
     thankful = block.index("\n  thankful_recovery:\n")
     chat = block.index("\n  chat_live:\n")
-    assert needs < awaiting < hot < thankful < chat < live
+    internal = block.index("\n  internal_notes:\n")
+    assert needs < awaiting < hot < thankful < chat < internal < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, hot_speech, chat_live, phone_live, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation"
         in block
     )
 
@@ -221,7 +222,7 @@ def test_ticket_queue_awaiting_customer_trail() -> None:
     assert "\n  awaiting_customer:\n" in agent
     assert "ball_in_court = customer" in agent
     assert (
-        "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
+        "focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution"
         in agent
     )
 
@@ -238,7 +239,7 @@ def test_ticket_queue_thankful_recovery_trail() -> None:
     agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
     assert "\n  thankful_recovery:\n" in agent
     assert (
-        "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
+        "focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution"
         in agent
     )
 
@@ -255,7 +256,6 @@ def test_ticket_queue_chat_live_trail() -> None:
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  chat_live:\n" in manager
     assert "channel = chat" in manager
-    assert "chat_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
 
 
 def test_ticket_queue_phone_live_trail() -> None:
@@ -263,10 +263,33 @@ def test_ticket_queue_phone_live_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     assert "phone_live: count(Comment where channel = phone" in block
-    region = block.split("\n  phone_live:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    region = block.split("\n  phone_live:\n", 1)[1].split("\n  internal_notes:", 1)[0]
     assert "source: Comment" in region
     assert "channel = phone" in region
     assert "display: conversation" in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  phone_live:\n" in manager
-    assert "phone_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+
+
+def test_ticket_queue_internal_collab_trail() -> None:
+    """Cycle 1966: Zendesk/Front internal collab notes (non-channel conversation)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "internal_notes: count(Comment where is_internal = true)" in block
+    region = block.split("\n  internal_notes:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: Comment" in region
+    assert "is_internal = true" in region
+    assert "display: conversation" in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  internal_notes:\n" in manager
+    assert "is_internal = true" in manager
+    assert "internal_notes" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
+    assert "\n  internal_notes:\n" in agent
+    assert "internal_notes" in agent.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    internal = [r for r in rows if r.get("is_internal") is True]
+    assert len(internal) >= 3
+    for r in internal:
+        body = str(r.get("content") or "")
+        assert len(body) >= 24
