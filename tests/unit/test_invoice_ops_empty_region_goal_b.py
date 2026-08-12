@@ -38,8 +38,8 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
     assert "display: funnel_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, "
-        "past_due, awaiting_approval" in block
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, "
+        "tax_certificates, composition, past_due, awaiting_approval" in block
     )
 
 
@@ -71,8 +71,8 @@ def test_approval_desk_omits_decision_timeline() -> None:
     assert "recently_decided:" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: approval_load, document_pulse, tax_certificates, composition, awaiting_approval, live_conversation"
-        in block
+        "focus: approval_load, document_pulse, po_packets, tax_certificates, composition, "
+        "awaiting_approval, live_conversation" in block
     )
 
 

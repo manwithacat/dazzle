@@ -73,7 +73,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
   (no status bar-chart or twin invoice timeline under the fold).
 - **Approval Desk** — approver home: a **tax certificate watch** of reverse-charge
-  certs (cycle 1959 peer-pack), awaiting-approval queue, **named AP packets**
+  certs (cycle 1959 peer-pack), a **PO packet watch** of signed PO covers
+  (cycle 1965 peer-pack), awaiting-approval queue, **named AP packets**
   (remittance / credit memo / PO / tax / payment confirmation) as document
   composition, live AP discussion as Message/Bubble conversation chrome, approval
   board, and supplier context grid (no decision-timeline dump).
@@ -91,7 +92,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), document pulse
   with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **tax certificate watch**
-  (doc_kind=tax_certificate reverse-charge certs — cycle 1959), then dual attention (awaiting + ready), **named
+  (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
+  (doc_kind=po_packet signed PO covers — cycle 1965), then dual attention (awaiting + ready), **named
   AP packets** (InvoiceDocument composition queue) and line-item body, live
   discussion trail as Message/Bubble conversation chrome, metrics, and ops
   kanban (no lifecycle funnel, payment bar chart, or paid timeline voids).
@@ -192,4 +194,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:31dc0a6393ec741e822ba0275460b75c0f467bab9e84f761fd838c4da4fef0ae -->
+<!-- dazzle-spec-brief: sha256:c62634c4d1fd18f7246e4ce5eaf89811d76b06ed0a86be56545c68150679366d -->

@@ -107,9 +107,16 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("tax_certificates:")
     assert ops.index("tax_certificates:") < ops.index("composition:")
     assert "tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)" in ops
+    # Cycle 1965: PO packet watch after draft gate, before tax certs (above fold)
+    assert "po_packets:" in ops
+    assert "filter: doc_kind = po_packet" in ops
+    assert "po_packs: count(InvoiceDocument where doc_kind = po_packet)" in ops
+    assert ops.index("draft_packets:") < ops.index("po_packets:")
+    assert ops.index("po_packets:") < ops.index("tax_certificates:")
+    assert ops.index("tax_certificates:") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, "
-        "composition, past_due, awaiting_approval" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, "
+        "tax_certificates, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -310,9 +317,40 @@ def test_approval_desk_tax_certificate_watch() -> None:
     assert "display: queue" in region
     assert "tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)" in desk
     assert desk.index("document_pulse:") < desk.index("tax_certificates:")
+    # Cycle 1965: PO packets sit above tax certs for hero still fold share
+    assert desk.index("po_packets:") < desk.index("tax_certificates:")
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert (
-        "focus: approval_load, document_pulse, tax_certificates, composition, "
+        "focus: approval_load, document_pulse, po_packets, tax_certificates, composition, "
+        "awaiting_approval, live_conversation" in desk
+    )
+
+
+def test_approval_and_ops_po_packet_watch() -> None:
+    """Cycle 1965: signed PO packet watch before approve/ops (Bill.com/Coupa/Tipalti)."""
+    ops = _workspace_block("finance_ops")
+    assert "po_packets:" in ops
+    ops_region = ops.split("\n  po_packets:\n", 1)[1].split("\n  tax_certificates:", 1)[0]
+    assert "source: InvoiceDocument" in ops_region
+    assert "doc_kind = po_packet" in ops_region
+    assert "display: queue" in ops_region
+    assert "po_packs: count(InvoiceDocument where doc_kind = po_packet)" in ops
+    assert ops.index("draft_packets:") < ops.index("po_packets:")
+    assert ops.index("po_packets:") < ops.index("tax_certificates:")
+    assert ops.index("tax_certificates:") < ops.index("composition:")
+
+    desk = _workspace_block("approval_desk")
+    assert "po_packets:" in desk
+    region = desk.split("\n  po_packets:\n", 1)[1].split("\n  tax_certificates:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = po_packet" in region
+    assert "display: queue" in region
+    assert "po_packs: count(InvoiceDocument where doc_kind = po_packet)" in desk
+    assert desk.index("document_pulse:") < desk.index("po_packets:")
+    assert desk.index("po_packets:") < desk.index("tax_certificates:")
+    assert desk.index("tax_certificates:") < desk.index("composition:")
+    assert (
+        "focus: approval_load, document_pulse, po_packets, tax_certificates, composition, "
         "awaiting_approval, live_conversation" in desk
     )
 

@@ -514,7 +514,7 @@ workspace finance_ops "Finance Operations":
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
   # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
-  purpose: "Day-to-day invoice throughput — packet covers, draft release gate, past-due pressure, dual attention, named packets, line composition, and live discussion"
+  purpose: "Day-to-day invoice throughput — packet covers, draft gate, tax certs, PO packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -555,11 +555,13 @@ workspace finance_ops "Finance Operations":
       published: count(InvoiceDocument where status = published)
       draft: count(InvoiceDocument where status = draft)
       tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
+      po_packs: count(InvoiceDocument where doc_kind = po_packet)
     tones:
       documents: accent
       published: positive
       draft: warning
       tax_certs: accent
+      po_packs: accent
 
   # Peer-pack document upgrade (cycle 1957): Bill.com / Melio / Tipalti
   # "release gate" — draft remittance/credit packets must publish before
@@ -572,6 +574,19 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No draft packets — every remittance and credit memo is published or archived"
+
+  # Peer-pack document upgrade (cycle 1965): Bill.com / Coupa / Tipalti PO
+  # packet watch — signed PO cover before approve/ops (recipe po_packet_watch;
+  # not tax_cert / draft_packet / payment_confirmation re-stack). Above tax
+  # certs so finance_ops hero stills can read PO packet titles when focused.
+  po_packets:
+    source: InvoiceDocument
+    filter: doc_kind = po_packet
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No PO packets on file — attach signed PO covers before approve"
 
   # Peer-pack document upgrade (cycle 1959): Bill.com / Tipalti reverse-charge
   # tax certificates controllers lean into before approve/settle
@@ -664,20 +679,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, tax cert watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, PO packet + tax cert watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, tax cert watch, draft gate, evidence packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_certificates, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, PO packet + tax cert watch, draft gate, evidence packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, po_packets, tax_certificates, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -769,7 +784,8 @@ workspace approval_desk "Approval Desk":
   # Goal B document (cycle 1879): peer AP approval homes (Bill.com / Coupa)
   # put named remittance / PO packets above the discussion trail — not notes-only.
   # Cycle 1959: tax certificate watch before approve (reverse-charge lean-in).
-  purpose: "Approver job — tax cert watch, awaiting queue, named AP packets, then live discussion"
+  # Cycle 1965: PO packet watch — signed PO cover before approve (Coupa lean-in).
+  purpose: "Approver job — tax cert + PO packet watch, awaiting queue, named AP packets, then live discussion"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -792,10 +808,24 @@ workspace approval_desk "Approval Desk":
       documents: count(InvoiceDocument)
       published: count(InvoiceDocument where status = published)
       tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
+      po_packs: count(InvoiceDocument where doc_kind = po_packet)
     tones:
       documents: accent
       published: positive
       tax_certs: accent
+      po_packs: accent
+
+  # Peer-pack po_packet_watch (cycle 1965) — signed PO covers before approve
+  # (Bill.com / Coupa / Tipalti; not tax_cert or payment_confirmation re-stack).
+  # Placed above tax certs so hero stills read PO packet titles above the fold.
+  po_packets:
+    source: InvoiceDocument
+    filter: doc_kind = po_packet
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No PO packets — attach signed PO covers before approve"
 
   # Peer-pack tax_certificate_watch (cycle 1959) — reverse-charge certs before
   # approve (Bill.com / Tipalti controller lean-in; not composition re-stack).
@@ -854,11 +884,11 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — tax cert watch, named packets, queue, conversation"
-      focus: approval_load, document_pulse, tax_certificates, composition, awaiting_approval, live_conversation
+      purpose: "Approval — PO packet watch, tax certs, named packets, queue, conversation"
+      focus: approval_load, document_pulse, po_packets, tax_certificates, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — tax cert watch, named packets, queue, conversation"
-      focus: approval_load, document_pulse, tax_certificates, composition, awaiting_approval, live_conversation
+      purpose: "Approval — PO packet watch, tax certs, named packets, queue, conversation"
+      focus: approval_load, document_pulse, po_packets, tax_certificates, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then
