@@ -122,8 +122,8 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, credit_memos, "
-        "goods_receipts, composition, past_due, awaiting_approval" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
+        "credit_memos, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -151,7 +151,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     """Cycle 1957: Bill.com/Melio draft packets must publish before settle batch."""
     desk = _workspace_block("pay_desk")
     assert "draft_packets:" in desk
-    region = desk.split("\n  draft_packets:\n", 1)[1].split("\n  credit_memos:", 1)[0]
+    region = desk.split("\n  draft_packets:\n", 1)[1].split("\n  remittances:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: status = draft" in region
     assert "display: queue" in region
@@ -160,7 +160,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, credit_memos, payment_confirmations, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, "
         "composition, ready_to_pay" in desk
     )
 
@@ -190,7 +190,7 @@ def test_finance_ops_and_pay_desk_credit_memo_watch() -> None:
     """Cycle 1971: Bill.com/Melio credit memo watch on ops + settle desks."""
     ops = _workspace_block("finance_ops")
     assert "\n  credit_memos:\n" in ops
-    region = ops.split("\n  credit_memos:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  credit_memos:\n", 1)[1].split("\n  remittances:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "doc_kind = credit_memo" in region
     assert "display: queue" in region
@@ -204,6 +204,27 @@ def test_finance_ops_and_pay_desk_credit_memo_watch() -> None:
     cm = [r for r in rows if r.get("doc_kind") == "credit_memo"]
     assert len(cm) >= 2
     for r in cm:
+        assert len(str(r.get("headline") or "")) >= 16
+
+
+def test_finance_ops_and_pay_desk_remittance_advice_watch() -> None:
+    """Cycle 1974: Bill.com/Melio remittance advice watch on ops + settle desks."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  remittances:\n" in ops
+    region = ops.split("\n  remittances:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = remittance" in region
+    assert "display: queue" in region
+    assert "remittances: count(InvoiceDocument where doc_kind = remittance)" in ops
+    assert "remittances" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  remittances:\n" in desk
+    assert "filter: doc_kind = remittance" in desk
+    assert "remittances" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    rem = [r for r in rows if r.get("doc_kind") == "remittance"]
+    assert len(rem) >= 2
+    for r in rem:
         assert len(str(r.get("headline") or "")) >= 16
 
 
@@ -416,8 +437,8 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert "pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)" in desk
     assert desk.index("draft_packets:") < desk.index("payment_confirmations:")
     assert desk.index("payment_confirmations:") < desk.index("composition:")
-    assert desk.index("\n  credit_memos:\n") < desk.index("payment_confirmations:")
+    assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, credit_memos, payment_confirmations, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, "
         "composition, ready_to_pay" in desk
     )
