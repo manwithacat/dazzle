@@ -1092,14 +1092,18 @@ workspace team_overview "Team Overview":
         icon: "columns"
         state: positive
 
-  # Goal B media + empty_region_honesty + command_density focus spine
+  # Goal B media + empty_region_honesty + command_density focus spine.
+  # Cycle 1951: cap persona focus to 4 (workspace_persona_focus _MAX_FOCUS_FOLD)
+  # so Monday review does not fire 7 concurrent region GETs under nested Playwright
+  # (agency_lead ERR_INSUFFICIENT_RESOURCES thrash). composition / conversation /
+  # team_roster remain on the desk and load on scroll/intersect.
   ux:
     as manager:
       purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
-      focus: media_shelf, metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+      focus: media_shelf, metrics, needs_review, plate_by_person
     as admin:
       purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
-      focus: media_shelf, metrics, needs_review, plate_by_person, composition, live_conversation, team_roster
+      focus: media_shelf, metrics, needs_review, plate_by_person
 
 workspace my_work "My Work":
   access: authenticated

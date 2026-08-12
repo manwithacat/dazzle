@@ -25,9 +25,11 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: TaskComment" in text
     assert "conversation: count(TaskComment)" in text
-    # command_density@1835 keeps live_conversation on the focus spine (not first).
+    # command_density@1835 keeps live_conversation on hero desks (not first).
+    # Cycle 1951: team_overview focus is fold-capped (≤4); conversation stays on
+    # the desk for pull/scroll but is not required in the eager focus list.
     assert "live_conversation" in text
-    assert "focus:" in text and "live_conversation" in text
+    assert "focus:" in text
     # Goal B interesting_product: hero live threads use MessageScroller chrome
     # (not queue meta) after the HTTP CONVERSATION wire-up.
     for ws in ("admin_dashboard", "team_overview", "my_work"):
@@ -35,9 +37,11 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
         region = block.split("live_conversation:", 1)[1][:400]
         assert "display: conversation" in region, ws
         assert "source: TaskComment" in region, ws
-        # Focus spine still names the conversation region.
-        ux = block.split("ux:", 1)[1][:800]
-        assert "live_conversation" in ux, ws
+        # admin/my_work still name conversation on the focus spine; team_overview
+        # keeps the region after the dual-attention fold (cycle 1951 thrash cap).
+        if ws != "team_overview":
+            ux = block.split("ux:", 1)[1][:800]
+            assert "live_conversation" in ux, ws
 
 
 def test_task_detail_discussion_uses_conversation_chrome() -> None:

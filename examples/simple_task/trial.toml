@@ -3,6 +3,8 @@
 [[scenario]]
 name = "agency_lead"
 login_persona = "manager"
+# Land on Monday-review desk (manager default) — save steps hunting /app.
+starting_url = "/app/workspaces/team_overview"
 # Hub / Monday-review pilot budgets (qa-trial Rule 4b) — 30/400s burned out
 # with only 5 steps under journey+console storm (cycle 1332); deep panel needs
 # room for create/status recovery + criteria scoring.

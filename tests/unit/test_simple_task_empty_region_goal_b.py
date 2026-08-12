@@ -41,11 +41,11 @@ def test_team_overview_omits_flow_chart_and_twin_comment() -> None:
     assert "flow_chart:" not in block
     assert "recent_discussion:" not in block
     assert "display: bar_chart" not in block
-    # media@1884 + command_density@1835: headshots then dual attention before trail
-    assert (
-        "focus: media_shelf, metrics, needs_review, plate_by_person, composition, "
-        "live_conversation, team_roster" in block
-    )
+    # media@1884 + command_density@1835 + cycle 1951 fold thrash cap (≤4 focus)
+    assert "focus: media_shelf, metrics, needs_review, plate_by_person" in block
+    assert "composition:" in block
+    assert "live_conversation:" in block
+    assert "team_roster:" in block
 
 
 def test_my_work_omits_twin_comment_timeline() -> None:

@@ -83,6 +83,33 @@ def _safe_media_image_url(value: Any) -> str | None:
     return raw
 
 
+def _sanitize_media_alt(alt: str) -> str:
+    """Prefer human alt text over schema field labels (cycle 1951 agency_lead).
+
+    Callers often pass column labels (``Photo Url``, ``logo_url``). Those
+    read as admin-schema dump when emitted as ``alt=`` — use a generic
+    ``Photo`` / ``Preview`` instead. Real titles (person name, brand) pass through.
+    """
+    a = (alt or "").strip()
+    if not a:
+        return "Preview"
+    compact = a.lower().replace("_", " ").replace("-", " ")
+    compact = " ".join(compact.split())
+    if compact.endswith(" url") or compact in {
+        "photo",
+        "image",
+        "logo",
+        "avatar",
+        "thumbnail",
+        "preview",
+        "picture",
+        "headshot",
+        "media",
+    }:
+        return "Photo"
+    return a
+
+
 def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
     """Post-5.8 media depth — compact image thumb for logo/preview URL cells.
 
@@ -96,7 +123,7 @@ def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
             return "—"
         return _html_mod.escape(raw, quote=False)
     src = _html_mod.escape(url, quote=True)
-    alt_esc = _html_mod.escape(alt or "Preview", quote=True)
+    alt_esc = _html_mod.escape(_sanitize_media_alt(alt), quote=True)
     # Square media frame: width 3rem; child fills via .dz-aspect-ratio > * CSS.
     return (
         f'<div class="dz-aspect-ratio" data-dz-ratio="1/1" data-dz-media-frame '

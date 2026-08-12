@@ -66,10 +66,10 @@ def test_team_overview_media_shelf_first() -> None:
     assert "sort: created_at desc" in block
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("media_shelf:") < block.index("needs_review:")
-    assert (
-        "focus: media_shelf, metrics, needs_review, plate_by_person, "
-        "composition, live_conversation, team_roster" in block
-    )
+    # Cycle 1951: fold thrash cap — focus ≤4; trail regions remain on desk.
+    assert "focus: media_shelf, metrics, needs_review, plate_by_person" in block
+    assert "composition:" in block
+    assert "team_roster:" in block
 
 
 def test_user_seeds_have_https_photo_urls() -> None:

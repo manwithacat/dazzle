@@ -53,10 +53,11 @@ def test_team_overview_dual_attention_before_conversation() -> None:
     assert block.index("needs_review:") < block.index("plate_by_person:")
     assert block.index("plate_by_person:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert (
-        "focus: media_shelf, metrics, needs_review, plate_by_person, composition, "
-        "live_conversation, team_roster" in block
-    )
+    # Cycle 1951: ≤4 focus names (fold thrash cap); trail regions stay authored.
+    assert "focus: media_shelf, metrics, needs_review, plate_by_person" in block
+    assert "composition:" in block
+    assert "live_conversation:" in block
+    assert "team_roster:" in block
 
 
 def test_my_work_dual_attention_before_conversation() -> None:

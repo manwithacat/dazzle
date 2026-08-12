@@ -29,14 +29,29 @@ def test_safe_media_url_rejects_javascript_and_http() -> None:
 
 def test_media_thumb_html_emits_img() -> None:
     url = "https://placehold.co/64x64/111111/FFFFFF/png?text=A"
-    html = _render_media_thumb_html(url, alt="Logo")
+    html = _render_media_thumb_html(url, alt="Acme brand")
     assert "dz-media-thumb" in html
     assert 'src="https://placehold.co/64x64/111111/FFFFFF/png?text=A"' in html
     assert "data-dz-media-thumb" in html
+    assert 'alt="Acme brand"' in html
     # dual-lock aspect-ratio media frame (field/media compose path)
     assert 'class="dz-aspect-ratio"' in html
     assert 'data-dz-ratio="1/1"' in html
     assert "data-dz-media-frame" in html
+
+
+def test_media_thumb_alt_sanitizes_schema_field_labels() -> None:
+    """Cycle 1951: alt must not dump 'Photo Url' schema labels on team cards."""
+    from dazzle.render.cell_chrome import _sanitize_media_alt
+
+    url = "https://placehold.co/64x64/111111/FFFFFF/png?text=A"
+    assert _sanitize_media_alt("Photo Url") == "Photo"
+    assert _sanitize_media_alt("photo_url") == "Photo"
+    assert _sanitize_media_alt("Logo Url") == "Photo"
+    assert _sanitize_media_alt("Hana Design Lead") == "Hana Design Lead"
+    html = _render_media_thumb_html(url, alt="Photo Url")
+    assert 'alt="Photo"' in html
+    assert "Photo Url" not in html
 
 
 def test_field_kind_palette_and_logo_names() -> None:
