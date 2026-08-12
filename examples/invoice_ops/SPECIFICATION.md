@@ -81,7 +81,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
-  publish before the settle batch), a **payment confirmation trail** of batch
+  publish before the settle batch), a **credit memo watch** of VAT/short-ship credits
+  (cycle 1971 peer-pack), a **payment confirmation trail** of batch
   ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
   panels, named remittance/payment-confirmation packets, live AP notes as
   Message/Bubble conversation chrome, then settle board (no payment-health chart
@@ -93,7 +94,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (InvoiceDocument.preview_url remittance / PO / tax / goods-receipt thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), document pulse
   with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **goods receipt watch**
-  (doc_kind=goods_receipt three-way match slips — cycle 1967), a **tax certificate watch**
+  (doc_kind=goods_receipt three-way match slips — cycle 1967), a **credit memo watch**
+  (doc_kind=credit_memo VAT/short-ship credits — cycle 1971), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
   (doc_kind=po_packet signed PO covers — cycle 1965), then dual attention (awaiting + ready), **named
   AP packets** (InvoiceDocument composition queue) and line-item body, live
@@ -196,4 +198,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:64a256fbc3f23b2a6740545281fd1e37d4b6778827065927e8ad7a1b2495ad74 -->
+<!-- dazzle-spec-brief: sha256:eb570b4b026e4f72de6174e3c24ef8e3206cd5782621cec0b2c2967501da60dc -->
