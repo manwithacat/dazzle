@@ -33,12 +33,46 @@ _NON_PAGE_PATH_PREFIXES = frozenset(
 )
 
 
+def _has_unresolved_path_placeholder(path: str) -> bool:
+    """True when *path* still carries FastAPI-style ``{param}`` segments.
+
+    Those are route templates, not real URLs — linking them 404s (cycle 1952).
+    """
+    return "{" in path and "}" in path
+
+
 def _suppress_crumb_url(accumulated: str, *, is_last: bool, multi_segment: bool) -> bool:
     """True when this crumb must not be an ``<a href>``."""
     if is_last and multi_segment:
         return True
     norm = accumulated.rstrip("/") or "/"
-    return norm in _NON_PAGE_PATH_PREFIXES
+    if norm in _NON_PAGE_PATH_PREFIXES:
+        return True
+    # Defense in depth: never emit a clickable unresolved template path.
+    return _has_unresolved_path_placeholder(norm)
+
+
+def _looks_like_id_segment(segment: str) -> bool:
+    """UUID / long hex id — keep raw so crumbs stay copiable."""
+    s = segment.strip()
+    if len(s) < 8:
+        return False
+    # UUID (with or without hyphens) or long opaque id
+    hexish = s.replace("-", "")
+    if len(hexish) >= 16 and all(c in "0123456789abcdefABCDEF" for c in hexish):
+        return True
+    return False
+
+
+def _default_segment_label(segment: str) -> str:
+    """Humanize a path segment; leave brace placeholders / ids readable."""
+    if _has_unresolved_path_placeholder(segment):
+        # ``{id}`` → keep as ``id`` rather than title-casing to ``{Id}``
+        inner = segment.strip("{}")
+        return inner.replace("-", " ").replace("_", " ") or segment
+    if _looks_like_id_segment(segment):
+        return segment
+    return segment.replace("-", " ").replace("_", " ").title()
 
 
 def build_breadcrumb_trail(
@@ -55,7 +89,8 @@ def build_breadcrumb_trail(
         List of Crumb objects. The last crumb has ``url=None`` (current page)
         when the path has more than one segment after Home. Structural
         namespaces without an index page (e.g. ``/app/workspaces``) also
-        emit ``url=None`` so agents do not hop into a 404.
+        emit ``url=None`` so agents do not hop into a 404. Unresolved
+        ``{param}`` template segments never get an ``href`` (cycle 1952).
     """
     overrides = label_overrides or {}
     segments = [s for s in path.strip("/").split("/") if s]
@@ -68,7 +103,7 @@ def build_breadcrumb_trail(
 
     for i, segment in enumerate(segments):
         accumulated = "/" + "/".join(segments[: i + 1])
-        label = overrides.get(accumulated, segment.replace("-", " ").replace("_", " ").title())
+        label = overrides.get(accumulated, _default_segment_label(segment))
         is_last = i == len(segments) - 1
         suppress_url = _suppress_crumb_url(accumulated, is_last=is_last, multi_segment=multi)
         crumbs.append(Crumb(label=label, url=None if suppress_url else accumulated))

@@ -54,3 +54,22 @@ class TestBuildBreadcrumbTrail:
         assert trail[2].url is None  # namespace prefix — no index route
         assert trail[3].url is None  # current page
         assert trail[3].label == "Team Overview"
+
+    def test_unresolved_id_placeholder_not_linked(self):
+        """Cycle 1952 — FastAPI template crumbs must not href ``/app/ticket/{id}``."""
+        trail = build_breadcrumb_trail("/app/ticket/{id}/edit", {})
+        assert len(trail) == 5  # Home, App, Ticket, {id}, Edit
+        assert trail[1].url == "/app"
+        assert trail[2].url == "/app/ticket"
+        id_crumb = trail[3]
+        assert id_crumb.url is None  # never link unresolved {param}
+        assert "{" not in id_crumb.label  # readable, not ``{Id}``
+        assert trail[4].url is None
+
+    def test_concrete_entity_id_intermediate_is_linked(self):
+        """Concrete UUID detail parent on edit pages remains a real drill."""
+        tid = "c3000000-0000-4000-8000-000000000001"
+        trail = build_breadcrumb_trail(f"/app/ticket/{tid}/edit", {})
+        assert trail[2].url == "/app/ticket"
+        assert trail[3].url == f"/app/ticket/{tid}"
+        assert trail[4].url is None

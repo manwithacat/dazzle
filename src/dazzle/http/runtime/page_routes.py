@@ -2158,8 +2158,13 @@ async def _page_handler(
     request: Request,
 ) -> Response:
     """Handle a page route: fetch data, enforce access, render HTML."""
-    # Set current route for nav highlighting
-    ctx.current_route = route_path
+    # Nav active-state + shell breadcrumbs must use the *concrete* request
+    # path (UUID filled in), not the FastAPI route template. Template paths
+    # like ``/app/ticket/{id}/edit`` produced intermediate crumbs
+    # ``href=/app/ticket/{id}`` label ``{Id}`` → smoke-crawl 404 auto_seed
+    # (cycle 1952 / agent_qa_smoke support_tickets).
+    concrete = str(getattr(getattr(request, "url", None), "path", "") or "").strip()
+    ctx.current_route = concrete or route_path
 
     surface_name = view_name or getattr(ctx, "view_name", None)
     cookies = dict(request.cookies) if request.cookies else None
