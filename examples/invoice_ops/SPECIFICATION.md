@@ -76,20 +76,23 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (remittance / credit memo / PO / tax / payment confirmation) as document
   composition, live AP discussion as Message/Bubble conversation chrome, approval
   board, and supplier context grid (no decision-timeline dump).
-- **Pay Desk** — finance home (multi-panel settlement): metrics, capped
-  ready-to-pay and dispute attention panels, named remittance/payment-confirmation
-  packets, live AP notes as Message/Bubble conversation chrome, then settle board
-  (no payment-health chart or twin dispute trail under the fold).
+- **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
+  release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
+  publish before the settle batch), capped ready-to-pay and past-due attention
+  panels, named remittance/payment-confirmation packets, live AP notes as
+  Message/Bubble conversation chrome, then settle board (no payment-health chart
+  or twin dispute trail under the fold).
 - **Audit Review** — auditor home: evidence packet covers and named AP document
   composition first (remittance / PO / tax), then disputed work and payment-attempt
   trail (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
 - **Finance Operations** — shared ops overview: **packet cover wall** first
   (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
-  Melio / Tipalti money grain, not teammate headshot shelves), then dual
-  attention (awaiting + ready), **named AP packets** (InvoiceDocument
-  composition queue) and line-item body, live discussion trail as Message/Bubble
-  conversation chrome, metrics, and ops kanban (no lifecycle funnel, payment bar
-  chart, or paid timeline voids).
+  Melio / Tipalti money grain, not teammate headshot shelves), document pulse
+  with draft count, a **draft packet release gate** (status=draft packets before
+  dual attention — cycle 1957), then dual attention (awaiting + ready), **named
+  AP packets** (InvoiceDocument composition queue) and line-item body, live
+  discussion trail as Message/Bubble conversation chrome, metrics, and ops
+  kanban (no lifecycle funnel, payment bar chart, or paid timeline voids).
 - **Suppliers** — vendor **org-structure** desk: after the vendor pulse it
   shows a **region kanban** (EMEA / AMER / APAC) and a **multi-invoice supplier
   load** board over open AP, then a flat roster, bank refs, and recent invoices
@@ -187,4 +190,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:78383e619a1ad3ac8f07aabdfba15e06b98376f83e3d0fa41e83c0a104fac1c3 -->
+<!-- dazzle-spec-brief: sha256:a25c00919f1480f2916d83e40e18a3c5c621ff30f66c4db1f63e00433db9d98e -->

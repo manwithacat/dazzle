@@ -38,8 +38,8 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
     assert "display: funnel_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, composition, past_due, "
-        "awaiting_approval, ready_to_pay, line_composition, live_conversation" in block
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, "
+        "past_due, awaiting_approval, ready_to_pay, live_conversation" in block
     )
 
 
@@ -90,8 +90,8 @@ def test_pay_desk_omits_payment_health_and_dispute_trail() -> None:
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: settle_metrics, document_pulse, composition, past_due, ready_to_pay, "
-        "disputed_queue, live_conversation" in block
+        "focus: settle_metrics, document_pulse, draft_packets, composition, past_due, "
+        "ready_to_pay, live_conversation" in block
     )
 
 

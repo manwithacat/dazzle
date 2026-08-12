@@ -98,9 +98,13 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "sort: due_date asc" in ops
     # Peer refuse: no headshot-first media shelf on the money desk
     assert "media_shelf:" not in ops
+    assert "draft_packets:" in ops
+    assert "filter: status = draft" in ops
+    assert ops.index("document_pulse:") < ops.index("draft_packets:")
+    assert ops.index("draft_packets:") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, composition, past_due, "
-        "awaiting_approval, ready_to_pay, line_composition, live_conversation" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, "
+        "past_due, awaiting_approval, ready_to_pay, live_conversation" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -122,6 +126,24 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert "unmatched: count(LineItem where po_match = unmatched)" in lines_desk
     assert "focus: line_pulse, po_match_board, composition, open_documents" in lines_desk
     assert "source: LineItem" in text.split("workspace my_invoices", 1)[1]
+
+
+def test_pay_desk_draft_packet_release_gate() -> None:
+    """Cycle 1957: Bill.com/Melio draft packets must publish before settle batch."""
+    desk = _workspace_block("pay_desk")
+    assert "draft_packets:" in desk
+    region = desk.split("\n  draft_packets:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: status = draft" in region
+    assert "display: queue" in region
+    assert "draft: count(InvoiceDocument where status = draft)" in desk
+    assert desk.index("document_pulse:") < desk.index("draft_packets:")
+    assert desk.index("draft_packets:") < desk.index("composition:")
+    assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
+    assert (
+        "focus: settle_metrics, document_pulse, draft_packets, composition, past_due, "
+        "ready_to_pay, live_conversation" in desk
+    )
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:

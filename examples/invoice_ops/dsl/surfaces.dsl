@@ -514,7 +514,7 @@ workspace finance_ops "Finance Operations":
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
   # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
-  purpose: "Day-to-day invoice throughput — packet covers, past-due pressure, dual attention, named packets, line composition, and live discussion"
+  purpose: "Day-to-day invoice throughput — packet covers, draft release gate, past-due pressure, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -558,6 +558,18 @@ workspace finance_ops "Finance Operations":
       documents: accent
       published: positive
       draft: warning
+
+  # Peer-pack document upgrade (cycle 1957): Bill.com / Melio / Tipalti
+  # "release gate" — draft remittance/credit packets must publish before
+  # settle (recipe draft_packet_release_gate; not packet_cover_wall re-stack).
+  draft_packets:
+    source: InvoiceDocument
+    filter: status = draft
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No draft packets — every remittance and credit memo is published or archived"
 
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
@@ -638,20 +650,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, past-due pressure, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, draft release gate, past-due, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, ready_to_pay, live_conversation
     as tenant_admin:
-      purpose: "AP ops — packet covers, past-due pressure, dual attention, then discussion"
-      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, ready_to_pay, line_composition, live_conversation
+      purpose: "AP ops — packet covers, draft release gate, past-due, dual attention, then discussion"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, ready_to_pay, live_conversation
     as finance:
-      purpose: "AP ops — packet covers, past-due settle pressure, then settle queues"
-      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
+      purpose: "AP ops — packet covers, draft release gate, past-due settle pressure, then settle queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
     as approver:
-      purpose: "AP ops — packet covers, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, awaiting_approval, live_conversation
+      purpose: "AP ops — packet covers, draft release gate, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, awaiting_approval, live_conversation
     as auditor:
-      purpose: "AP ops — packet covers, evidence packets with conversation spine"
-      focus: packet_covers, ops_metrics, document_pulse, composition, past_due, live_conversation, disputed_queue
+      purpose: "AP ops — packet covers, draft release gate, evidence packets with conversation spine"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, composition, past_due, live_conversation, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -823,7 +835,8 @@ workspace approval_desk "Approval Desk":
 workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then
   # remittance / payment-confirmation packets before notes.
-  purpose: "Multi-panel settlement — dual attention, named packets, then live AP notes"
+  # Cycle 1957: draft packet release gate before ready_to_pay (peer AP settle).
+  purpose: "Multi-panel settlement — draft release gate, dual attention, named packets, then live AP notes"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -847,9 +860,22 @@ workspace pay_desk "Pay Desk":
     aggregate:
       documents: count(InvoiceDocument)
       published: count(InvoiceDocument where status = published)
+      draft: count(InvoiceDocument where status = draft)
     tones:
       documents: accent
       published: positive
+      draft: warning
+
+  # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
+  # credit memos before releasing the settle batch (not composition re-stack).
+  draft_packets:
+    source: InvoiceDocument
+    filter: status = draft
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No draft packets blocking release — publish remittances before the settle batch"
 
   # Goal B document composition — remittance / payment-confirmation packets
   # above dual attention so hero stills show titles above the fold.
@@ -901,11 +927,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — packets, past-due pressure, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — draft release gate, past-due, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
     as finance_admin:
-      purpose: "Multi-panel settlement — packets, past-due pressure, dual attention, then live AP notes"
-      focus: settle_metrics, document_pulse, composition, past_due, ready_to_pay, disputed_queue, live_conversation
+      purpose: "Multi-panel settlement — draft release gate, past-due, dual attention, then live AP notes"
+      focus: settle_metrics, document_pulse, draft_packets, composition, past_due, ready_to_pay, live_conversation
 
   settle_board:
     source: Invoice
