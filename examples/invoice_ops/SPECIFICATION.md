@@ -80,7 +80,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   ready-to-pay and dispute attention panels, named remittance/payment-confirmation
   packets, live AP notes as Message/Bubble conversation chrome, then settle board
   (no payment-health chart or twin dispute trail under the fold).
-- **Audit Review** — auditor home: payment-attempt trail and settled invoices.
+- **Audit Review** — auditor home: evidence packet covers and named AP document
+  composition first (remittance / PO / tax), then disputed work and payment-attempt
+  trail (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
 - **Finance Operations** — shared ops overview: **packet cover wall** first
   (InvoiceDocument.preview_url remittance / PO / tax thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), then dual
@@ -185,4 +187,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:29a3b8594273aecf05338fce809817dcc78b845be66b82511f57014428fa69f3 -->
+<!-- dazzle-spec-brief: sha256:78383e619a1ad3ac8f07aabdfba15e06b98376f83e3d0fa41e83c0a104fac1c3 -->

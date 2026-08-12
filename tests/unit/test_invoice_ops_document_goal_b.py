@@ -245,3 +245,29 @@ def test_invoice_document_seeds_are_domain_true_headlines() -> None:
         "payment_confirmation",
     }
     assert statuses >= {"draft", "published"}
+
+
+def test_audit_review_declares_evidence_packets_before_trail() -> None:
+    """Cycle 1942: audit desk puts packet covers + composition above payment trail."""
+    block = _workspace_block("audit_review")
+    assert "document_pulse:" in block
+    assert "packet_covers:" in block
+    assert "source: InvoiceDocument" in block
+    assert "filter: preview_url != null" in block
+    assert "display: grid" in block
+    assert "composition:" in block
+    assert "disputed_queue:" in block
+    assert "payment_attempts:" in block
+    # Order: document pulse → covers → composition → disputed → trail
+    assert block.index("document_pulse:") < block.index("packet_covers:")
+    assert block.index("packet_covers:") < block.index("composition:")
+    assert block.index("composition:") < block.index("disputed_queue:")
+    assert block.index("disputed_queue:") < block.index("payment_attempts:")
+    assert (
+        "focus: document_pulse, packet_covers, composition, disputed_queue, "
+        "payment_attempts, settled_invoices"
+    ) in block
+    assert "media_shelf:" not in block
+    # Chart stays under-fold (not focus spine)
+    assert "audit_mix:" in block
+    assert "audit_mix" not in block.split("focus:")[1].split("\n")[0]

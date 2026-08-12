@@ -917,37 +917,75 @@ workspace pay_desk "Pay Desk":
     empty: "No invoices in settle pipeline"
 
 workspace audit_review "Audit Review":
-  purpose: "Auditor job — payment trail and invoice evidence without warehouse CRUD"
+  # Goal B document peer-pack upgrade (cycle 1942): Bill.com / Tipalti audit
+  # desks put named remittance / PO / tax packet covers + composition above the
+  # payment trail — not chart theater or trail-only evidence (recipe
+  # audit_evidence_packets; not conversation re-stack after 1940).
+  purpose: "Auditor job — evidence packets first, then payment trail without warehouse CRUD"
   access: persona(auditor, finance_admin, tenant_admin)
 
-  trail_metrics:
-    source: Invoice
+  # Document pulse first — evidence volume buyers scan before attempt timelines.
+  document_pulse:
+    source: InvoiceDocument
     display: metrics
     aggregate:
-      paid: count(Invoice where status = paid)
+      documents: count(InvoiceDocument)
+      published: count(InvoiceDocument where status = published)
       disputed: count(Invoice where status = disputed)
-      attempts: count(PaymentAttempt)
+      paid: count(Invoice where status = paid)
     tones:
+      documents: accent
+      published: positive
       disputed: destructive
       paid: positive
 
-  # Work-surface utility: payment attempts are dated events → timeline.
+  # Goal B document FIRST — packet covers (preview thumbs) before trail dumps.
+  packet_covers:
+    source: InvoiceDocument
+    filter: preview_url != null
+    sort: created_at desc
+    limit: 6
+    display: grid
+    action: invoice_document_detail
+    empty: "No packet covers yet — attach remittance or PO packets with cover previews"
+
+  # Named AP packets (remittance / credit memo / PO / tax) — composition titles.
+  composition:
+    source: InvoiceDocument
+    sort: created_at desc
+    limit: 8
+    display: queue
+    action: invoice_document_detail
+    empty: "No invoice documents yet — attach a remittance or PO packet on an invoice hub"
+
+  # Disputed work rows after evidence packets (payment/approval state on the row).
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No disputes open"
+
+  # Work-surface utility: payment attempts are dated events → timeline (under-fold).
   payment_attempts:
     source: PaymentAttempt
     display: timeline
     sort: created_at desc
-    limit: 20
+    limit: 12
     empty: "No payment attempts to review"
 
   settled_invoices:
     source: Invoice
     filter: status = paid
     sort: updated_at desc
-    limit: 15
-    display: timeline
+    limit: 10
+    display: queue
     action: invoice_detail
     empty: "No paid invoices yet"
 
+  # Under-fold chart dogfood — not in multi-panel focus spine (empty_region honesty).
   audit_mix:
     source: Invoice
     display: bar_chart
@@ -955,15 +993,6 @@ workspace audit_review "Audit Review":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
-
-  disputed_queue:
-    source: Invoice
-    filter: status = disputed
-    sort: updated_at desc
-    limit: 15
-    display: queue
-    action: invoice_detail
-    empty: "No disputes open"
 
   audit_board:
     source: Invoice
@@ -973,6 +1002,17 @@ workspace audit_review "Audit Review":
     sort: updated_at desc
     action: invoice_detail
     empty: "No invoices in the audit trail"
+
+  ux:
+    as auditor:
+      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
+    as finance_admin:
+      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
+    as tenant_admin:
+      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
 
 # Sixth product workspace: supplier / vendor desk so list shells
 # no longer dominate vs job workspaces (vendors + bank refs, not bare CRUD).
