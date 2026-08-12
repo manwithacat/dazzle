@@ -3,7 +3,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "4de6cd637a659311",
+  "source_sha256": "d88708b74e161aeb",
   "personas": [
     {
       "id_hint": "requester",
@@ -40,6 +40,15 @@
       "stable_id_candidate": "auditor",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "System administrator",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "staff",
@@ -80,13 +89,6 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Message",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
       "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -95,6 +97,13 @@
     },
     {
       "name": "Auditor",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -151,6 +160,13 @@
       "status": "hypothesis"
     },
     {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "requester",
+      "status": "hypothesis"
+    },
+    {
       "persona": "staff",
       "name": "staff_desk",
       "purpose": "Job desk for Staff",
@@ -180,6 +196,12 @@
     {
       "persona": "auditor",
       "story": "Auditor has seeded Invoice rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Invoice"
+    },
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Invoice rows for their desk",
       "min_rows": 1,
       "entity_hint": "Invoice"
     },

@@ -8,7 +8,7 @@
 Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working
 
 **Source:** `/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md`
-**Fingerprint:** `f99244ce0b33a60c`
+**Fingerprint:** `424f133fc3468d7f`
 
 ## Personas (jobs)
 
@@ -24,11 +24,11 @@ Project Tracker is a team project-management product. It organises work as Proje
 - **Project** (grounded) owner≈`owner` lifecycle: backlog → todo → in_progress → review → done → cancelled — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: progress → review → done — definitional sentence in founder brief (A X is …)
 - **TeamMember** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Discussion** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=article_noun)
+- **Discussion** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Board`, `Dashboard`, `Data`, `JavaScript`, `Mockup`, `People`, `Plan`, `Proposal`, `Review`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `chart`, `command`, `conversation`, `dazzle`, `decision`, `declared`, `document`, `five`, `informal`, `kanban`, `larger`, `live`, `mature`, `parent`, `product`, `queue`, `signed`, `spec`, `static`, `team`, `technical`
+`Board`, `Dashboard`, `Data`, `JavaScript`, `Message`, `Mockup`, `People`, `Plan`, `Proposal`, `Review`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `chart`, `command`, `conversation`, `dazzle`, `decision`, `declared`, `document`, `five`, `informal`, `kanban`, `larger`, `live`, `mature`, `parent`, `product`, `queue`, `signed`, `spec`, `static`, `team`, `technical`
 
 ## Desks
 
@@ -72,7 +72,7 @@ Project Tracker is a team project-management product. It organises work as Proje
   "title": "Project Tracker \u2014 Specification",
   "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments carrying the conversation, Project Documents (briefs, specs, proposals, status reports, decisions) as named composition buyers scan above the notes trail, and Attachments as binary file evidence on tasks. Everyone on the team shares two working",
   "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
-  "source_sha256": "f99244ce0b33a60c",
+  "source_sha256": "424f133fc3468d7f",
   "personas": [
     {
       "id_hint": "admin",
@@ -163,7 +163,7 @@ Project Tracker is a team project-management product. It organises work as Proje
     {
       "name": "Discussion",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=article_noun)",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     }
@@ -277,6 +277,7 @@ Project Tracker is a team project-management product. It organises work as Proje
     "Dashboard",
     "Data",
     "JavaScript",
+    "Message",
     "Mockup",
     "People",
     "Plan",

@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from
 
 **Source:** `/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md`
-**Fingerprint:** `12d37e021a31b281`
+**Fingerprint:** `c029c82354d34cdf`
 
 ## Personas (jobs)
 
@@ -25,10 +25,11 @@
 - **DesignAsset** (grounded) owner≈`assigned_to` lifecycle: draft → review → approved → published → archived — definitional sentence in founder brief (A X is …)
 - **DesignFeedback** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Feedback** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Figma** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Abstract`, `Adobe`, `Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Frame`, `Goal`, `JavaScript`, `Named`, `Op`, `Reviewer`, `Strategy`, `Studio`, `System`, `asset`, `assigned`, `auditable`, `bare`, `byte`, `command`, `creative`, `critique`, `current`, `desk`, `document`, `draft`, `explicit`, `flat`, `fold`, `formal`, `framework`, `informal`, `live`, `matrix`, `mature`, `people`, `pipeline`, `product`, `pull`, `record`, `review`, `schedule`, `skeptic`, `specific`, `static`, `technical`, `visibility`, `work`
+`Abstract`, `Adobe`, `Beyond`, `Bynder`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Frame`, `Goal`, `JavaScript`, `Named`, `Op`, `Reviewer`, `Strategy`, `Studio`, `System`, `asset`, `assigned`, `auditable`, `bare`, `byte`, `command`, `creative`, `critique`, `current`, `desk`, `document`, `draft`, `explicit`, `flat`, `fold`, `formal`, `framework`, `informal`, `live`, `matrix`, `mature`, `people`, `pipeline`, `product`, `pull`, `record`, `review`, `schedule`, `skeptic`, `specific`, `static`, `technical`, `visibility`, `work`
 
 ## Desks
 
@@ -71,7 +72,7 @@
   "title": "Design Studio \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from",
   "source_path": "/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md",
-  "source_sha256": "12d37e021a31b281",
+  "source_sha256": "c029c82354d34cdf",
   "personas": [
     {
       "id_hint": "admin",
@@ -161,6 +162,13 @@
     },
     {
       "name": "Feedback",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Figma",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -271,6 +279,7 @@
     "Abstract",
     "Adobe",
     "Beyond",
+    "Bynder",
     "Campaigns",
     "Catalog",
     "Dashboard",

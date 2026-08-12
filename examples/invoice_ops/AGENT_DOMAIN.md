@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
 **Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `4de6cd637a659311`
+**Fingerprint:** `d88708b74e161aeb`
 
 ## Personas (jobs)
 
@@ -16,6 +16,7 @@
 - **Approver** (`approver`, stable≈`approver`, grounded) — desk `approver_desk` — role word in founder brief
 - **Finance** (`finance`, stable≈`finance`, grounded) — desk `finance_desk` — role word in founder brief
 - **Auditor** (`auditor`, stable≈`auditor`, grounded) — desk `auditor_desk` — role word in founder brief
+- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 - **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
 
 ## Nouns (domain types)
@@ -23,9 +24,9 @@
 - **Invoice** (grounded) owner≈`requester` lifecycle: draft → submitted → approved → rejected → paid — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 
@@ -39,6 +40,7 @@
 - **approver_desk** for `approver` (hypothesis) owner≈`requester` — Job desk for Approver
 - **finance_desk** for `finance` (hypothesis) owner≈`requester` — Job desk for Finance
 - **auditor_desk** for `auditor` (hypothesis) owner≈`requester` — Job desk for Auditor
+- **admin_desk** for `admin` (hypothesis) owner≈`requester` — Job desk for Admin
 - **staff_desk** for `staff` (hypothesis) owner≈`requester` — Job desk for Staff
 
 ## Demo spine (seed stories)
@@ -47,6 +49,7 @@
 - `approver`: Approver has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `finance`: Finance has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `auditor`: Auditor has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
+- `admin`: Admin has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `staff`: Staff has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 
 ## Open questions
@@ -78,7 +81,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "4de6cd637a659311",
+  "source_sha256": "d88708b74e161aeb",
   "personas": [
     {
       "id_hint": "requester",
@@ -115,6 +118,15 @@
       "stable_id_candidate": "auditor",
       "status": "grounded",
       "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "System administrator",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "staff",
@@ -155,13 +167,6 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Message",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
       "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -170,6 +175,13 @@
     },
     {
       "name": "Auditor",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -226,6 +238,13 @@
       "status": "hypothesis"
     },
     {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "requester",
+      "status": "hypothesis"
+    },
+    {
       "persona": "staff",
       "name": "staff_desk",
       "purpose": "Job desk for Staff",
@@ -255,6 +274,12 @@
     {
       "persona": "auditor",
       "story": "Auditor has seeded Invoice rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "Invoice"
+    },
+    {
+      "persona": "admin",
+      "story": "Admin has seeded Invoice rows for their desk",
       "min_rows": 1,
       "entity_hint": "Invoice"
     },
