@@ -3,7 +3,7 @@
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
   "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
-  "source_sha256": "aa773ed165fd63ab",
+  "source_sha256": "19356e4b4f0478b5",
   "personas": [
     {
       "id_hint": "tester",
@@ -224,6 +224,7 @@
     "Dashboard",
     "Data",
     "Devices",
+    "Email",
     "Engineer",
     "Firmware",
     "Issue",

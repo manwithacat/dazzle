@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,
 
 **Source:** `/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md`
-**Fingerprint:** `d69451391bc51168`
+**Fingerprint:** `2e7542f5d3b54737`
 
 ## Personas (jobs)
 
@@ -20,13 +20,13 @@
 
 - **AssessmentResult** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → waiting_on_customer → escalated → resolved → closed — definitional sentence in founder brief (A X is …)
-- **TicketClassification** (grounded) owner≈`—` lifecycle: open → in_progress → resolved → closed → reopened — definitional sentence in founder brief (A X is …)
-- **Ticket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → resolved → closed → reopened — appears in founder brief (source=capitalized_noun)
+- **TicketClassification** (grounded) owner≈`—` lifecycle: draft → published → archived — definitional sentence in founder brief (A X is …)
+- **Ticket** (grounded) owner≈`assigned_to` lifecycle: draft → published → archived — appears in founder brief (source=capitalized_noun)
 - **Classification** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Agent`, `Beyond`, `Dashboard`, `Data`, `Escalation`, `Four`, `JavaScript`, `Op`, `Priority`, `Result`, `Support`, `Team`, `Their`, `administrative`, `auditable`, `command`, `confidence`, `declared`, `explicit`, `flat`, `framework`, `human`, `informal`, `inventory`, `lifecycle`, `live`, `mature`, `model`, `parent`, `product`, `readiness`, `record`, `related`, `response`, `specific`, `suggested`, `supervisor`, `technical`, `work`
+`Beyond`, `Dashboard`, `Data`, `Email`, `Four`, `JavaScript`, `Op`, `Priority`, `Result`, `Support`, `Team`, `Their`, `administrative`, `agent`, `auditable`, `case`, `command`, `confidence`, `declared`, `document`, `escalation`, `explicit`, `flat`, `framework`, `human`, `informal`, `inventory`, `lifecycle`, `live`, `macro`, `mature`, `model`, `named`, `parent`, `product`, `readiness`, `record`, `related`, `response`, `specific`, `suggested`, `supervisor`, `technical`, `work`
 
 ## Desks
 
@@ -42,7 +42,7 @@
 
 ## Open questions
 
-_None blocking._
+- `q1`: Can a classification have multiple documents, or just one?
 
 ## Process candidates (hypothesis)
 
@@ -66,7 +66,7 @@ _None blocking._
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
   "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
-  "source_sha256": "d69451391bc51168",
+  "source_sha256": "2e7542f5d3b54737",
   "personas": [
     {
       "id_hint": "agent",
@@ -123,11 +123,9 @@ _None blocking._
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [
-        "open",
-        "in_progress",
-        "resolved",
-        "closed",
-        "reopened"
+        "draft",
+        "published",
+        "archived"
       ],
       "owner_field_hint": null
     },
@@ -136,11 +134,9 @@ _None blocking._
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [
-        "open",
-        "in_progress",
-        "resolved",
-        "closed",
-        "reopened"
+        "draft",
+        "published",
+        "archived"
       ],
       "owner_field_hint": "assigned_to"
     },
@@ -195,7 +191,13 @@ _None blocking._
       "entity_hint": "SupportTicket"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a classification have multiple documents, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "process_candidates": [
     {
       "id_hint": "escalation",
@@ -236,11 +238,10 @@ _None blocking._
     "3 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
-    "Agent",
     "Beyond",
     "Dashboard",
     "Data",
-    "Escalation",
+    "Email",
     "Four",
     "JavaScript",
     "Op",
@@ -250,10 +251,14 @@ _None blocking._
     "Team",
     "Their",
     "administrative",
+    "agent",
     "auditable",
+    "case",
     "command",
     "confidence",
     "declared",
+    "document",
+    "escalation",
     "explicit",
     "flat",
     "framework",
@@ -262,8 +267,10 @@ _None blocking._
     "inventory",
     "lifecycle",
     "live",
+    "macro",
     "mature",
     "model",
+    "named",
     "parent",
     "product",
     "readiness",

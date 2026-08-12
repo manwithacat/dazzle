@@ -3,7 +3,7 @@
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
   "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
-  "source_sha256": "d69451391bc51168",
+  "source_sha256": "2e7542f5d3b54737",
   "personas": [
     {
       "id_hint": "agent",
@@ -60,11 +60,9 @@
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [
-        "open",
-        "in_progress",
-        "resolved",
-        "closed",
-        "reopened"
+        "draft",
+        "published",
+        "archived"
       ],
       "owner_field_hint": null
     },
@@ -73,11 +71,9 @@
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [
-        "open",
-        "in_progress",
-        "resolved",
-        "closed",
-        "reopened"
+        "draft",
+        "published",
+        "archived"
       ],
       "owner_field_hint": "assigned_to"
     },
@@ -132,7 +128,13 @@
       "entity_hint": "SupportTicket"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a classification have multiple documents, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "process_candidates": [
     {
       "id_hint": "escalation",
@@ -173,11 +175,10 @@
     "3 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
-    "Agent",
     "Beyond",
     "Dashboard",
     "Data",
-    "Escalation",
+    "Email",
     "Four",
     "JavaScript",
     "Op",
@@ -187,10 +188,14 @@
     "Team",
     "Their",
     "administrative",
+    "agent",
     "auditable",
+    "case",
     "command",
     "confidence",
     "declared",
+    "document",
+    "escalation",
     "explicit",
     "flat",
     "framework",
@@ -199,8 +204,10 @@
     "inventory",
     "lifecycle",
     "live",
+    "macro",
     "mature",
     "model",
+    "named",
     "parent",
     "product",
     "readiness",
