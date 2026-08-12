@@ -187,7 +187,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     # Region block (not the metrics aggregate key).
-    region = block.split("\n  hot_speech:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    region = block.split("\n  hot_speech:\n", 1)[1].split("\n  thankful_recovery:", 1)[0]
     assert "source: Comment" in region
     assert "customer_tone = frustrated" in region
     assert "customer_tone = urgent" in region
@@ -198,9 +198,10 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     awaiting = block.index("\n  awaiting_customer:\n")
     hot = block.index("\n  hot_speech:\n")
     live = block.index("\n  live_conversation:\n")
-    assert needs < awaiting < hot < live
+    thankful = block.index("\n  thankful_recovery:\n")
+    assert needs < awaiting < hot < thankful < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue"
+        "focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation"
         in block
     )
 
@@ -219,6 +220,23 @@ def test_ticket_queue_awaiting_customer_trail() -> None:
     assert "\n  awaiting_customer:\n" in agent
     assert "ball_in_court = customer" in agent
     assert (
-        "focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution"
+        "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
+        in agent
+    )
+
+
+def test_ticket_queue_thankful_recovery_trail() -> None:
+    """Cycle 1958: Intercom/Zendesk warm recovery trail complements hot_speech."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "thankful_recovery: count(Comment where customer_tone = thankful" in block
+    region = block.split("\n  thankful_recovery:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: Comment" in region
+    assert "customer_tone = thankful" in region
+    assert "display: conversation" in region
+    agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
+    assert "\n  thankful_recovery:\n" in agent
+    assert (
+        "focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution"
         in agent
     )

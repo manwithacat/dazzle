@@ -554,6 +554,7 @@ workspace ticket_queue "Ticket Queue":
   # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
   # Cycle 1940 conversation peer-pack: tone/escalation heat (not ball-only).
   # Cycle 1955: awaiting_customer complements needs_reply (both ball sides).
+  # Cycle 1958: thankful recovery complements hot_speech (warm closeout trail).
   queue_metrics:
     source: Ticket
     display: summary
@@ -565,6 +566,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: count(Comment where ball_in_court = agent)
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
+      thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       documents: count(SlaWaiver)
     tones:
       critical: destructive
@@ -573,6 +575,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: warning
       awaiting_customer: accent
       hot_speech: destructive
+      thankful_recovery: positive
       documents: accent
 
   # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
@@ -609,6 +612,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No heated customer speech — tone and escalation are quiet"
+
+  # Peer-pack conversation upgrade (cycle 1958): Intercom/Zendesk "warm recovery"
+  # — thankful customer speech after a fix so agents lean into closeout wins
+  # (recipe thankful_recovery_trail; not hot_speech re-stack).
+  thankful_recovery:
+    source: Comment
+    filter: customer_tone = thankful and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No thankful recovery notes yet — closeout wins land here after a fix lands"
 
   # Goal B conversation spine — newest notes as pull-to-open queue above the
   # ticket worklist so buyer stills show real thread copy (not empty timeline).
@@ -686,6 +701,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
         icon: "flame"
         state: destructive
+      - title: "Thankful recovery"
+        caption: "Warm closeout speech after a fix — lean into wins before the full trail"
+        icon: "heart"
+        state: positive
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -701,14 +720,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
+      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
+      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + awaiting-customer ball + hot tone before full trail"
-      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, live_conversation, open_queue
+      purpose: "Triage home — both-ball + hot speech + thankful recovery before full trail"
+      focus: media_shelf, queue_metrics, needs_reply, awaiting_customer, hot_speech, thankful_recovery, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -882,7 +901,7 @@ workspace agent_dashboard "Agent Dashboard":
   # Goal B empty_region_honesty (cycle 1812): peer agent homes (Zendesk /
   # Intercom) lead with WIP board + close-out + one comment trail — not funnel
   # / progress chart theater or triple comment streams that render as voids.
-  purpose: "Personal WIP board with both-ball conversation (needs-reply + awaiting-customer) on claimed cases"
+  purpose: "Personal WIP board with both-ball conversation plus thankful recovery on claimed cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
@@ -922,6 +941,16 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "Nothing waiting on customers from this desk"
 
+  # Peer-pack thankful_recovery_trail (cycle 1958) — warm closeout speech.
+  thankful_recovery:
+    source: Comment
+    filter: customer_tone = thankful and is_internal = false
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: comment_detail
+    empty: "No thankful recovery notes on your plate yet"
+
   # Conversation on my plate — queue of recent notes (Goal B conversation depth).
   my_conversation:
     source: Comment
@@ -952,11 +981,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + both-ball conversation (needs-reply + awaiting-customer) — no funnel theater"
-      focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution
+      purpose: "Personal WIP + both-ball + thankful recovery — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution
     as manager:
-      purpose: "Personal WIP + both-ball conversation (needs-reply + awaiting-customer) — no funnel theater"
-      focus: my_assigned, needs_reply, awaiting_customer, my_conversation, pending_resolution
+      purpose: "Personal WIP + both-ball + thankful recovery — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, thankful_recovery, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show
