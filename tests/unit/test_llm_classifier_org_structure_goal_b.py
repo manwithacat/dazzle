@@ -34,6 +34,18 @@ def test_support_staff_entity_declares_department_and_job_title() -> None:
     assert "active -> offboarded:" in block
 
 
+def test_support_staff_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1935: Team desk staff cards skip Email/Status schema dump."""
+    text = APP.read_text()
+    start = text.index('entity SupportStaff "Support Staff":')
+    block = text[start : text.index('entity TicketDocument "Ticket Document":')]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "name" in line and "role" in line
+    assert "department" in line and "job_title" in line
+    assert "email" not in line
+    assert "status" not in line
+
+
 def test_team_desk_declares_title_board_and_dept_before_load() -> None:
     """Peer support tools show title/dept org shape before ticket load dumps."""
     block = _team_desk_block()

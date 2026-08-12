@@ -38,9 +38,11 @@ employment records rather than directly, so a job change never overwrites
 history.
 
 **People and their histories.** A Person is a staff member, past or present —
-an identity record with optional headshot photo URLs for the staff home media shelf that notes when they started and, where applicable, when
-they left. The facts that vary over a career live in three effective-dated
-record types tied to that person:
+an identity record with optional headshot photo URLs for the staff home media
+shelf, shown with clean **legal / preferred name, work location, start date**
+chips (not Email schema labels — cycle 1935). The record notes when they
+started and, where applicable, when they left. The facts that vary over a
+career live in three effective-dated record types tied to that person:
 
 - An **Employment** record assigns a person to a role and a department for a
   period; a record with no end date is the currently active assignment.

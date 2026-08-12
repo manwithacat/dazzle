@@ -48,9 +48,10 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
 - **Draft Releases** — unshipped builds: draft pulse + one pull queue — not twin
   draft queues, trail, and status chart.
 - **Tester Roster** — engineer/manager org-structure desk: tester metrics, a
-  skill-tier board (casual / enthusiast / engineer), a region-sorted queue,
-  then flat roster and unassigned devices — hierarchy before dump, not a
-  skill-mix bar or session trail dump.
+  skill-tier board (casual / enthusiast / engineer), a region-sorted queue with
+  clean **name / location / skill** chips (not Email / Active schema labels —
+  cycle 1935), then flat roster and unassigned devices — hierarchy before dump,
+  not a skill-mix bar or session trail dump.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
   their issues and tasks, session timeline (severity mix kept for personal dogfood).
 - **Field Kit** — tester road desk: assigned devices, recent sessions, open

@@ -28,6 +28,17 @@ def test_issue_seeds_have_safe_https_photo_urls() -> None:
         assert "placehold.co" in url
 
 
+def test_tester_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1935: Tester Roster/media cards skip Email/Active schema dump."""
+    text = APP_DSL.read_text()
+    start = text.index('entity Tester "Tester"')
+    block = text[start : text.index('entity IssueReport "Issue Report"')]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "name" in line and "location" in line and "skill_level" in line
+    assert "email" not in line
+    assert "active" not in line
+
+
 def test_issue_triage_declares_field_evidence_grid() -> None:
     text = APP_DSL.read_text()
     assert "workspace issue_triage" in text

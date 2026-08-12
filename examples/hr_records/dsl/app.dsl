@@ -249,7 +249,10 @@ entity Person "Person":
 
   fitness:
     # Location + name first so org boards and list rows read place grain.
-    repr_fields: [legal_name, preferred_name, work_location, email, started_at]
+    # Cycle 1935 agent_acceptance: staff media/people cards skip Email schema
+    # dump (peer support_tickets User 1933, fieldtest Tester 1935). email stays
+    # on list/detail; photo_url still media-injects.
+    repr_fields: [legal_name, preferred_name, work_location, started_at]
 
   index work_location
 

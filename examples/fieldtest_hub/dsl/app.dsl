@@ -182,7 +182,11 @@ entity Tester "Tester":
   index location
 
   fitness:
-    repr_fields: [name, email, location, skill_level, active]
+    # Cycle 1935 agent_acceptance: tester roster/media cards show identity
+    # chips (name/location/skill) — not Email / Active schema dump
+    # (peer support_tickets User 1933, contact_manager 1931, simple_task 1925).
+    # email/active stay on list/detail surfaces.
+    repr_fields: [name, location, skill_level]
 
 # Entity: IssueReport
 entity IssueReport "Issue Report":

@@ -27,6 +27,18 @@ def test_person_entity_declares_photo_url() -> None:
     assert "photo_url: url" in text
 
 
+def test_person_repr_fields_are_identity_chips_not_schema_dump() -> None:
+    """Cycle 1935: staff media/people cards skip Email schema dump."""
+    text = APP.read_text()
+    start = text.index('entity Person "Person":')
+    block = text[start : text.index('entity PersonNote "Person Note":')]
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "legal_name" in line and "preferred_name" in line
+    assert "work_location" in line and "started_at" in line
+    assert "email" not in line
+    assert "photo_url" not in line
+
+
 def test_staff_directory_media_shelf_first() -> None:
     block = _workspace_block("staff_directory")
     assert "media_shelf:" in block

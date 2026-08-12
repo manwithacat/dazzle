@@ -216,7 +216,10 @@ entity SupportStaff "Support Staff":
       as: admin, supervisor
 
   fitness:
-    repr_fields: [name, email, role, department, job_title, status]
+    # Cycle 1935 agent_acceptance: Team desk staff cards show org identity
+    # chips — not Email / Status schema dump (peer support_tickets User 1933).
+    # email/status stay on list/detail.
+    repr_fields: [name, role, department, job_title]
 
 # Goal B document composition (cycle 1876): peer AI support tools (Zendesk /
 # Intercom / Freshdesk / Gorgias) show named case briefs, macros, and SLA notes

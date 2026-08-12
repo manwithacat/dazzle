@@ -34,8 +34,10 @@ stays attached to that ticket and can be reviewed against it.
 assessing a ticket's priority, giving the team a standing record of how urgency
 was judged.
 
-**Support staff.** Support Staff rows carry department and job title so the Team
-desk can show agents by title kanban and department placement (Frontline Support
+**Support staff.** Support Staff rows carry department and job title with clean
+**name / role / department / job title** chips (not Email / Status schema labels
+— cycle 1935) so the Team desk can show agents by title kanban and department
+placement (Frontline Support
 / Escalations / Billing Ops / AI Ops) before a flat roster or open-ticket load.
 Staff status moves onboarding → active → offboarded under supervisor/admin
 control (rehire and re-onboarding paths included).
