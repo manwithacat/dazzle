@@ -71,3 +71,45 @@ surface engagement_letter_detail "Engagement letter":
     field scope_summary "Scope summary"
   ux:
     purpose: "Engagement letter hub — named document, lifecycle strip, parties, and scope in one place"
+
+# Cycle 1954 agent_qa_smoke: related-tab "+ New Engagement Letter" stamped
+# create_url=/app/engagementletter/create but no create surface → HTTP 404
+# (ownership=product). Mirror ContactNote / HrDocument create+edit so list
+# and contact-hub related CTAs resolve to a real form (draft letter → send).
+surface engagement_letter_create "Create Engagement Letter":
+  uses entity EngagementLetter
+  mode: create
+  render: fragment
+
+  section document "Document":
+    field scope_summary "Document title"
+    field party "Party"
+    field effective_date "Effective date"
+    field status "Status"
+
+  section parties "Parties":
+    field contact "Contact"
+    field signatory_name "Signatory"
+    field signatory_email "Signatory email"
+
+  ux:
+    purpose: "Draft an MSA, NDA, or retainer for a contact — named document before send"
+
+surface engagement_letter_edit "Edit Engagement Letter":
+  uses entity EngagementLetter
+  mode: edit
+  render: fragment
+
+  section document "Document":
+    field scope_summary "Document title"
+    field party "Party"
+    field effective_date "Effective date"
+    field status "Status"
+
+  section parties "Parties":
+    field contact "Contact"
+    field signatory_name "Signatory"
+    field signatory_email "Signatory email"
+
+  ux:
+    purpose: "Update engagement letter document title, party, or signatory before send"

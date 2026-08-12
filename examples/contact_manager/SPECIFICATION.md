@@ -98,6 +98,6 @@ can stream document bytes outside it without being explicitly listed (verify:
 
 ## Automation & controls
 
-**Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
+**Engagement letter lifecycle.** Users draft an engagement letter from the letter list or a contact hub (create form), then move it draft → sent → signed; administrators may void a letter from draft, sent, or signed.
 
-<!-- dazzle-spec-brief: sha256:b489ef620ec3c78fc3303d2aeafce6af9b91aeffba27d927294e23544602dbd7 -->
+<!-- dazzle-spec-brief: sha256:5682dfb74785db9503bd71890b15a97057ee6f2f26ea44bab0dbf09ba03adbef -->

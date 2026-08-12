@@ -51,6 +51,17 @@ def test_engagement_letter_list_dual_open_and_contact_hub() -> None:
     assert "show: EngagementLetter" in text
 
 
+def test_engagement_letter_has_create_and_edit_surfaces() -> None:
+    """Smoke dig 1954: related-tab New CTA must resolve (not 404 create path)."""
+    text = SIGNING.read_text()
+    assert 'surface engagement_letter_create "Create Engagement Letter"' in text
+    assert "mode: create" in text
+    assert 'surface engagement_letter_edit "Edit Engagement Letter"' in text
+    assert "mode: edit" in text
+    assert "field scope_summary" in text
+    assert "field contact" in text
+
+
 def test_engagement_letter_seeds_are_domain_true_titles() -> None:
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     assert len(rows) >= 12, "Goal B document expects composition lines across contacts"
