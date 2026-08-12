@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
 **Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md`
-**Fingerprint:** `013e5961f1553c90`
+**Fingerprint:** `49b0d8f694de196f`
 
 ## Personas (jobs)
 
@@ -26,7 +26,7 @@
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Desk`, `Directory`, `Email`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `dept`, `document`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `informal`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `record`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `work`
+`Beyond`, `Desk`, `Directory`, `Email`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `document`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `informal`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `record`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `work`
 
 ## Desks
 
@@ -65,7 +65,7 @@ _None blocking._
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
   "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "013e5961f1553c90",
+  "source_sha256": "49b0d8f694de196f",
   "personas": [
     {
       "id_hint": "manager",
@@ -230,7 +230,6 @@ _None blocking._
     "current",
     "currently",
     "data",
-    "dept",
     "document",
     "effective",
     "facts",

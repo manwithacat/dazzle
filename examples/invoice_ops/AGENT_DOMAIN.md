@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
 **Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `d88708b74e161aeb`
+**Fingerprint:** `5b3549c23eeada2c`
 
 ## Personas (jobs)
 
@@ -24,15 +24,15 @@
 - **Invoice** (grounded) owner≈`requester` lifecycle: draft → submitted → approved → rejected → paid — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Controllership`, `Desk`, `Finally`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Melio`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Tipalti`, `Treasury`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `audit`, `auditable`, `bill`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `finance`, `flat`, `fold`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `item`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `people`, `product`, `read`, `record`, `roles`, `rule`, `signed`, `technical`, `users`, `vendor`
+`Account`, `Administrator`, `Controllership`, `Desk`, `Finally`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Melio`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Tipalti`, `Treasury`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `audit`, `auditable`, `bill`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `finance`, `flat`, `fold`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `item`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `people`, `product`, `read`, `record`, `roles`, `rule`, `settle`, `signed`, `technical`, `users`, `vendor`
 
 ## Desks
 
@@ -81,7 +81,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "d88708b74e161aeb",
+  "source_sha256": "5b3549c23eeada2c",
   "personas": [
     {
       "id_hint": "requester",
@@ -167,6 +167,13 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Message",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -175,13 +182,6 @@
     },
     {
       "name": "Auditor",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -419,6 +419,7 @@
     "record",
     "roles",
     "rule",
+    "settle",
     "signed",
     "technical",
     "users",
