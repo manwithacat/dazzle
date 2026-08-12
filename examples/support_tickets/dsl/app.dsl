@@ -556,6 +556,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1955: awaiting_customer complements needs_reply (both ball sides).
   # Cycle 1958: thankful recovery complements hot_speech (warm closeout trail).
   # Cycle 1966: internal collab notes (is_internal) — non-channel peer grain.
+  # Cycle 1969: critical escalations (escalation=critical) — P1 speech, not channel.
   queue_metrics:
     source: Ticket
     display: summary
@@ -567,6 +568,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: count(Comment where ball_in_court = agent)
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
+      critical_escalations: count(Comment where escalation = critical and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
@@ -579,6 +581,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: warning
       awaiting_customer: accent
       hot_speech: destructive
+      critical_escalations: destructive
       thankful_recovery: positive
       chat_live: accent
       phone_live: warning
@@ -619,6 +622,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No heated customer speech — tone and escalation are quiet"
+
+  # Peer-pack conversation upgrade (cycle 1969): Zendesk/Service Cloud P1 speech —
+  # escalation=critical only so leads lean into ARR-risk / critical path notes
+  # (recipe critical_escalation_trail; not hot_speech or channel re-stack).
+  critical_escalations:
+    source: Comment
+    filter: escalation = critical and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No critical escalations — P1 customer speech lands here when raised to critical"
 
   # Peer-pack conversation upgrade (cycle 1958): Intercom/Zendesk "warm recovery"
   # — thankful customer speech after a fix so agents lean into closeout wins
@@ -744,6 +759,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
         icon: "flame"
         state: destructive
+      - title: "Critical escalations"
+        caption: "P1 critical-path speech only — lean into ARR-risk notes before the mixed hot trail"
+        icon: "siren"
+        state: destructive
       - title: "Thankful recovery"
         caption: "Warm closeout speech after a fix — lean into wins before the full trail"
         icon: "heart"
@@ -775,14 +794,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
-      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
+      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
     as manager:
-      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
-      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
+      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
     as admin:
-      purpose: "Triage home — both-ball + internal collab + hot speech (non-channel peer grain)"
-      focus: media_shelf, queue_metrics, needs_reply, internal_notes, hot_speech, live_conversation
+      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -832,6 +851,7 @@ workspace manager_ops "Manager Ops":
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      critical_escalations: count(Comment where escalation = critical and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
@@ -843,6 +863,7 @@ workspace manager_ops "Manager Ops":
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      critical_escalations: destructive
       internal_notes: accent
       documents: accent
 
@@ -925,6 +946,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No customer notes waiting on agents"
 
+  # Peer-pack critical_escalation_trail (cycle 1969) — P1 critical speech on ops.
+  critical_escalations:
+    source: Comment
+    filter: escalation = critical and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No critical escalations for the team — P1 speech lands here"
+
   # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
   chat_live:
     source: Comment
@@ -969,8 +1000,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, internal collab, dual queues, docs"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, internal_notes, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, critical escalations, dual queues, docs"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, critical_escalations, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -1017,6 +1048,16 @@ workspace agent_dashboard "Agent Dashboard":
     display: conversation
     action: comment_detail
     empty: "No customer notes waiting on you — clear the ball before new claims"
+
+  # Peer-pack critical_escalation_trail (cycle 1969) — P1 critical speech on my plate.
+  critical_escalations:
+    source: Comment
+    filter: escalation = critical and is_internal = false
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: comment_detail
+    empty: "No critical escalations on your plate — P1 speech lands here"
 
   # Peer-pack awaiting_customer_trail (cycle 1955) — notes I (or the desk)
   # kicked back; park until the customer answers (not open agent thrash).
@@ -1079,11 +1120,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + both-ball + internal collab — no funnel theater"
-      focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + critical escalations — no funnel theater"
+      focus: my_assigned, needs_reply, critical_escalations, awaiting_customer, pending_resolution
     as manager:
-      purpose: "Personal WIP + both-ball + internal collab — no funnel theater"
-      focus: my_assigned, needs_reply, internal_notes, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + critical escalations — no funnel theater"
+      focus: my_assigned, needs_reply, critical_escalations, awaiting_customer, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show
