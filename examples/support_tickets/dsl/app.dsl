@@ -569,6 +569,7 @@ workspace ticket_queue "Ticket Queue":
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
+      raised_escalations: count(Comment where escalation = raised and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
@@ -582,6 +583,7 @@ workspace ticket_queue "Ticket Queue":
       awaiting_customer: accent
       hot_speech: destructive
       critical_escalations: destructive
+      raised_escalations: warning
       thankful_recovery: positive
       chat_live: accent
       phone_live: warning
@@ -634,6 +636,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No critical escalations — P1 customer speech lands here when raised to critical"
+
+  # Peer-pack conversation upgrade (cycle 1972): Zendesk/Service Cloud L2 raised —
+  # escalation=raised (not critical) so agents lean into tier-2 handoffs before P1
+  # (recipe raised_escalation_trail; not critical_escalation or channel re-stack).
+  raised_escalations:
+    source: Comment
+    filter: escalation = raised and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No raised escalations — L2 handoff notes land here before P1 critical"
 
   # Peer-pack conversation upgrade (cycle 1958): Intercom/Zendesk "warm recovery"
   # — thankful customer speech after a fix so agents lean into closeout wins
@@ -763,6 +777,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "P1 critical-path speech only — lean into ARR-risk notes before the mixed hot trail"
         icon: "siren"
         state: destructive
+      - title: "Raised escalations"
+        caption: "L2 raised handoffs (not P1) — lean into tier-2 notes before critical path"
+        icon: "arrow-up"
+        state: warning
       - title: "Thankful recovery"
         caption: "Warm closeout speech after a fix — lean into wins before the full trail"
         icon: "heart"
@@ -794,14 +812,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
-      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
+      purpose: "Triage home — needs-reply + raised/critical escalations (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, raised_escalations, critical_escalations, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
-      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
+      purpose: "Triage home — needs-reply + raised/critical escalations (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, raised_escalations, critical_escalations, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + critical escalations + internal collab (non-channel)"
-      focus: media_shelf, queue_metrics, needs_reply, critical_escalations, internal_notes, live_conversation
+      purpose: "Triage home — needs-reply + raised/critical escalations (non-channel)"
+      focus: media_shelf, queue_metrics, needs_reply, raised_escalations, critical_escalations, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -852,6 +870,7 @@ workspace manager_ops "Manager Ops":
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
+      raised_escalations: count(Comment where escalation = raised and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
@@ -864,6 +883,7 @@ workspace manager_ops "Manager Ops":
       conversation: accent
       needs_reply: warning
       critical_escalations: destructive
+      raised_escalations: warning
       internal_notes: accent
       documents: accent
 
@@ -956,6 +976,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No critical escalations for the team — P1 speech lands here"
 
+  # Peer-pack raised_escalation_trail (cycle 1972) — L2 raised handoffs on ops.
+  raised_escalations:
+    source: Comment
+    filter: escalation = raised and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No raised escalations for the team — L2 handoffs land here"
+
   # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
   chat_live:
     source: Comment
@@ -1000,8 +1030,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, critical escalations, dual queues, docs"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, critical_escalations, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, raised/critical escalations, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, raised_escalations, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -1058,6 +1088,16 @@ workspace agent_dashboard "Agent Dashboard":
     display: conversation
     action: comment_detail
     empty: "No critical escalations on your plate — P1 speech lands here"
+
+  # Peer-pack raised_escalation_trail (cycle 1972) — L2 raised handoffs on my plate.
+  raised_escalations:
+    source: Comment
+    filter: escalation = raised and is_internal = false
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: comment_detail
+    empty: "No raised escalations on your plate — L2 handoffs land here"
 
   # Peer-pack awaiting_customer_trail (cycle 1955) — notes I (or the desk)
   # kicked back; park until the customer answers (not open agent thrash).
@@ -1120,11 +1160,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + needs-reply + critical escalations — no funnel theater"
-      focus: my_assigned, needs_reply, critical_escalations, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + raised escalations — no funnel theater"
+      focus: my_assigned, needs_reply, raised_escalations, awaiting_customer, pending_resolution
     as manager:
-      purpose: "Personal WIP + needs-reply + critical escalations — no funnel theater"
-      focus: my_assigned, needs_reply, critical_escalations, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + raised escalations — no funnel theater"
+      focus: my_assigned, needs_reply, raised_escalations, awaiting_customer, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show
