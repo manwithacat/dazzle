@@ -558,6 +558,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1966: internal collab notes (is_internal) — non-channel peer grain.
   # Cycle 1969: critical escalations (escalation=critical) — P1 speech, not channel.
   # Cycle 1977: frustrated_speech (tone=frustrated only) — CSAT risk, not hot_speech OR.
+  # Cycle 1979: urgent_speech (tone=urgent only) — SLA time-pressure, not hot_speech OR.
   queue_metrics:
     source: Ticket
     display: summary
@@ -572,6 +573,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
+      urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
@@ -587,6 +589,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: destructive
       raised_escalations: warning
       frustrated_speech: destructive
+      urgent_speech: warning
       thankful_recovery: positive
       chat_live: accent
       phone_live: warning
@@ -639,6 +642,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No frustrated customer speech — CSAT-risk notes land here when tone is frustrated"
+
+  # Peer-pack conversation upgrade (cycle 1979): Zendesk/Intercom SLA time-pressure —
+  # customer_tone=urgent only (not frustrated OR escalation umbrella in hot_speech)
+  # (recipe urgent_tone_trail; not hot_speech / frustrated / channel / escalation re-stack).
+  urgent_speech:
+    source: Comment
+    filter: customer_tone = urgent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No urgent customer speech — SLA time-pressure notes land here when tone is urgent"
 
   # Peer-pack conversation upgrade (cycle 1969): Zendesk/Service Cloud P1 speech —
   # escalation=critical only so leads lean into ARR-risk / critical path notes
@@ -827,14 +842,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + frustrated speech + raised escalations (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, frustrated_speech, raised_escalations, live_conversation
+      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + frustrated speech + raised escalations (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, frustrated_speech, raised_escalations, live_conversation
+      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + frustrated speech + raised escalations (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, frustrated_speech, raised_escalations, live_conversation
+      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -887,6 +902,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
+      urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
@@ -901,6 +917,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: destructive
       raised_escalations: warning
       frustrated_speech: destructive
+      urgent_speech: warning
       internal_notes: accent
       documents: accent
 
@@ -1013,6 +1030,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No frustrated customer speech for the team — CSAT-risk notes land here"
 
+  # Peer-pack urgent_tone_trail (cycle 1979) — pure urgent SLA time-pressure speech on ops.
+  urgent_speech:
+    source: Comment
+    filter: customer_tone = urgent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No urgent customer speech for the team — SLA time-pressure notes land here"
+
   # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
   chat_live:
     source: Comment
@@ -1057,8 +1084,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, raised/critical escalations, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, frustrated_speech, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, urgent/frustrated speech, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, urgent_speech, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -1136,6 +1163,16 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "No frustrated customer speech on your plate — CSAT-risk notes land here"
 
+  # Peer-pack urgent_tone_trail (cycle 1979) — pure urgent SLA time-pressure on my plate.
+  urgent_speech:
+    source: Comment
+    filter: customer_tone = urgent and is_internal = false
+    sort: created_at desc
+    limit: 6
+    display: conversation
+    action: comment_detail
+    empty: "No urgent customer speech on your plate — SLA time-pressure notes land here"
+
   # Peer-pack awaiting_customer_trail (cycle 1955) — notes I (or the desk)
   # kicked back; park until the customer answers (not open agent thrash).
   awaiting_customer:
@@ -1197,11 +1234,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + needs-reply + frustrated speech — no funnel theater"
-      focus: my_assigned, needs_reply, frustrated_speech, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + urgent speech — no funnel theater"
+      focus: my_assigned, needs_reply, urgent_speech, awaiting_customer, pending_resolution
     as manager:
-      purpose: "Personal WIP + needs-reply + frustrated speech — no funnel theater"
-      focus: my_assigned, needs_reply, frustrated_speech, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + urgent speech — no funnel theater"
+      focus: my_assigned, needs_reply, urgent_speech, awaiting_customer, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show
