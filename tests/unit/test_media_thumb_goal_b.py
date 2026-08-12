@@ -144,6 +144,49 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
     assert "is_active" not in keys
 
 
+def test_fitness_repr_fields_skip_column_economy_truncation() -> None:
+    """Cycle 1929: economy must not drop ticket_number from 7-field fitness repr."""
+    from types import SimpleNamespace
+
+    from dazzle.http.runtime.workspace_columns import build_entity_columns
+
+    def _field(name: str, kind: str = "str") -> SimpleNamespace:
+        return SimpleNamespace(
+            name=name,
+            type=SimpleNamespace(kind=kind, enum_values=None, ref_entity=None, currency_code=None),
+        )
+
+    ticket = SimpleNamespace(
+        name="Ticket",
+        fields=[
+            _field("id", "uuid"),
+            _field("ticket_number"),
+            _field("title"),
+            _field("status", "enum"),
+            _field("priority", "enum"),
+            _field("sla_state", "enum"),
+            _field("category", "enum"),
+            _field("assigned_to", "ref"),
+        ],
+        state_machine=None,
+        fitness=SimpleNamespace(
+            repr_fields=[
+                "ticket_number",
+                "title",
+                "status",
+                "priority",
+                "sla_state",
+                "category",
+                "assigned_to",
+            ]
+        ),
+    )
+    keys = [c["key"] for c in build_entity_columns(ticket)]
+    assert keys[0] == "ticket_number"
+    assert "title" in keys
+    assert len(keys) >= 7
+
+
 def test_prefer_fitness_repr_helper_documents_card_like_displays() -> None:
     """CARD_LIKE helper remains for shape docs; fitness is authoritative when set (1928)."""
     from dazzle.http.runtime.workspace_columns import prefer_fitness_repr_for_display

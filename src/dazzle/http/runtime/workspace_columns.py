@@ -466,5 +466,13 @@ def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, 
     drill/peek. A ≤6-column entity is byte-identical. The request-time usage path
     (ADR-0050 2d → L4) instead calls ``build_entity_columns_full`` + the usage-boosted
     resolver; this remains the cold-start / no-DB default.
+
+    When ``fitness.repr_fields`` is set, the author list is already a deliberate
+    projection — **do not** re-truncate with economy (cycle 1929: economy dropped
+    ``ticket_number`` from support_tickets queues → #1304 AAA-* needles zero while
+    row count stayed 3).
     """
-    return resolve_column_economy(build_entity_columns_full(entity_spec, enums))
+    full = build_entity_columns_full(entity_spec, enums)
+    if _fitness_repr_field_names(entity_spec):
+        return full
+    return resolve_column_economy(full)
