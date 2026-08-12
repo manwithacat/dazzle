@@ -187,7 +187,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     # Region block (not the metrics aggregate key).
-    region = block.split("\n  hot_speech:\n", 1)[1].split("\n  critical_escalations:", 1)[0]
+    region = block.split("\n  hot_speech:\n", 1)[1].split("\n  frustrated_speech:", 1)[0]
     assert "source: Comment" in region
     assert "customer_tone = frustrated" in region
     assert "customer_tone = urgent" in region
@@ -197,15 +197,18 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
     needs = block.index("\n  needs_reply:\n")
     awaiting = block.index("\n  awaiting_customer:\n")
     hot = block.index("\n  hot_speech:\n")
+    frustrated = block.index("\n  frustrated_speech:\n")
     live = block.index("\n  live_conversation:\n")
     thankful = block.index("\n  thankful_recovery:\n")
     chat = block.index("\n  chat_live:\n")
     critical = block.index("\n  critical_escalations:\n")
     raised = block.index("\n  raised_escalations:\n")
     internal = block.index("\n  internal_notes:\n")
-    assert needs < awaiting < hot < critical < raised < thankful < chat < internal < live
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, raised_escalations, critical_escalations, live_conversation"
+        needs < awaiting < hot < frustrated < critical < raised < thankful < chat < internal < live
+    )
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, frustrated_speech, raised_escalations, live_conversation"
         in block
     )
 
@@ -224,7 +227,7 @@ def test_ticket_queue_awaiting_customer_trail() -> None:
     assert "\n  awaiting_customer:\n" in agent
     assert "ball_in_court = customer" in agent
     assert (
-        "focus: my_assigned, needs_reply, raised_escalations, awaiting_customer, pending_resolution"
+        "focus: my_assigned, needs_reply, frustrated_speech, awaiting_customer, pending_resolution"
         in agent
     )
 
@@ -241,7 +244,7 @@ def test_ticket_queue_thankful_recovery_trail() -> None:
     agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
     assert "\n  thankful_recovery:\n" in agent
     assert (
-        "focus: my_assigned, needs_reply, raised_escalations, awaiting_customer, pending_resolution"
+        "focus: my_assigned, needs_reply, frustrated_speech, awaiting_customer, pending_resolution"
         in agent
     )
 
@@ -326,12 +329,41 @@ def test_ticket_queue_raised_escalation_trail() -> None:
     assert "display: conversation" in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  raised_escalations:\n" in manager
-    assert "raised_escalations" in manager.split("focus:", 1)[1].split("\n", 1)[0]
     agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
     assert "\n  raised_escalations:\n" in agent
-    assert "raised_escalations" in agent.split("focus:", 1)[1].split("\n", 1)[0]
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     raised = [
         r for r in rows if r.get("escalation") == "raised" and r.get("is_internal") is not True
     ]
     assert len(raised) >= 2
+
+
+def test_ticket_queue_frustrated_tone_trail() -> None:
+    """Cycle 1977: Zendesk/Intercom pure frustrated tone (not hot_speech OR umbrella)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "frustrated_speech: count(Comment where customer_tone = frustrated" in block
+    region = block.split("\n  frustrated_speech:\n", 1)[1].split(
+        "\n  # Peer-pack conversation upgrade (cycle 1969)", 1
+    )[0]
+    assert "source: Comment" in region
+    assert "filter: customer_tone = frustrated and is_internal = false" in region
+    assert "display: conversation" in region
+    # Pure tone filter — not the hot_speech OR umbrella (urgent / escalation).
+    assert "customer_tone = urgent" not in region
+    assert "escalation !=" not in region
+    assert "escalation =" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  frustrated_speech:\n" in manager
+    assert "frustrated_speech: count(Comment where customer_tone = frustrated" in manager
+    assert "frustrated_speech" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
+    assert "\n  frustrated_speech:\n" in agent
+    assert "frustrated_speech" in agent.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    frustrated = [
+        r
+        for r in rows
+        if r.get("customer_tone") == "frustrated" and r.get("is_internal") is not True
+    ]
+    assert len(frustrated) >= 3
