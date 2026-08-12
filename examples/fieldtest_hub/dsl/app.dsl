@@ -1978,10 +1978,14 @@ workspace tester_roster "Tester Roster":
 
 
 workspace device_fleet "Device Fleet":
-  # Goal B empty_region_honesty (cycle 1855): peer fleet desks keep pulse + dual
+  # Goal B empty_region_honesty (cycle 1855): peer fleet desks keep pulse + work
   # queues — not a twin device timeline + status bar dump (chart/timeline dogfood
   # stays on engineering_dashboard).
-  purpose: "Fleet pressure — active and recalled devices without trail/bar thrash"
+  # Goal B org_structure peer-pack upgrade (cycle 1938): model + lifecycle
+  # columns before flat load — hardware ops parse Probe/Gateway/Sensor shape
+  # and prototype→active→recalled stages (recipe fleet_model_hierarchy; not
+  # dual_attention / headshot_shelf).
+  purpose: "Fleet org structure — model and lifecycle before pressure queues"
   access: persona(engineer, manager)
 
   fleet_metrics:
@@ -1991,17 +1995,49 @@ workspace device_fleet "Device Fleet":
       active: count(Device where status = active)
       prototype: count(Device where status = prototype)
       recalled: count(Device where status = recalled)
+      unassigned: count(Device where assigned_tester_id = null)
     tones:
       active: positive
       prototype: accent
       recalled: destructive
+      unassigned: warning
+
+  # Org structure: lifecycle columns (enum kanban — status is the fleet hierarchy).
+  by_status:
+    source: Device
+    display: kanban
+    group_by: status
+    sort: serial_number asc
+    limit: 30
+    action: device_detail
+    empty: "No devices in this lifecycle stage"
+
+  # Org structure: model-sorted roster — free-string model is not kanban-groupable
+  # (empty board dogfood); serial/name fitness shows family placement in queue meta.
+  by_model:
+    source: Device
+    sort: model asc, serial_number asc
+    limit: 24
+    display: queue
+    action: device_detail
+    empty: "No devices registered in the fleet"
+
+  # Unassigned stock — capacity gap buyers scan after org boards.
+  unassigned_devices:
+    source: Device
+    filter: assigned_tester_id = null
+    sort: model asc, serial_number asc
+    limit: 12
+    display: queue
+    action: device_detail
+    empty: "Every device has a tester assignment"
 
   # Work-surface utility (cycle 1486 story_walk ST-045): fleet active devices → queue.
   active_devices:
     source: Device
     filter: status = active
     sort: name asc
-    limit: 20
+    limit: 12
     display: queue
     action: device_detail
     empty: "No active devices"
@@ -2010,10 +2046,18 @@ workspace device_fleet "Device Fleet":
     source: Device
     filter: status = recalled
     sort: updated_at desc
-    limit: 15
+    limit: 8
     display: queue
     action: device_detail
     empty: "No recalled devices"
+
+  ux:
+    as engineer:
+      purpose: "Fleet org — lifecycle board + model roster before unassigned/active pressure"
+      focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices
+    as manager:
+      purpose: "Fleet org shape — lifecycle and model placement before capacity pressure"
+      focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices
 
 workspace draft_releases "Draft Releases":
   # Goal B empty_region_honesty (cycle 1855): one draft queue + pulse — not twin

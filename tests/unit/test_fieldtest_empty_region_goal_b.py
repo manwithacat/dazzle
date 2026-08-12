@@ -49,15 +49,20 @@ def test_firmware_pipeline_omits_status_bar_and_task_timeline() -> None:
 
 
 def test_device_fleet_omits_trail_and_status_bar() -> None:
-    """Fleet desk: pulse + dual queues — not trail/bar thrash."""
+    """Fleet desk: org boards + pressure queues — not trail/bar thrash."""
     block = _workspace_block("device_fleet")
     assert "fleet_metrics:" in block
+    assert "by_model:" in block
+    assert "by_status:" in block
+    assert "unassigned_devices:" in block
     assert "active_devices:" in block
     assert "recall_queue:" in block
     assert "fleet_trail:" not in block
     assert "status_mix:" not in block
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
+    # Cycle 1938 org_structure: model/lifecycle boards before queues.
+    assert "focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices" in block
 
 
 def test_draft_releases_omits_twin_queue_trail_and_bar() -> None:

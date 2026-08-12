@@ -54,3 +54,45 @@ def test_tester_seeds_span_skills_and_locations() -> None:
         assert row.get("name")
         assert row.get("location")
         assert row.get("skill_level")
+
+
+def _device_fleet_block() -> str:
+    text = APP.read_text()
+    start = text.index('workspace device_fleet "Device Fleet":')
+    end = text.index('workspace draft_releases "Draft Releases":', start)
+    return text[start:end]
+
+
+def test_device_fleet_declares_model_and_lifecycle_before_queues() -> None:
+    """Cycle 1938: peer fleet desks show lifecycle kanban + model roster before dumps."""
+    block = _device_fleet_block()
+    assert "by_status:" in block
+    assert "group_by: status" in block
+    assert "display: kanban" in block
+    assert "by_model:" in block
+    assert "sort: model asc" in block
+    assert "unassigned_devices:" in block
+    assert "active_devices:" in block
+    # Order: pulse → lifecycle board → model roster → capacity pressure.
+    assert block.index("fleet_metrics:") < block.index("by_status:")
+    assert block.index("by_status:") < block.index("by_model:")
+    assert block.index("by_model:") < block.index("unassigned_devices:")
+    assert block.index("unassigned_devices:") < block.index("active_devices:")
+    assert "focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices" in block
+    assert "unassigned: count(Device where assigned_tester_id = null)" in block
+    assert "org" in block.lower() or "lifecycle" in block.lower() or "model" in block.lower()
+
+
+def test_device_seeds_span_models_for_org_boards() -> None:
+    rows = [
+        json.loads(line)
+        for line in (ROOT / "examples/fieldtest_hub/dsl/seeds/demo_data/Device.jsonl")
+        .read_text()
+        .splitlines()
+        if line.strip()
+    ]
+    models = {str(r.get("model") or "") for r in rows}
+    statuses = {str(r.get("status") or "") for r in rows}
+    assert len(models) >= 3
+    assert "active" in statuses
+    assert "prototype" in statuses or "recalled" in statuses

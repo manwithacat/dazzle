@@ -43,7 +43,8 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   the same desk (empty_region_honesty).
 - **Firmware Pipeline** — release desk: draft/live metrics, release history,
   status board, and open-task queue — not a release status bar dump.
-- **Device Fleet** — fleet pressure: active + recalled queues with pulse — not
+- **Device Fleet** — fleet org structure: model-family and lifecycle kanban
+  columns before active + recalled pressure queues (cycle 1938) — not
   twin device trail + status mix chart theater.
 - **Draft Releases** — unshipped builds: draft pulse + one pull queue — not twin
   draft queues, trail, and status chart.
@@ -96,4 +97,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:1557fecff7fc86f3300727384f41c1350b5ac8882b51d9eeed8b2292b5dacecb -->
+<!-- dazzle-spec-brief: sha256:5d05f6d7b2ff3b25bb4f439f2eefa3d05094596abe9f37a3fbdf92ba928b968c -->
