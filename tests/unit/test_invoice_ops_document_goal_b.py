@@ -122,8 +122,8 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "form_w9s, packing_slips, composition, past_due, awaiting_approval" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, "
+        "remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,8 +160,8 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, "
-        "packing_slips, composition, ready_to_pay" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, "
+        "remittances, form_w9s, packing_slips, composition, ready_to_pay" in desk
     )
 
 
@@ -390,7 +390,7 @@ def test_finance_ops_and_pay_desk_insurance_certificate_watch() -> None:
         "insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)"
         in ops
     )
-    # Focus later prefers form_w9s (cycle 1995); region + metric remain.
+    # Focus later prefers compliance_drafts (cycle 2000); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  insurance_certificates:\n" in desk
     assert "filter: doc_kind = insurance_certificate" in desk
@@ -419,6 +419,7 @@ def test_finance_ops_and_pay_desk_form_w9_watch() -> None:
     assert "doc_kind = insurance_certificate" not in region
     assert "doc_kind = ach_authorization" not in region
     assert "form_w9s: count(InvoiceDocument where doc_kind = form_w9)" in ops
+    # Focus later prefers compliance_drafts (cycle 2000); form_w9 region + metric remain.
     assert "form_w9s" in ops.split("focus:", 1)[1].split("\n", 1)[0]
     desk = _workspace_block("pay_desk")
     assert "\n  form_w9s:\n" in desk
@@ -432,6 +433,72 @@ def test_finance_ops_and_pay_desk_form_w9_watch() -> None:
         assert len(str(r.get("headline") or "")) >= 16
     assert any(r.get("status") == "published" for r in w9)
     assert any(r.get("status") == "draft" for r in w9)
+
+
+def test_finance_ops_and_pay_desk_compliance_draft_gate() -> None:
+    """Cycle 2000: Bill.com/Melio/Tipalti compliance drafts before first settle.
+
+    Compound status=draft + onboarding kinds (W-9/COI/tax/lien/ACH) — not
+    form_w9-only or all-draft re-stack.
+    """
+    ops = _workspace_block("finance_ops")
+    assert "\n  compliance_drafts:\n" in ops
+    region = ops.split("\n  compliance_drafts:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "status = draft" in region
+    assert "doc_kind = form_w9" in region
+    assert "doc_kind = insurance_certificate" in region
+    assert "doc_kind = tax_certificate" in region
+    assert "doc_kind = lien_waiver" in region
+    assert "doc_kind = ach_authorization" in region
+    # Pure compliance compound — not remittance/credit/all-draft re-stack.
+    assert "doc_kind = remittance" not in region
+    assert "doc_kind = credit_memo" not in region
+    assert "display: queue" in region
+    assert (
+        "compliance_drafts: count(InvoiceDocument where status = draft and "
+        "(doc_kind = form_w9 or doc_kind = insurance_certificate or "
+        "doc_kind = tax_certificate or doc_kind = lien_waiver or "
+        "doc_kind = ach_authorization))" in ops
+    )
+    assert "compliance_drafts" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Region sits after draft_packets (refined gate), before PO packets.
+    assert ops.index("draft_packets:") < ops.index("\n  compliance_drafts:\n")
+    assert ops.index("\n  compliance_drafts:\n") < ops.index("po_packets:")
+
+    desk = _workspace_block("pay_desk")
+    assert "\n  compliance_drafts:\n" in desk
+    region_d = desk.split("\n  compliance_drafts:\n", 1)[1].split("\n  remittances:", 1)[0]
+    assert "status = draft" in region_d
+    assert "doc_kind = form_w9" in region_d
+    assert "doc_kind = insurance_certificate" in region_d
+    assert "doc_kind = remittance" not in region_d
+    assert (
+        "compliance_drafts: count(InvoiceDocument where status = draft and "
+        "(doc_kind = form_w9 or doc_kind = insurance_certificate or "
+        "doc_kind = tax_certificate or doc_kind = lien_waiver or "
+        "doc_kind = ach_authorization))" in desk
+    )
+    assert "compliance_drafts" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert desk.index("\n  draft_packets:\n") < desk.index("\n  compliance_drafts:\n")
+    assert desk.index("\n  compliance_drafts:\n") < desk.index("\n  remittances:\n")
+
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    compliance_kinds = {
+        "form_w9",
+        "insurance_certificate",
+        "tax_certificate",
+        "lien_waiver",
+        "ach_authorization",
+    }
+    drafts = [
+        r for r in rows if r.get("status") == "draft" and r.get("doc_kind") in compliance_kinds
+    ]
+    assert len(drafts) >= 2
+    for r in drafts:
+        assert len(str(r.get("headline") or "")) >= 16
+    # At least two distinct compliance kinds still draft (not single-kind theater).
+    assert len({r.get("doc_kind") for r in drafts}) >= 2
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -695,6 +762,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in desk
     )
