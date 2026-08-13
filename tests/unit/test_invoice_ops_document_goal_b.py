@@ -122,7 +122,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, "
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
         "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
         "awaiting_approval" in ops
     )
@@ -161,7 +161,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, "
+        "focus: settle_metrics, document_pulse, draft_packets, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
         "compliance_drafts, remittances, form_w9s, packing_slips, composition, "
         "ready_to_pay" in desk
     )
@@ -654,7 +654,7 @@ def test_finance_ops_and_pay_desk_bank_rail_evidence() -> None:
 
     ops = _workspace_block("finance_ops")
     assert "\n  bank_rail:\n" in ops
-    region = ops.split("\n  bank_rail:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    region = ops.split("\n  bank_rail:\n", 1)[1].split("\n  tax_identity:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "doc_kind = ach_authorization" in region
     assert "doc_kind = wire_instructions" in region
@@ -665,17 +665,17 @@ def test_finance_ops_and_pay_desk_bank_rail_evidence() -> None:
     assert bank_count in ops
     assert "bank_rail" in ops.split("focus:", 1)[1].split("\n", 1)[0]
     assert ops.index("\n  adjustment_rail:\n") < ops.index("\n  bank_rail:\n")
-    assert ops.index("\n  bank_rail:\n") < ops.index("po_packets:")
+    assert ops.index("\n  bank_rail:\n") < ops.index("\n  tax_identity:\n")
 
     desk = _workspace_block("pay_desk")
     assert "\n  bank_rail:\n" in desk
-    region_d = desk.split("\n  bank_rail:\n", 1)[1].split("\n  remittances:", 1)[0]
+    region_d = desk.split("\n  bank_rail:\n", 1)[1].split("\n  tax_identity:", 1)[0]
     assert bank_filter in region_d
     assert "doc_kind = remittance" not in region_d
     assert bank_count in desk
     assert "bank_rail" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert desk.index("\n  adjustment_rail:\n") < desk.index("\n  bank_rail:\n")
-    assert desk.index("\n  bank_rail:\n") < desk.index("\n  remittances:\n")
+    assert desk.index("\n  bank_rail:\n") < desk.index("\n  tax_identity:\n")
 
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     bank_kinds = {"ach_authorization", "wire_instructions"}
@@ -684,6 +684,49 @@ def test_finance_ops_and_pay_desk_bank_rail_evidence() -> None:
     for r in bank:
         assert len(str(r.get("headline") or "")) >= 16
     assert bank_kinds.issubset({r.get("doc_kind") for r in bank})
+
+
+def test_finance_ops_and_pay_desk_tax_identity_rail() -> None:
+    """Cycle 2010: Bill.com/Melio tax identity rail (Form W-9 + tax certificate).
+
+    Compound TIN/VAT identity pack — not form_w9-only or tax_certificate-only
+    re-stack after compliance_draft_gate / bank_rail.
+    """
+    tax_filter = "doc_kind = form_w9 or doc_kind = tax_certificate"
+    tax_count = f"tax_identity: count(InvoiceDocument where {tax_filter})"
+
+    ops = _workspace_block("finance_ops")
+    assert "\n  tax_identity:\n" in ops
+    region = ops.split("\n  tax_identity:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = form_w9" in region
+    assert "doc_kind = tax_certificate" in region
+    assert "doc_kind = ach_authorization" not in region
+    assert "doc_kind = insurance_certificate" not in region
+    assert "status = draft" not in region
+    assert "display: queue" in region
+    assert tax_count in ops
+    assert "tax_identity" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    assert ops.index("\n  bank_rail:\n") < ops.index("\n  tax_identity:\n")
+    assert ops.index("\n  tax_identity:\n") < ops.index("po_packets:")
+
+    desk = _workspace_block("pay_desk")
+    assert "\n  tax_identity:\n" in desk
+    region_d = desk.split("\n  tax_identity:\n", 1)[1].split("\n  remittances:", 1)[0]
+    assert tax_filter in region_d
+    assert "doc_kind = remittance" not in region_d
+    assert tax_count in desk
+    assert "tax_identity" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert desk.index("\n  bank_rail:\n") < desk.index("\n  tax_identity:\n")
+    assert desk.index("\n  tax_identity:\n") < desk.index("\n  remittances:\n")
+
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    tax_kinds = {"form_w9", "tax_certificate"}
+    tax = [r for r in rows if r.get("doc_kind") in tax_kinds]
+    assert len(tax) >= 5
+    for r in tax:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert tax_kinds.issubset({r.get("doc_kind") for r in tax})
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -947,6 +990,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in desk
     )
