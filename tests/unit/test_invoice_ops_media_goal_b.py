@@ -49,8 +49,9 @@ def test_finance_ops_packet_covers_first() -> None:
     # Peer refuse headshot shelf on pure money desk
     assert "media_shelf:" not in block
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, "
-        "remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval" in block
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, "
+        "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
+        "awaiting_approval" in block
     )
 
 

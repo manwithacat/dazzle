@@ -38,8 +38,9 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
     assert "display: funnel_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, "
-        "remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval" in block
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, "
+        "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
+        "awaiting_approval" in block
     )
 
 
@@ -71,7 +72,7 @@ def test_approval_desk_omits_decision_timeline() -> None:
     assert "recently_decided:" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: approval_load, document_pulse, goods_receipts, po_packets, composition, "
+        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
         "awaiting_approval, live_conversation" in block
     )
 
@@ -90,7 +91,7 @@ def test_pay_desk_omits_payment_health_and_dispute_trail() -> None:
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in block
     )
 

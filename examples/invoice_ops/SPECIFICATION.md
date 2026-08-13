@@ -72,7 +72,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **My Invoices** — requester home: line-item composition (document body),
   draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
   (no status bar-chart or twin invoice timeline under the fold).
-- **Approval Desk** — approver home: a **goods receipt** three-way match watch
+- **Approval Desk** — approver home: a **three-way match evidence** pack
+  (PO + goods receipt + packing slip — cycle 2002 peer-pack; not single-kind
+  re-stack), a **goods receipt** three-way match watch
   (cycle 1967 peer-pack), a **tax certificate watch** of reverse-charge
   certs (cycle 1959 peer-pack), a **PO packet watch** of signed PO covers
   (cycle 1965 peer-pack), awaiting-approval queue, **named AP packets**
@@ -83,7 +85,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
   publish before the settle batch), a **compliance draft gate** of vendor
   onboarding packets still draft (W-9 / COI / tax / lien / ACH — cycle 2000 peer-pack;
-  not form_w9-only or all-draft re-stack), a **remittance advice watch** of SEPA/ACH covers
+  not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
+  (PO + goods receipt + packing slip — cycle 2002 peer-pack; not packing_slip-only
+  re-stack), a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
   ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
@@ -107,7 +111,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=lien_waiver conditional/final lien waivers before construction or facility pay release — cycle 1991), an **insurance certificate watch**
   (doc_kind=insurance_certificate COI on file before contractor/facility pay release — cycle 1993), a **Form W-9 watch**
   (doc_kind=form_w9 IRS W-9 / vendor TIN on file before first US settle — cycle 1995), a **compliance draft gate**
-  (status=draft and onboarding kinds W-9/COI/tax/lien/ACH — cycle 2000; not form_w9-only or all-draft re-stack), a **remittance advice watch**
+  (status=draft and onboarding kinds W-9/COI/tax/lien/ACH — cycle 2000; not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
+  (doc_kind=po_packet or goods_receipt or packing_slip — cycle 2002; not single-kind re-stack after compliance_draft_gate), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -214,4 +219,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:4769cb34c2db3fef95749cf70d668df50108904371bdf58c893846a5ab63fa1d -->
+<!-- dazzle-spec-brief: sha256:f885fcceb6e88e279a792e14b2ebb1b33f185712d3fb948ed99c87eec20ae277 -->

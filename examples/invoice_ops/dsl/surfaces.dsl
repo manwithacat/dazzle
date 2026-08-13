@@ -514,7 +514,7 @@ workspace finance_ops "Finance Operations":
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
   # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
-  purpose: "Day-to-day invoice throughput — packet covers, draft gate, compliance drafts, tax certs, PO packets, dispute packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
+  purpose: "Day-to-day invoice throughput — packet covers, draft gate, compliance drafts, three-way match evidence, tax certs, PO packets, dispute packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -567,6 +567,7 @@ workspace finance_ops "Finance Operations":
       insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
       form_w9s: count(InvoiceDocument where doc_kind = form_w9)
       compliance_drafts: count(InvoiceDocument where status = draft and (doc_kind = form_w9 or doc_kind = insurance_certificate or doc_kind = tax_certificate or doc_kind = lien_waiver or doc_kind = ach_authorization))
+      match_evidence: count(InvoiceDocument where doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -586,6 +587,7 @@ workspace finance_ops "Finance Operations":
       insurance_certificates: warning
       form_w9s: warning
       compliance_drafts: destructive
+      match_evidence: accent
       remittances: accent
       dispute_packets: destructive
 
@@ -613,6 +615,19 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No compliance drafts — W-9, COI, tax cert, lien, and ACH packets are published"
+
+  # Peer-pack document upgrade (cycle 2002): Coupa / Tipalti / Bill.com three-way
+  # match evidence pack — PO cover + goods receipt + packing slip in one compound
+  # filter (recipe three_way_match_evidence; not single doc_kind re-stack after
+  # compliance_draft_gate or goods_receipt/packing_slip/po_packet alone).
+  match_evidence:
+    source: InvoiceDocument
+    filter: doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No match evidence — attach PO cover, goods receipt, and packing slip for three-way match"
 
   # Peer-pack document upgrade (cycle 1965): Bill.com / Coupa / Tipalti PO
   # packet watch — signed PO cover before approve/ops (recipe po_packet_watch;
@@ -863,20 +878,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, compliance draft gate, W-9 + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, three-way match evidence, compliance drafts, remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, compliance draft gate, W-9 + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, three-way match evidence, compliance drafts, remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, compliance draft gate, W-9 + remittance watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, three-way match evidence, compliance drafts, remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, compliance draft gate, W-9 + remittance watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, three-way match evidence, compliance drafts, remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, compliance draft gate, W-9 + remittance watch, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, three-way match evidence, compliance drafts, remittance watch, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -970,7 +985,8 @@ workspace approval_desk "Approval Desk":
   # Cycle 1959: tax certificate watch before approve (reverse-charge lean-in).
   # Cycle 1965: PO packet watch — signed PO cover before approve (Coupa lean-in).
   # Cycle 1967: goods receipt three-way match before approve (Tipalti lean-in).
-  purpose: "Approver job — goods receipt + PO/tax watch, awaiting queue, named AP packets, then live discussion"
+  # Cycle 2002: compound three-way match evidence (PO + GRN + packing slip).
+  purpose: "Approver job — three-way match evidence, goods receipt + PO/tax watch, awaiting queue, named AP packets, then live discussion"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -995,12 +1011,26 @@ workspace approval_desk "Approval Desk":
       tax_certs: count(InvoiceDocument where doc_kind = tax_certificate)
       po_packs: count(InvoiceDocument where doc_kind = po_packet)
       goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)
+      match_evidence: count(InvoiceDocument where doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip)
     tones:
       documents: accent
       published: positive
       tax_certs: accent
       po_packs: accent
       goods_receipts: accent
+      match_evidence: accent
+
+  # Peer-pack three_way_match_evidence (cycle 2002): Coupa / Tipalti / Bill.com
+  # compound PO + goods receipt + packing slip before approve — not single
+  # goods_receipt / po_packet / packing_slip re-stack.
+  match_evidence:
+    source: InvoiceDocument
+    filter: doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No match evidence — attach PO cover, goods receipt, and packing slip for three-way match"
 
   # Peer-pack goods_receipt_match (cycle 1967) — three-way match receipts before
   # approve (Coupa / Tipalti / Bill.com; not PO/tax/payment re-stack).
@@ -1082,11 +1112,11 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — goods receipt + PO/tax watch, named packets, queue, conversation"
-      focus: approval_load, document_pulse, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
+      purpose: "Approval — three-way match evidence, goods receipt + PO/tax watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — goods receipt + PO/tax watch, named packets, queue, conversation"
-      focus: approval_load, document_pulse, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
+      purpose: "Approval — three-way match evidence, goods receipt + PO/tax watch, named packets, queue, conversation"
+      focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
   # Goal B command_density + document (cycle 1820/1879): dual attention then
@@ -1103,7 +1133,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1991: lien waiver watch — conditional/final lien waivers before pay release.
   # Cycle 1993: insurance certificate (COI) watch — proof of insurance before contractor pay.
   # Cycle 1995: Form W-9 watch — IRS W-9 / vendor TIN before first US settle.
-  purpose: "Multi-panel settlement — draft gate, remittances, W-9, packing slips, payment confirmations, dual attention"
+  # Cycle 2002: three-way match evidence pack (PO + GRN + packing slip).
+  purpose: "Multi-panel settlement — draft gate, three-way match evidence, remittances, W-9, packing slips, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1139,6 +1170,7 @@ workspace pay_desk "Pay Desk":
       insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
       form_w9s: count(InvoiceDocument where doc_kind = form_w9)
       compliance_drafts: count(InvoiceDocument where status = draft and (doc_kind = form_w9 or doc_kind = insurance_certificate or doc_kind = tax_certificate or doc_kind = lien_waiver or doc_kind = ach_authorization))
+      match_evidence: count(InvoiceDocument where doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1155,6 +1187,7 @@ workspace pay_desk "Pay Desk":
       insurance_certificates: warning
       form_w9s: warning
       compliance_drafts: destructive
+      match_evidence: accent
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1179,6 +1212,18 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No compliance drafts blocking settle — W-9, COI, tax, lien, ACH published"
+
+  # Peer-pack three_way_match_evidence (cycle 2002): Coupa / Tipalti / Bill.com
+  # compound PO + goods receipt + packing slip before settle — not single
+  # packing_slip / goods_receipt / po_packet re-stack after compliance_draft_gate.
+  match_evidence:
+    source: InvoiceDocument
+    filter: doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No match evidence — attach PO cover, goods receipt, and packing slip for three-way match"
 
   # Peer-pack remittance_advice_watch (cycle 1974): Bill.com / Melio remittance
   # advice on the settle desk so controllers lean into SEPA/ACH covers before
@@ -1362,11 +1407,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — compliance draft gate, remittances, W-9, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — three-way match evidence, compliance drafts, remittances, W-9, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — compliance draft gate, remittances, W-9, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — three-way match evidence, compliance drafts, remittances, W-9, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice

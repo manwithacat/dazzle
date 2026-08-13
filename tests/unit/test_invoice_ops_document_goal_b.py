@@ -122,8 +122,9 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, compliance_drafts, "
-        "remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval" in ops
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, match_evidence, "
+        "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
+        "awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,8 +161,9 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, "
-        "remittances, form_w9s, packing_slips, composition, ready_to_pay" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, match_evidence, "
+        "compliance_drafts, remittances, form_w9s, packing_slips, composition, "
+        "ready_to_pay" in desk
     )
 
 
@@ -443,7 +445,7 @@ def test_finance_ops_and_pay_desk_compliance_draft_gate() -> None:
     """
     ops = _workspace_block("finance_ops")
     assert "\n  compliance_drafts:\n" in ops
-    region = ops.split("\n  compliance_drafts:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    region = ops.split("\n  compliance_drafts:\n", 1)[1].split("\n  match_evidence:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "status = draft" in region
     assert "doc_kind = form_w9" in region
@@ -462,13 +464,13 @@ def test_finance_ops_and_pay_desk_compliance_draft_gate() -> None:
         "doc_kind = ach_authorization))" in ops
     )
     assert "compliance_drafts" in ops.split("focus:", 1)[1].split("\n", 1)[0]
-    # Region sits after draft_packets (refined gate), before PO packets.
+    # Region sits after draft_packets (refined gate), before match evidence (cycle 2002).
     assert ops.index("draft_packets:") < ops.index("\n  compliance_drafts:\n")
-    assert ops.index("\n  compliance_drafts:\n") < ops.index("po_packets:")
+    assert ops.index("\n  compliance_drafts:\n") < ops.index("\n  match_evidence:\n")
 
     desk = _workspace_block("pay_desk")
     assert "\n  compliance_drafts:\n" in desk
-    region_d = desk.split("\n  compliance_drafts:\n", 1)[1].split("\n  remittances:", 1)[0]
+    region_d = desk.split("\n  compliance_drafts:\n", 1)[1].split("\n  match_evidence:", 1)[0]
     assert "status = draft" in region_d
     assert "doc_kind = form_w9" in region_d
     assert "doc_kind = insurance_certificate" in region_d
@@ -481,7 +483,7 @@ def test_finance_ops_and_pay_desk_compliance_draft_gate() -> None:
     )
     assert "compliance_drafts" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert desk.index("\n  draft_packets:\n") < desk.index("\n  compliance_drafts:\n")
-    assert desk.index("\n  compliance_drafts:\n") < desk.index("\n  remittances:\n")
+    assert desk.index("\n  compliance_drafts:\n") < desk.index("\n  match_evidence:\n")
 
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     compliance_kinds = {
@@ -499,6 +501,60 @@ def test_finance_ops_and_pay_desk_compliance_draft_gate() -> None:
         assert len(str(r.get("headline") or "")) >= 16
     # At least two distinct compliance kinds still draft (not single-kind theater).
     assert len({r.get("doc_kind") for r in drafts}) >= 2
+
+
+def test_finance_ops_pay_and_approval_three_way_match_evidence() -> None:
+    """Cycle 2002: Coupa/Tipalti/Bill.com three-way match evidence pack.
+
+    Compound PO + goods receipt + packing slip — not single doc_kind re-stack
+    after compliance_draft_gate or goods_receipt/packing_slip/po_packet alone.
+    """
+    match_filter = "doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip"
+    match_count = f"match_evidence: count(InvoiceDocument where {match_filter})"
+
+    ops = _workspace_block("finance_ops")
+    assert "\n  match_evidence:\n" in ops
+    region = ops.split("\n  match_evidence:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = po_packet" in region
+    assert "doc_kind = goods_receipt" in region
+    assert "doc_kind = packing_slip" in region
+    # Pure match compound — not compliance draft or remittance re-stack.
+    assert "status = draft" not in region
+    assert "doc_kind = remittance" not in region
+    assert "doc_kind = form_w9" not in region
+    assert "display: queue" in region
+    assert match_count in ops
+    assert "match_evidence" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    assert ops.index("\n  compliance_drafts:\n") < ops.index("\n  match_evidence:\n")
+    assert ops.index("\n  match_evidence:\n") < ops.index("po_packets:")
+
+    desk = _workspace_block("pay_desk")
+    assert "\n  match_evidence:\n" in desk
+    region_d = desk.split("\n  match_evidence:\n", 1)[1].split("\n  remittances:", 1)[0]
+    assert match_filter in region_d
+    assert "doc_kind = remittance" not in region_d
+    assert match_count in desk
+    assert "match_evidence" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert desk.index("\n  compliance_drafts:\n") < desk.index("\n  match_evidence:\n")
+    assert desk.index("\n  match_evidence:\n") < desk.index("\n  remittances:\n")
+
+    approval = _workspace_block("approval_desk")
+    assert "\n  match_evidence:\n" in approval
+    region_a = approval.split("\n  match_evidence:\n", 1)[1].split("\n  goods_receipts:", 1)[0]
+    assert match_filter in region_a
+    assert match_count in approval
+    assert "match_evidence" in approval.split("focus:", 1)[1].split("\n", 1)[0]
+    assert approval.index("\n  match_evidence:\n") < approval.index("\n  goods_receipts:\n")
+
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    match_kinds = {"po_packet", "goods_receipt", "packing_slip"}
+    evidence = [r for r in rows if r.get("doc_kind") in match_kinds]
+    assert len(evidence) >= 6
+    for r in evidence:
+        assert len(str(r.get("headline") or "")) >= 16
+    # All three match kinds present (not single-kind theater).
+    assert match_kinds.issubset({r.get("doc_kind") for r in evidence})
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -714,7 +770,7 @@ def test_approval_desk_tax_certificate_watch() -> None:
     assert desk.index("po_packets:") < desk.index("tax_certificates:")
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert (
-        "focus: approval_load, document_pulse, goods_receipts, po_packets, composition, "
+        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
         "awaiting_approval, live_conversation" in desk
     )
 
@@ -744,7 +800,7 @@ def test_approval_and_ops_po_packet_watch() -> None:
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert desk.index("\n  goods_receipts:\n") < desk.index("po_packets:")
     assert (
-        "focus: approval_load, document_pulse, goods_receipts, po_packets, composition, "
+        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
         "awaiting_approval, live_conversation" in desk
     )
 
@@ -762,6 +818,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, compliance_drafts, remittances, form_w9s, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in desk
     )
