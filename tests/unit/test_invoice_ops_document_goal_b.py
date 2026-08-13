@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "packing_slips, vendor_statements, composition, past_due, awaiting_approval" in ops
+        "ach_authorizations, packing_slips, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,8 +160,8 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, "
-        "vendor_statements, composition, ready_to_pay" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, "
+        "packing_slips, composition, ready_to_pay" in desk
     )
 
 
@@ -281,18 +281,17 @@ def test_finance_ops_and_pay_desk_packing_slip_watch() -> None:
     """Cycle 1985: Bill.com/Coupa packing slip three-way match grain."""
     ops = _workspace_block("finance_ops")
     assert "\n  packing_slips:\n" in ops
-    region = ops.split("\n  packing_slips:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  packing_slips:\n", 1)[1].split("\n  ach_authorizations:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: doc_kind = packing_slip" in region
     assert "display: queue" in region
     assert "doc_kind = goods_receipt" not in region
     assert "doc_kind = po_packet" not in region
     assert "packing_slips: count(InvoiceDocument where doc_kind = packing_slip)" in ops
-    assert "packing_slips" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers ach_authorizations (cycle 1987); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  packing_slips:\n" in desk
     assert "filter: doc_kind = packing_slip" in desk
-    assert "packing_slips" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert "packing_slips: count(InvoiceDocument where doc_kind = packing_slip)" in desk
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     ps = [r for r in rows if r.get("doc_kind") == "packing_slip"]
@@ -300,6 +299,31 @@ def test_finance_ops_and_pay_desk_packing_slip_watch() -> None:
     for r in ps:
         assert len(str(r.get("headline") or "")) >= 16
     assert any(r.get("status") == "published" for r in ps)
+
+
+def test_finance_ops_and_pay_desk_ach_authorization_watch() -> None:
+    """Cycle 1987: Bill.com/Melio ACH authorization before first settle."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  ach_authorizations:\n" in ops
+    region = ops.split("\n  ach_authorizations:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = ach_authorization" in region
+    assert "display: queue" in region
+    assert "doc_kind = remittance" not in region
+    assert "doc_kind = payment_confirmation" not in region
+    assert "ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)" in ops
+    assert "ach_authorizations" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  ach_authorizations:\n" in desk
+    assert "filter: doc_kind = ach_authorization" in desk
+    assert "ach_authorizations" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert "ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)" in desk
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    aa = [r for r in rows if r.get("doc_kind") == "ach_authorization"]
+    assert len(aa) >= 2
+    for r in aa:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert any(r.get("status") == "published" for r in aa)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -563,6 +587,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, "
         "composition, ready_to_pay" in desk
     )

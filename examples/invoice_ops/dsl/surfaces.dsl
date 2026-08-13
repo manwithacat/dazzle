@@ -561,6 +561,7 @@ workspace finance_ops "Finance Operations":
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
       packing_slips: count(InvoiceDocument where doc_kind = packing_slip)
+      ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -574,6 +575,7 @@ workspace finance_ops "Finance Operations":
       debit_memos: destructive
       vendor_statements: accent
       packing_slips: accent
+      ach_authorizations: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -698,6 +700,18 @@ workspace finance_ops "Finance Operations":
     action: invoice_document_detail
     empty: "No packing slips on file — attach carrier packing slips for three-way match"
 
+  # Peer-pack document upgrade (cycle 1987): Bill.com / Melio / Tipalti ACH
+  # authorization watch — signed ACH auth before first SEPA/ACH settle
+  # (recipe ach_authorization_watch; not remittance / payment_confirmation re-stack).
+  ach_authorizations:
+    source: InvoiceDocument
+    filter: doc_kind = ach_authorization
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No ACH authorizations on file — attach signed ACH auth before first settle"
+
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
@@ -777,20 +791,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, ACH auth + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, ACH auth + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, ACH auth + remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, ACH auth + remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, packing slip + remittance watch, draft gate, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, ACH auth + remittance watch, draft gate, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1012,7 +1026,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1981: debit memo watch — vendor additional charges before settle batch.
   # Cycle 1983: vendor statement watch — period-end AP reconcile before settle.
   # Cycle 1985: packing slip watch — carrier packing slips for three-way match.
-  purpose: "Multi-panel settlement — draft gate, remittances, packing slips, vendor statements, payment confirmations, dual attention"
+  # Cycle 1987: ACH authorization watch — signed ACH auth before first settle.
+  purpose: "Multi-panel settlement — draft gate, remittances, ACH authorizations, packing slips, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1042,6 +1057,7 @@ workspace pay_desk "Pay Desk":
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
       packing_slips: count(InvoiceDocument where doc_kind = packing_slip)
+      ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1052,6 +1068,7 @@ workspace pay_desk "Pay Desk":
       debit_memos: destructive
       vendor_statements: accent
       packing_slips: accent
+      ach_authorizations: warning
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1125,6 +1142,18 @@ workspace pay_desk "Pay Desk":
     action: invoice_document_detail
     empty: "No packing slips — attach carrier packing slips for three-way match"
 
+  # Peer-pack ach_authorization_watch (cycle 1987): Bill.com / Melio / Tipalti
+  # ACH authorizations on the settle desk — signed ACH auth before first
+  # SEPA/ACH batch (not remittance / payment_confirmation re-stack).
+  ach_authorizations:
+    source: InvoiceDocument
+    filter: doc_kind = ach_authorization
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No ACH authorizations — attach signed ACH auth before first settle"
+
   # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
   # Tipalti put payment confirmations on the settle desk so controllers lean
   # into batch proof (not draft_packet or tax_cert re-stack).
@@ -1187,11 +1216,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft gate, remittances, packing slips, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, ACH authorizations, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft gate, remittances, packing slips, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, ACH authorizations, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice
