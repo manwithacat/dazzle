@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, debit_memo, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "debit_memos, credit_memos, composition, past_due, awaiting_approval" in ops
+        "vendor_statements, debit_memos, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,8 +160,8 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, "
-        "credit_memos, composition, ready_to_pay" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, vendor_statements, "
+        "debit_memos, composition, ready_to_pay" in desk
     )
 
 
@@ -195,11 +195,10 @@ def test_finance_ops_and_pay_desk_credit_memo_watch() -> None:
     assert "doc_kind = credit_memo" in region
     assert "display: queue" in region
     assert "credit_memos: count(InvoiceDocument where doc_kind = credit_memo)" in ops
-    assert "credit_memos" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers vendor_statements (cycle 1983); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  credit_memos:\n" in desk
     assert "filter: doc_kind = credit_memo" in desk
-    assert "credit_memos" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     cm = [r for r in rows if r.get("doc_kind") == "credit_memo"]
     assert len(cm) >= 2
@@ -232,7 +231,7 @@ def test_finance_ops_and_pay_desk_debit_memo_watch() -> None:
     """Cycle 1981: Bill.com/Melio debit memo watch — opposite credit_memo."""
     ops = _workspace_block("finance_ops")
     assert "\n  debit_memos:\n" in ops
-    region = ops.split("\n  debit_memos:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  debit_memos:\n", 1)[1].split("\n  vendor_statements:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: doc_kind = debit_memo" in region
     assert "display: queue" in region
@@ -240,11 +239,10 @@ def test_finance_ops_and_pay_desk_debit_memo_watch() -> None:
     assert "doc_kind = credit_memo" not in region
     assert "doc_kind = dispute_packet" not in region
     assert "debit_memos: count(InvoiceDocument where doc_kind = debit_memo)" in ops
-    assert "debit_memos" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers vendor_statements (cycle 1983); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  debit_memos:\n" in desk
     assert "filter: doc_kind = debit_memo" in desk
-    assert "debit_memos" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert "debit_memos: count(InvoiceDocument where doc_kind = debit_memo)" in desk
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     dm = [r for r in rows if r.get("doc_kind") == "debit_memo"]
@@ -253,6 +251,31 @@ def test_finance_ops_and_pay_desk_debit_memo_watch() -> None:
         assert len(str(r.get("headline") or "")) >= 16
     # At least one published debit (not draft-only theater).
     assert any(r.get("status") == "published" for r in dm)
+
+
+def test_finance_ops_and_pay_desk_vendor_statement_watch() -> None:
+    """Cycle 1983: Bill.com/Melio vendor statement period-end reconcile."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  vendor_statements:\n" in ops
+    region = ops.split("\n  vendor_statements:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = vendor_statement" in region
+    assert "display: queue" in region
+    assert "doc_kind = remittance" not in region
+    assert "doc_kind = debit_memo" not in region
+    assert "vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)" in ops
+    assert "vendor_statements" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  vendor_statements:\n" in desk
+    assert "filter: doc_kind = vendor_statement" in desk
+    assert "vendor_statements" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert "vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)" in desk
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    vs = [r for r in rows if r.get("doc_kind") == "vendor_statement"]
+    assert len(vs) >= 2
+    for r in vs:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert any(r.get("status") == "published" for r in vs)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -516,6 +539,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, "
         "composition, ready_to_pay" in desk
     )

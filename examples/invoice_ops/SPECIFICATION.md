@@ -97,7 +97,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   with draft count, a **draft packet release gate** (status=draft packets — cycle 1957), a **goods receipt watch**
   (doc_kind=goods_receipt three-way match slips — cycle 1967), a **credit memo watch**
   (doc_kind=credit_memo VAT/short-ship credits — cycle 1971), a **debit memo watch**
-  (doc_kind=debit_memo vendor additional charges opposite credit_memo — cycle 1981), a **remittance advice watch**
+  (doc_kind=debit_memo vendor additional charges opposite credit_memo — cycle 1981), a **vendor statement watch**
+  (doc_kind=vendor_statement period-end AP reconcile covers — cycle 1983), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -204,4 +205,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:0ed7476184e36399c10d9a3cb8b382eebe29f20c4aa16f4d8e3add6f9fb13b53 -->
+<!-- dazzle-spec-brief: sha256:88243b0da659f51e7d320939460e5457f4e5c3fb8dc59b9f9c9ac4a1d0a61afb -->

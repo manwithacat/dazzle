@@ -326,7 +326,7 @@ entity InvoiceNote "Invoice Note":
 # discussion trail — not line composition alone as the only "document" surface.
 
 entity InvoiceDocument "Invoice Document":
-  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
+  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, vendor statement, PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
   domain: accounts_payable
   patterns: documentation, audit_trail
   display_field: headline
@@ -339,7 +339,9 @@ entity InvoiceDocument "Invoice Document":
   # invoices are disputed — not status-only dispute queues.
   # Goal B document (cycle 1981): debit_memo — vendor-issued additional charges
   # (fuel surcharge / price correction) opposite credit_memo before settle.
-  doc_kind: enum[remittance, credit_memo, debit_memo, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
+  # Goal B document (cycle 1983): vendor_statement — period-end AP reconcile
+  # covers (Bill.com / Melio / Tipalti statement match before pay).
+  doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
