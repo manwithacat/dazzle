@@ -570,6 +570,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 2001: raised_needs_reply — escalation=raised AND ball_in_court=agent (L2 waiting-on-you; not full raised_escalations or P1 critical_needs_reply).
   # Cycle 2003: urgent_needs_reply — tone=urgent AND ball_in_court=agent (SLA time-pressure waiting-on-you; not full urgent_speech or channel×ball).
   # Cycle 2005: urgent_awaiting_customer — tone=urgent AND ball_in_court=customer (SLA time-pressure parked on customer; not full awaiting_customer or agent needs_reply).
+  # Cycle 2007: frustrated_awaiting_customer — tone=frustrated AND ball_in_court=customer (CSAT-risk parked on customer; not full awaiting_customer or agent frustrated_needs_reply).
   queue_metrics:
     source: Ticket
     display: summary
@@ -581,6 +582,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: count(Comment where ball_in_court = agent)
       urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
       urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
+      frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
@@ -608,6 +610,7 @@ workspace ticket_queue "Ticket Queue":
       needs_reply: warning
       urgent_needs_reply: warning
       urgent_awaiting_customer: warning
+      frustrated_awaiting_customer: destructive
       awaiting_customer: accent
       hot_speech: destructive
       critical_escalations: destructive
@@ -687,6 +690,19 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No frustrated notes waiting on agents — CSAT-risk speech is closed or still on the customer"
+
+  # Peer-pack conversation upgrade (cycle 2007): Intercom/Zendesk "angry still waiting
+  # on customer" — customer_tone=frustrated AND ball_in_court=customer (recipe
+  # frustrated_awaiting_customer_trail; not full awaiting_customer missing tone, not
+  # agent frustrated_needs_reply, not urgent_awaiting_customer re-stack).
+  frustrated_awaiting_customer:
+    source: Comment
+    filter: customer_tone = frustrated and ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No frustrated notes waiting on customers — CSAT-risk outbound is closed or still on us"
 
   # Peer-pack conversation upgrade (cycle 1979): Zendesk/Intercom SLA time-pressure —
   # customer_tone=urgent only (not frustrated OR escalation umbrella in hot_speech)
@@ -968,6 +984,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "Urgent-tone notes with ball in customer court — nudge before SLA breach; not agent waiting-on-you"
         icon: "clock-alert"
         state: warning
+      - title: "Frustrated awaiting customer"
+        caption: "Frustrated-tone notes with ball in customer court — CSAT-risk nudge; not agent angry-waiting-on-you"
+        icon: "frown"
+        state: destructive
       - title: "Hot speech"
         caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
         icon: "flame"
@@ -1015,14 +1035,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — urgent awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
+      purpose: "Triage home — frustrated/urgent awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — urgent awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
+      purpose: "Triage home — frustrated/urgent awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — urgent awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
+      purpose: "Triage home — frustrated/urgent awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1074,6 +1094,7 @@ workspace manager_ops "Manager Ops":
       needs_reply: count(Comment where ball_in_court = agent)
       urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
       urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
+      frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
@@ -1094,6 +1115,7 @@ workspace manager_ops "Manager Ops":
       needs_reply: warning
       urgent_needs_reply: warning
       urgent_awaiting_customer: warning
+      frustrated_awaiting_customer: destructive
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
@@ -1273,6 +1295,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No urgent notes waiting on customers — SLA time-pressure outbound is closed or still on the team"
 
+  # Peer-pack frustrated_awaiting_customer_trail (cycle 2007) — CSAT-risk speech parked on customers.
+  frustrated_awaiting_customer:
+    source: Comment
+    filter: customer_tone = frustrated and ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No frustrated notes waiting on customers — CSAT-risk outbound is closed or still on the team"
+
   # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
   chat_live:
     source: Comment
@@ -1377,8 +1409,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, urgent awaiting-customer, needs-reply, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, frustrated/urgent awaiting-customer, needs-reply, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
