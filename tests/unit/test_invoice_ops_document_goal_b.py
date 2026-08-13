@@ -122,7 +122,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("draft_packets:") < ops.index("\n  goods_receipts:\n")
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
         "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
         "awaiting_approval" in ops
     )
@@ -161,7 +161,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
+        "focus: settle_metrics, document_pulse, draft_packets, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
         "compliance_drafts, remittances, form_w9s, packing_slips, composition, "
         "ready_to_pay" in desk
     )
@@ -783,7 +783,7 @@ def test_finance_ops_and_pay_desk_vendor_risk_rail_evidence() -> None:
 
     ops = _workspace_block("finance_ops")
     assert "\n  vendor_risk_rail:\n" in ops
-    region = ops.split("\n  vendor_risk_rail:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    region = ops.split("\n  vendor_risk_rail:\n", 1)[1].split("\n  dispute_rail:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "doc_kind = insurance_certificate" in region
     assert "doc_kind = lien_waiver" in region
@@ -794,17 +794,17 @@ def test_finance_ops_and_pay_desk_vendor_risk_rail_evidence() -> None:
     assert risk_count in ops
     assert "vendor_risk_rail" in ops.split("focus:", 1)[1].split("\n", 1)[0]
     assert ops.index("\n  reconcile_rail:\n") < ops.index("\n  vendor_risk_rail:\n")
-    assert ops.index("\n  vendor_risk_rail:\n") < ops.index("po_packets:")
+    assert ops.index("\n  vendor_risk_rail:\n") < ops.index("\n  dispute_rail:\n")
 
     desk = _workspace_block("pay_desk")
     assert "\n  vendor_risk_rail:\n" in desk
-    region_d = desk.split("\n  vendor_risk_rail:\n", 1)[1].split("\n  remittances:", 1)[0]
+    region_d = desk.split("\n  vendor_risk_rail:\n", 1)[1].split("\n  dispute_rail:", 1)[0]
     assert risk_filter in region_d
     assert "doc_kind = form_w9" not in region_d
     assert risk_count in desk
     assert "vendor_risk_rail" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert desk.index("\n  reconcile_rail:\n") < desk.index("\n  vendor_risk_rail:\n")
-    assert desk.index("\n  vendor_risk_rail:\n") < desk.index("\n  remittances:\n")
+    assert desk.index("\n  vendor_risk_rail:\n") < desk.index("\n  dispute_rail:\n")
 
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     risk_kinds = {"insurance_certificate", "lien_waiver"}
@@ -813,6 +813,49 @@ def test_finance_ops_and_pay_desk_vendor_risk_rail_evidence() -> None:
     for r in risk:
         assert len(str(r.get("headline") or "")) >= 16
     assert risk_kinds.issubset({r.get("doc_kind") for r in risk})
+
+
+def test_finance_ops_and_pay_desk_dispute_rail_evidence() -> None:
+    """Cycle 2021: Bill.com/Melio dispute rail (dispute packet + debit memo).
+
+    Compound exception pack — not dispute-only or debit-only re-stack after
+    adjustment_rail (credit|debit without dispute evidence) / vendor_risk_rail.
+    """
+    dis_filter = "doc_kind = dispute_packet or doc_kind = debit_memo"
+    dis_count = f"dispute_rail: count(InvoiceDocument where {dis_filter})"
+
+    ops = _workspace_block("finance_ops")
+    assert "\n  dispute_rail:\n" in ops
+    region = ops.split("\n  dispute_rail:\n", 1)[1].split("\n  po_packets:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "doc_kind = dispute_packet" in region
+    assert "doc_kind = debit_memo" in region
+    assert "doc_kind = credit_memo" not in region
+    assert "doc_kind = insurance_certificate" not in region
+    assert "status = draft" not in region
+    assert "display: queue" in region
+    assert dis_count in ops
+    assert "dispute_rail" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    assert ops.index("\n  vendor_risk_rail:\n") < ops.index("\n  dispute_rail:\n")
+    assert ops.index("\n  dispute_rail:\n") < ops.index("po_packets:")
+
+    desk = _workspace_block("pay_desk")
+    assert "\n  dispute_rail:\n" in desk
+    region_d = desk.split("\n  dispute_rail:\n", 1)[1].split("\n  remittances:", 1)[0]
+    assert dis_filter in region_d
+    assert "doc_kind = credit_memo" not in region_d
+    assert dis_count in desk
+    assert "dispute_rail" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert desk.index("\n  vendor_risk_rail:\n") < desk.index("\n  dispute_rail:\n")
+    assert desk.index("\n  dispute_rail:\n") < desk.index("\n  remittances:\n")
+
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    dis_kinds = {"dispute_packet", "debit_memo"}
+    dis = [r for r in rows if r.get("doc_kind") in dis_kinds]
+    assert len(dis) >= 5
+    for r in dis:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert dis_kinds.issubset({r.get("doc_kind") for r in dis})
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -1076,6 +1119,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in desk
     )
