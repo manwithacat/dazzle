@@ -562,6 +562,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1982: email_live (channel=email only) — async email path, not chat/phone re-stack.
   # Cycle 1984: portal_live (channel=portal only) — self-serve portal path, not email re-stack.
   # Cycle 1986: email_needs_reply — channel=email AND ball_in_court=agent (not full email_live).
+  # Cycle 1988: portal_needs_reply — channel=portal AND ball_in_court=agent (not full portal_live).
   queue_metrics:
     source: Ticket
     display: summary
@@ -583,6 +584,7 @@ workspace ticket_queue "Ticket Queue":
       email_live: count(Comment where channel = email and is_internal = false)
       email_needs_reply: count(Comment where channel = email and ball_in_court = agent and is_internal = false)
       portal_live: count(Comment where channel = portal and is_internal = false)
+      portal_needs_reply: count(Comment where channel = portal and ball_in_court = agent and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
@@ -602,6 +604,7 @@ workspace ticket_queue "Ticket Queue":
       email_live: accent
       email_needs_reply: warning
       portal_live: accent
+      portal_needs_reply: warning
       internal_notes: accent
       documents: accent
 
@@ -760,6 +763,18 @@ workspace ticket_queue "Ticket Queue":
     action: comment_detail
     empty: "No portal-channel notes — email/chat/phone still carry the rest of the trail"
 
+  # Peer-pack conversation upgrade (cycle 1988): Intercom/Zendesk "portal waiting
+  # on you" — channel=portal AND ball_in_court=agent (recipe portal_needs_reply_trail;
+  # not full portal_live or ball-only needs_reply re-stack).
+  portal_needs_reply:
+    source: Comment
+    filter: channel = portal and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No portal notes waiting on agents — self-serve portal is closed or still on the customer"
+
   # Peer-pack conversation upgrade (cycle 1966): Zendesk/Front internal collab —
   # agent/manager side notes (is_internal) so triage stills show private handoff
   # grain, not another public channel filter (recipe internal_collab_trail).
@@ -887,14 +902,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
-      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
+      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
-      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
+      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
-      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
+      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1135,6 +1150,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No portal-channel notes for the team — email/chat/phone still carry the trail"
 
+  # Peer-pack portal_needs_reply_trail (cycle 1988) — portal still waiting on agents.
+  portal_needs_reply:
+    source: Comment
+    filter: channel = portal and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No portal notes waiting on the team — self-serve portal is closed or still on the customer"
+
   # Peer-pack internal_collab_trail (cycle 1966) — private agent/manager handoffs
   # (is_internal) on the ops home; not another public channel filter.
   internal_notes:
@@ -1160,7 +1185,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA pressure, needs-reply, urgent/frustrated speech, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, email_needs_reply, live_conversation
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, portal_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

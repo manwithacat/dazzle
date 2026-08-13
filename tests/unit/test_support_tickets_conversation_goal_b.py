@@ -219,7 +219,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation"
         in block
     )
 
@@ -348,7 +348,7 @@ def test_ticket_queue_email_needs_reply_trail() -> None:
     assert "customer_tone" not in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  email_needs_reply:\n" in manager
-    assert "email_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers portal_needs_reply (cycle 1988); region + metric remain.
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     enr = [
         r
@@ -358,6 +358,36 @@ def test_ticket_queue_email_needs_reply_trail() -> None:
         and r.get("is_internal") is not True
     ]
     assert len(enr) >= 3
+
+
+def test_ticket_queue_portal_needs_reply_trail() -> None:
+    """Cycle 1988: Intercom/Zendesk portal waiting-on-you (channel+ball compound)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert (
+        "portal_needs_reply: count(Comment where channel = portal and ball_in_court = agent"
+        in block
+    )
+    region = block.split("\n  portal_needs_reply:\n", 1)[1].split(
+        "\n  # Peer-pack conversation upgrade (cycle 1966)", 1
+    )[0]
+    assert "source: Comment" in region
+    assert "filter: channel = portal and ball_in_court = agent and is_internal = false" in region
+    assert "display: conversation" in region
+    assert "channel = email" not in region
+    assert "customer_tone" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  portal_needs_reply:\n" in manager
+    assert "portal_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    pnr = [
+        r
+        for r in rows
+        if r.get("channel") == "portal"
+        and r.get("ball_in_court") == "agent"
+        and r.get("is_internal") is not True
+    ]
+    assert len(pnr) >= 3
 
 
 def test_ticket_queue_internal_collab_trail() -> None:
