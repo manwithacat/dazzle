@@ -558,6 +558,7 @@ workspace finance_ops "Finance Operations":
       po_packs: count(InvoiceDocument where doc_kind = po_packet)
       goods_receipts: count(InvoiceDocument where doc_kind = goods_receipt)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
+      debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -568,6 +569,7 @@ workspace finance_ops "Finance Operations":
       po_packs: accent
       goods_receipts: accent
       credit_memos: warning
+      debit_memos: destructive
       remittances: accent
       dispute_packets: destructive
 
@@ -656,6 +658,18 @@ workspace finance_ops "Finance Operations":
     action: invoice_document_detail
     empty: "No dispute packets on file — attach exception evidence when invoices are disputed"
 
+  # Peer-pack document upgrade (cycle 1981): Bill.com / Melio / Tipalti debit
+  # memo watch — vendor-issued additional charges (fuel surcharge / price fix)
+  # opposite credit_memo (recipe debit_memo_watch; not credit/dispute re-stack).
+  debit_memos:
+    source: InvoiceDocument
+    filter: doc_kind = debit_memo
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No debit memos on file — attach vendor additional-charge memos before settle"
+
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
@@ -735,20 +749,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, debit/credit memo + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, debit/credit memo + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, debit/credit memo + remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, remittance + dispute packet watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, debit/credit memo + remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, remittance + dispute packet watch, draft gate, evidence packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, dispute_packets, credit_memos, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, debit memo + remittance watch, draft gate, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -967,7 +981,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1961: payment confirmation trail (proof of settle before/after batch).
   # Cycle 1971: credit memo watch — VAT/short-ship credits before settle batch.
   # Cycle 1974: remittance advice watch — SEPA/ACH remittance covers before settle.
-  purpose: "Multi-panel settlement — draft gate, remittances, credit memos, payment confirmations, dual attention"
+  # Cycle 1981: debit memo watch — vendor additional charges before settle batch.
+  purpose: "Multi-panel settlement — draft gate, remittances, debit/credit memos, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -994,6 +1009,7 @@ workspace pay_desk "Pay Desk":
       draft: count(InvoiceDocument where status = draft)
       pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
+      debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1001,6 +1017,7 @@ workspace pay_desk "Pay Desk":
       draft: warning
       pay_confirms: positive
       credit_memos: warning
+      debit_memos: destructive
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1037,6 +1054,18 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No credit memos — attach VAT or short-ship credits before settle"
+
+  # Peer-pack debit_memo_watch (cycle 1981): Bill.com / Melio / Tipalti debit
+  # memos on the settle desk — vendor additional charges (fuel surcharge /
+  # price correction) opposite credit_memo (not dispute_packet re-stack).
+  debit_memos:
+    source: InvoiceDocument
+    filter: doc_kind = debit_memo
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No debit memos — attach vendor additional-charge memos before settle"
 
   # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
   # Tipalti put payment confirmations on the settle desk so controllers lean
@@ -1100,11 +1129,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft gate, remittances, credit memos, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, debit/credit memos, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft gate, remittances, credit memos, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, debit/credit memos, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, composition, ready_to_pay
 
   settle_board:
     source: Invoice

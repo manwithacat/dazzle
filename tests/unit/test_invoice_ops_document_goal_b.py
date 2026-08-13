@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "dispute_packets, credit_memos, composition, past_due, awaiting_approval" in ops
+        "debit_memos, credit_memos, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,8 +160,8 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, "
-        "composition, ready_to_pay" in desk
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, "
+        "credit_memos, composition, ready_to_pay" in desk
     )
 
 
@@ -211,7 +211,7 @@ def test_finance_ops_and_pay_desk_remittance_advice_watch() -> None:
     """Cycle 1974: Bill.com/Melio remittance advice watch on ops + settle desks."""
     ops = _workspace_block("finance_ops")
     assert "\n  remittances:\n" in ops
-    region = ops.split("\n  remittances:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  remittances:\n", 1)[1].split("\n  dispute_packets:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "doc_kind = remittance" in region
     assert "display: queue" in region
@@ -226,6 +226,33 @@ def test_finance_ops_and_pay_desk_remittance_advice_watch() -> None:
     assert len(rem) >= 2
     for r in rem:
         assert len(str(r.get("headline") or "")) >= 16
+
+
+def test_finance_ops_and_pay_desk_debit_memo_watch() -> None:
+    """Cycle 1981: Bill.com/Melio debit memo watch — opposite credit_memo."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  debit_memos:\n" in ops
+    region = ops.split("\n  debit_memos:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = debit_memo" in region
+    assert "display: queue" in region
+    # Pure debit grain — not credit_memo / dispute_packet re-stack filters.
+    assert "doc_kind = credit_memo" not in region
+    assert "doc_kind = dispute_packet" not in region
+    assert "debit_memos: count(InvoiceDocument where doc_kind = debit_memo)" in ops
+    assert "debit_memos" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  debit_memos:\n" in desk
+    assert "filter: doc_kind = debit_memo" in desk
+    assert "debit_memos" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert "debit_memos: count(InvoiceDocument where doc_kind = debit_memo)" in desk
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    dm = [r for r in rows if r.get("doc_kind") == "debit_memo"]
+    assert len(dm) >= 2
+    for r in dm:
+        assert len(str(r.get("headline") or "")) >= 16
+    # At least one published debit (not draft-only theater).
+    assert any(r.get("status") == "published" for r in dm)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -289,14 +316,15 @@ def test_finance_ops_and_dispute_desk_dispute_packet_watch() -> None:
     """Cycle 1978: Bill.com/Melio/Tipalti dispute evidence packets on ops + dispute desk."""
     ops = _workspace_block("finance_ops")
     assert "\n  dispute_packets:\n" in ops
-    region = ops.split("\n  dispute_packets:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  dispute_packets:\n", 1)[1].split("\n  debit_memos:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "doc_kind = dispute_packet" in region
     assert "display: queue" in region
     assert "dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)" in ops
-    assert "dispute_packets" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers debit_memos (cycle 1981); region + metric remain.
     assert ops.index("\n  remittances:\n") < ops.index("\n  dispute_packets:\n")
-    assert ops.index("\n  dispute_packets:\n") < ops.index("composition:")
+    assert ops.index("\n  dispute_packets:\n") < ops.index("\n  debit_memos:\n")
+    assert ops.index("\n  debit_memos:\n") < ops.index("composition:")
 
     desk = _workspace_block("dispute_desk")
     assert "document_pulse:" in desk
@@ -488,6 +516,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, credit_memos, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, debit_memos, credit_memos, "
         "composition, ready_to_pay" in desk
     )
