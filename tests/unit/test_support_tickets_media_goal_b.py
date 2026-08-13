@@ -49,9 +49,11 @@ def test_manager_ops_media_shelf_first() -> None:
     assert "sort: created_at desc" in block
     assert block.index("media_shelf:") < block.index("team_metrics:")
     assert block.index("media_shelf:") < block.index("critical_queue:")
+    # Fold pin tracks product intent (cycle 1998: critical_needs_reply over
+    # frustrated_needs_reply on the manager focus strip). media_shelf stays first.
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, frustrated_needs_reply, live_conversation" in block
+        "unassigned_queue, needs_reply, critical_needs_reply, live_conversation" in block
     )
 
 
