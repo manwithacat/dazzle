@@ -219,7 +219,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
         in block
     )
 
@@ -437,7 +437,7 @@ def test_ticket_queue_phone_needs_reply_trail() -> None:
     assert "\n  phone_needs_reply:\n" in manager
     # Focus later prefers frustrated_needs_reply (cycle 1994); region + metric remain.
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -473,10 +473,10 @@ def test_ticket_queue_frustrated_needs_reply_trail() -> None:
     assert "escalation" not in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  frustrated_needs_reply:\n" in manager
-    # Focus later prefers critical_needs_reply (cycle 1998); region + metric remain.
+    # Focus later prefers raised_needs_reply (cycle 2001); region + metric remain.
     assert "frustrated_needs_reply: count(Comment where customer_tone = frustrated" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -499,7 +499,7 @@ def test_ticket_queue_critical_needs_reply_trail() -> None:
         in block
     )
     region = block.split("\n  critical_needs_reply:\n", 1)[1].split(
-        "\n  # Peer-pack conversation upgrade (cycle 1972)", 1
+        "\n  # Peer-pack conversation upgrade (cycle 2001)", 1
     )[0]
     assert "source: Comment" in region
     assert (
@@ -509,11 +509,12 @@ def test_ticket_queue_critical_needs_reply_trail() -> None:
     # Escalation×ball compound — not full critical_escalations (missing ball) or channel×ball.
     assert "channel =" not in region
     assert "customer_tone" not in region
+    # Focus later prefers raised_needs_reply (cycle 2001); critical region + metric remain.
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  critical_needs_reply:\n" in manager
     assert "critical_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -525,6 +526,42 @@ def test_ticket_queue_critical_needs_reply_trail() -> None:
         and r.get("is_internal") is not True
     ]
     assert len(cnr) >= 3
+
+
+def test_ticket_queue_raised_needs_reply_trail() -> None:
+    """Cycle 2001: Zendesk/Service Cloud L2 still waiting-on-you (raised×ball compound)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert (
+        "raised_needs_reply: count(Comment where escalation = raised and ball_in_court = agent"
+        in block
+    )
+    region = block.split("\n  raised_needs_reply:\n", 1)[1].split(
+        "\n  # Peer-pack conversation upgrade (cycle 1972)", 1
+    )[0]
+    assert "source: Comment" in region
+    assert "filter: escalation = raised and ball_in_court = agent and is_internal = false" in region
+    assert "display: conversation" in region
+    # Raised×ball compound — not full raised_escalations (missing ball), not P1 critical, not channel.
+    assert "escalation = critical" not in region
+    assert "channel =" not in region
+    assert "customer_tone" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  raised_needs_reply:\n" in manager
+    assert "raised_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation"
+        in block
+    )
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    rnr = [
+        r
+        for r in rows
+        if r.get("escalation") == "raised"
+        and r.get("ball_in_court") == "agent"
+        and r.get("is_internal") is not True
+    ]
+    assert len(rnr) >= 3
 
 
 def test_ticket_queue_internal_collab_trail() -> None:

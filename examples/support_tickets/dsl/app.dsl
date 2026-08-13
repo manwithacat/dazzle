@@ -567,6 +567,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1992: phone_needs_reply — channel=phone AND ball_in_court=agent (not full phone_live).
   # Cycle 1994: frustrated_needs_reply — tone=frustrated AND ball_in_court=agent (not channel re-stack).
   # Cycle 1998: critical_needs_reply — escalation=critical AND ball_in_court=agent (not channel×ball or pure critical_escalations).
+  # Cycle 2001: raised_needs_reply — escalation=raised AND ball_in_court=agent (L2 waiting-on-you; not full raised_escalations or P1 critical_needs_reply).
   queue_metrics:
     source: Ticket
     display: summary
@@ -581,6 +582,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
+      raised_needs_reply: count(Comment where escalation = raised and ball_in_court = agent and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
       frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
       urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
@@ -605,6 +607,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
+      raised_needs_reply: warning
       frustrated_speech: destructive
       frustrated_needs_reply: destructive
       urgent_speech: warning
@@ -714,6 +717,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No critical escalations waiting on agents — P1 speech is closed or still on the customer"
+
+  # Peer-pack conversation upgrade (cycle 2001): Zendesk/Service Cloud L2 still waiting
+  # on you — escalation=raised AND ball_in_court=agent (recipe raised_needs_reply_trail;
+  # not full raised_escalations missing ball, not P1 critical_needs_reply, not channel×ball).
+  raised_needs_reply:
+    source: Comment
+    filter: escalation = raised and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No raised escalations waiting on agents — L2 handoffs are closed or still on the customer"
 
   # Peer-pack conversation upgrade (cycle 1972): Zendesk/Service Cloud L2 raised —
   # escalation=raised (not critical) so agents lean into tier-2 handoffs before P1
@@ -967,13 +982,13 @@ workspace ticket_queue "Ticket Queue":
   ux:
     as agent:
       purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
     as manager:
       purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
     as admin:
       purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1026,6 +1041,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
+      raised_needs_reply: count(Comment where escalation = raised and ball_in_court = agent and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
       frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
       urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
@@ -1043,6 +1059,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
+      raised_needs_reply: warning
       frustrated_speech: destructive
       frustrated_needs_reply: destructive
       urgent_speech: warning
@@ -1147,6 +1164,16 @@ workspace manager_ops "Manager Ops":
     display: conversation
     action: comment_detail
     empty: "No critical escalations waiting on the team — P1 speech is closed or still on the customer"
+
+  # Peer-pack raised_needs_reply_trail (cycle 2001) — L2 raised speech still on agents.
+  raised_needs_reply:
+    source: Comment
+    filter: escalation = raised and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No raised escalations waiting on the team — L2 handoffs are closed or still on the customer"
 
   # Peer-pack raised_escalation_trail (cycle 1972) — L2 raised handoffs on ops.
   raised_escalations:
@@ -1293,7 +1320,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA pressure, needs-reply, critical waiting-on-you, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, critical_needs_reply, live_conversation
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

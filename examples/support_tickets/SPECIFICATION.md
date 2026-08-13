@@ -81,7 +81,7 @@ a **frustrated needs reply** conversation region of `customer_tone=frustrated` n
 an **urgent speech** conversation region of pure `customer_tone=urgent` notes
 (cycle 1979 peer-pack; SLA time-pressure lean-in — not the hot_speech OR umbrella, not frustrated/channel/escalation re-stack),
 a **critical escalations** conversation region of `escalation=critical` P1 speech
-(cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
+(cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised needs reply** conversation region of `escalation=raised` notes whose **ball is in the agent court** (cycle 2001 peer-pack; Zendesk/Service Cloud "L2 waiting on you" — not full raised_escalations or P1 critical_needs_reply re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
 (cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
 (cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), an **email path** conversation region of channel=email notes (cycle 1982 peer-pack; async email grain — not chat/phone/tone re-stack), an **email needs reply** conversation region of channel=email notes whose **ball is in the agent court** (cycle 1986 peer-pack; Front/Intercom "email waiting on you" — not full email_live or ball-only needs_reply re-stack), a **portal path** conversation region of channel=portal notes (cycle 1984 peer-pack; self-serve portal grain — not email/chat/phone/tone re-stack), a **portal needs reply** conversation region of channel=portal notes whose **ball is in the agent court** (cycle 1988 peer-pack; Intercom/Zendesk "portal waiting on you" — not full portal_live or ball-only needs_reply re-stack), a **chat needs reply** conversation region of channel=chat notes whose **ball is in the agent court** (cycle 1990 peer-pack; Intercom/Front "chat waiting on you" — not full chat_live or ball-only needs_reply re-stack), a **phone needs reply** conversation region of channel=phone notes whose **ball is in the agent court** (cycle 1992 peer-pack; Zendesk/Front "phone waiting on you" — not full phone_live or ball-only needs_reply re-stack), an **internal collab** conversation region of `is_internal` agent/manager notes (cycle 1966 peer-pack; non-channel handoff grain), a **live conversation** trail of newest
 notes, a **composition** queue of open SLA waivers (named breach titles), a review
@@ -89,7 +89,7 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised escalations, frustrated speech, frustrated needs reply, urgent speech, internal notes, documents), SLA readiness, a **breach risk** queue
+conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, urgent speech, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 **needs reply** ball (limit 4), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
@@ -202,4 +202,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:dee3ca261e8cc3a85540c88dc2d62b9ec28eed834c6085261f846f98d5ac1e18 -->
+<!-- dazzle-spec-brief: sha256:5d1c08095f975ec66c67cbfa7fc07ff8fe561392ab5c78791b2986aefb8b8c54 -->
