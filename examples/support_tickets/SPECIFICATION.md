@@ -85,6 +85,8 @@ an **urgent awaiting customer** conversation region of `customer_tone=urgent` no
 an **frustrated awaiting customer** conversation region of `customer_tone=frustrated` notes whose **ball is in the customer court** (cycle 2007 peer-pack; Intercom/Zendesk "angry still waiting on customer" — not full awaiting_customer or agent frustrated_needs_reply re-stack),
 an **raised awaiting customer** conversation region of `escalation=raised` notes whose **ball is in the customer court** (cycle 2009 peer-pack; Zendesk/Service Cloud "L2 still waiting on customer" — not full awaiting_customer or agent raised_needs_reply re-stack),
 an **critical awaiting customer** conversation region of `escalation=critical` notes whose **ball is in the customer court** (cycle 2013 peer-pack; Zendesk/Service Cloud "P1 still waiting on customer" — not full awaiting_customer or agent critical_needs_reply re-stack),
+an **email awaiting customer** conversation region of `channel=email` notes whose **ball is in the customer court** (cycle 2015 peer-pack; Front/Intercom "email still waiting on customer" — not full email_live or agent email_needs_reply re-stack),
+a **chat awaiting customer** conversation region of `channel=chat` notes whose **ball is in the customer court** (cycle 2020 peer-pack; Intercom/Front "chat still waiting on customer" — not full chat_live or agent chat_needs_reply or email_awaiting_customer re-stack),
 a **critical escalations** conversation region of `escalation=critical` P1 speech
 (cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised needs reply** conversation region of `escalation=raised` notes whose **ball is in the agent court** (cycle 2001 peer-pack; Zendesk/Service Cloud "L2 waiting on you" — not full raised_escalations or P1 critical_needs_reply re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
 (cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
@@ -102,7 +104,9 @@ unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 (limit 4; cycle 2005), a **frustrated awaiting customer** trail of CSAT-risk notes parked on customers
 (limit 4; cycle 2007), a **raised awaiting customer** trail of L2 notes parked on customers
 (limit 4; cycle 2009), a **critical awaiting customer** trail of P1 notes parked on customers
-(limit 4; cycle 2013), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
+(limit 4; cycle 2013), an **email awaiting customer** trail of async email handoffs parked on customers
+(limit 4; cycle 2015), a **chat awaiting customer** trail of live chat handoffs parked on customers
+(limit 4; cycle 2020), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
 (limit 4), a **chat needs reply** trail of chat notes waiting on agents
 (limit 4), a **phone needs reply** trail of phone notes waiting on agents
 (limit 4) **before** a capped live conversation trail
@@ -212,4 +216,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:8f2116e02567ad22fe6ae908243bd5b7400a571ba99e5c6c36eda3c62990b3c2 -->
+<!-- dazzle-spec-brief: sha256:8629e5a4be12d86e0b8ff13696b3ccbe245660402c3a356e97ed7d3e851e8f88 -->
