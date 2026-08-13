@@ -51,8 +51,8 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1997 | USED |
-| **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 1997 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 2019 | USED |
+| **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 2019 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list + **presentation residual**) | COGNITION | MCP | **example-apps** + framework-ux | 1997 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 2003 | USED |
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
@@ -68,7 +68,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1997 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1997 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1997 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2018 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2019 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1951 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 2012 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 2012 | USED |
@@ -77,7 +77,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1997 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1896 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 2018 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 2019 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -136,9 +136,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 2004 (2026-08-13).** interesting_product invoice_ops settle_rail_evidence @0e1c6f017.
-> **Cycle 1997 (2026-08-13).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff≈26 HYGIENE_STALE_eff≈38; domain extract support_tickets+invoice_ops+hr_records; validate 3 apps green (advisory); gallery 48/48; dual_lock=0; coherence_queue=0; tip green @26bf36c89; next interesting_product (aggressive) / presentation·acceptance STALE digs.
-> **Cycle 2011 (2026-08-13).** self-audit 5/5 CLEAN end_sha 5d9566832 (window 26bf36c89..HEAD; interesting_product product digs claim↔diff↔receipt↔pytest green).
-> **Cycle 1995 (2026-08-13).** interesting_product invoice_ops form_w9_watch @26bf36c89.
-> **Cycle 1994 (2026-08-13).** interesting_product support frustrated_needs_reply @c575d690c.
-> **Cycle 1976 (2026-08-12).** capability-sweep domain+validate+gallery dual_lock=0 @10bad6550.
+> **Cycle 2019 (2026-08-13).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff≈28 HYGIENE_STALE_eff≈35; domain extract support_tickets+invoice_ops+hr_records; dual_lock=0; coherence_queue=0; residual_total=0 densify_allowed=0; tip green @ef0cbc2a6; next interesting_product support_tickets conversation (aggressive) / presentation·MCP STALE digs.

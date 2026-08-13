@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
 **Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `6d0a030ef07cec55`
+**Fingerprint:** `5dd2eb46acde7b96`
 
 ## Personas (jobs)
 
@@ -24,11 +24,11 @@
 - **Invoice** (grounded) owner≈`requester` lifecycle: draft → submitted → approved → rejected → paid — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 - **Auditor** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
+- **Message** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -81,7 +81,7 @@
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
   "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "6d0a030ef07cec55",
+  "source_sha256": "5dd2eb46acde7b96",
   "personas": [
     {
       "id_hint": "requester",
@@ -167,6 +167,19 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Payment",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded"
+      ],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Auditor",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -181,13 +194,6 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Message",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
       "name": "Approver",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -195,16 +201,10 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Payment",
+      "name": "Message",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [
-        "pending",
-        "processing",
-        "completed",
-        "failed",
-        "refunded"
-      ],
+      "lifecycle_hint": [],
       "owner_field_hint": "requester"
     }
   ],

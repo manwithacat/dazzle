@@ -8,7 +8,7 @@
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
 **Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
-**Fingerprint:** `222f7442823b5bee`
+**Fingerprint:** `38ccf96f0e658adc`
 
 ## Personas (jobs)
 
@@ -21,9 +21,10 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 - **SLAWaiver** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → waiting_on_customer → escalated → resolved → closed — definitional sentence in founder brief (A X is …)
-- **Zendesk** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Email** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Intercom** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Email** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Cloud** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Zendesk** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Front** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=comma_list)
 
@@ -72,7 +73,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "222f7442823b5bee",
+  "source_sha256": "38ccf96f0e658adc",
   "personas": [
     {
       "id_hint": "agent",
@@ -134,7 +135,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Zendesk",
+      "name": "Intercom",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -148,7 +149,14 @@ Support Tickets is a customer-support system that tracks customer issues from fi
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Intercom",
+      "name": "Cloud",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Zendesk",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
