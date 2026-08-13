@@ -58,7 +58,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 1554 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 1554 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 1624 | STALE |
-| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 2003 | USED |
+| **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 2004 | USED |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 1624 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 2003 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1918 | USED |
@@ -136,6 +136,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
+> **Cycle 2004 (2026-08-13).** interesting_product invoice_ops settle_rail_evidence @0e1c6f017.
 > **Cycle 1997 (2026-08-13).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff≈26 HYGIENE_STALE_eff≈38; domain extract support_tickets+invoice_ops+hr_records; validate 3 apps green (advisory); gallery 48/48; dual_lock=0; coherence_queue=0; tip green @26bf36c89; next interesting_product (aggressive) / presentation·acceptance STALE digs.
 > **Cycle 1996 (2026-08-13).** self-audit 5/5 CLEAN end_sha 26bf36c89.
 > **Cycle 1995 (2026-08-13).** interesting_product invoice_ops form_w9_watch @26bf36c89.
