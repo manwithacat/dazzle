@@ -87,6 +87,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   onboarding packets still draft (W-9 / COI / tax / lien / ACH — cycle 2000 peer-pack;
   not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
   (PO + goods receipt + packing slip — cycle 2002 peer-pack; not packing_slip-only
+  re-stack), a **settle rail evidence** pack
+  (remittance + payment confirmation ACKs — cycle 2004 peer-pack; not single-kind
   re-stack), a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
@@ -112,7 +114,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=insurance_certificate COI on file before contractor/facility pay release — cycle 1993), a **Form W-9 watch**
   (doc_kind=form_w9 IRS W-9 / vendor TIN on file before first US settle — cycle 1995), a **compliance draft gate**
   (status=draft and onboarding kinds W-9/COI/tax/lien/ACH — cycle 2000; not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
-  (doc_kind=po_packet or goods_receipt or packing_slip — cycle 2002; not single-kind re-stack after compliance_draft_gate), a **remittance advice watch**
+  (doc_kind=po_packet or goods_receipt or packing_slip — cycle 2002; not single-kind re-stack after compliance_draft_gate), a **settle rail evidence** pack
+  (doc_kind=remittance or payment_confirmation — cycle 2004; not remittance-only or payment_confirmation-only re-stack), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -219,4 +222,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:f885fcceb6e88e279a792e14b2ebb1b33f185712d3fb948ed99c87eec20ae277 -->
+<!-- dazzle-spec-brief: sha256:ec441d23ff36b3e647cf7d8abf3b22911df4dc5353d9a3f1d11a54b5854d34f2 -->
