@@ -219,7 +219,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
 
@@ -339,7 +339,9 @@ def test_ticket_queue_email_needs_reply_trail() -> None:
     assert (
         "email_needs_reply: count(Comment where channel = email and ball_in_court = agent" in block
     )
-    region = block.split("\n  email_needs_reply:\n", 1)[1].split("\n  portal_live:", 1)[0]
+    region = block.split("\n  email_needs_reply:\n", 1)[1].split("\n  email_awaiting_customer:", 1)[
+        0
+    ]
     assert "source: Comment" in region
     assert "filter: channel = email and ball_in_court = agent and is_internal = false" in region
     assert "display: conversation" in region
@@ -437,7 +439,7 @@ def test_ticket_queue_phone_needs_reply_trail() -> None:
     assert "\n  phone_needs_reply:\n" in manager
     # Focus later prefers frustrated_needs_reply (cycle 1994); region + metric remain.
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -476,7 +478,7 @@ def test_ticket_queue_frustrated_needs_reply_trail() -> None:
     # Focus later prefers raised_needs_reply (cycle 2001); region + metric remain.
     assert "frustrated_needs_reply: count(Comment where customer_tone = frustrated" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -514,7 +516,7 @@ def test_ticket_queue_critical_needs_reply_trail() -> None:
     assert "\n  critical_needs_reply:\n" in manager
     assert "critical_needs_reply: count(Comment where escalation = critical" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -550,7 +552,7 @@ def test_ticket_queue_raised_needs_reply_trail() -> None:
     assert "\n  raised_needs_reply:\n" in manager
     assert "raised_needs_reply: count(Comment where escalation = raised" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -595,7 +597,7 @@ def test_ticket_queue_urgent_needs_reply_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  urgent_speech:\n") < block.index("\n  urgent_needs_reply:\n")
@@ -638,13 +640,13 @@ def test_ticket_queue_urgent_awaiting_customer_trail() -> None:
     assert "escalation =" not in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  urgent_awaiting_customer:\n" in manager
-    assert "urgent_awaiting_customer" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers email_awaiting_customer (cycle 2015); region + metric remain.
     assert (
         "urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer"
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  urgent_needs_reply:\n") < block.index("\n  urgent_awaiting_customer:\n")
@@ -694,7 +696,7 @@ def test_ticket_queue_frustrated_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  frustrated_needs_reply:\n") < block.index(
@@ -743,7 +745,7 @@ def test_ticket_queue_raised_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  raised_needs_reply:\n") < block.index("\n  raised_awaiting_customer:\n")
@@ -791,7 +793,7 @@ def test_ticket_queue_critical_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  critical_needs_reply:\n") < block.index(
@@ -809,6 +811,53 @@ def test_ticket_queue_critical_awaiting_customer_trail() -> None:
         and r.get("is_internal") is not True
     ]
     assert len(cac) >= 3
+
+
+def test_ticket_queue_email_awaiting_customer_trail() -> None:
+    """Cycle 2015: Zendesk/Front email still waiting on customer (channel×customer-ball).
+
+    channel=email AND ball_in_court=customer — not full email_live, not agent
+    email_needs_reply, not tone/escalation×customer re-stack.
+    """
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert (
+        "email_awaiting_customer: count(Comment where channel = email and ball_in_court = customer"
+        in block
+    )
+    region = block.split("\n  email_awaiting_customer:\n", 1)[1].split(
+        "\n  # Peer-pack conversation upgrade (cycle 1984)", 1
+    )[0]
+    assert "source: Comment" in region
+    assert "filter: channel = email and ball_in_court = customer and is_internal = false" in region
+    assert "display: conversation" in region
+    # Channel×customer-ball compound — not agent email_needs_reply, not tone/escalation.
+    assert "ball_in_court = agent" not in region
+    assert "customer_tone" not in region
+    assert "escalation" not in region
+    assert "channel = portal" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  email_awaiting_customer:\n" in manager
+    assert "email_awaiting_customer" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    assert (
+        "email_awaiting_customer: count(Comment where channel = email and ball_in_court = customer"
+        in manager
+    )
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
+        in block
+    )
+    assert block.index("\n  email_needs_reply:\n") < block.index("\n  email_awaiting_customer:\n")
+    assert block.index("\n  email_awaiting_customer:\n") < block.index("\n  portal_live:\n")
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    eac = [
+        r
+        for r in rows
+        if r.get("channel") == "email"
+        and r.get("ball_in_court") == "customer"
+        and r.get("is_internal") is not True
+    ]
+    assert len(eac) >= 3
 
 
 def test_ticket_queue_internal_collab_trail() -> None:

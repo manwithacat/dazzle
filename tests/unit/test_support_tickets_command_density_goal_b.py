@@ -46,7 +46,7 @@ def test_manager_ops_caps_attention_queues_for_fold_share() -> None:
     assert "limit: 4" in block
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation"
+        "unassigned_queue, needs_reply, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
     assert "Multi-panel support ops" in block or "multi-panel" in block.lower()
