@@ -219,7 +219,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, email_live, urgent_speech, live_conversation"
         in block
     )
 
@@ -279,12 +279,35 @@ def test_ticket_queue_phone_live_trail() -> None:
     text = APP.read_text()
     block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
     assert "phone_live: count(Comment where channel = phone" in block
-    region = block.split("\n  phone_live:\n", 1)[1].split("\n  internal_notes:", 1)[0]
+    region = block.split("\n  phone_live:\n", 1)[1].split("\n  email_live:", 1)[0]
     assert "source: Comment" in region
     assert "channel = phone" in region
     assert "display: conversation" in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  phone_live:\n" in manager
+
+
+def test_ticket_queue_email_live_trail() -> None:
+    """Cycle 1982: Zendesk/Front email-channel trail (async path)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert "email_live: count(Comment where channel = email" in block
+    region = block.split("\n  email_live:\n", 1)[1].split("\n  internal_notes:", 1)[0]
+    assert "source: Comment" in region
+    assert "filter: channel = email and is_internal = false" in region
+    assert "display: conversation" in region
+    # Pure channel filter — not tone/escalation re-stack.
+    assert "customer_tone" not in region
+    assert "escalation" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  email_live:\n" in manager
+    assert "channel = email" in manager
+    assert "email_live" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    email_public = [
+        r for r in rows if r.get("channel") == "email" and r.get("is_internal") is not True
+    ]
+    assert len(email_public) >= 3
 
 
 def test_ticket_queue_internal_collab_trail() -> None:
@@ -396,7 +419,7 @@ def test_ticket_queue_urgent_tone_trail() -> None:
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  urgent_speech:\n" in manager
     assert "urgent_speech: count(Comment where customer_tone = urgent" in manager
-    assert "urgent_speech" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers email_live (cycle 1982); region + metric remain.
     agent = text.split("workspace agent_dashboard", 1)[1].split("workspace my_tickets", 1)[0]
     assert "\n  urgent_speech:\n" in agent
     assert "urgent_speech" in agent.split("focus:", 1)[1].split("\n", 1)[0]

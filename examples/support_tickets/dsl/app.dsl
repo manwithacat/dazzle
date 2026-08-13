@@ -559,6 +559,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1969: critical escalations (escalation=critical) — P1 speech, not channel.
   # Cycle 1977: frustrated_speech (tone=frustrated only) — CSAT risk, not hot_speech OR.
   # Cycle 1979: urgent_speech (tone=urgent only) — SLA time-pressure, not hot_speech OR.
+  # Cycle 1982: email_live (channel=email only) — async email path, not chat/phone re-stack.
   queue_metrics:
     source: Ticket
     display: summary
@@ -577,6 +578,7 @@ workspace ticket_queue "Ticket Queue":
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
+      email_live: count(Comment where channel = email and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
@@ -593,6 +595,7 @@ workspace ticket_queue "Ticket Queue":
       thankful_recovery: positive
       chat_live: accent
       phone_live: warning
+      email_live: accent
       internal_notes: accent
       documents: accent
 
@@ -714,6 +717,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No phone-channel notes — chat/portal/email still carry the rest of the trail"
+
+  # Peer-pack conversation upgrade (cycle 1982): Zendesk/Front email path —
+  # channel=email public speech so agents lean into async email grain
+  # (recipe email_channel_trail; not chat/phone/tone re-stack).
+  email_live:
+    source: Comment
+    filter: channel = email and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No email-channel notes — chat/phone/portal still carry the rest of the trail"
 
   # Peer-pack conversation upgrade (cycle 1966): Zendesk/Front internal collab —
   # agent/manager side notes (is_internal) so triage stills show private handoff
@@ -842,14 +857,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
+      purpose: "Triage home — needs-reply + email path + urgent speech (channel grain)"
+      focus: media_shelf, queue_metrics, needs_reply, email_live, urgent_speech, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
+      purpose: "Triage home — needs-reply + email path + urgent speech (channel grain)"
+      focus: media_shelf, queue_metrics, needs_reply, email_live, urgent_speech, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + urgent speech + frustrated speech (tone grain)"
-      focus: media_shelf, queue_metrics, needs_reply, urgent_speech, frustrated_speech, live_conversation
+      purpose: "Triage home — needs-reply + email path + urgent speech (channel grain)"
+      focus: media_shelf, queue_metrics, needs_reply, email_live, urgent_speech, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1060,6 +1075,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No phone-channel notes for the team — chat and email still carry the trail"
 
+  # Peer-pack email_channel_trail (cycle 1982) — async email intake path.
+  email_live:
+    source: Comment
+    filter: channel = email and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No email-channel notes for the team — chat/phone/portal still carry the trail"
+
   # Peer-pack internal_collab_trail (cycle 1966) — private agent/manager handoffs
   # (is_internal) on the ops home; not another public channel filter.
   internal_notes:
@@ -1085,7 +1110,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA pressure, needs-reply, urgent/frustrated speech, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, urgent_speech, live_conversation
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, email_live, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
