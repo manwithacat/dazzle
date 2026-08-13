@@ -219,7 +219,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, chat_needs_reply, portal_needs_reply, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, phone_needs_reply, chat_needs_reply, live_conversation"
         in block
     )
 
@@ -405,7 +405,7 @@ def test_ticket_queue_chat_needs_reply_trail() -> None:
     assert "customer_tone" not in region
     manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
     assert "\n  chat_needs_reply:\n" in manager
-    assert "chat_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers phone_needs_reply (cycle 1992); region + metric remain.
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     cnr = [
         r
@@ -415,6 +415,40 @@ def test_ticket_queue_chat_needs_reply_trail() -> None:
         and r.get("is_internal") is not True
     ]
     assert len(cnr) >= 3
+
+
+def test_ticket_queue_phone_needs_reply_trail() -> None:
+    """Cycle 1992: Zendesk/Front phone waiting-on-you (channel+ball compound)."""
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert (
+        "phone_needs_reply: count(Comment where channel = phone and ball_in_court = agent" in block
+    )
+    region = block.split("\n  phone_needs_reply:\n", 1)[1].split("\n  email_live:", 1)[0]
+    assert "source: Comment" in region
+    assert "filter: channel = phone and ball_in_court = agent and is_internal = false" in region
+    assert "display: conversation" in region
+    # Compound grain — not full phone_live (missing ball) or needs_reply (missing channel).
+    assert "channel = chat" not in region
+    assert "channel = email" not in region
+    assert "channel = portal" not in region
+    assert "customer_tone" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  phone_needs_reply:\n" in manager
+    assert "phone_needs_reply" in manager.split("focus:", 1)[1].split("\n", 1)[0]
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, phone_needs_reply, chat_needs_reply, live_conversation"
+        in block
+    )
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    pnr = [
+        r
+        for r in rows
+        if r.get("channel") == "phone"
+        and r.get("ball_in_court") == "agent"
+        and r.get("is_internal") is not True
+    ]
+    assert len(pnr) >= 3
 
 
 def test_ticket_queue_internal_collab_trail() -> None:
