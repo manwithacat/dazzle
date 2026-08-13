@@ -565,6 +565,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1988: portal_needs_reply — channel=portal AND ball_in_court=agent (not full portal_live).
   # Cycle 1990: chat_needs_reply — channel=chat AND ball_in_court=agent (not full chat_live).
   # Cycle 1992: phone_needs_reply — channel=phone AND ball_in_court=agent (not full phone_live).
+  # Cycle 1994: frustrated_needs_reply — tone=frustrated AND ball_in_court=agent (not channel re-stack).
   queue_metrics:
     source: Ticket
     display: summary
@@ -579,6 +580,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
+      frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
       urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
@@ -601,6 +603,7 @@ workspace ticket_queue "Ticket Queue":
       critical_escalations: destructive
       raised_escalations: warning
       frustrated_speech: destructive
+      frustrated_needs_reply: destructive
       urgent_speech: warning
       thankful_recovery: positive
       chat_live: accent
@@ -660,6 +663,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No frustrated customer speech — CSAT-risk notes land here when tone is frustrated"
+
+  # Peer-pack conversation upgrade (cycle 1994): Intercom/Zendesk "angry and waiting
+  # on you" — customer_tone=frustrated AND ball_in_court=agent (recipe
+  # frustrated_needs_reply_trail; not full frustrated_speech or channel×ball re-stack).
+  frustrated_needs_reply:
+    source: Comment
+    filter: customer_tone = frustrated and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No frustrated notes waiting on agents — CSAT-risk speech is closed or still on the customer"
 
   # Peer-pack conversation upgrade (cycle 1979): Zendesk/Intercom SLA time-pressure —
   # customer_tone=urgent only (not frustrated OR escalation umbrella in hot_speech)
@@ -936,14 +951,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + phone waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, phone_needs_reply, chat_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + frustrated waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_needs_reply, phone_needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + phone waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, phone_needs_reply, chat_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + frustrated waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_needs_reply, phone_needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + phone waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, phone_needs_reply, chat_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + frustrated waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, frustrated_needs_reply, phone_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -996,6 +1011,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
       frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
+      frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
       urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
@@ -1011,6 +1027,7 @@ workspace manager_ops "Manager Ops":
       critical_escalations: destructive
       raised_escalations: warning
       frustrated_speech: destructive
+      frustrated_needs_reply: destructive
       urgent_speech: warning
       internal_notes: accent
       documents: accent
@@ -1123,6 +1140,16 @@ workspace manager_ops "Manager Ops":
     display: conversation
     action: comment_detail
     empty: "No frustrated customer speech for the team — CSAT-risk notes land here"
+
+  # Peer-pack frustrated_needs_reply_trail (cycle 1994) — CSAT-risk speech still on agents.
+  frustrated_needs_reply:
+    source: Comment
+    filter: customer_tone = frustrated and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No frustrated notes waiting on the team — CSAT-risk speech is closed or still on the customer"
 
   # Peer-pack urgent_tone_trail (cycle 1979) — pure urgent SLA time-pressure speech on ops.
   urgent_speech:
@@ -1238,8 +1265,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, phone waiting-on-you, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, phone_needs_reply, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, frustrated waiting-on-you, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, frustrated_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

@@ -69,7 +69,7 @@ Managers alone can delete tickets or comments.
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
 (including conversation, **needs reply**, **awaiting customer**, **hot speech**,
-**frustrated speech**, **urgent speech**, **thankful recovery**, channel paths, **internal notes**, and document volume), a **needs reply** conversation region
+**frustrated speech**, **frustrated needs reply**, **urgent speech**, **thankful recovery**, channel paths, **internal notes**, and document volume), a **needs reply** conversation region
 of customer notes whose **ball is in the agent court** (Front / Intercom "waiting
 on you" grain), an **awaiting customer** conversation region of outbound notes
 whose **ball is in the customer court** (cycle 1955 peer-pack; park these — do not
@@ -77,6 +77,7 @@ re-thrash as open agent work), a **hot speech** conversation region of
 frustrated/urgent tone or raised escalation (cycle 1940 peer-pack; not ball-only),
 a **frustrated speech** conversation region of pure `customer_tone=frustrated` notes
 (cycle 1977 peer-pack; CSAT-risk lean-in — not the hot_speech OR umbrella, not channel/escalation re-stack),
+a **frustrated needs reply** conversation region of `customer_tone=frustrated` notes whose **ball is in the agent court** (cycle 1994 peer-pack; Intercom/Zendesk "angry and waiting on you" — not full frustrated_speech or channel×ball re-stack),
 an **urgent speech** conversation region of pure `customer_tone=urgent` notes
 (cycle 1979 peer-pack; SLA time-pressure lean-in — not the hot_speech OR umbrella, not frustrated/channel/escalation re-stack),
 a **critical escalations** conversation region of `escalation=critical` P1 speech
@@ -88,10 +89,11 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, raised escalations, frustrated speech, urgent speech, internal notes, documents), SLA readiness, a **breach risk** queue
+conversation, needs reply, critical escalations, raised escalations, frustrated speech, frustrated needs reply, urgent speech, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
-**needs reply** ball (limit 4), a **chat needs reply** trail of chat notes waiting on agents
+**needs reply** ball (limit 4), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
+(limit 4), a **chat needs reply** trail of chat notes waiting on agents
 (limit 4), a **phone needs reply** trail of phone notes waiting on agents
 (limit 4) **before** a capped live conversation trail
 (limit 4) — no status funnel or secondary ticket timeline (empty_region honesty;
@@ -200,4 +202,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:7586cefb4abc030dcc4da0aa71af8bc0a3353847c316e3a6bf8d5b0683ab8aad -->
+<!-- dazzle-spec-brief: sha256:fb5c5d5b62905ba9a0083ec2e9e70a14d31cec64355d1ad32dd904b9b4f8f4cb -->
