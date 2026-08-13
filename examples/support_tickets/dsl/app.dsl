@@ -568,6 +568,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1994: frustrated_needs_reply — tone=frustrated AND ball_in_court=agent (not channel re-stack).
   # Cycle 1998: critical_needs_reply — escalation=critical AND ball_in_court=agent (not channel×ball or pure critical_escalations).
   # Cycle 2001: raised_needs_reply — escalation=raised AND ball_in_court=agent (L2 waiting-on-you; not full raised_escalations or P1 critical_needs_reply).
+  # Cycle 2003: urgent_needs_reply — tone=urgent AND ball_in_court=agent (SLA time-pressure waiting-on-you; not full urgent_speech or channel×ball).
   queue_metrics:
     source: Ticket
     display: summary
@@ -577,6 +578,7 @@ workspace ticket_queue "Ticket Queue":
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
@@ -602,6 +604,7 @@ workspace ticket_queue "Ticket Queue":
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      urgent_needs_reply: warning
       awaiting_customer: accent
       hot_speech: destructive
       critical_escalations: destructive
@@ -693,6 +696,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No urgent customer speech — SLA time-pressure notes land here when tone is urgent"
+
+  # Peer-pack conversation upgrade (cycle 2003): Front/Intercom "urgent and waiting
+  # on you" — customer_tone=urgent AND ball_in_court=agent (recipe urgent_needs_reply_trail;
+  # not full urgent_speech missing ball, not frustrated/raised/critical needs_reply, not channel×ball).
+  urgent_needs_reply:
+    source: Comment
+    filter: customer_tone = urgent and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No urgent notes waiting on agents — SLA time-pressure speech is closed or still on the customer"
 
   # Peer-pack conversation upgrade (cycle 1969): Zendesk/Service Cloud P1 speech —
   # escalation=critical only so leads lean into ARR-risk / critical path notes
@@ -981,14 +996,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      purpose: "Triage home — urgent waiting-on-you + needs-reply + critical"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      purpose: "Triage home — urgent waiting-on-you + needs-reply + critical"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + critical waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
+      purpose: "Triage home — urgent waiting-on-you + needs-reply + critical"
+      focus: media_shelf, queue_metrics, needs_reply, urgent_needs_reply, raised_needs_reply, critical_needs_reply, frustrated_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1038,6 +1053,7 @@ workspace manager_ops "Manager Ops":
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
+      urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
@@ -1056,6 +1072,7 @@ workspace manager_ops "Manager Ops":
       in_progress: accent
       conversation: accent
       needs_reply: warning
+      urgent_needs_reply: warning
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
@@ -1215,6 +1232,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No urgent customer speech for the team — SLA time-pressure notes land here"
 
+  # Peer-pack urgent_needs_reply_trail (cycle 2003) — SLA time-pressure speech still on agents.
+  urgent_needs_reply:
+    source: Comment
+    filter: customer_tone = urgent and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No urgent notes waiting on the team — SLA time-pressure speech is closed or still on the customer"
+
   # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
   chat_live:
     source: Comment
@@ -1320,7 +1347,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA pressure, needs-reply, critical waiting-on-you, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
