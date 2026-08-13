@@ -560,6 +560,7 @@ workspace finance_ops "Finance Operations":
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
+      packing_slips: count(InvoiceDocument where doc_kind = packing_slip)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -572,6 +573,7 @@ workspace finance_ops "Finance Operations":
       credit_memos: warning
       debit_memos: destructive
       vendor_statements: accent
+      packing_slips: accent
       remittances: accent
       dispute_packets: destructive
 
@@ -684,6 +686,18 @@ workspace finance_ops "Finance Operations":
     action: invoice_document_detail
     empty: "No vendor statements on file — attach period-end statements before reconcile"
 
+  # Peer-pack document upgrade (cycle 1985): Bill.com / Coupa / Tipalti packing
+  # slip watch — carrier packing slips for three-way match with PO/GRN
+  # (recipe packing_slip_watch; not goods_receipt / PO re-stack).
+  packing_slips:
+    source: InvoiceDocument
+    filter: doc_kind = packing_slip
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No packing slips on file — attach carrier packing slips for three-way match"
+
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
@@ -763,20 +777,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, vendor statement + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, vendor statement + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, vendor statement + remittance watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, vendor statement + remittance watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, packing slip + remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, vendor statement + remittance watch, draft gate, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, packing slip + remittance watch, draft gate, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -997,7 +1011,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1974: remittance advice watch — SEPA/ACH remittance covers before settle.
   # Cycle 1981: debit memo watch — vendor additional charges before settle batch.
   # Cycle 1983: vendor statement watch — period-end AP reconcile before settle.
-  purpose: "Multi-panel settlement — draft gate, remittances, vendor statements, debit memos, payment confirmations, dual attention"
+  # Cycle 1985: packing slip watch — carrier packing slips for three-way match.
+  purpose: "Multi-panel settlement — draft gate, remittances, packing slips, vendor statements, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1026,6 +1041,7 @@ workspace pay_desk "Pay Desk":
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
+      packing_slips: count(InvoiceDocument where doc_kind = packing_slip)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1035,6 +1051,7 @@ workspace pay_desk "Pay Desk":
       credit_memos: warning
       debit_memos: destructive
       vendor_statements: accent
+      packing_slips: accent
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1095,6 +1112,18 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No vendor statements — attach period-end statements before reconcile"
+
+  # Peer-pack packing_slip_watch (cycle 1985): Bill.com / Coupa / Tipalti packing
+  # slips on the settle desk — carrier packing slips for three-way match with
+  # PO/GRN (not goods_receipt re-stack).
+  packing_slips:
+    source: InvoiceDocument
+    filter: doc_kind = packing_slip
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No packing slips — attach carrier packing slips for three-way match"
 
   # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
   # Tipalti put payment confirmations on the settle desk so controllers lean
@@ -1158,11 +1187,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft gate, remittances, vendor statements, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, packing slips, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft gate, remittances, vendor statements, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, packing slips, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, composition, ready_to_pay
 
   settle_board:
     source: Invoice

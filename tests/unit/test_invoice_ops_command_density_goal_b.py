@@ -36,7 +36,7 @@ def test_pay_desk_caps_attention_for_fold_share() -> None:
     block = _pay_desk_block()
     assert "limit: 3" in block
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, vendor_statements, debit_memos, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, packing_slips, vendor_statements, "
         "composition, ready_to_pay" in block
     )
     assert "Multi-panel settlement" in block or "multi-panel" in block.lower()
