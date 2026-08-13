@@ -138,7 +138,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 > **Cycle 2004 (2026-08-13).** interesting_product invoice_ops settle_rail_evidence @0e1c6f017.
 > **Cycle 1997 (2026-08-13).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff≈26 HYGIENE_STALE_eff≈38; domain extract support_tickets+invoice_ops+hr_records; validate 3 apps green (advisory); gallery 48/48; dual_lock=0; coherence_queue=0; tip green @26bf36c89; next interesting_product (aggressive) / presentation·acceptance STALE digs.
-> **Cycle 1996 (2026-08-13).** self-audit 5/5 CLEAN end_sha 26bf36c89.
+> **Cycle 2011 (2026-08-13).** self-audit 5/5 CLEAN end_sha 5d9566832 (window 26bf36c89..HEAD; interesting_product product digs claim↔diff↔receipt↔pytest green).
 > **Cycle 1995 (2026-08-13).** interesting_product invoice_ops form_w9_watch @26bf36c89.
 > **Cycle 1994 (2026-08-13).** interesting_product support frustrated_needs_reply @c575d690c.
 > **Cycle 1976 (2026-08-12).** capability-sweep domain+validate+gallery dual_lock=0 @10bad6550.
