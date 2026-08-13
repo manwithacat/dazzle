@@ -563,6 +563,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1984: portal_live (channel=portal only) — self-serve portal path, not email re-stack.
   # Cycle 1986: email_needs_reply — channel=email AND ball_in_court=agent (not full email_live).
   # Cycle 1988: portal_needs_reply — channel=portal AND ball_in_court=agent (not full portal_live).
+  # Cycle 1990: chat_needs_reply — channel=chat AND ball_in_court=agent (not full chat_live).
   queue_metrics:
     source: Ticket
     display: summary
@@ -580,6 +581,7 @@ workspace ticket_queue "Ticket Queue":
       urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
       thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
       chat_live: count(Comment where channel = chat and is_internal = false)
+      chat_needs_reply: count(Comment where channel = chat and ball_in_court = agent and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
       email_live: count(Comment where channel = email and is_internal = false)
       email_needs_reply: count(Comment where channel = email and ball_in_court = agent and is_internal = false)
@@ -600,6 +602,7 @@ workspace ticket_queue "Ticket Queue":
       urgent_speech: warning
       thankful_recovery: positive
       chat_live: accent
+      chat_needs_reply: warning
       phone_live: warning
       email_live: accent
       email_needs_reply: warning
@@ -714,6 +717,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No live chat notes — portal/email/phone still carry the rest of the trail"
+
+  # Peer-pack conversation upgrade (cycle 1990): Intercom/Front "chat waiting
+  # on you" — channel=chat AND ball_in_court=agent (recipe chat_needs_reply_trail;
+  # not full chat_live or ball-only needs_reply re-stack).
+  chat_needs_reply:
+    source: Comment
+    filter: channel = chat and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No chat notes waiting on agents — live chat is closed or still on the customer"
 
   # Peer-pack conversation upgrade (cycle 1963): Zendesk phone path —
   # channel=phone public speech so agents lean into voice-channel grain
@@ -902,14 +917,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + chat/portal waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, chat_needs_reply, portal_needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + chat/portal waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, chat_needs_reply, portal_needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + portal/email waiting-on-you"
-      focus: media_shelf, queue_metrics, needs_reply, portal_needs_reply, email_needs_reply, live_conversation
+      purpose: "Triage home — needs-reply + chat/portal waiting-on-you"
+      focus: media_shelf, queue_metrics, needs_reply, chat_needs_reply, portal_needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1110,6 +1125,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No live chat notes for the team — other channels still carry the trail"
 
+  # Peer-pack chat_needs_reply_trail (cycle 1990) — chat still waiting on agents.
+  chat_needs_reply:
+    source: Comment
+    filter: channel = chat and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No chat notes waiting on the team — live chat is closed or still on the customer"
+
   # Peer-pack phone_channel_trail (cycle 1963) — voice intake path.
   phone_live:
     source: Comment
@@ -1184,8 +1209,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, needs-reply, urgent/frustrated speech, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, portal_needs_reply, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, needs-reply, chat waiting-on-you, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, chat_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

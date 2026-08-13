@@ -82,7 +82,7 @@ an **urgent speech** conversation region of pure `customer_tone=urgent` notes
 a **critical escalations** conversation region of `escalation=critical` P1 speech
 (cycle 1969 peer-pack; non-channel ARR-risk grain), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
 (cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
-(cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), an **email path** conversation region of channel=email notes (cycle 1982 peer-pack; async email grain — not chat/phone/tone re-stack), an **email needs reply** conversation region of channel=email notes whose **ball is in the agent court** (cycle 1986 peer-pack; Front/Intercom "email waiting on you" — not full email_live or ball-only needs_reply re-stack), a **portal path** conversation region of channel=portal notes (cycle 1984 peer-pack; self-serve portal grain — not email/chat/phone/tone re-stack), a **portal needs reply** conversation region of channel=portal notes whose **ball is in the agent court** (cycle 1988 peer-pack; Intercom/Zendesk "portal waiting on you" — not full portal_live or ball-only needs_reply re-stack), an **internal collab** conversation region of `is_internal` agent/manager notes (cycle 1966 peer-pack; non-channel handoff grain), a **live conversation** trail of newest
+(cycle 1958 peer-pack; not heat re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), an **email path** conversation region of channel=email notes (cycle 1982 peer-pack; async email grain — not chat/phone/tone re-stack), an **email needs reply** conversation region of channel=email notes whose **ball is in the agent court** (cycle 1986 peer-pack; Front/Intercom "email waiting on you" — not full email_live or ball-only needs_reply re-stack), a **portal path** conversation region of channel=portal notes (cycle 1984 peer-pack; self-serve portal grain — not email/chat/phone/tone re-stack), a **portal needs reply** conversation region of channel=portal notes whose **ball is in the agent court** (cycle 1988 peer-pack; Intercom/Zendesk "portal waiting on you" — not full portal_live or ball-only needs_reply re-stack), a **chat needs reply** conversation region of channel=chat notes whose **ball is in the agent court** (cycle 1990 peer-pack; Intercom/Front "chat waiting on you" — not full chat_live or ball-only needs_reply re-stack), an **internal collab** conversation region of `is_internal` agent/manager notes (cycle 1966 peer-pack; non-channel handoff grain), a **live conversation** trail of newest
 notes, a **composition** queue of open SLA waivers (named breach titles), a review
 queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
@@ -91,7 +91,7 @@ stream, not a flat list).
 conversation, needs reply, critical escalations, raised escalations, frustrated speech, urgent speech, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
-**needs reply** ball (limit 4), a **portal needs reply** trail of portal notes waiting on agents
+**needs reply** ball (limit 4), a **chat needs reply** trail of chat notes waiting on agents
 (limit 4) **before** a capped live conversation trail
 (limit 4) — no status funnel or secondary ticket timeline (empty_region honesty;
 avoids pilot scroll resource storms). Ticket rows carry an **SLA** state
@@ -199,4 +199,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:a6e1e05db9a4c69bd0eabb1d1c69daeb0fa4c1d3e3141b446db8f04521c1526f -->
+<!-- dazzle-spec-brief: sha256:118e9e8d5275f88ad32c201800ba01e0819085db86b7c7758b61b1ebcde105c5 -->
