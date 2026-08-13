@@ -3,7 +3,7 @@
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "62b54f0b95d5b0c9",
+  "source_sha256": "222f7442823b5bee",
   "personas": [
     {
       "id_hint": "agent",
@@ -62,6 +62,34 @@
         "resolved",
         "closed"
       ],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Zendesk",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Email",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Intercom",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Front",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     },
     {
@@ -190,9 +218,6 @@
     "Avoid",
     "Console",
     "Dashboard",
-    "Email",
-    "Front",
-    "Intercom",
     "JavaScript",
     "Lead",
     "Message",
@@ -203,7 +228,6 @@
     "Tickets",
     "Url",
     "Waiver",
-    "Zendesk",
     "agent",
     "associated",
     "auditable",
