@@ -326,7 +326,7 @@ entity InvoiceNote "Invoice Note":
 # discussion trail — not line composition alone as the only "document" surface.
 
 entity InvoiceDocument "Invoice Document":
-  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, vendor statement, packing slip, ACH authorization, wire instructions, lien waiver, insurance certificate (COI), PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
+  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, vendor statement, packing slip, ACH authorization, wire instructions, lien waiver, insurance certificate (COI), Form W-9, PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
   domain: accounts_payable
   patterns: documentation, audit_trail
   display_field: headline
@@ -351,7 +351,10 @@ entity InvoiceDocument "Invoice Document":
   # before construction or facility pay release (not wire/ACH/tax re-stack).
   # Goal B document (cycle 1993): insurance_certificate — COI on file before
   # contractor/facility pay release (not lien waiver / wire / ACH re-stack).
-  doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, insurance_certificate, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
+  # Goal B document (cycle 1995): form_w9 — IRS Form W-9 / vendor TIN on file
+  # before first US settle (Bill.com / Melio / Tipalti; not tax_certificate
+  # reverse-charge / COI / ACH re-stack).
+  doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, insurance_certificate, form_w9, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)

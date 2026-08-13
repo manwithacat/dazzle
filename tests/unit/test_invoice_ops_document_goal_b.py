@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, insurance_certificate, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, insurance_certificate, form_w9, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "insurance_certificates, packing_slips, composition, past_due, awaiting_approval" in ops
+        "form_w9s, packing_slips, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,7 +160,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, "
         "packing_slips, composition, ready_to_pay" in desk
     )
 
@@ -379,7 +379,7 @@ def test_finance_ops_and_pay_desk_insurance_certificate_watch() -> None:
     """Cycle 1993: Bill.com/Melio COI before contractor/facility pay release."""
     ops = _workspace_block("finance_ops")
     assert "\n  insurance_certificates:\n" in ops
-    region = ops.split("\n  insurance_certificates:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  insurance_certificates:\n", 1)[1].split("\n  form_w9s:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: doc_kind = insurance_certificate" in region
     assert "display: queue" in region
@@ -390,11 +390,10 @@ def test_finance_ops_and_pay_desk_insurance_certificate_watch() -> None:
         "insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)"
         in ops
     )
-    assert "insurance_certificates" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers form_w9s (cycle 1995); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  insurance_certificates:\n" in desk
     assert "filter: doc_kind = insurance_certificate" in desk
-    assert "insurance_certificates" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert (
         "insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)"
         in desk
@@ -406,6 +405,33 @@ def test_finance_ops_and_pay_desk_insurance_certificate_watch() -> None:
         assert len(str(r.get("headline") or "")) >= 16
     assert any(r.get("status") == "published" for r in coi)
     assert any(r.get("status") == "draft" for r in coi)
+
+
+def test_finance_ops_and_pay_desk_form_w9_watch() -> None:
+    """Cycle 1995: Bill.com/Melio/Tipalti Form W-9 before first US settle."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  form_w9s:\n" in ops
+    region = ops.split("\n  form_w9s:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = form_w9" in region
+    assert "display: queue" in region
+    assert "doc_kind = tax_certificate" not in region
+    assert "doc_kind = insurance_certificate" not in region
+    assert "doc_kind = ach_authorization" not in region
+    assert "form_w9s: count(InvoiceDocument where doc_kind = form_w9)" in ops
+    assert "form_w9s" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  form_w9s:\n" in desk
+    assert "filter: doc_kind = form_w9" in desk
+    assert "form_w9s" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert "form_w9s: count(InvoiceDocument where doc_kind = form_w9)" in desk
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    w9 = [r for r in rows if r.get("doc_kind") == "form_w9"]
+    assert len(w9) >= 2
+    for r in w9:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert any(r.get("status") == "published" for r in w9)
+    assert any(r.get("status") == "draft" for r in w9)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -669,6 +695,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, "
         "composition, ready_to_pay" in desk
     )

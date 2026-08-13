@@ -565,6 +565,7 @@ workspace finance_ops "Finance Operations":
       wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)
       lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)
       insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
+      form_w9s: count(InvoiceDocument where doc_kind = form_w9)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -582,6 +583,7 @@ workspace finance_ops "Finance Operations":
       wire_instructions: warning
       lien_waivers: warning
       insurance_certificates: warning
+      form_w9s: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -755,6 +757,18 @@ workspace finance_ops "Finance Operations":
     action: invoice_document_detail
     empty: "No insurance certificates on file — attach COI before contractor pay release"
 
+  # Peer-pack document upgrade (cycle 1995): Bill.com / Melio / Tipalti Form
+  # W-9 watch — IRS W-9 / vendor TIN on file before first US settle (recipe
+  # form_w9_watch; not tax_certificate reverse-charge / COI / ACH re-stack).
+  form_w9s:
+    source: InvoiceDocument
+    filter: doc_kind = form_w9
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No Form W-9 on file — collect vendor TIN before first US settle"
+
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
@@ -834,20 +848,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, W-9 + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, W-9 + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, W-9 + remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, W-9 + remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, COI + remittance watch, draft gate, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, W-9 + remittance watch, draft gate, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1073,7 +1087,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1989: wire instructions watch — bank wire details before first wire release.
   # Cycle 1991: lien waiver watch — conditional/final lien waivers before pay release.
   # Cycle 1993: insurance certificate (COI) watch — proof of insurance before contractor pay.
-  purpose: "Multi-panel settlement — draft gate, remittances, COI, packing slips, payment confirmations, dual attention"
+  # Cycle 1995: Form W-9 watch — IRS W-9 / vendor TIN before first US settle.
+  purpose: "Multi-panel settlement — draft gate, remittances, W-9, packing slips, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1107,6 +1122,7 @@ workspace pay_desk "Pay Desk":
       wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)
       lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)
       insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
+      form_w9s: count(InvoiceDocument where doc_kind = form_w9)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1121,6 +1137,7 @@ workspace pay_desk "Pay Desk":
       wire_instructions: warning
       lien_waivers: warning
       insurance_certificates: warning
+      form_w9s: warning
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1242,6 +1259,18 @@ workspace pay_desk "Pay Desk":
     action: invoice_document_detail
     empty: "No insurance certificates — attach COI before contractor pay release"
 
+  # Peer-pack form_w9_watch (cycle 1995): Bill.com / Melio / Tipalti Form W-9
+  # on the settle desk — IRS W-9 / vendor TIN before first US settle (not
+  # tax_certificate reverse-charge / COI / ACH re-stack).
+  form_w9s:
+    source: InvoiceDocument
+    filter: doc_kind = form_w9
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No Form W-9 — collect vendor TIN before first US settle"
+
   # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
   # Tipalti put payment confirmations on the settle desk so controllers lean
   # into batch proof (not draft_packet or tax_cert re-stack).
@@ -1304,11 +1333,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft gate, remittances, COI, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, W-9, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft gate, remittances, COI, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, W-9, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, form_w9s, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice

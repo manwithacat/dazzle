@@ -103,7 +103,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=ach_authorization signed ACH/SEPA mandate before first settle — cycle 1987), a **wire instructions watch**
   (doc_kind=wire_instructions bank wire details before first high-value wire — cycle 1989), a **lien waiver watch**
   (doc_kind=lien_waiver conditional/final lien waivers before construction or facility pay release — cycle 1991), an **insurance certificate watch**
-  (doc_kind=insurance_certificate COI on file before contractor/facility pay release — cycle 1993), a **remittance advice watch**
+  (doc_kind=insurance_certificate COI on file before contractor/facility pay release — cycle 1993), a **Form W-9 watch**
+  (doc_kind=form_w9 IRS W-9 / vendor TIN on file before first US settle — cycle 1995), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -210,4 +211,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:ac2baf2e1571659eccb07f1e35dc6fb12a3148785ee9f60d17dcd8b780ef7f9c -->
+<!-- dazzle-spec-brief: sha256:be93393cea71b26a14d88cc7538c28c555bc9cbca381d7336b54d92ac4840fe5 -->
