@@ -105,7 +105,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (Form W-9 + ACH authorization — cycle 2025 peer-pack; not form_w9-only tax_identity
   or ACH-only bank_rail re-stack), a **closeout rail** pack
   (lien waiver + payment confirmation — cycle 2030 peer-pack; not lien-only vendor_risk
-  or payment_confirmation-only settle_rail re-stack), a **remittance advice watch** of SEPA/ACH covers
+  or payment_confirmation-only settle_rail re-stack), a **remediation rail** pack
+  (dispute packet + credit memo — cycle 2033 peer-pack; not dispute|debit dispute_rail
+  or credit|debit adjustment_rail re-stack), a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
   ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
@@ -139,7 +141,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=insurance_certificate or lien_waiver — cycle 2018; not insurance-only or lien-only re-stack after tax_identity / compliance_draft_gate), a **dispute rail** pack
   (doc_kind=dispute_packet or debit_memo — cycle 2021; not dispute-only or debit-only re-stack after adjustment_rail), a **first-pay rail** pack
   (doc_kind=form_w9 or ach_authorization — cycle 2025; not form_w9-only tax_identity or ACH-only bank_rail re-stack), a **closeout rail** pack
-  (doc_kind=lien_waiver or payment_confirmation — cycle 2030; not lien-only vendor_risk or payment_confirmation-only settle_rail re-stack), a **remittance advice watch**
+  (doc_kind=lien_waiver or payment_confirmation — cycle 2030; not lien-only vendor_risk or payment_confirmation-only settle_rail re-stack), a **remediation rail** pack
+  (doc_kind=dispute_packet or credit_memo — cycle 2033; not dispute|debit dispute_rail or credit|debit adjustment_rail re-stack), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -246,4 +249,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:df059b5d037650d03c8a4e050e1cc7a347c65bf7970be0f45e3b251c6235738d -->
+<!-- dazzle-spec-brief: sha256:6e604a8bddc20a513b1b19742f978a2fd1fc4a2d8b3c26f631ccf216a237a462 -->
