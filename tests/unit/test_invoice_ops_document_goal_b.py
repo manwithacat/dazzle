@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, lien_waiver, insurance_certificate, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "lien_waivers, packing_slips, composition, past_due, awaiting_approval" in ops
+        "insurance_certificates, packing_slips, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,7 +160,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, lien_waivers, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, "
         "packing_slips, composition, ready_to_pay" in desk
     )
 
@@ -288,7 +288,7 @@ def test_finance_ops_and_pay_desk_packing_slip_watch() -> None:
     assert "doc_kind = goods_receipt" not in region
     assert "doc_kind = po_packet" not in region
     assert "packing_slips: count(InvoiceDocument where doc_kind = packing_slip)" in ops
-    # Focus later prefers lien_waivers (cycle 1991); region + metric remain.
+    # Focus later prefers insurance_certificates (cycle 1993); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  packing_slips:\n" in desk
     assert "filter: doc_kind = packing_slip" in desk
@@ -312,7 +312,7 @@ def test_finance_ops_and_pay_desk_ach_authorization_watch() -> None:
     assert "doc_kind = remittance" not in region
     assert "doc_kind = payment_confirmation" not in region
     assert "ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)" in ops
-    # Focus later prefers lien_waivers (cycle 1991); region + metric remain.
+    # Focus later prefers insurance_certificates (cycle 1993); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  ach_authorizations:\n" in desk
     assert "filter: doc_kind = ach_authorization" in desk
@@ -336,7 +336,7 @@ def test_finance_ops_and_pay_desk_wire_instructions_watch() -> None:
     assert "doc_kind = ach_authorization" not in region
     assert "doc_kind = payment_confirmation" not in region
     assert "wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)" in ops
-    # Focus later prefers lien_waivers (cycle 1991); region + metric remain.
+    # Focus later prefers insurance_certificates (cycle 1993); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  wire_instructions:\n" in desk
     assert "filter: doc_kind = wire_instructions" in desk
@@ -354,18 +354,17 @@ def test_finance_ops_and_pay_desk_lien_waiver_watch() -> None:
     """Cycle 1991: Bill.com/Melio lien waivers before construction pay release."""
     ops = _workspace_block("finance_ops")
     assert "\n  lien_waivers:\n" in ops
-    region = ops.split("\n  lien_waivers:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  lien_waivers:\n", 1)[1].split("\n  insurance_certificates:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: doc_kind = lien_waiver" in region
     assert "display: queue" in region
     assert "doc_kind = wire_instructions" not in region
     assert "doc_kind = ach_authorization" not in region
     assert "lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)" in ops
-    assert "lien_waivers" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers insurance_certificates (cycle 1993); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  lien_waivers:\n" in desk
     assert "filter: doc_kind = lien_waiver" in desk
-    assert "lien_waivers" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert "lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)" in desk
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     lw = [r for r in rows if r.get("doc_kind") == "lien_waiver"]
@@ -374,6 +373,39 @@ def test_finance_ops_and_pay_desk_lien_waiver_watch() -> None:
         assert len(str(r.get("headline") or "")) >= 16
     assert any(r.get("status") == "published" for r in lw)
     assert any(r.get("status") == "draft" for r in lw)
+
+
+def test_finance_ops_and_pay_desk_insurance_certificate_watch() -> None:
+    """Cycle 1993: Bill.com/Melio COI before contractor/facility pay release."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  insurance_certificates:\n" in ops
+    region = ops.split("\n  insurance_certificates:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = insurance_certificate" in region
+    assert "display: queue" in region
+    assert "doc_kind = lien_waiver" not in region
+    assert "doc_kind = wire_instructions" not in region
+    assert "doc_kind = ach_authorization" not in region
+    assert (
+        "insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)"
+        in ops
+    )
+    assert "insurance_certificates" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  insurance_certificates:\n" in desk
+    assert "filter: doc_kind = insurance_certificate" in desk
+    assert "insurance_certificates" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert (
+        "insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)"
+        in desk
+    )
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    coi = [r for r in rows if r.get("doc_kind") == "insurance_certificate"]
+    assert len(coi) >= 2
+    for r in coi:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert any(r.get("status") == "published" for r in coi)
+    assert any(r.get("status") == "draft" for r in coi)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -637,6 +669,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, "
         "composition, ready_to_pay" in desk
     )

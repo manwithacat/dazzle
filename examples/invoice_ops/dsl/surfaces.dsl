@@ -564,6 +564,7 @@ workspace finance_ops "Finance Operations":
       ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)
       wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)
       lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)
+      insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -580,6 +581,7 @@ workspace finance_ops "Finance Operations":
       ach_authorizations: warning
       wire_instructions: warning
       lien_waivers: warning
+      insurance_certificates: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -740,6 +742,19 @@ workspace finance_ops "Finance Operations":
     action: invoice_document_detail
     empty: "No lien waivers on file — attach conditional or final waivers before pay release"
 
+  # Peer-pack document upgrade (cycle 1993): Bill.com / Melio / Tipalti
+  # insurance certificate (COI) watch — proof of insurance on file before
+  # contractor/facility pay release (recipe insurance_certificate_watch; not
+  # lien_waiver / wire / ACH re-stack).
+  insurance_certificates:
+    source: InvoiceDocument
+    filter: doc_kind = insurance_certificate
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No insurance certificates on file — attach COI before contractor pay release"
+
   # Goal B document composition AFTER cover wall — named remittance /
   # credit memo / PO packets so hero stills also read packet titles in queue.
   composition:
@@ -819,20 +834,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, draft gate, lien + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, draft gate, lien + remittance watch, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, draft gate, lien + remittance watch, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, draft gate, lien + remittance watch, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, draft gate, COI + remittance watch, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, lien + remittance watch, draft gate, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, COI + remittance watch, draft gate, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1057,7 +1072,8 @@ workspace pay_desk "Pay Desk":
   # Cycle 1987: ACH authorization watch — signed ACH auth before first settle.
   # Cycle 1989: wire instructions watch — bank wire details before first wire release.
   # Cycle 1991: lien waiver watch — conditional/final lien waivers before pay release.
-  purpose: "Multi-panel settlement — draft gate, remittances, lien waivers, packing slips, payment confirmations, dual attention"
+  # Cycle 1993: insurance certificate (COI) watch — proof of insurance before contractor pay.
+  purpose: "Multi-panel settlement — draft gate, remittances, COI, packing slips, payment confirmations, dual attention"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1090,6 +1106,7 @@ workspace pay_desk "Pay Desk":
       ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)
       wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)
       lien_waivers: count(InvoiceDocument where doc_kind = lien_waiver)
+      insurance_certificates: count(InvoiceDocument where doc_kind = insurance_certificate)
       remittances: count(InvoiceDocument where doc_kind = remittance)
     tones:
       documents: accent
@@ -1103,6 +1120,7 @@ workspace pay_desk "Pay Desk":
       ach_authorizations: warning
       wire_instructions: warning
       lien_waivers: warning
+      insurance_certificates: warning
       remittances: accent
 
   # Peer-pack draft_packet_release_gate (cycle 1957) — publish remittance /
@@ -1212,6 +1230,18 @@ workspace pay_desk "Pay Desk":
     action: invoice_document_detail
     empty: "No lien waivers — attach conditional or final waivers before pay release"
 
+  # Peer-pack insurance_certificate_watch (cycle 1993): Bill.com / Melio / Tipalti
+  # COI on the settle desk — proof of insurance before contractor/facility pay
+  # release (not lien_waiver / wire / ACH re-stack).
+  insurance_certificates:
+    source: InvoiceDocument
+    filter: doc_kind = insurance_certificate
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No insurance certificates — attach COI before contractor pay release"
+
   # Peer-pack payment_confirmation_trail (cycle 1961): Bill.com / Melio /
   # Tipalti put payment confirmations on the settle desk so controllers lean
   # into batch proof (not draft_packet or tax_cert re-stack).
@@ -1274,11 +1304,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — draft gate, remittances, lien waivers, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, COI, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — draft gate, remittances, lien waivers, dual attention"
-      focus: settle_metrics, document_pulse, draft_packets, remittances, lien_waivers, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — draft gate, remittances, COI, dual attention"
+      focus: settle_metrics, document_pulse, draft_packets, remittances, insurance_certificates, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice
