@@ -91,7 +91,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (remittance + payment confirmation ACKs — cycle 2004 peer-pack; not single-kind
   re-stack), an **adjustment rail evidence** pack
   (credit memo + debit memo AP adjustments — cycle 2006 peer-pack; not credit-only
-  or debit-only re-stack), a **remittance advice watch** of SEPA/ACH covers
+  or debit-only re-stack), a **bank rail evidence** pack
+  (ACH authorization + wire instructions — cycle 2008 peer-pack; not ACH-only or
+  wire-only re-stack), a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
   ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
@@ -118,7 +120,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (status=draft and onboarding kinds W-9/COI/tax/lien/ACH — cycle 2000; not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
   (doc_kind=po_packet or goods_receipt or packing_slip — cycle 2002; not single-kind re-stack after compliance_draft_gate), a **settle rail evidence** pack
   (doc_kind=remittance or payment_confirmation — cycle 2004; not remittance-only or payment_confirmation-only re-stack), an **adjustment rail evidence** pack
-  (doc_kind=credit_memo or debit_memo — cycle 2006; not credit-only or debit-only re-stack after settle_rail), a **remittance advice watch**
+  (doc_kind=credit_memo or debit_memo — cycle 2006; not credit-only or debit-only re-stack after settle_rail), a **bank rail evidence** pack
+  (doc_kind=ach_authorization or wire_instructions — cycle 2008; not ACH-only or wire-only re-stack), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -225,4 +228,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:37b2b438a0ce61fc37e9e2b1e68e0d4616123532d30da22e81c5c3bb9fb81f85 -->
+<!-- dazzle-spec-brief: sha256:679cae9bd0edee8e8daafd3e69f9e55105696d5bd6c106a7f4f8e77b567959a4 -->

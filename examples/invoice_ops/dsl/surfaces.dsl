@@ -570,6 +570,7 @@ workspace finance_ops "Finance Operations":
       match_evidence: count(InvoiceDocument where doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip)
       settle_rail: count(InvoiceDocument where doc_kind = remittance or doc_kind = payment_confirmation)
       adjustment_rail: count(InvoiceDocument where doc_kind = credit_memo or doc_kind = debit_memo)
+      bank_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = wire_instructions)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -592,6 +593,7 @@ workspace finance_ops "Finance Operations":
       match_evidence: accent
       settle_rail: positive
       adjustment_rail: warning
+      bank_rail: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -658,6 +660,19 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No adjustment rail — attach credit and debit memos before settle net"
+
+  # Peer-pack document upgrade (cycle 2008): Bill.com / Melio / Tipalti bank rail
+  # evidence — ACH authorization + wire instructions payment-method pack in one
+  # compound filter (recipe bank_rail_evidence; not ACH-only or wire-only re-stack
+  # after adjustment_rail / settle_rail / compliance_draft_gate).
+  bank_rail:
+    source: InvoiceDocument
+    filter: doc_kind = ach_authorization or doc_kind = wire_instructions
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No bank rail — attach ACH auth and wire instructions before first settle"
 
   # Peer-pack document upgrade (cycle 1965): Bill.com / Coupa / Tipalti PO
   # packet watch — signed PO cover before approve/ops (recipe po_packet_watch;
@@ -908,20 +923,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, adjustment rail, settle rail, three-way match evidence, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, bank rail, adjustment rail, settle rail, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, adjustment rail, settle rail, three-way match evidence, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, bank rail, adjustment rail, settle rail, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, adjustment rail, settle rail, three-way match evidence, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, bank rail, adjustment rail, settle rail, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, adjustment rail, settle rail, three-way match evidence, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, bank rail, adjustment rail, settle rail, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, adjustment rail, settle rail, three-way match evidence, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, bank rail, adjustment rail, settle rail, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1192,6 +1207,7 @@ workspace pay_desk "Pay Desk":
       pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)
       settle_rail: count(InvoiceDocument where doc_kind = remittance or doc_kind = payment_confirmation)
       adjustment_rail: count(InvoiceDocument where doc_kind = credit_memo or doc_kind = debit_memo)
+      bank_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = wire_instructions)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
@@ -1211,6 +1227,7 @@ workspace pay_desk "Pay Desk":
       pay_confirms: positive
       settle_rail: positive
       adjustment_rail: warning
+      bank_rail: warning
       credit_memos: warning
       debit_memos: destructive
       vendor_statements: accent
@@ -1282,6 +1299,18 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No adjustment rail — attach credit and debit memos before settle net"
+
+  # Peer-pack bank_rail_evidence (cycle 2008): Bill.com / Melio / Tipalti ACH auth
+  # + wire instructions payment-method pack before first settle — not ACH-only
+  # or wire-only re-stack after adjustment_rail / settle_rail.
+  bank_rail:
+    source: InvoiceDocument
+    filter: doc_kind = ach_authorization or doc_kind = wire_instructions
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No bank rail — attach ACH auth and wire instructions before first settle"
 
   # Peer-pack remittance_advice_watch (cycle 1974): Bill.com / Melio remittance
   # advice on the settle desk so controllers lean into SEPA/ACH covers before
@@ -1465,11 +1494,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — adjustment rail, settle rail, three-way match evidence, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — bank rail, adjustment rail, settle rail, remittances"
+      focus: settle_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
     as finance_admin:
-      purpose: "Multi-panel settlement — adjustment rail, settle rail, three-way match evidence, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — bank rail, adjustment rail, settle rail, remittances"
+      focus: settle_metrics, document_pulse, draft_packets, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice
