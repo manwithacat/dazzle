@@ -53,7 +53,7 @@ def test_manager_ops_media_shelf_first() -> None:
     # critical_needs_reply on the manager focus strip). media_shelf stays first.
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation"
+        "unassigned_queue, needs_reply, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, critical_needs_reply, live_conversation"
         in block
     )
 

@@ -81,6 +81,7 @@ a **frustrated needs reply** conversation region of `customer_tone=frustrated` n
 an **urgent speech** conversation region of pure `customer_tone=urgent` notes
 (cycle 1979 peer-pack; SLA time-pressure lean-in — not the hot_speech OR umbrella, not frustrated/channel/escalation re-stack),
 an **urgent needs reply** conversation region of `customer_tone=urgent` notes whose **ball is in the agent court** (cycle 2003 peer-pack; Front/Intercom "urgent and waiting on you" — not full urgent_speech or channel×ball re-stack),
+an **urgent awaiting customer** conversation region of `customer_tone=urgent` notes whose **ball is in the customer court** (cycle 2005 peer-pack; Front/Intercom "urgent still waiting on customer" — not full awaiting_customer or agent urgent_needs_reply re-stack),
 a **critical escalations** conversation region of `escalation=critical` P1 speech
 (cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised needs reply** conversation region of `escalation=raised` notes whose **ball is in the agent court** (cycle 2001 peer-pack; Zendesk/Service Cloud "L2 waiting on you" — not full raised_escalations or P1 critical_needs_reply re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
 (cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
@@ -90,11 +91,12 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, urgent speech, urgent needs reply, internal notes, documents), SLA readiness, a **breach risk** queue
+conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, urgent speech, urgent needs reply, urgent awaiting customer, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 **needs reply** ball (limit 4), an **urgent needs reply** trail of SLA time-pressure notes waiting on agents
-(limit 4; cycle 2003), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
+(limit 4; cycle 2003), an **urgent awaiting customer** trail of SLA time-pressure notes parked on customers
+(limit 4; cycle 2005), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
 (limit 4), a **chat needs reply** trail of chat notes waiting on agents
 (limit 4), a **phone needs reply** trail of phone notes waiting on agents
 (limit 4) **before** a capped live conversation trail
@@ -204,4 +206,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:2a257ea349530b3867c331032417e97e2fed610af0a94a6aeffaac77c3c341f3 -->
+<!-- dazzle-spec-brief: sha256:a8a0bde201643bb7bcf5f50bd4c1926355725a4c557c7fe38f2a0e1a0512305d -->
