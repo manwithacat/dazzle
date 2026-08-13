@@ -89,7 +89,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (PO + goods receipt + packing slip — cycle 2002 peer-pack; not packing_slip-only
   re-stack), a **settle rail evidence** pack
   (remittance + payment confirmation ACKs — cycle 2004 peer-pack; not single-kind
-  re-stack), a **remittance advice watch** of SEPA/ACH covers
+  re-stack), an **adjustment rail evidence** pack
+  (credit memo + debit memo AP adjustments — cycle 2006 peer-pack; not credit-only
+  or debit-only re-stack), a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
   ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
@@ -115,7 +117,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=form_w9 IRS W-9 / vendor TIN on file before first US settle — cycle 1995), a **compliance draft gate**
   (status=draft and onboarding kinds W-9/COI/tax/lien/ACH — cycle 2000; not form_w9-only or all-draft re-stack), a **three-way match evidence** pack
   (doc_kind=po_packet or goods_receipt or packing_slip — cycle 2002; not single-kind re-stack after compliance_draft_gate), a **settle rail evidence** pack
-  (doc_kind=remittance or payment_confirmation — cycle 2004; not remittance-only or payment_confirmation-only re-stack), a **remittance advice watch**
+  (doc_kind=remittance or payment_confirmation — cycle 2004; not remittance-only or payment_confirmation-only re-stack), an **adjustment rail evidence** pack
+  (doc_kind=credit_memo or debit_memo — cycle 2006; not credit-only or debit-only re-stack after settle_rail), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -222,4 +225,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:ec441d23ff36b3e647cf7d8abf3b22911df4dc5353d9a3f1d11a54b5854d34f2 -->
+<!-- dazzle-spec-brief: sha256:37b2b438a0ce61fc37e9e2b1e68e0d4616123532d30da22e81c5c3bb9fb81f85 -->
