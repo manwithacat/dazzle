@@ -572,6 +572,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 2005: urgent_awaiting_customer — tone=urgent AND ball_in_court=customer (SLA time-pressure parked on customer; not full awaiting_customer or agent needs_reply).
   # Cycle 2007: frustrated_awaiting_customer — tone=frustrated AND ball_in_court=customer (CSAT-risk parked on customer; not full awaiting_customer or agent frustrated_needs_reply).
   # Cycle 2009: raised_awaiting_customer — escalation=raised AND ball_in_court=customer (L2 handoff parked on customer; not full awaiting_customer or agent raised_needs_reply).
+  # Cycle 2013: critical_awaiting_customer — escalation=critical AND ball_in_court=customer (P1 parked on customer; not full awaiting_customer or agent critical_needs_reply).
   queue_metrics:
     source: Ticket
     display: summary
@@ -585,6 +586,7 @@ workspace ticket_queue "Ticket Queue":
       urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
       frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
       raised_awaiting_customer: count(Comment where escalation = raised and ball_in_court = customer and is_internal = false)
+      critical_awaiting_customer: count(Comment where escalation = critical and ball_in_court = customer and is_internal = false)
       awaiting_customer: count(Comment where ball_in_court = customer)
       hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
@@ -613,13 +615,14 @@ workspace ticket_queue "Ticket Queue":
       urgent_needs_reply: warning
       urgent_awaiting_customer: warning
       frustrated_awaiting_customer: destructive
+      raised_awaiting_customer: warning
+      critical_awaiting_customer: destructive
       awaiting_customer: accent
       hot_speech: destructive
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
       raised_needs_reply: warning
-      raised_awaiting_customer: warning
       frustrated_speech: destructive
       frustrated_needs_reply: destructive
       urgent_speech: warning
@@ -766,6 +769,19 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No critical escalations waiting on agents — P1 speech is closed or still on the customer"
+
+  # Peer-pack conversation upgrade (cycle 2013): Zendesk/Service Cloud P1 still waiting
+  # on customer — escalation=critical AND ball_in_court=customer (recipe
+  # critical_awaiting_customer_trail; not full awaiting_customer missing escalation, not
+  # agent critical_needs_reply, not raised/frustrated/urgent awaiting re-stack).
+  critical_awaiting_customer:
+    source: Comment
+    filter: escalation = critical and ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No critical escalations waiting on customers — P1 handoffs are closed or still on us"
 
   # Peer-pack conversation upgrade (cycle 2001): Zendesk/Service Cloud L2 still waiting
   # on you — escalation=raised AND ball_in_court=agent (recipe raised_needs_reply_trail;
@@ -1008,6 +1024,10 @@ workspace ticket_queue "Ticket Queue":
         caption: "L2 raised escalations with ball in customer court — nudge handoffs; not agent L2 waiting-on-you"
         icon: "arrow-up-from-line"
         state: warning
+      - title: "Critical awaiting customer"
+        caption: "P1 critical escalations with ball in customer court — ARR-risk nudge; not agent P1 waiting-on-you"
+        icon: "siren"
+        state: destructive
       - title: "Hot speech"
         caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
         icon: "flame"
@@ -1055,14 +1075,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — raised/frustrated awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, live_conversation
+      purpose: "Triage home — critical/raised awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation
     as manager:
-      purpose: "Triage home — raised/frustrated awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, live_conversation
+      purpose: "Triage home — critical/raised awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation
     as admin:
-      purpose: "Triage home — raised/frustrated awaiting-customer + waiting-on-you + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, live_conversation
+      purpose: "Triage home — critical/raised awaiting-customer + waiting-on-you + needs-reply"
+      focus: media_shelf, queue_metrics, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1116,6 +1136,7 @@ workspace manager_ops "Manager Ops":
       urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
       frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
       raised_awaiting_customer: count(Comment where escalation = raised and ball_in_court = customer and is_internal = false)
+      critical_awaiting_customer: count(Comment where escalation = critical and ball_in_court = customer and is_internal = false)
       critical_escalations: count(Comment where escalation = critical and is_internal = false)
       critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
       raised_escalations: count(Comment where escalation = raised and is_internal = false)
@@ -1138,6 +1159,7 @@ workspace manager_ops "Manager Ops":
       urgent_awaiting_customer: warning
       frustrated_awaiting_customer: destructive
       raised_awaiting_customer: warning
+      critical_awaiting_customer: destructive
       critical_escalations: destructive
       critical_needs_reply: destructive
       raised_escalations: warning
@@ -1246,6 +1268,16 @@ workspace manager_ops "Manager Ops":
     display: conversation
     action: comment_detail
     empty: "No critical escalations waiting on the team — P1 speech is closed or still on the customer"
+
+  # Peer-pack critical_awaiting_customer_trail (cycle 2013) — P1 critical handoffs parked on customers.
+  critical_awaiting_customer:
+    source: Comment
+    filter: escalation = critical and ball_in_court = customer and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No critical escalations waiting on customers — P1 handoffs are closed or still on the team"
 
   # Peer-pack raised_needs_reply_trail (cycle 2001) — L2 raised speech still on agents.
   raised_needs_reply:
@@ -1441,8 +1473,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA pressure, raised/frustrated awaiting-customer, needs-reply, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, live_conversation
+      purpose: "Multi-panel support ops — SLA pressure, critical/raised awaiting-customer, needs-reply, dual queues"
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
