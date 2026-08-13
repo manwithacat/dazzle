@@ -83,6 +83,7 @@ an **urgent speech** conversation region of pure `customer_tone=urgent` notes
 an **urgent needs reply** conversation region of `customer_tone=urgent` notes whose **ball is in the agent court** (cycle 2003 peer-pack; Front/Intercom "urgent and waiting on you" — not full urgent_speech or channel×ball re-stack),
 an **urgent awaiting customer** conversation region of `customer_tone=urgent` notes whose **ball is in the customer court** (cycle 2005 peer-pack; Front/Intercom "urgent still waiting on customer" — not full awaiting_customer or agent urgent_needs_reply re-stack),
 an **frustrated awaiting customer** conversation region of `customer_tone=frustrated` notes whose **ball is in the customer court** (cycle 2007 peer-pack; Intercom/Zendesk "angry still waiting on customer" — not full awaiting_customer or agent frustrated_needs_reply re-stack),
+an **raised awaiting customer** conversation region of `escalation=raised` notes whose **ball is in the customer court** (cycle 2009 peer-pack; Zendesk/Service Cloud "L2 still waiting on customer" — not full awaiting_customer or agent raised_needs_reply re-stack),
 a **critical escalations** conversation region of `escalation=critical` P1 speech
 (cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised needs reply** conversation region of `escalation=raised` notes whose **ball is in the agent court** (cycle 2001 peer-pack; Zendesk/Service Cloud "L2 waiting on you" — not full raised_escalations or P1 critical_needs_reply re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
 (cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
@@ -92,13 +93,14 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, internal notes, documents), SLA readiness, a **breach risk** queue
+conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, internal notes, documents), SLA readiness, a **breach risk** queue
 (at_risk / breached tickets, limit 4), dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 **needs reply** ball (limit 4), an **urgent needs reply** trail of SLA time-pressure notes waiting on agents
 (limit 4; cycle 2003), an **urgent awaiting customer** trail of SLA time-pressure notes parked on customers
 (limit 4; cycle 2005), a **frustrated awaiting customer** trail of CSAT-risk notes parked on customers
-(limit 4; cycle 2007), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
+(limit 4; cycle 2007), a **raised awaiting customer** trail of L2 notes parked on customers
+(limit 4; cycle 2009), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
 (limit 4), a **chat needs reply** trail of chat notes waiting on agents
 (limit 4), a **phone needs reply** trail of phone notes waiting on agents
 (limit 4) **before** a capped live conversation trail
@@ -208,4 +210,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:90012b0859a13e67e21bb3bb928d2bf9bbff83e00523908606fc17a23c013c73 -->
+<!-- dazzle-spec-brief: sha256:6daa0f44d78420e31443f07e7ff9b9041f5fd43677517af1faed33b58cc6e48b -->

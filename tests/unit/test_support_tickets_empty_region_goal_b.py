@@ -90,7 +90,7 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     assert "display: timeline" not in block
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, raised_needs_reply, live_conversation"
+        "unassigned_queue, needs_reply, raised_awaiting_customer, frustrated_awaiting_customer, urgent_awaiting_customer, urgent_needs_reply, live_conversation"
     ) in block
     assert "as manager:" in block
     assert "breach_risk:" in block
