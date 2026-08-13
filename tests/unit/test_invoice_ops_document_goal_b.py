@@ -57,7 +57,7 @@ def test_invoice_document_entity_is_named_packet_composition() -> None:
     assert "display_field: headline" in text
     assert "headline: str(200) required" in text
     assert (
-        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, po_packet, tax_certificate, "
+        "doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, po_packet, tax_certificate, "
         "payment_confirmation, goods_receipt, dispute_packet]=remittance" in text
     )
     assert "status: enum[draft, published, archived]=draft" in text
@@ -123,7 +123,7 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert ops.index("\n  goods_receipts:\n") < ops.index("composition:")
     assert (
         "focus: packet_covers, ops_metrics, document_pulse, draft_packets, remittances, "
-        "ach_authorizations, packing_slips, composition, past_due, awaiting_approval" in ops
+        "wire_instructions, packing_slips, composition, past_due, awaiting_approval" in ops
     )
 
     # List / hub expose amount + due + vendor (peer above_fold)
@@ -160,7 +160,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert desk.index("draft_packets:") < desk.index("composition:")
     assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, wire_instructions, "
         "packing_slips, composition, ready_to_pay" in desk
     )
 
@@ -288,7 +288,7 @@ def test_finance_ops_and_pay_desk_packing_slip_watch() -> None:
     assert "doc_kind = goods_receipt" not in region
     assert "doc_kind = po_packet" not in region
     assert "packing_slips: count(InvoiceDocument where doc_kind = packing_slip)" in ops
-    # Focus later prefers ach_authorizations (cycle 1987); region + metric remain.
+    # Focus later prefers wire_instructions (cycle 1989); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  packing_slips:\n" in desk
     assert "filter: doc_kind = packing_slip" in desk
@@ -305,18 +305,17 @@ def test_finance_ops_and_pay_desk_ach_authorization_watch() -> None:
     """Cycle 1987: Bill.com/Melio ACH authorization before first settle."""
     ops = _workspace_block("finance_ops")
     assert "\n  ach_authorizations:\n" in ops
-    region = ops.split("\n  ach_authorizations:\n", 1)[1].split("\n  composition:", 1)[0]
+    region = ops.split("\n  ach_authorizations:\n", 1)[1].split("\n  wire_instructions:", 1)[0]
     assert "source: InvoiceDocument" in region
     assert "filter: doc_kind = ach_authorization" in region
     assert "display: queue" in region
     assert "doc_kind = remittance" not in region
     assert "doc_kind = payment_confirmation" not in region
     assert "ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)" in ops
-    assert "ach_authorizations" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    # Focus later prefers wire_instructions (cycle 1989); region + metric remain.
     desk = _workspace_block("pay_desk")
     assert "\n  ach_authorizations:\n" in desk
     assert "filter: doc_kind = ach_authorization" in desk
-    assert "ach_authorizations" in desk.split("focus:", 1)[1].split("\n", 1)[0]
     assert "ach_authorizations: count(InvoiceDocument where doc_kind = ach_authorization)" in desk
     rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
     aa = [r for r in rows if r.get("doc_kind") == "ach_authorization"]
@@ -324,6 +323,32 @@ def test_finance_ops_and_pay_desk_ach_authorization_watch() -> None:
     for r in aa:
         assert len(str(r.get("headline") or "")) >= 16
     assert any(r.get("status") == "published" for r in aa)
+
+
+def test_finance_ops_and_pay_desk_wire_instructions_watch() -> None:
+    """Cycle 1989: Bill.com/Melio wire instructions before first high-value wire."""
+    ops = _workspace_block("finance_ops")
+    assert "\n  wire_instructions:\n" in ops
+    region = ops.split("\n  wire_instructions:\n", 1)[1].split("\n  composition:", 1)[0]
+    assert "source: InvoiceDocument" in region
+    assert "filter: doc_kind = wire_instructions" in region
+    assert "display: queue" in region
+    assert "doc_kind = ach_authorization" not in region
+    assert "doc_kind = payment_confirmation" not in region
+    assert "wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)" in ops
+    assert "wire_instructions" in ops.split("focus:", 1)[1].split("\n", 1)[0]
+    desk = _workspace_block("pay_desk")
+    assert "\n  wire_instructions:\n" in desk
+    assert "filter: doc_kind = wire_instructions" in desk
+    assert "wire_instructions" in desk.split("focus:", 1)[1].split("\n", 1)[0]
+    assert "wire_instructions: count(InvoiceDocument where doc_kind = wire_instructions)" in desk
+    rows = [json.loads(line) for line in DOC_SEEDS.read_text().splitlines() if line.strip()]
+    wi = [r for r in rows if r.get("doc_kind") == "wire_instructions"]
+    assert len(wi) >= 2
+    for r in wi:
+        assert len(str(r.get("headline") or "")) >= 16
+    assert any(r.get("status") == "published" for r in wi)
+    assert any(r.get("status") == "draft" for r in wi)
 
 
 def test_invoice_document_list_dual_open_and_invoice_hub() -> None:
@@ -587,6 +612,6 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, document_pulse, draft_packets, remittances, ach_authorizations, packing_slips, "
+        "focus: settle_metrics, document_pulse, draft_packets, remittances, wire_instructions, packing_slips, "
         "composition, ready_to_pay" in desk
     )

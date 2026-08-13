@@ -326,7 +326,7 @@ entity InvoiceNote "Invoice Note":
 # discussion trail — not line composition alone as the only "document" surface.
 
 entity InvoiceDocument "Invoice Document":
-  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, vendor statement, packing slip, ACH authorization, PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
+  intent: "A named AP document on an Invoice — remittance advice, credit/debit memo, vendor statement, packing slip, ACH authorization, wire instructions, PO packet, tax certificate, payment confirmation, goods receipt, or dispute packet buyers scan above the discussion trail"
   domain: accounts_payable
   patterns: documentation, audit_trail
   display_field: headline
@@ -345,7 +345,9 @@ entity InvoiceDocument "Invoice Document":
   # three-way match with PO/GRN (not goods_receipt re-stack).
   # Goal B document (cycle 1987): ach_authorization — signed ACH auth before
   # first SEPA/ACH settle (Bill.com / Melio / Tipalti pay-path).
-  doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
+  # Goal B document (cycle 1989): wire_instructions — bank wire details packet
+  # before first high-value wire release (not ACH mandate / pay confirm re-stack).
+  doc_kind: enum[remittance, credit_memo, debit_memo, vendor_statement, packing_slip, ach_authorization, wire_instructions, po_packet, tax_certificate, payment_confirmation, goods_receipt, dispute_packet]=remittance
   body: text
   status: enum[draft, published, archived]=draft
   author: str(120)
