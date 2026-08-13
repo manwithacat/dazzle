@@ -561,6 +561,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 1979: urgent_speech (tone=urgent only) — SLA time-pressure, not hot_speech OR.
   # Cycle 1982: email_live (channel=email only) — async email path, not chat/phone re-stack.
   # Cycle 1984: portal_live (channel=portal only) — self-serve portal path, not email re-stack.
+  # Cycle 1986: email_needs_reply — channel=email AND ball_in_court=agent (not full email_live).
   queue_metrics:
     source: Ticket
     display: summary
@@ -580,6 +581,7 @@ workspace ticket_queue "Ticket Queue":
       chat_live: count(Comment where channel = chat and is_internal = false)
       phone_live: count(Comment where channel = phone and is_internal = false)
       email_live: count(Comment where channel = email and is_internal = false)
+      email_needs_reply: count(Comment where channel = email and ball_in_court = agent and is_internal = false)
       portal_live: count(Comment where channel = portal and is_internal = false)
       internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
@@ -598,6 +600,7 @@ workspace ticket_queue "Ticket Queue":
       chat_live: accent
       phone_live: warning
       email_live: accent
+      email_needs_reply: warning
       portal_live: accent
       internal_notes: accent
       documents: accent
@@ -732,6 +735,18 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "No email-channel notes — chat/phone/portal still carry the rest of the trail"
+
+  # Peer-pack conversation upgrade (cycle 1986): Front/Intercom "email waiting
+  # on you" — channel=email AND ball_in_court=agent (recipe email_needs_reply_trail;
+  # not full email_live or ball-only needs_reply re-stack).
+  email_needs_reply:
+    source: Comment
+    filter: channel = email and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No email notes waiting on agents — outbound email is closed or still on the customer"
 
   # Peer-pack conversation upgrade (cycle 1984): Zendesk/Intercom portal path —
   # channel=portal public speech so agents lean into self-serve portal grain
@@ -872,14 +887,14 @@ workspace ticket_queue "Ticket Queue":
 
   ux:
     as agent:
-      purpose: "Triage home — needs-reply + portal path + email path (channel grain)"
-      focus: media_shelf, queue_metrics, needs_reply, portal_live, email_live, live_conversation
+      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
+      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
     as manager:
-      purpose: "Triage home — needs-reply + portal path + email path (channel grain)"
-      focus: media_shelf, queue_metrics, needs_reply, portal_live, email_live, live_conversation
+      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
+      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
     as admin:
-      purpose: "Triage home — needs-reply + portal path + email path (channel grain)"
-      focus: media_shelf, queue_metrics, needs_reply, portal_live, email_live, live_conversation
+      purpose: "Triage home — needs-reply + email waiting-on-you + portal path"
+      focus: media_shelf, queue_metrics, needs_reply, email_needs_reply, portal_live, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1100,6 +1115,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No email-channel notes for the team — chat/phone/portal still carry the trail"
 
+  # Peer-pack email_needs_reply_trail (cycle 1986) — email still waiting on agents.
+  email_needs_reply:
+    source: Comment
+    filter: channel = email and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No email notes waiting on the team — outbound email is closed or still on the customer"
+
   # Peer-pack portal_channel_trail (cycle 1984) — self-serve portal intake path.
   portal_live:
     source: Comment
@@ -1135,7 +1160,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA pressure, needs-reply, urgent/frustrated speech, dual queues"
-      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, portal_live, live_conversation
+      focus: media_shelf, team_metrics, breach_risk, critical_queue, unassigned_queue, needs_reply, email_needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
