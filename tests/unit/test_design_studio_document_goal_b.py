@@ -61,7 +61,8 @@ def test_review_desk_declares_composition_after_dual_attention() -> None:
     assert block.index("draft_queue:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: review_load, awaiting_review, draft_queue, composition, live_conversation" in block
+        "focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation"
+        in block
     )
 
 

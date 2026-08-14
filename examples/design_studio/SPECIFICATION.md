@@ -76,7 +76,9 @@ records, and that grant is itself an explicit, auditable declaration.
   thumbs above fold), brand swatch wall (logo + Primary/Secondary/Accent palette
   chips — peer Figma/Bynder identity, not name-only queues), and active campaign
   queue (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog).
-- **Review Desk** — multi-panel review home (command_density + document):
+- **Review Desk** — multi-panel review home (media + command_density + document):
+  in-review creative pixel wall first (status=review Asset preview_url grid —
+  cycle 2048 peer Frame.io/Figma review_pixels_wall, not media_shelf re-stack),
   review-load metrics (including document + conversation counts), dual attention
   (awaiting-review + draft queues), design-document composition, then live critique
   trail (Feedback copy), recently approved, and pipeline kanban.
@@ -151,4 +153,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:f4b6cdf203b20a84e3ffe7f776639cc5ddbd59fc066c80c7e248c917890764c7 -->
+<!-- dazzle-spec-brief: sha256:7d006f070147922faee5c501b4fd19a65cd16f74cc559769af3ba770f4ff7b54 -->

@@ -47,19 +47,22 @@ def test_studio_dashboard_dual_attention_before_conversation() -> None:
 
 
 def test_review_desk_dual_attention_before_conversation() -> None:
-    """Reviewer home: awaiting + draft dual attention before critique trail."""
+    """Reviewer home: review pixels then dual attention before critique trail."""
     block = _review_desk_block()
+    assert "review_pixels:" in block
     assert "review_load:" in block
     assert "awaiting_review:" in block
     assert "draft_queue:" in block
     assert "live_conversation:" in block
+    assert block.index("review_pixels:") < block.index("review_load:")
     assert block.index("review_load:") < block.index("awaiting_review:")
     assert block.index("awaiting_review:") < block.index("draft_queue:")
     assert block.index("draft_queue:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
     assert (
-        "focus: review_load, awaiting_review, draft_queue, composition, live_conversation" in block
+        "focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation"
+        in block
     )
 
 
