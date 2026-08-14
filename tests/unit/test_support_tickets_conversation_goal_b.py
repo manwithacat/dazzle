@@ -77,7 +77,7 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     assert "display: conversation" in discussion
     assert "show: Comment" in discussion
     assert (
-        "columns: content, author, customer_tone, channel, escalation, ball_in_court, sla_pressure, created_at, is_internal"
+        "columns: content, author, customer_tone, channel, escalation, ball_in_court, sla_pressure, case_priority, created_at, is_internal"
         in discussion
     )
     # is_internal is orient-only (not queue meta thrash column lead).
@@ -86,6 +86,8 @@ def test_ticket_hub_discussion_is_content_first_not_internal_meta() -> None:
     assert discussion.index("channel") < discussion.index("is_internal")
     assert discussion.index("escalation") < discussion.index("is_internal")
     assert discussion.index("ball_in_court") < discussion.index("is_internal")
+    assert discussion.index("case_priority") < discussion.index("is_internal")
+    assert discussion.index("sla_pressure") < discussion.index("case_priority")
 
 
 def test_user_hub_comments_uses_conversation_chrome() -> None:
@@ -220,7 +222,7 @@ def test_ticket_queue_hot_speech_before_live_trail() -> None:
         < live
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
 
@@ -440,7 +442,7 @@ def test_ticket_queue_phone_needs_reply_trail() -> None:
     assert "\n  phone_needs_reply:\n" in manager
     # Focus later prefers frustrated_needs_reply (cycle 1994); region + metric remain.
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -479,7 +481,7 @@ def test_ticket_queue_frustrated_needs_reply_trail() -> None:
     # Focus later prefers raised_needs_reply (cycle 2001); region + metric remain.
     assert "frustrated_needs_reply: count(Comment where customer_tone = frustrated" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -517,7 +519,7 @@ def test_ticket_queue_critical_needs_reply_trail() -> None:
     assert "\n  critical_needs_reply:\n" in manager
     assert "critical_needs_reply: count(Comment where escalation = critical" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -553,7 +555,7 @@ def test_ticket_queue_raised_needs_reply_trail() -> None:
     assert "\n  raised_needs_reply:\n" in manager
     assert "raised_needs_reply: count(Comment where escalation = raised" in manager
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
@@ -598,7 +600,7 @@ def test_ticket_queue_urgent_needs_reply_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  urgent_speech:\n") < block.index("\n  urgent_needs_reply:\n")
@@ -647,7 +649,7 @@ def test_ticket_queue_urgent_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  urgent_needs_reply:\n") < block.index("\n  urgent_awaiting_customer:\n")
@@ -697,7 +699,7 @@ def test_ticket_queue_frustrated_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  frustrated_needs_reply:\n") < block.index(
@@ -746,7 +748,7 @@ def test_ticket_queue_raised_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  raised_needs_reply:\n") < block.index("\n  raised_awaiting_customer:\n")
@@ -794,7 +796,7 @@ def test_ticket_queue_critical_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  critical_needs_reply:\n") < block.index(
@@ -845,7 +847,7 @@ def test_ticket_queue_email_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  email_needs_reply:\n") < block.index("\n  email_awaiting_customer:\n")
@@ -893,7 +895,7 @@ def test_ticket_queue_chat_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  email_awaiting_customer:\n") < block.index(
@@ -943,7 +945,7 @@ def test_ticket_queue_phone_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  chat_awaiting_customer:\n") < block.index(
@@ -993,7 +995,7 @@ def test_ticket_queue_portal_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  needs_reply:\n") < block.index("\n  portal_awaiting_customer:\n")
@@ -1043,7 +1045,7 @@ def test_ticket_queue_thankful_needs_reply_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  needs_reply:\n") < block.index("\n  thankful_needs_reply:\n")
@@ -1093,7 +1095,7 @@ def test_ticket_queue_thankful_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  thankful_needs_reply:\n") < block.index(
@@ -1151,7 +1153,7 @@ def test_ticket_queue_breach_needs_reply_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  needs_reply:\n") < block.index("\n  breach_needs_reply:\n")
@@ -1209,7 +1211,7 @@ def test_ticket_queue_breach_awaiting_customer_trail() -> None:
         in manager
     )
     assert (
-        "focus: media_shelf, queue_metrics, needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
         in block
     )
     assert block.index("\n  needs_reply:\n") < block.index("\n  breach_awaiting_customer:\n")
@@ -1351,3 +1353,61 @@ def test_ticket_queue_urgent_tone_trail() -> None:
     # Pure tone grain must not be only critical re-stack.
     pure = [r for r in urgent_public if r.get("escalation") in (None, "none")]
     assert len(pure) >= 1
+
+
+def test_comment_declares_case_priority() -> None:
+    """Cycle 2040: denormalized ticket priority on speech for priority×ball grain."""
+    text = APP.read_text()
+    block = text.split('entity Comment "Comment":', 1)[1].split("entity ", 1)[0]
+    assert "case_priority: enum[low,medium,high,critical]=medium" in block
+    assert "case_priority" in block.split("fitness:", 1)[1].split("\n\n", 1)[0]
+
+
+def test_ticket_queue_priority_needs_reply_trail() -> None:
+    """Cycle 2040: Zendesk/Front high-priority speech waiting-on-you (priority×ball).
+
+    case_priority high|critical AND ball_in_court=agent — not Ticket open_queue
+    priority rows, not ball-only needs_reply, not escalation×ball critical_needs_reply,
+    not sla_pressure breach_needs_reply, not tone×ball re-stack.
+    """
+    text = APP.read_text()
+    block = text.split("workspace ticket_queue", 1)[1].split("workspace manager_ops", 1)[0]
+    assert (
+        "priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = agent"
+        in block
+    )
+    region = block.split("\n  priority_needs_reply:\n", 1)[1].split(
+        "\n  # Peer-pack conversation upgrade (cycle 2032)", 1
+    )[0]
+    assert "source: Comment" in region
+    assert (
+        "filter: (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false"
+        in region
+    )
+    assert "display: conversation" in region
+    # Priority×ball — not SLA-pressure, not escalation, not tone, not channel.
+    assert "sla_pressure" not in region
+    assert "escalation" not in region
+    assert "customer_tone" not in region
+    assert "channel =" not in region
+    manager = text.split("workspace manager_ops", 1)[1].split("workspace agent_dashboard", 1)[0]
+    assert "\n  priority_needs_reply:\n" in manager
+    assert (
+        "priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical)"
+        in manager
+    )
+    assert (
+        "focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation"
+        in block
+    )
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    pnr = [
+        r
+        for r in rows
+        if r.get("case_priority") in {"high", "critical"}
+        and r.get("ball_in_court") == "agent"
+        and r.get("is_internal") is not True
+    ]
+    assert len(pnr) >= 3
+    # All seeds carry case_priority
+    assert all("case_priority" in r for r in rows)
