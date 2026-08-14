@@ -2124,6 +2124,9 @@ workspace agent_console "Agent Console":
       count: count(Comment)
     empty: "No comments for this agent"
 
+  # Open work pull queue (product surface). #1304 keeps agent_tickets (all
+  # statuses) for 1-hop e2e; this open-only edit queue is the manager/agent
+  # desk — not a twin card dump of the same open plate.
   agent_priority_queue:
     source: Ticket
     filter: assigned_to = current_context and status != closed
@@ -2131,24 +2134,6 @@ workspace agent_console "Agent Console":
     limit: 15
     display: queue
     action: ticket_edit
-    empty: "No open tickets for this agent"
-
-  agent_comment_trail:
-    source: Comment
-    filter: ticket.assigned_to = current_context
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: comment_detail
-    empty: "No comments on this agent's tickets"
-
-  agent_ticket_cards:
-    source: Ticket
-    filter: assigned_to = current_context and status != closed
-    sort: priority desc
-    limit: 12
-    display: queue
-    action: ticket_detail
     empty: "No open tickets for this agent"
 
   # Framework artefact coverage dogfood (cycle 1813): display: progress +
@@ -2181,6 +2166,23 @@ workspace agent_console "Agent Console":
     aggregate:
       count: count(Ticket)
     empty: "No tickets for this agent"
+
+  # Goal B empty_region_honesty (cycle 2067): recipe agent_console_twin_queue_prune
+  # — drop twin open-ticket cards + twin comment timeline (agent_ticket_cards /
+  # agent_comment_trail). Peer Zendesk/Front agent inspectors show one open
+  # plate + one trail under the people selector, not triple ticket dumps or
+  # dual timelines that scroll as empty theater. #1304/#1305 keep agent_tickets
+  # + agent_ticket_comments + bar/progress/funnel coverage below fold.
+  ux:
+    as manager:
+      purpose: "One open plate + one comment trail under agent selector — no twin dumps"
+      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
+    as agent:
+      purpose: "One open plate + one comment trail under agent selector — no twin dumps"
+      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
+    as admin:
+      purpose: "One open plate + one comment trail under agent selector — no twin dumps"
+      focus: agent_priority_queue, agent_ticket_comments, agent_lifecycle_progress, agent_category_chart
 
 # Goal B org_structure (cycle 1847 + 2056): peer support tools (Zendesk /
 # Front / Intercom) show L1 frontline vs L2 escalation people density for

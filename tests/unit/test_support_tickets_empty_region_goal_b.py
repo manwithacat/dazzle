@@ -77,6 +77,30 @@ def test_agent_console_hosts_progress_and_activity_feed_coverage() -> None:
     assert "current_context" in block
 
 
+def test_agent_console_omits_twin_open_queue_and_comment_trail() -> None:
+    """Cycle 2067 empty_region_honesty: recipe agent_console_twin_queue_prune.
+
+    Peer Zendesk/Front agent inspectors: one open plate + one comment trail under
+    the people selector — not twin open-ticket cards or dual comment timelines.
+    Keep #1304 agent_tickets + agent_ticket_comments and coverage displays.
+    """
+    block = _workspace_block("agent_console")
+    assert "agent_tickets:" in block
+    assert "agent_ticket_comments:" in block
+    assert "agent_priority_queue:" in block
+    assert "agent_ticket_cards:" not in block
+    assert "agent_comment_trail:" not in block
+    # Single timeline (agent_ticket_comments) — not twin trails.
+    assert block.count("display: timeline") == 1
+    assert (
+        "focus: agent_priority_queue, agent_ticket_comments, "
+        "agent_lifecycle_progress, agent_category_chart" in block
+    )
+    assert "as manager:" in block
+    assert "as agent:" in block
+    assert "as admin:" in block
+
+
 def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     """Manager Ops: dual queues + docs + conversation — not funnel/trail thrash."""
     block = _workspace_block("manager_ops")

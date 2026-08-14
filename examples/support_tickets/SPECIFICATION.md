@@ -144,10 +144,12 @@ activity dumps — empty_region honesty).
 queues, one case-history timeline, and how-it-works guidance (no bar-chart
 theater or duplicate open/timeline dumps).
 The **Agent Console** — shared by administrators, managers, and agents — lets
-you pick an agent and see their tickets, comments, comparison charts, lifecycle
-progress, comment activity feed, status funnel, priority queue, comment trail,
-and open ticket cards (framework display coverage under context_selector —
-funnel/progress/feed live here, not on Manager Ops / Agent Dashboard heroes).
+you pick an agent and see **one open priority plate**, **one comment timeline**,
+lifecycle progress, category chart, and (below fold) full ticket list + coverage
+displays under context_selector (funnel/progress/feed/bar charts live here, not
+on Manager Ops / Agent Dashboard heroes). Cycle 2067 `agent_console_twin_queue_prune`
+drops twin open-ticket cards and a second comment trail — peer Zendesk/Front
+inspectors are one plate + one trail, not scroll theater.
 
 ## How work flows through it
 
@@ -226,4 +228,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:a5fafe0aecdd75ee0ac699f800c24c95a2595b2bc4fc5d3fe2a965cead4f9a99 -->
+<!-- dazzle-spec-brief: sha256:b704bc899d63ca5a32302596d3025488af4cef945dc7ee207e6981143f489b9b -->
