@@ -49,10 +49,28 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "dept_mix:" not in block
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
-    assert (
-        "focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
-        in block
-    )
+    # Cycle 2057: focus ≤4 (fold honesty) — regions remain; secondary not eager.
+    assert "focus: team_pulse, office_sites, remote_flex, by_department" in block
+
+
+def test_starters_desk_omits_twin_person_cards() -> None:
+    """Cycle 2057: BambooHR onboarding desk — one starter queue, not twin Person dumps."""
+    block = _workspace_block("starters_desk")
+    assert "recent_people:" in block
+    assert "employment_trail:" in block
+    assert "starter_cards:" not in block
+    assert "focus: starter_pulse, recent_people, employment_trail" in block
+    assert block.index("recent_people:") < block.index("employment_trail:")
+
+
+def test_active_staff_omits_twin_grid_dump() -> None:
+    """Cycle 2057: one active queue + hire trail — not active_queue + active_grid twin."""
+    block = _workspace_block("active_staff")
+    assert "active_queue:" in block
+    assert "hire_trail:" in block
+    assert "active_grid:" not in block
+    assert "focus: headcount_pulse, active_queue, hire_trail" in block
+    assert block.index("active_queue:") < block.index("hire_trail:")
 
 
 def test_hr_records_keeps_bar_chart_for_coverage() -> None:

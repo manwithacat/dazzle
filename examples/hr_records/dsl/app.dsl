@@ -1537,12 +1537,15 @@ workspace my_team "My Team":
     empty: "No team documents yet — attach an offer or promo letter on a report"
 
   ux:
+    # Cycle 2057 empty_region: focus ≤4 (staff_directory 1950 lesson) — keep
+    # office/remote density + dual org boards eager; location/reporting/docs/
+    # notes remain regions but not focus-eager fold storms.
     as manager:
-      purpose: "Multi-panel team — office/remote density + level/dept/location + documents before conversation trail"
-      focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel team — office/remote density + level/dept boards before secondary placement and notes"
+      focus: team_pulse, office_sites, remote_flex, by_department
     as hr_admin:
-      purpose: "Multi-panel org coaching — office/remote density + level/dept/location + documents before notes"
-      focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel org coaching — office/remote density + level/dept boards before secondary placement and notes"
+      focus: team_pulse, office_sites, remote_flex, by_department
 
   # Conversation trail after dual attention org boards + documents.
   live_conversation:
@@ -1583,8 +1586,11 @@ workspace my_team "My Team":
 
 
 # Seventh product workspace: HR starters / onboarding desk.
+# Cycle 2057 empty_region (recipe hr_desk_twin_queue_prune): drop starter_cards
+# twin of recent_people — peer BambooHR/Workday put one onboarding queue + hire
+# trail, not two Person dumps with the same empty (support people_desk twin prune).
 workspace starters_desk "New Starters":
-  purpose: "HR desk for recent joiners — headcount pulse and onboarding queue"
+  purpose: "HR desk for recent joiners — pulse, one onboarding queue, hire trail (no twin starter cards)"
   access: persona(hr_admin)
 
   starter_pulse:
@@ -1597,27 +1603,27 @@ workspace starters_desk "New Starters":
     tones:
       people: accent
 
+  # Single onboarding pull queue (capped for fold share with hire trail).
   recent_people:
     source: Person
+    sort: started_at desc
     display: queue
-    limit: 25
-    action: person_detail
-    empty: "No people on record"
-
-  # Work-surface utility: starter cards are an onboarding pull queue (pair with recent_people).
-  starter_cards:
-    source: Person
-    display: queue
-    limit: 20
+    limit: 8
     action: person_detail
     empty: "No people on record"
 
   employment_trail:
     source: Employment
     display: timeline
-    limit: 15
+    limit: 12
     empty: "No employment rows yet"
 
+  ux:
+    as hr_admin:
+      purpose: "Onboarding pulse + one starter queue + hire trail — no twin Person card dump"
+      focus: starter_pulse, recent_people, employment_trail
+
+  # Secondary mix under fold — bar_chart coverage for fleet display modes.
   salary_mix:
     source: Salary
     display: bar_chart
@@ -1742,8 +1748,11 @@ workspace reporting_desk "Reporting":
         icon: "users"
         state: positive
 
+# Cycle 2057 empty_region (recipe hr_desk_twin_queue_prune): drop active_grid
+# twin of active_queue — same Person source + same empty was scroll theater after
+# headcount (peer BambooHR: one active roster + hire trail, not dual twin dumps).
 workspace active_staff "Active Staff":
-  purpose: "Headcount pressure — currently employed people without warehouse CRUD"
+  purpose: "Headcount pressure — one active queue + hire trail (no twin grid dump)"
   access: persona(hr_admin, manager, finance)
 
   headcount_pulse:
@@ -1758,21 +1767,12 @@ workspace active_staff "Active Staff":
       leavers: warning
       employments: accent
 
+  # Single active headcount queue (capped; hire_trail timeline is distinct grain).
   active_queue:
     source: Person
     filter: ended_at = null
     sort: started_at desc
-    limit: 25
-    display: queue
-    action: person_detail
-    empty: "No active people on record"
-
-  # Work-surface utility: active headcount cards are a pull queue (pair with active_queue).
-  active_grid:
-    source: Person
-    filter: ended_at = null
-    sort: legal_name asc
-    limit: 20
+    limit: 8
     display: queue
     action: person_detail
     empty: "No active people on record"
@@ -1781,11 +1781,23 @@ workspace active_staff "Active Staff":
     source: Person
     filter: ended_at = null
     sort: started_at desc
-    limit: 15
+    limit: 12
     display: timeline
     action: person_detail
     empty: "No active hires yet"
 
+  ux:
+    as hr_admin:
+      purpose: "Active headcount + hire trail — no twin Person grid dump"
+      focus: headcount_pulse, active_queue, hire_trail
+    as manager:
+      purpose: "Active roster pressure without twin card theater"
+      focus: headcount_pulse, active_queue, hire_trail
+    as finance:
+      purpose: "Active headcount before compensation hop — no twin dump"
+      focus: headcount_pulse, active_queue, hire_trail
+
+  # Secondary level mix under fold — bar_chart coverage retained.
   level_mix:
     source: Role
     display: bar_chart

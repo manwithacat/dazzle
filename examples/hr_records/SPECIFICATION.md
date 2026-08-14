@@ -95,8 +95,12 @@ dedicated screens — fourteen in all, from the staff directory to
   office_remote_density — HQ/Manchester/client vs remote/hybrid work queues, not
   by_location-only re-stack), then dual attention level + department boards,
   work-location kanban, capped reporting pressure, document composition, then
-  people-notes trail and secondary report roster (no redundant under-fold org bar charts).
-- **New Starters** — HR onboarding desk with starter cards and employment trail.
+  people-notes trail and secondary report roster (no redundant under-fold org bar
+  charts; cycle 2057 focus ≤4 fold honesty — secondary regions not focus-eager).
+- **New Starters** — HR onboarding desk with one starter queue + employment trail
+  (cycle 2057 `hr_desk_twin_queue_prune` — no twin starter_cards Person dump).
+- **Active Staff** — headcount pulse + one active queue + hire trail (cycle 2057
+  twin prune — no active_grid twin of active_queue).
 - **Reporting** — office↔remote density, filled active ManagerLink span queue
   (report→manager), then department + work-location placement boards (not an empty
   span kanban void or dept-name bar chart theater).
@@ -142,4 +146,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:3cec54f1a0c316548ec26a1301229c683f487196d97f432371c953b99d15ff95 -->
+<!-- dazzle-spec-brief: sha256:462c43136d5303b0a104fd22499d1f4b8789674529838ca5ef75bc35ec233f11 -->
