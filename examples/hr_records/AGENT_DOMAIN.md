@@ -8,7 +8,7 @@
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
 **Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md`
-**Fingerprint:** `49b0d8f694de196f`
+**Fingerprint:** `81a796e71d89f8cc`
 
 ## Personas (jobs)
 
@@ -18,7 +18,7 @@
 
 ## Nouns (domain types)
 
-- **Department** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Department** (grounded) owner≈`owner` lifecycle: report → manager — definitional sentence in founder brief (A X is …)
 - **Person** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Role** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **PersonNote** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
@@ -55,7 +55,7 @@ _None blocking._
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
 - process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
-- 1 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
+- 2 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -65,7 +65,7 @@ _None blocking._
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
   "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "49b0d8f694de196f",
+  "source_sha256": "81a796e71d89f8cc",
   "personas": [
     {
       "id_hint": "manager",
@@ -100,7 +100,10 @@ _None blocking._
       "name": "Department",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "report",
+        "manager"
+      ],
       "owner_field_hint": "owner"
     },
     {
@@ -207,7 +210,7 @@ _None blocking._
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
     "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
-    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
+    "2 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Beyond",
