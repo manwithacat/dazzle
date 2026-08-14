@@ -34,15 +34,18 @@ def test_people_desk_declares_tier_density_before_dept() -> None:
     block = _people_desk_block()
     assert "l1_frontline:" in block
     assert "l2_escalation:" in block
+    assert "l3_lead:" in block
     assert "support_tier = l1" in block
     assert "support_tier = l2" in block
+    assert "support_tier = l3" in block
     assert "by_department:" in block
     assert "group_by: department" in block
     assert "unassigned_work:" in block
     assert "roster:" not in block  # cycle 2052 twin prune
-    # Order: pulse → L1 → L2 → role → department → load
+    # Order: pulse → L1 → L3 → L2 → role → department → load (L1|L3 fold pair)
     assert block.index("people_pulse:") < block.index("l1_frontline:")
-    assert block.index("l1_frontline:") < block.index("l2_escalation:")
+    assert block.index("l1_frontline:") < block.index("l3_lead:")
+    assert block.index("l3_lead:") < block.index("l2_escalation:")
     assert block.index("l2_escalation:") < block.index("by_role:")
     assert block.index("by_role:") < block.index("by_department:")
     assert block.index("by_department:") < block.index("unassigned_work:")
@@ -55,13 +58,29 @@ def test_people_desk_declares_tier_density_before_dept() -> None:
 
 def test_people_desk_ux_focus_tier_density() -> None:
     block = _people_desk_block()
-    assert "focus: people_pulse, l1_frontline, l2_escalation, by_department" in block
+    assert "focus: people_pulse, l1_frontline, l3_lead, l2_escalation" in block
     assert (
-        "support_tier_density" in block.lower()
-        or "l1/l2" in block.lower()
+        "l3_lead_density" in block.lower()
+        or "l1→l2→l3" in block.lower()
+        or "l1/l2/l3" in block.lower()
+        or "support_tier_density" in block.lower()
         or "tier" in block.lower()
     )
     assert "twin roster" in block.lower() or "no twin" in block.lower()
+
+
+def test_l3_lead_density_queue_filters_exclusive_l3() -> None:
+    """Cycle 2073 recipe l3_lead_density — exclusive L3 lead people board."""
+    block = _people_desk_block()
+    lead = block.split("\n  l3_lead:\n", 1)[1].split("\n  l2_escalation:", 1)[0]
+    assert "source: User" in lead
+    assert "support_tier = l3" in lead
+    assert "department != External" in lead
+    assert "display: queue" in lead
+    assert "limit: 3" in lead
+    assert "support_tier = l1" not in lead
+    assert "support_tier = l2" not in lead
+    assert "l3_lead_density" in block or "L1→L2→L3" in block or "L1 / L2 / L3" in block
 
 
 def test_manager_nav_includes_people_desk() -> None:

@@ -2223,7 +2223,10 @@ workspace people_desk "People":
   # Cycle 2052 empty_region: people_desk_roster_twin_prune (no third flat roster).
   # Cycle 2056 org_structure peer-pack: recipe support_tier_density —
   # exclusive L1 frontline vs L2 escalation people queues above fold.
-  purpose: "Org structure managers can parse — L1/L2 support tiers for routing, then department placement before open load"
+  # Cycle 2073 org_structure peer-pack: recipe l3_lead_density — exclusive L3
+  # lead queue paired with L1 above fold (Zendesk/Front/Service Cloud ladder;
+  # not L1/L2-only re-stack, not department kanban alone, not twin roster).
+  purpose: "Org structure managers can parse — L1/L2/L3 support-tier ladder for routing, then department placement before open load"
   stage: "command_center"
   access: persona(manager, agent)
 
@@ -2252,17 +2255,28 @@ workspace people_desk "People":
     source: User
     filter: is_active = true and support_tier = l1 and department != External
     sort: name asc
-    limit: 8
+    limit: 3
     display: queue
     action: user_detail
     empty: "No L1 frontline agents — seed support_tier = l1 on staff"
+
+  # L3 lead — managers / leads for final escalation (exclusive L3; cycle 2073
+  # recipe l3_lead_density — paired with L1 above fold; not L1/L2 dual re-stack).
+  l3_lead:
+    source: User
+    filter: is_active = true and support_tier = l3 and department != External
+    sort: name asc
+    limit: 3
+    display: queue
+    action: user_detail
+    empty: "No L3 leads — seed support_tier = l3 on managers"
 
   # L2 escalation — specialists for raised/critical handoff (exclusive L2).
   l2_escalation:
     source: User
     filter: is_active = true and support_tier = l2 and department != External
     sort: name asc
-    limit: 8
+    limit: 3
     display: queue
     action: user_detail
     empty: "No L2 escalation specialists — seed support_tier = l2 on staff"
@@ -2314,8 +2328,8 @@ workspace people_desk "People":
   org_hint:
     display: status_list
     entries:
-      - title: "L1 / L2 tier density"
-        caption: "Frontline vs escalation people queues for routing reassignment"
+      - title: "L1 / L2 / L3 tier ladder"
+        caption: "Frontline + lead + escalation people queues for routing reassignment"
         icon: "users"
         state: accent
       - title: "Department board"
@@ -2329,11 +2343,11 @@ workspace people_desk "People":
 
   ux:
     as manager:
-      purpose: "Route via L1 frontline vs L2 escalation people density, then department — no twin roster dump"
-      focus: people_pulse, l1_frontline, l2_escalation, by_department
+      purpose: "Route via L1+L3 (+L2) tier ladder density, then department - no twin roster dump"
+      focus: people_pulse, l1_frontline, l3_lead, l2_escalation
     as agent:
-      purpose: "Read L1/L2 tier placement and department for handoff — no twin roster dump"
-      focus: people_pulse, l1_frontline, l2_escalation, by_department
+      purpose: "Read L1+L3 (+L2) tier ladder for handoff - no twin roster dump"
+      focus: people_pulse, l1_frontline, l3_lead, l2_escalation
 
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
