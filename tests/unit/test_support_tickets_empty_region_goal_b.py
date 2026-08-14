@@ -102,19 +102,22 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
 
 
 def test_people_desk_omits_twin_roster_dump() -> None:
-    """Cycle 2052: Zendesk/Front routing desk — role+dept boards + load, not twin roster.
+    """Cycle 2052: no twin roster dump; cycle 2056 focus is L1/L2 tier density.
 
-    Recipe people_desk_roster_twin_prune — by_department kanban owns placement;
-    flat roster queue was scroll theater after org shape.
+    Recipe people_desk_roster_twin_prune — flat roster queue was scroll theater.
+    Cycle 2056 support_tier_density puts L1/L2 people queues + department in focus
+    (still no roster: region; load stays under fold after placement).
     """
     block = _workspace_block("people_desk")
     assert "by_role:" in block
     assert "by_department:" in block
     assert "group_by: department" in block
+    assert "l1_frontline:" in block
+    assert "l2_escalation:" in block
     assert "unassigned_work:" in block
     assert "plate_by_person:" in block
     assert "roster:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: people_pulse, by_role, by_department, unassigned_work" in block
+    assert "focus: people_pulse, l1_frontline, l2_escalation, by_department" in block
     assert block.index("by_department:") < block.index("unassigned_work:")
     assert block.index("unassigned_work:") < block.index("plate_by_person:")

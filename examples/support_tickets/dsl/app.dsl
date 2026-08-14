@@ -55,6 +55,10 @@ entity User "User":
   # Goal B org_structure (cycle 1847): department placement so manager People
   # desk shows Support / Escalations / Billing shape — not a flat role-only roster.
   department: str(50)
+  # Goal B org_structure peer-pack (cycle 2056): support_tier_density —
+  # Zendesk/Front route by L1 frontline vs L2 escalation vs L3 lead, not only
+  # role+dept dual kanban (decorative Team desk clone refuse in peer pack).
+  support_tier: enum[l1,l2,l3]=l1
   # Goal B media (cycle 1883): peer support tools (Zendesk / Intercom / Front)
   # put agent headshot thumbs on queue/ops homes — not name-only roster theater.
   photo_url: url
@@ -69,7 +73,8 @@ entity User "User":
     # identity chips (name/role/dept) — not Photo Url / Email / Is Active
     # schema dump (peer simple_task 1925/1928, contact_manager 1931).
     # photo_url still media-injects; email/is_active stay on list/detail.
-    repr_fields: [name, role, department]
+    # Cycle 2056: support_tier on chips for routing reassignment clarity.
+    repr_fields: [name, role, department, support_tier]
 
 # Ticket entity with full business logic
 entity Ticket "Support Ticket":
@@ -261,6 +266,7 @@ surface user_list "User List":
     field name "Name"
     field role "Role"
     field department "Department"
+    field support_tier "Tier"
     field is_active "Active"
     field created_at "Created"
 
@@ -274,6 +280,7 @@ surface user_detail "User Detail":
     field name "Name"
     field email "Email"
     field department "Department"
+    field support_tier "Tier"
 
   section role "Role & access":
     layout: strip
@@ -306,6 +313,7 @@ surface user_create "Create User":
     field name "Name"
     field role "Role"
     field department "Department"
+    field support_tier "Support Tier"
     field photo_url "Photo URL"
 
 surface user_edit "Edit User":
@@ -318,6 +326,7 @@ surface user_edit "Edit User":
     field name "Name"
     field role "Role"
     field department "Department"
+    field support_tier "Support Tier"
     field photo_url "Photo URL"
     # HM Switch — boolean settings / account on-off (hyperpart auto_seed drain)
     field is_active "Active" widget=switch
@@ -2146,15 +2155,15 @@ workspace agent_console "Agent Console":
       count: count(Ticket)
     empty: "No tickets for this agent"
 
-# Goal B org_structure (cycle 1847): peer support tools (Zendesk / Intercom /
-# Freshdesk) show team by role and department so managers reassign without a
-# flat warehouse roster. Filter staff only — customers are not org nodes.
+# Goal B org_structure (cycle 1847 + 2056): peer support tools (Zendesk /
+# Front / Intercom) show L1 frontline vs L2 escalation people density for
+# routing reassignment, then department placement — not a flat warehouse
+# roster or decorative role+dept-only Team desk clone (peer pack refuse).
 workspace people_desk "People":
-  # Goal B empty_region_honesty (cycle 2052): recipe people_desk_roster_twin_prune —
-  # peer Zendesk/Front routing desks put role board + department placement + open
-  # load, not a third flat staff queue twin of by_department (roster dump was
-  # scroll theater after org shape). Unassigned + plate share the fold after placement.
-  purpose: "Org structure managers can parse — support staff by role and department before open load (no twin roster dump)"
+  # Cycle 2052 empty_region: people_desk_roster_twin_prune (no third flat roster).
+  # Cycle 2056 org_structure peer-pack: recipe support_tier_density —
+  # exclusive L1 frontline vs L2 escalation people queues above fold.
+  purpose: "Org structure managers can parse — L1/L2 support tiers for routing, then department placement before open load"
   stage: "command_center"
   access: persona(manager, agent)
 
@@ -2164,36 +2173,60 @@ workspace people_desk "People":
     aggregate:
       people: count(User)
       active: count(User where is_active = true)
+      l1: count(User where is_active = true and support_tier = l1 and department != External)
+      l2: count(User where is_active = true and support_tier = l2 and department != External)
+      l3: count(User where is_active = true and support_tier = l3 and department != External)
       open_tickets: count(Ticket where status = open)
       unassigned: count(Ticket where assigned_to = null and status = open)
     tones:
       active: positive
+      l1: accent
+      l2: warning
+      l3: positive
       open_tickets: warning
       unassigned: warning
 
-  # Role board (agent / manager columns) — org authority for reassignment.
-  # is_active keeps inactive accounts off the board; customers remain in
-  # kanban only if seeded active (demo seeds keep customers off staff focus via
-  # department External — manager reads Support/Escalations/Billing first).
+  # L1 frontline — first-response agents managers reassign soft work to
+  # (exclusive support_tier = l1; customers never appear).
+  l1_frontline:
+    source: User
+    filter: is_active = true and support_tier = l1 and department != External
+    sort: name asc
+    limit: 8
+    display: queue
+    action: user_detail
+    empty: "No L1 frontline agents — seed support_tier = l1 on staff"
+
+  # L2 escalation — specialists for raised/critical handoff (exclusive L2).
+  l2_escalation:
+    source: User
+    filter: is_active = true and support_tier = l2 and department != External
+    sort: name asc
+    limit: 8
+    display: queue
+    action: user_detail
+    empty: "No L2 escalation specialists — seed support_tier = l2 on staff"
+
+  # Role board (agent / manager columns) — org authority under tier density.
+  # Staff only: department != External keeps customers off org boards.
   by_role:
     source: User
-    filter: is_active = true
+    filter: is_active = true and department != External
     display: kanban
     group_by: role
     sort: name asc
-    limit: 40
+    limit: 24
     action: user_detail
     empty: "No support staff yet"
 
-  # Department placement — Support / Escalations / Billing columns (not a flat
-  # twin queue + second roster list).
+  # Department placement — Support / Escalations / Billing columns.
   by_department:
     source: User
-    filter: is_active = true
+    filter: is_active = true and department != External
     display: kanban
     group_by: department
     sort: name asc
-    limit: 40
+    limit: 24
     action: user_detail
     empty: "No support staff yet"
 
@@ -2208,7 +2241,6 @@ workspace people_desk "People":
     empty: "Every open ticket has an assignee"
 
   # Assignee columns for Monday capacity after org shape (reassignment clarity).
-  # Cap groups so plate cannot re-eat the fold after dual org boards.
   plate_by_person:
     source: Ticket
     filter: status != closed and assigned_to != null
@@ -2222,12 +2254,12 @@ workspace people_desk "People":
   org_hint:
     display: status_list
     entries:
-      - title: "By role board"
-        caption: "Agent / Manager columns show who can take work at a glance"
+      - title: "L1 / L2 tier density"
+        caption: "Frontline vs escalation people queues for routing reassignment"
         icon: "users"
         state: accent
       - title: "Department board"
-        caption: "Support, Escalations, Billing columns — place people before load dump"
+        caption: "Support, Escalations, Billing columns after tier density"
         icon: "building"
         state: positive
       - title: "Unassigned + plate"
@@ -2237,11 +2269,11 @@ workspace people_desk "People":
 
   ux:
     as manager:
-      purpose: "See support staff by role and department, then unassigned load — no twin roster dump"
-      focus: people_pulse, by_role, by_department, unassigned_work
+      purpose: "Route via L1 frontline vs L2 escalation people density, then department — no twin roster dump"
+      focus: people_pulse, l1_frontline, l2_escalation, by_department
     as agent:
-      purpose: "Read team placement and open load for handoff — no twin roster dump"
-      focus: people_pulse, by_role, by_department, unassigned_work
+      purpose: "Read L1/L2 tier placement and department for handoff — no twin roster dump"
+      focus: people_pulse, l1_frontline, l2_escalation, by_department
 
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).

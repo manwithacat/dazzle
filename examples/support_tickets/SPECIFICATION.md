@@ -121,9 +121,13 @@ avoids pilot scroll resource storms). Ticket rows carry an **SLA** state
 Front / Intercom first-response pressure. Comment rows carry **ball in court**
 (`agent` / `customer` / `none`) so the trail shows who must speak next.
 **People** is the org-structure desk for managers and agents: active staff
-metrics, a role kanban, a department kanban (not a twin flat roster dump —
+metrics with **L1 / L2 / L3 tier counts**, dual exclusive people queues
+(**L1 frontline** soft routing vs **L2 escalation** hard handoff — cycle 2056
+`support_tier_density`; peer Zendesk/Front routing, not role+dept-only Team
+desk clone), role and department kanbans (not a twin flat roster dump —
 cycle 2052 empty_region people_desk_roster_twin_prune), then unassigned open
-tickets and plate-by-person load — hierarchy before dump.
+tickets and plate-by-person load — hierarchy before dump. Staff rows carry
+`support_tier` (`l1` / `l2` / `l3`) for reassignment clarity.
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
@@ -222,4 +226,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:cb7c25547deebc145e2fccad09b85a15ca9b48658fae9035c73bca4f112e3ea9 -->
+<!-- dazzle-spec-brief: sha256:4abd8b089604005acd9ccc6f3a2776eea000c0f24710e37aa8104e9652caa0ac -->
