@@ -113,7 +113,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (wire instructions + payment confirmation — cycle 2039 peer-pack; not ACH|wire bank_rail,
   remittance|payment settle_rail, lien|payment closeout_rail, or statement|payment period_close re-stack), a **ACH-settle rail** pack
   (ACH authorization + payment confirmation — cycle 2041 peer-pack; not ACH|wire bank_rail,
-  form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack),
+  form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack), a **receipt-settle rail** pack
+  (goods receipt + payment confirmation — cycle 2046 peer-pack; not goods-only match_evidence,
+  remittance|payment settle_rail, ACH|payment ach_settle_rail, or wire|payment wire_settle_rail re-stack),
   a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
@@ -152,7 +154,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=dispute_packet or credit_memo — cycle 2033; not dispute|debit dispute_rail or credit|debit adjustment_rail re-stack), a **period-close rail** pack
   (doc_kind=vendor_statement or payment_confirmation — cycle 2037; not statement|remittance reconcile_rail, remittance|payment settle_rail, or lien|payment closeout_rail re-stack), a **wire-settle rail** pack
   (doc_kind=wire_instructions or payment_confirmation — cycle 2039; not ACH|wire bank_rail, remittance|payment settle_rail, lien|payment closeout_rail, or statement|payment period_close re-stack), a **ACH-settle rail** pack
-  (doc_kind=ach_authorization or payment_confirmation — cycle 2041; not ACH|wire bank_rail, form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack), a **remittance advice watch**
+  (doc_kind=ach_authorization or payment_confirmation — cycle 2041; not ACH|wire bank_rail, form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack), a **receipt-settle rail** pack
+  (doc_kind=goods_receipt or payment_confirmation — cycle 2046; not goods-only match_evidence, remittance|payment settle_rail, ACH|payment ach_settle_rail, or wire|payment wire_settle_rail re-stack), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**
@@ -259,4 +262,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:be24f8de5816a1ecc8c96f77636b8b461e11c312742d7e16a736f3474575fed1 -->
+<!-- dazzle-spec-brief: sha256:d962feef49ae10d880eb0c956d352a28dc9f245bf914de0657a322fb67f6ce6b -->
