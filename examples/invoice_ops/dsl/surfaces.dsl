@@ -2194,7 +2194,7 @@ workspace line_items_desk "Line Items":
     source: LineItem
     filter: po_match = unmatched
     sort: unit_amount desc
-    limit: 8
+    limit: 12
     display: queue
     action: invoice_detail
     empty: "No unmatched lines — every composition row has a PO match"
@@ -2203,7 +2203,7 @@ workspace line_items_desk "Line Items":
     source: LineItem
     filter: po_match = partial
     sort: unit_amount desc
-    limit: 8
+    limit: 12
     display: queue
     action: invoice_detail
     empty: "No partial matches — quantity/price exceptions are cleared"
@@ -2221,7 +2221,7 @@ workspace line_items_desk "Line Items":
   composition:
     source: LineItem
     sort: created_at desc
-    limit: 16
+    limit: 24
     display: queue
     action: invoice_detail
     empty: "No line items yet — add lines to a draft invoice"
