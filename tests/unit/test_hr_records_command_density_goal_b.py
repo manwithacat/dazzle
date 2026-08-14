@@ -52,7 +52,7 @@ def test_my_team_dual_attention_before_conversation() -> None:
     assert block.index("\n  by_department:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
     assert (
-        "focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
+        "focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
         in block
     )
 

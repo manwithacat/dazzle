@@ -50,7 +50,7 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
+        "focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
         in block
     )
 
@@ -79,7 +79,10 @@ def test_reporting_desk_span_is_filled_queue_not_empty_kanban() -> None:
     # No second primary link region competing for fold as empty twin
     assert "\n  active_links:" not in block
     assert "people_cards:" not in block
-    assert "focus: reporting_pulse, span_of_control, by_department, by_location" in block
+    assert (
+        "focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location"
+        in block
+    )
     # Placement boards still present for org shape (not only metrics)
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block

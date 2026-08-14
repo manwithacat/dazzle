@@ -60,7 +60,7 @@ def test_hero_desks_declare_composition_queue() -> None:
     assert team.index("\n  reporting_lines:") < team.index("composition:")
     assert team.index("composition:") < team.index("live_conversation:")
     assert (
-        "focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
+        "focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
         in team
     )
 

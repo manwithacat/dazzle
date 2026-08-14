@@ -1429,10 +1429,11 @@ workspace time_machine "Time Machine":
 # not a bare Person warehouse list.
 workspace my_team "My Team":
   # Goal B command_density + org_structure (cycle 1837) + document (cycle 1838)
-  # + work_location_grain (cycle 1914): level/dept/location org boards, then
-  # named employment documents, before notes — peer Workday / BambooHR put
+  # + work_location_grain (cycle 1914) + office_remote_density (cycle 2050):
+  # office vs remote dual presence queues, then level/dept/location org boards,
+  # then named employment documents, before notes — peer Workday / BambooHR put
   # place grain + letters above conversation chrome.
-  purpose: "Multi-panel manager desk — level/dept/location org boards, documents, reporting pressure, then notes"
+  purpose: "Multi-panel manager desk — office/remote density, level/dept/location org boards, documents, reporting pressure, then notes"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1445,6 +1446,8 @@ workspace my_team "My Team":
       roles: count(Role)
       remote_uk: count(Person where work_location = remote_uk and ended_at = null)
       hybrid: count(Person where work_location = hybrid and ended_at = null)
+      office_sites: count(Person where ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site))
+      remote_flex: count(Person where ended_at = null and (work_location = remote_uk or work_location = hybrid))
       documents: count(HrDocument)
       conversation: count(PersonNote)
     tones:
@@ -1452,8 +1455,33 @@ workspace my_team "My Team":
       reporting_lines: positive
       remote_uk: warning
       hybrid: accent
+      office_sites: accent
+      remote_flex: warning
       documents: accent
       conversation: accent
+
+  # Goal B org_structure (cycle 2050): peer BambooHR / Workday office↔remote
+  # density — dual site-presence queues ABOVE full location kanban (recipe
+  # office_remote_density; not by_location-only work_location_grain re-stack,
+  # not department metric tiles alone — people partners lean into HQ/office
+  # vs remote/hybrid span pressure as two work queues).
+  office_sites:
+    source: Person
+    filter: ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site)
+    sort: legal_name asc
+    limit: 4
+    display: queue
+    action: person_detail
+    empty: "No active people at office or client sites"
+
+  remote_flex:
+    source: Person
+    filter: ended_at = null and (work_location = remote_uk or work_location = hybrid)
+    sort: legal_name asc
+    limit: 4
+    display: queue
+    action: person_detail
+    empty: "No active remote or hybrid people"
 
   # Dual attention — level board + department board before fold trail.
   # Role-level board (enum columns ic1…m4) — career ladder shape at a glance.
@@ -1510,11 +1538,11 @@ workspace my_team "My Team":
 
   ux:
     as manager:
-      purpose: "Multi-panel team — level/dept/location + documents before conversation trail"
-      focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel team — office/remote density + level/dept/location + documents before conversation trail"
+      focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation
     as hr_admin:
-      purpose: "Multi-panel org coaching — level/dept/location + documents before notes"
-      focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation
+      purpose: "Multi-panel org coaching — office/remote density + level/dept/location + documents before notes"
+      focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation
 
   # Conversation trail after dual attention org boards + documents.
   live_conversation:
@@ -1606,7 +1634,7 @@ workspace starters_desk "New Starters":
 # active ManagerLink rows + department/location placement boards (not empty
 # kanban theater). Full recursive tree remains TODO #hr-hierarchy.
 workspace reporting_desk "Reporting":
-  purpose: "People hierarchy — filled report→manager span, department + work-location placement (no empty span void)"
+  purpose: "People hierarchy — office/remote density, filled report→manager span, department + work-location placement (no empty span void)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1619,11 +1647,35 @@ workspace reporting_desk "Reporting":
       roles: count(Role)
       remote_uk: count(Person where work_location = remote_uk and ended_at = null)
       hybrid: count(Person where work_location = hybrid and ended_at = null)
+      office_sites: count(Person where ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site))
+      remote_flex: count(Person where ended_at = null and (work_location = remote_uk or work_location = hybrid))
     tones:
       links: accent
       people: positive
       remote_uk: warning
       hybrid: accent
+      office_sites: accent
+      remote_flex: warning
+
+  # Goal B org_structure (cycle 2050): office↔remote dual presence before span
+  # (recipe office_remote_density — peer BambooHR hybrid workforce view).
+  office_sites:
+    source: Person
+    filter: ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site)
+    sort: legal_name asc
+    limit: 4
+    display: queue
+    action: person_detail
+    empty: "No active people at office or client sites"
+
+  remote_flex:
+    source: Person
+    filter: ended_at = null and (work_location = remote_uk or work_location = hybrid)
+    sort: legal_name asc
+    limit: 4
+    display: queue
+    action: person_detail
+    empty: "No active remote or hybrid people"
 
   # Span of control — active report→manager lines as a pull queue (fitness
   # shows report + manager names). Queue fills when Links>0; empty kanban
@@ -1661,11 +1713,11 @@ workspace reporting_desk "Reporting":
 
   ux:
     as hr_admin:
-      purpose: "Filled reporting lines + department/location placement — no empty span theater"
-      focus: reporting_pulse, span_of_control, by_department, by_location
+      purpose: "Office/remote density + filled reporting lines + department/location placement — no empty span theater"
+      focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location
     as manager:
-      purpose: "See report→manager lines and open a reporting line or person hub"
-      focus: reporting_pulse, span_of_control, by_department, by_location
+      purpose: "See office/remote density, report→manager lines, and open a reporting line or person hub"
+      focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location
 
   # Dated link history under the fold (not a second empty primary region).
   link_trail:

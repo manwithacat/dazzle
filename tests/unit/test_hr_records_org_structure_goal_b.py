@@ -56,8 +56,10 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block
     assert "\n  reporting_lines:" in block
-    # Order: pulse → level → department → location → reporting → conversation
-    assert block.index("team_pulse:") < block.index("\n  by_level:")
+    # Order: pulse → office/remote density → level → department → location → reporting
+    assert block.index("team_pulse:") < block.index("\n  office_sites:")
+    assert block.index("\n  office_sites:") < block.index("\n  remote_flex:")
+    assert block.index("\n  remote_flex:") < block.index("\n  by_level:")
     assert block.index("\n  by_level:") < block.index("\n  by_department:")
     assert block.index("\n  by_department:") < block.index("\n  by_location:")
     assert block.index("\n  by_location:") < block.index("\n  reporting_lines:")
@@ -67,7 +69,7 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
 def test_my_team_ux_focus_org_before_load() -> None:
     block = _my_team_block()
     assert (
-        "focus: team_pulse, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
+        "focus: team_pulse, office_sites, remote_flex, by_level, by_department, by_location, reporting_lines, composition, live_conversation"
         in block
     )
     # Cycle 1819 empty_region: no under-fold bar theater (kanbans own org shape)
@@ -108,7 +110,9 @@ def test_reporting_desk_span_of_control_before_flat_queue() -> None:
     assert "group_by: manager" not in span
     assert "filter: end_date = null" in span
     # People hierarchy before dept-name bar theater
-    assert block.index("reporting_pulse:") < block.index("\n  span_of_control:")
+    assert block.index("reporting_pulse:") < block.index("\n  office_sites:")
+    assert block.index("\n  office_sites:") < block.index("\n  remote_flex:")
+    assert block.index("\n  remote_flex:") < block.index("\n  span_of_control:")
     assert block.index("\n  span_of_control:") < block.index("\n  by_department:")
     assert block.index("\n  by_department:") < block.index("\n  by_location:")
     assert "dept_mix:" not in block
@@ -119,7 +123,10 @@ def test_reporting_desk_span_of_control_before_flat_queue() -> None:
 
 def test_reporting_desk_ux_focus_org_people() -> None:
     block = _reporting_desk_block()
-    assert "focus: reporting_pulse, span_of_control, by_department, by_location" in block
+    assert (
+        "focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location"
+        in block
+    )
     assert (
         "span of control" in block.lower()
         or "Span of control" in block
@@ -146,3 +153,37 @@ def test_person_seeds_span_work_locations() -> None:
     assert len(locs) >= 4
     for row in rows:
         assert row.get("work_location"), row
+
+
+def test_my_team_and_reporting_office_remote_density() -> None:
+    """Cycle 2050: BambooHR/Workday office↔remote dual presence (office_remote_density).
+
+    Not by_location-only work_location_grain re-stack, not department metric tiles alone.
+    """
+    office_filter = (
+        "ended_at = null and (work_location = london_hq or work_location = manchester "
+        "or work_location = client_site)"
+    )
+    remote_filter = "ended_at = null and (work_location = remote_uk or work_location = hybrid)"
+    team = _my_team_block()
+    assert "\n  office_sites:\n" in team
+    assert "\n  remote_flex:\n" in team
+    office = team.split("\n  office_sites:\n", 1)[1].split("\n  remote_flex:", 1)[0]
+    assert "source: Person" in office
+    assert "work_location = london_hq" in office
+    assert "display: queue" in office
+    assert "limit: 4" in office
+    remote = team.split("\n  remote_flex:\n", 1)[1].split("\n  by_level:", 1)[0]
+    assert "source: Person" in remote
+    assert "work_location = remote_uk" in remote
+    assert "work_location = hybrid" in remote
+    assert "display: queue" in remote
+    assert f"office_sites: count(Person where {office_filter})" in team
+    assert f"remote_flex: count(Person where {remote_filter})" in team
+    assert team.index("\n  office_sites:\n") < team.index("\n  by_level:\n")
+
+    desk = _reporting_desk_block()
+    assert "\n  office_sites:\n" in desk
+    assert "\n  remote_flex:\n" in desk
+    assert desk.index("\n  office_sites:\n") < desk.index("\n  span_of_control:\n")
+    assert f"office_sites: count(Person where {office_filter})" in desk
