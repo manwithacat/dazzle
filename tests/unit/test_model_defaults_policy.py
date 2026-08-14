@@ -1,10 +1,15 @@
-"""Gate: no hardcoded Claude model IDs outside dazzle.core.model_defaults (#1368).
+"""Gate: no hardcoded model IDs outside dazzle.core.model_defaults (#1368).
 
-Before this gate, six call sites each pinned their own model ID and
+Before this gate, six call sites each pinned their own ID and
 rotted independently — the most common pin (claude-sonnet-4-20250514)
 was four days from API retirement when the audit caught it. The fix is
 structural: one module owns the IDs and pricing, everything else
 imports from it, and this test makes a new stray literal a CI failure.
+
+Grok IDs get the same treatment: ``DEFAULT_GROK_JUDGMENT_MODEL`` is the
+only pin, and a ``grok-<digit>`` literal anywhere else under
+``src/dazzle/`` is a CI failure (driver names like ``grok-cli`` are
+not model IDs and do not match).
 """
 
 from __future__ import annotations
@@ -27,16 +32,25 @@ ALLOWED_FILES = {
     SRC / "core" / "dsl_parser_impl" / "llm.py",
 }
 
+# Grok model IDs live only in the defaults module — no DSL examples.
+GROK_ALLOWED_FILES = {
+    DEFAULTS_MODULE,
+}
+
 # Matches Claude model IDs (claude-sonnet-4-6, claude-3-opus-20240229,
 # claude-fable-5, ...) but not product names like claude-code or
 # claude-in-chrome.
 MODEL_ID_RE = re.compile(r"claude-(?:fable|opus|sonnet|haiku|instant|[0-9])[a-z0-9.-]*")
 
+# Matches versioned Grok model IDs (grok-4.6, grok-4.5, grok-3-mini)
+# but not driver names (grok-cli) or temp prefixes (dazzle-grok-prompt-).
+GROK_MODEL_ID_RE = re.compile(r"grok-[0-9][a-z0-9.-]*")
 
-def _scan(path: Path) -> list[tuple[int, str]]:
+
+def _scan(path: Path, pattern: re.Pattern[str] = MODEL_ID_RE) -> list[tuple[int, str]]:
     hits = []
     for lineno, line in enumerate(path.read_text().splitlines(), start=1):
-        for match in MODEL_ID_RE.finditer(line):
+        for match in pattern.finditer(line):
             hits.append((lineno, match.group(0)))
     return hits
 
@@ -55,6 +69,22 @@ def test_no_model_id_literals_outside_defaults_module() -> None:
         + "\nImport DEFAULT_JUDGMENT_MODEL / DEFAULT_MECHANICAL_MODEL / "
         "ANTHROPIC_PRICING_PER_MTOK from dazzle.core.model_defaults instead "
         "(see that module's docstring for the tier policy)."
+    )
+
+
+def test_no_grok_model_id_literals_outside_defaults_module() -> None:
+    offenders = []
+    for path in sorted(SRC.rglob("*.py")):
+        if path in GROK_ALLOWED_FILES:
+            continue
+        for lineno, model_id in _scan(path, GROK_MODEL_ID_RE):
+            offenders.append(f"{path.relative_to(REPO_ROOT)}:{lineno}: {model_id}")
+    assert not offenders, (
+        "Hardcoded Grok model IDs found outside "
+        "src/dazzle/core/model_defaults.py:\n  "
+        + "\n  ".join(offenders)
+        + "\nImport DEFAULT_GROK_JUDGMENT_MODEL / GROK_JUDGMENT_MODELS "
+        "from dazzle.core.model_defaults instead."
     )
 
 
@@ -85,3 +115,10 @@ def test_defaults_are_priced() -> None:
 
     assert md.DEFAULT_JUDGMENT_MODEL in md.ANTHROPIC_PRICING_PER_MTOK
     assert md.DEFAULT_MECHANICAL_MODEL in md.ANTHROPIC_PRICING_PER_MTOK
+
+
+def test_grok_default_is_on_the_current_catalog() -> None:
+    from dazzle.core import model_defaults as md
+
+    assert md.DEFAULT_GROK_JUDGMENT_MODEL in md.GROK_JUDGMENT_MODELS
+    assert GROK_MODEL_ID_RE.fullmatch(md.DEFAULT_GROK_JUDGMENT_MODEL)

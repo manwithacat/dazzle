@@ -92,7 +92,7 @@ Deploy checklist:
 - Invokes `grok --single` / `--prompt-file` with `--output-format json`
   and `--system-prompt-override`.
 - Same text-protocol agent path as `claude-cli`.
-- Default judgment model: `grok-4.5`
+- Default judgment model: `grok-4.6`
   (`DEFAULT_GROK_JUDGMENT_MODEL`).
 - Long prompts use `--prompt-file` to avoid argv limits.
 - Metered keys (`XAI_API_KEY`, `GROK_API_KEY`, `ANTHROPIC_API_KEY`) are

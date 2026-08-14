@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from dazzle.core.model_defaults import DEFAULT_GROK_JUDGMENT_MODEL
 from dazzle.llm.driver import (
     DRIVER_CLAUDE_CLI,
     DRIVER_GROK_CLI,
@@ -264,12 +265,16 @@ class TestCallGrokCli:
         with patch("dazzle.llm.driver.grok_cli_available", return_value=True):
             with patch("dazzle.llm.driver.subprocess.run") as mock_run:
                 mock_run.return_value = self._completed('{"result": "ok"}')
-                call_grok_cli("hi", system_prompt="be brief", model="grok-4.5")
+                call_grok_cli(
+                    "hi",
+                    system_prompt="be brief",
+                    model=DEFAULT_GROK_JUDGMENT_MODEL,
+                )
         cmd = mock_run.call_args.args[0]
         assert cmd[0] == "grok"
         assert "--single" in cmd and "hi" in cmd
         assert "--system-prompt-override" in cmd and "be brief" in cmd
-        assert "--model" in cmd and "grok-4.5" in cmd
+        assert "--model" in cmd and DEFAULT_GROK_JUDGMENT_MODEL in cmd
         assert "--output-format" in cmd and "json" in cmd
         # Pure text: allow zero tools (empty --tools) + deny remainder
         assert "--tools" in cmd

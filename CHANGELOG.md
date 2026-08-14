@@ -20,6 +20,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Grok 4.6 judgment default** — `DEFAULT_GROK_JUDGMENT_MODEL` is now
+  `grok-4.6` (Grok Build CLI default as of grok 1.0.3 / 2026-08-12).
+  `GROK_JUDGMENT_MODELS` catalogs still-served IDs; the model-defaults
+  policy gate now fails CI on stray `grok-<digit>` literals under
+  `src/dazzle/`.
 - **Goal C coat residual in /improve** — `goal_b_coat` is a real probe
   (`conv_siblings`, `slice_cartesian`, focus/rail walls). `coat_residual_total`
   beats Goal B add and loses to Goal A / presentation. New playbook

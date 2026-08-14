@@ -1313,7 +1313,7 @@ def qa_trial(
     model: str | None = typer.Option(
         None,
         "--model",
-        help="Override LLM model (default: Claude Sonnet or Grok 4.5 per driver)",
+        help="Override LLM model (default: Claude Sonnet or Grok 4.6 per driver)",
     ),
     llm_driver: str | None = typer.Option(
         None,

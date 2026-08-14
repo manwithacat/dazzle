@@ -1,22 +1,25 @@
-"""Single source of truth for the framework's Claude model defaults (#1368).
+"""Single source of truth for the framework's model defaults (#1368).
 
 Every LLM-calling site in the framework imports its default model from
 here instead of hardcoding an ID. The pre-#1368 state — six call sites
 each pinning their own ID — rotted independently until the most common
 pin (``claude-sonnet-4-20250514``) was four days from API retirement.
 ``tests/unit/test_model_defaults_policy.py`` enforces that no other
-module under ``src/dazzle/`` contains a ``claude-*`` model-ID literal.
+module under ``src/dazzle/`` contains a ``claude-*`` or ``grok-<digit>``
+model-ID literal.
 
 Tier policy (mirrors the Subagent Model Policy in .claude/CLAUDE.md):
 
 - **Judgment work** (agent missions, trial verdicts, visual evaluation,
   fitness investigation) uses the current Sonnet alias — an undated ID,
-  so it tracks Anthropic's stable release of that tier.
+  so it tracks Anthropic's stable release of that tier. The Grok
+  subscription driver uses ``DEFAULT_GROK_JUDGMENT_MODEL`` instead
+  (Grok Build CLI rejects Claude IDs).
 - **Mechanical work** (fixed-signature generation like the DSL fuzzer)
   pins dated Haiku per the policy.
 
-When Anthropic ships new tiers, this file and the pricing table below
-are the only places to update.
+When Anthropic or xAI ships new tiers, this file (and the pricing
+table below, for Anthropic) are the only places to update.
 """
 
 DEFAULT_JUDGMENT_MODEL = "claude-sonnet-4-6"
@@ -24,8 +27,20 @@ DEFAULT_MECHANICAL_MODEL = "claude-haiku-4-5-20251001"
 
 # Grok Build CLI / xAI model defaults (subscription driver: grok-cli).
 # Keep undated aliases where the CLI accepts them so pins track the
-# current Grok tier without a dated retirement cliff.
-DEFAULT_GROK_JUDGMENT_MODEL = "grok-4.5"
+# current Grok tier without a dated retirement cliff. Matches the
+# Grok Build CLI default as of grok 1.0.3 (2026-08-12 Grok 4.6 launch).
+DEFAULT_GROK_JUDGMENT_MODEL = "grok-4.6"
+
+# Still-served Grok judgment IDs. The current pin must be in this set;
+# previous aliases stay listed so a caller that still names a live ID
+# is not treated as retired. Drop an ID here only when the CLI/API
+# stops accepting it.
+GROK_JUDGMENT_MODELS: frozenset[str] = frozenset(
+    {
+        "grok-4.6",
+        "grok-4.5",
+    }
+)
 
 
 def default_model_for_driver(driver: str) -> str:
