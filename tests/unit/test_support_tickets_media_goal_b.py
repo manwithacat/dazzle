@@ -55,7 +55,7 @@ def test_manager_ops_media_shelf_first() -> None:
     # Cycle 2054: sla_stage_density (at_risk_queue + breached_queue) replaces breach_risk.
     assert (
         "focus: media_shelf, team_metrics, at_risk_queue, breached_queue, critical_queue, "
-        "unassigned_queue, needs_reply, priority_needs_reply, priority_awaiting_customer, "
+        "unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, "
         "breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, "
         "portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, "
         "critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
