@@ -427,12 +427,11 @@
       "name": "admin_dashboard",
       "title": "Admin Dashboard",
       "kind": "workspace",
-      "purpose": "Multi-panel admin - team headshots, pressure queues, briefs, question vs decision density, then live conversation",
+      "purpose": "Multi-panel admin - team headshots, pressure queues, briefs, open questions, then live conversation",
       "personas": [
         "admin"
       ],
       "contents": [
-        "conversation of TaskComment",
         "conversation of TaskComment",
         "grid of User",
         "metrics of Task",
@@ -440,7 +439,6 @@
         "queue of Task",
         "queue of Task",
         "queue of TaskBrief",
-        "conversation of TaskComment",
         "conversation of TaskComment",
         "bar_chart of Task",
         "bar_chart of Task"
@@ -457,13 +455,11 @@
       ],
       "contents": [
         "conversation of TaskComment",
-        "conversation of TaskComment",
         "grid of User",
         "metrics of Task",
         "queue of Task",
         "kanban of Task",
         "queue of TaskBrief",
-        "conversation of TaskComment",
         "conversation of TaskComment",
         "queue of User"
       ]

@@ -42,7 +42,7 @@ def test_team_overview_omits_flow_chart_and_twin_comment() -> None:
     assert "recent_discussion:" not in block
     assert "display: bar_chart" not in block
     # media@1884 + command_density@1835 + cycle 1951 fold thrash cap (≤4 focus)
-    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
+    assert "focus: open_questions, media_shelf, metrics" in block
     assert "composition:" in block
     assert "live_conversation:" in block
     assert "team_roster:" in block
@@ -94,7 +94,7 @@ def test_admin_dashboard_keeps_bar_chart_coverage_under_fold() -> None:
     assert "status_mix:" in block
     assert "priority_mix:" in block
     assert block.count("display: bar_chart") >= 2
-    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
+    assert "focus: open_questions, media_shelf, metrics" in block
     # Bars must not hijack the admin pressure spine.
     assert "status_mix" not in block.split("focus:")[1].split("\n")[0]
     assert "priority_mix" not in block.split("focus:")[1].split("\n")[0]

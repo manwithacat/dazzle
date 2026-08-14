@@ -48,6 +48,12 @@ FREEZE: dict[str, dict[str, int]] = {
         "max_focus": 27,
         "metric_keys": 57,
     },
+    "simple_task": {
+        "conversation_sites": 9,
+        "conversation_names": 4,
+        "max_focus": 5,
+        "metric_keys": 19,
+    },
 }
 
 _CONV_DISPLAY = re.compile(r"display:\s*conversation")

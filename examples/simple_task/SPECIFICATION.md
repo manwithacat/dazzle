@@ -53,7 +53,9 @@ all three roles — has board metrics, dual kanban (status + assignee), due
 timeline, and urgent queue (no status chart / comment dump theater —
 empty_region honesty). The **Admin Dashboard** is the administrator home:
 metrics, dual attention (urgent + overdue queues capped for fold share),
-document composition, then dual blocker/question conversation density plus exclusive decision log trail and live trail (cycle 2058 blocker_question_density + cycle 2074 decision_question_density). The
+document composition, then an **open questions** trail and a **live conversation**
+(cycle 2078 Goal C distill — one pressure trail + one live thread; synonym
+decision/blocker conversation slices removed). The
 **Team Overview** is the manager home: teammate media shelf first, metrics,
 dual attention (review queue + assignee plate kanban), briefs, conversation,
 and a team roster — person cards and roster rows show clean **name / role /
@@ -129,4 +131,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:94dfc332f6da9c698cdf4b56efb878e69a611613218679c25aa627ec0cc6fa0f -->
+<!-- dazzle-spec-brief: sha256:7eaa79b7f280db9b2eb27fd399460eabc26211672b5d96815c56cc8ae9976881 -->

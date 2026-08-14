@@ -29,7 +29,9 @@
   (`conv_siblings`, `slice_cartesian`, focus/rail walls). `coat_residual_total`
   beats Goal B add and loses to Goal A / presentation. New playbook
   `example-apps distill`. Cycle 2077 distilled support_tickets conversation
-  coat (keep `needs_reply` + `live_conversation`; freeze lowered).
+  coat (keep `needs_reply` + `live_conversation`; freeze lowered). Cycle 2078
+  distilled simple_task (keep `open_questions` + `live_conversation`; freeze
+  added).
 - **Goal B coat freeze** — portfolio collapses synonym recipe tags into
   families (`conversation_filter_slice`, `document_rail_slice`,
   `stage_queue_slice`); one family ship or live DSL above honest grain

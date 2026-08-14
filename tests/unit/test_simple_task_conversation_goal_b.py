@@ -51,42 +51,25 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
                 assert "live_conversation" in ux, ws
 
 
-def test_admin_declares_blocker_question_density() -> None:
-    """Cycle 2058 blockers+questions; cycle 2074 decision_question_density."""
+def test_admin_honest_grain_is_questions_plus_live() -> None:
+    """Cycle 2078 Goal C: one pressure trail + live thread — no synonym slices."""
     block = _workspace_block("admin_dashboard")
-    assert "open_blockers:" in block
     assert "open_questions:" in block
-    assert "open_decisions:" in block
-    assert "note_kind = blocker" in block
+    assert "live_conversation:" in block
+    assert "\n  open_decisions:\n" not in block
+    assert "\n  open_blockers:\n" not in block
     assert "note_kind = question" in block
-    assert "note_kind = decision" in block
-    assert "blockers: count(TaskComment where note_kind = blocker)" in block
     assert "questions: count(TaskComment where note_kind = question)" in block
-    assert "decisions: count(TaskComment where note_kind = decision)" in block
-    assert block.index("open_questions:") < block.index("open_decisions:")
-    assert block.index("open_decisions:") < block.index("media_shelf:")
+    assert "blockers: count(TaskComment" not in block
+    assert "decisions: count(TaskComment" not in block
+    assert block.index("open_questions:") < block.index("media_shelf:")
     assert block.index("media_shelf:") < block.index("metrics:")
-    assert block.index("open_decisions:") < block.index("composition:")
-    assert block.index("composition:") < block.index("open_blockers:")
-    assert block.index("open_blockers:") < block.index("live_conversation:")
-    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
-    assert (
-        "decision_question_density" in block.lower()
-        or "question vs decision" in block.lower()
-        or "blocker_question_density" in block.lower()
-    )
-
-
-def test_open_decisions_filters_exclusive_decision_kind() -> None:
-    """Cycle 2074 recipe decision_question_density — exclusive decision trail."""
-    block = _workspace_block("admin_dashboard")
-    dec = block.split("\n  open_decisions:\n", 1)[1].split("\n  media_shelf:", 1)[0]
-    assert "source: TaskComment" in dec
-    assert "note_kind = decision" in dec
-    assert "display: conversation" in dec
-    assert "limit: 4" in dec
-    assert "note_kind = question" not in dec
-    assert "note_kind = blocker" not in dec
+    assert block.index("composition:") < block.index("live_conversation:")
+    assert "focus: open_questions, media_shelf, metrics" in block
+    q = block.split("\n  open_questions:\n", 1)[1].split("\n  media_shelf:", 1)[0]
+    assert "source: TaskComment" in q
+    assert "note_kind = question" in q
+    assert "display: conversation" in q
 
 
 def test_task_detail_discussion_uses_conversation_chrome() -> None:

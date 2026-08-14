@@ -832,10 +832,10 @@ workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
   # Goal B media (cycle 1884) + command_density (cycle 1835): headshot shelf
   # first, then dual attention (urgent + overdue) before composition trail.
-  purpose: "Multi-panel admin - team headshots, pressure queues, briefs, question vs decision density, then live conversation"
+  purpose: "Multi-panel admin - team headshots, pressure queues, briefs, open questions, then live conversation"
 
 
-  # Cycle 2074 decision_question_density — question vs decision trails after metrics.
+  # Cycle 2078 distill: one pressure trail (open questions) + live thread.
   open_questions:
     source: TaskComment
     filter: note_kind = question
@@ -844,20 +844,6 @@ workspace admin_dashboard "Admin Dashboard":
     display: conversation
     action: comment_detail
     empty: "No open questions waiting on the team"
-
-  # Cycle 2074 recipe decision_question_density — exclusive decision log trail
-  # after open questions (Linear/Asana decision notes vs open Qs; not
-  # blocker_question re-stack alone, not mixed live dump).
-  open_decisions:
-    source: TaskComment
-    filter: note_kind = decision
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No decisions logged yet - approvals and callouts land here"
-
-
 
   # Goal B media FIRST — admin home is a people shelf (teammate photo_url thumbs).
   # Newest-first so non-STABLE seeded roster (Fay/Gus/Hana + placeholds) win
@@ -883,17 +869,13 @@ workspace admin_dashboard "Admin Dashboard":
       in_review: count(Task where status = review)
       documents: count(TaskBrief)
       conversation: count(TaskComment)
-      blockers: count(TaskComment where note_kind = blocker)
       questions: count(TaskComment where note_kind = question)
-      decisions: count(TaskComment where note_kind = decision)
     tones:
       in_progress: accent
       in_review: warning
       documents: accent
       conversation: accent
-      blockers: danger
       questions: warning
-      decisions: positive
 
 
   team_metrics:
@@ -933,19 +915,8 @@ workspace admin_dashboard "Admin Dashboard":
     action: brief_detail
     empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
 
-  # Goal B conversation (cycle 2058): recipe blocker_question_density —
-  # exclusive blocker vs question trails before the mixed live thread
-  # (peer Linear/Asana activity filters, not one undifferentiated dump).
-  # Cycle 2074 also ships decision_question_density (open_decisions after questions).
-  open_blockers:
-    source: TaskComment
-    filter: note_kind = blocker
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No open blockers in the discussion trail"
-  # Full conversation trail after conversation density + composition.
+  # Cycle 2078 distill: live thread after composition (honest grain with
+  # open_questions above the fold). Decision/blocker synonym slices removed.
   live_conversation:
     source: TaskComment
     sort: created_at desc
@@ -1041,10 +1012,9 @@ workspace admin_dashboard "Admin Dashboard":
 
   ux:
     as admin:
-      # Cycle 2074: question vs decision conversation density eager on fold
-      # with metrics; blockers remain regions (<=4 focus).
-      purpose: "Multi-panel admin - headshots, metrics, question vs decision conversation density before full trail"
-      focus: open_questions, open_decisions, media_shelf, metrics
+      # Cycle 2078 distill: one open-question trail + media + metrics (≤4 focus).
+      purpose: "Multi-panel admin - headshots, metrics, open questions before full trail"
+      focus: open_questions, media_shelf, metrics
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
@@ -1053,8 +1023,7 @@ workspace team_overview "Team Overview":
   purpose: "Multi-panel lead desk — team headshots, review pressure, plate by person, briefs, then conversation"
 
 
-  # Cycle 2074 decision_question_density on lead desk — exclusive Q vs decision
-  # trails after metrics (manager still proof; admin desk is capture-skipped).
+  # Cycle 2078 distill: one pressure trail (open questions) + live thread.
   open_questions:
     source: TaskComment
     filter: note_kind = question
@@ -1063,15 +1032,6 @@ workspace team_overview "Team Overview":
     display: conversation
     action: comment_detail
     empty: "No open questions waiting on the team"
-
-  open_decisions:
-    source: TaskComment
-    filter: note_kind = decision
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No decisions logged yet - approvals and callouts land here"
 
   # Goal B media FIRST — lead home is a people shelf (teammate photo_url thumbs).
   media_shelf:
@@ -1097,18 +1057,14 @@ workspace team_overview "Team Overview":
       done: count(Task where status = done)
       documents: count(TaskBrief)
       conversation: count(TaskComment)
-      blockers: count(TaskComment where note_kind = blocker)
       questions: count(TaskComment where note_kind = question)
-      decisions: count(TaskComment where note_kind = decision)
     tones:
       in_progress: accent
       in_review: warning
       done: positive
       documents: accent
       conversation: accent
-      blockers: danger
       questions: warning
-      decisions: positive
 
   # Dual attention — review queue + plate kanban before fold trail.
   needs_review:
@@ -1138,16 +1094,7 @@ workspace team_overview "Team Overview":
     action: brief_detail
     empty: "No document lines yet — briefs and acceptance criteria appear here"
 
-  # Cycle 2058 conversation density (blockers under fold; Q/decision eager above).
-  open_blockers:
-    source: TaskComment
-    filter: note_kind = blocker
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No open blockers in the discussion trail"
-
+  # Cycle 2078 distill: live thread after composition (honest grain).
   live_conversation:
     source: TaskComment
     sort: created_at desc
@@ -1189,11 +1136,11 @@ workspace team_overview "Team Overview":
   # is admin-only and fleet recapture skips pure admin personas).
   ux:
     as manager:
-      purpose: "Multi-panel lead — headshots, metrics, question vs decision conversation density"
-      focus: open_questions, open_decisions, media_shelf, metrics
+      purpose: "Multi-panel lead — headshots, metrics, open questions before full trail"
+      focus: open_questions, media_shelf, metrics
     as admin:
-      purpose: "Multi-panel lead — headshots, metrics, question vs decision conversation density"
-      focus: open_questions, open_decisions, media_shelf, metrics
+      purpose: "Multi-panel lead — headshots, metrics, open questions before full trail"
+      focus: open_questions, media_shelf, metrics
 
 workspace my_work "My Work":
   access: authenticated

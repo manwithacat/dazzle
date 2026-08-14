@@ -30,6 +30,17 @@ def test_support_tickets_conversation_freeze() -> None:
     assert m.metric_keys <= caps["metric_keys"]
 
 
+def test_simple_task_conversation_freeze() -> None:
+    m = measure("simple_task")
+    caps = FREEZE["simple_task"]
+    assert m.conversation_sites <= caps["conversation_sites"]
+    assert m.conversation_names <= caps["conversation_names"]
+    assert m.max_focus <= caps["max_focus"]
+    assert m.metric_keys <= caps["metric_keys"]
+    assert m.conv_siblings <= 2
+    assert m.coat_flag == 0
+
+
 def test_invoice_ops_document_freeze() -> None:
     m = measure("invoice_ops")
     caps = FREEZE["invoice_ops"]
@@ -64,7 +75,7 @@ def test_support_tickets_signature_is_siblings_and_cartesian() -> None:
     assert m.coat_flag == 0
     n, nxt = coat_residual()
     assert n >= 1
-    assert nxt != "support_tickets"
+    assert nxt == "invoice_ops"
 
 
 def test_invoice_ops_flagged_on_rails_and_focus() -> None:
