@@ -110,6 +110,63 @@ def test_ships_from_dig_receipts(tmp_path: Path) -> None:
     assert ships[0].recipe == "headshot_shelf"
 
 
+def test_ships_from_dig_receipts_structured_fields(tmp_path: Path) -> None:
+    """Cycle 2047: dig contract fields depth_id/recipe without notes prose."""
+    from scripts.interesting_product_portfolio import ships_from_dig_receipts
+
+    digs = tmp_path / "digs"
+    digs.mkdir()
+    (digs / "20260814035000-invoice_ops-interesting_product.json").write_text(
+        json.dumps(
+            {
+                "app": "invoice_ops",
+                "cycle": 2046,
+                "depth_id": "document",
+                "recipe": "receipt_settle_rail_evidence",
+                "outcome": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
+    ships = ships_from_dig_receipts(digs_dir=digs)
+    assert len(ships) == 1
+    assert ships[0].app == "invoice_ops"
+    assert ships[0].depth_id == "document"
+    assert ships[0].recipe == "receipt_settle_rail_evidence"
+
+
+def test_matrix_full_pair_thrash_avoids_locked_icon_cell() -> None:
+    """Alternating conversation/document must not re-lock invoice_ops/document."""
+    from scripts.interesting_product_portfolio import GoalBShip, recommend_pick
+
+    apps = ["invoice_ops", "support_tickets", "acme_billing", "design_studio"]
+    covered = {
+        (a, d)
+        for a in apps
+        for d in (
+            "conversation",
+            "document",
+            "media",
+            "command_density",
+            "org_structure",
+            "empty_region_honesty",
+        )
+    }
+    recent = [
+        GoalBShip("invoice_ops", "document", "receipt_settle_rail_evidence"),
+        GoalBShip("support_tickets", "conversation", "priority_awaiting_customer"),
+        GoalBShip("invoice_ops", "document", "ach_settle_rail_evidence"),
+        GoalBShip("support_tickets", "conversation", "priority_needs_reply"),
+        GoalBShip("invoice_ops", "document", "wire_settle_rail_evidence"),
+    ]
+    rec, _, _, notes = recommend_pick(covered=covered, apps=apps, recent=recent)
+    assert rec is not None
+    assert any("matrix full" in n for n in notes)
+    # Thrash cell must not win (winner may be clean; thrash only on losers)
+    assert not (rec["app"] == "invoice_ops" and rec["depth_id"] == "document")
+    assert rec["depth_id"] != "document" or rec["app"] != "invoice_ops"
+
+
 def test_live_portfolio_status_runs() -> None:
     """Smoke against the real repo matrix (no assert on recommend identity)."""
     from scripts.interesting_product_portfolio import format_status, snapshot

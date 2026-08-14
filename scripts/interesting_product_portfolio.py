@@ -195,10 +195,12 @@ def ships_from_dig_receipts(*, digs_dir: Path = DIGS, limit: int = 40) -> list[G
             continue
         app = _normalize_app(str(data.get("app") or ""))
         notes = str(data.get("notes") or "")
-        depth = None
-        m = re.search(r"depth_id\s*=\s*([a-z_]+)", notes, re.I)
-        if m:
-            depth = _normalize_depth(m.group(1))
+        # Prefer structured fields (cycle 2047+ dig contract); fall back to notes prose.
+        depth = _normalize_depth(str(data.get("depth_id") or "")) or None
+        if not depth:
+            m = re.search(r"depth_id\s*=\s*([a-z_]+)", notes, re.I)
+            if m:
+                depth = _normalize_depth(m.group(1))
         if not depth:
             for d in DEPTH_IDS:
                 if d in notes.lower() or d.replace("_", " ") in notes.lower():
@@ -211,11 +213,14 @@ def ships_from_dig_receipts(*, digs_dir: Path = DIGS, limit: int = 40) -> list[G
             cycle_i = int(cycle) if cycle is not None else None
         except (TypeError, ValueError):
             cycle_i = None
+        # Explicit recipe tag (e.g. receipt_settle_rail_evidence) wins; else soft patterns.
+        recipe_raw = str(data.get("recipe") or "").strip() or None
+        recipe = recipe_raw or _recipe_from_text(notes) or _recipe_from_text(recipe_raw or "")
         ships.append(
             GoalBShip(
                 app=app,
                 depth_id=depth,
-                recipe=_recipe_from_text(notes),
+                recipe=recipe,
                 source=path.name,
                 cycle=cycle_i,
             )
@@ -358,6 +363,12 @@ def recommend_pick(
     only_banned_left = bool(missing) and all(d in banned_depths for _, d in missing)
     matrix_full = not missing
 
+    # Pair thrash: tipward (app, depth) counts — breaks conversation↔document
+    # alternation that never hits max_same_depth but re-paints the same cell.
+    pair_counts: Counter[tuple[str, str]] = Counter(
+        (s.app, s.depth_id) for s in recent[:12] if s.app and s.depth_id
+    )
+
     def score(app: str, depth: str, *, allow_banned_depth: bool) -> tuple[int, str]:
         """Higher is better. Reasons for logging."""
         why: list[str] = []
@@ -396,6 +407,12 @@ def recommend_pick(
         if recent and recent[0].depth_id == depth and not allow_banned_depth:
             s -= 25
             why.append("not_last_depth")
+        # Matrix-full upgrades: penalize cells already dominating tip history so
+        # icon_app+peer_pack cannot lock invoice_ops/document forever (cycle 2047).
+        pair_n = pair_counts.get((app, depth), 0)
+        if pair_n:
+            s -= 40 * pair_n
+            why.append(f"pair_thrash n={pair_n}")
         if load_peer_pack(app):
             s += 8
             why.append("peer_pack")
