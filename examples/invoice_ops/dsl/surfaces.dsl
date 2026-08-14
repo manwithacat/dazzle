@@ -579,6 +579,7 @@ workspace finance_ops "Finance Operations":
       closeout_rail: count(InvoiceDocument where doc_kind = lien_waiver or doc_kind = payment_confirmation)
       remediation_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = credit_memo)
       period_close_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = payment_confirmation)
+      wire_settle_rail: count(InvoiceDocument where doc_kind = wire_instructions or doc_kind = payment_confirmation)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -610,6 +611,7 @@ workspace finance_ops "Finance Operations":
       closeout_rail: positive
       remediation_rail: warning
       period_close_rail: accent
+      wire_settle_rail: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -794,6 +796,20 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No period-close rail — attach vendor statements and payment ACKs before month-end close"
+
+  # Peer-pack document upgrade (cycle 2039): Bill.com / Melio / Tipalti wire-settle rail
+  # — wire instructions + payment confirmation high-value wire pack in one compound filter
+  # (recipe wire_settle_rail_evidence; not ACH|wire bank_rail re-stack, not
+  # remittance|payment settle_rail, not lien|payment closeout_rail, not
+  # statement|payment period_close_rail — pairs bank wire details with wire ACK).
+  wire_settle_rail:
+    source: InvoiceDocument
+    filter: doc_kind = wire_instructions or doc_kind = payment_confirmation
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No wire-settle rail — attach wire instructions and payment ACKs before high-value wire release"
 
   # Peer-pack document upgrade (cycle 1965): Bill.com / Coupa / Tipalti PO
   # packet watch — signed PO cover before approve/ops (recipe po_packet_watch;
@@ -1045,19 +1061,19 @@ workspace finance_ops "Finance Operations":
   ux:
     as finance_admin:
       purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as tenant_admin:
       purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as finance:
       purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
     as approver:
       purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
     as auditor:
       purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1337,6 +1353,7 @@ workspace pay_desk "Pay Desk":
       closeout_rail: count(InvoiceDocument where doc_kind = lien_waiver or doc_kind = payment_confirmation)
       remediation_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = credit_memo)
       period_close_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = payment_confirmation)
+      wire_settle_rail: count(InvoiceDocument where doc_kind = wire_instructions or doc_kind = payment_confirmation)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
@@ -1365,6 +1382,7 @@ workspace pay_desk "Pay Desk":
       closeout_rail: positive
       remediation_rail: warning
       period_close_rail: accent
+      wire_settle_rail: warning
       credit_memos: warning
       debit_memos: destructive
       vendor_statements: accent
@@ -1545,6 +1563,19 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No period-close rail — attach vendor statements and payment ACKs before month-end close"
+
+  # Peer-pack wire_settle_rail_evidence (cycle 2039): Bill.com / Melio / Tipalti
+  # wire instructions + payment confirmation high-value wire pack — not ACH|wire
+  # bank_rail, remittance|payment settle_rail, lien|payment closeout_rail, or
+  # statement|payment period_close_rail re-stack (pairs wire details with wire ACK).
+  wire_settle_rail:
+    source: InvoiceDocument
+    filter: doc_kind = wire_instructions or doc_kind = payment_confirmation
+    sort: created_at desc
+    limit: 6
+    display: queue
+    action: invoice_document_detail
+    empty: "No wire-settle rail — attach wire instructions and payment ACKs before high-value wire release"
 
   # Peer-pack remittance_advice_watch (cycle 1974): Bill.com / Melio remittance
   # advice on the settle desk so controllers lean into SEPA/ACH covers before
@@ -1729,10 +1760,10 @@ workspace pay_desk "Pay Desk":
   ux:
     as finance:
       purpose: "Multi-panel settlement — first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      focus: settle_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
     as finance_admin:
       purpose: "Multi-panel settlement — first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      focus: settle_metrics, document_pulse, draft_packets, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
 
   settle_board:
     source: Invoice
