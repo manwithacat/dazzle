@@ -41,10 +41,12 @@ def test_billing_workspace_declares_composition_queue() -> None:
     rest = text[block_start + 1 :]
     nxt = rest.find("\nworkspace ")
     block = text[block_start : block_start + 1 + nxt] if nxt != -1 else text[block_start:]
+    assert block.index("soft_dunning:") < block.index("hard_collections:")
+    assert block.index("hard_collections:") < block.index("open_invoices:")
     assert block.index("dunning_board:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert (
-        "focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, "
+        "focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, "
         "dunning_board, composition, live_conversation" in block
     )
 
@@ -99,3 +101,37 @@ def test_demo_personas_bind_domain_user_org() -> None:
     # STABLE dual-identity for admin + auditor
     assert by_email["admin@demo.dazzle.local"]["id"] == "a1000000-0000-4000-8000-000000000003"
     assert by_email["auditor@demo.dazzle.local"]["id"] == "a1000000-0000-4000-8000-000000000009"
+
+
+def test_billing_dunning_stage_density() -> None:
+    """Cycle 2053: Stripe/Chargebee soft vs hard dunning document queues.
+
+    Recipe dunning_stage_density — not dunning_board-only re-stack.
+    """
+    text = SURFACES.read_text()
+    start = text.index('workspace billing "Acme Billing":')
+    rest = text[start + 1 :]
+    nxt = rest.find("\nworkspace ")
+    block = text[start : start + 1 + nxt] if nxt != -1 else text[start:]
+    assert "\n  soft_dunning:\n" in block
+    assert "\n  hard_collections:\n" in block
+    soft = block.split("\n  soft_dunning:\n", 1)[1].split("\n  hard_collections:", 1)[0]
+    assert "source: Invoice" in soft
+    assert "dunning_state = reminder_1" in soft
+    assert "dunning_state = reminder_2" in soft
+    assert "display: queue" in soft
+    hard = block.split("\n  hard_collections:\n", 1)[1].split("\n  open_invoices:", 1)[0]
+    assert "dunning_state = final" in hard
+    assert "dunning_state = collections" in hard
+    assert "display: queue" in hard
+    assert (
+        "soft_dunning: count(Invoice where dunning_state = reminder_1 or dunning_state = reminder_2)"
+        in block
+    )
+    assert (
+        "hard_collections: count(Invoice where dunning_state = final or dunning_state = collections)"
+        in block
+    )
+    assert block.index("portfolio_metrics:") < block.index("\n  soft_dunning:\n")
+    assert block.index("\n  soft_dunning:\n") < block.index("\n  hard_collections:\n")
+    assert block.index("\n  hard_collections:\n") < block.index("dunning_board:")

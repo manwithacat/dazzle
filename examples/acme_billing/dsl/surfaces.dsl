@@ -461,6 +461,7 @@ workspace billing "Acme Billing":
 
   # Metrics-first portfolio before attention panels.
   # Goal B document peer-pack (cycle 1904): dunning + plan grain on the fold.
+  # Cycle 2053: soft vs hard dunning stage counts (dunning_stage_density).
   portfolio_metrics:
     source: Invoice
     display: metrics
@@ -468,13 +469,40 @@ workspace billing "Acme Billing":
       open_books: count(Invoice where sensitive != true)
       sensitive: count(Invoice where sensitive = true)
       in_dunning: count(Invoice where dunning_state != none)
+      soft_dunning: count(Invoice where dunning_state = reminder_1 or dunning_state = reminder_2)
+      hard_collections: count(Invoice where dunning_state = final or dunning_state = collections)
       lines: count(LineItem)
       conversation: count(InvoiceNote)
     tones:
       open_books: accent
       sensitive: destructive
       in_dunning: warning
+      soft_dunning: warning
+      hard_collections: destructive
       conversation: accent
+
+  # Goal B document (cycle 2053): peer Stripe/Chargebee dunning stage density —
+  # soft reminders vs hard final/collections as dual document queues ABOVE the
+  # full dunning kanban (recipe dunning_stage_density; not dunning_board-only
+  # re-stack, not composition_lines alone — finance operators lean into stage
+  # pressure as two work queues of invoice documents).
+  soft_dunning:
+    source: Invoice
+    filter: dunning_state = reminder_1 or dunning_state = reminder_2
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No invoices in soft dunning — no open reminders"
+
+  hard_collections:
+    source: Invoice
+    filter: dunning_state = final or dunning_state = collections
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No invoices in hard collections — no final notices or collections"
 
   # Dual attention (fold share): standard open books + sensitive review.
   open_invoices:
@@ -527,14 +555,14 @@ workspace billing "Acme Billing":
 
   ux:
     as admin:
-      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as org_owner:
-      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as auditor:
-      purpose: "Invoice packet wall first, then dual attention, dunning, and composition"
-      focus: invoice_packets, portfolio_metrics, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
 
   # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:

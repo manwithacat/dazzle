@@ -31,7 +31,7 @@ def test_billing_omits_membership_mix_under_fold() -> None:
     # Focus spine stays chart-free; bar_chart coverage may sit under fold.
     # Goal B media invoice_packets leads the fold (cycle 1885).
     assert (
-        "focus: invoice_packets, portfolio_metrics, open_invoices, "
+        "focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, "
         "sensitive_flags, dunning_board, composition, live_conversation" in block
     )
     assert "invoice_by_project" not in block.split("focus:")[1].split("\n")[0]

@@ -37,7 +37,7 @@ def test_billing_caps_attention_for_fold_share() -> None:
     assert "limit: 4" in block
     # Goal B media invoice_packets leads; dual attention + dunning + composition trail.
     assert (
-        "focus: invoice_packets, portfolio_metrics, open_invoices, "
+        "focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, "
         "sensitive_flags, dunning_board, composition, live_conversation"
     ) in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()

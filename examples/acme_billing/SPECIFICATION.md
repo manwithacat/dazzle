@@ -81,8 +81,10 @@ Work is split across job desks so scoped workers never land in the org-admin
 warehouse:
 
 - **Acme Billing** — multi-panel home for administrators, organization
-  owners, and auditors: portfolio metrics, dual attention (open books +
-  sensitive flags), line composition, then live invoice notes, with
+  owners, and auditors: invoice packet wall, portfolio metrics, soft vs hard
+  dunning stage queues (cycle 2053 Stripe/Chargebee dunning_stage_density —
+  reminders vs final/collections before the full dunning board), dual attention
+  (open books + sensitive flags), line composition, then live invoice notes, with
   organization / project context below (no role-mix chart under the fold).
 - **My Work** — home for project members and external contractors: assigned
   projects and invoices only (no status chart / membership timeline voids).
@@ -157,4 +159,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:debdc3ddba4063809420acbec3023420f9fc9167fff20f71d00ade3df5f50ff3 -->
+<!-- dazzle-spec-brief: sha256:786d0fff396ee8cdf16e8436d228d517edf30917e4edb55c8ee0af5e08433c34 -->
