@@ -209,6 +209,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_repository_null_bool_default.py",
     # acme_billing Goal B conversation (InvoiceNote live trail on billing desks)
     "tests/unit/test_acme_billing_conversation_goal_b.py",
+    # acme_billing Goal B document (LineItem composition + line_kind_density)
+    "tests/unit/test_acme_billing_document_goal_b.py",
     # acme_billing Goal B command_density (open+sensitive dual attention)
     "tests/unit/test_acme_billing_command_density_goal_b.py",
     # acme_billing Goal B empty_region_honesty (cycle 1828 primary desks prune)
