@@ -33,7 +33,7 @@ def test_command_center_caps_attention_queues_for_fold_share() -> None:
     # Caps keep dual panels + documents + conversation sharing the fold.
     assert "limit: 4" in block
     assert (
-        "focus: runbook_covers, health_summary, systems_attention, active_alerts, "
+        "focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, "
         "composition, live_conversation" in block
     )
     assert "multi-panel" in block.lower() or "runbook cover" in block.lower()
@@ -45,3 +45,40 @@ def test_command_center_metrics_count_critical_and_conversation() -> None:
     assert "documents: count(OpsDocument)" in block
     assert "conversation: count(IncidentNote)" in block
     assert "source: IncidentNote" in block
+
+
+def test_command_center_critical_bridge_density() -> None:
+    """Cycle 2049: PagerDuty/Opsgenie critical bridge density above dual attention.
+
+    Recipe critical_bridge_density — offline|critical systems + high|critical
+    active pages — not systems_attention|active_alerts dual_attention re-stack alone.
+    """
+    block = _command_center_block()
+    assert "\n  critical_systems:\n" in block
+    assert "\n  page_alerts:\n" in block
+    crit = block.split("\n  critical_systems:\n", 1)[1].split("\n  page_alerts:", 1)[0]
+    assert "source: System" in crit
+    assert "status = critical" in crit
+    assert "status = offline" in crit
+    assert "display: queue" in crit
+    assert "limit: 3" in crit
+    pages = block.split("\n  page_alerts:\n", 1)[1].split("\n  systems_attention:", 1)[0]
+    assert "source: Alert" in pages
+    assert "severity = critical" in pages
+    assert "severity = high" in pages
+    assert "status = active" in pages
+    assert "display: queue" in pages
+    assert "offline_count: count(System where status = offline)" in block
+    assert (
+        "page_alerts: count(Alert where status = active and (severity = critical or severity = high))"
+        in block
+    )
+    # Order: health → critical bridge → broad dual attention
+    assert block.index("\n  health_summary:\n") < block.index("\n  critical_systems:\n")
+    assert block.index("\n  critical_systems:\n") < block.index("\n  page_alerts:\n")
+    assert block.index("\n  page_alerts:\n") < block.index("\n  systems_attention:\n")
+    assert block.index("\n  systems_attention:\n") < block.index("\n  active_alerts:\n")
+    assert (
+        "focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, "
+        "composition, live_conversation" in block
+    )

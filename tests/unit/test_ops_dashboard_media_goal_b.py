@@ -39,7 +39,7 @@ def test_command_center_runbook_covers_first() -> None:
     assert "photo_url" not in block
     assert block.index("runbook_covers:") < block.index("health_summary:")
     assert (
-        "focus: runbook_covers, health_summary, systems_attention, active_alerts, "
+        "focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, "
         "composition, live_conversation" in block
     )
 

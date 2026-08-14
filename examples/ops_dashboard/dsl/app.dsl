@@ -307,7 +307,7 @@ workspace command_center "Command Center":
   # PagerDuty/Datadog put runbook cover thumbs above health pulse and dual
   # attention — not headshot shelves (portfolio ban headshot_shelf).
   # Recipe runbook_cover_wall.
-  purpose: "Multi-panel ops — runbook covers, health pulse, dual attention, composition, live incident notes"
+  purpose: "Multi-panel ops — runbook covers, health pulse, critical bridge density, dual attention, composition, live incident notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
@@ -339,13 +339,41 @@ workspace command_center "Command Center":
       total_systems: count(System)
       healthy_count: count(System where status = healthy)
       critical_count: count(System where status = critical)
+      offline_count: count(System where status = offline)
+      page_alerts: count(Alert where status = active and (severity = critical or severity = high))
       documents: count(OpsDocument)
       conversation: count(IncidentNote)
     tones:
       healthy_count: positive
       critical_count: destructive
+      offline_count: destructive
+      page_alerts: destructive
       documents: accent
       conversation: accent
+
+  # Goal B command_density (cycle 2049): peer PagerDuty / Opsgenie / Datadog
+  # critical-bridge density — offline|critical systems + high|critical active
+  # pages as a tight dual pressure pair ABOVE broad dual attention (recipe
+  # critical_bridge_density; not systems_attention|active_alerts dual_attention
+  # re-stack alone — sev1 bridge strip before the full fleet/alert feeds).
+  critical_systems:
+    source: System
+    filter: status = critical or status = offline
+    sort: error_rate desc, response_time_ms desc
+    limit: 3
+    display: queue
+    action: system_detail
+    empty: "No critical or offline systems"
+    refresh: every 30s
+
+  page_alerts:
+    source: Alert
+    filter: status = active and (severity = critical or severity = high)
+    sort: severity desc, triggered_at desc
+    limit: 3
+    display: queue
+    empty: "No high/critical pages firing"
+    refresh: every 30s
 
   # Fleet attention — non-healthy systems (degraded / critical / offline).
   # Cap at 4 so metrics + dual panels + documents + conversation share the fold.
@@ -784,11 +812,11 @@ workspace command_center "Command Center":
     as ops_engineer:
       scope: all
       # Goal B media first (cycle 1889) + command_density + document.
-      purpose: "Runbook cover wall first, then dual attention, composition, and incident notes"
-      focus: runbook_covers, health_summary, systems_attention, active_alerts, composition, live_conversation
+      purpose: "Runbook cover wall first, then critical bridge density, dual attention, composition, and incident notes"
+      focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, composition, live_conversation
     as admin:
-      purpose: "Runbook cover wall first, then multi-panel attention, documents, and conversation"
-      focus: runbook_covers, health_summary, systems_attention, active_alerts, composition, live_conversation
+      purpose: "Runbook cover wall first, then critical bridge density, multi-panel attention, documents, and conversation"
+      focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, composition, live_conversation
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)
