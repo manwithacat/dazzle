@@ -208,6 +208,10 @@ entity LineItem "Line Item":
   # operators lean into these (Stripe Billing / Chargebee), not description alone.
   tax_code: str(20) optional
   plan_name: str(80) optional
+  # Goal B document (cycle 2069): Stripe/Chargebee line-kind density —
+  # subscription vs metered usage vs one-time vs credit composition grain
+  # (recipe line_kind_density — not dunning_stage_density re-stack).
+  line_kind: enum[subscription, usage, one_time, credit]=one_time
   created_at: datetime auto_add
 
   # Same role surface as Invoice read/list; create stays admin-only (no

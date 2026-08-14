@@ -234,7 +234,7 @@ surface invoice_detail "Invoice":
   related lines "Line items":
     display: queue
     show: LineItem
-    columns: description, quantity, unit_amount, tax_code, plan_name
+    columns: description, quantity, unit_amount, tax_code, plan_name, line_kind
 
   # Goal B conversation (cycle 1899 hub wave): invoice hub Discussion uses
   # RelatedDisplayMode.conversation → Message/Bubble chrome (finance desk
@@ -335,6 +335,7 @@ surface line_item_list "Line Items":
     field unit_amount "Unit (¢)"
     field tax_code "Tax"
     field plan_name "Plan"
+    field line_kind "Kind"
     field invoice "Invoice"
 
   ux:
@@ -351,6 +352,7 @@ surface line_item_detail "Line Item":
     field unit_amount "Unit (¢)"
     field tax_code "Tax Code"
     field plan_name "Plan"
+    field line_kind "Kind"
     field invoice "Invoice"
     field created_at "Created"
 
@@ -369,6 +371,7 @@ surface line_item_create "Create Line Item":
     field unit_amount "Unit (¢)"
     field tax_code "Tax Code"
     field plan_name "Plan"
+    field line_kind "Kind"
 
 surface line_item_edit "Edit Line Item":
   uses entity LineItem
@@ -382,6 +385,7 @@ surface line_item_edit "Edit Line Item":
     field unit_amount "Unit (¢)"
     field tax_code "Tax Code"
     field plan_name "Plan"
+    field line_kind "Kind"
 
 # =============================================================================
 # MEMBERSHIP SURFACES
@@ -448,20 +452,25 @@ workspace billing "Acme Billing":
   # to all authenticated users).
   access: persona(admin, org_owner, auditor)
 
-  # Goal B media FIRST — invoice document thumbs (Stripe/Chargebee packet wall).
-  # Recipe: invoice_packet_preview — not headshot_shelf (portfolio ban).
+  # Metrics-first portfolio before attention panels.
+  # Goal B document peer-pack (cycle 1904): dunning + plan grain on the fold.
+  # Cycle 2053: soft vs hard dunning stage counts (dunning_stage_density).
+  # Cycle 2069: subscription vs usage line-kind counts (line_kind_density).
   invoice_packets:
     source: Invoice
     filter: preview_url != null
     sort: created_at desc
-    limit: 6
+    # Cycle 2069: 3 thumbs leave fold room for subscription/usage line-kind queues.
+    limit: 3
     display: grid
     action: invoice_detail
     empty: "No invoice packet previews yet"
 
-  # Metrics-first portfolio before attention panels.
-  # Goal B document peer-pack (cycle 1904): dunning + plan grain on the fold.
-  # Cycle 2053: soft vs hard dunning stage counts (dunning_stage_density).
+  # Goal B document (cycle 2053): peer Stripe/Chargebee dunning stage density —
+  # soft reminders vs hard final/collections as dual document queues ABOVE the
+  # full dunning kanban (recipe dunning_stage_density; not dunning_board-only
+  # re-stack, not composition_lines alone — finance operators lean into stage
+  # pressure as two work queues of invoice documents).
   portfolio_metrics:
     source: Invoice
     display: metrics
@@ -471,6 +480,8 @@ workspace billing "Acme Billing":
       in_dunning: count(Invoice where dunning_state != none)
       soft_dunning: count(Invoice where dunning_state = reminder_1 or dunning_state = reminder_2)
       hard_collections: count(Invoice where dunning_state = final or dunning_state = collections)
+      subscription_lines: count(LineItem where line_kind = subscription)
+      usage_lines: count(LineItem where line_kind = usage)
       lines: count(LineItem)
       conversation: count(InvoiceNote)
     tones:
@@ -479,13 +490,34 @@ workspace billing "Acme Billing":
       in_dunning: warning
       soft_dunning: warning
       hard_collections: destructive
+      subscription_lines: accent
+      usage_lines: warning
       conversation: accent
 
-  # Goal B document (cycle 2053): peer Stripe/Chargebee dunning stage density —
-  # soft reminders vs hard final/collections as dual document queues ABOVE the
-  # full dunning kanban (recipe dunning_stage_density; not dunning_board-only
-  # re-stack, not composition_lines alone — finance operators lean into stage
-  # pressure as two work queues of invoice documents).
+  # Goal B document (cycle 2069): Stripe/Chargebee line-kind density —
+  # subscription vs metered usage dual composition queues ABOVE the full line
+  # tray (recipe line_kind_density; not dunning_stage_density re-stack, not
+  # composition_lines alone — finance operators lean into plan vs usage grain).
+  subscription_lines:
+    source: LineItem
+    filter: line_kind = subscription
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No subscription lines — no recurring plan composition yet"
+
+  usage_lines:
+    source: LineItem
+    filter: line_kind = usage
+    sort: created_at desc
+    limit: 4
+    display: queue
+    action: invoice_detail
+    empty: "No usage lines — no metered overage composition yet"
+
+  # Goal B media FIRST — invoice document thumbs (Stripe/Chargebee packet wall).
+  # Recipe: invoice_packet_preview — not headshot_shelf (portfolio ban).
   soft_dunning:
     source: Invoice
     filter: dunning_state = reminder_1 or dunning_state = reminder_2
@@ -534,7 +566,7 @@ workspace billing "Acme Billing":
     action: invoice_detail
     empty: "No invoices in dunning — healthy books"
 
-  # Goal B document composition: named line descriptions + tax/plan columns
+  # Goal B document composition: named line descriptions + tax/plan/kind columns
   # (Bill.com / Stripe Invoicing peer — not header-only amount shells).
   composition:
     source: LineItem
@@ -555,14 +587,14 @@ workspace billing "Acme Billing":
 
   ux:
     as admin:
-      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
-      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then line-kind density, dunning stages, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, subscription_lines, usage_lines, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as org_owner:
-      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
-      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then line-kind density, dunning stages, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, subscription_lines, usage_lines, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
     as auditor:
-      purpose: "Invoice packet wall first, then dunning stage density, dual attention, and composition"
-      focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
+      purpose: "Invoice packet wall first, then line-kind density, dunning stages, dual attention, and composition"
+      focus: invoice_packets, portfolio_metrics, subscription_lines, usage_lines, soft_dunning, hard_collections, open_invoices, sensitive_flags, dunning_board, composition, live_conversation
 
   # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:
@@ -601,6 +633,7 @@ workspace billing "Acme Billing":
 
 # Product landing for scoped workers (product maturity: not warehouse-only).
 # Separate from billing so org-management chrome stays gated to owner/auditor.
+
 workspace my_work "My Work":
   # Goal B empty_region_honesty (cycle 1828): assigned work queues only —
   # not status bar chart / membership timeline voids under the fold.

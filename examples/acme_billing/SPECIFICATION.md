@@ -41,7 +41,8 @@ with its amount recorded in whole cents. Invoices can be flagged as sensitive,
 and that flag is enforced by the visibility rules: members and contractors
 never see sensitive invoices, while auditors and owners do. Each invoice can
 carry **line items** — named composition lines (description, quantity, unit
-amount in cents) that make up the document body, not just a header total.
+amount in cents, tax code, plan name, and line kind: subscription / usage /
+one-time / credit) that make up the document body, not just a header total.
 
 **Memberships.** A Membership links a User to a Project — it is the assignment
 record that grants project members and contractors their view of the work.
@@ -81,11 +82,14 @@ Work is split across job desks so scoped workers never land in the org-admin
 warehouse:
 
 - **Acme Billing** — multi-panel home for administrators, organization
-  owners, and auditors: invoice packet wall, portfolio metrics, soft vs hard
-  dunning stage queues (cycle 2053 Stripe/Chargebee dunning_stage_density —
-  reminders vs final/collections before the full dunning board), dual attention
-  (open books + sensitive flags), line composition, then live invoice notes, with
+  owners, and auditors: invoice packet wall, portfolio metrics, subscription vs
+  usage line-kind queues (cycle 2069 line_kind_density — recurring plan
+  composition vs metered overage above the fold), soft vs hard dunning stage
+  queues (cycle 2053 Stripe/Chargebee dunning_stage_density — reminders vs
+  final/collections before the full dunning board), dual attention (open books +
+  sensitive flags), line composition, then live invoice notes, with
   organization / project context below (no role-mix chart under the fold).
+
 - **My Work** — home for project members and external contractors: assigned
   projects and invoices only (no status chart / membership timeline voids).
 - **Projects** — project-first path: kanban portfolio and recent invoices
@@ -159,4 +163,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:786d0fff396ee8cdf16e8436d228d517edf30917e4edb55c8ee0af5e08433c34 -->
+<!-- dazzle-spec-brief: sha256:2dab8fd7fd5a51c3185a60c5736db7edc619e14b0a37c81d12b2fc01198dd995 -->

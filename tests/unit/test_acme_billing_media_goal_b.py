@@ -29,7 +29,12 @@ def test_invoice_declares_preview_url() -> None:
 
 
 def test_billing_invoice_packets_first() -> None:
-    """Novel media: invoice document thumbs win fold — not User headshots."""
+    """Novel media: invoice document thumbs win fold — not User headshots.
+
+    Cycle 2069: packets stay first for media depth; line-kind density queues
+    follow portfolio_metrics (document depth) with limit 3 packet thumbs so
+    subscription/usage OCR fits the above-fold still.
+    """
     block = _billing_block()
     assert "invoice_packets:" in block
     assert "source: Invoice" in block
@@ -37,8 +42,12 @@ def test_billing_invoice_packets_first() -> None:
     assert "preview_url != null" in block
     assert "media_shelf:" not in block
     assert "photo_url" not in block
-    assert block.index("invoice_packets:") < block.index("portfolio_metrics:")
-    assert "invoice_packets" in block
+    # Packets first on the fold (region order + focus spine).
+    assert block.index("\n  invoice_packets:\n") < block.index("portfolio_metrics:")
+    assert (
+        "focus: invoice_packets, portfolio_metrics, subscription_lines, usage_lines, soft_dunning, hard_collections, "
+        "open_invoices, sensitive_flags, dunning_board, composition, live_conversation" in block
+    )
     assert "as admin:" in block
     assert "as org_owner:" in block
     assert "as auditor:" in block

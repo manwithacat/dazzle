@@ -7,6 +7,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SURFACES = ROOT / "examples/acme_billing/dsl/surfaces.dsl"
 
+BILLING_FOCUS = (
+    "focus: invoice_packets, portfolio_metrics, subscription_lines, usage_lines, soft_dunning, hard_collections, "
+    "open_invoices, sensitive_flags, dunning_board, composition, live_conversation"
+)
+
 
 def _billing_block() -> str:
     text = SURFACES.read_text()
@@ -24,22 +29,25 @@ def test_billing_declares_dual_attention_before_conversation() -> None:
     assert "dunning_board:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    # Order: metrics → open → sensitive → dunning → composition → conversation.
-    assert block.index("portfolio_metrics:") < block.index("open_invoices:")
-    assert block.index("open_invoices:") < block.index("sensitive_flags:")
-    assert block.index("sensitive_flags:") < block.index("dunning_board:")
-    assert block.index("dunning_board:") < block.index("composition:")
-    assert block.index("composition:") < block.index("live_conversation:")
+    # Order: packets → metrics → line-kind dual queues → dunning stages → dual
+    # attention → dunning board → composition → conversation (region markers).
+    assert block.index("\n  invoice_packets:\n") < block.index("portfolio_metrics:")
+    assert block.index("portfolio_metrics:") < block.index("\n  subscription_lines:\n")
+    assert block.index("\n  subscription_lines:\n") < block.index("\n  usage_lines:\n")
+    assert block.index("\n  usage_lines:\n") < block.index("\n  soft_dunning:\n")
+    assert block.index("\n  soft_dunning:\n") < block.index("\n  hard_collections:\n")
+    assert block.index("\n  hard_collections:\n") < block.index("\n  open_invoices:\n")
+    assert block.index("\n  open_invoices:\n") < block.index("\n  sensitive_flags:\n")
+    assert block.index("\n  sensitive_flags:\n") < block.index("\n  dunning_board:\n")
+    assert block.index("\n  dunning_board:\n") < block.index("\n  composition:\n")
+    assert block.index("\n  composition:\n") < block.index("\n  live_conversation:\n")
 
 
 def test_billing_caps_attention_for_fold_share() -> None:
     block = _billing_block()
     assert "limit: 4" in block
-    # Goal B media invoice_packets leads; dual attention + dunning + composition trail.
-    assert (
-        "focus: invoice_packets, portfolio_metrics, soft_dunning, hard_collections, open_invoices, "
-        "sensitive_flags, dunning_board, composition, live_conversation"
-    ) in block
+    # Goal B media invoice_packets leads; line-kind density + dual attention trail.
+    assert BILLING_FOCUS in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
 
