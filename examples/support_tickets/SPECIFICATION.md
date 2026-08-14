@@ -51,16 +51,17 @@ escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: a
 multi-panel command home with an agent **media shelf** (headshot thumbs) first,
 then team counts (including unassigned, **at-risk / breached SLA** pressure, and
-document volume), an SLA readiness strip, a live **breach risk** queue of
-tickets whose first-response SLA is at risk or breached, dual attention queues
-(critical + unassigned, fold-capped), a **composition** queue of named SLA
-waiver documents, and a capped live conversation trail — not conversation-only
-above the fold, not a status-funnel / secondary ticket-trail thrash pair under
-the fold, and not an empty personal assigned kanban. From the same Lead nav
-they open **People**: staff by role and department (Support, Escalations,
-Billing) before unassigned load — so reassignment is org-shaped, not a flat
-warehouse roster. The team Ticket Queue and Agent Console remain available.
-Managers alone can delete tickets or comments.
+document volume), **SLA stage density** dual queues (soft **at-risk** vs hard
+**breached**, fold-capped — cycle 2054 `sla_stage_density`; peer Zendesk/Front
+stage boards, not one mixed breach-risk list), an SLA readiness strip, dual
+attention queues (critical + unassigned, fold-capped), a **composition** queue
+of named SLA waiver documents, and a capped live conversation trail — not
+conversation-only above the fold, not a status-funnel / secondary ticket-trail
+thrash pair under the fold, and not an empty personal assigned kanban. From the
+same Lead nav they open **People**: staff by role and department (Support,
+Escalations, Billing) before unassigned load — so reassignment is org-shaped,
+not a flat warehouse roster. The team Ticket Queue and Agent Console remain
+available. Managers alone can delete tickets or comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
@@ -97,8 +98,7 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, critical awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, thankful needs reply, thankful awaiting customer, priority needs reply, breach needs reply, breach awaiting customer, internal notes, documents), SLA readiness, a **breach risk** queue
-(at_risk / breached tickets, limit 4), dual attention queues (critical +
+conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, critical awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, thankful needs reply, thankful awaiting customer, priority needs reply, breach needs reply, breach awaiting customer, internal notes, documents), **SLA stage density** dual queues (**at-risk** soft pressure + **breached** hard failures, limit 4 each; cycle 2054 `sla_stage_density` — not one mixed breach-risk list), SLA readiness, dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 **needs reply** ball (limit 4), an **urgent needs reply** trail of SLA time-pressure notes waiting on agents
 (limit 4; cycle 2003), an **urgent awaiting customer** trail of SLA time-pressure notes parked on customers
@@ -164,8 +164,8 @@ down; representative ones:
   customer is notified.
 - When a Support Manager reviews team performance on Manager Ops, they see
   agent headshots first, then open, in-progress, critical, at-risk, breached,
-  resolved, and conversation counts plus the breach-risk queue, critical/
-  unassigned queues, and live note trail.
+  resolved, and conversation counts plus soft at-risk and hard breached stage
+  queues, critical/unassigned dual attention, and live note trail.
 - When a Support Manager reassigns a ticket, the chosen agent takes it over
   and the previous assignee is notified.
 - When the Administrator triages the full queue, they see every ticket
@@ -222,4 +222,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:b1bdf0615cf18f84d86fdf9988a4ba2a460ce3bfecd9a522b787ed37bd425aff -->
+<!-- dazzle-spec-brief: sha256:cb7c25547deebc145e2fccad09b85a15ca9b48658fae9035c73bca4f112e3ea9 -->
