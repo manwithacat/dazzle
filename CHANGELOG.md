@@ -31,7 +31,8 @@
   `example-apps distill`. Cycle 2077 distilled support_tickets conversation
   coat (keep `needs_reply` + `live_conversation`; freeze lowered). Cycle 2078
   distilled simple_task (keep `open_questions` + `live_conversation`; freeze
-  added).
+  added). Cycle 2079 distilled invoice_ops document rails (keep settle /
+  adjustment / bank spine; drop 10 remix rails; freeze 27→7 rails, 27→11 focus).
 - **Goal B coat freeze** — portfolio collapses synonym recipe tags into
   families (`conversation_filter_slice`, `document_rail_slice`,
   `stage_queue_slice`); one family ship or live DSL above honest grain

@@ -514,7 +514,7 @@ workspace finance_ops "Finance Operations":
   # money desk first — not teammate headshot shelves (peer refuse). Dual
   # attention, line composition, and live discussion follow the packet wall.
   # Cycle 1909: due-date / past-due work rows (amount + due + vendor pressure).
-  purpose: "Day-to-day invoice throughput — packet covers, draft gate, compliance drafts, three-way match evidence, tax certs, PO packets, dispute packets, past-due pressure, dual attention, named packets, line composition, and live discussion"
+  purpose: "Day-to-day invoice throughput — packet covers, draft gate, match evidence, settle rail, past-due pressure, dual attention, named packets, and live discussion"
   access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
 
   # Goal B document FIRST — recipe packet_cover_wall (novel vs headshot_shelf).
@@ -569,19 +569,9 @@ workspace finance_ops "Finance Operations":
       compliance_drafts: count(InvoiceDocument where status = draft and (doc_kind = form_w9 or doc_kind = insurance_certificate or doc_kind = tax_certificate or doc_kind = lien_waiver or doc_kind = ach_authorization))
       match_evidence: count(InvoiceDocument where doc_kind = po_packet or doc_kind = goods_receipt or doc_kind = packing_slip)
       settle_rail: count(InvoiceDocument where doc_kind = remittance or doc_kind = payment_confirmation)
-      ach_settle_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = payment_confirmation)
-      receipt_settle_rail: count(InvoiceDocument where doc_kind = goods_receipt or doc_kind = payment_confirmation)
       adjustment_rail: count(InvoiceDocument where doc_kind = credit_memo or doc_kind = debit_memo)
       bank_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = wire_instructions)
       tax_identity: count(InvoiceDocument where doc_kind = form_w9 or doc_kind = tax_certificate)
-      reconcile_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = remittance)
-      vendor_risk_rail: count(InvoiceDocument where doc_kind = insurance_certificate or doc_kind = lien_waiver)
-      dispute_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = debit_memo)
-      first_pay_rail: count(InvoiceDocument where doc_kind = form_w9 or doc_kind = ach_authorization)
-      closeout_rail: count(InvoiceDocument where doc_kind = lien_waiver or doc_kind = payment_confirmation)
-      remediation_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = credit_memo)
-      period_close_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = payment_confirmation)
-      wire_settle_rail: count(InvoiceDocument where doc_kind = wire_instructions or doc_kind = payment_confirmation)
       remittances: count(InvoiceDocument where doc_kind = remittance)
       dispute_packets: count(InvoiceDocument where doc_kind = dispute_packet)
     tones:
@@ -603,19 +593,9 @@ workspace finance_ops "Finance Operations":
       compliance_drafts: destructive
       match_evidence: accent
       settle_rail: positive
-      ach_settle_rail: positive
-      receipt_settle_rail: positive
       adjustment_rail: warning
       bank_rail: warning
       tax_identity: warning
-      reconcile_rail: accent
-      vendor_risk_rail: warning
-      dispute_rail: destructive
-      first_pay_rail: warning
-      closeout_rail: positive
-      remediation_rail: warning
-      period_close_rail: accent
-      wire_settle_rail: warning
       remittances: accent
       dispute_packets: destructive
 
@@ -708,140 +688,6 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_document_detail
     empty: "No tax identity pack — attach Form W-9 and reverse-charge tax certs before first settle"
-
-  # Peer-pack document upgrade (cycle 2014): Bill.com / Melio / Tipalti reconcile rail
-  # — vendor statement + remittance advice period-end pack in one compound filter
-  # (recipe reconcile_rail_evidence; not vendor_statement-only or remittance-only re-stack
-  # after settle_rail which is remittance|payment_confirmation).
-  reconcile_rail:
-    source: InvoiceDocument
-    filter: doc_kind = vendor_statement or doc_kind = remittance
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No reconcile rail — attach vendor statements and remittance advice for period-end close"
-
-  # Peer-pack document upgrade (cycle 2018): Bill.com / Melio / Tipalti vendor risk rail
-  # — COI insurance certificate + lien waiver compliance pack in one compound filter
-  # (recipe vendor_risk_rail_evidence; not insurance-only or lien-only re-stack after
-  # tax_identity / compliance_draft_gate which already cover form_w9 + tax certs).
-  vendor_risk_rail:
-    source: InvoiceDocument
-    filter: doc_kind = insurance_certificate or doc_kind = lien_waiver
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No vendor risk pack — attach COI certificates and lien waivers before first settle"
-
-  # Peer-pack document upgrade (cycle 2021): Bill.com / Melio / Tipalti dispute rail
-  # — dispute packet + debit memo exception pack in one compound filter
-  # (recipe dispute_rail_evidence; not dispute_packet-only or debit_memo-only re-stack
-  # after adjustment_rail which is credit|debit without dispute evidence).
-  dispute_rail:
-    source: InvoiceDocument
-    filter: doc_kind = dispute_packet or doc_kind = debit_memo
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No dispute rail — attach exception packets and debit memos before re-open"
-
-  # Peer-pack document upgrade (cycle 2025): Bill.com / Melio / Tipalti first-pay rail
-  # — Form W-9 + ACH authorization first-settle pack in one compound filter
-  # (recipe first_pay_rail_evidence; not form_w9-only tax_identity re-stack, not
-  # ACH-only bank_rail re-stack — pairs TIN identity with payment method for first pay).
-  first_pay_rail:
-    source: InvoiceDocument
-    filter: doc_kind = form_w9 or doc_kind = ach_authorization
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No first-pay pack — attach Form W-9 and ACH authorization before first settle"
-
-  # Peer-pack document upgrade (cycle 2030): Bill.com / Melio / Tipalti closeout rail
-  # — lien waiver + payment confirmation job-closeout pack in one compound filter
-  # (recipe closeout_rail_evidence; not lien-only vendor_risk re-stack, not
-  # payment_confirmation-only settle_rail re-stack — pairs legal release with bank ACK).
-  closeout_rail:
-    source: InvoiceDocument
-    filter: doc_kind = lien_waiver or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No closeout rail — attach lien waivers and payment ACKs before final pay release"
-
-  # Peer-pack document upgrade (cycle 2033): Bill.com / Melio / Tipalti remediation rail
-  # — dispute packet + credit memo exception-remediation pack in one compound filter
-  # (recipe remediation_rail_evidence; not dispute|debit dispute_rail re-stack, not
-  # credit|debit adjustment_rail re-stack — pairs exception evidence with credit resolution).
-  remediation_rail:
-    source: InvoiceDocument
-    filter: doc_kind = dispute_packet or doc_kind = credit_memo
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No remediation rail — attach dispute packets and credit memos before re-open settle"
-
-  # Peer-pack document upgrade (cycle 2037): Bill.com / Melio / Tipalti period-close rail
-  # — vendor statement + payment confirmation month-end pack in one compound filter
-  # (recipe period_close_rail_evidence; not statement|remittance reconcile_rail re-stack,
-  # not remittance|payment settle_rail or lien|payment closeout_rail re-stack —
-  # pairs period vendor balance with bank ACK for close).
-  period_close_rail:
-    source: InvoiceDocument
-    filter: doc_kind = vendor_statement or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No period-close rail — attach vendor statements and payment ACKs before month-end close"
-
-  # Peer-pack document upgrade (cycle 2039): Bill.com / Melio / Tipalti wire-settle rail
-  # — wire instructions + payment confirmation high-value wire pack in one compound filter
-  # (recipe wire_settle_rail_evidence; not ACH|wire bank_rail re-stack, not
-  # remittance|payment settle_rail, not lien|payment closeout_rail, not
-  # statement|payment period_close_rail — pairs bank wire details with wire ACK).
-  wire_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = wire_instructions or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No wire-settle rail — attach wire instructions and payment ACKs before high-value wire release"
-
-  # Peer-pack document upgrade (cycle 2041): Bill.com / Melio / Tipalti ACH-settle rail
-  # — ACH authorization + payment confirmation bulk-settle pack in one compound filter
-  # (recipe ach_settle_rail_evidence; not ACH|wire bank_rail re-stack, not form_w9|ACH
-  # first_pay_rail, not remittance|payment settle_rail, not wire|payment wire_settle_rail —
-  # pairs signed ACH/SEPA mandate with bank ACK for the high-volume settle path).
-  ach_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = ach_authorization or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No ACH-settle rail — attach ACH authorizations and payment ACKs before bulk ACH release"
-
-  # Peer-pack document upgrade (cycle 2046): Bill.com / Melio / Tipalti receipt-settle rail
-  # — goods receipt + payment confirmation pay-on-receipt pack in one compound filter
-  # (recipe receipt_settle_rail_evidence; not goods-only match_evidence, not remittance|payment
-  # settle_rail, not ACH|payment ach_settle_rail, not wire|payment wire_settle_rail — pairs
-  # three-way-match receiving slip with bank ACK before release).
-  receipt_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = goods_receipt or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No receipt-settle rail — attach goods receipts and payment ACKs before pay-on-receipt release"
 
   # Peer-pack document upgrade (cycle 1965): Bill.com / Coupa / Tipalti PO
   # packet watch — signed PO cover before approve/ops (recipe po_packet_watch;
@@ -1092,20 +938,20 @@ workspace finance_ops "Finance Operations":
 
   ux:
     as finance_admin:
-      purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, settle rail, match evidence, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, past_due, awaiting_approval
     as tenant_admin:
-      purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due, dual attention"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, settle rail, match evidence, past-due, dual attention"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, past_due, awaiting_approval
     as finance:
-      purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due settle pressure"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, ready_to_pay
+      purpose: "AP ops — packet covers, settle rail, match evidence, past-due settle pressure"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, past_due, ready_to_pay
     as approver:
-      purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, past-due + review queues"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, awaiting_approval
+      purpose: "AP ops — packet covers, settle rail, match evidence, past-due + review queues"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, past_due, awaiting_approval
     as auditor:
-      purpose: "AP ops — packet covers, first-pay rail, dispute, vendor risk, tax identity, settle, settle packets"
-      focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, disputed_queue
+      purpose: "AP ops — packet covers, settle rail, match evidence, settle packets"
+      focus: packet_covers, ops_metrics, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, past_due, disputed_queue
     as requester:
       purpose: "AP ops overview — packet covers, packets, lines, and conversation"
       focus: packet_covers, ops_metrics, composition, past_due, line_composition, live_conversation, awaiting_approval
@@ -1411,19 +1257,9 @@ workspace pay_desk "Pay Desk":
       draft: count(InvoiceDocument where status = draft)
       pay_confirms: count(InvoiceDocument where doc_kind = payment_confirmation)
       settle_rail: count(InvoiceDocument where doc_kind = remittance or doc_kind = payment_confirmation)
-      ach_settle_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = payment_confirmation)
-      receipt_settle_rail: count(InvoiceDocument where doc_kind = goods_receipt or doc_kind = payment_confirmation)
       adjustment_rail: count(InvoiceDocument where doc_kind = credit_memo or doc_kind = debit_memo)
       bank_rail: count(InvoiceDocument where doc_kind = ach_authorization or doc_kind = wire_instructions)
       tax_identity: count(InvoiceDocument where doc_kind = form_w9 or doc_kind = tax_certificate)
-      reconcile_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = remittance)
-      vendor_risk_rail: count(InvoiceDocument where doc_kind = insurance_certificate or doc_kind = lien_waiver)
-      dispute_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = debit_memo)
-      first_pay_rail: count(InvoiceDocument where doc_kind = form_w9 or doc_kind = ach_authorization)
-      closeout_rail: count(InvoiceDocument where doc_kind = lien_waiver or doc_kind = payment_confirmation)
-      remediation_rail: count(InvoiceDocument where doc_kind = dispute_packet or doc_kind = credit_memo)
-      period_close_rail: count(InvoiceDocument where doc_kind = vendor_statement or doc_kind = payment_confirmation)
-      wire_settle_rail: count(InvoiceDocument where doc_kind = wire_instructions or doc_kind = payment_confirmation)
       credit_memos: count(InvoiceDocument where doc_kind = credit_memo)
       debit_memos: count(InvoiceDocument where doc_kind = debit_memo)
       vendor_statements: count(InvoiceDocument where doc_kind = vendor_statement)
@@ -1442,19 +1278,9 @@ workspace pay_desk "Pay Desk":
       draft: warning
       pay_confirms: positive
       settle_rail: positive
-      ach_settle_rail: positive
-      receipt_settle_rail: positive
       adjustment_rail: warning
       bank_rail: warning
       tax_identity: warning
-      reconcile_rail: accent
-      vendor_risk_rail: warning
-      dispute_rail: destructive
-      first_pay_rail: warning
-      closeout_rail: positive
-      remediation_rail: warning
-      period_close_rail: accent
-      wire_settle_rail: warning
       credit_memos: warning
       debit_memos: destructive
       vendor_statements: accent
@@ -1550,130 +1376,6 @@ workspace pay_desk "Pay Desk":
     display: queue
     action: invoice_document_detail
     empty: "No tax identity pack — attach Form W-9 and reverse-charge tax certs before first settle"
-
-  # Peer-pack reconcile_rail_evidence (cycle 2014): Bill.com / Melio / Tipalti
-  # vendor statement + remittance advice period-end pack — not vendor_statement-only
-  # or remittance-only re-stack after settle_rail (remittance|payment_confirmation).
-  reconcile_rail:
-    source: InvoiceDocument
-    filter: doc_kind = vendor_statement or doc_kind = remittance
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No reconcile rail — attach vendor statements and remittance advice for period-end close"
-
-  # Peer-pack vendor_risk_rail_evidence (cycle 2018): Bill.com / Melio / Tipalti
-  # COI insurance + lien waiver vendor-risk pack — not insurance-only or lien-only
-  # re-stack after tax_identity / compliance_draft_gate.
-  vendor_risk_rail:
-    source: InvoiceDocument
-    filter: doc_kind = insurance_certificate or doc_kind = lien_waiver
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No vendor risk pack — attach COI certificates and lien waivers before first settle"
-
-  # Peer-pack dispute_rail_evidence (cycle 2021): Bill.com / Melio / Tipalti
-  # dispute packet + debit memo exception pack — not dispute-only or debit-only
-  # re-stack after adjustment_rail (credit|debit without dispute evidence).
-  dispute_rail:
-    source: InvoiceDocument
-    filter: doc_kind = dispute_packet or doc_kind = debit_memo
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No dispute rail — attach exception packets and debit memos before re-open"
-
-  # Peer-pack first_pay_rail_evidence (cycle 2025): Bill.com / Melio / Tipalti
-  # Form W-9 + ACH authorization first-settle pack — not form_w9-only tax_identity
-  # or ACH-only bank_rail re-stack (pairs TIN with payment method for first pay).
-  first_pay_rail:
-    source: InvoiceDocument
-    filter: doc_kind = form_w9 or doc_kind = ach_authorization
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No first-pay pack — attach Form W-9 and ACH authorization before first settle"
-
-  # Peer-pack closeout_rail_evidence (cycle 2030): Bill.com / Melio / Tipalti
-  # lien waiver + payment confirmation job-closeout pack — not lien-only vendor_risk
-  # or payment_confirmation-only settle_rail re-stack (pairs legal release with bank ACK).
-  closeout_rail:
-    source: InvoiceDocument
-    filter: doc_kind = lien_waiver or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No closeout rail — attach lien waivers and payment ACKs before final pay release"
-
-  # Peer-pack remediation_rail_evidence (cycle 2033): Bill.com / Melio / Tipalti
-  # dispute packet + credit memo exception-remediation pack — not dispute|debit
-  # dispute_rail or credit|debit adjustment_rail re-stack (pairs exception with credit).
-  remediation_rail:
-    source: InvoiceDocument
-    filter: doc_kind = dispute_packet or doc_kind = credit_memo
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No remediation rail — attach dispute packets and credit memos before re-open settle"
-
-  # Peer-pack period_close_rail_evidence (cycle 2037): Bill.com / Melio / Tipalti
-  # vendor statement + payment confirmation month-end pack — not statement|remittance
-  # reconcile_rail, remittance|payment settle_rail, or lien|payment closeout_rail re-stack
-  # (pairs period vendor balance with bank ACK for close).
-  period_close_rail:
-    source: InvoiceDocument
-    filter: doc_kind = vendor_statement or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No period-close rail — attach vendor statements and payment ACKs before month-end close"
-
-  # Peer-pack wire_settle_rail_evidence (cycle 2039): Bill.com / Melio / Tipalti
-  # wire instructions + payment confirmation high-value wire pack — not ACH|wire
-  # bank_rail, remittance|payment settle_rail, lien|payment closeout_rail, or
-  # statement|payment period_close_rail re-stack (pairs wire details with wire ACK).
-  wire_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = wire_instructions or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No wire-settle rail — attach wire instructions and payment ACKs before high-value wire release"
-
-  # Peer-pack ach_settle_rail_evidence (cycle 2041): Bill.com / Melio / Tipalti
-  # ACH authorization + payment confirmation bulk-settle pack — not ACH|wire
-  # bank_rail, form_w9|ACH first_pay_rail, remittance|payment settle_rail, or
-  # wire|payment wire_settle_rail re-stack (pairs ACH mandate with bank ACK).
-  ach_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = ach_authorization or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No ACH-settle rail — attach ACH authorizations and payment ACKs before bulk ACH release"
-
-  # Peer-pack receipt_settle_rail_evidence (cycle 2046): Bill.com / Melio / Tipalti
-  # goods receipt + payment confirmation pay-on-receipt pack — not goods-only
-  # match_evidence, remittance|payment settle_rail, ACH|payment ach_settle_rail, or
-  # wire|payment wire_settle_rail re-stack (pairs receiving slip with bank ACK).
-  receipt_settle_rail:
-    source: InvoiceDocument
-    filter: doc_kind = goods_receipt or doc_kind = payment_confirmation
-    sort: created_at desc
-    limit: 6
-    display: queue
-    action: invoice_document_detail
-    empty: "No receipt-settle rail — attach goods receipts and payment ACKs before pay-on-receipt release"
 
   # Peer-pack remittance_advice_watch (cycle 1974): Bill.com / Melio remittance
   # advice on the settle desk so controllers lean into SEPA/ACH covers before
@@ -1859,11 +1561,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
+      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, settle rail, match evidence"
+      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, ready_to_pay, past_due
     as finance_admin:
-      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
+      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, settle rail, match evidence"
+      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, ready_to_pay, past_due
 
   settle_board:
     source: Invoice

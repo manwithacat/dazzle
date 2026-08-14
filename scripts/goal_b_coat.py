@@ -44,9 +44,9 @@ FREEZE: dict[str, dict[str, int]] = {
     },
     "invoice_ops": {
         "conversation_sites": 7,
-        "document_rails": 27,
-        "max_focus": 27,
-        "metric_keys": 57,
+        "document_rails": 7,
+        "max_focus": 11,
+        "metric_keys": 47,
     },
     "simple_task": {
         "conversation_sites": 9,

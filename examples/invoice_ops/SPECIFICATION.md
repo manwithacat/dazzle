@@ -95,27 +95,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (ACH authorization + wire instructions — cycle 2008 peer-pack; not ACH-only or
   wire-only re-stack), a **tax identity rail** pack
   (Form W-9 + reverse-charge tax certificate — cycle 2010 peer-pack; not form_w9-only
-  or tax_certificate-only re-stack), a **reconcile rail** pack
-  (vendor statement + remittance advice — cycle 2014 peer-pack; not vendor_statement-only
-  or remittance-only re-stack after settle_rail), a **vendor risk rail** pack
-  (COI insurance certificate + lien waiver — cycle 2018 peer-pack; not insurance-only
-  or lien-only re-stack after tax_identity / compliance_draft_gate), a **dispute rail** pack
-  (dispute packet + debit memo — cycle 2021 peer-pack; not dispute-only or debit-only
-  re-stack after adjustment_rail), a **first-pay rail** pack
-  (Form W-9 + ACH authorization — cycle 2025 peer-pack; not form_w9-only tax_identity
-  or ACH-only bank_rail re-stack), a **closeout rail** pack
-  (lien waiver + payment confirmation — cycle 2030 peer-pack; not lien-only vendor_risk
-  or payment_confirmation-only settle_rail re-stack), a **remediation rail** pack
-  (dispute packet + credit memo — cycle 2033 peer-pack; not dispute|debit dispute_rail
-  or credit|debit adjustment_rail re-stack), a **period-close rail** pack
-  (vendor statement + payment confirmation — cycle 2037 peer-pack; not statement|remittance
-  reconcile_rail, remittance|payment settle_rail, or lien|payment closeout_rail re-stack), a **wire-settle rail** pack
-  (wire instructions + payment confirmation — cycle 2039 peer-pack; not ACH|wire bank_rail,
-  remittance|payment settle_rail, lien|payment closeout_rail, or statement|payment period_close re-stack), a **ACH-settle rail** pack
-  (ACH authorization + payment confirmation — cycle 2041 peer-pack; not ACH|wire bank_rail,
-  form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack), a **receipt-settle rail** pack
-  (goods receipt + payment confirmation — cycle 2046 peer-pack; not goods-only match_evidence,
-  remittance|payment settle_rail, ACH|payment ach_settle_rail, or wire|payment wire_settle_rail re-stack),
+  or tax_certificate-only re-stack; cycle 2079 distilled remix rails — reconcile /
+  vendor-risk / dispute / first-pay / closeout / remediation / period-close /
+  wire-settle / ACH-settle / receipt-settle — so one settle spine stays above the fold),
   a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
@@ -147,17 +129,7 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (doc_kind=remittance or payment_confirmation — cycle 2004; not remittance-only or payment_confirmation-only re-stack), an **adjustment rail evidence** pack
   (doc_kind=credit_memo or debit_memo — cycle 2006; not credit-only or debit-only re-stack after settle_rail), a **bank rail evidence** pack
   (doc_kind=ach_authorization or wire_instructions — cycle 2008; not ACH-only or wire-only re-stack), a **tax identity rail** pack
-  (doc_kind=form_w9 or tax_certificate — cycle 2010; not form_w9-only or tax_certificate-only re-stack), a **reconcile rail** pack
-  (doc_kind=vendor_statement or remittance — cycle 2014; not vendor_statement-only or remittance-only re-stack after settle_rail), a **vendor risk rail** pack
-  (doc_kind=insurance_certificate or lien_waiver — cycle 2018; not insurance-only or lien-only re-stack after tax_identity / compliance_draft_gate), a **dispute rail** pack
-  (doc_kind=dispute_packet or debit_memo — cycle 2021; not dispute-only or debit-only re-stack after adjustment_rail), a **first-pay rail** pack
-  (doc_kind=form_w9 or ach_authorization — cycle 2025; not form_w9-only tax_identity or ACH-only bank_rail re-stack), a **closeout rail** pack
-  (doc_kind=lien_waiver or payment_confirmation — cycle 2030; not lien-only vendor_risk or payment_confirmation-only settle_rail re-stack), a **remediation rail** pack
-  (doc_kind=dispute_packet or credit_memo — cycle 2033; not dispute|debit dispute_rail or credit|debit adjustment_rail re-stack), a **period-close rail** pack
-  (doc_kind=vendor_statement or payment_confirmation — cycle 2037; not statement|remittance reconcile_rail, remittance|payment settle_rail, or lien|payment closeout_rail re-stack), a **wire-settle rail** pack
-  (doc_kind=wire_instructions or payment_confirmation — cycle 2039; not ACH|wire bank_rail, remittance|payment settle_rail, lien|payment closeout_rail, or statement|payment period_close re-stack), a **ACH-settle rail** pack
-  (doc_kind=ach_authorization or payment_confirmation — cycle 2041; not ACH|wire bank_rail, form_w9|ACH first_pay_rail, remittance|payment settle_rail, or wire|payment wire_settle_rail re-stack), a **receipt-settle rail** pack
-  (doc_kind=goods_receipt or payment_confirmation — cycle 2046; not goods-only match_evidence, remittance|payment settle_rail, ACH|payment ach_settle_rail, or wire|payment wire_settle_rail re-stack), a **remittance advice watch**
+  (doc_kind=form_w9 or tax_certificate — cycle 2010; not form_w9-only or tax_certificate-only re-stack; cycle 2079 distilled remix rails so one settle spine stays above the fold), a **remittance advice watch**
   (doc_kind=remittance SEPA/ACH covers — cycle 1974), a **dispute packet watch**
   (doc_kind=dispute_packet exception evidence — cycle 1978), a **tax certificate watch**
   (doc_kind=tax_certificate reverse-charge certs — cycle 1959), a **PO packet watch**

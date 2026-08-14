@@ -57,15 +57,17 @@ def test_freeze_breaches_empty_at_current_counts() -> None:
 def test_honest_grain_saturates_icon_coats() -> None:
     apps = ["support_tickets", "invoice_ops", "simple_task", "acme_billing"]
     sat = live_saturated_cells(apps)
-    # Cycle 2077 distilled support_tickets conversation coat — cell is no longer
-    # saturated. invoice_ops document/focus wall still blocks upgrades.
+    # Cycle 2077 distilled support_tickets; 2079 distilled invoice_ops rails.
     assert ("support_tickets", "conversation") not in sat
-    assert ("invoice_ops", "document") in sat
+    assert ("invoice_ops", "document") not in sat
     assert ("support_tickets", "media") not in sat
-    assert ("invoice_ops", "command_density") in sat
+    assert ("invoice_ops", "command_density") not in sat
     st = measure("support_tickets")
     assert st.conversation_sites <= HONEST_CONVERSATION_SITES
     assert st.max_focus <= HONEST_FOCUS
+    inv = measure("invoice_ops")
+    assert inv.document_rails <= 8
+    assert inv.max_focus <= HONEST_FOCUS
 
 
 def test_support_tickets_signature_is_siblings_and_cartesian() -> None:
@@ -74,15 +76,15 @@ def test_support_tickets_signature_is_siblings_and_cartesian() -> None:
     assert m.slice_cartesian == 0
     assert m.coat_flag == 0
     n, nxt = coat_residual()
-    assert n >= 1
-    assert nxt == "invoice_ops"
+    assert n == 0
+    assert nxt is None
 
 
 def test_invoice_ops_flagged_on_rails_and_focus() -> None:
     m = measure("invoice_ops")
-    assert m.document_rails > 8
-    assert m.max_focus > 12
-    assert m.coat_flag == 1
+    assert m.document_rails <= 8
+    assert m.max_focus <= 12
+    assert m.coat_flag == 0
 
 
 def test_acme_billing_not_flagged_as_conversation_coat() -> None:

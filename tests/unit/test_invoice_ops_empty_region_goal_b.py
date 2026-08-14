@@ -38,8 +38,8 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
     assert "display: funnel_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
-        "compliance_drafts, remittances, form_w9s, packing_slips, composition, past_due, "
+        "focus: packet_covers, ops_metrics, document_pulse, draft_packets, "
+        "settle_rail, match_evidence, compliance_drafts, composition, past_due, "
         "awaiting_approval" in block
     )
 
@@ -91,8 +91,9 @@ def test_pay_desk_omits_payment_health_and_dispute_trail() -> None:
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
-        "composition, ready_to_pay, past_due" in block
+        "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, "
+        "document_pulse, draft_packets, settle_rail, match_evidence, "
+        "compliance_drafts, composition, ready_to_pay, past_due" in block
     )
 
 

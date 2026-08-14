@@ -10,11 +10,9 @@ SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
 INVOICE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Invoice.jsonl"
 
 PAY_FOCUS = (
-    "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, "
-    "ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, "
-    "closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, "
-    "bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, "
-    "packing_slips, composition, ready_to_pay, past_due"
+    "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, "
+    "draft_packets, settle_rail, match_evidence, compliance_drafts, composition, "
+    "ready_to_pay, past_due"
 )
 
 
