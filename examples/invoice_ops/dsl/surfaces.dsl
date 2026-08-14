@@ -2166,10 +2166,11 @@ workspace payments_trail "Payments":
 # Peer tools (Bill.com / Tipalti) show line composition with invoice numbers —
 # not UUID shells or bare CRUD lists.
 workspace line_items_desk "Line Items":
-  # Goal B document peer-pack (cycle 1900): recipe line_tax_po_match —
-  # Bill.com / Melio controllers scan tax line + PO match boards, not bare
-  # description queues that feel like a spreadsheet export.
-  purpose: "Invoice document composition — tax + PO match grain, line body, open docs (not warehouse CRUD)"
+  # Goal B document peer-pack (cycle 1900 line_tax_po_match) + cycle 2061
+  # recipe po_match_exception_density — Bill.com / Melio / Tipalti controllers
+  # work exclusive unmatched vs partial exception queues before a full match
+  # kanban (not one mixed composition dump or packet-rail re-stack).
+  purpose: "Invoice document composition — unmatched vs partial PO match exceptions, then line body (not warehouse CRUD)"
   access: persona(requester, finance, finance_admin, auditor)
 
   line_pulse:
@@ -2179,14 +2180,35 @@ workspace line_items_desk "Line Items":
       lines: count(LineItem)
       matched: count(LineItem where po_match = matched)
       unmatched: count(LineItem where po_match = unmatched)
+      partial: count(LineItem where po_match = partial)
       open_invoices: count(Invoice where status != paid and status != rejected)
     tones:
       open_invoices: accent
       lines: positive
       matched: positive
       unmatched: destructive
+      partial: warning
 
-  # Controller-true match board FIRST (still proof above the fold).
+  # Dual exception density — soft partial vs hard unmatched (exclusive filters).
+  unmatched_lines:
+    source: LineItem
+    filter: po_match = unmatched
+    sort: unit_amount desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No unmatched lines — every composition row has a PO match"
+
+  partial_lines:
+    source: LineItem
+    filter: po_match = partial
+    sort: unit_amount desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No partial matches — quantity/price exceptions are cleared"
+
+  # Full match board under dual exception queues (secondary placement).
   po_match_board:
     source: LineItem
     display: kanban
@@ -2195,12 +2217,11 @@ workspace line_items_desk "Line Items":
     action: invoice_detail
     empty: "No line items yet — add lines to a draft invoice"
 
-  # Document body: composition lines pull open the parent invoice hub —
-  # description as title; tax + PO match travel on the line entity.
+  # Document body: composition lines pull open the parent invoice hub.
   composition:
     source: LineItem
     sort: created_at desc
-    limit: 25
+    limit: 16
     display: queue
     action: invoice_detail
     empty: "No line items yet — add lines to a draft invoice"
@@ -2210,7 +2231,7 @@ workspace line_items_desk "Line Items":
     source: Invoice
     filter: status = draft or status = submitted or status = approved
     sort: updated_at desc
-    limit: 15
+    limit: 12
     display: queue
     action: invoice_detail
     empty: "No open invoice documents"
@@ -2225,17 +2246,17 @@ workspace line_items_desk "Line Items":
 
   ux:
     as requester:
-      purpose: "Composition — PO match board, then line body (no bare spreadsheet theater)"
-      focus: line_pulse, po_match_board, composition, open_documents
+      purpose: "Composition — unmatched vs partial PO exceptions before full board"
+      focus: line_pulse, unmatched_lines, partial_lines, composition
     as finance:
-      purpose: "Composition — PO match board, unmatched grain, then line body"
-      focus: line_pulse, po_match_board, composition, open_documents
+      purpose: "Composition — unmatched vs partial PO exception density before line body"
+      focus: line_pulse, unmatched_lines, partial_lines, composition
     as finance_admin:
-      purpose: "Composition — PO match board, unmatched grain, then line body"
-      focus: line_pulse, po_match_board, composition, open_documents
+      purpose: "Composition — unmatched vs partial PO exception density before line body"
+      focus: line_pulse, unmatched_lines, partial_lines, composition
     as auditor:
-      purpose: "Composition evidence — PO match board then line body"
-      focus: line_pulse, po_match_board, composition, open_documents
+      purpose: "Composition evidence — unmatched vs partial exception queues first"
+      focus: line_pulse, unmatched_lines, partial_lines, composition
 
 # Tenth product workspace: dedicated Disputes desk (SPEC + Goal B document).
 # Peer AP tools (Bill.com / Melio / Tipalti) give controllers a dispute home

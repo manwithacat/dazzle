@@ -136,16 +136,31 @@ def test_ops_and_requester_homes_declare_document_composition() -> None:
     assert 'field due_date "Due Date"' in hub
     assert "columns: description, quantity, unit_amount, tax_code, po_match" in hub
 
-    # Dedicated composition desk: PO match board before line body (recipe line_tax_po_match)
+    # Dedicated composition desk: dual PO match exceptions (cycle 2061)
     lines_desk = _workspace_block("line_items_desk")
+    assert "unmatched_lines:" in lines_desk
+    assert "partial_lines:" in lines_desk
+    assert "po_match = unmatched" in lines_desk
+    assert "po_match = partial" in lines_desk
     assert "po_match_board:" in lines_desk
     assert "group_by: po_match" in lines_desk
     assert "source: LineItem" in lines_desk
+    assert lines_desk.index("unmatched_lines:") < lines_desk.index("partial_lines:")
+    assert lines_desk.index("partial_lines:") < lines_desk.index("po_match_board:")
     assert lines_desk.index("po_match_board:") < lines_desk.index("composition:")
     assert "matched: count(LineItem where po_match = matched)" in lines_desk
     assert "unmatched: count(LineItem where po_match = unmatched)" in lines_desk
-    assert "focus: line_pulse, po_match_board, composition, open_documents" in lines_desk
+    assert "partial: count(LineItem where po_match = partial)" in lines_desk
+    assert "focus: line_pulse, unmatched_lines, partial_lines, composition" in lines_desk
+    assert (
+        "po_match_exception_density" in lines_desk.lower()
+        or "unmatched vs partial" in lines_desk.lower()
+    )
     assert "source: LineItem" in text.split("workspace my_invoices", 1)[1]
+
+    rows = [json.loads(line) for line in LINE_SEEDS.read_text().splitlines() if line.strip()]
+    assert sum(1 for r in rows if r.get("po_match") == "unmatched") >= 2
+    assert sum(1 for r in rows if r.get("po_match") == "partial") >= 2
 
 
 def test_pay_desk_draft_packet_release_gate() -> None:
