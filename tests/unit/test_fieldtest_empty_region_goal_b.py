@@ -24,15 +24,18 @@ def _workspace_block(name: str) -> str:
 
 
 def test_issue_triage_omits_critical_trail() -> None:
-    """Triage: conversation + evidence + dual queues — not twin critical timeline."""
+    """Triage: dual severity media + conversation + queues — not twin critical timeline."""
     block = _workspace_block("issue_triage")
     assert "live_conversation:" in block
+    assert "critical_evidence:" in block
+    assert "high_evidence:" in block
     assert "field_evidence:" in block
     assert "triage_queue:" in block
     assert "critical_issues:" in block
     assert "critical_trail:" not in block
     assert "display: timeline" not in block
     assert "display: bar_chart" not in block
+    assert "focus: open_pressure, critical_evidence, high_evidence, live_conversation" in block
 
 
 def test_firmware_pipeline_omits_status_bar_and_task_timeline() -> None:

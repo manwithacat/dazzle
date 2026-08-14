@@ -39,13 +39,41 @@ def test_tester_repr_fields_are_identity_chips_not_schema_dump() -> None:
     assert "active" not in line
 
 
-def test_issue_triage_declares_field_evidence_grid() -> None:
+def _issue_triage_block() -> str:
     text = APP_DSL.read_text()
-    assert "workspace issue_triage" in text
-    assert "field_evidence:" in text
-    assert "display: grid" in text
+    start = text.index('workspace issue_triage "Issue Triage":')
+    end = text.find("\nworkspace ", start + 1)
+    return text[start:] if end < 0 else text[start:end]
+
+
+def test_issue_triage_declares_severity_evidence_density() -> None:
+    """Cycle 2059: dual critical vs high photo grids (not one mixed evidence dump)."""
+    block = _issue_triage_block()
+    assert "critical_evidence:" in block
+    assert "high_evidence:" in block
+    assert "severity = critical and photo_url != null" in block
+    assert "severity = high and photo_url != null" in block
+    assert "display: grid" in block
+    assert "critical_photos: count(IssueReport" in block
+    assert "high_photos: count(IssueReport" in block
+    assert block.index("open_pressure:") < block.index("critical_evidence:")
+    assert block.index("critical_evidence:") < block.index("high_evidence:")
+    assert block.index("high_evidence:") < block.index("live_conversation:")
+    assert "focus: open_pressure, critical_evidence, high_evidence, live_conversation" in block
+    assert "severity_evidence_density" in block.lower() or "critical vs high" in block.lower()
+    # Mixed field_evidence remains under fold (not focus twin of dual shelves)
+    assert "field_evidence:" in block
+    assert "field_evidence" not in block.split("focus:")[1].split("\n")[0]
     # photo_url typed as url for media chrome
-    assert "photo_url: url" in text
+    assert "photo_url: url" in APP_DSL.read_text()
+
+
+def test_issue_seeds_span_critical_and_high_photos() -> None:
+    rows = [json.loads(line) for line in ISSUE_SEEDS.read_text().splitlines() if line.strip()]
+    crit = [r for r in rows if r.get("severity") == "critical" and r.get("photo_url")]
+    high = [r for r in rows if r.get("severity") == "high" and r.get("photo_url")]
+    assert len(crit) >= 2
+    assert len(high) >= 1
 
 
 def test_pick_display_key_skips_image_columns() -> None:

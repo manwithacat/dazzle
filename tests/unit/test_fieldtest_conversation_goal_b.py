@@ -25,14 +25,17 @@ def test_ops_and_triage_declare_live_conversation_spine() -> None:
     assert "live_conversation:" in text
     assert "source: IssueNote" in text
     assert "conversation: count(IssueNote)" in text
-    assert "focus: live_conversation" in text
     # Goal B interesting_product: hero live threads use Message/Bubble chrome
     # (not queue meta) after the HTTP CONVERSATION wire-up.
+    # Cycle 2059: issue_triage focus is severity media dual first; trail remains.
     for ws in ("engineering_dashboard", "manager_ops", "issue_triage"):
         block = text.split(f"workspace {ws}", 1)[1]
         region = block.split("live_conversation:", 1)[1][:400]
         assert "display: conversation" in region, ws
         assert "source: IssueNote" in region, ws
+        if ws != "issue_triage":
+            ux = block.split("ux:", 1)[1][:600]
+            assert "live_conversation" in ux, ws
 
 
 def test_issue_detail_discussion_uses_conversation_chrome() -> None:

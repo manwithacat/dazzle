@@ -1731,20 +1731,12 @@ workspace manager_ops "Manager Ops":
   # (bar_chart dogfood stays on engineering_dashboard / tester_dashboard).
 
 workspace issue_triage "Issue Triage":
-  # Goal B conversation + media + empty_region_honesty (cycle 1855): discussion
-  # + field photos + open/critical queues — not a twin critical timeline under
-  # the same desk (history dogfood stays on engineering_dashboard).
-  purpose: "Triage notes, field photo evidence, then open and critical queues"
+  # Goal B conversation + media + empty_region_honesty (cycle 1855) + media
+  # peer-pack (cycle 2059): recipe severity_evidence_density — TestRail /
+  # BrowserStack put P0/critical photo shelves vs high-severity evidence as
+  # dual media grids (not one mixed field_evidence dump or headshot shelf).
+  purpose: "Critical vs high field photo density, triage notes, then open queues"
   access: persona(engineer, manager)
-
-  # Goal B conversation spine FIRST — Message/Bubble mitigation prose above fold.
-  live_conversation:
-    source: IssueNote
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: issue_note_detail
-    empty: "No triage conversation yet — engineer notes on open issues appear here"
 
   open_pressure:
     source: IssueReport
@@ -1752,27 +1744,52 @@ workspace issue_triage "Issue Triage":
     aggregate:
       open: count(IssueReport where status = open)
       critical: count(IssueReport where severity = critical and status != closed)
-      total: count(IssueReport)
+      high: count(IssueReport where severity = high and status != closed)
+      critical_photos: count(IssueReport where severity = critical and photo_url != null and status != closed)
+      high_photos: count(IssueReport where severity = high and photo_url != null and status != closed)
       conversation: count(IssueNote)
     tones:
       open: warning
       critical: destructive
+      high: warning
+      critical_photos: danger
+      high_photos: warning
       conversation: accent
 
-  ux:
-    as engineer:
-      purpose: "See triage discussion and field photos before severity queues"
-      focus: live_conversation, open_pressure, field_evidence, triage_queue
-    as manager:
-      purpose: "Triage notes and critical field quality pressure"
-      focus: live_conversation, open_pressure, field_evidence, critical_issues
+  # Goal B media dual density — exclusive severity photo grids (caps for fold).
+  critical_evidence:
+    source: IssueReport
+    filter: severity = critical and photo_url != null and status != closed
+    sort: reported_at desc
+    limit: 4
+    display: grid
+    action: issue_report_detail
+    empty: "No critical field photos — attach evidence on P0 reports"
 
-  # Goal B media depth: buyer sees field photos above fold (not severity-only text).
+  high_evidence:
+    source: IssueReport
+    filter: severity = high and photo_url != null and status != closed
+    sort: reported_at desc
+    limit: 4
+    display: grid
+    action: issue_report_detail
+    empty: "No high-severity field photos yet"
+
+  # Conversation trail after dual media density (still Message chrome).
+  live_conversation:
+    source: IssueNote
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: issue_note_detail
+    empty: "No triage conversation yet — engineer notes on open issues appear here"
+
+  # Mixed photo shelf under dual density (scroll) — not a third focus twin.
   field_evidence:
     source: IssueReport
-    filter: status = open or status = triaged or status = in_progress
+    filter: photo_url != null and (status = open or status = triaged or status = in_progress)
     sort: severity desc, reported_at desc
-    limit: 12
+    limit: 8
     display: grid
     action: issue_report_detail
     empty: "No field photos yet — ask testers to attach evidence"
@@ -1781,7 +1798,7 @@ workspace issue_triage "Issue Triage":
     source: IssueReport
     filter: status = open
     sort: severity desc, reported_at desc
-    limit: 20
+    limit: 12
     display: queue
     action: issue_report_edit
     empty: "No open reports to triage"
@@ -1791,10 +1808,18 @@ workspace issue_triage "Issue Triage":
     source: IssueReport
     filter: severity = critical and status != closed
     sort: reported_at desc
-    limit: 10
+    limit: 8
     display: queue
     action: issue_report_detail
     empty: "No critical issues!"
+
+  ux:
+    as engineer:
+      purpose: "Critical vs high field photo density before notes and open triage queue"
+      focus: open_pressure, critical_evidence, high_evidence, live_conversation
+    as manager:
+      purpose: "Critical vs high field photo density — quality pressure with pixels first"
+      focus: open_pressure, critical_evidence, high_evidence, live_conversation
 
 workspace firmware_pipeline "Firmware Pipeline":
   # Goal B empty_region_honesty (cycle 1855): peer ship desks keep pulse + board

@@ -38,8 +38,10 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   pulse (open / critical / sessions / documents), dual attention (critical
   issues + non-active devices), test-document composition, then triage notes —
   dual attention and named briefs above fold, not a single conversation list.
-- **Issue Triage** — shared engineer/manager desk: triage conversation, field
-  photo evidence, open and critical queues — not a twin critical timeline under
+- **Issue Triage** — shared engineer/manager desk: dual **critical vs high** field
+  photo evidence density (cycle 2059 `severity_evidence_density`; peer TestRail /
+  BrowserStack P0/P1 screenshots), triage conversation, open and critical queues —
+  not a twin critical timeline under
   the same desk (empty_region_honesty).
 - **Firmware Pipeline** — release desk: draft/live metrics, release history,
   status board, and open-task queue — not a release status bar dump.
@@ -98,4 +100,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:8132856b7082182c1f61ae97487d30066a5336f3f38ef5a0ff5fc5cf73263d12 -->
+<!-- dazzle-spec-brief: sha256:bdce5fe0899edbfbf7c6bcc1921e1fbfc16897ef0017be28794c8bdf8303b7ee -->
