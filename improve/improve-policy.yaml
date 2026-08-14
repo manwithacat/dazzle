@@ -102,7 +102,8 @@ campaigns:
       - "Drained queues (dual_lock depth 0) are skipped, not re-stamped as PASS"
       - "No isomorphic *_ops densify while densify_allowed=0 (#1637)"
       - "When residual=0, Goal B depth (interesting_product) after open-hop cap — still proof"
-      - "Goal B honors portfolio recommend (anti-wave / anti-recipe / stack) — not fleet-fill monoculture"
+      - "When residual=0 and coat_residual>0, distill (Goal C) before Goal B add"
+      - "Goal B honors portfolio recommend (anti-wave / family / saturate-stop) — not fleet-fill monoculture"
     prefer:
       lane: framework-ux
       strategy: explore

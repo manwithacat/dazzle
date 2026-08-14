@@ -49,10 +49,14 @@ when residual remains: product → demo → journey):
 | `framework-ux hyperpart_emitter` | `improve/strategies/hyperpart_emitter.md` | `hyperpart_scenarios planned_emitter>0` — ship DSL path for gallery-only part |
 | `example-apps interesting_product` | `improve/strategies/interesting_product.md` | post-5.8 Goal B depth menu + still proof |
 | `example-apps depth` | `improve/strategies/interesting_product.md` | alias of interesting_product |
+| `example-apps distill` | `improve/strategies/distill.md` | Goal C coat residual — subtract filter-wall / cartesian / rails |
 
-**Post-5.8 (interesting SaaS):** when `residual_total=0` and open-hop / dual-open
-cycles hit the policy cap (`max_consecutive_open_hop`, default 5), force
+**Post-5.8 (interesting SaaS):** when `residual_total=0` **and**
+`goal_b_coat residual_total=0` and open-hop / dual-open cycles hit the policy
+cap (`max_consecutive_open_hop`, default 5), force
 **`example-apps interesting_product`** — one closed depth id + hero recapture.
+When Goal A is green but `goal_b_coat residual_total>0`, force
+**`example-apps distill <app>`** (Goal C — subtract, do not add).
 Doctrine: `docs/reference/interesting-saas-context.md`. Dual-open without recapture
 is **harness_only** (Goal A); do not claim bake-off lift. Presentation OCR residual
 stays the immune system when residual > 0.
@@ -622,6 +626,7 @@ residual is visible without starting a cycle.
 /improve example-apps product_maturity  # anti-warehouse job desks
 /improve example-apps demo_fleet        # #1626 felt bar / seeds / stills
 /improve example-apps journey_dogfood   # bound stories + hubs
+/improve example-apps distill           # Goal C coat residual (subtract)
 /improve cimonitor                      # force CI snapshot (+ repair if red)
 /improve github-prs                     # Dependabot / open PR processing
 /improve consumer-issues                # downstream consumer bug intake

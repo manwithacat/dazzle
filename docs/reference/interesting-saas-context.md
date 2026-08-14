@@ -64,11 +64,17 @@ Dazzle must support both. They need **different context, residuals, and proof**.
 ```text
 Goal A: can the agent ship a coherent app?
 Goal B: would a buyer care?
+Goal C: can a lead work the first screen?   # residual: scripts/goal_b_coat.py
 
 A without B = functional plateau (today’s dual-open era risk)
+B without C = filter-wall coat (support_tickets conversation slices)
 B without A = pretty theater (old empty-hero failure)
-Both = interesting, shippable SaaS
+A+B+C = interesting, shippable, scannable SaaS
 ```
+
+Goal C is **not** a third depth menu. It is a residual + `example-apps distill`
+strategy. It does not join `product_residual_total` (A stays green). When
+`coat_residual_total>0`, improve picks distill over interesting_product.
 
 ---
 
@@ -161,11 +167,16 @@ recipe across every showcase). Selection pressure without inventing residual hea
 | Icon-app stacking | prefer apps with 1–2 depths before thin coat | ICON_APPS + coverage from unit pins |
 | Peer packs (R3) | when present | `improve/peer_packs/<app>.toml` |
 | Oral history | durable loop lessons | `improve/oral-history.md` |
+| **Saturate / stop** | one coat family per `(app, depth)`; live DSL above honest grain; freeze ratchet must not grow | `scripts/goal_b_coat.py` + portfolio `saturated=` / recommend `-` |
 
 ```bash
 uv run python scripts/interesting_product_portfolio.py --status
 uv run python scripts/interesting_product_portfolio.py --recommend
+uv run python scripts/goal_b_coat.py --status
 ```
+
+A `-` recommend is a **legal cycle** (`require_mutation` off). Do not invent a
+synonym recipe tag to keep shipping.
 
 Policy attaches recommend onto `interesting_product` force args when residual=0.
 **No interestingness score** — only diversification and stacking constraints.

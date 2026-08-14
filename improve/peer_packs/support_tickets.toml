@@ -15,10 +15,13 @@ refuse = [
   "Re-panel acceptance without product fix",
   "Headshot shelf as the only media claim when tickets have no creative assets",
   "Funnel chart theater on Manager Ops",
+  "Enum × ball_in_court cartesian slices (thankful/medium/channel × needs_reply)",
+  "Denormalized parent enums on Comment (case_priority, sla_pressure) so count() can filter",
+  "Another display: conversation region on an already-saturated ticket desk",
 ]
 
 icon_depths = ["conversation", "command_density", "empty_region_honesty"]
 surprise_prompts = [
-  "What one support-true detail (SLA breach, escalation, customer tone) makes an agent lean in?",
-  "Does the first screen look like a real queue a lead would work?",
+  "Can a lead work one waiting-on-you trail and the live ticket thread without a filter wall?",
+  "Does the first screen look like a real queue a lead would work — not 19 conversation slices?",
 ]

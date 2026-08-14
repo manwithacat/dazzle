@@ -555,7 +555,7 @@ workspace ticket_queue "Ticket Queue":
   # Goal B media (cycle 1883) + conversation + document: peer support tools
   # (Zendesk / Intercom / Front) put agent headshots, live thread copy, and
   # named waiver documents on the triage home — not only ticket rows.
-  purpose: "Team headshots, SLA pressure stage speech (at-risk vs breached needs-reply), needs-reply ball, live trail, and SLA waiver documents"
+  purpose: "Team headshots, needs-reply ball, live trail, and SLA waiver documents"
   stage: "scanner_table"
   access: persona(agent, manager, admin)
 
@@ -574,39 +574,7 @@ workspace ticket_queue "Ticket Queue":
     empty: "No agent headshots yet — add photo URLs on team users"
 
   # Job primary: at-a-glance pressure (tones on critical).
-  # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
-  # Cycle 1940 conversation peer-pack: tone/escalation heat (not ball-only).
-  # Cycle 1955: awaiting_customer complements needs_reply (both ball sides).
-  # Cycle 1958: thankful recovery complements hot_speech (warm closeout trail).
-  # Cycle 1966: internal collab notes (is_internal) — non-channel peer grain.
-  # Cycle 1969: critical escalations (escalation=critical) — P1 speech, not channel.
-  # Cycle 1977: frustrated_speech (tone=frustrated only) — CSAT risk, not hot_speech OR.
-  # Cycle 1979: urgent_speech (tone=urgent only) — SLA time-pressure, not hot_speech OR.
-  # Cycle 1982: email_live (channel=email only) — async email path, not chat/phone re-stack.
-  # Cycle 1984: portal_live (channel=portal only) — self-serve portal path, not email re-stack.
-  # Cycle 1986: email_needs_reply — channel=email AND ball_in_court=agent (not full email_live).
-  # Cycle 1988: portal_needs_reply — channel=portal AND ball_in_court=agent (not full portal_live).
-  # Cycle 1990: chat_needs_reply — channel=chat AND ball_in_court=agent (not full chat_live).
-  # Cycle 1992: phone_needs_reply — channel=phone AND ball_in_court=agent (not full phone_live).
-  # Cycle 1994: frustrated_needs_reply — tone=frustrated AND ball_in_court=agent (not channel re-stack).
-  # Cycle 1998: critical_needs_reply — escalation=critical AND ball_in_court=agent (not channel×ball or pure critical_escalations).
-  # Cycle 2001: raised_needs_reply — escalation=raised AND ball_in_court=agent (L2 waiting-on-you; not full raised_escalations or P1 critical_needs_reply).
-  # Cycle 2003: urgent_needs_reply — tone=urgent AND ball_in_court=agent (SLA time-pressure waiting-on-you; not full urgent_speech or channel×ball).
-  # Cycle 2005: urgent_awaiting_customer — tone=urgent AND ball_in_court=customer (SLA time-pressure parked on customer; not full awaiting_customer or agent needs_reply).
-  # Cycle 2007: frustrated_awaiting_customer — tone=frustrated AND ball_in_court=customer (CSAT-risk parked on customer; not full awaiting_customer or agent frustrated_needs_reply).
-  # Cycle 2009: raised_awaiting_customer — escalation=raised AND ball_in_court=customer (L2 handoff parked on customer; not full awaiting_customer or agent raised_needs_reply).
-  # Cycle 2013: critical_awaiting_customer — escalation=critical AND ball_in_court=customer (P1 parked on customer; not full awaiting_customer or agent critical_needs_reply).
-  # Cycle 2015: email_awaiting_customer — channel=email AND ball_in_court=customer (async email parked on customer; not full email_live, not agent email_needs_reply, not tone/escalation×customer re-stack).
-  # Cycle 2020: chat_awaiting_customer — channel=chat AND ball_in_court=customer (live chat handoff parked on customer; not full chat_live, not agent chat_needs_reply, not email_awaiting_customer re-stack).
-  # Cycle 2023: phone_awaiting_customer — channel=phone AND ball_in_court=customer (callback/phone handoff parked on customer; not full phone_live, not agent phone_needs_reply, not chat_awaiting_customer re-stack).
-  # Cycle 2029: portal_awaiting_customer — channel=portal AND ball_in_court=customer (self-serve portal handoff parked on customer; not full portal_live, not agent portal_needs_reply, not phone/chat/email_awaiting_customer re-stack).
-  # Cycle 2032: thankful_needs_reply — customer_tone=thankful AND ball_in_court=agent (warm closeout still on agent; not full thankful_recovery missing ball, not frustrated/urgent needs_reply heat re-stack, not channel×ball coat).
-  # Cycle 2035: thankful_awaiting_customer — customer_tone=thankful AND ball_in_court=customer (warm closeout parked on customer confirm; not full thankful_recovery, not agent thankful_needs_reply, not frustrated/urgent×customer re-stack).
-  # Cycle 2036: breach_needs_reply — sla_pressure at_risk|breached AND ball_in_court=agent (Zendesk SLA speech waiting on you — denormalized ticket SLA on Comment; not Ticket breach_risk queue rows, not ball-only needs_reply, not escalation×ball critical_needs_reply).
-  # Cycle 2038: breach_awaiting_customer — sla_pressure at_risk|breached AND ball_in_court=customer (SLA clock still burning while parked on customer; not agent breach_needs_reply, not Ticket breach_risk rows, not ball-only awaiting_customer, not tone/channel×customer re-stack).
-  # Cycle 2040: priority_needs_reply — case_priority high|critical AND ball_in_court=agent (Zendesk/Front high-priority speech waiting on you — denormalized ticket priority on Comment; not Ticket open_queue priority rows, not ball-only needs_reply, not escalation×ball critical_needs_reply, not sla_pressure breach_needs_reply).
-  # Cycle 2060: medium_needs_reply — case_priority=medium AND ball_in_court=agent (Zendesk/Front mid-priority speech waiting on you — not high|critical priority_needs_reply, not ball-only needs_reply, not tone/channel×ball re-stack).
-  # Cycle 2042: priority_awaiting_customer — case_priority high|critical AND ball_in_court=customer (high-priority speech parked on customer — not agent priority_needs_reply, not ball-only awaiting_customer, not Ticket open_queue priority rows, not escalation/SLA×customer re-stack).
+  # Cycle 2077 distill: keep needs_reply + live_conversation (Goal C honest grain).
   queue_metrics:
     source: Ticket
     display: summary
@@ -616,88 +584,13 @@ workspace ticket_queue "Ticket Queue":
       critical: count(Ticket where priority = critical and status != closed)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
-      priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false)
-      medium_needs_reply: count(Comment where case_priority = medium and ball_in_court = agent and is_internal = false)
-      priority_awaiting_customer: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false)
-      breach_needs_reply: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false)
-      at_risk_needs_reply: count(Comment where sla_pressure = at_risk and ball_in_court = agent and is_internal = false)
-      breached_needs_reply: count(Comment where sla_pressure = breached and ball_in_court = agent and is_internal = false)
-      breach_awaiting_customer: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false)
-      thankful_needs_reply: count(Comment where customer_tone = thankful and ball_in_court = agent and is_internal = false)
-      thankful_awaiting_customer: count(Comment where customer_tone = thankful and ball_in_court = customer and is_internal = false)
-      urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
-      urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
-      frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
-      raised_awaiting_customer: count(Comment where escalation = raised and ball_in_court = customer and is_internal = false)
-      critical_awaiting_customer: count(Comment where escalation = critical and ball_in_court = customer and is_internal = false)
-      email_awaiting_customer: count(Comment where channel = email and ball_in_court = customer and is_internal = false)
-      chat_awaiting_customer: count(Comment where channel = chat and ball_in_court = customer and is_internal = false)
-      phone_awaiting_customer: count(Comment where channel = phone and ball_in_court = customer and is_internal = false)
-      portal_awaiting_customer: count(Comment where channel = portal and ball_in_court = customer and is_internal = false)
-      awaiting_customer: count(Comment where ball_in_court = customer)
-      hot_speech: count(Comment where (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false)
-      critical_escalations: count(Comment where escalation = critical and is_internal = false)
-      critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
-      raised_escalations: count(Comment where escalation = raised and is_internal = false)
-      raised_needs_reply: count(Comment where escalation = raised and ball_in_court = agent and is_internal = false)
-      frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
-      frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
-      urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
-      thankful_recovery: count(Comment where customer_tone = thankful and is_internal = false)
-      chat_live: count(Comment where channel = chat and is_internal = false)
-      chat_needs_reply: count(Comment where channel = chat and ball_in_court = agent and is_internal = false)
-      phone_live: count(Comment where channel = phone and is_internal = false)
-      phone_needs_reply: count(Comment where channel = phone and ball_in_court = agent and is_internal = false)
-      email_live: count(Comment where channel = email and is_internal = false)
-      email_needs_reply: count(Comment where channel = email and ball_in_court = agent and is_internal = false)
-      portal_live: count(Comment where channel = portal and is_internal = false)
-      portal_needs_reply: count(Comment where channel = portal and ball_in_court = agent and is_internal = false)
-      internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
-      critical: destructive
       in_progress: accent
+      critical: destructive
       conversation: accent
       needs_reply: warning
-      priority_needs_reply: warning
-      medium_needs_reply: accent
-      priority_awaiting_customer: warning
-      breach_needs_reply: destructive
-      at_risk_needs_reply: warning
-      breached_needs_reply: destructive
-      breach_awaiting_customer: destructive
-      thankful_needs_reply: positive
-      thankful_awaiting_customer: positive
-      urgent_needs_reply: warning
-      urgent_awaiting_customer: warning
-      frustrated_awaiting_customer: destructive
-      raised_awaiting_customer: warning
-      critical_awaiting_customer: destructive
-      email_awaiting_customer: accent
-      chat_awaiting_customer: accent
-      phone_awaiting_customer: warning
-      portal_awaiting_customer: accent
-      awaiting_customer: accent
-      hot_speech: destructive
-      critical_escalations: destructive
-      critical_needs_reply: destructive
-      raised_escalations: warning
-      raised_needs_reply: warning
-      frustrated_speech: destructive
-      frustrated_needs_reply: destructive
-      urgent_speech: warning
-      thankful_recovery: positive
-      chat_live: accent
-      chat_needs_reply: warning
-      phone_live: warning
-      phone_needs_reply: warning
-      email_live: accent
-      email_needs_reply: warning
-      portal_live: accent
-      portal_needs_reply: warning
-      internal_notes: accent
       documents: accent
-
   # Peer-pack needs_reply_ball (cycle 1922): Front / Intercom "waiting on you"
   # — customer speech that still needs an agent reply, above the live trail.
   needs_reply:
@@ -708,463 +601,6 @@ workspace ticket_queue "Ticket Queue":
     display: conversation
     action: comment_detail
     empty: "Nothing waiting on agents — every customer note has a reply path"
-
-
-  # Peer-pack conversation upgrade (cycle 2060): Zendesk/Front "mid-priority waiting on you" —
-  # case_priority=medium AND ball_in_court=agent (recipe medium_needs_reply_trail;
-  # not high|critical priority_needs_reply, not ball-only needs_reply, not tone/channel×ball coat).
-  medium_needs_reply:
-    source: Comment
-    filter: case_priority = medium and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No medium-priority notes waiting on agents — mid-priority threads are answered or parked"
-
-  # Peer-pack conversation upgrade (cycle 2040): Zendesk/Front "high-priority waiting on you" —
-  # case_priority high|critical AND ball_in_court=agent (recipe priority_needs_reply_trail;
-  # not Ticket open_queue/critical priority rows alone, not ball-only needs_reply, not
-  # escalation×ball critical_needs_reply, not sla_pressure breach_needs_reply, not tone×ball).
-  # Denormalized ticket priority on Comment — peer priority inbox on the speech grain.
-  priority_needs_reply:
-    source: Comment
-    filter: (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No high-priority notes waiting on agents — high/critical threads are answered or parked on customers"
-
-  # Peer-pack conversation upgrade (cycle 2042): Zendesk/Front "high-priority waiting on customer" —
-  # case_priority high|critical AND ball_in_court=customer (recipe priority_awaiting_customer_trail;
-  # not agent priority_needs_reply, not ball-only awaiting_customer, not Ticket open_queue priority rows,
-  # not escalation/SLA×customer re-stack). Priority rides the note while the customer holds the ball.
-  priority_awaiting_customer:
-    source: Comment
-    filter: (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No high-priority notes waiting on customers — high/critical threads are answered or still on agents"
-
-  # Peer-pack conversation upgrade (cycle 2032): Intercom/Zendesk "thanks — still
-  # waiting on you" — customer_tone=thankful AND ball_in_court=agent (recipe
-  # thankful_needs_reply_trail; not full thankful_recovery missing ball, not
-  # frustrated/urgent needs_reply heat re-stack, not channel×ball coat).
-  thankful_needs_reply:
-    source: Comment
-    filter: customer_tone = thankful and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No thankful notes waiting on agents — warm closeouts are closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2036): Zendesk/Front "SLA breach waiting on you" —
-  # sla_pressure at_risk|breached AND ball_in_court=agent (recipe breach_needs_reply_trail;
-  # not Ticket breach_risk queue rows, not ball-only needs_reply, not escalation×ball critical_needs_reply,
-  # not tone×ball re-stack). Denormalized ticket SLA on Comment — peer first-response pressure on speech.
-  # Cycle 2075 recipe sla_pressure_stage_density — exclusive soft at-risk vs hard
-  # breached needs-reply speech (not OR-combined breach_needs_reply alone; peer
-  # Zendesk/Front SLA stage boards on conversation grain).
-  at_risk_needs_reply:
-    source: Comment
-    filter: sla_pressure = at_risk and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No at-risk SLA notes waiting on agents — soft pressure is answered or parked"
-
-  breached_needs_reply:
-    source: Comment
-    filter: sla_pressure = breached and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No breached-SLA notes waiting on agents — hard failures are answered or parked"
-
-
-  breach_needs_reply:
-    source: Comment
-    filter: (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No SLA-pressure notes waiting on agents — at-risk and breached threads are answered or parked on customers"
-
-  # Peer-pack conversation upgrade (cycle 2038): Zendesk/Front "SLA still burning — waiting on customer" —
-  # sla_pressure at_risk|breached AND ball_in_court=customer (recipe breach_awaiting_customer_trail;
-  # not agent breach_needs_reply, not Ticket breach_risk rows, not ball-only awaiting_customer,
-  # not tone/channel×customer re-stack). Clock still runs while the customer holds the ball.
-  breach_awaiting_customer:
-    source: Comment
-    filter: (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No SLA-pressure notes waiting on customers — at-risk and breached threads are answered or still on agents"
-
-  # Peer-pack conversation upgrade (cycle 2035): Intercom/Zendesk "thanks — waiting on
-  # customer confirm" — customer_tone=thankful AND ball_in_court=customer (recipe
-  # thankful_awaiting_customer_trail; not full thankful_recovery missing ball, not agent
-  # thankful_needs_reply, not frustrated/urgent×customer heat re-stack, not channel×ball).
-  thankful_awaiting_customer:
-    source: Comment
-    filter: customer_tone = thankful and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No thankful notes waiting on customers — warm confirm handoffs are closed or still on agents"
-
-  # Peer-pack conversation upgrade (cycle 2029): Intercom/Zendesk "portal waiting on
-  # customer" — channel=portal AND ball_in_court=customer (recipe portal_awaiting_customer_trail;
-  # not full portal_live missing ball, not agent portal_needs_reply, not phone/chat/email_awaiting).
-  portal_awaiting_customer:
-    source: Comment
-    filter: channel = portal and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No portal notes waiting on customers — self-serve portal handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1955): Front / Intercom "waiting on
-  # customer" — agent speech that kicked the ball back; do not re-thrash these
-  # threads as open agent work (recipe awaiting_customer_trail).
-  awaiting_customer:
-    source: Comment
-    filter: ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "Nothing waiting on customers — every outbound note is closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1940): Zendesk/Front "heated" trail —
-  # frustrated/urgent tone or raised/critical escalation, not ball_in_court alone
-  # (recipe tone_escalation_heat; not needs_reply_ball re-stack).
-  hot_speech:
-    source: Comment
-    filter: (customer_tone = frustrated or customer_tone = urgent or escalation != none) and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No heated customer speech — tone and escalation are quiet"
-
-  # Peer-pack conversation upgrade (cycle 1977): Zendesk/Intercom CSAT-risk lean-in —
-  # customer_tone=frustrated only (not urgent OR escalation umbrella in hot_speech)
-  # (recipe frustrated_tone_trail; not hot_speech / escalation / channel re-stack).
-  frustrated_speech:
-    source: Comment
-    filter: customer_tone = frustrated and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated customer speech — CSAT-risk notes land here when tone is frustrated"
-
-  # Peer-pack conversation upgrade (cycle 1994): Intercom/Zendesk "angry and waiting
-  # on you" — customer_tone=frustrated AND ball_in_court=agent (recipe
-  # frustrated_needs_reply_trail; not full frustrated_speech or channel×ball re-stack).
-  frustrated_needs_reply:
-    source: Comment
-    filter: customer_tone = frustrated and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated notes waiting on agents — CSAT-risk speech is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2007): Intercom/Zendesk "angry still waiting
-  # on customer" — customer_tone=frustrated AND ball_in_court=customer (recipe
-  # frustrated_awaiting_customer_trail; not full awaiting_customer missing tone, not
-  # agent frustrated_needs_reply, not urgent_awaiting_customer re-stack).
-  frustrated_awaiting_customer:
-    source: Comment
-    filter: customer_tone = frustrated and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated notes waiting on customers — CSAT-risk outbound is closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1979): Zendesk/Intercom SLA time-pressure —
-  # customer_tone=urgent only (not frustrated OR escalation umbrella in hot_speech)
-  # (recipe urgent_tone_trail; not hot_speech / frustrated / channel / escalation re-stack).
-  urgent_speech:
-    source: Comment
-    filter: customer_tone = urgent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No urgent customer speech — SLA time-pressure notes land here when tone is urgent"
-
-  # Peer-pack conversation upgrade (cycle 2003): Front/Intercom "urgent and waiting
-  # on you" — customer_tone=urgent AND ball_in_court=agent (recipe urgent_needs_reply_trail;
-  # not full urgent_speech missing ball, not frustrated/raised/critical needs_reply, not channel×ball).
-  urgent_needs_reply:
-    source: Comment
-    filter: customer_tone = urgent and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No urgent notes waiting on agents — SLA time-pressure speech is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2005): Front/Intercom "urgent still waiting on
-  # customer" — customer_tone=urgent AND ball_in_court=customer (recipe urgent_awaiting_customer_trail;
-  # not full awaiting_customer missing tone, not agent urgent_needs_reply, not channel×ball).
-  urgent_awaiting_customer:
-    source: Comment
-    filter: customer_tone = urgent and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No urgent notes waiting on customers — SLA time-pressure outbound is closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1969): Zendesk/Service Cloud P1 speech —
-  # escalation=critical only so leads lean into ARR-risk / critical path notes
-  # (recipe critical_escalation_trail; not hot_speech or channel re-stack).
-  critical_escalations:
-    source: Comment
-    filter: escalation = critical and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations — P1 customer speech lands here when raised to critical"
-
-  # Peer-pack conversation upgrade (cycle 1998): Zendesk/Service Cloud P1 still waiting
-  # on you — escalation=critical AND ball_in_court=agent (recipe critical_needs_reply_trail;
-  # not full critical_escalations missing ball, not channel×ball re-stack).
-  critical_needs_reply:
-    source: Comment
-    filter: escalation = critical and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations waiting on agents — P1 speech is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2013): Zendesk/Service Cloud P1 still waiting
-  # on customer — escalation=critical AND ball_in_court=customer (recipe
-  # critical_awaiting_customer_trail; not full awaiting_customer missing escalation, not
-  # agent critical_needs_reply, not raised/frustrated/urgent awaiting re-stack).
-  critical_awaiting_customer:
-    source: Comment
-    filter: escalation = critical and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations waiting on customers — P1 handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 2001): Zendesk/Service Cloud L2 still waiting
-  # on you — escalation=raised AND ball_in_court=agent (recipe raised_needs_reply_trail;
-  # not full raised_escalations missing ball, not P1 critical_needs_reply, not channel×ball).
-  raised_needs_reply:
-    source: Comment
-    filter: escalation = raised and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations waiting on agents — L2 handoffs are closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2009): Zendesk/Service Cloud L2 still waiting
-  # on customer — escalation=raised AND ball_in_court=customer (recipe
-  # raised_awaiting_customer_trail; not full awaiting_customer missing escalation, not
-  # agent raised_needs_reply, not critical/frustrated/urgent awaiting re-stack).
-  raised_awaiting_customer:
-    source: Comment
-    filter: escalation = raised and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations waiting on customers — L2 handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1972): Zendesk/Service Cloud L2 raised —
-  # escalation=raised (not critical) so agents lean into tier-2 handoffs before P1
-  # (recipe raised_escalation_trail; not critical_escalation or channel re-stack).
-  raised_escalations:
-    source: Comment
-    filter: escalation = raised and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations — L2 handoff notes land here before P1 critical"
-
-  # Peer-pack conversation upgrade (cycle 1958): Intercom/Zendesk "warm recovery"
-  # — thankful customer speech after a fix so agents lean into closeout wins
-  # (recipe thankful_recovery_trail; not hot_speech re-stack).
-  thankful_recovery:
-    source: Comment
-    filter: customer_tone = thankful and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No thankful recovery notes yet — closeout wins land here after a fix lands"
-
-  # Peer-pack conversation upgrade (cycle 1960): Intercom/Front live chat path —
-  # channel=chat public speech so agents lean into real-time channel grain
-  # (recipe chat_channel_trail; not tone/ball re-stack).
-  chat_live:
-    source: Comment
-    filter: channel = chat and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No live chat notes — portal/email/phone still carry the rest of the trail"
-
-  # Peer-pack conversation upgrade (cycle 1990): Intercom/Front "chat waiting
-  # on you" — channel=chat AND ball_in_court=agent (recipe chat_needs_reply_trail;
-  # not full chat_live or ball-only needs_reply re-stack).
-  chat_needs_reply:
-    source: Comment
-    filter: channel = chat and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No chat notes waiting on agents — live chat is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 1963): Zendesk phone path —
-  # channel=phone public speech so agents lean into voice-channel grain
-  # (recipe phone_channel_trail; not chat re-stack).
-  phone_live:
-    source: Comment
-    filter: channel = phone and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No phone-channel notes — chat/portal/email still carry the rest of the trail"
-
-  # Peer-pack conversation upgrade (cycle 1992): Zendesk/Front "phone waiting
-  # on you" — channel=phone AND ball_in_court=agent (recipe phone_needs_reply_trail;
-  # not full phone_live or ball-only needs_reply re-stack).
-  phone_needs_reply:
-    source: Comment
-    filter: channel = phone and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No phone notes waiting on agents — voice intake is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 1982): Zendesk/Front email path —
-  # channel=email public speech so agents lean into async email grain
-  # (recipe email_channel_trail; not chat/phone/tone re-stack).
-  email_live:
-    source: Comment
-    filter: channel = email and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No email-channel notes — chat/phone/portal still carry the rest of the trail"
-
-  # Peer-pack conversation upgrade (cycle 1986): Front/Intercom "email waiting
-  # on you" — channel=email AND ball_in_court=agent (recipe email_needs_reply_trail;
-  # not full email_live or ball-only needs_reply re-stack).
-  email_needs_reply:
-    source: Comment
-    filter: channel = email and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No email notes waiting on agents — outbound email is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 2015): Zendesk/Front "email waiting on
-  # customer" — channel=email AND ball_in_court=customer (recipe email_awaiting_customer_trail;
-  # not full email_live missing ball, not agent email_needs_reply, not tone/escalation×customer).
-  email_awaiting_customer:
-    source: Comment
-    filter: channel = email and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No email notes waiting on customers — async email handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 2020): Intercom/Front "chat waiting on
-  # customer" — channel=chat AND ball_in_court=customer (recipe chat_awaiting_customer_trail;
-  # not full chat_live missing ball, not agent chat_needs_reply, not email_awaiting_customer).
-  chat_awaiting_customer:
-    source: Comment
-    filter: channel = chat and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No chat notes waiting on customers — live chat handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 2023): Zendesk/Front "phone waiting on
-  # customer" — channel=phone AND ball_in_court=customer (recipe phone_awaiting_customer_trail;
-  # not full phone_live missing ball, not agent phone_needs_reply, not chat_awaiting_customer).
-  phone_awaiting_customer:
-    source: Comment
-    filter: channel = phone and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No phone notes waiting on customers — callback handoffs are closed or still on us"
-
-  # Peer-pack conversation upgrade (cycle 1984): Zendesk/Intercom portal path —
-  # channel=portal public speech so agents lean into self-serve portal grain
-  # (recipe portal_channel_trail; not email/chat/phone/tone re-stack).
-  portal_live:
-    source: Comment
-    filter: channel = portal and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No portal-channel notes — email/chat/phone still carry the rest of the trail"
-
-  # Peer-pack conversation upgrade (cycle 1988): Intercom/Zendesk "portal waiting
-  # on you" — channel=portal AND ball_in_court=agent (recipe portal_needs_reply_trail;
-  # not full portal_live or ball-only needs_reply re-stack).
-  portal_needs_reply:
-    source: Comment
-    filter: channel = portal and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No portal notes waiting on agents — self-serve portal is closed or still on the customer"
-
-  # Peer-pack conversation upgrade (cycle 1966): Zendesk/Front internal collab —
-  # agent/manager side notes (is_internal) so triage stills show private handoff
-  # grain, not another public channel filter (recipe internal_collab_trail).
-  internal_notes:
-    source: Comment
-    filter: is_internal = true
-    sort: created_at desc
-    limit: 8
-    display: conversation
-    action: comment_detail
-    empty: "No internal collab notes — agent handoffs and side research land here"
-
-  # Goal B conversation spine — newest notes as pull-to-open queue above the
-  # ticket worklist so buyer stills show real thread copy (not empty timeline).
-  # Hyperpart emitter dogfood: display: conversation → Message(.dz-message) + Bubble(.dz-bubble)
   live_conversation:
     source: Comment
     sort: created_at desc
@@ -1222,7 +658,6 @@ workspace ticket_queue "Ticket Queue":
     display: timeline
     action: comment_detail
     empty: "No recent comments"
-
   queue_readiness:
     display: status_list
     entries:
@@ -1230,74 +665,6 @@ workspace ticket_queue "Ticket Queue":
         caption: "Customer notes with ball in agent court — answer before the rest of the trail"
         icon: "reply"
         state: warning
-      - title: "Priority needs reply"
-        caption: "High/critical case-priority notes with ball in agent court — answer priority speech waiting-on-you before SLA-pressure trail"
-        icon: "flag"
-        state: warning
-      - title: "Breach needs reply"
-        caption: "Notes on at-risk or breached tickets with ball in agent court — answer SLA-pressure speech before the full trail"
-        icon: "timer"
-        state: destructive
-      - title: "Awaiting customer"
-        caption: "Outbound notes with ball in customer court — park these; do not re-answer as open work"
-        icon: "hourglass"
-        state: accent
-      - title: "Urgent awaiting customer"
-        caption: "Urgent-tone notes with ball in customer court — nudge before SLA breach; not agent waiting-on-you"
-        icon: "clock-alert"
-        state: warning
-      - title: "Frustrated awaiting customer"
-        caption: "Frustrated-tone notes with ball in customer court — CSAT-risk nudge; not agent angry-waiting-on-you"
-        icon: "frown"
-        state: destructive
-      - title: "Raised awaiting customer"
-        caption: "L2 raised escalations with ball in customer court — nudge handoffs; not agent L2 waiting-on-you"
-        icon: "arrow-up-from-line"
-        state: warning
-      - title: "Critical awaiting customer"
-        caption: "P1 critical escalations with ball in customer court — ARR-risk nudge; not agent P1 waiting-on-you"
-        icon: "siren"
-        state: destructive
-      - title: "Hot speech"
-        caption: "Frustrated/urgent tone or raised escalation — lean into heat before the full trail"
-        icon: "flame"
-        state: destructive
-      - title: "Critical escalations"
-        caption: "P1 critical-path speech only — lean into ARR-risk notes before the mixed hot trail"
-        icon: "siren"
-        state: destructive
-      - title: "Raised escalations"
-        caption: "L2 raised handoffs (not P1) — lean into tier-2 notes before critical path"
-        icon: "arrow-up"
-        state: warning
-      - title: "Thankful recovery"
-        caption: "Warm closeout speech after a fix — lean into wins before the full trail"
-        icon: "heart"
-        state: positive
-      - title: "Thankful needs reply"
-        caption: "Thankful-tone notes with ball in agent court — close the loop after a win; not pure recovery missing ball"
-        icon: "heart-handshake"
-        state: positive
-      - title: "Live chat"
-        caption: "Chat-channel notes in real time — lean into Intercom-style live path before the full trail"
-        icon: "messages-square"
-        state: accent
-      - title: "Phone path"
-        caption: "Phone-channel notes from voice intake — lean into Zendesk phone grain before the full trail"
-        icon: "phone"
-        state: warning
-      - title: "Phone needs reply"
-        caption: "Phone notes with ball in agent court — answer voice waiting-on-you before the full phone trail"
-        icon: "phone-call"
-        state: warning
-      - title: "Portal awaiting customer"
-        caption: "Portal notes with ball in customer court — nudge self-serve handoffs; not agent portal waiting-on-you"
-        icon: "globe"
-        state: accent
-      - title: "Internal collab"
-        caption: "Private agent/manager notes — lean into Zendesk internal handoffs before the public trail"
-        icon: "lock"
-        state: accent
       - title: "Live conversation"
         caption: "Newest customer and agent notes — open a row for the note, ticket, or author"
         icon: "message-square"
@@ -1310,17 +677,16 @@ workspace ticket_queue "Ticket Queue":
         caption: "First response warning at 2h — see Manager Ops for team SLA strip"
         icon: "clock"
         state: accent
-
   ux:
     as agent:
-      purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: at_risk_needs_reply, breached_needs_reply, media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      purpose: "Triage home — needs-reply ball + live trail"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation
     as manager:
-      purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: at_risk_needs_reply, breached_needs_reply, media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      purpose: "Triage home — needs-reply ball + live trail"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation
     as admin:
-      purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: at_risk_needs_reply, breached_needs_reply, media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      purpose: "Triage home — needs-reply ball + live trail"
+      focus: media_shelf, queue_metrics, needs_reply, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1346,7 +712,7 @@ workspace manager_ops "Manager Ops":
   # in_progress lifecycle stage boards (recipe status_stage_density; peer
   # Zendesk/Front status views — not sla_stage_density re-stack, not
   # critical/unassigned dual_attention alone, not conversation trail thrash).
-  purpose: "Multi-panel support ops — headshots, open vs in-progress status stages, SLA stage density, dual queues, needs-reply ball, waiver documents, live conversation"
+  purpose: "Multi-panel support ops — headshots, status/SLA stages, dual queues, needs-reply ball, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -1378,70 +744,17 @@ workspace manager_ops "Manager Ops":
       resolved: count(Ticket where status = resolved)
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
-      priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false)
-      medium_needs_reply: count(Comment where case_priority = medium and ball_in_court = agent and is_internal = false)
-      priority_awaiting_customer: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false)
-      breach_needs_reply: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false)
-      at_risk_needs_reply: count(Comment where sla_pressure = at_risk and ball_in_court = agent and is_internal = false)
-      breached_needs_reply: count(Comment where sla_pressure = breached and ball_in_court = agent and is_internal = false)
-      breach_awaiting_customer: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false)
-      thankful_needs_reply: count(Comment where customer_tone = thankful and ball_in_court = agent and is_internal = false)
-      thankful_awaiting_customer: count(Comment where customer_tone = thankful and ball_in_court = customer and is_internal = false)
-      email_awaiting_customer: count(Comment where channel = email and ball_in_court = customer and is_internal = false)
-      chat_awaiting_customer: count(Comment where channel = chat and ball_in_court = customer and is_internal = false)
-      phone_awaiting_customer: count(Comment where channel = phone and ball_in_court = customer and is_internal = false)
-      portal_awaiting_customer: count(Comment where channel = portal and ball_in_court = customer and is_internal = false)
-      urgent_needs_reply: count(Comment where customer_tone = urgent and ball_in_court = agent and is_internal = false)
-      urgent_awaiting_customer: count(Comment where customer_tone = urgent and ball_in_court = customer and is_internal = false)
-      frustrated_awaiting_customer: count(Comment where customer_tone = frustrated and ball_in_court = customer and is_internal = false)
-      raised_awaiting_customer: count(Comment where escalation = raised and ball_in_court = customer and is_internal = false)
-      critical_awaiting_customer: count(Comment where escalation = critical and ball_in_court = customer and is_internal = false)
-      critical_escalations: count(Comment where escalation = critical and is_internal = false)
-      critical_needs_reply: count(Comment where escalation = critical and ball_in_court = agent and is_internal = false)
-      raised_escalations: count(Comment where escalation = raised and is_internal = false)
-      raised_needs_reply: count(Comment where escalation = raised and ball_in_court = agent and is_internal = false)
-      frustrated_speech: count(Comment where customer_tone = frustrated and is_internal = false)
-      frustrated_needs_reply: count(Comment where customer_tone = frustrated and ball_in_court = agent and is_internal = false)
-      urgent_speech: count(Comment where customer_tone = urgent and is_internal = false)
-      internal_notes: count(Comment where is_internal = true)
       documents: count(SlaWaiver)
     tones:
+      in_progress: accent
       critical_open: destructive
       unassigned: warning
       at_risk: warning
       breached: destructive
       resolved: positive
-      in_progress: accent
       conversation: accent
       needs_reply: warning
-      priority_needs_reply: warning
-      medium_needs_reply: accent
-      priority_awaiting_customer: warning
-      breach_needs_reply: destructive
-      at_risk_needs_reply: warning
-      breached_needs_reply: destructive
-      breach_awaiting_customer: destructive
-      thankful_needs_reply: positive
-      thankful_awaiting_customer: positive
-      email_awaiting_customer: accent
-      chat_awaiting_customer: accent
-      phone_awaiting_customer: warning
-      portal_awaiting_customer: accent
-      urgent_needs_reply: warning
-      urgent_awaiting_customer: warning
-      frustrated_awaiting_customer: destructive
-      raised_awaiting_customer: warning
-      critical_awaiting_customer: destructive
-      critical_escalations: destructive
-      critical_needs_reply: destructive
-      raised_escalations: warning
-      raised_needs_reply: warning
-      frustrated_speech: destructive
-      frustrated_needs_reply: destructive
-      urgent_speech: warning
-      internal_notes: accent
       documents: accent
-
   # Live status stage density (cycle 2070) — peer Zendesk/Front put exclusive
   # open (intake) vs in_progress (active work) boards before SLA stages and
   # priority dual attention (recipe status_stage_density; not sla_stage_density
@@ -1557,354 +870,6 @@ workspace manager_ops "Manager Ops":
     display: conversation
     action: comment_detail
     empty: "No customer notes waiting on agents"
-
-  # Peer-pack thankful_needs_reply_trail (cycle 2032) — warm closeout still on agents.
-  thankful_needs_reply:
-    source: Comment
-    filter: customer_tone = thankful and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No thankful notes waiting on the team — warm closeouts are closed or still on the customer"
-
-
-  # Peer-pack medium_needs_reply_trail (cycle 2060) — mid-priority speech waiting on agents.
-  medium_needs_reply:
-    source: Comment
-    filter: case_priority = medium and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No medium-priority notes waiting on the team — mid-priority threads are answered or parked"
-
-  # Peer-pack priority_needs_reply_trail (cycle 2040) — high/critical case priority speech waiting on agents.
-  priority_needs_reply:
-    source: Comment
-    filter: (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No high-priority notes waiting on the team — high/critical threads are answered or parked on customers"
-
-  # Peer-pack priority_awaiting_customer_trail (cycle 2042) — high/critical case priority speech parked on customers.
-  priority_awaiting_customer:
-    source: Comment
-    filter: (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No high-priority notes waiting on customers — high/critical threads are answered or still on the team"
-
-  # Peer-pack breach_needs_reply_trail (cycle 2036) — sla_pressure at-risk/breached speech waiting on agents.
-  # Cycle 2075 recipe sla_pressure_stage_density — exclusive soft at-risk vs hard
-  # breached needs-reply speech (not OR-combined breach_needs_reply alone; peer
-  # Zendesk/Front SLA stage boards on conversation grain).
-  at_risk_needs_reply:
-    source: Comment
-    filter: sla_pressure = at_risk and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No at-risk SLA notes waiting on agents — soft pressure is answered or parked"
-
-  breached_needs_reply:
-    source: Comment
-    filter: sla_pressure = breached and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No breached-SLA notes waiting on agents — hard failures are answered or parked"
-
-
-  breach_needs_reply:
-    source: Comment
-    filter: (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No SLA-pressure notes waiting on the team — at-risk and breached threads are answered or parked on customers"
-
-  # Peer-pack breach_awaiting_customer_trail (cycle 2038) — sla_pressure at-risk/breached speech parked on customers (clock still burns).
-  breach_awaiting_customer:
-    source: Comment
-    filter: (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No SLA-pressure notes waiting on customers — at-risk and breached threads are answered or still on the team"
-
-  # Peer-pack thankful_awaiting_customer_trail (cycle 2035) — warm closeout parked on customer confirm.
-  thankful_awaiting_customer:
-    source: Comment
-    filter: customer_tone = thankful and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No thankful notes waiting on customers — warm confirm handoffs are closed or still on the team"
-
-  # Peer-pack portal_awaiting_customer_trail (cycle 2029) — self-serve portal handoffs parked on customers.
-  portal_awaiting_customer:
-    source: Comment
-    filter: channel = portal and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No portal notes waiting on customers — self-serve portal handoffs are closed or still on the team"
-
-  # Peer-pack critical_escalation_trail (cycle 1969) — P1 critical speech on ops.
-  critical_escalations:
-    source: Comment
-    filter: escalation = critical and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations for the team — P1 speech lands here"
-
-  # Peer-pack critical_needs_reply_trail (cycle 1998) — P1 critical speech still on agents.
-  critical_needs_reply:
-    source: Comment
-    filter: escalation = critical and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations waiting on the team — P1 speech is closed or still on the customer"
-
-  # Peer-pack critical_awaiting_customer_trail (cycle 2013) — P1 critical handoffs parked on customers.
-  critical_awaiting_customer:
-    source: Comment
-    filter: escalation = critical and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations waiting on customers — P1 handoffs are closed or still on the team"
-
-  # Peer-pack raised_needs_reply_trail (cycle 2001) — L2 raised speech still on agents.
-  raised_needs_reply:
-    source: Comment
-    filter: escalation = raised and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations waiting on the team — L2 handoffs are closed or still on the customer"
-
-  # Peer-pack raised_escalation_trail (cycle 1972) — L2 raised handoffs on ops.
-  raised_escalations:
-    source: Comment
-    filter: escalation = raised and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations for the team — L2 handoffs land here"
-
-  # Peer-pack frustrated_tone_trail (cycle 1977) — pure frustrated CSAT-risk speech on ops.
-  frustrated_speech:
-    source: Comment
-    filter: customer_tone = frustrated and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated customer speech for the team — CSAT-risk notes land here"
-
-  # Peer-pack frustrated_needs_reply_trail (cycle 1994) — CSAT-risk speech still on agents.
-  frustrated_needs_reply:
-    source: Comment
-    filter: customer_tone = frustrated and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated notes waiting on the team — CSAT-risk speech is closed or still on the customer"
-
-  # Peer-pack urgent_tone_trail (cycle 1979) — pure urgent SLA time-pressure speech on ops.
-  urgent_speech:
-    source: Comment
-    filter: customer_tone = urgent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No urgent customer speech for the team — SLA time-pressure notes land here"
-
-  # Peer-pack urgent_needs_reply_trail (cycle 2003) — SLA time-pressure speech still on agents.
-  urgent_needs_reply:
-    source: Comment
-    filter: customer_tone = urgent and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No urgent notes waiting on the team — SLA time-pressure speech is closed or still on the customer"
-
-  # Peer-pack urgent_awaiting_customer_trail (cycle 2005) — SLA time-pressure speech parked on customers.
-  urgent_awaiting_customer:
-    source: Comment
-    filter: customer_tone = urgent and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No urgent notes waiting on customers — SLA time-pressure outbound is closed or still on the team"
-
-  # Peer-pack frustrated_awaiting_customer_trail (cycle 2007) — CSAT-risk speech parked on customers.
-  frustrated_awaiting_customer:
-    source: Comment
-    filter: customer_tone = frustrated and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated notes waiting on customers — CSAT-risk outbound is closed or still on the team"
-
-  # Peer-pack raised_awaiting_customer_trail (cycle 2009) — L2 raised handoffs parked on customers.
-  raised_awaiting_customer:
-    source: Comment
-    filter: escalation = raised and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations waiting on customers — L2 handoffs are closed or still on the team"
-
-  # Peer-pack chat_channel_trail (cycle 1960) — live chat path on manager home.
-  chat_live:
-    source: Comment
-    filter: channel = chat and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No live chat notes for the team — other channels still carry the trail"
-
-  # Peer-pack chat_needs_reply_trail (cycle 1990) — chat still waiting on agents.
-  chat_needs_reply:
-    source: Comment
-    filter: channel = chat and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No chat notes waiting on the team — live chat is closed or still on the customer"
-
-  # Peer-pack phone_channel_trail (cycle 1963) — voice intake path.
-  phone_live:
-    source: Comment
-    filter: channel = phone and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No phone-channel notes for the team — chat and email still carry the trail"
-
-  # Peer-pack phone_needs_reply_trail (cycle 1992) — phone still waiting on agents.
-  phone_needs_reply:
-    source: Comment
-    filter: channel = phone and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No phone notes waiting on the team — voice intake is closed or still on the customer"
-
-  # Peer-pack email_channel_trail (cycle 1982) — async email intake path.
-  email_live:
-    source: Comment
-    filter: channel = email and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No email-channel notes for the team — chat/phone/portal still carry the trail"
-
-  # Peer-pack email_needs_reply_trail (cycle 1986) — email still waiting on agents.
-  email_needs_reply:
-    source: Comment
-    filter: channel = email and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No email notes waiting on the team — outbound email is closed or still on the customer"
-
-  # Peer-pack email_awaiting_customer_trail (cycle 2015) — async email handoffs parked on customers.
-  email_awaiting_customer:
-    source: Comment
-    filter: channel = email and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No email notes waiting on customers — async email handoffs are closed or still on the team"
-
-  # Peer-pack chat_awaiting_customer_trail (cycle 2020) — live chat handoffs parked on customers.
-  chat_awaiting_customer:
-    source: Comment
-    filter: channel = chat and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No chat notes waiting on customers — live chat handoffs are closed or still on the team"
-
-  # Peer-pack phone_awaiting_customer_trail (cycle 2023) — callback/phone handoffs parked on customers.
-  phone_awaiting_customer:
-    source: Comment
-    filter: channel = phone and ball_in_court = customer and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No phone notes waiting on customers — callback handoffs are closed or still on the team"
-
-  # Peer-pack portal_channel_trail (cycle 1984) — self-serve portal intake path.
-  portal_live:
-    source: Comment
-    filter: channel = portal and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No portal-channel notes for the team — email/chat/phone still carry the trail"
-
-  # Peer-pack portal_needs_reply_trail (cycle 1988) — portal still waiting on agents.
-  portal_needs_reply:
-    source: Comment
-    filter: channel = portal and ball_in_court = agent and is_internal = false
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No portal notes waiting on the team — self-serve portal is closed or still on the customer"
-
-  # Peer-pack internal_collab_trail (cycle 1966) — private agent/manager handoffs
-  # (is_internal) on the ops home; not another public channel filter.
-  internal_notes:
-    source: Comment
-    filter: is_internal = true
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No internal collab notes for the team — side research and handoffs land here"
-
-  # Goal B conversation spine AFTER dual attention + composition so manager
-  # hero stills show pressure queues, documents, and Message/Bubble chrome.
-  # display: conversation → MessageScroller (same path as ticket_queue live_conversation).
   live_conversation:
     source: Comment
     sort: created_at desc
@@ -1915,8 +880,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — status stage density (open vs in-progress), SLA stage density, breach needs-reply speech, thankful needs-reply, portal awaiting-customer, phone, chat, email, critical/raised, needs-reply, dual queues"
-      focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, breached_queue, critical_queue, unassigned_queue, at_risk_needs_reply, breached_needs_reply, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation
+      purpose: "Multi-panel support ops — status/SLA stages, dual queues, needs-reply, live conversation"
+      focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every
@@ -1928,14 +893,13 @@ workspace manager_ops "Manager Ops":
   # on agent_dashboard; funnel_chart coverage lives on agent_console.
 
 
-
 workspace agent_dashboard "Agent Dashboard":
   # Personal agent view (assigned work + conversation). Manager team home is
   # manager_ops; agents keep this for "my WIP" after claiming from the queue.
   # Goal B empty_region_honesty (cycle 1812): peer agent homes (Zendesk /
   # Intercom) lead with WIP board + close-out + one comment trail — not funnel
   # / progress chart theater or triple comment streams that render as voids.
-  purpose: "Personal WIP board with both-ball conversation plus thankful recovery on claimed cases"
+  purpose: "Personal WIP board with needs-reply ball and awaiting-customer park on claimed cases"
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
@@ -1963,49 +927,6 @@ workspace agent_dashboard "Agent Dashboard":
     display: conversation
     action: comment_detail
     empty: "No customer notes waiting on you — clear the ball before new claims"
-
-  # Peer-pack critical_escalation_trail (cycle 1969) — P1 critical speech on my plate.
-  critical_escalations:
-    source: Comment
-    filter: escalation = critical and is_internal = false
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No critical escalations on your plate — P1 speech lands here"
-
-  # Peer-pack raised_escalation_trail (cycle 1972) — L2 raised handoffs on my plate.
-  raised_escalations:
-    source: Comment
-    filter: escalation = raised and is_internal = false
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No raised escalations on your plate — L2 handoffs land here"
-
-  # Peer-pack frustrated_tone_trail (cycle 1977) — pure frustrated speech on my plate.
-  frustrated_speech:
-    source: Comment
-    filter: customer_tone = frustrated and is_internal = false
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No frustrated customer speech on your plate — CSAT-risk notes land here"
-
-  # Peer-pack urgent_tone_trail (cycle 1979) — pure urgent SLA time-pressure on my plate.
-  urgent_speech:
-    source: Comment
-    filter: customer_tone = urgent and is_internal = false
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No urgent customer speech on your plate — SLA time-pressure notes land here"
-
-  # Peer-pack awaiting_customer_trail (cycle 1955) — notes I (or the desk)
-  # kicked back; park until the customer answers (not open agent thrash).
   awaiting_customer:
     source: Comment
     filter: ball_in_court = customer and is_internal = false
@@ -2014,28 +935,6 @@ workspace agent_dashboard "Agent Dashboard":
     display: conversation
     action: comment_detail
     empty: "Nothing waiting on customers from this desk"
-
-  # Peer-pack thankful_recovery_trail (cycle 1958) — warm closeout speech.
-  thankful_recovery:
-    source: Comment
-    filter: customer_tone = thankful and is_internal = false
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No thankful recovery notes on your plate yet"
-
-  # Peer-pack internal_collab_trail (cycle 1966) — private notes on my plate.
-  internal_notes:
-    source: Comment
-    filter: is_internal = true
-    sort: created_at desc
-    limit: 6
-    display: conversation
-    action: comment_detail
-    empty: "No internal collab notes on your plate — handoffs and side research land here"
-
-  # Conversation on my plate — queue of recent notes (Goal B conversation depth).
   my_conversation:
     source: Comment
     sort: created_at desc
@@ -2065,11 +964,11 @@ workspace agent_dashboard "Agent Dashboard":
 
   ux:
     as agent:
-      purpose: "Personal WIP + needs-reply + urgent speech — no funnel theater"
-      focus: my_assigned, needs_reply, urgent_speech, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + awaiting customer — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, pending_resolution
     as manager:
-      purpose: "Personal WIP + needs-reply + urgent speech — no funnel theater"
-      focus: my_assigned, needs_reply, urgent_speech, awaiting_customer, pending_resolution
+      purpose: "Personal WIP + needs-reply + awaiting customer — no funnel theater"
+      focus: my_assigned, needs_reply, awaiting_customer, pending_resolution
 
 workspace my_tickets "My Tickets":
   # Goal B empty_region_honesty (cycle 1812): customer portal peers show

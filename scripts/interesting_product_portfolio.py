@@ -73,6 +73,28 @@ _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("empty_region_prune", re.compile(r"empty_region|prune .*theater|honesty", re.I)),
 )
 
+# Coat families — synonym tags collapse here so "novel recipe" cannot evade
+# anti-recipe. One family ship on (app, depth) saturates that cell.
+_FAMILY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "conversation_filter_slice",
+        re.compile(
+            r"needs_reply|awaiting_customer|_channel_trail|_tone_trail|"
+            r"escalation_trail|hot_speech|thankful_recovery|tone_escalation",
+            re.I,
+        ),
+    ),
+    (
+        "document_rail_slice",
+        re.compile(r"_rail_evidence|_watch\b|rail_evidence", re.I),
+    ),
+    (
+        "stage_queue_slice",
+        re.compile(r"stage_density|_stage_queue", re.I),
+    ),
+)
+COAT_FAMILIES: frozenset[str] = frozenset(name for name, _ in _FAMILY_PATTERNS)
+
 # Prefer stacking depth on these icon apps before thin fleet coat.
 ICON_APPS: dict[str, tuple[str, ...]] = {
     "conversation": ("support_tickets", "simple_task", "fieldtest_hub"),
@@ -93,6 +115,7 @@ class GoalBShip:
     app: str
     depth_id: str
     recipe: str | None = None
+    family: str | None = None
     source: str = ""
     cycle: int | None = None
 
@@ -112,6 +135,7 @@ class PortfolioSnapshot:
     recipe_streak_id: str | None
     banned_depths: list[str]
     banned_recipes: list[str]
+    saturated_cells: list[list[str]] = field(default_factory=list)
     recommend: dict[str, Any] | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -145,6 +169,22 @@ def _recipe_from_text(text: str) -> str | None:
         if pat.search(text or ""):
             return name
     return None
+
+
+def recipe_family(recipe: str | None, text: str = "") -> str | None:
+    """Collapse a free recipe tag (or notes) onto a closed family.
+
+    Coat synonyms (thankful_needs_reply_trail, receipt_settle_rail_evidence)
+    must not count as novel. Honest first grains (message_chrome, dual_attention)
+    stay on the original six families.
+    """
+    blob = f"{recipe or ''} {text or ''}".strip()
+    if not blob:
+        return None
+    for name, pat in _FAMILY_PATTERNS:
+        if pat.search(blob):
+            return name
+    return _recipe_from_text(blob)
 
 
 def covered_from_unit_pins(*, unit_dir: Path = UNIT) -> set[tuple[str, str]]:
@@ -213,14 +253,16 @@ def ships_from_dig_receipts(*, digs_dir: Path = DIGS, limit: int = 40) -> list[G
             cycle_i = int(cycle) if cycle is not None else None
         except (TypeError, ValueError):
             cycle_i = None
-        # Explicit recipe tag (e.g. receipt_settle_rail_evidence) wins; else soft patterns.
+        # Raw tag kept for logs; family collapse is what anti-recipe / saturate use.
         recipe_raw = str(data.get("recipe") or "").strip() or None
-        recipe = recipe_raw or _recipe_from_text(notes) or _recipe_from_text(recipe_raw or "")
+        recipe = recipe_raw or _recipe_from_text(notes)
+        family = recipe_family(recipe_raw, notes) or recipe_family(recipe)
         ships.append(
             GoalBShip(
                 app=app,
                 depth_id=depth,
                 recipe=recipe,
+                family=family,
                 source=path.name,
                 cycle=cycle_i,
             )
@@ -278,11 +320,13 @@ def ships_from_git(*, limit: int = 40) -> list[GoalBShip]:
                     break
         if not app:
             continue
+        raw = _recipe_from_text(line)
         ships.append(
             GoalBShip(
                 app=app,
                 depth_id=depth,
-                recipe=_recipe_from_text(line),
+                recipe=raw,
+                family=recipe_family(raw, line),
                 source="git",
             )
         )
@@ -317,6 +361,16 @@ def _streak(values: list[str | None]) -> tuple[int, str | None]:
     return n, head
 
 
+def cells_saturated_by_ships(recent: list[GoalBShip]) -> set[tuple[str, str]]:
+    """One coat-family ship on (app, depth) saturates that cell."""
+    sat: set[tuple[str, str]] = set()
+    for ship in recent:
+        fam = ship.family or recipe_family(ship.recipe)
+        if fam in COAT_FAMILIES and ship.app and ship.depth_id:
+            sat.add((ship.app, ship.depth_id))
+    return sat
+
+
 def recommend_pick(
     *,
     covered: set[tuple[str, str]],
@@ -325,11 +379,12 @@ def recommend_pick(
     max_same_depth: int = DEFAULT_MAX_SAME_DEPTH,
     max_same_recipe: int = DEFAULT_MAX_SAME_RECIPE,
     stack_target: int = DEFAULT_STACK_TARGET,
+    saturated: set[tuple[str, str]] | None = None,
 ) -> tuple[dict[str, Any] | None, list[str], list[str], list[str]]:
     """Return (recommend_dict|None, banned_depths, banned_recipes, notes)."""
     notes: list[str] = []
     depth_values = [s.depth_id for s in recent]
-    recipe_values = [s.recipe for s in recent]
+    recipe_values = [s.family or s.recipe for s in recent]
     depth_streak, depth_id = _streak(depth_values)
     recipe_streak, recipe_id = _streak(recipe_values)
 
@@ -341,6 +396,14 @@ def recommend_pick(
     if recipe_streak >= max_same_recipe and recipe_id:
         banned_recipes.append(recipe_id)
         notes.append(f"ban recipe={recipe_id} (streak {recipe_streak}>={max_same_recipe})")
+
+    sat = set(saturated or ()) | cells_saturated_by_ships(recent)
+    if sat:
+        notes.append(
+            "saturated="
+            + ",".join(f"{a}/{d}" for a, d in sorted(sat)[:12])
+            + ("…" if len(sat) > 12 else "")
+        )
 
     by_app: dict[str, int] = Counter(a for a, _ in covered if a in apps)
     missing: list[tuple[str, str]] = []
@@ -373,11 +436,13 @@ def recommend_pick(
         """Higher is better. Reasons for logging."""
         why: list[str] = []
         s = 0
+        if (app, depth) in sat:
+            return (-10_000, "saturated_cell")
         if depth in banned_depths and not allow_banned_depth:
             return (-10_000, "banned_depth")
         if depth in banned_depths and allow_banned_depth:
             s -= 20
-            why.append("novel_recipe_required")
+            why.append("different_family_or_stop")
         natural = natural_recipe.get(depth)
         if natural and natural in banned_recipes:
             s -= 40
@@ -421,20 +486,31 @@ def recommend_pick(
     candidates = missing
     allow_banned = False
     if matrix_full:
-        notes.append("coverage matrix full — recommend peer-pack upgrade or framework primitive")
-        # Upgrade path: icon apps with peer packs; prefer least-recent depth not at recipe ban peak
+        notes.append(
+            "coverage matrix full — upgrade only unsaturated cells; "
+            "else stop / framework-ux (not another coat synonym)"
+        )
         candidates = []
         for depth, icons in ICON_APPS.items():
             for app in icons:
-                if app in apps:
+                if app in apps and (app, depth) not in sat:
                     candidates.append((app, depth))
-        allow_banned = True  # upgrade may re-touch a wave depth with novel expression
+        allow_banned = True
+        if not candidates:
+            notes.append("all icon cells saturated — stop (no Goal B coat this cycle)")
+            return None, banned_depths, banned_recipes, notes
     elif only_banned_left:
         notes.append(
-            "only banned-depth cells remain — allow fill with must_novel_recipe "
-            "(do not ship the banned recipe)"
+            "only banned-depth cells remain — fill with a different family or stop "
+            "(do not invent a synonym recipe tag)"
         )
         allow_banned = True
+        candidates = [(a, d) for a, d in candidates if (a, d) not in sat]
+        if not candidates:
+            notes.append("banned-depth remainder is saturated — stop")
+            return None, banned_depths, banned_recipes, notes
+    else:
+        candidates = [(a, d) for a, d in candidates if (a, d) not in sat]
 
     best: tuple[int, str, str, str] | None = None
     for app, depth in candidates:
@@ -443,7 +519,7 @@ def recommend_pick(
             best = (sc, app, depth, why)
 
     if best is None or best[0] < -1000:
-        notes.append("no viable portfolio cell — framework-ux non-hop or scenario_underused")
+        notes.append("no viable portfolio cell — stop / framework-ux / scenario_underused")
         return None, banned_depths, banned_recipes, notes
 
     _sc, app, depth, why = best
@@ -471,8 +547,8 @@ def recommend_pick(
         "stack_target": stack_target,
         "guidance": (
             "Honor portfolio pick unless dig finds red CI / residual heat. "
-            "If must_novel_recipe, do not ship the banned surface recipe — "
-            "different expression, framework primitive, or peer-pack upgrade."
+            "must_novel_recipe means a different closed family or stop — "
+            "never a new synonym tag on the same coat."
         ),
     }
     return rec, banned_depths, banned_recipes, notes
@@ -492,6 +568,21 @@ def snapshot(
     covered = {(a, d) for a, d in covered if a in apps}
     dig_ships = ships_from_dig_receipts(digs_dir=digs_dir)
     recent = dig_ships if dig_ships else ships_from_git()
+    live_sat: set[tuple[str, str]] = set()
+    try:
+        from scripts.goal_b_coat import live_saturated_cells
+    except Exception:  # noqa: BLE001 — script path when run as __main__
+        try:
+            import goal_b_coat as _coat  # type: ignore
+
+            live_saturated_cells = _coat.live_saturated_cells
+        except Exception:  # noqa: BLE001
+            live_saturated_cells = None  # type: ignore[assignment]
+    if live_saturated_cells is not None:
+        try:
+            live_sat = live_saturated_cells(apps)
+        except Exception:  # noqa: BLE001
+            live_sat = set()
     rec, banned_d, banned_r, notes = recommend_pick(
         covered=covered,
         apps=apps,
@@ -499,9 +590,10 @@ def snapshot(
         max_same_depth=max_same_depth,
         max_same_recipe=max_same_recipe,
         stack_target=stack_target,
+        saturated=live_sat,
     )
     depth_streak, depth_id = _streak([s.depth_id for s in recent])
-    recipe_streak, recipe_id = _streak([s.recipe for s in recent])
+    recipe_streak, recipe_id = _streak([s.family or s.recipe for s in recent])
     missing = [[a, d] for a in apps for d in DEPTH_IDS if (a, d) not in covered]
     by_app: dict[str, int] = defaultdict(int)
     by_depth: dict[str, int] = defaultdict(int)
@@ -522,6 +614,7 @@ def snapshot(
         recipe_streak_id=recipe_id,
         banned_depths=banned_d,
         banned_recipes=banned_r,
+        saturated_cells=sorted([list(x) for x in (live_sat | cells_saturated_by_ships(recent))]),
         recommend=rec,
         notes=notes,
     )
@@ -542,6 +635,10 @@ def format_status(snap: PortfolioSnapshot | None = None) -> str:
         lines.append(f"banned_depths={','.join(snap.banned_depths)}")
     if snap.banned_recipes:
         lines.append(f"banned_recipes={','.join(snap.banned_recipes)}")
+    if snap.saturated_cells:
+        sat_bits = ",".join(f"{a}/{d}" for a, d in snap.saturated_cells[:12])
+        extra = "…" if len(snap.saturated_cells) > 12 else ""
+        lines.append(f"saturated={sat_bits}{extra}")
     if snap.coverage_by_depth:
         depth_bits = " ".join(f"{k}={v}" for k, v in snap.coverage_by_depth.items())
         lines.append(f"by_depth {depth_bits}")

@@ -20,6 +20,18 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal C coat residual in /improve** — `goal_b_coat` is a real probe
+  (`conv_siblings`, `slice_cartesian`, focus/rail walls). `coat_residual_total`
+  beats Goal B add and loses to Goal A / presentation. New playbook
+  `example-apps distill`. Cycle 2077 distilled support_tickets conversation
+  coat (keep `needs_reply` + `live_conversation`; freeze lowered).
+- **Goal B coat freeze** — portfolio collapses synonym recipe tags into
+  families (`conversation_filter_slice`, `document_rail_slice`,
+  `stage_queue_slice`); one family ship or live DSL above honest grain
+  saturates the cell; `--recommend -` is a legal stop (`require_mutation`
+  off). `scripts/goal_b_coat.py` ratchets support_tickets conversation and
+  invoice_ops document counts so they cannot grow. Peer packs refuse the
+  cartesian. Distill is a later cycle (`example-apps distill`).
 - **Goal B document Form W-9 watch (cycle 1995)** — invoice_ops InvoiceDocument
   gains `doc_kind=form_w9`; finance_ops + pay_desk W-9 regions + pulse metrics;
   focus prefers form_w9s; published + draft seeds (TIN on file / missing signature);

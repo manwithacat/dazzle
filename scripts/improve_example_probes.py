@@ -48,6 +48,15 @@ def _product() -> tuple[str, str | None, int]:
     return line, nxt, len(residual)
 
 
+def _coat() -> tuple[str, str | None, int]:
+    """Goal C coat residual — filter-wall / cartesian / rail pile / focus list."""
+    mod = _load("goal_b_coat", REPO / "scripts" / "goal_b_coat.py")
+    rows = mod.scan()
+    n, nxt = mod.coat_residual(rows=rows)
+    n += len(mod.freeze_breaches())
+    return mod.format_status(), nxt, n
+
+
 def _warehouse_index_line() -> str:
     """One-line WI summary for quiet-fleet feature_creep (residual may already be 0)."""
     mod = _load("example_product_maturity", REPO / "scripts" / "example_product_maturity.py")
@@ -254,6 +263,12 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         results.append(("product_quality", f"product_quality error={type(exc).__name__}", None, -1))
 
+    try:
+        c_line, c_nxt, c_n = _coat()
+        results.append(("goal_b_coat", c_line, c_nxt, c_n))
+    except Exception as exc:  # noqa: BLE001
+        results.append(("goal_b_coat", f"goal_b_coat error={type(exc).__name__}", None, -1))
+
     for name, fn in (
         ("story_walk", _story_walk),
         ("trial_verdict", _trial_verdict),
@@ -303,6 +318,7 @@ def main(argv: list[str] | None = None) -> int:
         "demo_fleet": "demo_fleet",
         "journey_maturity": "journey_dogfood",
         "product_quality": "demo_fleet",
+        "goal_b_coat": "distill",
         "story_walk": "story_walk",
         "trial_verdict": "agent_acceptance_panel",
         "process_dig": "story_walk",  # default; overridden by receipt strategy
@@ -327,6 +343,9 @@ def main(argv: list[str] | None = None) -> int:
                 parts = pq_force.split()
                 preferred_strategy = parts[-1] if parts else "demo_fleet"
                 preferred_force = pq_force
+            elif name == "goal_b_coat" and nxt:
+                preferred_strategy = "distill"
+                preferred_force = f"example-apps distill {nxt}"
             elif name == "hyperpart_scenarios" and hp_force:
                 preferred_strategy = "hyperpart_emitter"
                 preferred_force = hp_force
@@ -410,6 +429,7 @@ def main(argv: list[str] | None = None) -> int:
         # story_walk + trial_verdict + process_dig + domain_cognition + hyperpart_scenarios
         for name, line, _nxt, _n in results:
             if name in {
+                "goal_b_coat",
                 "story_walk",
                 "trial_verdict",
                 "process_dig",

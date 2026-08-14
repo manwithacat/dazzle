@@ -217,6 +217,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_acme_billing_empty_region_goal_b.py",
     # acme_billing Goal B org_structure (cycle 1867 team title+dept boards)
     "tests/unit/test_acme_billing_org_structure_goal_b.py",
+    # Goal B coat freeze (conversation/rail/focus/metric ratchet — must not grow)
+    "tests/unit/test_goal_b_coat.py",
+    "tests/unit/test_interesting_product_portfolio.py",
     # support_tickets Goal B conversation (Comment display_field + manager_ops trail)
     "tests/unit/test_support_tickets_conversation_goal_b.py",
     # support_tickets Goal B command_density (cycle 1727 manager_ops dual attention)

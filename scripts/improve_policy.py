@@ -247,6 +247,27 @@ def consecutive_open_hop_streak(*, window: int = 16) -> int:
     return streak
 
 
+def coat_residual_total() -> tuple[int, str | None]:
+    """Goal C coat heat — flagged apps and the worst next distill target.
+
+    Separate from product_residual_total so demo-safe A stays green while
+    a filter wall is still visible to pick().
+    """
+    try:
+        from scripts.goal_b_coat import coat_residual
+    except Exception:  # noqa: BLE001
+        try:
+            import goal_b_coat as _coat  # type: ignore
+
+            coat_residual = _coat.coat_residual
+        except Exception:  # noqa: BLE001
+            return 0, None
+    try:
+        return coat_residual()
+    except Exception:  # noqa: BLE001
+        return 0, None
+
+
 def product_residual_total() -> int:
     """Felt+structural residual heat (0 when demo-safe residual era is green).
 
@@ -519,6 +540,7 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     smoke_n, smoke_next = qa_smoke_residual()
     cur = current_cycle_hint() or 0
     residual = product_residual_total()
+    coat_n, coat_next = coat_residual_total()
     open_hop = consecutive_open_hop_streak()
     # Post-5.8: after K open-hop digs under residual=0, force Goal B depth pack.
     max_open_hop = int((policy.get("steady_state") or {}).get("max_consecutive_open_hop") or 5)
@@ -533,6 +555,8 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
         "qa_smoke_residual": smoke_n,
         "qa_smoke_next": smoke_next,
         "product_residual_total": residual,
+        "coat_residual_total": coat_n,
+        "coat_next": coat_next,
         "open_hop_streak": open_hop,
         "max_consecutive_open_hop": max_open_hop,
         "current_cycle_hint": cur or None,
@@ -566,6 +590,21 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                 decision["force_args"] = prefer.get("force_args")
                 decision["lane"] = prefer.get("lane") or "example-apps"
                 decision["strategy"] = prefer.get("strategy") or "agent_qa_smoke"
+            return decision
+
+        # Goal C: residual green but a desk is a filter wall → distill, not add.
+        if residual <= 0 and coat_n > 0:
+            decision.update(
+                {
+                    "force_args": f"example-apps distill {coat_next}"
+                    if coat_next
+                    else "example-apps distill",
+                    "lane": "example-apps",
+                    "strategy": "distill",
+                    "require_mutation": True,
+                    "reason": (f"campaign:{active} coat_residual={coat_n} next={coat_next or '-'}"),
+                }
+            )
             return decision
 
         # Post-5.8 Goal B: residual green + open-hop monoculture → interesting depth.
@@ -719,6 +758,7 @@ def _attach_interesting_portfolio(
     decision["portfolio_recipe_streak_id"] = snap.recipe_streak_id
     decision["portfolio_banned_depths"] = list(snap.banned_depths)
     decision["portfolio_banned_recipes"] = list(snap.banned_recipes)
+    decision["portfolio_saturated_cells"] = list(snap.saturated_cells)
     if snap.recommend:
         decision["interesting_product_recommend"] = snap.recommend
         app = snap.recommend.get("app")
@@ -727,6 +767,17 @@ def _attach_interesting_portfolio(
             decision["force_args"] = f"example-apps interesting_product {app} {depth}"
             decision["reason"] = (
                 f"{decision.get('reason') or 'interesting_product'} portfolio={app}/{depth}"
+            ).strip()
+    else:
+        # Saturated matrix: stop is a legal Goal B cycle. Do not invent a coat.
+        decision["interesting_product_saturated"] = True
+        if decision.get("strategy") == "interesting_product":
+            decision["require_mutation"] = False
+            decision["force_args"] = "framework-ux"
+            decision["lane"] = "framework-ux"
+            decision["strategy"] = "framework-ux"
+            decision["reason"] = (
+                f"{decision.get('reason') or 'interesting_product'} goal_b_saturated_stop"
             ).strip()
 
 
@@ -752,6 +803,10 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         lines.append(f"panel_streak={d.get('panel_streak')}")
     if d.get("product_residual_total") is not None:
         lines.append(f"product_residual_total={d.get('product_residual_total')}")
+    if d.get("coat_residual_total") is not None:
+        lines.append(
+            f"coat_residual_total={d.get('coat_residual_total')} next={d.get('coat_next') or '-'}"
+        )
     if d.get("open_hop_streak") is not None:
         lines.append(
             f"open_hop_streak={d.get('open_hop_streak')}/{d.get('max_consecutive_open_hop') or 5}"
@@ -771,7 +826,11 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
             probe: dict[str, Any] = {"strategy": "interesting_product", "reason": "status"}
             _attach_interesting_portfolio(probe, camp)
             for k, v in probe.items():
-                if k.startswith("portfolio_") or k == "interesting_product_recommend":
+                if (
+                    k.startswith("portfolio_")
+                    or k == "interesting_product_recommend"
+                    or k == "interesting_product_saturated"
+                ):
                     d.setdefault(k, v)
         rec = d.get("interesting_product_recommend")
         if rec:
@@ -779,6 +838,8 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
                 f"interesting_product_recommend app={rec.get('app')} "
                 f"depth_id={rec.get('depth_id')} reason={rec.get('reason')}"
             )
+        if d.get("interesting_product_saturated"):
+            lines.append("interesting_product_saturated=1 require_mutation=0")
         if d.get("portfolio_depth_streak") is not None:
             lines.append(
                 f"portfolio_depth_streak={d.get('portfolio_depth_streak')}"

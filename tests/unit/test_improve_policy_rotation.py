@@ -120,13 +120,53 @@ def test_interesting_product_when_residual_green_and_open_hop_cap() -> None:
     with (
         patch.object(pol, "qa_smoke_residual", return_value=(0, None)),
         patch.object(pol, "product_residual_total", return_value=0),
+        patch.object(pol, "coat_residual_total", return_value=(0, None)),
         patch.object(pol, "consecutive_open_hop_streak", return_value=6),
         patch.object(pol, "current_cycle_hint", return_value=1600),
     ):
         d = pol.pick(policy)
-    assert d["strategy"] == "interesting_product"
-    assert "interesting_product" in (d["force_args"] or "")
     assert "open_hop_streak=6" in (d["reason"] or "")
+    # Saturated live matrix yields framework-ux + require_mutation=0.
+    if d.get("interesting_product_saturated"):
+        assert d["strategy"] == "framework-ux"
+        assert d.get("require_mutation") is False
+    else:
+        assert d["strategy"] == "interesting_product"
+        assert "interesting_product" in (d["force_args"] or "")
+
+
+def test_coat_residual_forces_distill_over_goal_b() -> None:
+    import scripts.improve_policy as pol
+
+    policy = {
+        "active_campaign": "aggressive-change",
+        "steady_state": {"max_consecutive_open_hop": 5},
+        "campaigns": {
+            "aggressive-change": {
+                "require_mutation": True,
+                "interesting_product_when_green": True,
+                "prefer_rotation": [
+                    {
+                        "force_args": "example-apps interesting_product",
+                        "lane": "example-apps",
+                        "strategy": "interesting_product",
+                    }
+                ],
+            }
+        },
+    }
+    with (
+        patch.object(pol, "qa_smoke_residual", return_value=(0, None)),
+        patch.object(pol, "product_residual_total", return_value=0),
+        patch.object(pol, "coat_residual_total", return_value=(2, "support_tickets")),
+        patch.object(pol, "consecutive_open_hop_streak", return_value=6),
+        patch.object(pol, "current_cycle_hint", return_value=1600),
+    ):
+        d = pol.pick(policy)
+    assert d["strategy"] == "distill"
+    assert d["force_args"] == "example-apps distill support_tickets"
+    assert d.get("require_mutation") is True
+    assert "coat_residual=2" in (d["reason"] or "")
 
 
 def test_no_interesting_product_when_residual_hot() -> None:

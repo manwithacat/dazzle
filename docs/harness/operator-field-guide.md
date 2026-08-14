@@ -55,8 +55,10 @@ when you want the next dig soon). Log a one-liner in `dev_docs/improve-log.md`.
 ```text
 /improve                              # driver picks
 /improve example-apps interesting_product
-# Goal B portfolio (anti-wave / stacking):
+/improve example-apps distill support_tickets   # Goal C coat residual
+# Goal B portfolio / Goal C coat:
 #   uv run python scripts/interesting_product_portfolio.py --status
+#   uv run python scripts/goal_b_coat.py --status
 # Oral history: improve/oral-history.md · peer packs: improve/peer_packs/
 /improve framework-ux
 /improve cimonitor                    # snapshot; repair only if red

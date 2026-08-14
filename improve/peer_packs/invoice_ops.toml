@@ -16,6 +16,8 @@ refuse = [
   "Metric tile proliferation without work rows",
   "Headshot shelf as media depth on a pure money desk (prefer document/money grain)",
   "Dual-open hop labeled as document depth",
+  "Another settle/watch rail on the same source (ach/receipt/wire/period_close synonyms)",
+  "Focus lists longer than a pair of attention regions plus one document spine",
 ]
 
 icon_depths = ["document", "command_density", "empty_region_honesty"]

@@ -85,6 +85,14 @@ Doctrine source of truth remains
     “next~N” seeds past the due point while CI-poll thrash burns cycles
     (1920→1949 was 29 late). Hand-audit if the workflow Sample agent stalls.
 
+19. **Upgrade + novel recipe tag + floor pin is coat theatre.** After the
+    first honest grain (`live_conversation`, one needs-reply ball), agents
+    invented synonym recipes (`thankful_needs_reply_trail`, …) and unit
+    pins that the slice exists. Saturate the cell and stop. Do not add the
+    next AND. Machine: `scripts/goal_b_coat.py` freeze + portfolio family
+    collapse. `/improve` picks `example-apps distill` when
+    `coat_residual_total>0` (Goal C). Distill lowers FREEZE in the same ship.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

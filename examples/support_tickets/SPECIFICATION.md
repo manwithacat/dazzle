@@ -72,54 +72,25 @@ available. Managers alone can delete tickets or comments.
 
 Six workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — agent **media shelf** headshots first, then summary metrics
-(including conversation, **needs reply**, **awaiting customer**, **hot speech**,
-**frustrated speech**, **frustrated needs reply**, **urgent speech**, **thankful recovery**, **thankful needs reply**, **thankful awaiting customer**, channel paths, **internal notes**, and document volume), a **needs reply** conversation region
-of customer notes whose **ball is in the agent court** (Front / Intercom "waiting
-on you" grain), an **awaiting customer** conversation region of outbound notes
-whose **ball is in the customer court** (cycle 1955 peer-pack; park these — do not
-re-thrash as open agent work), a **hot speech** conversation region of
-frustrated/urgent tone or raised escalation (cycle 1940 peer-pack; not ball-only),
-a **frustrated speech** conversation region of pure `customer_tone=frustrated` notes
-(cycle 1977 peer-pack; CSAT-risk lean-in — not the hot_speech OR umbrella, not channel/escalation re-stack),
-a **frustrated needs reply** conversation region of `customer_tone=frustrated` notes whose **ball is in the agent court** (cycle 1994 peer-pack; Intercom/Zendesk "angry and waiting on you" — not full frustrated_speech or channel×ball re-stack),
-an **urgent speech** conversation region of pure `customer_tone=urgent` notes
-(cycle 1979 peer-pack; SLA time-pressure lean-in — not the hot_speech OR umbrella, not frustrated/channel/escalation re-stack),
-an **urgent needs reply** conversation region of `customer_tone=urgent` notes whose **ball is in the agent court** (cycle 2003 peer-pack; Front/Intercom "urgent and waiting on you" — not full urgent_speech or channel×ball re-stack),
-an **urgent awaiting customer** conversation region of `customer_tone=urgent` notes whose **ball is in the customer court** (cycle 2005 peer-pack; Front/Intercom "urgent still waiting on customer" — not full awaiting_customer or agent urgent_needs_reply re-stack),
-an **frustrated awaiting customer** conversation region of `customer_tone=frustrated` notes whose **ball is in the customer court** (cycle 2007 peer-pack; Intercom/Zendesk "angry still waiting on customer" — not full awaiting_customer or agent frustrated_needs_reply re-stack),
-an **raised awaiting customer** conversation region of `escalation=raised` notes whose **ball is in the customer court** (cycle 2009 peer-pack; Zendesk/Service Cloud "L2 still waiting on customer" — not full awaiting_customer or agent raised_needs_reply re-stack),
-an **critical awaiting customer** conversation region of `escalation=critical` notes whose **ball is in the customer court** (cycle 2013 peer-pack; Zendesk/Service Cloud "P1 still waiting on customer" — not full awaiting_customer or agent critical_needs_reply re-stack),
-an **email awaiting customer** conversation region of `channel=email` notes whose **ball is in the customer court** (cycle 2015 peer-pack; Front/Intercom "email still waiting on customer" — not full email_live or agent email_needs_reply re-stack),
-a **chat awaiting customer** conversation region of `channel=chat` notes whose **ball is in the customer court** (cycle 2020 peer-pack; Intercom/Front "chat still waiting on customer" — not full chat_live or agent chat_needs_reply or email_awaiting_customer re-stack),
-a **phone awaiting customer** conversation region of `channel=phone` notes whose **ball is in the customer court** (cycle 2023 peer-pack; Zendesk/Front "phone still waiting on customer" — not full phone_live or agent phone_needs_reply or chat_awaiting_customer re-stack), a **portal awaiting customer** conversation region of `channel=portal` notes whose **ball is in the customer court** (cycle 2029 peer-pack; Intercom/Zendesk "portal still waiting on customer" — not full portal_live or agent portal_needs_reply or phone/chat/email_awaiting re-stack),
-a **critical escalations** conversation region of `escalation=critical` P1 speech
-(cycle 1969 peer-pack; non-channel ARR-risk grain), a **critical needs reply** conversation region of `escalation=critical` notes whose **ball is in the agent court** (cycle 1998 peer-pack; Zendesk/Service Cloud "P1 waiting on you" — not full critical_escalations or channel×ball re-stack), a **raised needs reply** conversation region of `escalation=raised` notes whose **ball is in the agent court** (cycle 2001 peer-pack; Zendesk/Service Cloud "L2 waiting on you" — not full raised_escalations or P1 critical_needs_reply re-stack), a **raised escalations** conversation region of `escalation=raised` L2 handoffs
-(cycle 1972 peer-pack; non-channel tier-2 grain), a **thankful recovery** conversation region of warm closeout speech after a fix
-(cycle 1958 peer-pack; not heat re-stack), a **thankful needs reply** conversation region of `customer_tone=thankful` notes whose **ball is in the agent court** (cycle 2032 peer-pack; Intercom/Zendesk "thanks — still waiting on you" — not full thankful_recovery missing ball, not frustrated/urgent needs_reply heat re-stack, not channel×ball coat), a **thankful awaiting customer** conversation region of `customer_tone=thankful` notes whose **ball is in the customer court** (cycle 2035 peer-pack; Intercom/Zendesk "thanks — waiting on customer confirm" — not full thankful_recovery, not agent thankful_needs_reply, not frustrated/urgent×customer re-stack), a **priority needs reply** conversation region of `case_priority` high|critical notes whose **ball is in the agent court** (cycle 2040 peer-pack; Zendesk/Front "high-priority waiting on you" — denormalized ticket priority on Comment; not Ticket open_queue priority rows, not ball-only needs_reply, not escalation×ball critical_needs_reply, not sla_pressure breach_needs_reply), a **priority awaiting customer** conversation region of `case_priority` high|critical notes whose **ball is in the customer court** (cycle 2042 peer-pack; Zendesk/Front "high-priority waiting on customer" — not agent priority_needs_reply, not ball-only awaiting_customer, not Ticket open_queue priority rows, not escalation/SLA×customer re-stack), exclusive **at-risk needs reply** vs **breached needs reply** conversation regions (cycle 2075 `sla_pressure_stage_density`) plus a **breach needs reply** conversation region of notes with **`sla_pressure` at_risk|breached** (denormalized ticket SLA on Comment) and **ball in the agent court** (cycle 2036 peer-pack; Zendesk/Front "SLA-pressure speech waiting on you" — not Ticket `breach_risk` queue rows, not ball-only needs_reply, not escalation×ball critical_needs_reply, not tone/channel×ball re-stack; dotted `ticket.sla_state` unsupported in aggregate count), a **breach awaiting customer** conversation region of notes with **`sla_pressure` at_risk|breached** and **ball in the customer court** (cycle 2038 peer-pack; Zendesk/Front "SLA still burning — waiting on customer" — not agent breach_needs_reply, not Ticket breach_risk rows, not ball-only awaiting_customer, not tone/channel×customer re-stack), a **live chat** conversation region of channel=chat notes (cycle 1960 peer-pack), a **phone path** conversation region of channel=phone notes (cycle 1963), an **email path** conversation region of channel=email notes (cycle 1982 peer-pack; async email grain — not chat/phone/tone re-stack), an **email needs reply** conversation region of channel=email notes whose **ball is in the agent court** (cycle 1986 peer-pack; Front/Intercom "email waiting on you" — not full email_live or ball-only needs_reply re-stack), a **portal path** conversation region of channel=portal notes (cycle 1984 peer-pack; self-serve portal grain — not email/chat/phone/tone re-stack), a **portal needs reply** conversation region of channel=portal notes whose **ball is in the agent court** (cycle 1988 peer-pack; Intercom/Zendesk "portal waiting on you" — not full portal_live or ball-only needs_reply re-stack), a **chat needs reply** conversation region of channel=chat notes whose **ball is in the agent court** (cycle 1990 peer-pack; Intercom/Front "chat waiting on you" — not full chat_live or ball-only needs_reply re-stack), a **phone needs reply** conversation region of channel=phone notes whose **ball is in the agent court** (cycle 1992 peer-pack; Zendesk/Front "phone waiting on you" — not full phone_live or ball-only needs_reply re-stack), an **internal collab** conversation region of `is_internal` agent/manager notes (cycle 1966 peer-pack; non-channel handoff grain), a **live conversation** trail of newest
-notes, a **composition** queue of open SLA waivers (named breach titles), a review
-queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
-stream, not a flat list).
+(open / in-progress / critical / conversation / **needs reply** / documents), a
+**needs reply** conversation region of customer notes whose **ball is in the
+agent court** (Front / Intercom "waiting on you"), a **live conversation** trail
+of newest notes, a **composition** queue of open SLA waivers (named breach
+titles), a review queue, a kanban board of open statuses, and a recent-comment
+**timeline** (dated stream, not a flat list). Cycle 2077 distilled the
+enum×ball conversation coat (channel / tone / escalation / SLA-pressure /
+priority slices) so a lead can work the first screen.
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, critical awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, thankful needs reply, thankful awaiting customer, priority needs reply, breach needs reply, breach awaiting customer, internal notes, documents), **status stage density** dual queues (**open** + **in_progress**, limit 4 each; cycle 2070 `status_stage_density`), **SLA stage density** dual queues (**at-risk** soft pressure + **breached** hard failures, limit 4 each; cycle 2054 `sla_stage_density` — not one mixed breach-risk list), SLA readiness, dual attention queues (critical +
+conversation, needs reply, documents), **status stage density** dual queues
+(**open** + **in_progress**, limit 4 each; cycle 2070 `status_stage_density`),
+**SLA stage density** dual queues (**at-risk** soft pressure + **breached**
+hard failures, limit 4 each; cycle 2054 `sla_stage_density` — not one mixed
+breach-risk list), SLA readiness, dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
-**needs reply** ball (limit 4), an **urgent needs reply** trail of SLA time-pressure notes waiting on agents
-(limit 4; cycle 2003), an **urgent awaiting customer** trail of SLA time-pressure notes parked on customers
-(limit 4; cycle 2005), a **frustrated awaiting customer** trail of CSAT-risk notes parked on customers
-(limit 4; cycle 2007), a **raised awaiting customer** trail of L2 notes parked on customers
-(limit 4; cycle 2009), a **critical awaiting customer** trail of P1 notes parked on customers
-(limit 4; cycle 2013), an **email awaiting customer** trail of async email handoffs parked on customers
-(limit 4; cycle 2015), a **chat awaiting customer** trail of live chat handoffs parked on customers
-(limit 4; cycle 2020), a **phone awaiting customer** trail of callback/phone handoffs parked on customers
-(limit 4; cycle 2023), a **portal awaiting customer** trail of self-serve portal handoffs parked on customers
-(limit 4; cycle 2029), a **thankful needs reply** trail of warm closeout notes still waiting on agents
-(limit 4; cycle 2032), a **thankful awaiting customer** trail of warm closeout notes parked on customer confirm
-(limit 4; cycle 2035), a **breach needs reply** trail of SLA at-risk/breached notes waiting on agents (limit 4; cycle 2036), a **breach awaiting customer** trail of SLA at-risk/breached notes parked on customers while the clock still burns (limit 4; cycle 2038), a **frustrated needs reply** trail of CSAT-risk notes waiting on agents
-(limit 4), a **chat needs reply** trail of chat notes waiting on agents
-(limit 4), a **phone needs reply** trail of phone notes waiting on agents
-(limit 4) **before** a capped live conversation trail
-(limit 4) — no status funnel or secondary ticket timeline (empty_region honesty;
-avoids pilot scroll resource storms). Ticket rows carry an **SLA** state
+**needs reply** ball (limit 4) **before** a capped live conversation trail
+(limit 4) — no status funnel, secondary ticket timeline, or cartesian speech
+wall (empty_region honesty; Goal C distill). Ticket rows carry an **SLA** state
 (`on_track` / `at_risk` / `breached`) so queue grain matches peer Zendesk /
 Front / Intercom first-response pressure. Comment rows carry **ball in court**
 (`agent` / `customer` / `none`) so the trail shows who must speak next.
@@ -135,15 +106,11 @@ load — hierarchy before dump. Staff rows carry `support_tier` (`l1` / `l2` /
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
-kanban of assigned open tickets, a **medium needs reply** trail of mid-priority notes waiting on agents (cycle 2060), a **needs reply** ball of customer notes
-waiting on agents, an **urgent speech** trail of pure urgent tone
-(cycle 1979), a **frustrated speech** trail of pure frustrated tone
-(cycle 1977), a **raised escalations** trail of L2 handoffs (cycle 1972),
-an **awaiting customer** trail of outbound notes parked for
-the customer (cycle 1955), a **thankful recovery** trail of warm closeout speech
-(cycle 1958), a **my conversation** notes queue, a resolved close-out queue, and
-**one** recent-comment timeline (no funnel/progress chart theater or triple
-activity dumps — empty_region honesty).
+kanban of assigned open tickets, a **needs reply** ball of customer notes
+waiting on agents, an **awaiting customer** trail of outbound notes parked for
+the customer, a **my conversation** notes queue, a resolved close-out queue, and
+**one** recent-comment timeline (no funnel/progress chart theater, triple
+activity dumps, or tone/channel conversation coat — empty_region honesty).
 **My Tickets** is the customer's home: open/WIP counts, open and in-progress
 queues, one case-history timeline, and how-it-works guidance (no bar-chart
 theater or duplicate open/timeline dumps).
@@ -232,4 +199,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:98bb0a2b02e4a4e275db9a40200100c398d4c955f9d1b23421f6f5d4c43a821f -->
+<!-- dazzle-spec-brief: sha256:d708182ab960d28387b2ac1b11acfcb137081d8595e2a9f759fc348ad7b7c709 -->

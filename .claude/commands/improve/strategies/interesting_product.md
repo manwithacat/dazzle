@@ -32,6 +32,9 @@ Skip when:
 * residual_total > 0 → presentation / demo_fleet / maturity first (Goal A hygiene)
 * presentation residual (`ref_as_repr` / `person_as_text` / `delta_theater`) →
   `framework-ux hyperpart_presentation` (immune system — keep)
+* `goal_b_coat residual_total>0` → **`example-apps distill`** (Goal C; do not add)
+* portfolio `--recommend` is `-` / `interesting_product_saturated=1` → **STOP**
+  (no coat; `require_mutation` off)
 
 ---
 
@@ -71,20 +74,29 @@ uv run python scripts/interesting_product_portfolio.py --status
 
 ```bash
 uv run python scripts/interesting_product_portfolio.py --recommend
-# → app depth_id # reason
+# → app depth_id # reason   OR   `-` (saturated — STOP)
+uv run python scripts/goal_b_coat.py --status
 ```
+
+**STOP is a legal cycle.** If `--recommend` prints `-` or policy says
+`interesting_product_saturated=1`, do **not** add a region. Log
+`saturated, no ship`, leave `require_mutation` off, yield to framework-ux
+or wait. A cycle with no Goal B coat is green.
 
 Rules the planner enforces (also in policy status):
 
 | Rule | Meaning |
 |------|---------|
 | **Anti-wave** | After ≥3 tipward Goal B ships with the same `depth_id`, that depth is banned |
-| **Anti-recipe** | After ≥3 ships with the same surface recipe (e.g. `headshot_shelf`), that recipe is banned — implement a *different* expression or pick another depth |
-| **Icon stacking** | Prefer icon apps for a depth and apps with 1–2 depths already over thin fleet coat on every app |
-| **Peer pack** | If `improve/peer_packs/<app>.toml` exists, Peer prompt must use it |
+| **Family, not tag** | Recipe is a closed family. `thankful_needs_reply_trail` is `conversation_filter_slice`. Synonyms do not count as novel |
+| **Saturate** | One coat-family ship on `(app, depth)`, or live DSL above honest grain, saturates that cell. Do not upgrade it |
+| **Icon stacking** | Prefer icon apps for a depth and apps with 1–2 depths already over thin fleet coat on every app — unless the cell is saturated |
+| **Peer pack** | If `improve/peer_packs/<app>.toml` exists, Peer prompt must use it. Honor `refuse` |
+| **Freeze ratchet** | `scripts/goal_b_coat.py` — conversation/rail/focus/metric counts must not grow. Distill later lowers the caps |
 
 Override portfolio only with a one-line dig reason (e.g. `scenario_underused`
-emitter dogfood on a different home).
+emitter dogfood on a different home). Never override a stop to add another
+filter slice.
 
 **2b. Four prompts** (cycle log, short):
 
@@ -100,7 +112,7 @@ Also log:
 depth_id: conversation|document|media|command_density|org_structure|empty_region_honesty
 harness_only: false
 app: <showcase>   # from portfolio recommend unless overridden
-recipe: <short tag or "novel">   # not the banned recipe
+recipe: <closed family>   # conversation_filter_slice / document_rail_slice / … — never a synonym tag
 still_paths: examples/<app>/.dazzle/qa/screenshots/<hero>_desktop_light.png
 portfolio_reason: <from --recommend>
 ```

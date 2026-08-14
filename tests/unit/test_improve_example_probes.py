@@ -38,6 +38,9 @@ def test_status_prints_structural_and_felt(probes, capsys) -> None:
     # Continuous anti-warehouse gradient (feature_creep when residual=0).
     assert "warehouse_index " in out
     assert "wi_fleet=" in out
+    assert "goal_b_coat" in out
+    assert "residual_total=" in out
+    assert "freeze_breach=" in out
     # Felt bar lines always present (persona_homes / stills / product_quality).
     assert "persona_homes " in out or "product_quality residual_total=" in out
     assert rc in (0, 1)  # 0 when clean; 1 only with --strict
@@ -79,6 +82,7 @@ def test_json_shape(probes, capsys) -> None:
     assert "product_quality_lines" in payload
     assert "warehouse_index" in payload
     assert "wi_fleet=" in str(payload["warehouse_index"])
+    assert "goal_b_coat" in names
     assert rc == 0
 
 

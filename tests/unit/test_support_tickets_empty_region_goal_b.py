@@ -34,10 +34,7 @@ def test_agent_dashboard_omits_funnel_progress_and_triple_comment_theater() -> N
     assert "display: funnel_chart" not in block
     assert "display: progress" not in block
     assert "display: activity_feed" not in block
-    assert (
-        "focus: my_assigned, needs_reply, urgent_speech, awaiting_customer, pending_resolution"
-        in block
-    )
+    assert "focus: my_assigned, needs_reply, awaiting_customer, pending_resolution" in block
     # recent_comments stays on the desk as secondary trail (not focus thrash).
     assert "recent_comments:" in block
     assert "ux:" in block
@@ -113,7 +110,7 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     assert "display: funnel_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, breached_queue, critical_queue, unassigned_queue, at_risk_needs_reply, breached_needs_reply, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
+        "focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, live_conversation"
     ) in block
     assert "as manager:" in block
     assert "at_risk_queue:" in block
