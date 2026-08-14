@@ -119,7 +119,7 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
-  ACKs (cycle 1961 peer-pack), **due stage density** — soft on-time ready-to-pay
+  ACKs (cycle 1961 peer-pack), **intake stage density** — exclusive draft vs submitted Invoice boards (cycle 2071 `intake_stage_density`), **due stage density** — soft on-time ready-to-pay
   vs hard past-due approved dual queues with exclusive filters and On Time /
   Past Due metric tiles (cycle 2055 peer-pack; not one mixed approved ready list
   or broader open past-due including submitted), named remittance/payment-confirmation
@@ -264,4 +264,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:5e0124b3acc11feb5348c09751ba00c535c74ce9ca6912857723755a658b582c -->
+<!-- dazzle-spec-brief: sha256:83ac43f585c96585ffc5c49ea4ca1f89263e575c483edae804b7e795d9f9088d -->

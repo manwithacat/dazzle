@@ -1351,7 +1351,11 @@ workspace pay_desk "Pay Desk":
   # Cycle 2055: due_stage_density — soft on-time ready vs hard past-due approved
   # dual queues (Bill.com / Melio / Tipalti settle urgency stages; not one mixed
   # ready_to_pay list and not broader open past_due including submitted drafts).
-  purpose: "Multi-panel settlement — draft gate, settle rail, three-way match evidence, remittances, packing slips, due stage density"
+  # Cycle 2071: intake_stage_density — exclusive draft intake vs submitted
+  # awaiting-approval Invoice boards before document rails and due stages
+  # (Bill.com / Melio / Tipalti pipeline attention; not due_stage_density re-stack,
+  # not draft_packets document gate alone, not settle-rail thrash).
+  purpose: "Multi-panel settlement — intake stage density (draft vs submitted), draft gate, settle rail, three-way match evidence, remittances, packing slips, due stage density"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1361,14 +1365,41 @@ workspace pay_desk "Pay Desk":
       ready: count(Invoice where status = approved)
       on_time: count(Invoice where status = approved and due_date >= today)
       past_due: count(Invoice where status = approved and due_date < today)
+      invoice_draft: count(Invoice where status = draft)
+      awaiting_approval: count(Invoice where status = submitted)
       disputed: count(Invoice where status = disputed)
       conversation: count(InvoiceNote)
     tones:
       ready: accent
       on_time: positive
       past_due: destructive
+      invoice_draft: warning
+      awaiting_approval: accent
       disputed: destructive
       conversation: accent
+
+  # Live intake stage density (cycle 2071) — peer Bill.com / Melio / Tipalti put
+  # exclusive draft intake vs submitted awaiting-approval boards before document
+  # packet rails and due stages (recipe intake_stage_density; not due_stage_density
+  # re-stack, not draft_packets document gate alone). Caps keep stage panels +
+  # dual due queues sharing the fold.
+  draft_invoice_queue:
+    source: Invoice
+    filter: status = draft
+    sort: updated_at desc
+    limit: 3
+    display: queue
+    action: invoice_detail
+    empty: "No draft invoices — intake is empty or everything is already submitted"
+
+  awaiting_approval_queue:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 3
+    display: queue
+    action: invoice_detail
+    empty: "Nothing awaiting approval — submitted work is cleared or already approved"
 
   # Honest document pulse (InvoiceDocument source — not cross-entity under Invoice).
   document_pulse:
@@ -1828,11 +1859,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
+      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
+      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
     as finance_admin:
-      purpose: "Multi-panel settlement — due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
+      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
+      focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
 
   settle_board:
     source: Invoice
