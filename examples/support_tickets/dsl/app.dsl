@@ -605,6 +605,7 @@ workspace ticket_queue "Ticket Queue":
   # Cycle 2036: breach_needs_reply — sla_pressure at_risk|breached AND ball_in_court=agent (Zendesk SLA speech waiting on you — denormalized ticket SLA on Comment; not Ticket breach_risk queue rows, not ball-only needs_reply, not escalation×ball critical_needs_reply).
   # Cycle 2038: breach_awaiting_customer — sla_pressure at_risk|breached AND ball_in_court=customer (SLA clock still burning while parked on customer; not agent breach_needs_reply, not Ticket breach_risk rows, not ball-only awaiting_customer, not tone/channel×customer re-stack).
   # Cycle 2040: priority_needs_reply — case_priority high|critical AND ball_in_court=agent (Zendesk/Front high-priority speech waiting on you — denormalized ticket priority on Comment; not Ticket open_queue priority rows, not ball-only needs_reply, not escalation×ball critical_needs_reply, not sla_pressure breach_needs_reply).
+  # Cycle 2060: medium_needs_reply — case_priority=medium AND ball_in_court=agent (Zendesk/Front mid-priority speech waiting on you — not high|critical priority_needs_reply, not ball-only needs_reply, not tone/channel×ball re-stack).
   # Cycle 2042: priority_awaiting_customer — case_priority high|critical AND ball_in_court=customer (high-priority speech parked on customer — not agent priority_needs_reply, not ball-only awaiting_customer, not Ticket open_queue priority rows, not escalation/SLA×customer re-stack).
   queue_metrics:
     source: Ticket
@@ -616,6 +617,7 @@ workspace ticket_queue "Ticket Queue":
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
       priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false)
+      medium_needs_reply: count(Comment where case_priority = medium and ball_in_court = agent and is_internal = false)
       priority_awaiting_customer: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false)
       breach_needs_reply: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false)
       breach_awaiting_customer: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false)
@@ -656,6 +658,7 @@ workspace ticket_queue "Ticket Queue":
       conversation: accent
       needs_reply: warning
       priority_needs_reply: warning
+      medium_needs_reply: accent
       priority_awaiting_customer: warning
       breach_needs_reply: destructive
       breach_awaiting_customer: destructive
@@ -702,6 +705,18 @@ workspace ticket_queue "Ticket Queue":
     action: comment_detail
     empty: "Nothing waiting on agents — every customer note has a reply path"
 
+
+  # Peer-pack conversation upgrade (cycle 2060): Zendesk/Front "mid-priority waiting on you" —
+  # case_priority=medium AND ball_in_court=agent (recipe medium_needs_reply_trail;
+  # not high|critical priority_needs_reply, not ball-only needs_reply, not tone/channel×ball coat).
+  medium_needs_reply:
+    source: Comment
+    filter: case_priority = medium and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 8
+    display: conversation
+    action: comment_detail
+    empty: "No medium-priority notes waiting on agents — mid-priority threads are answered or parked"
 
   # Peer-pack conversation upgrade (cycle 2040): Zendesk/Front "high-priority waiting on you" —
   # case_priority high|critical AND ball_in_court=agent (recipe priority_needs_reply_trail;
@@ -1273,13 +1288,13 @@ workspace ticket_queue "Ticket Queue":
   ux:
     as agent:
       purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
     as manager:
       purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
     as admin:
       purpose: "Triage home — high-priority needs-reply + priority awaiting-customer + SLA breach + thankful + portal awaiting-customer + phone + chat + email + critical/raised + needs-reply"
-      focus: media_shelf, queue_metrics, needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
+      focus: media_shelf, queue_metrics, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, live_conversation
 
 
 workspace manager_ops "Manager Ops":
@@ -1334,6 +1349,7 @@ workspace manager_ops "Manager Ops":
       conversation: count(Comment)
       needs_reply: count(Comment where ball_in_court = agent)
       priority_needs_reply: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = agent and is_internal = false)
+      medium_needs_reply: count(Comment where case_priority = medium and ball_in_court = agent and is_internal = false)
       priority_awaiting_customer: count(Comment where (case_priority = high or case_priority = critical) and ball_in_court = customer and is_internal = false)
       breach_needs_reply: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = agent and is_internal = false)
       breach_awaiting_customer: count(Comment where (sla_pressure = at_risk or sla_pressure = breached) and ball_in_court = customer and is_internal = false)
@@ -1367,6 +1383,7 @@ workspace manager_ops "Manager Ops":
       conversation: accent
       needs_reply: warning
       priority_needs_reply: warning
+      medium_needs_reply: accent
       priority_awaiting_customer: warning
       breach_needs_reply: destructive
       breach_awaiting_customer: destructive
@@ -1490,6 +1507,16 @@ workspace manager_ops "Manager Ops":
     action: comment_detail
     empty: "No thankful notes waiting on the team — warm closeouts are closed or still on the customer"
 
+
+  # Peer-pack medium_needs_reply_trail (cycle 2060) — mid-priority speech waiting on agents.
+  medium_needs_reply:
+    source: Comment
+    filter: case_priority = medium and ball_in_court = agent and is_internal = false
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No medium-priority notes waiting on the team — mid-priority threads are answered or parked"
 
   # Peer-pack priority_needs_reply_trail (cycle 2040) — high/critical case priority speech waiting on agents.
   priority_needs_reply:
@@ -1806,7 +1833,7 @@ workspace manager_ops "Manager Ops":
   ux:
     as manager:
       purpose: "Multi-panel support ops — SLA stage density (at-risk vs breached), breach needs-reply speech, thankful needs-reply, portal awaiting-customer, phone, chat, email, critical/raised, needs-reply, dual queues"
-      focus: media_shelf, team_metrics, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation
+      focus: media_shelf, team_metrics, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

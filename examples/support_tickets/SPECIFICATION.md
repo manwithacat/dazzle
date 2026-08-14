@@ -131,7 +131,7 @@ tickets and plate-by-person load — hierarchy before dump. Staff rows carry
 Lifecycle kanban for claimed work lives on the **Agent Dashboard** (not a
 second open-board on Manager Ops).
 The **Agent Dashboard** is a personal dashboard for claimed work — a status
-kanban of assigned open tickets, a **needs reply** ball of customer notes
+kanban of assigned open tickets, a **medium needs reply** trail of mid-priority notes waiting on agents (cycle 2060), a **needs reply** ball of customer notes
 waiting on agents, an **urgent speech** trail of pure urgent tone
 (cycle 1979), a **frustrated speech** trail of pure frustrated tone
 (cycle 1977), a **raised escalations** trail of L2 handoffs (cycle 1972),
@@ -226,4 +226,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:4abd8b089604005acd9ccc6f3a2776eea000c0f24710e37aa8104e9652caa0ac -->
+<!-- dazzle-spec-brief: sha256:a5fafe0aecdd75ee0ac699f800c24c95a2595b2bc4fc5d3fe2a965cead4f9a99 -->
