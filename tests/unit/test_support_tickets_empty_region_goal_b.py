@@ -94,3 +94,22 @@ def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     ) in block
     assert "as manager:" in block
     assert "breach_risk:" in block
+
+
+def test_people_desk_omits_twin_roster_dump() -> None:
+    """Cycle 2052: Zendesk/Front routing desk — role+dept boards + load, not twin roster.
+
+    Recipe people_desk_roster_twin_prune — by_department kanban owns placement;
+    flat roster queue was scroll theater after org shape.
+    """
+    block = _workspace_block("people_desk")
+    assert "by_role:" in block
+    assert "by_department:" in block
+    assert "group_by: department" in block
+    assert "unassigned_work:" in block
+    assert "plate_by_person:" in block
+    assert "roster:" not in block
+    assert "display: bar_chart" not in block
+    assert "focus: people_pulse, by_role, by_department, unassigned_work" in block
+    assert block.index("by_department:") < block.index("unassigned_work:")
+    assert block.index("unassigned_work:") < block.index("plate_by_person:")

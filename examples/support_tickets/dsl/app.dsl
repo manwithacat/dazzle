@@ -2136,7 +2136,11 @@ workspace agent_console "Agent Console":
 # Freshdesk) show team by role and department so managers reassign without a
 # flat warehouse roster. Filter staff only — customers are not org nodes.
 workspace people_desk "People":
-  purpose: "Org structure managers can parse — support staff by role and department before open load"
+  # Goal B empty_region_honesty (cycle 2052): recipe people_desk_roster_twin_prune —
+  # peer Zendesk/Front routing desks put role board + department placement + open
+  # load, not a third flat staff queue twin of by_department (roster dump was
+  # scroll theater after org shape). Unassigned + plate share the fold after placement.
+  purpose: "Org structure managers can parse — support staff by role and department before open load (no twin roster dump)"
   stage: "command_center"
   access: persona(manager, agent)
 
@@ -2167,42 +2171,37 @@ workspace people_desk "People":
     action: user_detail
     empty: "No support staff yet"
 
-  # Department roster — Support / Escalations / Billing placement before flat list.
+  # Department placement — Support / Escalations / Billing columns (not a flat
+  # twin queue + second roster list).
   by_department:
     source: User
     filter: is_active = true
-    display: queue
-    sort: department asc, name asc
+    display: kanban
+    group_by: department
+    sort: name asc
     limit: 40
     action: user_detail
     empty: "No support staff yet"
-
-  roster:
-    source: User
-    filter: is_active = true
-    sort: department asc, name asc
-    limit: 20
-    display: queue
-    action: user_detail
-    empty: "No active support staff"
 
   # Open load after org shape — who still has unassigned work to claim.
   unassigned_work:
     source: Ticket
     filter: assigned_to = null and status = open
     sort: priority desc, created_at asc
-    limit: 12
+    limit: 8
     display: queue
     action: ticket_edit
     empty: "Every open ticket has an assignee"
 
   # Assignee columns for Monday capacity after org shape (reassignment clarity).
+  # Cap groups so plate cannot re-eat the fold after dual org boards.
   plate_by_person:
     source: Ticket
     filter: status != closed and assigned_to != null
     display: kanban
     group_by: assigned_to
     sort: priority desc
+    limit: 24
     action: ticket_edit
     empty: "No assigned open work"
 
@@ -2213,22 +2212,22 @@ workspace people_desk "People":
         caption: "Agent / Manager columns show who can take work at a glance"
         icon: "users"
         state: accent
-      - title: "Department queue"
-        caption: "Support, Escalations, Billing — place people before load dump"
+      - title: "Department board"
+        caption: "Support, Escalations, Billing columns — place people before load dump"
         icon: "building"
         state: positive
-      - title: "Plate by person"
-        caption: "Assignee columns for reassignment after you read org shape"
+      - title: "Unassigned + plate"
+        caption: "Open load and assignee columns after org shape — no twin staff roster"
         icon: "list-checks"
         state: warning
 
   ux:
     as manager:
-      purpose: "See support staff by role and department before unassigned load"
-      focus: people_pulse, by_role, by_department, roster
+      purpose: "See support staff by role and department, then unassigned load — no twin roster dump"
+      focus: people_pulse, by_role, by_department, unassigned_work
     as agent:
-      purpose: "Read team placement and open load for handoff"
-      focus: people_pulse, by_role, by_department, roster
+      purpose: "Read team placement and open load for handoff — no twin roster dump"
+      focus: people_pulse, by_role, by_department, unassigned_work
 
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).

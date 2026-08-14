@@ -33,17 +33,20 @@ def test_people_desk_declares_role_board_and_dept_before_load() -> None:
     assert "display: kanban" in block
     assert "group_by: role" in block
     assert "by_department:" in block
+    assert "group_by: department" in block
     assert "unassigned_work:" in block
+    assert "roster:" not in block  # cycle 2052 twin prune
     assert block.index("people_pulse:") < block.index("by_role:")
     assert block.index("by_role:") < block.index("by_department:")
-    assert block.index("by_department:") < block.index("roster:")
-    assert block.index("roster:") < block.index("unassigned_work:")
+    assert block.index("by_department:") < block.index("unassigned_work:")
+    assert block.index("unassigned_work:") < block.index("plate_by_person:")
 
 
 def test_people_desk_ux_focus_org_before_load() -> None:
     block = _people_desk_block()
-    assert "focus: people_pulse, by_role, by_department, roster" in block
+    assert "focus: people_pulse, by_role, by_department, unassigned_work" in block
     assert "org structure" in block.lower() or "role and department" in block.lower()
+    assert "twin roster" in block.lower() or "no twin" in block.lower()
 
 
 def test_manager_nav_includes_people_desk() -> None:
