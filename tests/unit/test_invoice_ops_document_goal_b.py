@@ -163,7 +163,7 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert (
         "focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, "
         "compliance_drafts, remittances, form_w9s, packing_slips, composition, "
-        "ready_to_pay" in desk
+        "ready_to_pay, past_due" in desk
     )
 
 

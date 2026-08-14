@@ -119,10 +119,12 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   a **remittance advice watch** of SEPA/ACH covers
   (cycle 1974 peer-pack), a **credit memo watch** of VAT/short-ship credits
   (cycle 1971 peer-pack), a **payment confirmation trail** of batch
-  ACKs (cycle 1961 peer-pack), capped ready-to-pay and past-due attention
-  panels, named remittance/payment-confirmation packets, live AP notes as
-  Message/Bubble conversation chrome, then settle board (no payment-health chart
-  or twin dispute trail under the fold).
+  ACKs (cycle 1961 peer-pack), **due stage density** — soft on-time ready-to-pay
+  vs hard past-due approved dual queues with exclusive filters and On Time /
+  Past Due metric tiles (cycle 2055 peer-pack; not one mixed approved ready list
+  or broader open past-due including submitted), named remittance/payment-confirmation
+  packets, live AP notes as Message/Bubble conversation chrome, then settle board
+  (no payment-health chart or twin dispute trail under the fold).
 - **Audit Review** — auditor home: evidence packet covers and named AP document
   composition first (remittance / PO / tax), then disputed work and payment-attempt
   trail (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
@@ -262,4 +264,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:d962feef49ae10d880eb0c956d352a28dc9f245bf914de0657a322fb67f6ce6b -->
+<!-- dazzle-spec-brief: sha256:15d6489ff864622a7b6ea24ac9d3f30b1a0d79370c6005f83690a43fc4417694 -->

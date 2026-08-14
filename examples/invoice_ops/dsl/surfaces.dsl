@@ -1348,7 +1348,10 @@ workspace pay_desk "Pay Desk":
   # Cycle 1993: insurance certificate (COI) watch — proof of insurance before contractor pay.
   # Cycle 1995: Form W-9 watch — IRS W-9 / vendor TIN before first US settle.
   # Cycle 2002: three-way match evidence pack (PO + GRN + packing slip).
-  purpose: "Multi-panel settlement — draft gate, settle rail, three-way match evidence, remittances, packing slips, dual attention"
+  # Cycle 2055: due_stage_density — soft on-time ready vs hard past-due approved
+  # dual queues (Bill.com / Melio / Tipalti settle urgency stages; not one mixed
+  # ready_to_pay list and not broader open past_due including submitted drafts).
+  purpose: "Multi-panel settlement — draft gate, settle rail, three-way match evidence, remittances, packing slips, due stage density"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1356,11 +1359,13 @@ workspace pay_desk "Pay Desk":
     display: metrics
     aggregate:
       ready: count(Invoice where status = approved)
-      past_due: count(Invoice where due_date < today and status != paid and status != rejected and status != draft)
+      on_time: count(Invoice where status = approved and due_date >= today)
+      past_due: count(Invoice where status = approved and due_date < today)
       disputed: count(Invoice where status = disputed)
       conversation: count(InvoiceNote)
     tones:
       ready: accent
+      on_time: positive
       past_due: destructive
       disputed: destructive
       conversation: accent
@@ -1781,24 +1786,26 @@ workspace pay_desk "Pay Desk":
     action: invoice_document_detail
     empty: "No invoice documents yet — attach remittance or payment confirmation"
 
-  # Dual attention after named packets — due_date first (SLA settle pressure).
+  # Dual attention after named packets — due stage density (cycle 2055).
+  # Soft on-time approved vs hard past-due approved — exclusive filters, not one
+  # mixed ready_to_pay list (recipe due_stage_density; peer Bill.com / Melio / Tipalti).
   ready_to_pay:
     source: Invoice
-    filter: status = approved
+    filter: status = approved and due_date >= today
     sort: due_date asc
     limit: 3
     display: queue
     action: invoice_detail
-    empty: "Nothing ready to pay"
+    empty: "Nothing on-time and ready to pay"
 
   past_due:
     source: Invoice
-    filter: due_date < today and status != paid and status != rejected and status != draft
+    filter: status = approved and due_date < today
     sort: due_date asc
     limit: 3
     display: queue
     action: invoice_detail
-    empty: "No past-due open invoices"
+    empty: "No past-due approved invoices"
 
   disputed_queue:
     source: Invoice
@@ -1821,11 +1828,11 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
+      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
     as finance_admin:
-      purpose: "Multi-panel settlement — first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
-      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay
+      purpose: "Multi-panel settlement — due stage density, first-pay rail, dispute, vendor risk, tax identity, settle rail, remittances"
+      focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, composition, ready_to_pay, past_due
 
   settle_board:
     source: Invoice

@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
+INVOICE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Invoice.jsonl"
+
+PAY_FOCUS = (
+    "focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, "
+    "wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, "
+    "dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, "
+    "settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
+    "composition, ready_to_pay, past_due"
+)
 
 
 def _pay_desk_block() -> str:
@@ -16,37 +26,82 @@ def _pay_desk_block() -> str:
 
 
 def test_pay_desk_declares_dual_attention_before_conversation() -> None:
-    """Peer AP settle homes put packets + ≥2 attention panels above the note trail."""
+    """Peer AP settle homes put packets + ≥2 attention panels above the note trail.
+
+    Cycle 2055: due_stage_density splits soft on-time ready vs hard past-due approved.
+    """
     block = _pay_desk_block()
     assert "settle_metrics:" in block
     assert "document_pulse:" in block
     assert "ready_to_pay:" in block
+    assert "past_due:" in block
     assert "disputed_queue:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    # Order: metrics → document pulse → packets → ready → disputes → conversation.
-    assert block.index("settle_metrics:") < block.index("document_pulse:")
-    assert block.index("document_pulse:") < block.index("composition:")
-    assert block.index("composition:") < block.index("ready_to_pay:")
-    assert block.index("ready_to_pay:") < block.index("disputed_queue:")
-    assert block.index("disputed_queue:") < block.index("live_conversation:")
+    # Order: metrics → document pulse → packets → composition → soft ready → hard past-due → disputes → conversation.
+    # Use region markers so metric aggregate lines (past_due: count(...)) do not win index().
+    assert block.index("\n  settle_metrics:\n") < block.index("\n  document_pulse:\n")
+    assert block.index("\n  document_pulse:\n") < block.index("\n  composition:\n")
+    assert block.index("\n  composition:\n") < block.index("\n  ready_to_pay:\n")
+    assert block.index("\n  ready_to_pay:\n") < block.index("\n  past_due:\n")
+    assert block.index("\n  past_due:\n") < block.index("\n  disputed_queue:\n")
+    assert block.index("\n  disputed_queue:\n") < block.index("\n  live_conversation:\n")
 
 
 def test_pay_desk_caps_attention_for_fold_share() -> None:
     block = _pay_desk_block()
     assert "limit: 3" in block
-    assert (
-        "focus: settle_metrics, document_pulse, draft_packets, ach_settle_rail, receipt_settle_rail, wire_settle_rail, period_close_rail, remediation_rail, closeout_rail, first_pay_rail, dispute_rail, vendor_risk_rail, reconcile_rail, tax_identity, bank_rail, adjustment_rail, settle_rail, match_evidence, compliance_drafts, remittances, form_w9s, packing_slips, "
-        "composition, ready_to_pay" in block
-    )
+    assert PAY_FOCUS in block
     assert "Multi-panel settlement" in block or "multi-panel" in block.lower()
+    assert (
+        "due_stage_density" in block
+        or "due stage density" in block.lower()
+        or "on-time ready vs hard past-due" in block.lower()
+    )
 
 
 def test_pay_desk_metrics_count_ready_disputed_and_conversation() -> None:
     block = _pay_desk_block()
     assert "ready: count(Invoice where status = approved)" in block
+    assert "on_time: count(Invoice where status = approved and due_date >= today)" in block
+    assert "past_due: count(Invoice where status = approved and due_date < today)" in block
     assert "disputed: count(Invoice where status = disputed)" in block
-    assert "documents: count(InvoiceDocument)" in block
     assert "conversation: count(InvoiceNote)" in block
-    assert "filter: status = approved" in block
-    assert "filter: status = disputed" in block
+    assert "documents: count(InvoiceDocument)" in block
+
+
+def test_due_stage_density_queues_filter_soft_and_hard() -> None:
+    """Cycle 2055 recipe due_stage_density — soft on-time vs hard past-due approved dual queues."""
+    block = _pay_desk_block()
+    soft = block.split("\n  ready_to_pay:\n", 1)[1].split("\n  past_due:", 1)[0]
+    hard = block.split("\n  past_due:\n", 1)[1].split("\n  disputed_queue:", 1)[0]
+    assert "source: Invoice" in soft
+    assert "status = approved" in soft
+    assert "due_date >= today" in soft
+    assert "display: queue" in soft
+    assert "limit: 3" in soft
+    assert "source: Invoice" in hard
+    assert "status = approved" in hard
+    assert "due_date < today" in hard
+    assert "display: queue" in hard
+    assert "limit: 3" in hard
+    # Soft and hard are exclusive stage filters (not OR-combined ready list).
+    assert "due_date < today" not in soft
+    assert "due_date >= today" not in hard
+    # Hard stage is approved-only (not broader open past-due including submitted).
+    assert "status != paid" not in hard
+    assert "status != rejected" not in hard
+    assert "status != draft" not in hard
+
+
+def test_invoice_seeds_span_due_stages() -> None:
+    """Demo seeds need both on-time and past-due approved rows for dual queues."""
+    rows = [json.loads(line) for line in INVOICE_SEEDS.read_text().splitlines() if line.strip()]
+    approved = [r for r in rows if r.get("status") == "approved" and r.get("due_date")]
+    assert len(approved) >= 2, f"expected ≥2 approved with due_date, got {approved}"
+    # Parse as YYYY-MM-DD strings; demo "today" is runtime — span past + future calendar dues.
+    dues = sorted(str(r["due_date"]) for r in approved)
+    assert dues[0] < dues[-1], f"expected spread of due dates for stage density, got {dues}"
+    # At least one due before mid-2026 and one after (soft/hard under typical demo today).
+    assert any(d <= "2026-08-01" for d in dues), f"need past-due-ish approved seed, got {dues}"
+    assert any(d >= "2026-09-01" for d in dues), f"need on-time-ish approved seed, got {dues}"
