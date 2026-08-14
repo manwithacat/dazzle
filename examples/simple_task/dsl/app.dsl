@@ -176,6 +176,10 @@ entity TaskComment "Task Comment":
   task: ref Task required
   author: ref User required
   content: text required
+  # Goal B conversation peer-pack (cycle 2058): recipe blocker_question_density —
+  # Linear/Asana put blockers vs open questions as dual conversation trails
+  # (not undifferentiated comment meta alone). `kind` is reserved — use note_kind.
+  note_kind: enum[note,blocker,question,decision]=note
   created_at: datetime auto_add
 
   # Publish comment events
@@ -208,7 +212,7 @@ entity TaskComment "Task Comment":
       as: admin
 
   fitness:
-    repr_fields: [task, author, content]
+    repr_fields: [task, author, content, note_kind]
 
 # =============================================================================
 # TaskBrief Entity — document composition body on a Task (Goal B document)
@@ -446,7 +450,7 @@ surface task_detail "Task Detail":
   related discussion "Discussion":
     display: conversation
     show: TaskComment
-    columns: content, author, created_at
+    columns: content, author, note_kind, created_at
 
   ux:
     purpose: "Task context — document briefs, status, ownership, and discussion in one place"
@@ -461,6 +465,7 @@ surface task_comments "Task Comments":
   section main "Comments":
     field author "Author"
     field content "Comment"
+    field note_kind "Kind"
     field created_at "Posted"
     field task "Task"
 
@@ -468,7 +473,7 @@ surface task_comments "Task Comments":
     purpose: "View comments — open a row for the note, parent task hub, or author overview"
     sort: created_at desc
     search: content
-    filter: author
+    filter: author, note_kind
     empty: "No comments yet. Start the discussion!"
 
 # Comment Create - inline comment form on task detail
@@ -481,6 +486,7 @@ surface comment_detail "Comment Detail":
     field task "Task"
     field author "Author"
     field content "Comment"
+    field note_kind "Kind"
     field created_at "Created"
 
   ux:
@@ -493,6 +499,7 @@ surface comment_create "Add Comment":
 
   section main "New Comment":
     field content "Comment"
+    field note_kind "Kind"
 
   ux:
     purpose: "Add a comment to a task"
@@ -507,6 +514,7 @@ surface comment_edit "Edit Comment":
 
   section main "Edit Comment":
     field content "Comment"
+    field note_kind "Kind"
 
   ux:
     purpose: "Edit an existing comment"
@@ -850,11 +858,17 @@ workspace admin_dashboard "Admin Dashboard":
       in_review: count(Task where status = review)
       documents: count(TaskBrief)
       conversation: count(TaskComment)
+      blockers: count(TaskComment where note_kind = blocker)
+      questions: count(TaskComment where note_kind = question)
+      decisions: count(TaskComment where note_kind = decision)
     tones:
       in_progress: accent
       in_review: warning
       documents: accent
       conversation: accent
+      blockers: danger
+      questions: warning
+      decisions: positive
 
   team_metrics:
     source: User
@@ -893,7 +907,28 @@ workspace admin_dashboard "Admin Dashboard":
     action: brief_detail
     empty: "No briefs yet — add acceptance criteria or a runbook line on a task"
 
-  # Conversation trail after dual attention + composition.
+  # Goal B conversation (cycle 2058): recipe blocker_question_density —
+  # exclusive blocker vs question trails before the mixed live thread
+  # (peer Linear/Asana activity filters, not one undifferentiated dump).
+  open_blockers:
+    source: TaskComment
+    filter: note_kind = blocker
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open blockers in the discussion trail"
+
+  open_questions:
+    source: TaskComment
+    filter: note_kind = question
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open questions waiting on the team"
+
+  # Full conversation trail after dual conversation density + composition.
   live_conversation:
     source: TaskComment
     sort: created_at desc
@@ -989,8 +1024,10 @@ workspace admin_dashboard "Admin Dashboard":
 
   ux:
     as admin:
-      purpose: "Multi-panel admin — team headshots then dual attention before conversation trail"
-      focus: media_shelf, metrics, urgent_tasks, overdue_tasks, composition, live_conversation
+      # Cycle 2058: conversation dual density (blockers + questions) eager on
+      # fold with metrics; task pressure + briefs remain regions (≤4 focus).
+      purpose: "Multi-panel admin — headshots, metrics, blocker vs question conversation density before full trail"
+      focus: media_shelf, metrics, open_blockers, open_questions
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
@@ -1022,12 +1059,16 @@ workspace team_overview "Team Overview":
       done: count(Task where status = done)
       documents: count(TaskBrief)
       conversation: count(TaskComment)
+      blockers: count(TaskComment where note_kind = blocker)
+      questions: count(TaskComment where note_kind = question)
     tones:
       in_progress: accent
       in_review: warning
       done: positive
       documents: accent
       conversation: accent
+      blockers: danger
+      questions: warning
 
   # Dual attention — review queue + plate kanban before fold trail.
   needs_review:
@@ -1056,6 +1097,25 @@ workspace team_overview "Team Overview":
     display: queue
     action: brief_detail
     empty: "No document lines yet — briefs and acceptance criteria appear here"
+
+  # Cycle 2058 conversation density (regions under fold; focus stays ≤4 lead).
+  open_blockers:
+    source: TaskComment
+    filter: note_kind = blocker
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open blockers in the discussion trail"
+
+  open_questions:
+    source: TaskComment
+    filter: note_kind = question
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open questions waiting on the team"
 
   live_conversation:
     source: TaskComment
@@ -1093,17 +1153,16 @@ workspace team_overview "Team Overview":
         state: positive
 
   # Goal B media + empty_region_honesty + command_density focus spine.
-  # Cycle 1951: cap persona focus to 4 (workspace_persona_focus _MAX_FOCUS_FOLD)
-  # so Monday review does not fire 7 concurrent region GETs under nested Playwright
-  # (agency_lead ERR_INSUFFICIENT_RESOURCES thrash). composition / conversation /
-  # team_roster remain on the desk and load on scroll/intersect.
+  # Cycle 1951: cap persona focus to 4 (workspace_persona_focus _MAX_FOCUS_FOLD).
+  # Cycle 2058: conversation dual density eager on manager still (admin_dashboard
+  # is admin-only and fleet recapture skips pure admin personas).
   ux:
     as manager:
-      purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
-      focus: media_shelf, metrics, needs_review, plate_by_person
+      purpose: "Multi-panel lead — headshots, metrics, blocker vs question conversation density"
+      focus: media_shelf, metrics, open_blockers, open_questions
     as admin:
-      purpose: "Multi-panel lead — team headshots then review + plate before conversation trail"
-      focus: media_shelf, metrics, needs_review, plate_by_person
+      purpose: "Multi-panel lead — headshots, metrics, blocker vs question conversation density"
+      focus: media_shelf, metrics, open_blockers, open_questions
 
 workspace my_work "My Work":
   access: authenticated

@@ -20,23 +20,27 @@ def _workspace_block(name: str) -> str:
 
 
 def test_admin_dashboard_dual_attention_before_conversation() -> None:
-    """Peer admin ops homes put urgent + overdue pressure above discussion trail."""
+    """Peer admin ops homes put urgent + overdue pressure above discussion trail.
+
+    Cycle 2058: conversation dual (open_blockers/open_questions) is focus-eager;
+    task dual attention + composition remain authored regions in order.
+    """
     block = _workspace_block("admin_dashboard")
     assert "media_shelf:" in block
     assert "metrics:" in block
     assert "urgent_tasks:" in block
     assert "overdue_tasks:" in block
     assert "composition:" in block
+    assert "open_blockers:" in block
+    assert "open_questions:" in block
     assert "live_conversation:" in block
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("metrics:") < block.index("urgent_tasks:")
     assert block.index("urgent_tasks:") < block.index("overdue_tasks:")
     assert block.index("overdue_tasks:") < block.index("composition:")
-    assert block.index("composition:") < block.index("live_conversation:")
-    assert (
-        "focus: media_shelf, metrics, urgent_tasks, overdue_tasks, "
-        "composition, live_conversation" in block
-    )
+    assert block.index("composition:") < block.index("open_blockers:")
+    assert block.index("open_questions:") < block.index("live_conversation:")
+    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
 
@@ -53,8 +57,10 @@ def test_team_overview_dual_attention_before_conversation() -> None:
     assert block.index("needs_review:") < block.index("plate_by_person:")
     assert block.index("plate_by_person:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    # Cycle 1951: ≤4 focus names (fold thrash cap); trail regions stay authored.
-    assert "focus: media_shelf, metrics, needs_review, plate_by_person" in block
+    # Cycle 1951: ≤4 focus; cycle 2058 conversation density on lead still.
+    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
+    assert "needs_review:" in block
+    assert "plate_by_person:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
     assert "team_roster:" in block

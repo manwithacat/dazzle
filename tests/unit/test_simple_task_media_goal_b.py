@@ -50,10 +50,7 @@ def test_admin_dashboard_media_shelf_first() -> None:
     assert "sort: created_at desc" in block
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("media_shelf:") < block.index("urgent_tasks:")
-    assert (
-        "focus: media_shelf, metrics, urgent_tasks, overdue_tasks, "
-        "composition, live_conversation" in block
-    )
+    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
 
 
 def test_team_overview_media_shelf_first() -> None:
@@ -66,8 +63,8 @@ def test_team_overview_media_shelf_first() -> None:
     assert "sort: created_at desc" in block
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("media_shelf:") < block.index("needs_review:")
-    # Cycle 1951: fold thrash cap — focus ≤4; trail regions remain on desk.
-    assert "focus: media_shelf, metrics, needs_review, plate_by_person" in block
+    # Cycle 2058: conversation density focus (≤4); media shelf still first.
+    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
     assert "composition:" in block
     assert "team_roster:" in block
 
