@@ -8,7 +8,7 @@
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
 **Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
-**Fingerprint:** `38ccf96f0e658adc`
+**Fingerprint:** `811537a86b06cf37`
 
 ## Personas (jobs)
 
@@ -21,16 +21,16 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 - **SLAWaiver** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → waiting_on_customer → escalated → resolved → closed — definitional sentence in founder brief (A X is …)
-- **Intercom** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Email** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Cloud** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Zendesk** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Front** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Intercom** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Cloud** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=comma_list)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Approval`, `Avoid`, `Console`, `Dashboard`, `JavaScript`, `Lead`, `Message`, `Need`, `Op`, `Photo`, `Support`, `Tickets`, `Url`, `Waiver`, `agent`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `capped`, `change`, `chosen`, `close`, `critical`, `data`, `datastore`, `declared`, `department`, `document`, `durable`, `escalation`, `flat`, `fold`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `multi`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `role`, `shared`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `trail`, `visibility`, `whole`, `work`
+`Administrator`, `Approval`, `Avoid`, `Console`, `Dashboard`, `JavaScript`, `Lead`, `Message`, `Need`, `Op`, `Photo`, `Support`, `Tickets`, `Url`, `Waiver`, `agent`, `associated`, `auditable`, `authenticated`, `breach`, `byte`, `capped`, `change`, `chosen`, `clock`, `close`, `critical`, `data`, `datastore`, `declared`, `department`, `document`, `durable`, `escalation`, `flat`, `fold`, `framework`, `informal`, `kanban`, `lifecycle`, `live`, `mature`, `model`, `multi`, `operation`, `operational`, `personal`, `product`, `queue`, `recent`, `resolved`, `response`, `review`, `role`, `shared`, `signed`, `solo`, `static`, `team`, `technical`, `ticket`, `trail`, `visibility`, `whole`, `work`
 
 ## Desks
 
@@ -73,7 +73,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "38ccf96f0e658adc",
+  "source_sha256": "811537a86b06cf37",
   "personas": [
     {
       "id_hint": "agent",
@@ -135,21 +135,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Intercom",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
       "name": "Email",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
-      "name": "Cloud",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -164,6 +150,20 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     },
     {
       "name": "Front",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Intercom",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Cloud",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -314,6 +314,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     "capped",
     "change",
     "chosen",
+    "clock",
     "close",
     "critical",
     "data",

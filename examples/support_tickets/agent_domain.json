@@ -3,7 +3,7 @@
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
   "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "38ccf96f0e658adc",
+  "source_sha256": "811537a86b06cf37",
   "personas": [
     {
       "id_hint": "agent",
@@ -65,21 +65,7 @@
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Intercom",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
       "name": "Email",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
-      "name": "Cloud",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -94,6 +80,20 @@
     },
     {
       "name": "Front",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Intercom",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Cloud",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -244,6 +244,7 @@
     "capped",
     "change",
     "chosen",
+    "clock",
     "close",
     "critical",
     "data",
