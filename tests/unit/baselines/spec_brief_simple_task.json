@@ -439,6 +439,8 @@
         "queue of Task",
         "queue of TaskBrief",
         "conversation of TaskComment",
+        "conversation of TaskComment",
+        "conversation of TaskComment",
         "bar_chart of Task",
         "bar_chart of Task"
       ]
@@ -458,6 +460,8 @@
         "queue of Task",
         "kanban of Task",
         "queue of TaskBrief",
+        "conversation of TaskComment",
+        "conversation of TaskComment",
         "conversation of TaskComment",
         "queue of User"
       ]
