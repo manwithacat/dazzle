@@ -38,10 +38,7 @@ def test_command_center_runbook_covers_first() -> None:
     assert "media_shelf:" not in block
     assert "photo_url" not in block
     assert block.index("runbook_covers:") < block.index("health_summary:")
-    assert (
-        "focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, "
-        "composition, live_conversation" in block
-    )
+    assert "focus: runbook_covers, health_summary, unacked_pages, acked_bridge" in block
 
 
 def test_incident_review_keeps_runbook_covers_not_headshot() -> None:

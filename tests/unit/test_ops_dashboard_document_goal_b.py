@@ -38,10 +38,7 @@ def test_command_center_declares_composition_after_dual_attention() -> None:
     # Order: dual attention → documents → conversation
     assert block.index("active_alerts:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert (
-        "focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, "
-        "composition, live_conversation" in block
-    )
+    assert "focus: runbook_covers, health_summary, unacked_pages, acked_bridge" in block
     # Media cover wall is first; composition remains after dual attention.
     assert block.index("runbook_covers:") < block.index("health_summary:")
 

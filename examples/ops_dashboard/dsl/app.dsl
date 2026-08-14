@@ -307,7 +307,10 @@ workspace command_center "Command Center":
   # PagerDuty/Datadog put runbook cover thumbs above health pulse and dual
   # attention — not headshot shelves (portfolio ban headshot_shelf).
   # Recipe runbook_cover_wall.
-  purpose: "Multi-panel ops — runbook covers, health pulse, critical bridge density, dual attention, composition, live incident notes"
+  # Cycle 2049 critical_bridge_density + cycle 2064 ack_stage_density —
+  # PagerDuty/Opsgenie put unacked vs acked high|critical pages as exclusive
+  # stage boards (not one mixed page_alerts list or dual_attention re-stack).
+  purpose: "Multi-panel ops — runbook covers, health pulse, unacked vs acked page stages, dual attention, composition, live notes"
   stage: "command_center"
   access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
@@ -315,8 +318,6 @@ workspace command_center "Command Center":
   live: on
 
   # Goal B media — recipe runbook_cover_wall (novel vs headshot_shelf).
-  # Cap 2 so dual attention + live conversation (phase/channel) share the fold
-  # after cycle 1917 timeline_phase_channel conversation peer upgrade.
   runbook_covers:
     source: OpsDocument
     filter: preview_url != null
@@ -327,7 +328,7 @@ workspace command_center "Command Center":
     empty: "No runbook covers yet — attach runbooks with cover previews"
     refresh: every 30s
 
-  # Health pulse — fleet counts with critical + documents + conversation.
+  # Health pulse — fleet counts with critical + ack stage + documents + conversation.
   health_summary:
     source: System
     display: metrics
@@ -340,22 +341,20 @@ workspace command_center "Command Center":
       healthy_count: count(System where status = healthy)
       critical_count: count(System where status = critical)
       offline_count: count(System where status = offline)
-      page_alerts: count(Alert where status = active and (severity = critical or severity = high))
+      unacked_pages: count(Alert where status = active and (severity = critical or severity = high))
+      acked_pages: count(Alert where status = acknowledged and (severity = critical or severity = high))
       documents: count(OpsDocument)
       conversation: count(IncidentNote)
     tones:
       healthy_count: positive
       critical_count: destructive
       offline_count: destructive
-      page_alerts: destructive
+      unacked_pages: destructive
+      acked_pages: warning
       documents: accent
       conversation: accent
 
-  # Goal B command_density (cycle 2049): peer PagerDuty / Opsgenie / Datadog
-  # critical-bridge density — offline|critical systems + high|critical active
-  # pages as a tight dual pressure pair ABOVE broad dual attention (recipe
-  # critical_bridge_density; not systems_attention|active_alerts dual_attention
-  # re-stack alone — sev1 bridge strip before the full fleet/alert feeds).
+  # Goal B command_density (cycle 2049): critical systems strip (still useful).
   critical_systems:
     source: System
     filter: status = critical or status = offline
@@ -366,6 +365,27 @@ workspace command_center "Command Center":
     empty: "No critical or offline systems"
     refresh: every 30s
 
+  # Goal B command_density (cycle 2064): recipe ack_stage_density —
+  # exclusive unacked (hard) vs acked (soft) high|critical page boards.
+  unacked_pages:
+    source: Alert
+    filter: status = active and (severity = critical or severity = high)
+    sort: severity desc, triggered_at desc
+    limit: 4
+    display: queue
+    empty: "No unacked high/critical pages — every sev1 is acked or resolved"
+    refresh: every 30s
+
+  acked_bridge:
+    source: Alert
+    filter: status = acknowledged and (severity = critical or severity = high)
+    sort: severity desc, triggered_at desc
+    limit: 4
+    display: queue
+    empty: "No acked high/critical pages still open on the bridge"
+    refresh: every 30s
+
+  # Secondary mixed active feed (under dual ack stages).
   page_alerts:
     source: Alert
     filter: status = active and (severity = critical or severity = high)
@@ -376,7 +396,6 @@ workspace command_center "Command Center":
     refresh: every 30s
 
   # Fleet attention — non-healthy systems (degraded / critical / offline).
-  # Cap at 4 so metrics + dual panels + documents + conversation share the fold.
   systems_attention:
     source: System
     filter: status != healthy
@@ -387,8 +406,7 @@ workspace command_center "Command Center":
     empty: "All systems healthy"
     refresh: every 30s
 
-  # Alert Feed - active alerts as an urgency queue (severity-sorted).
-  # Live-refreshes (#1391). Cap at 4 for fold with systems + documents + notes.
+  # Alert Feed - all active alerts as an urgency queue (severity-sorted).
   active_alerts:
     source: Alert
     filter: status = active
@@ -397,8 +415,6 @@ workspace command_center "Command Center":
     display: queue
     refresh: every 30s
 
-  # Goal B document composition AFTER dual attention — named runbooks /
-  # postmortems so hero stills read as documents before the notes trail.
   composition:
     source: OpsDocument
     sort: created_at desc
@@ -408,9 +424,6 @@ workspace command_center "Command Center":
     empty: "No ops documents yet — attach a runbook or postmortem on a system"
     refresh: every 30s
 
-  # Goal B conversation spine AFTER dual attention + documents — newest
-  # operator notes so stills show domain-true mitigation prose without
-  # owning the whole fold. display: conversation → Message/Bubble chrome.
   live_conversation:
     source: IncidentNote
     sort: created_at desc
@@ -812,11 +825,11 @@ workspace command_center "Command Center":
     as ops_engineer:
       scope: all
       # Goal B media first (cycle 1889) + command_density + document.
-      purpose: "Runbook cover wall first, then critical bridge density, dual attention, composition, and incident notes"
-      focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, composition, live_conversation
+      purpose: "Runbook covers, health pulse, unacked vs acked page stage density, then dual attention and notes"
+      focus: runbook_covers, health_summary, unacked_pages, acked_bridge
     as admin:
-      purpose: "Runbook cover wall first, then critical bridge density, multi-panel attention, documents, and conversation"
-      focus: runbook_covers, health_summary, critical_systems, page_alerts, systems_attention, active_alerts, composition, live_conversation
+      purpose: "Runbook covers, health pulse, unacked vs acked page stage density, then multi-panel attention"
+      focus: runbook_covers, health_summary, unacked_pages, acked_bridge
 
 # =============================================================================
 # Workspace - PAIR_STRIP Stage (v0.61.71, AegisMark UX patterns #5)

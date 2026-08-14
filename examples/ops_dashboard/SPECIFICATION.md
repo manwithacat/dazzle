@@ -4,7 +4,7 @@
 
 Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's external alerting service.
 
-It is built for two kinds of user: Operations Engineers, who watch system health in real time and respond quickly to alerts from a purpose-built Command Center, and Administrators, who manage the monitored estate itself.
+It is built for two kinds of user: Operations Engineers, who watch system health in real time and respond quickly to alerts from a purpose-built Command Center (unacked vs acked page stage density — cycle 2064), and Administrators, who manage the monitored estate itself.
 
 Two guarantees stand out. First, every role's permissions, for every kind of record and operation, are declared as machine-readable policy that compiles on demand into an auditable access matrix — permission review is something you run and diff, not something you eyeball — and the row-visibility rules can additionally be submitted to an SMT solver for formal verification. Second, access-controlled records are automatically filtered to what each user is permitted to see, by a rule declared once in the model and applied to every query the product runs.
 
@@ -69,4 +69,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Ops Document lifecycle.** Ops Documents move draft → published → archived (ops_engineer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:8d62df8db05858bc5568851bdc43c8bd414d2e7e287a4ceacdebbb23a29f5953 -->
+<!-- dazzle-spec-brief: sha256:3c7db16c69cf067006d02067fba217b4956aabadd5485f9afcfa749e0b746e22 -->
