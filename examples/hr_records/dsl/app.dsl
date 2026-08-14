@@ -1428,12 +1428,11 @@ workspace time_machine "Time Machine":
 # Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
 workspace my_team "My Team":
-  # Goal B command_density + org_structure (cycle 1837) + document (cycle 1838)
-  # + work_location_grain (cycle 1914) + office_remote_density (cycle 2050):
-  # office vs remote dual presence queues, then level/dept/location org boards,
-  # then named employment documents, before notes — peer Workday / BambooHR put
-  # place grain + letters above conversation chrome.
-  purpose: "Multi-panel manager desk — office/remote density, level/dept/location org boards, documents, reporting pressure, then notes"
+  # Goal B org_structure peer-pack (cycle 2065): recipe career_track_density —
+  # BambooHR / Workday / Lattice put exclusive IC track vs people-manager track
+  # role queues before a mixed by_level kanban (not office_remote-only or dept
+  # metric tiles alone — people partners lean into career ladder shape).
+  purpose: "Multi-panel manager desk — IC vs manager career-track density, then location/dept boards, documents, notes"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1460,11 +1459,39 @@ workspace my_team "My Team":
       documents: accent
       conversation: accent
 
-  # Goal B org_structure (cycle 2050): peer BambooHR / Workday office↔remote
-  # density — dual site-presence queues ABOVE full location kanban (recipe
-  # office_remote_density; not by_location-only work_location_grain re-stack,
-  # not department metric tiles alone — people partners lean into HQ/office
-  # vs remote/hybrid span pressure as two work queues).
+  # Career-track pulse — honest Role-source counts (IC vs people managers).
+  career_pulse:
+    source: Role
+    display: metrics
+    aggregate:
+      ic_roles: count(Role where level = ic1 or level = ic2 or level = ic3 or level = ic4 or level = ic5 or level = ic6)
+      manager_roles: count(Role where level = m1 or level = m2 or level = m3 or level = m4)
+      roles: count(Role)
+    tones:
+      ic_roles: accent
+      manager_roles: warning
+      roles: positive
+
+  # Dual exclusive career tracks (soft IC ladder vs hard people-manager track).
+  ic_track:
+    source: Role
+    filter: level = ic1 or level = ic2 or level = ic3 or level = ic4 or level = ic5 or level = ic6
+    sort: title asc
+    limit: 8
+    display: queue
+    action: role_detail
+    empty: "No IC-track roles — seed individual-contributor levels"
+
+  manager_track:
+    source: Role
+    filter: level = m1 or level = m2 or level = m3 or level = m4
+    sort: title asc
+    limit: 8
+    display: queue
+    action: role_detail
+    empty: "No people-manager roles — seed m1–m4 levels"
+
+  # Office/remote density (cycle 2050) — secondary after career tracks.
   office_sites:
     source: Person
     filter: ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site)
@@ -1483,8 +1510,7 @@ workspace my_team "My Team":
     action: person_detail
     empty: "No active remote or hybrid people"
 
-  # Dual attention — level board + department board before fold trail.
-  # Role-level board (enum columns ic1…m4) — career ladder shape at a glance.
+  # Full level kanban under dual career tracks.
   by_level:
     source: Role
     display: kanban
@@ -1505,8 +1531,7 @@ workspace my_team "My Team":
     action: employment_detail
     empty: "No active employment rows"
 
-  # Goal B org_structure peer upgrade (cycle 1914): work_location board —
-  # people partners lean into HQ vs Manchester vs remote/hybrid columns.
+  # Goal B org_structure peer upgrade (cycle 1914): work_location board.
   by_location:
     source: Person
     filter: ended_at = null
@@ -1526,8 +1551,7 @@ workspace my_team "My Team":
     action: managerlink_detail
     empty: "No reporting lines yet — assign a manager to a person"
 
-  # Goal B document composition AFTER dual attention / reporting — named
-  # employment letters before the notes trail.
+  # Goal B document composition AFTER dual attention / reporting.
   composition:
     source: HrDocument
     sort: created_at desc
@@ -1537,15 +1561,13 @@ workspace my_team "My Team":
     empty: "No team documents yet — attach an offer or promo letter on a report"
 
   ux:
-    # Cycle 2057 empty_region: focus ≤4 (staff_directory 1950 lesson) — keep
-    # office/remote density + dual org boards eager; location/reporting/docs/
-    # notes remain regions but not focus-eager fold storms.
+    # Cycle 2065: career-track density eager (≤4); office/remote secondary.
     as manager:
-      purpose: "Multi-panel team — office/remote density + level/dept boards before secondary placement and notes"
-      focus: team_pulse, office_sites, remote_flex, by_department
+      purpose: "IC vs people-manager career-track density before location and department boards"
+      focus: career_pulse, ic_track, manager_track, by_department
     as hr_admin:
-      purpose: "Multi-panel org coaching — office/remote density + level/dept boards before secondary placement and notes"
-      focus: team_pulse, office_sites, remote_flex, by_department
+      purpose: "IC vs people-manager career-track density before placement boards"
+      focus: career_pulse, ic_track, manager_track, by_department
 
   # Conversation trail after dual attention org boards + documents.
   live_conversation:

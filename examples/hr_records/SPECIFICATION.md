@@ -14,7 +14,7 @@ was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
 Staff desks are multi-panel command dens: dual attention pressure (active roster
-+ recent starters on Staff Directory (headshot shelf first, then dual attention); level + department + **work-location** boards on My Team) and
++ recent starters on Staff Directory (headshot shelf first, then dual attention); level + department + **work-location** boards on My Team (IC vs manager career-track density — cycle 2065)) and
 **named employment documents** (HrDocument composition with display_field
 headline — offer / policy / promo / contract letters) sit above a **people notes**
 trail (PersonNote with display_field body) — not only directory metrics or
@@ -146,4 +146,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:462c43136d5303b0a104fd22499d1f4b8789674529838ca5ef75bc35ec233f11 -->
+<!-- dazzle-spec-brief: sha256:6b75ce771a9a5fc85ea6c3c16f6c314b64363ce392dec44740036caa03ca5ddd -->

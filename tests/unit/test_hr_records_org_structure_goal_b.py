@@ -41,8 +41,10 @@ def test_person_entity_declares_work_location() -> None:
 
 
 def test_my_team_declares_level_dept_location_boards_before_conversation() -> None:
-    """Peer HR tools show level/dept/location org shape before conversation thrash."""
+    """Peer HR tools show IC vs manager career tracks before full level kanban."""
     block = _my_team_block()
+    assert "ic_track:" in block
+    assert "manager_track:" in block
     assert "by_level:" in block
     assert "display: kanban" in block
     assert "group_by: level" in block
@@ -51,13 +53,14 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
     assert "by_location:" in block
     assert "group_by: work_location" in block
     assert "live_conversation:" in block
-    # Region headers (indent 2) — avoid team_pulse aggregate key "reporting_lines:"
     assert "\n  by_level:" in block
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block
     assert "\n  reporting_lines:" in block
-    # Order: pulse → office/remote density → level → department → location → reporting
-    assert block.index("team_pulse:") < block.index("\n  office_sites:")
+    # Order: career pulse → IC track → manager track → office/remote → level board
+    assert block.index("career_pulse:") < block.index("\n  ic_track:")
+    assert block.index("\n  ic_track:") < block.index("\n  manager_track:")
+    assert block.index("\n  manager_track:") < block.index("\n  office_sites:")
     assert block.index("\n  office_sites:") < block.index("\n  remote_flex:")
     assert block.index("\n  remote_flex:") < block.index("\n  by_level:")
     assert block.index("\n  by_level:") < block.index("\n  by_department:")
@@ -68,15 +71,28 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
 
 def test_my_team_ux_focus_org_before_load() -> None:
     block = _my_team_block()
-    assert "focus: team_pulse, office_sites, remote_flex, by_department" in block
+    assert "focus: career_pulse, ic_track, manager_track, by_department" in block
+    assert (
+        "career_track_density" in block.lower()
+        or "ic vs" in block.lower()
+        or "people-manager" in block.lower()
+    )
     # Cycle 1819 empty_region: no under-fold bar theater (kanbans own org shape)
     assert "dept_mix:" not in block
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
-    assert "multi-panel" in block.lower() or "dual attention" in block.lower()
     assert "work_location" in block or "by_location" in block
-    assert "remote_uk: count(Person where work_location = remote_uk" in block
-    assert "hybrid: count(Person where work_location = hybrid" in block
+    assert "ic_roles: count(Role where" in block
+    assert "manager_roles: count(Role where" in block
+    rows = [json.loads(line) for line in PERSON_SEEDS.read_text().splitlines() if line.strip()]
+    assert len(rows) >= 5
+    # Role seeds span IC + manager tracks
+    role_path = ROOT / "examples/hr_records/dsl/seeds/demo_data/Role.jsonl"
+    roles = [json.loads(line) for line in role_path.read_text().splitlines() if line.strip()]
+    ic = [r for r in roles if str(r.get("level", "")).startswith("ic")]
+    mgr = [r for r in roles if str(r.get("level", "")).startswith("m")]
+    assert len(ic) >= 3
+    assert len(mgr) >= 2
 
 
 def test_my_team_reporting_lines_are_queue_not_only_timeline() -> None:
