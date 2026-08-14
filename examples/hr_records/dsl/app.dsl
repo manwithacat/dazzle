@@ -1142,7 +1142,10 @@ workspace staff_directory "Staff Directory":
 # context_id and shows company-wide timelines (agent_acceptance cycle 1918).
 workspace career_desk "Career Desk":
   access: persona(hr_admin, manager, finance, employee)
-  purpose: "Career timeline — employment + salary history side-by-side"
+  # Goal B empty_region_honesty (cycle 2072): recipe career_desk_employment_twin_prune —
+  # drop second Employment timeline (employment_trail twin of employment_history);
+  # peer BambooHR/Workday career record shows one employment spine + salary + reporting.
+  purpose: "Career timeline — one employment spine + salary + reporting (no twin employment trail)"
 
   # TODO(#hr-temporal): "history timeline" display mode.
   # A region whose source is a temporal entity (Employment / Salary) and
@@ -1210,11 +1213,7 @@ workspace career_desk "Career Desk":
         icon: "users"
         state: positive
 
-  employment_trail:
-    source: Employment
-    display: timeline
-    limit: 15
-    empty: "No employment rows"
+  # employment_trail removed (cycle 2072) — twin of employment_history scroll theater.
 
   salary_mix:
     source: Salary
@@ -1229,6 +1228,23 @@ workspace career_desk "Career Desk":
 # Post-5.8 Goal B org_structure: people reporting lines above the fold (queue
 # of report→manager), not only dept units. Full recursive tree remains a
 # pattern gap (TODO #hr-hierarchy); queue + person hubs is buyer-true.
+
+  ux:
+    as hr_admin:
+      purpose: "One employment timeline + salary + reporting — no twin employment trail"
+      focus: career_pulse, employment_history, salary_history, reporting_history
+    as manager:
+      purpose: "One employment timeline + salary + reporting — no twin employment trail"
+      focus: career_pulse, employment_history, salary_history, reporting_history
+    as finance:
+      purpose: "One employment timeline + salary + reporting — no twin employment trail"
+      focus: career_pulse, employment_history, salary_history, reporting_history
+    as employee:
+      purpose: "Your employment + salary + reporting spine — no twin trail"
+      focus: career_pulse, employment_history, salary_history, reporting_history
+
+
+
 workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
   purpose: "Who reports to whom, nested departments, and job roles — org hierarchy people can parse"

@@ -104,3 +104,23 @@ def test_reporting_desk_span_is_filled_queue_not_empty_kanban() -> None:
     # Placement boards still present for org shape (not only metrics)
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block
+
+
+def test_career_desk_omits_twin_employment_trail() -> None:
+    """Cycle 2072: recipe career_desk_employment_twin_prune.
+
+    BambooHR/Workday career record: one employment timeline + salary + reporting.
+    employment_trail was a second Employment timeline twin of employment_history.
+    """
+    block = _workspace_block("career_desk")
+    assert "employment_history:" in block
+    assert "salary_history:" in block
+    assert "reporting_history:" in block
+    assert "career_pulse:" in block
+    assert "employment_trail:" not in block
+    assert "focus: career_pulse, employment_history, salary_history, reporting_history" in block
+    assert "career_desk_employment_twin_prune" in block or "twin employment" in block.lower()
+    # Region order: pulse → employment → salary → reporting
+    assert block.index("career_pulse:") < block.index("employment_history:")
+    assert block.index("employment_history:") < block.index("salary_history:")
+    assert block.index("salary_history:") < block.index("reporting_history:")
