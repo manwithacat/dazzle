@@ -50,7 +50,7 @@ def test_admin_dashboard_media_shelf_first() -> None:
     assert "sort: created_at desc" in block
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("media_shelf:") < block.index("urgent_tasks:")
-    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
+    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
 
 
 def test_team_overview_media_shelf_first() -> None:
@@ -64,7 +64,7 @@ def test_team_overview_media_shelf_first() -> None:
     assert block.index("media_shelf:") < block.index("metrics:")
     assert block.index("media_shelf:") < block.index("needs_review:")
     # Cycle 2058: conversation density focus (≤4); media shelf still first.
-    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
+    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
     assert "composition:" in block
     assert "team_roster:" in block
 

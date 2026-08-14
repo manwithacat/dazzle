@@ -832,7 +832,32 @@ workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
   # Goal B media (cycle 1884) + command_density (cycle 1835): headshot shelf
   # first, then dual attention (urgent + overdue) before composition trail.
-  purpose: "Multi-panel admin — team headshots, pressure queues, briefs, then live conversation"
+  purpose: "Multi-panel admin - team headshots, pressure queues, briefs, question vs decision density, then live conversation"
+
+
+  # Cycle 2074 decision_question_density — question vs decision trails after metrics.
+  open_questions:
+    source: TaskComment
+    filter: note_kind = question
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open questions waiting on the team"
+
+  # Cycle 2074 recipe decision_question_density — exclusive decision log trail
+  # after open questions (Linear/Asana decision notes vs open Qs; not
+  # blocker_question re-stack alone, not mixed live dump).
+  open_decisions:
+    source: TaskComment
+    filter: note_kind = decision
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No decisions logged yet - approvals and callouts land here"
+
+
 
   # Goal B media FIRST — admin home is a people shelf (teammate photo_url thumbs).
   # Newest-first so non-STABLE seeded roster (Fay/Gus/Hana + placeholds) win
@@ -869,6 +894,7 @@ workspace admin_dashboard "Admin Dashboard":
       blockers: danger
       questions: warning
       decisions: positive
+
 
   team_metrics:
     source: User
@@ -910,6 +936,7 @@ workspace admin_dashboard "Admin Dashboard":
   # Goal B conversation (cycle 2058): recipe blocker_question_density —
   # exclusive blocker vs question trails before the mixed live thread
   # (peer Linear/Asana activity filters, not one undifferentiated dump).
+  # Cycle 2074 also ships decision_question_density (open_decisions after questions).
   open_blockers:
     source: TaskComment
     filter: note_kind = blocker
@@ -918,17 +945,7 @@ workspace admin_dashboard "Admin Dashboard":
     display: conversation
     action: comment_detail
     empty: "No open blockers in the discussion trail"
-
-  open_questions:
-    source: TaskComment
-    filter: note_kind = question
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No open questions waiting on the team"
-
-  # Full conversation trail after dual conversation density + composition.
+  # Full conversation trail after conversation density + composition.
   live_conversation:
     source: TaskComment
     sort: created_at desc
@@ -1024,16 +1041,37 @@ workspace admin_dashboard "Admin Dashboard":
 
   ux:
     as admin:
-      # Cycle 2058: conversation dual density (blockers + questions) eager on
-      # fold with metrics; task pressure + briefs remain regions (≤4 focus).
-      purpose: "Multi-panel admin — headshots, metrics, blocker vs question conversation density before full trail"
-      focus: media_shelf, metrics, open_blockers, open_questions
+      # Cycle 2074: question vs decision conversation density eager on fold
+      # with metrics; blockers remain regions (<=4 focus).
+      purpose: "Multi-panel admin - headshots, metrics, question vs decision conversation density before full trail"
+      focus: open_questions, open_decisions, media_shelf, metrics
 
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
   # Goal B media (cycle 1884) + command_density (cycle 1835): headshot shelf
   # first, then dual attention (review + plate) before composition trail.
   purpose: "Multi-panel lead desk — team headshots, review pressure, plate by person, briefs, then conversation"
+
+
+  # Cycle 2074 decision_question_density on lead desk — exclusive Q vs decision
+  # trails after metrics (manager still proof; admin desk is capture-skipped).
+  open_questions:
+    source: TaskComment
+    filter: note_kind = question
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No open questions waiting on the team"
+
+  open_decisions:
+    source: TaskComment
+    filter: note_kind = decision
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: comment_detail
+    empty: "No decisions logged yet - approvals and callouts land here"
 
   # Goal B media FIRST — lead home is a people shelf (teammate photo_url thumbs).
   media_shelf:
@@ -1061,6 +1099,7 @@ workspace team_overview "Team Overview":
       conversation: count(TaskComment)
       blockers: count(TaskComment where note_kind = blocker)
       questions: count(TaskComment where note_kind = question)
+      decisions: count(TaskComment where note_kind = decision)
     tones:
       in_progress: accent
       in_review: warning
@@ -1069,6 +1108,7 @@ workspace team_overview "Team Overview":
       conversation: accent
       blockers: danger
       questions: warning
+      decisions: positive
 
   # Dual attention — review queue + plate kanban before fold trail.
   needs_review:
@@ -1098,7 +1138,7 @@ workspace team_overview "Team Overview":
     action: brief_detail
     empty: "No document lines yet — briefs and acceptance criteria appear here"
 
-  # Cycle 2058 conversation density (regions under fold; focus stays ≤4 lead).
+  # Cycle 2058 conversation density (blockers under fold; Q/decision eager above).
   open_blockers:
     source: TaskComment
     filter: note_kind = blocker
@@ -1107,15 +1147,6 @@ workspace team_overview "Team Overview":
     display: conversation
     action: comment_detail
     empty: "No open blockers in the discussion trail"
-
-  open_questions:
-    source: TaskComment
-    filter: note_kind = question
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: comment_detail
-    empty: "No open questions waiting on the team"
 
   live_conversation:
     source: TaskComment
@@ -1158,11 +1189,11 @@ workspace team_overview "Team Overview":
   # is admin-only and fleet recapture skips pure admin personas).
   ux:
     as manager:
-      purpose: "Multi-panel lead — headshots, metrics, blocker vs question conversation density"
-      focus: media_shelf, metrics, open_blockers, open_questions
+      purpose: "Multi-panel lead — headshots, metrics, question vs decision conversation density"
+      focus: open_questions, open_decisions, media_shelf, metrics
     as admin:
-      purpose: "Multi-panel lead — headshots, metrics, blocker vs question conversation density"
-      focus: media_shelf, metrics, open_blockers, open_questions
+      purpose: "Multi-panel lead — headshots, metrics, question vs decision conversation density"
+      focus: open_questions, open_decisions, media_shelf, metrics
 
 workspace my_work "My Work":
   access: authenticated

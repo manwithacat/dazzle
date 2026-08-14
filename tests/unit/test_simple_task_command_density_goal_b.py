@@ -39,8 +39,10 @@ def test_admin_dashboard_dual_attention_before_conversation() -> None:
     assert block.index("urgent_tasks:") < block.index("overdue_tasks:")
     assert block.index("overdue_tasks:") < block.index("composition:")
     assert block.index("composition:") < block.index("open_blockers:")
-    assert block.index("open_questions:") < block.index("live_conversation:")
-    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
+    assert block.index("open_questions:") < block.index("open_decisions:")
+    assert block.index("open_decisions:") < block.index("composition:")
+    assert block.index("composition:") < block.index("open_blockers:")
+    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
     assert "Multi-panel" in block or "multi-panel" in block.lower()
 
 
@@ -58,7 +60,7 @@ def test_team_overview_dual_attention_before_conversation() -> None:
     assert block.index("plate_by_person:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     # Cycle 1951: ≤4 focus; cycle 2058 conversation density on lead still.
-    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
+    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
     assert "needs_review:" in block
     assert "plate_by_person:" in block
     assert "composition:" in block

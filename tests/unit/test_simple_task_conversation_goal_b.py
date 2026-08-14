@@ -52,19 +52,41 @@ def test_hero_desks_declare_live_conversation_spine() -> None:
 
 
 def test_admin_declares_blocker_question_density() -> None:
-    """Cycle 2058: Linear/Asana dual conversation trails before mixed live thread."""
+    """Cycle 2058 blockers+questions; cycle 2074 decision_question_density."""
     block = _workspace_block("admin_dashboard")
     assert "open_blockers:" in block
     assert "open_questions:" in block
+    assert "open_decisions:" in block
     assert "note_kind = blocker" in block
     assert "note_kind = question" in block
+    assert "note_kind = decision" in block
     assert "blockers: count(TaskComment where note_kind = blocker)" in block
     assert "questions: count(TaskComment where note_kind = question)" in block
+    assert "decisions: count(TaskComment where note_kind = decision)" in block
+    assert block.index("open_questions:") < block.index("open_decisions:")
+    assert block.index("open_decisions:") < block.index("media_shelf:")
+    assert block.index("media_shelf:") < block.index("metrics:")
+    assert block.index("open_decisions:") < block.index("composition:")
     assert block.index("composition:") < block.index("open_blockers:")
-    assert block.index("open_blockers:") < block.index("open_questions:")
-    assert block.index("open_questions:") < block.index("live_conversation:")
-    assert "focus: media_shelf, metrics, open_blockers, open_questions" in block
-    assert "blocker_question_density" in block.lower() or "blocker vs question" in block.lower()
+    assert block.index("open_blockers:") < block.index("live_conversation:")
+    assert "focus: open_questions, open_decisions, media_shelf, metrics" in block
+    assert (
+        "decision_question_density" in block.lower()
+        or "question vs decision" in block.lower()
+        or "blocker_question_density" in block.lower()
+    )
+
+
+def test_open_decisions_filters_exclusive_decision_kind() -> None:
+    """Cycle 2074 recipe decision_question_density — exclusive decision trail."""
+    block = _workspace_block("admin_dashboard")
+    dec = block.split("\n  open_decisions:\n", 1)[1].split("\n  media_shelf:", 1)[0]
+    assert "source: TaskComment" in dec
+    assert "note_kind = decision" in dec
+    assert "display: conversation" in dec
+    assert "limit: 4" in dec
+    assert "note_kind = question" not in dec
+    assert "note_kind = blocker" not in dec
 
 
 def test_task_detail_discussion_uses_conversation_chrome() -> None:
@@ -90,6 +112,7 @@ def test_task_comment_seeds_have_domain_true_copy_and_kinds() -> None:
     assert "note" in kinds
     assert sum(1 for r in rows if r.get("note_kind") == "blocker") >= 2
     assert sum(1 for r in rows if r.get("note_kind") == "question") >= 2
+    assert sum(1 for r in rows if r.get("note_kind") == "decision") >= 2
     for row in rows:
         body = str(row.get("content") or "")
         assert len(body) >= 24, body
