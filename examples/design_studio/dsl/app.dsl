@@ -397,23 +397,57 @@ workspace studio_dashboard "Studio Dashboard":
       purpose: "Multi-panel review home — creatives, dual attention, docs, then critique"
       focus: media_shelf, portfolio, review_pressure, draft_pressure, composition, live_conversation
 
-# Goal B media (cycle 1734): catalog is a visual media shelf — asset preview
-# thumbs must win the fold. Peer tools (Bynder / Frontify / Adobe CC) put
-# pixels first; brand meta is secondary context, not a four-row palette wall.
+# Goal B media (cycle 1734) + peer-pack (cycle 2063): recipe creative_type_density —
+# Bynder / Figma / Frame.io put exclusive logo/icon walls vs photo/illustration
+# walls before a mixed dump (not headshot_shelf or review_pixels_wall re-stack).
 workspace asset_catalog "Asset Catalog":
-  purpose: "Media shelf — asset preview thumbs above fold, then compact brand palette (no metric delta theater)"
+  purpose: "Media shelf — logo/icon vs photo/illustration type density above fold, then brand palette"
   access: persona(admin, designer, reviewer)
-  # Visual media grid FIRST — preview_url thumbs + type · name titles.
+
+  media_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      assets: count(Asset)
+      logos: count(Asset where asset_type = logo or asset_type = icon_glyph)
+      photos: count(Asset where asset_type = photo or asset_type = illustration)
+      in_review: count(Asset where status = review)
+    tones:
+      assets: accent
+      logos: positive
+      photos: accent
+      in_review: warning
+
+  # Dual type density — exclusive soft logo/icon vs hard photo/illustration walls.
+  logo_icons:
+    source: Asset
+    filter: asset_type = logo or asset_type = icon_glyph
+    display: grid
+    sort: created_at desc
+    limit: 6
+    action: asset_detail
+    empty: "No logo or icon previews — seed mark assets with preview thumbs"
+
+  photo_stills:
+    source: Asset
+    filter: asset_type = photo or asset_type = illustration
+    display: grid
+    sort: created_at desc
+    limit: 6
+    action: asset_detail
+    empty: "No photo or illustration previews yet"
+
+  # Mixed shelf under dual type walls (scroll).
   media_grid:
     source: Asset
     display: grid
     sort: created_at desc
-    limit: 12
+    limit: 8
     action: asset_detail
     empty: "No assets yet — upload or seed previews"
+
   # Goal B media recipe brand_swatch_wall (cycle 1923): Brand entity-fallback
-  # columns include logo + Primary/Secondary/Accent color types (salience keeps
-  # palette chips) so DAM buyers scan swatches after creatives — not name shells.
+  # columns include logo + Primary/Secondary/Accent color types.
   brand_palette:
     source: Brand
     display: queue
@@ -421,6 +455,7 @@ workspace asset_catalog "Asset Catalog":
     limit: 4
     action: brand_detail
     empty: "No brands yet — seed palette swatches on brand records"
+
   review_queue:
     source: Asset
     filter: status = review
@@ -428,6 +463,7 @@ workspace asset_catalog "Asset Catalog":
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
+
   pipeline_board:
     source: Asset
     filter: status = draft or status = review or status = approved
@@ -436,8 +472,8 @@ workspace asset_catalog "Asset Catalog":
     sort: updated_at asc
     action: asset_edit
     empty: "No assets in the pipeline"
-  # Goal B empty_region_honesty (cycle 1856): host bar_chart dogfood under fold
-  # on the DAM catalog (not on every secondary pressure desk).
+
+  # Goal B empty_region_honesty (cycle 1856): host bar_chart dogfood under fold.
   status_mix:
     source: Asset
     display: bar_chart
@@ -445,7 +481,7 @@ workspace asset_catalog "Asset Catalog":
     aggregate:
       count: count(Asset)
     empty: "No assets yet"
-  # Timeline dogfood under fold — secondary desks stay pulse+queues only.
+
   recent_activity:
     source: Asset
     sort: updated_at desc
@@ -453,16 +489,17 @@ workspace asset_catalog "Asset Catalog":
     display: timeline
     action: asset_detail
     empty: "No asset activity yet"
+
   ux:
     as designer:
-      purpose: "See asset preview thumbs above fold before brand palette"
-      focus: media_grid, brand_palette, review_queue
+      purpose: "Logo/icon vs photo/illustration type density before brand palette"
+      focus: media_pulse, logo_icons, photo_stills, brand_palette
     as admin:
-      purpose: "Media shelf first — previews, then brand identity"
-      focus: media_grid, brand_palette, review_queue
+      purpose: "Creative type density first — dual media walls, then brand identity"
+      focus: media_pulse, logo_icons, photo_stills, brand_palette
     as reviewer:
-      purpose: "Scan creatives as pixels before brand meta"
-      focus: media_grid, brand_palette, review_queue
+      purpose: "Scan dual type media walls before brand meta"
+      focus: media_pulse, logo_icons, photo_stills, brand_palette
 
 # Goal B media: brand desk is asset media shelf first, then brand swatch wall.
 # empty_region_honesty (cycle 1856): drop asset_trail + campaign_mix thrash —

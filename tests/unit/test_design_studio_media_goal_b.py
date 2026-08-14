@@ -21,17 +21,28 @@ def _workspace_block(name: str) -> str:
 
 
 def test_asset_catalog_media_grid_before_brand_palette() -> None:
-    """Peer DAM tools put creative thumbs above brand meta walls."""
+    """Peer DAM tools put dual type media walls above brand meta (cycle 2063)."""
     block = _workspace_block("asset_catalog")
-    assert "media_grid:" in block
+    assert "logo_icons:" in block
+    assert "photo_stills:" in block
+    assert "asset_type = logo or asset_type = icon_glyph" in block
+    assert "asset_type = photo or asset_type = illustration" in block
     assert "display: grid" in block
     assert "brand_palette:" in block
+    assert "media_pulse:" in block
+    assert block.index("logo_icons:") < block.index("photo_stills:")
+    assert block.index("photo_stills:") < block.index("media_grid:")
     assert block.index("media_grid:") < block.index("brand_palette:")
-    assert "focus: media_grid, brand_palette, review_queue" in block
+    assert "focus: media_pulse, logo_icons, photo_stills, brand_palette" in block
+    assert "creative_type_density" in block.lower() or "logo/icon vs photo" in block.lower()
     # Cap palette so it cannot re-eat the fold after reorder
     assert "limit: 4" in block
-    # brand_swatch_wall: empty copy names palette swatches for buyers
     assert "swatch" in block.lower() or "palette" in block.lower()
+    rows = [json.loads(line) for line in ASSET_SEEDS.read_text().splitlines() if line.strip()]
+    logos = [r for r in rows if r.get("asset_type") in ("logo", "icon_glyph")]
+    photos = [r for r in rows if r.get("asset_type") in ("photo", "illustration")]
+    assert len(logos) >= 2
+    assert len(photos) >= 2
 
 
 def test_brand_desk_declares_asset_media_shelf() -> None:

@@ -75,7 +75,7 @@ records, and that grant is itself an explicit, auditable declaration.
 - **Brand Desk** — brand media path: asset preview grid (logo/photo/illustration
   thumbs above fold), brand swatch wall (logo + Primary/Secondary/Accent palette
   chips — peer Figma/Bynder identity, not name-only queues), and active campaign
-  queue (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog).
+  queue (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog (logo/icon vs photo/illustration type density — cycle 2063)).
 - **Review Desk** — multi-panel review home (media + command_density + document):
   in-review creative pixel wall first (status=review Asset preview_url grid —
   cycle 2048 peer Frame.io/Figma review_pixels_wall, not media_shelf re-stack),
@@ -153,4 +153,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:7d006f070147922faee5c501b4fd19a65cd16f74cc559769af3ba770f4ff7b54 -->
+<!-- dazzle-spec-brief: sha256:ea439346d9be8455cec665f44a7b9ae145162dc01f75b38c7d74d778132208e9 -->
