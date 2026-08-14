@@ -1316,7 +1316,11 @@ workspace manager_ops "Manager Ops":
   # into soft at-risk vs hard breached stage queues (recipe sla_stage_density;
   # peer Zendesk/Front SLA stage boards — not one mixed pressure list, not
   # critical/unassigned dual_attention re-stack alone, not conversation tile thrash).
-  purpose: "Multi-panel support ops — headshots, SLA stage density (at-risk vs breached), dual queues, needs-reply ball, waiver documents, live conversation"
+  # Goal B command_density peer upgrade (cycle 2070): exclusive open vs
+  # in_progress lifecycle stage boards (recipe status_stage_density; peer
+  # Zendesk/Front status views — not sla_stage_density re-stack, not
+  # critical/unassigned dual_attention alone, not conversation trail thrash).
+  purpose: "Multi-panel support ops — headshots, open vs in-progress status stages, SLA stage density, dual queues, needs-reply ball, waiver documents, live conversation"
   stage: "command_center"
   access: persona(manager)
 
@@ -1408,6 +1412,29 @@ workspace manager_ops "Manager Ops":
       internal_notes: accent
       documents: accent
 
+  # Live status stage density (cycle 2070) — peer Zendesk/Front put exclusive
+  # open (intake) vs in_progress (active work) boards before SLA stages and
+  # priority dual attention (recipe status_stage_density; not sla_stage_density
+  # re-stack, not critical/unassigned dual_attention alone). Caps keep stage
+  # panels + dual queues + composition sharing the fold.
+  open_stage_queue:
+    source: Ticket
+    filter: status = open
+    sort: priority desc, created_at asc
+    limit: 4
+    display: queue
+    action: ticket_edit
+    empty: "No open tickets — intake is empty or everything is already in progress"
+
+  in_progress_stage_queue:
+    source: Ticket
+    filter: status = in_progress
+    sort: priority desc, created_at asc
+    limit: 4
+    display: queue
+    action: ticket_edit
+    empty: "No in-progress tickets — nothing is actively owned yet"
+
   # Live SLA stage density (cycle 2054) — peer Zendesk/Front put soft at-risk
   # vs hard breached as separate boards before priority dual attention (not one
   # mixed breach_risk list; recipe sla_stage_density). Caps keep stage panels
@@ -1437,6 +1464,10 @@ workspace manager_ops "Manager Ops":
       - title: "Ticket response SLA"
         caption: "Warning 2h · breach 4h · critical 8h (business hours)"
         icon: "clock"
+        state: accent
+      - title: "Status stage density"
+        caption: "Open intake vs in-progress active work as exclusive stage boards before SLA pressure"
+        icon: "layout-list"
         state: accent
       - title: "SLA stage density"
         caption: "Soft at-risk vs hard breached queues surface before priority dual attention"
@@ -1832,8 +1863,8 @@ workspace manager_ops "Manager Ops":
 
   ux:
     as manager:
-      purpose: "Multi-panel support ops — SLA stage density (at-risk vs breached), breach needs-reply speech, thankful needs-reply, portal awaiting-customer, phone, chat, email, critical/raised, needs-reply, dual queues"
-      focus: media_shelf, team_metrics, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation
+      purpose: "Multi-panel support ops — status stage density (open vs in-progress), SLA stage density, breach needs-reply speech, thankful needs-reply, portal awaiting-customer, phone, chat, email, critical/raised, needs-reply, dual queues"
+      focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, breached_queue, critical_queue, unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation
 
   # Goal B empty_region_honesty (cycle 1850) + acceptance dig 20260810:
   # funnel_chart + ticket timeline below the fold still lazy-fetched every

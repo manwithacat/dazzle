@@ -51,10 +51,13 @@ escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: a
 multi-panel command home with an agent **media shelf** (headshot thumbs) first,
 then team counts (including unassigned, **at-risk / breached SLA** pressure, and
-document volume), **SLA stage density** dual queues (soft **at-risk** vs hard
-**breached**, fold-capped — cycle 2054 `sla_stage_density`; peer Zendesk/Front
-stage boards, not one mixed breach-risk list), an SLA readiness strip, dual
-attention queues (critical + unassigned, fold-capped), a **composition** queue
+document volume), **status stage density** dual queues (**open** intake vs
+**in_progress** active work, fold-capped — cycle 2070 `status_stage_density`;
+peer Zendesk/Front status views, not SLA-only boards), **SLA stage density** dual
+queues (soft **at-risk** vs hard **breached**, fold-capped — cycle 2054
+`sla_stage_density`; peer Zendesk/Front stage boards, not one mixed breach-risk
+list), an SLA readiness strip, dual attention queues (critical + unassigned,
+fold-capped), a **composition** queue
 of named SLA waiver documents, and a capped live conversation trail — not
 conversation-only above the fold, not a status-funnel / secondary ticket-trail
 thrash pair under the fold, and not an empty personal assigned kanban. From the
@@ -98,7 +101,7 @@ queue, a kanban board of open statuses, and a recent-comment **timeline** (dated
 stream, not a flat list).
 **Manager Ops** is the manager home for multi-panel support ops — agent
 **media shelf** first, then metrics (critical, unassigned, at-risk, breached,
-conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, critical awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, thankful needs reply, thankful awaiting customer, priority needs reply, breach needs reply, breach awaiting customer, internal notes, documents), **SLA stage density** dual queues (**at-risk** soft pressure + **breached** hard failures, limit 4 each; cycle 2054 `sla_stage_density` — not one mixed breach-risk list), SLA readiness, dual attention queues (critical +
+conversation, needs reply, critical escalations, critical needs reply, raised needs reply, raised escalations, frustrated speech, frustrated needs reply, frustrated awaiting customer, raised awaiting customer, critical awaiting customer, urgent speech, urgent needs reply, urgent awaiting customer, thankful needs reply, thankful awaiting customer, priority needs reply, breach needs reply, breach awaiting customer, internal notes, documents), **status stage density** dual queues (**open** + **in_progress**, limit 4 each; cycle 2070 `status_stage_density`), **SLA stage density** dual queues (**at-risk** soft pressure + **breached** hard failures, limit 4 each; cycle 2054 `sla_stage_density` — not one mixed breach-risk list), SLA readiness, dual attention queues (critical +
 unassigned, limit 4 each), open **SLA waiver composition** (limit 4), a capped
 **needs reply** ball (limit 4), an **urgent needs reply** trail of SLA time-pressure notes waiting on agents
 (limit 4; cycle 2003), an **urgent awaiting customer** trail of SLA time-pressure notes parked on customers
@@ -228,4 +231,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:b704bc899d63ca5a32302596d3025488af4cef945dc7ee207e6981143f489b9b -->
+<!-- dazzle-spec-brief: sha256:bb51d8c4bbd20a17b65ac811744aeaedc3e648d1abc7a5b6b5892b8a3976bd46 -->

@@ -10,11 +10,12 @@ APP = ROOT / "examples/support_tickets/dsl/app.dsl"
 TICKET_SEEDS = ROOT / "examples/support_tickets/dsl/seeds/demo_data/Ticket.jsonl"
 
 MANAGER_FOCUS = (
-    "focus: media_shelf, team_metrics, at_risk_queue, breached_queue, critical_queue, "
-    "unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, priority_awaiting_customer, "
-    "breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, "
-    "portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, "
-    "critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
+    "focus: media_shelf, team_metrics, open_stage_queue, in_progress_stage_queue, at_risk_queue, "
+    "breached_queue, critical_queue, unassigned_queue, needs_reply, medium_needs_reply, priority_needs_reply, "
+    "priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, "
+    "thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, "
+    "email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, "
+    "frustrated_awaiting_customer, live_conversation"
 )
 
 
@@ -41,8 +42,13 @@ def test_manager_ops_declares_dual_attention_before_conversation() -> None:
     assert "unassigned_queue:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    # Order: metrics → soft at-risk → hard breached → readiness → critical → unassigned → composition → conversation.
-    assert block.index("team_metrics:") < block.index("at_risk_queue:")
+    # Order: metrics → open/in_progress status stages → soft at-risk → hard breached →
+    # readiness → critical → unassigned → composition → conversation.
+    assert "open_stage_queue:" in block
+    assert "in_progress_stage_queue:" in block
+    assert block.index("team_metrics:") < block.index("open_stage_queue:")
+    assert block.index("open_stage_queue:") < block.index("in_progress_stage_queue:")
+    assert block.index("in_progress_stage_queue:") < block.index("at_risk_queue:")
     assert block.index("at_risk_queue:") < block.index("breached_queue:")
     assert block.index("breached_queue:") < block.index("sla_readiness:")
     assert block.index("sla_readiness:") < block.index("critical_queue:")
@@ -60,7 +66,10 @@ def test_manager_ops_caps_attention_queues_for_fold_share() -> None:
     assert MANAGER_FOCUS in block
     assert "Multi-panel support ops" in block or "multi-panel" in block.lower()
     assert (
-        "sla_stage_density" in block
+        "status_stage_density" in block
+        or "Status stage density" in block
+        or "open vs in-progress" in block.lower()
+        or "sla_stage_density" in block
         or "SLA stage density" in block
         or "at-risk vs breached" in block.lower()
     )
@@ -121,3 +130,32 @@ def test_ticket_seeds_span_sla_states() -> None:
     hard = [r for r in pressure if r.get("sla_state") == "breached"]
     assert len(soft) >= 1, "at_risk_queue needs ≥1 open soft-SLA seed"
     assert len(hard) >= 1, "breached_queue needs ≥1 open hard-SLA seed"
+
+
+def test_status_stage_density_queues_filter_open_and_in_progress() -> None:
+    """Cycle 2070 recipe status_stage_density — exclusive open vs in_progress boards."""
+    block = _manager_ops_block()
+    open_q = block.split("\n  open_stage_queue:\n", 1)[1].split("\n  in_progress_stage_queue:", 1)[
+        0
+    ]
+    active = block.split("\n  in_progress_stage_queue:\n", 1)[1].split("\n  at_risk_queue:", 1)[0]
+    assert "source: Ticket" in open_q
+    assert "status = open" in open_q
+    assert "display: queue" in open_q
+    assert "limit: 4" in open_q
+    assert "source: Ticket" in active
+    assert "status = in_progress" in active
+    assert "display: queue" in active
+    assert "limit: 4" in active
+    # Exclusive lifecycle stages (not OR-combined status list).
+    assert "status = in_progress" not in open_q
+    assert "status = open" not in active
+    assert "status_stage_density" in block or "open vs in-progress" in block.lower()
+
+
+def test_ticket_seeds_span_open_and_in_progress() -> None:
+    rows = [json.loads(line) for line in TICKET_SEEDS.read_text().splitlines() if line.strip()]
+    open_n = sum(1 for r in rows if r.get("status") == "open")
+    active_n = sum(1 for r in rows if r.get("status") == "in_progress")
+    assert open_n >= 1, "open_stage_queue needs ≥1 open ticket seed"
+    assert active_n >= 1, "in_progress_stage_queue needs ≥1 in_progress ticket seed"
