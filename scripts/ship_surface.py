@@ -226,6 +226,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_via_1603.py::test_support_tickets_sla_waiver_list_dual_open",
     # support_tickets Goal B empty_region (cycle 1812 agent_dashboard + my_tickets prune)
     "tests/unit/test_support_tickets_empty_region_goal_b.py",
+    # support_tickets Goal B media (cycle 1883 headshot shelf; cycle 2044 pin lag
+    # after priority_awaiting_customer focus strip ×3 Pythons — conversation/
+    # command_density/empty_region were already in ship-surface; media was not)
+    "tests/unit/test_support_tickets_media_goal_b.py",
     # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)

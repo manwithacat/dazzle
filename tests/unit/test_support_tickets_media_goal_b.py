@@ -51,9 +51,10 @@ def test_manager_ops_media_shelf_first() -> None:
     assert block.index("media_shelf:") < block.index("critical_queue:")
     # Fold pin tracks product intent (cycle 2001: raised_needs_reply over
     # critical_needs_reply on the manager focus strip). media_shelf stays first.
+    # Cycle 2042: priority_awaiting_customer (high|critical × ball=customer).
     assert (
         "focus: media_shelf, team_metrics, breach_risk, critical_queue, "
-        "unassigned_queue, needs_reply, priority_needs_reply, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
+        "unassigned_queue, needs_reply, priority_needs_reply, priority_awaiting_customer, breach_awaiting_customer, breach_needs_reply, thankful_needs_reply, thankful_awaiting_customer, portal_awaiting_customer, phone_awaiting_customer, chat_awaiting_customer, email_awaiting_customer, critical_awaiting_customer, raised_awaiting_customer, frustrated_awaiting_customer, live_conversation"
         in block
     )
 
