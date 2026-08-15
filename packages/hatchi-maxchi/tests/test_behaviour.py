@@ -857,6 +857,32 @@ def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-un
     assert len(_grid_names(page)) == 4, "clearing search restores every row (page 1)"
 
 
+def test_grid_search_whitespace_does_not_invent_q(page) -> None:  # type: ignore[no-untyped-def]
+    """Whitespace-only q must not invent a search filter (cycle 2125).
+
+    Same honesty class as search-box empty query (2123). After a real
+    hit, spaces restore every row and hx-get must not carry q=%20.
+    """
+    goto_part(page, "grid")
+    page.fill("[data-grid-search]", "chen")
+    page.wait_for_timeout(350)
+    assert _grid_names(page) == ["Mia"], "non-empty query must still exchange"
+
+    page.evaluate(
+        """() => {
+          const i = document.querySelector('[data-grid-search]');
+          i.value = '   ';
+          i.dispatchEvent(new Event('input', {bubbles: true}));
+        }"""
+    )
+    page.wait_for_timeout(350)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    qs = hx.split("?", 1)[-1] if "?" in hx else ""
+    assert "q=" not in qs, f"whitespace must not send q=: {hx}"
+    assert len(_grid_names(page)) == 4, "whitespace search must restore every row"
+    page.reload()
+
+
 def _bulk_confirm_delete(page) -> None:  # type: ignore[no-untyped-def]
     """Click the bulk Delete and approve the designed confirm dialog."""
     page.click(".bulk-delete")

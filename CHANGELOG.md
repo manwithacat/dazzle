@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Grid search whitespace invented a `q=` filter (cycle 2125)** —
+  `dz-grid.js` now trims the search box before composing `q=` / the
+  matched-set scope key. Spaces after a real hit restore the unfiltered
+  rows (no `q=%20`); whitespace-only keystrokes on an empty box do not
+  refetch. Same honesty class as search-box empty query (2123).
 - **Search-box coaching restore XSS (CodeQL #223, cycle 2124)** —
   `dz-search-box.js` no longer stores coaching `outerHTML` in a data
   attribute and writes it back via `innerHTML` (`js/xss-through-dom`).

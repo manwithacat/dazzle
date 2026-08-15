@@ -2799,10 +2799,12 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *                  request query is rebuilt from ALL current DOM state.
  *   - search:      `[data-grid-search]` (an input) adds `q=` on input,
  *                  debounced (`data-grid-debounce`, default 250ms). Composes
- *                  with sort + filter into the same query. NB `q`, `sort`, `dir`,
- *                  `page`, `page_size` (query keys) and `action`, `selected_ids`,
- *                  `all_matching_selected`, `excluded_ids` (bulk-payload keys) are
- *                  reserved — don't use them as a `data-grid-filter` value.
+ *                  with sort + filter into the same query. Empty / whitespace
+ *                  is no `q=` (do not invent a spaces filter — cycle 2125).
+ *                  NB `q`, `sort`, `dir`, `page`, `page_size` (query keys) and
+ *                  `action`, `selected_ids`, `all_matching_selected`,
+ *                  `excluded_ids` (bulk-payload keys) are reserved — don't use
+ *                  them as a `data-grid-filter` value.
  *   - bulk:        `[data-grid-bulk-action="<action>"]` (a button, usually
  *                  with `hx-post` + `hx-confirm`) — on the config-request
  *                  event (htmx-4 `htmx:config:request` / legacy
@@ -2915,12 +2917,19 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     root.removeAttribute("data-grid-scope");
   }
 
+  // Effective search term: trim so spaces do not invent a q= filter
+  // (same honesty class as search-box empty query, cycle 2123).
+  function searchTerm(el) {
+    return el && el.value ? String(el.value).trim() : "";
+  }
+
   // The matched-set-DEFINING part of the query: search + filters. Sort and
   // page reorder/window the SAME set, so they're not part of the scope.
   function scopeKey(root) {
     var parts = [];
     var search = root.querySelector("[data-grid-search]");
-    if (search && search.value) parts.push("q=" + search.value);
+    var term = searchTerm(search);
+    if (term) parts.push("q=" + term);
     var filters = root.querySelectorAll("[data-grid-filter]");
     for (var i = 0; i < filters.length; i++) {
       var k = filters[i].getAttribute("data-grid-filter");
@@ -3047,8 +3056,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   function buildQuery(root) {
     var q = [];
     var search = root.querySelector("[data-grid-search]");
-    if (search && search.value) {
-      q.push("q=" + encodeURIComponent(search.value));
+    var term = searchTerm(search);
+    if (term) {
+      q.push("q=" + encodeURIComponent(term));
     }
     var s = readSort(root);
     if (s) {
@@ -3199,7 +3209,12 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       page: "1",
     };
     var search = root.querySelector("[data-grid-search]");
-    if (search) search.value = sp.has("q") ? sp.get("q") : init.search;
+    if (search) {
+      search.value = sp.has("q")
+        ? String(sp.get("q") || "").trim()
+        : init.search;
+      search._dzLastQ = searchTerm(search);
+    }
     var sort = sp.get("sort");
     var dir = sp.get("dir");
     if (dir !== "asc" && dir !== "desc") dir = null;
@@ -3281,6 +3296,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (t._dzSearchTimer) clearTimeout(t._dzSearchTimer);
     t._dzSearchTimer = setTimeout(function () {
       t._dzSearchTimer = null;
+      var next = searchTerm(t);
+      // Whitespace-only / net-unchanged term: do not refetch. Spaces after
+      // "chen" still clear the filter (next === "" !== last).
+      if ((t._dzLastQ || "") === next) return;
+      t._dzLastQ = next;
       // A search that CHANGES the matched set drops all-matching — a
       // selection over the old query must not silently apply to the new one.
       // (Scope-compared, so a net-unchanged keystroke keeps the mode.)
