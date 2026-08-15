@@ -7,6 +7,10 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Fidelity required-check on hidden carriers (cycle 2117)** — extracted
+  `_check_required_attributes` (complexity ratchet after 2116) and require a
+  visible sibling `required` when the named control is `type=hidden`. Hidden
+  skip no longer conceals a missing visible gate.
 - **Search-select / rich-text `required` on hidden carriers (cycle 2116)** —
   same class as file-upload 2115. Typeahead `required` lives on the visible
   combobox; rich-text payload is a visually-hidden `<textarea>` so native

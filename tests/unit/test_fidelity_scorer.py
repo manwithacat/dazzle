@@ -1219,3 +1219,55 @@ class TestHiddenRequiredIsIgnored:
         assert not [
             g for g in gaps if g.category == FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE
         ]
+
+    def test_hidden_carrier_without_visible_required_is_a_gap(self) -> None:
+        """Hidden skip must not hide a missing visible `required` (2117)."""
+        surface = _make_surface(
+            name="ticket_create",
+            entity_ref="Ticket",
+            mode=SurfaceMode.CREATE,
+            field_names=["company"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="company",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=80),
+                    modifiers=[FieldModifier.REQUIRED],
+                )
+            ]
+        )
+        html = """
+        <form hx-post="/tickets">
+          <div data-dz-widget="search_select">
+            <input type="hidden" name="company" value="">
+            <input type="text">
+          </div>
+        </form>
+        """
+        gaps = _check_semantic_fidelity(surface, entity, parse_html(html))
+        assert [g for g in gaps if g.category == FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE]
+
+    def test_visible_named_without_required_is_a_gap(self) -> None:
+        surface = _make_surface(
+            name="ticket_create",
+            entity_ref="Ticket",
+            mode=SurfaceMode.CREATE,
+            field_names=["title"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="title",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=80),
+                    modifiers=[FieldModifier.REQUIRED],
+                )
+            ]
+        )
+        html = """
+        <form hx-post="/tickets">
+          <input type="text" name="title">
+        </form>
+        """
+        gaps = _check_semantic_fidelity(surface, entity, parse_html(html))
+        assert [g for g in gaps if g.category == FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE]

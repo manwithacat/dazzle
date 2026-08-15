@@ -448,6 +448,82 @@ def _check_detail_structure(
 # ── Semantic checks ───────────────────────────────────────────────────
 
 _SNAKE_RE = re.compile(r"^[a-z]+(_[a-z]+)+$")
+_FORM_CONTROL_TAGS = frozenset({"input", "textarea", "select"})
+
+
+def _is_hidden_control(el: HTMLElement) -> bool:
+    """`type=hidden` is barred from constraint validation (invalid HTML)."""
+    return (el.get_attr("type") or "").lower() == "hidden"
+
+
+def _sibling_control_groups(root: HTMLElement) -> list[list[HTMLElement]]:
+    """Immediate-parent groups of input/textarea/select (widget siblings)."""
+    groups: list[list[HTMLElement]] = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        kids = [c for c in node.children if c.tag in _FORM_CONTROL_TAGS]
+        if kids:
+            groups.append(kids)
+        stack.extend(node.children)
+    return groups
+
+
+def _visible_required_coverage(
+    groups: list[list[HTMLElement]],
+) -> tuple[set[str], set[str]]:
+    """Return (need, ok) field names for the visible-required rule.
+
+    A name *needs* a visible `required` when a named visible control exists
+    or a hidden carrier shares a parent with visible siblings. Hidden
+    carriers themselves never satisfy the check (2115–2117).
+    """
+    need: set[str] = set()
+    ok: set[str] = set()
+    for group in groups:
+        visible = [c for c in group if not _is_hidden_control(c)]
+        has_req = any(c.has_attr("required") for c in visible)
+        for ctrl in visible:
+            name = ctrl.get_attr("name")
+            if name:
+                need.add(name)
+                if ctrl.has_attr("required"):
+                    ok.add(name)
+        hidden_names = {
+            c.get_attr("name") for c in group if _is_hidden_control(c) and c.get_attr("name")
+        }
+        if visible:
+            need.update(hidden_names)
+        if has_req:
+            ok.update(hidden_names)
+    return need, ok
+
+
+def _check_required_attributes(
+    surface: SurfaceSpec,
+    entity: EntitySpec | None,
+    root: HTMLElement,
+) -> list[FidelityGap]:
+    """Required fields must carry `required` on a *visible* control."""
+    if entity is None or surface.mode not in (SurfaceMode.CREATE, SurfaceMode.EDIT):
+        return []
+    required = {f.name for f in entity.fields if FieldModifier.REQUIRED in f.modifiers}
+    names = required & set(_field_names_from_surface(surface))
+    need, ok = _visible_required_coverage(_sibling_control_groups(root))
+    return [
+        FidelityGap(
+            category=FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE,
+            dimension="semantic",
+            severity="minor",
+            surface_name=surface.name,
+            target=f"input[{name}]",
+            expected="required attribute",
+            actual="not present",
+            recommendation=f"Add 'required' attribute to '{name}' input.",
+        )
+        for name in names
+        if name in need and name not in ok
+    ]
 
 
 def _check_semantic_fidelity(
@@ -476,32 +552,7 @@ def _check_semantic_fidelity(
                 )
             )
 
-    # Check required attributes on inputs
-    if entity and surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
-        required_fields = {f.name for f in entity.fields if FieldModifier.REQUIRED in f.modifiers}
-        present_fields = _field_names_from_surface(surface)
-        required_in_surface = required_fields & set(present_fields)
-
-        inputs = root.find_all("input") + root.find_all("textarea") + root.find_all("select")
-        for inp in inputs:
-            # Hidden inputs are barred from constraint validation — `required`
-            # there is invalid HTML (file-upload 2115, search-select/richtext 2116).
-            if (inp.get_attr("type") or "").lower() == "hidden":
-                continue
-            name = inp.get_attr("name")
-            if name in required_in_surface and not inp.has_attr("required"):
-                gaps.append(
-                    FidelityGap(
-                        category=FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE,
-                        dimension="semantic",
-                        severity="minor",
-                        surface_name=surface.name,
-                        target=f"input[{name}]",
-                        expected="required attribute",
-                        actual="not present",
-                        recommendation=f"Add 'required' attribute to '{name}' input.",
-                    )
-                )
+    gaps.extend(_check_required_attributes(surface, entity, root))
 
     # Check design tokens in style
     styles = root.find_all("style")
