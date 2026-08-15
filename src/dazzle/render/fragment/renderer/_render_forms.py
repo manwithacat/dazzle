@@ -539,16 +539,18 @@ class _RenderFormsMixin:
         name = ctx.escape_attr(c.name)
         init_attr = ctx.escape_attr(c.initial_value)
         required_attr = ' required aria-required="true"' if c.required else ""
-        # State-in-DOM (Tier F4e): the hex readout SSRs the initial value
-        # and dz-color.js mirrors future input — the x-data island retired
-        # with the Alpine runtime.
+        # State-in-DOM (Tier F4e): the hex companion SSRs the initial
+        # value and dz-color.js mirrors both ways. Leftover junk in the
+        # hex field must not invent a colour (cycle 2133). Hex has no
+        # name — the native swatch is the submitted value.
         # HM color DOM_CONTRACT root is [data-dz-color-group] (#1578).
         inner = (
             f'<div class="dz-form-color-group" data-dz-color-group>'
             f'<input type="color" id="field-{name}" name="{name}" '
             f'class="dz-form-color-input" value="{init_attr}"{required_attr}>'
-            '<span class="dz-form-color-hex" aria-hidden="true">'
-            f"{ctx.escape(c.initial_value)}</span>"
+            f'<input class="dz-form-color-hex" type="text" '
+            f'spellcheck="false" autocomplete="off" '
+            f'aria-label="Hex colour" value="{init_attr}">'
             "</div>"
         )
         return self._widget_label(ctx.escape(c.label), name, inner)

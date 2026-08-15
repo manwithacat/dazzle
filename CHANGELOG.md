@@ -7,6 +7,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Colour leftover hex invented a committed swatch (cycle 2133)** —
+  the hex companion is now an editable text field (no `name` — the
+  native `type=color` swatch is still the submitted value). Leftover
+  junk (`#3b82f6zzz`, `red`, `rgb(…)`) fails custom validity on both
+  controls and does not write the swatch, so submit cannot post the
+  previous colour as if the leftover were accepted. Blur keeps leftover
+  visible; empty hex restores from the swatch; valid 3/6-digit hex
+  (optional `#`) normalizes to `#rrggbb`. Same honesty class as money
+  leftover junk inventing 0 (2121) and tags leftover token (2131).
 - **Tags leftover typed token vanished on blur (cycle 2131)** —
   `dz-tags.js` now commits a leftover (trimmed) token on `focusout`, so
   tab-away / click-away submits what the user typed instead of discarding

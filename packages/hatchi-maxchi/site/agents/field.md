@@ -25,7 +25,7 @@ The label + control + help + error triad as one accessible unit. Error state der
   </div>
   <div class="form-field">
     <label class="form-label" for="hm-field-color">Brand colour</label>
-    <div class="form-color-group" data-color-group><input class="form-color-input" id="hm-field-color" type="color" value="#3b82f6"><span class="form-color-hex">#3b82f6</span></div>
+    <div class="form-color-group" data-color-group><input class="form-color-input" id="hm-field-color" type="color" value="#3b82f6"><input class="form-color-hex" type="text" spellcheck="false" autocomplete="off" aria-label="Hex colour" value="#3b82f6"></div>
   </div>
 </div>
 ```
@@ -117,7 +117,15 @@ __all__ = ["DOM_CONTRACT"]
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: field (extension: dz-color) — colour input group."""
+"""HYPERPART: field (extension: dz-color) — colour input group.
+
+Leftover honesty (cycle 2133): the hex companion is an editable text
+input (no ``name`` — the native ``type=color`` swatch is the submitted
+value). Typed leftover junk (``#3b82f6zzz``, ``red``, ``rgb(…)``) must
+not invent a colour — the swatch stays put and both controls fail
+custom validity so submit cannot post the previous swatch as if the
+leftover were accepted. Empty hex on blur restores from the swatch.
+"""
 
 from contracts._kit import DomContract, Node
 
@@ -132,7 +140,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch into the hex readout (contract: contracts/color.py). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py (HMC-139).
+Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch and the hex companion (contract: contracts/color.py). Hex leftover junk must not invent a colour (cycle 2133). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py (HMC-139).
 
 ## Source files
 

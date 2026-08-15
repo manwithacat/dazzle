@@ -1602,13 +1602,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<label class="dz-form-label" for="hm-field-color">Brand colour</label>'
             '<div class="dz-form-color-group" data-dz-color-group>'
             '<input class="dz-form-color-input" id="hm-field-color" type="color" value="#3b82f6">'
-            '<span class="dz-form-color-hex">#3b82f6</span>'
+            '<input class="dz-form-color-hex" type="text" spellcheck="false" '
+            'autocomplete="off" aria-label="Hex colour" value="#3b82f6">'
             "</div></div></div>",
             notes="Reuses the <code>dz-form-*</code> family (label / hint / input / error). The "
             "invalid field needs no modifier class — the red border keys off "
             "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads. "
             "The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> "
-            "can mirror the swatch into the hex readout (contract: contracts/color.py). "
+            "can mirror the swatch and the hex companion (contract: contracts/color.py). "
+            "Hex leftover junk must not invent a colour (cycle 2133). "
             "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
             "<code>contracts/color.py</code> (HMC-139).",
             tags=("forms",),

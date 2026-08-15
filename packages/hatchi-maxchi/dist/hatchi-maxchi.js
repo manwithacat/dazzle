@@ -5628,29 +5628,127 @@
 /* ── controllers/color.js ── */
 /* HYPERPART: field */
 /*
- * color — mirror a colour input's value into its hex readout.
+ * color — swatch ↔ hex companion for a colour group.
  *
  * Contract:
  *   - root: `[data-color-group]` (also class `form-color-group`)
- *   - input: `.form-color-input` — on `input`, copy value into the
- *            sibling `.form-color-hex` span
+ *   - swatch: `.form-color-input` — native <input type=color>; this
+ *             is the submitted value (the hex companion has no name)
+ *   - hex: `.form-color-hex` — editable text (legacy: a span readout)
  *
- * Server SSRs the initial readout, so no init pass. Replaces the last
- * Alpine straggler (an inline `x-data { value }` scope on the colour group).
+ * Leftover honesty (cycle 2133): leftover hex junk must not invent
+ * a colour. parseHex("#3b82f6zzz") / "red" / "rgb(…)" is
+ * invalid — the swatch stays put and both controls fail custom
+ * validity so submit cannot post the previous swatch as if the leftover
+ * were accepted. Empty hex on blur restores from the swatch (empty is
+ * not leftover junk). Valid 3/6-digit hex (optional #) writes the
+ * swatch; blur normalizes to #rrggbb.
+ *
+ * Same class as money leftover junk (2121) and tags leftover token
+ * (2131). Server SSRs the initial hex, so no init pass.
  */
 (function () {
   "use strict";
 
-  document.addEventListener("input", function (evt) {
-    var input =
-      evt.target.closest && evt.target.closest(".form-color-input");
-    if (!input) return;
+  function parts(el) {
+    if (!el || !el.closest) return null;
     var group =
-      input.closest("[data-color-group]") ||
-      input.closest(".form-color-group");
-    var hex = group && group.querySelector(".form-color-hex");
-    if (hex) hex.textContent = input.value;
+      el.closest("[data-color-group]") || el.closest(".form-color-group");
+    if (!group) return null;
+    return {
+      group: group,
+      color: group.querySelector(".form-color-input"),
+      hex: group.querySelector(".form-color-hex"),
+    };
+  }
+
+  function hexGet(el) {
+    if (!el) return "";
+    return el.tagName === "INPUT" ? el.value : el.textContent || "";
+  }
+
+  function hexSet(el, val) {
+    if (!el) return;
+    if (el.tagName === "INPUT") el.value = val;
+    else el.textContent = val;
+  }
+
+  // kind: empty | invalid | ok. Named colours / rgb() / leftover
+  // suffix after a hex token are invalid — not a silent parse.
+  function parseHex(raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    if (!s) return { kind: "empty" };
+    var m = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(s);
+    if (!m) return { kind: "invalid" };
+    var h = m[1];
+    if (h.length === 3) {
+      h =
+        h.charAt(0) +
+        h.charAt(0) +
+        h.charAt(1) +
+        h.charAt(1) +
+        h.charAt(2) +
+        h.charAt(2);
+    }
+    return { kind: "ok", value: "#" + h.toLowerCase() };
+  }
+
+  function syncValidity(p, parsed) {
+    var msg =
+      parsed.kind === "invalid" ? "Enter a hex colour like #3b82f6" : "";
+    if (p.hex && p.hex.setCustomValidity) p.hex.setCustomValidity(msg);
+    if (p.color && p.color.setCustomValidity) p.color.setCustomValidity(msg);
+  }
+
+  function applyFromColor(p) {
+    if (!p.color || !p.hex) return;
+    hexSet(p.hex, p.color.value);
+    syncValidity(p, { kind: "ok" });
+  }
+
+  function applyFromHex(p, normalize) {
+    if (!p.hex) return;
+    var parsed = parseHex(hexGet(p.hex));
+    if (parsed.kind === "ok") {
+      if (p.color) p.color.value = parsed.value;
+      if (normalize) hexSet(p.hex, parsed.value);
+    }
+    // leftover junk / empty: do not write the swatch (never invent)
+    syncValidity(p, parsed);
+  }
+
+  document.addEventListener("input", function (evt) {
+    var p = parts(evt.target);
+    if (!p) return;
+    if (evt.target.closest && evt.target.closest(".form-color-input")) {
+      applyFromColor(p);
+      return;
+    }
+    if (
+      p.hex &&
+      (evt.target === p.hex || evt.target.closest(".form-color-hex"))
+    ) {
+      applyFromHex(p, false);
+    }
   });
+
+  document.addEventListener(
+    "blur",
+    function (evt) {
+      var p = parts(evt.target);
+      if (!p || !p.hex || evt.target !== p.hex) return;
+      var parsed = parseHex(hexGet(p.hex));
+      if (parsed.kind === "ok") {
+        applyFromHex(p, true);
+      } else if (parsed.kind === "empty") {
+        applyFromColor(p);
+      } else {
+        // leftover junk stays visible — must not vanish / revert
+        syncValidity(p, parsed);
+      }
+    },
+    true,
+  );
 })();
 
 /* ── controllers/pdf.js ── */

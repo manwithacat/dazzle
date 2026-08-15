@@ -1830,6 +1830,56 @@ def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ig
     assert "Autoplay" in (root.locator("[data-carousel-status]").inner_text() or "")
 
 
+def test_color_leftover_hex_does_not_invent_swatch(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover hex junk must not invent a colour (cycle 2133).
+
+    Same honesty class as money leftover junk (2121) and tags leftover
+    token (2131): typed-but-uncommitted text is not a silent parse.
+    """
+    goto_part(page, "field")
+    group = "#field [data-color-group]"
+    swatch = f"{group} .form-color-input"
+    hex_inp = f"{group} .form-color-hex"
+
+    assert page.input_value(swatch).lower() == "#3b82f6"
+    assert page.input_value(hex_inp).lower() == "#3b82f6"
+
+    page.fill(hex_inp, "not-a-color")
+    assert page.input_value(swatch).lower() == "#3b82f6", "named leftover must not invent a swatch"
+    assert page.eval_on_selector(hex_inp, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(hex_inp, "el => el.validity.customError") is True
+    assert page.eval_on_selector(swatch, "el => el.validity.customError") is True
+
+    page.fill(hex_inp, "#3b82f6zzz")
+    assert page.input_value(swatch).lower() == "#3b82f6", "leftover suffix is not a silent #3b82f6"
+    page.eval_on_selector(hex_inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(hex_inp) == "#3b82f6zzz", "blur must not revert leftover junk"
+    assert page.input_value(swatch).lower() == "#3b82f6"
+
+    page.fill(hex_inp, "f00")
+    assert page.input_value(swatch).lower() == "#ff0000"
+    page.eval_on_selector(hex_inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(hex_inp).lower() == "#ff0000"
+
+    page.eval_on_selector(
+        swatch,
+        "el => { el.value = '#00ff00'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(50)
+    assert page.input_value(hex_inp).lower() == "#00ff00"
+    assert page.eval_on_selector(hex_inp, "el => el.checkValidity()") is True
+
+    page.fill(hex_inp, "")
+    page.eval_on_selector(hex_inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(hex_inp).lower() == "#00ff00", (
+        "empty hex on blur restores from the swatch"
+    )
+    page.reload()
+
+
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
     """dz-slider.js writes the range value into the group's [data-range-value]
     readout on input, scoped to the slider's own group."""

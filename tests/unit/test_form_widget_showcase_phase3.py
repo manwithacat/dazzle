@@ -216,17 +216,35 @@ def test_tags_widget() -> None:
 
 
 def test_color_widget_state_in_dom() -> None:
-    """F4e: the hex readout mirrors the input via the delegated HM
-    dz-color.js (input event → sibling .dz-form-color-hex textContent).
-    The straggler `x-data value` island retired with the Alpine runtime."""
+    """F4e: hex companion mirrors the swatch via delegated HM dz-color.js.
+    Leftover junk must not invent a colour (cycle 2133). The straggler
+    `x-data value` island retired with the Alpine runtime."""
     fd = {"name": "accent", "label": "Accent", "widget": "color", "default": "#ff0000"}
     assert isinstance(_field_to_primitive(fd), ColorField)
     html = _render(fd)
     assert 'type="color"' in html
     assert 'id="field-accent"' in html
     assert "x-model" not in html and "x-data" not in html and "x-text" not in html
-    assert 'value="#ff0000"' in html  # SSR'd input value
-    assert ">#ff0000</span>" in html  # SSR'd hex readout
+    assert 'value="#ff0000"' in html  # SSR'd swatch + hex
+    assert 'class="dz-form-color-hex"' in html
+    assert 'aria-label="Hex colour"' in html
+    assert ">#ff0000</span>" not in html
+
+
+def test_color_controller_leftover_hex_does_not_invent() -> None:
+    """dz-color.js must refuse leftover hex junk (2133)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-color.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseHex" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
 
 
 def test_color_default_fallback() -> None:

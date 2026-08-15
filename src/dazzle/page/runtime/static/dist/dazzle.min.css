@@ -2214,6 +2214,15 @@ border-radius: calc(var(--radius-sm) - 1px);
 font-family: var(--font-mono, monospace);
 font-size: var(--text-xs);
 color: var(--colour-text-muted);
+inline-size: 9ch;
+min-inline-size: 7.5ch;
+padding: 0.25rem 0.4rem;
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-sm);
+background: var(--colour-bg);
+}
+.dz-form-color-hex:invalid {
+border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
 }
 .dz-form-richtext {
 border: 1px solid var(--colour-border);

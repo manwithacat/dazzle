@@ -256,8 +256,11 @@ class TagsField:
 
 @dataclass(frozen=True, slots=True)
 class ColorField:
-    """Native colour input with a live hex readout (`widget=color`). Parity
-    with the legacy `_render_color` (`x-data`/`x-model` self-contained)."""
+    """Native colour input with an editable hex companion (`widget=color`).
+
+    The swatch is the submitted value. Leftover hex junk must not invent
+    a colour (cycle 2133).
+    """
 
     name: str
     label: str
