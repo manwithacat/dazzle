@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Rich-text visual-empty regex was an incomplete sanitizer (CodeQL #226, cycle 2129)** —
+  `isVisuallyEmpty` no longer strips tags with `/<[^>]+>/` (leaves a
+  leading `<script` when `>` is missing). It parses via `DOMParser` and
+  reads `textContent`. Server `is_visually_empty_rich_text` uses
+  `bleach.clean(tags=[])` for the same reason. Emptiness is still a
+  boolean — bleach remains the persist sanitizer.
 - **Rich-text empty editor invented a filled `<p><br></p>` (cycle 2128)** —
   `dz-richtext.js` `emit()` now collapses the contenteditable placeholder
   (and other whitespace-only markup) to `""`, so required fields fail

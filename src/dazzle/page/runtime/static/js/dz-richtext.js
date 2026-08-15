@@ -545,13 +545,19 @@
   // The contenteditable shell is ``<p><br></p>`` when the user has
   // typed nothing. That must not post as a filled value (cycle 2128 —
   // same honesty class as money inventing 0 from garbage).
+  // Cycle 2129 / CodeQL #226: do not regex-strip tags — `/<[^>]+>/`
+  // leaves a leading ``<script`` when ``>`` is missing (incomplete
+  // multi-character sanitization). DOMParser + textContent is the
+  // same closed-tree walk the paste path already uses.
   function isVisuallyEmpty(html) {
     if (!html) return true;
-    var text = String(html)
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;|&#160;|&#x0*a0;/gi, "")
-      .replace(/[\s\u00a0\u200b]+/g, "");
-    return !text;
+    var doc = new DOMParser().parseFromString(
+      "<div>" + String(html) + "</div>",
+      "text/html",
+    );
+    var root = doc.body && doc.body.firstChild;
+    var text = root ? String(root.textContent || "") : "";
+    return !text.replace(/[\s\u00a0\u200b]+/g, "");
   }
 
   function emit(editor) {

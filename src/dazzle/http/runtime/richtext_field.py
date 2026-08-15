@@ -27,10 +27,11 @@ from dazzle.core.ir.richtext import (
     is_safe_href,
 )
 
-# Tags + nbsp / ZWSP / whitespace — the contenteditable empty shell is
-# ``<p><br></p>``. That must not persist as a filled required value
-# (cycle 2128 — same honesty class as money inventing 0).
-_TAG = re.compile(r"<[^>]+>")
+# nbsp / ZWSP / whitespace after bleach strips every tag. The
+# contenteditable empty shell is ``<p><br></p>``. That must not
+# persist as a filled required value (cycle 2128 — same honesty
+# class as money inventing 0). Cycle 2129: bleach, not ``<[^>]+>``
+# (CodeQL js/incomplete-multi-character-sanitization #226 twin).
 _EMPTY_TOKEN = re.compile(
     r"(?:&nbsp;|&#160;|&#x0*a0;|[\s\u00a0\u200b])+",
     re.IGNORECASE,
@@ -62,7 +63,14 @@ def is_visually_empty_rich_text(html: str) -> bool:
     """
     if not html or not str(html).strip():
         return True
-    text = unescape(_TAG.sub("", str(html)))
+    text = unescape(
+        bleach.clean(
+            str(html),
+            tags=[],
+            strip=True,
+            strip_comments=True,
+        )
+    )
     return not _EMPTY_TOKEN.sub("", text)
 
 

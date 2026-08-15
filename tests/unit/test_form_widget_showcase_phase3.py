@@ -360,6 +360,8 @@ def test_richtext_controller_collapses_visual_empty() -> None:
     ).read_text(encoding="utf-8")
     assert "function isVisuallyEmpty" in src
     assert 'isVisuallyEmpty(html) ? ""' in src or 'isVisuallyEmpty(html) ? ""' in src
+    assert "new DOMParser()" in src
+    assert '.replace(/<[^>]+>/g, "")' not in src
     assert "function syncRequiredValidity" in src
     assert "Enter some text" in src
 

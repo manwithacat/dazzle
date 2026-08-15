@@ -166,6 +166,24 @@ class TestServerSanitiserContract:
         assert "<p>hi</p>" in clean_rich_text("<p>hi</p>")
         assert not is_visually_empty_rich_text("<p>hi<br></p>")
 
+    def test_visual_empty_does_not_regex_strip_tags(self) -> None:
+        """Cycle 2129 / CodeQL #226: bleach-strip, not ``<[^>]+>``.
+
+        A one-shot tag regex leaves ``<script`` when ``>`` is missing;
+        emptiness must not be a fake sanitizer.
+        """
+        from dazzle.http.runtime import richtext_field as rt
+
+        src = Path(rt.__file__).read_text(encoding="utf-8")
+        assert 'r"<[^>]+>"' not in src
+        assert "bleach.clean" in src
+        assert "tags=[]" in src
+        # Broken markup is visible text (not silently "sanitized" empty).
+        from dazzle.http.runtime.richtext_field import is_visually_empty_rich_text
+
+        assert not is_visually_empty_rich_text("<script")
+        assert not is_visually_empty_rich_text("<scr<script>ipt>alert(1)</script>")
+
     def test_long_input_raises(self) -> None:
         import pytest
 
