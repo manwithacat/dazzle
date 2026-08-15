@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Command palette leftover query invented the full catalog (cycle 2130)** —
+  gallery `dz-command` now posts `name=q` (product shell already did) and
+  the mock filters the catalog. Empty / focus-once still returns every
+  destination (⌘K). A leftover `zzzz` no longer keeps Operations
+  Dashboard / Invoices. Same honesty class as search-select empty query
+  inventing Aurora hits (2126).
 - **Rich-text visual-empty regex was an incomplete sanitizer (CodeQL #226, cycle 2129)** —
   `isVisuallyEmpty` no longer strips tags with `/<[^>]+>/` (leaves a
   leading `<script` when `>` is missing). It parses via `DOMParser` and

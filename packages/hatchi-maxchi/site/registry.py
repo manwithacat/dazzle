@@ -969,7 +969,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             # close button reliably placed — abspos against a modal <dialog> is
             # fragile on Safari/iPadOS (it landed at its static position there).
             '<div class="dz-command__bar">'
-            '<input class="dz-command__input" type="search" placeholder="Search workspaces and records…" '
+            '<input class="dz-command__input" type="search" name="q" '
+            'placeholder="Search workspaces and records…" autocomplete="off" '
             # type="search" is an implicit `searchbox` role: it validly supports
             # aria-controls (→ the listbox) + aria-autocomplete + the JS-set
             # aria-activedescendant, so the SR follows the active option. (role=
@@ -996,7 +997,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     trigger="the search input, on `input` (debounced 150ms) and first `focus`",
                     response='zero or more result rows — `<a>`/`<button class="dz-command__item" '
                     'role="option">` grouped by `<div class="dz-command__group">` headers; '
-                    'empty query or no matches returns `<div class="dz-command__empty">`',
+                    "empty query returns the full persona catalog; no matches returns "
+                    '`<div class="dz-command__empty">`',
                     swap="innerHTML of the sibling `.dz-command__results` listbox",
                     states=("loading", "empty", "populated", "error"),
                 ),

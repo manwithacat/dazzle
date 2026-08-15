@@ -199,7 +199,9 @@ Doctrine source of truth remains
     a fake `q=`. Money leftover junk must not post 0. Date-range From>To
     must not empty the region. Hidden carriers must not own `required`
     (file-upload, search-select, combobox/tags). Restore coaching via
-    WeakMap `cloneNode` — never `innerHTML` a data attr (#223).
+    WeakMap `cloneNode` — never `innerHTML` a data attr (#223). Command
+    palette empty query **is** the catalog (⌘K); a leftover non-match
+    must not invent the full canned list (name=q + mock filter, 2130).
 
 ## What not to re-learn
 

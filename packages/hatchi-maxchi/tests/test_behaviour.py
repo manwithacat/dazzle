@@ -220,6 +220,38 @@ def test_command_escape_closes(page) -> None:  # type: ignore[no-untyped-def]
     assert not page.evaluate(f"document.querySelector('{dlg}').open")
 
 
+def test_command_query_does_not_invent_catalog(page) -> None:  # type: ignore[no-untyped-def]
+    """Non-matching query must not invent the full canned catalog (cycle 2130).
+
+    Empty / focus-once still returns every destination (⌘K catalog — not
+    the search-box empty-query class). Leftover 'zzzz' used to keep
+    Operations Dashboard / Invoices because the mock ignored q=.
+    """
+    goto_part(page, "command")
+    dlg = "dialog.command"
+    inp = f"{dlg} .command__input, {dlg} .dz-command__input"
+    results = f"{dlg} .command__results, {dlg} .dz-command__results"
+    page.locator(".hm-preview [data-hm-open-command]").first.click()
+    page.wait_for_timeout(80)
+    assert "Operations Dashboard" in page.inner_text(results)
+    assert "Invoices" in page.inner_text(results)
+
+    page.fill(inp, "inv")
+    page.wait_for_timeout(80)
+    text = page.inner_text(results)
+    assert "Invoices" in text, "matching query must still exchange"
+    assert "Operations Dashboard" not in text
+    assert "Customers" not in text
+
+    page.fill(inp, "zzzz")
+    page.wait_for_timeout(80)
+    text = page.inner_text(results)
+    assert "No matching destinations" in text
+    assert "Operations Dashboard" not in text
+    assert "Invoices" not in text
+    page.reload()
+
+
 def test_menu_escape_dismiss(page) -> None:  # type: ignore[no-untyped-def]
     """Gallery probe menu.escape_dismiss — Escape closes Actions menu."""
     goto_part(page, "menu")

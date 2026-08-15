@@ -13,14 +13,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 (function () {
   "use strict";
   var RESPONSES = {
-    // Mock: <button> not <a href="#"> — hash links scroll the gallery page to top.
-    "/mock/command": '<div class="command__group">Workspaces</div>' +
-      '<button type="button" class="command__item" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></button>' +
-      '<button type="button" class="command__item" role="option">{i:settings}<span>Platform Admin</span></button>' +
-      '<div class="command__group">Records</div>' +
-      '<button type="button" class="command__item" role="option">{i:receipt}<span>Invoices</span></button>' +
-      '<button type="button" class="command__item" role="option">{i:users}<span>Customers</span></button>' +
-      '<button type="button" class="command__item" role="option">{i:triangle-alert}<span>Alerts</span></button>',
+    // /mock/command is computed by renderCommandResults (empty q = catalog;
+    // leftover query must not invent the full canned list — cycle 2130).
     "/mock/master-detail/inv-001": '<div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div>',
     "/mock/master-detail/inv-002": '<div class="card card-body"><div class="card-label">INV-002 · Globex</div><div class="card-value">£3,400.00</div><div class="card-delta">Pending · due Friday</div></div>',
     "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>',
@@ -529,11 +523,62 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     };
   }
 
+  // Command catalog — {i:} tokens stay literal so mock_htmx_icon_names
+  // can derive __HM_ICONS__. Empty / whitespace q returns all (⌘K
+  // catalog); a leftover query must not invent the full list.
+  var COMMAND_ITEMS = [
+    { group: "Workspaces", label: "Operations Dashboard",
+      html: '<button type="button" class="command__item" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></button>' },
+    { group: "Workspaces", label: "Platform Admin",
+      html: '<button type="button" class="command__item" role="option">{i:settings}<span>Platform Admin</span></button>' },
+    { group: "Records", label: "Invoices",
+      html: '<button type="button" class="command__item" role="option">{i:receipt}<span>Invoices</span></button>' },
+    { group: "Records", label: "Customers",
+      html: '<button type="button" class="command__item" role="option">{i:users}<span>Customers</span></button>' },
+    { group: "Records", label: "Alerts",
+      html: '<button type="button" class="command__item" role="option">{i:triangle-alert}<span>Alerts</span></button>' }
+  ];
+  function renderCommandResults(url) {
+    var q = (parseQuery(url).q || "").trim().toLowerCase();
+    var hits = COMMAND_ITEMS.filter(function (e) {
+      return !q || e.label.toLowerCase().indexOf(q) >= 0;
+    });
+    if (!hits.length) {
+      return '<div class="command__empty">No matching destinations.</div>';
+    }
+    var html = "", g = "";
+    hits.forEach(function (e) {
+      if (e.group !== g) {
+        g = e.group;
+        html += '<div class="command__group">' + g + "</div>";
+      }
+      html += e.html;
+    });
+    return html;
+  }
+
+  // Real htmx includes the initiating named input as a query param
+  // (command palette name=q). Path-only /mock/command invented the
+  // full catalog for every keystroke (cycle 2130).
+  function requestUrl(el) {
+    var url = el.getAttribute("hx-get") || "";
+    if (el && el.name && (
+      el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT"
+    )) {
+      var sep = url.indexOf("?") >= 0 ? "&" : "?";
+      url = url + sep + encodeURIComponent(el.name) + "="
+        + encodeURIComponent(el.value || "");
+    }
+    return url;
+  }
+
   function doGet(el) {
-    var url = el.getAttribute("hx-get");
+    var url = requestUrl(el);
     var path = url.split("?")[0];
     var body;
-    if (path === "/mock/grid/rows") {
+    if (path === "/mock/command") {
+      body = expand(renderCommandResults(url));
+    } else if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
     } else if (path === "/mock/list-region") {

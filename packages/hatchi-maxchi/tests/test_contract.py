@@ -449,6 +449,17 @@ def test_combobox_documents_form_bound_server_contract() -> None:
     assert "enclosing form" in prose
 
 
+def test_command_preview_posts_named_query() -> None:
+    """Cycle 2130: leftover query must reach /mock/command as name=q.
+
+    Product AppShell already emits name=q. The gallery preview used to
+    omit it, so MOCK_HTMX invented the full canned catalog for zzzz.
+    """
+    cmd = next(c for c in HYPERPARTS if c.id == "command")
+    assert 'name="q"' in cmd.partial
+    assert "full persona catalog" in cmd.exchanges[0].response
+
+
 _DATA_ATTR_RE = re.compile(r"\bdata-([a-z][a-z0-9-]*)=")
 
 
