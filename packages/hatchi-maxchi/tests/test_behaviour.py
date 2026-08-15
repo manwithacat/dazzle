@@ -3121,6 +3121,59 @@ def test_date_range_inverted_does_not_fire_search(page) -> None:  # type: ignore
     page.reload()
 
 
+def test_date_range_leftover_iso_does_not_invent_bound(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover ISO junk must not invent a date bound (cycle 2139).
+
+    Same honesty class as colour leftover hex (2133) and slider leftover
+    readout (2134): typed-but-uncommitted text is not a silent parse.
+    """
+    goto_part(page, "date-range")
+    root = "#date-range [data-date-range]"
+    frm = f'{root} input[name="date_from"]'
+    iso = f"{root} [data-date-iso]"
+    out = "#hm-dr-out"
+
+    assert page.input_value(frm) == "2026-06-01"
+    assert page.input_value(iso) == "2026-06-01"
+
+    page.evaluate(
+        """() => {
+          const o = document.querySelector('#hm-dr-out');
+          if (o) { o.hidden = false; o.textContent = 'SENTINEL'; }
+        }"""
+    )
+
+    page.fill(iso, "zzz")
+    assert page.input_value(frm) == "2026-06-01", "named leftover must not invent a bound"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    assert page.eval_on_selector(frm, "el => el.validity.customError") is True
+    assert page.inner_text(out) == "SENTINEL", "leftover must not hx-get"
+
+    page.fill(iso, "2026-06-01zzz")
+    assert page.input_value(frm) == "2026-06-01", "leftover suffix is not a silent 2026-06-01"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-01zzz", "blur must not revert leftover junk"
+    assert page.input_value(frm) == "2026-06-01"
+    assert page.inner_text(out) == "SENTINEL", "leftover suffix must not hx-get"
+
+    page.fill(iso, "2026-06-15")
+    page.wait_for_timeout(80)
+    assert page.input_value(frm) == "2026-06-15"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-15"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is True
+    assert "SENTINEL" not in page.inner_text(out), "valid ISO must still exchange"
+
+    page.fill(iso, "")
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-15", "empty ISO on blur restores from the native date"
+    page.reload()
+
+
 def test_money_invalid_text_does_not_invent_zero(page) -> None:  # type: ignore[no-untyped-def]
     """Garbage display must not post a silent 0 (cycle 2121).
 

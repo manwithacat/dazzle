@@ -208,7 +208,9 @@ Doctrine source of truth remains
     the previous option (`zzz` / prefix stay visible + fail validity,
     exact label commits, allow-create leftover Add "…", 2135).
     Search-select leftover typed query must not invent Aurora (`name=q`
-    + mock filter; leftover `zzz` is empty, 2138).
+    + mock filter; leftover `zzz` is empty, 2138). Date-range leftover
+    ISO must not invent a bound (`2026-06-01zzz` / `zzz` stay visible
+    + fail validity; empty restores from the native date, 2139).
 
 32. **Capability-sweep cadence is hard preemption once tip CI is green.**
     Widget-honesty ships may continue while CodeQL/CI repair claims the

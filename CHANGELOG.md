@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Date-range leftover ISO invented a bound (cycle 2139)** —
+  leftover typed ISO (`zzz`, `2026-06-01zzz`) no longer writes the
+  native From/To date or fires the bar's hx-get. Each bound has an
+  editable ISO companion (no name; native `type=date` still submits).
+  Leftover junk fails custom validity on both controls; blur keeps it
+  visible; empty companion restores from the date; valid YYYY-MM-DD
+  writes the date. Same honesty class as slider leftover readout
+  (2134) and colour leftover hex (2133).
 - **Search-select leftover query invented Aurora hits (cycle 2138)** —
   leftover typed query (`zzz`) no longer returns the canned typeahead
   catalog. The typeahead posts `name=q` (`form=""` so leftover is not

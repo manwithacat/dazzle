@@ -824,6 +824,8 @@ def test_date_range_emission_conforms_to_date_range_contract() -> None:
     assert 'name="date_to"' in html
     assert "date-range-bar" in html
     assert "2026-06-01" in html
+    assert "data-dz-date-iso" in html
+    assert 'aria-label="From ISO date"' in html
 
 
 def test_list_region_emission_conforms_to_list_region_contract() -> None:

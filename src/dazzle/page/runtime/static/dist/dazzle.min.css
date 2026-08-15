@@ -9009,6 +9009,26 @@ outline: none;
 box-shadow: 0 0 0 1px var(--colour-brand);
 border-color: var(--colour-brand);
 }
+.dz-date-range-group {
+display: flex;
+align-items: center;
+gap: var(--space-xs);
+}
+.dz-date-range-iso {
+font-family: var(--font-mono, monospace);
+font-size: var(--text-xs);
+color: var(--colour-text);
+height: 1.75rem;
+inline-size: 11ch;
+min-inline-size: 10ch;
+padding: 0.15rem 0.35rem;
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+}
+.dz-date-range-iso:invalid {
+border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
 }
 @layer components {
 .dz-search-select {

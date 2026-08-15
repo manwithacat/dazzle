@@ -2544,46 +2544,61 @@ def select(source: str, id: str) -> str:
             "filter bar for time-scoped regions.",
             '<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
             '<label class="dz-date-range-label" for="hm-dr-from">From</label>'
+            '<span class="dz-date-range-group">'
             '<input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" '
             'class="dz-date-range-input" hx-get="/mock/search" '
             'hx-target="#hm-dr-out" hx-swap="innerHTML" '
             'hx-include="closest .date-range-bar">'
+            '<input data-dz-date-iso class="dz-date-range-iso" type="text" '
+            'spellcheck="false" autocomplete="off" '
+            'aria-label="From ISO date" value="2026-06-01">'
+            "</span>"
             '<label class="dz-date-range-label" for="hm-dr-to">To</label>'
+            '<span class="dz-date-range-group">'
             '<input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" '
             'class="dz-date-range-input" hx-get="/mock/search" '
             'hx-target="#hm-dr-out" hx-swap="innerHTML" '
             'hx-include="closest .date-range-bar">'
+            '<input data-dz-date-iso class="dz-date-range-iso" type="text" '
+            'spellcheck="false" autocomplete="off" '
+            'aria-label="To ISO date" value="2026-06-30">'
+            "</span>"
             '<div id="hm-dr-out" hidden></div>'
             "</div>",
             notes="Dual-lock root is <code>data-dz-date-range</code> "
             "(<code>contracts/date_range.py</code>). Native "
-            "<code>type=&quot;date&quot;</code> inputs. Each input fires the "
-            "region's hx-get on change and "
+            "<code>type=&quot;date&quot;</code> is the submitted value "
+            "(ISO companion has no <code>name</code>). Each date input "
+            "fires the region's hx-get on change and "
             "<code>hx-include=&quot;closest .date-range-bar&quot;</code> sends "
             "BOTH bounds every time, so the server always sees the full range. "
             "<code>dz-date-range.js</code> blocks an inverted From&gt;To "
-            "change (custom validity + no silent empty-region GET).",
+            "change (custom validity + no silent empty-region GET). "
+            "Leftover ISO junk must not invent a bound (cycle 2139).",
             tags=("forms", "htmx"),
             controller="controllers/dz-date-range.js",
             contracts=("contracts/date_range.py",),
             guidance=Guidance(
                 seams=(
                     "root data-dz-date-range owns both native date inputs",
+                    "native type=date is the submitted value; [data-dz-date-iso] is the editable companion",
                     "hx-include closest .date-range-bar sends both bounds on either change",
                 ),
                 pitfalls=(
                     "inverted From>To must not hx-get a silent empty region",
                     "empty either bound is an open range — do not invent a missing date",
+                    "leftover ISO junk must not invent a bound (do not revert on blur)",
                 ),
                 do_dont=(
                     (
-                        "block inverted ranges with setCustomValidity before the exchange",
+                        "write a valid companion ISO into the date; refuse leftover junk",
                         "POST From after To and let the server return an unexplained empty list",
                     ),
                 ),
                 a11y_keys=(
                     "native type=date keeps the platform picker and constraint UI",
                     "custom validity names the inversion so the bubble is not a generic required miss",
+                    "companion has aria-label; leftover junk fails custom validity",
                 ),
             ),
             exchanges=(

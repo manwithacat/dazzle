@@ -1457,9 +1457,11 @@ class DateRangePicker:
     """Two-input from/to date range filter for list/queue regions.
 
     Renders a `<div class="dz-date-range-picker date-range-bar">` with
-    paired `<input type="date">` elements wired to HTMX with
+    paired `<input type="date">` elements plus ISO companions
+    (`data-dz-date-iso`, no name) wired to HTMX with
     `hx-include="closest .date-range-bar"` so both values ride along
-    on every change. `date_from` and `date_to` are pre-formatted
+    on every change. Leftover ISO junk must not invent a bound
+    (cycle 2139). `date_from` and `date_to` are pre-formatted
     iso-date strings (`YYYY-MM-DD`); empty string = no date set.
 
     `region_name` namespaces the input ids (`date-from-<region>`,

@@ -3,6 +3,14 @@
 Dual-lock unit is the region root. HTMX endpoint and region target are
 host-owned; both inputs share ``hx-include="closest .date-range-bar"``.
 ``dz-date-range.js`` blocks inverted From>To before the exchange (cycle 2122).
+
+Leftover honesty (cycle 2139): each bound has an ISO companion
+(``data-dz-date-iso``, no ``name`` — the native ``type=date`` is the
+submitted / hx-include value). Typed leftover junk (``2026-06-01zzz``,
+``zzz``, ``June 1``) must not invent a bound — the date stays put and
+both controls fail custom validity so submit / hx-get cannot post the
+previous date as if the leftover were accepted. Empty ISO on blur
+restores from the native date.
 """
 
 from __future__ import annotations
@@ -21,6 +29,7 @@ DOM_CONTRACT = DomContract(
             "[data-dz-date-range]",
             attrs={"data-dz-date-range": Present()},
         ),
+        Node("[data-dz-date-iso]", attrs={"data-dz-date-iso": Present()}),
     ),
 )
 
@@ -53,6 +62,30 @@ EXEMPLARS: list[DateRange] = [
 ]
 
 
+def _bound(
+    rname: str,
+    bound: str,
+    name: str,
+    value: str,
+    endpoint: str,
+    target: str,
+    label: str,
+) -> str:
+    iso_label = html.escape(f"{label} ISO date", quote=True)
+    return (
+        f'<label class="dz-date-range-label" for="date-{bound}-{rname}">{label}</label>'
+        f'<span class="dz-date-range-group">'
+        f'<input type="date" id="date-{bound}-{rname}" name="{name}" '
+        f'value="{value}" class="dz-date-range-input" '
+        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
+        f'hx-include="closest .date-range-bar">'
+        f'<input data-dz-date-iso class="dz-date-range-iso" type="text" '
+        f'spellcheck="false" autocomplete="off" '
+        f'aria-label="{iso_label}" value="{value}">'
+        f"</span>"
+    )
+
+
 def render(d: DateRange) -> str:
     """Model → date-range picker bar."""
     rname = html.escape(d.region_name, quote=True)
@@ -62,16 +95,8 @@ def render(d: DateRange) -> str:
     date_to = html.escape(d.date_to, quote=True)
     return (
         f'<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
-        f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
-        f'<input type="date" id="date-from-{rname}" name="date_from" '
-        f'value="{date_from}" class="dz-date-range-input" '
-        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
-        f'hx-include="closest .date-range-bar">'
-        f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
-        f'<input type="date" id="date-to-{rname}" name="date_to" '
-        f'value="{date_to}" class="dz-date-range-input" '
-        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
-        f'hx-include="closest .date-range-bar">'
+        f"{_bound(rname, 'from', 'date_from', date_from, endpoint, target, 'From')}"
+        f"{_bound(rname, 'to', 'date_to', date_to, endpoint, target, 'To')}"
         f"</div>"
     )
 

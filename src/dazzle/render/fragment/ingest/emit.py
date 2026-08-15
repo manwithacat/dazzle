@@ -1292,15 +1292,25 @@ def render_date_range(d: DateRange) -> str:
     return (
         f'<div class="dz-date-range-picker date-range-bar" {root_attrs}>'
         f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
+        f'<span class="dz-date-range-group">'
         f'<input type="date" id="date-from-{rname}" name="date_from" '
         f'value="{date_from}" class="dz-date-range-input" '
         f'hx-get="{endpoint}" hx-target="{target_esc}" hx-swap="innerHTML" '
         f'hx-include="closest .date-range-bar">'
+        f'<input data-dz-date-iso class="dz-date-range-iso" type="text" '
+        f'spellcheck="false" autocomplete="off" '
+        f'aria-label="From ISO date" value="{date_from}">'
+        f"</span>"
         f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
+        f'<span class="dz-date-range-group">'
         f'<input type="date" id="date-to-{rname}" name="date_to" '
         f'value="{date_to}" class="dz-date-range-input" '
         f'hx-get="{endpoint}" hx-target="{target_esc}" hx-swap="innerHTML" '
         f'hx-include="closest .date-range-bar">'
+        f'<input data-dz-date-iso class="dz-date-range-iso" type="text" '
+        f'spellcheck="false" autocomplete="off" '
+        f'aria-label="To ISO date" value="{date_to}">'
+        f"</span>"
         f"</div>"
     )
 

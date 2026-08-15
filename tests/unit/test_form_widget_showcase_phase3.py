@@ -171,6 +171,22 @@ def test_date_range_controller_rejects_inverted() -> None:
     assert "stopImmediatePropagation" in src
 
 
+def test_date_range_controller_leftover_iso_does_not_invent() -> None:
+    """dz-date-range.js must refuse leftover ISO junk (2139)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-date-range.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseISO" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
+
+
 def test_money_controller_rejects_invalid_text() -> None:
     """dz-money.js must not invent 0 from garbage (cycle 2121)."""
     from pathlib import Path

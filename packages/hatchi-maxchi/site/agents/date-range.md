@@ -14,9 +14,9 @@ Two native date inputs driving one htmx exchange — the from/to filter bar for 
 ```html
 <div class="date-range-picker date-range-bar" data-date-range>
   <label class="date-range-label" for="hm-dr-from">From</label>
-  <input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar">
+  <span class="date-range-group"><input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><input data-date-iso class="date-range-iso" type="text" spellcheck="false" autocomplete="off" aria-label="From ISO date" value="2026-06-01"></span>
   <label class="date-range-label" for="hm-dr-to">To</label>
-  <input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar">
+  <span class="date-range-group"><input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><input data-date-iso class="date-range-iso" type="text" spellcheck="false" autocomplete="off" aria-label="To ISO date" value="2026-06-30"></span>
   <div id="hm-dr-out" hidden></div>
 </div>
 ```
@@ -86,23 +86,26 @@ Correct response for body_only into #{region}-body (innerHTML / innerMorph). Wro
 ### Seams
 
 - root data-dz-date-range owns both native date inputs
+- native type=date is the submitted value; [data-dz-date-iso] is the editable companion
 - hx-include closest .date-range-bar sends both bounds on either change
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| block inverted ranges with setCustomValidity before the exchange | POST From after To and let the server return an unexplained empty list |
+| write a valid companion ISO into the date; refuse leftover junk | POST From after To and let the server return an unexplained empty list |
 
 ### Pitfalls
 
 - inverted From>To must not hx-get a silent empty region
 - empty either bound is an open range — do not invent a missing date
+- leftover ISO junk must not invent a bound (do not revert on blur)
 
 ### Keyboard / AT
 
 - native type=date keeps the platform picker and constraint UI
 - custom validity names the inversion so the bubble is not a generic required miss
+- companion has aria-label; leftover junk fails custom validity
 
 ## DOM contract
 
@@ -115,6 +118,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-date-range]` | `data-dz-date-range` | present (any value) |
+| `[data-dz-date-iso]` | `data-dz-date-iso` | present (any value) |
 
 #### Ingestion model `DateRange`
 
@@ -138,23 +142,15 @@ def render(d: DateRange) -> str:
     date_to = html.escape(d.date_to, quote=True)
     return (
         f'<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
-        f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
-        f'<input type="date" id="date-from-{rname}" name="date_from" '
-        f'value="{date_from}" class="dz-date-range-input" '
-        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
-        f'hx-include="closest .date-range-bar">'
-        f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
-        f'<input type="date" id="date-to-{rname}" name="date_to" '
-        f'value="{date_to}" class="dz-date-range-input" '
-        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
-        f'hx-include="closest .date-range-bar">'
+        f"{_bound(rname, 'from', 'date_from', date_from, endpoint, target, 'From')}"
+        f"{_bound(rname, 'to', 'date_to', date_to, endpoint, target, 'To')}"
         f"</div>"
     )
 ```
 
 ## Notes
 
-Dual-lock root is data-dz-date-range (contracts/date_range.py). Native type="date" inputs. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range. dz-date-range.js blocks an inverted From>To change (custom validity + no silent empty-region GET).
+Dual-lock root is data-dz-date-range (contracts/date_range.py). Native type="date" is the submitted value (ISO companion has no name). Each date input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range. dz-date-range.js blocks an inverted From>To change (custom validity + no silent empty-region GET). Leftover ISO junk must not invent a bound (cycle 2139).
 
 ## Source files
 
