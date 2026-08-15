@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -78,14 +79,18 @@ def _run(
     status: str,
     conclusion: str | None,
     sha: str = "abc12345",
+    updated_at: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "id": run_id,
         "status": status,
         "conclusion": conclusion,
         "head_sha": sha,
         "html_url": f"https://example.test/run/{run_id}",
     }
+    if updated_at is not None:
+        payload["updated_at"] = updated_at
+    return payload
 
 
 def test_prefer_completed_skips_inflight_when_last_completed_is_green() -> None:
@@ -131,6 +136,110 @@ def test_prefer_completed_wait_follows_tip_after_stale_red() -> None:
     ):
         code = mod.main(["--prefer-completed", "--wait", "30", "--poll", "1"])
     assert code == 0
+
+
+def test_completed_run_age_seconds_parses_github_iso() -> None:
+    mod = _load_mod()
+    run = _run(
+        run_id=1,
+        status="completed",
+        conclusion="failure",
+        updated_at="2026-08-15T22:50:17Z",
+    )
+    now = datetime(2026, 8, 15, 23, 11, 14, tzinfo=UTC)
+    age = mod.completed_run_age_seconds(run, now=now)
+    assert age is not None
+    assert 1250 <= age <= 1270  # ~21 minutes (2141 sample)
+
+
+def test_prefer_completed_wait_follows_newer_after_stale_completed_red() -> None:
+    """Cycle 2141: Dazzle CI started before the sibling HM run was listed."""
+    mod = _load_mod()
+    stale = _run(
+        run_id=31912865017,
+        status="completed",
+        conclusion="failure",
+        sha="c0b09eb6",
+        updated_at="2026-08-15T22:50:17Z",
+    )
+    green = _run(
+        run_id=31914122384,
+        status="completed",
+        conclusion="success",
+        sha="d2e51bf1",
+        updated_at="2026-08-15T23:23:54Z",
+    )
+    with (
+        patch.object(mod, "latest_runs", side_effect=[[stale], [green, stale]]),
+        patch.object(mod, "first_failed_job", return_value=None),
+        patch.object(mod.time, "sleep"),
+    ):
+        code = mod.main(["--prefer-completed", "--wait", "30", "--poll", "1"])
+    assert code == 0
+
+
+def test_prefer_completed_wait_fails_immediately_on_fresh_completed_red() -> None:
+    """A tip that just went red is not the 2141 sync race — fail now."""
+    mod = _load_mod()
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    red = _run(
+        run_id=9,
+        status="completed",
+        conclusion="failure",
+        updated_at=now,
+    )
+    with (
+        patch.object(mod, "latest_runs", return_value=[red]),
+        patch.object(mod.time, "sleep") as slept,
+    ):
+        code = mod.main(["--prefer-completed", "--wait", "30", "--poll", "1"])
+    assert code == 1
+    slept.assert_not_called()
+
+
+def test_prefer_completed_wait_grace_zero_fails_stale_red() -> None:
+    mod = _load_mod()
+    red = _run(
+        run_id=1,
+        status="completed",
+        conclusion="failure",
+        updated_at="2026-08-15T20:00:00Z",
+    )
+    with (
+        patch.object(mod, "latest_runs", return_value=[red]),
+        patch.object(mod.time, "sleep") as slept,
+    ):
+        code = mod.main(
+            [
+                "--prefer-completed",
+                "--wait",
+                "30",
+                "--poll",
+                "1",
+                "--stale-red-grace",
+                "0",
+            ]
+        )
+    assert code == 1
+    slept.assert_not_called()
+
+
+def test_completed_red_without_wait_fails_immediately() -> None:
+    """Local push_gate has no --wait; a completed red is still red."""
+    mod = _load_mod()
+    red = _run(
+        run_id=1,
+        status="completed",
+        conclusion="failure",
+        updated_at="2026-08-15T20:00:00Z",
+    )
+    with (
+        patch.object(mod, "latest_runs", return_value=[red]),
+        patch.object(mod.time, "sleep") as slept,
+    ):
+        code = mod.main(["--prefer-completed"])
+    assert code == 1
+    slept.assert_not_called()
 
 
 def test_wait_continues_when_no_failed_job_yet() -> None:

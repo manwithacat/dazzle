@@ -355,8 +355,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Prefer last completed *green* so an in-flight post-sync CI
         # does not fail every concurrent Dazzle matrix. If last
-        # completed is red, wait on the in-flight tip (do not sample
-        # stale red). Sync workflow separately waits on the tip SHA.
+        # completed is red, wait on the in-flight tip — and if that
+        # tip is not listed yet (sync lag), keep polling the stale
+        # completed red until a newer run appears (cycle 2142).
+        # Sync workflow separately waits on the tip SHA.
         run: python scripts/hm_standalone_ci_status.py --prefer-completed --wait 900 --poll 25
 
   type-check:

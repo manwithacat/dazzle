@@ -69,6 +69,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2140: empty form="" fails HM Nu/W3C (search-select leftover)
     "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
+    # cycle 2142: --wait must not fail immediately on stale completed HM red
+    "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2141: Page chrome #hm-detached-q must not trip no-user-form pins
     "tests/unit/test_error_views.py::test_404_view_renders_no_form",
     "tests/unit/test_error_views.py::test_403_view_renders_no_form",

@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Cycle 2142 cimonitor — stale completed HM red raced the sibling tip** —
+  Dazzle CI started before the post-sync hatchi-maxchi workflow was
+  listed; `--prefer-completed --wait 900` still sampled the previous
+  completed failure and exited 1 in ~1s (2141: HM #31912865017 while
+  #31914122384 was queuing). A stale completed red now keeps polling
+  for a newer tip; a fresh tip red still fails immediately. Promoted
+  `test_hm_standalone_ci_status` to ship-surface (oral #37).
 - **Cycle 2141 cimonitor — 2140 chrome form + stale linux date-range** —
   Page `#hm-detached-q` tripped seven confirmation/error `no-form` pins
   (user-form invariant still holds; chrome singleton ignored). Linux

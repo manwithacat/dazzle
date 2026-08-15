@@ -252,6 +252,16 @@ Doctrine source of truth remains
     (2141). Linux date-range baselines from 2139 leftover-ISO must
     land in the same repair if visual is the other red job.
 
+37. **`--wait` must not fail immediately on a stale completed HM red.**
+    Cycle 2137 fixed in-flight tip vs stale red. Cycle 2141 still
+    re-redded: Dazzle CI started at 23:11:01 and the mirror job at
+    23:11:13 sampled completed failure #31912865017 because the
+    sibling HM run #31914122384 was not listed yet. `status==completed`
+    returned 1 and `--wait 900` never ran. If the red's `updated_at` is
+    older than ~90s, keep polling for a newer run (grace ~180s). A
+    tip that just went red still fails now. Re-running the mirror job
+    is the no-code recovery once HM is already green.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

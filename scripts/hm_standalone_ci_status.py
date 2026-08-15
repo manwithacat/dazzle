@@ -17,6 +17,12 @@ fail-fast cancel propagation) to finish the run. That is what made
 "Wait for hatchi-maxchi CI" look stalled when Visual was red but Behaviour
 kept running for another 10+ minutes.
 
+**Stale completed red + --wait (cycle 2142):** a monorepo push often
+starts Dazzle CI before the sibling HM workflow is listed. ``--wait``
+must keep polling that previous completed failure until a newer run
+appears (or grace expires). A *fresh* completed red is the tip and
+still fails immediately.
+
 Usage (from monorepo root)::
 
     python scripts/hm_standalone_ci_status.py
@@ -36,7 +42,17 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from typing import Any
+
+# A completed failure newer than this is the tip (fail now). Older reds
+# with --wait may still be the previous SHA while the sibling HM run
+# from a monorepo sync has not appeared in the Actions list yet
+# (cycle 2141: sampled 31912865017 at 23:11 while 31914122384 was
+# still queuing).
+_DEFAULT_FRESH_RED_SECONDS = 90
+# How long --wait keeps polling that stale completed red for a newer tip.
+_DEFAULT_STALE_RED_GRACE = 180
 
 REPO = "manwithacat/hatchi-maxchi"
 WORKFLOW = "ci.yml"  # path under .github/workflows
@@ -108,6 +124,71 @@ def pick_run(
     return runs[0]
 
 
+def completed_run_age_seconds(
+    run: dict[str, Any],
+    *,
+    now: datetime | None = None,
+) -> float | None:
+    """Age of ``updated_at`` in seconds, or None if missing/unparseable."""
+    raw = run.get("updated_at") or run.get("updatedAt")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    text = raw.strip().replace("Z", "+00:00")
+    try:
+        ts = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=UTC)
+    stamp = now or datetime.now(UTC)
+    return max(0.0, (stamp - ts).total_seconds())
+
+
+def is_fresh_completed_failure(
+    run: dict[str, Any],
+    *,
+    fresh_red_seconds: float = _DEFAULT_FRESH_RED_SECONDS,
+) -> bool:
+    """True when this completed red just finished (it is the tip).
+
+    Missing ``updated_at`` is treated as stale so --wait can cover the
+    monorepo-sync race and unit fixtures without timestamps.
+    """
+    age = completed_run_age_seconds(run)
+    if age is None:
+        return False
+    return age < fresh_red_seconds
+
+
+def should_poll_for_newer_after_completed_red(
+    run: dict[str, Any],
+    *,
+    wait: int,
+    sha: str | None,
+    deadline: float,
+    fresh_red_seconds: float,
+    stale_red_grace: float,
+    state: dict[str, Any],
+    now_mono: float | None = None,
+) -> bool:
+    """Keep polling when --wait saw a stale completed red (cycle 2142)."""
+    if not wait or sha:
+        return False
+    now = time.monotonic() if now_mono is None else now_mono
+    if now >= deadline:
+        return False
+    if is_fresh_completed_failure(run, fresh_red_seconds=fresh_red_seconds):
+        return False
+    rid = run.get("id")
+    if state.get("id") != rid:
+        state["id"] = rid
+        state["started"] = now
+    started = float(state.get("started") or now)
+    if now - started >= stale_red_grace:
+        return False
+    return True
+
+
 def format_run(run: dict[str, Any]) -> str:
     return (
         f"run={run.get('id')} status={run.get('status')} "
@@ -166,7 +247,27 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "skip an in-flight tip when the last completed run is green. "
-            "A stale red completed run never wins over a newer in-flight tip."
+            "A stale red completed run never wins over a newer in-flight tip. "
+            "With --wait, a stale completed red also polls until a newer run "
+            "appears (monorepo sync may not have listed the sibling yet)."
+        ),
+    )
+    p.add_argument(
+        "--fresh-red-seconds",
+        type=int,
+        default=_DEFAULT_FRESH_RED_SECONDS,
+        help=(
+            "a completed failure updated within this many seconds is the tip "
+            "(fail immediately). Older reds with --wait poll for a newer run."
+        ),
+    )
+    p.add_argument(
+        "--stale-red-grace",
+        type=int,
+        default=_DEFAULT_STALE_RED_GRACE,
+        help=(
+            "seconds to keep polling after sampling a stale completed red "
+            "while waiting for a newer HM tip to appear (monorepo sync lag)."
         ),
     )
     p.add_argument(
@@ -182,6 +283,7 @@ def main(argv: list[str] | None = None) -> int:
     deadline = time.monotonic() + max(0, args.wait)
     run: dict[str, Any] | None = None
     prefer_completed = bool(args.prefer_completed) and not args.sha
+    stale_red_wait: dict[str, Any] = {"id": None, "started": None}
 
     while True:
         try:
@@ -212,6 +314,27 @@ def main(argv: list[str] | None = None) -> int:
             if conclusion == "success":
                 print("OK: hatchi-maxchi standalone CI is green")
                 return 0
+            # Cycle 2142: --wait + no --sha must not fail immediately on a
+            # completed red. Monorepo push often starts Dazzle CI *before*
+            # the sibling HM workflow is listed; pick_run then returns the
+            # previous completed failure and we used to exit 1 in ~1s
+            # (2141: sampled 31912865017 while 31914122384 was still
+            # queuing). Keep polling for a newer run until grace/deadline.
+            if should_poll_for_newer_after_completed_red(
+                run,
+                wait=args.wait,
+                sha=args.sha,
+                deadline=deadline,
+                fresh_red_seconds=float(args.fresh_red_seconds),
+                stale_red_grace=float(args.stale_red_grace),
+                state=stale_red_wait,
+            ):
+                print(
+                    f"waiting: completed {conclusion!r} — checking for a newer HM tip…",
+                    flush=True,
+                )
+                time.sleep(max(5, args.poll))
+                continue
             print(
                 f"FAIL: hatchi-maxchi standalone CI conclusion={conclusion!r} "
                 f"(Dazzle must not treat main as green while HM is red)",
