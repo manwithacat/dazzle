@@ -64,6 +64,9 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 1499 dz-toggle — CONSUMER_MAP + DUAL_LOCK_COVERAGE drift ×3 Pythons)
     "tests/unit/test_consumer_map_tool.py::test_committed_consumer_map_matches_generator",
     "tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator",
+    # #1648 file-upload picker emit (cycle 2110 — Alpine hollow shell)
+    "tests/unit/test_file_upload_primitive.py",
+    "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
     # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
     # depth on contact_manager — display_field + home region rename ×3 Pythons)
     "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",

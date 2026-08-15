@@ -56,6 +56,8 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         # cycle 4); the contract test below scans both files.
         "richtext",
         "range-tooltip",
+        # #1648 file-upload picker — vanilla registry mount (cycle 2110)
+        "file-upload",
     }
 )
 
