@@ -5323,16 +5323,17 @@
  * (always Aurora/Beacon) or a product empty region. Same honesty class
  * as date-range inverted emptying the region (cycle 2122).
  *
- * Re-query the DOM on every event (morph-safe). Cache the original
- * coaching HTML on first touch so restore is the author's copy, not a
- * hard-coded string.
+ * Re-query the DOM on every event (morph-safe). Cache a clone of the
+ * author's coaching node on first touch (WeakMap — never store markup in
+ * a data attribute and write it back; CodeQL js/xss-through-dom #223).
+ * Restore via appendChild of a clone. Fallback is createElement +
+ * textContent, never an HTML string.
  */
 (function () {
   "use strict";
 
-  var COACHING_ATTR = "data-search-coaching";
-  var FALLBACK_COACHING =
-    '<div class="search-box-empty">Type a title or keyword</div>';
+  var coachingByRoot = new WeakMap();
+  var FALLBACK_TEXT = "Type a title or keyword";
 
   function rootOf(el) {
     if (!el || !el.closest) return null;
@@ -5353,22 +5354,33 @@
     return String(el.className).indexOf("no-results") !== -1;
   }
 
+  function fallbackNode() {
+    var d = document.createElement("div");
+    d.className = "search-box-empty";
+    d.textContent = FALLBACK_TEXT;
+    return d;
+  }
+
   function cacheCoaching(root) {
-    if (root.getAttribute(COACHING_ATTR)) return;
+    if (coachingByRoot.has(root)) return;
     var results = resultsOf(root);
     var empty =
       results &&
       (results.querySelector(".search-box-empty") ||
         results.querySelector(".search-box-empty"));
-    var html =
-      empty && !isNoResults(empty) ? empty.outerHTML : FALLBACK_COACHING;
-    root.setAttribute(COACHING_ATTR, html);
+    if (empty && !isNoResults(empty)) {
+      coachingByRoot.set(root, empty.cloneNode(true));
+    } else {
+      coachingByRoot.set(root, fallbackNode());
+    }
   }
 
   function restoreCoaching(root) {
     var results = resultsOf(root);
     if (!results) return;
-    results.innerHTML = root.getAttribute(COACHING_ATTR) || FALLBACK_COACHING;
+    var node = coachingByRoot.get(root) || fallbackNode();
+    results.textContent = "";
+    results.appendChild(node.cloneNode(true));
   }
 
   function onQuery(evt) {

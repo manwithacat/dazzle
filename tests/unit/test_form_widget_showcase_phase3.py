@@ -85,6 +85,26 @@ def test_search_box_controller_rejects_empty_query() -> None:
     assert "stopImmediatePropagation" in src
 
 
+def test_search_box_controller_does_not_reparse_dom_text() -> None:
+    """Coaching restore must clone a node, not innerHTML a data attr (2124 / #223)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-search-box.js"
+    ).read_text(encoding="utf-8")
+    assert "WeakMap" in src
+    assert "cloneNode" in src
+    assert "textContent" in src
+    assert "innerHTML" not in src
+    assert "COACHING_ATTR" not in src
+    assert "data-dz-search-coaching" not in src
+    assert "outerHTML" not in src
+
+
 def test_date_range_controller_rejects_inverted() -> None:
     """dz-date-range.js must not hx-get From>To (cycle 2122)."""
     from pathlib import Path

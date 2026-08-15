@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-box coaching restore XSS (CodeQL #223, cycle 2124)** —
+  `dz-search-box.js` no longer stores coaching `outerHTML` in a data
+  attribute and writes it back via `innerHTML` (`js/xss-through-dom`).
+  Restore now clones the author's coaching node (WeakMap) and appends
+  it; fallback is `createElement` + `textContent`. Dist/gallery copies
+  (#224/#225) rebuild from the same source.
 - **Date-range inverted From>To emptied the region (cycle 2122)** —
   `dz-date-range.js` now `setCustomValidity` and stops the change before
   htmx fires when both bounds are set and From is after To. Empty either

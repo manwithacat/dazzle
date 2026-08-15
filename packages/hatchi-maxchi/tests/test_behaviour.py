@@ -2711,6 +2711,9 @@ def test_search_box_empty_does_not_fire_search(page) -> None:  # type: ignore[no
     text = results.inner_text()
     assert "Type a title or keyword" in text, "empty must restore coaching"
     assert "Aurora" not in text, "empty must not hx-get fake hits"
+    # CodeQL #223: coaching must not ride a data-attr → innerHTML roundtrip
+    assert region.get_attribute("data-search-coaching") is None
+    assert region.get_attribute("data-dz-search-coaching") is None
     page.reload()
 
 
