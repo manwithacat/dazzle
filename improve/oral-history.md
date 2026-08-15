@@ -150,6 +150,8 @@ Doctrine source of truth remains
     (framework primitive; `role =` is reserved for role()). Do not put
     requesters back in that picker. Seed users must carry department/tier
     or `!= External` empties the picker (2087 CI).
+    Machine: `agent_only_selector_empty` saturates `(app, empty_region_honesty)`
+    when `context_selector` filters `department != External`.
 
 25. **fieldtest document grain is protocol vs acceptance, not another mixed
     composition dump.** After TestDocument composition exists, exclusive

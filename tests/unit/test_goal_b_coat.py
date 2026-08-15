@@ -9,6 +9,7 @@ from scripts.goal_b_coat import (
     FREEZE,
     HONEST_CONVERSATION_SITES,
     HONEST_FOCUS,
+    agent_only_selector_empty,
     coat_residual,
     freeze_breaches,
     live_saturated_cells,
@@ -239,6 +240,29 @@ def test_tree_people_org_saturates(tmp_path: Path) -> None:
     sat = live_saturated_cells(["demo"], examples=tmp_path)
     assert ("demo", "org_structure") in sat
     assert tree_people_org((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_agent_only_selector_saturates_empty_region(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace agent_console:\n"
+        "  context_selector:\n"
+        "    entity: User\n"
+        "    display_field: name\n"
+        "    filter: support_tier = l1 and department != External\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "empty_region_honesty") in sat
+    assert agent_only_selector_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_support_tickets_agent_only_selector_saturates() -> None:
+    sat = live_saturated_cells(["support_tickets", "acme_billing"])
+    assert ("support_tickets", "empty_region_honesty") in sat
+    assert ("acme_billing", "empty_region_honesty") not in sat
 
 
 def test_hr_records_tree_people_saturates_org() -> None:

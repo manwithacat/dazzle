@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: staff-only picker saturates empty_region (cycle 2102)** —
+  `context_selector` with `department != External` saturates
+  `(app, empty_region_honesty)` so support_tickets is not recommended for
+  another inspector void (oral #24).
 - **Goal B planner: tree-people org saturates (cycle 2101)** — exclusive
   `in_tree` + `apex_people` queues with `reporting_seat` saturate
   `(app, org_structure)` so hr_records is not recommended for another

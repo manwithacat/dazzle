@@ -322,6 +322,16 @@ def tree_people_org(text: str) -> bool:
     return has_in_tree and has_apex and bool(re.search(r"reporting_seat:\s*enum", text))
 
 
+def agent_only_selector_empty(text: str) -> bool:
+    """Staff-only context_selector (oral #24) — not customers in the picker."""
+    for _ws, name, body in _workspace_region_windows(text):
+        if name != "context_selector":
+            continue
+        if re.search(r"department\s*!=\s*External", body):
+            return True
+    return False
+
+
 def stamp_pair_media(text: str) -> bool:
     """Exclusive in-review + approved pixel grids (Frame.io honest grain)."""
     has_review = False
@@ -368,6 +378,8 @@ def live_saturated_cells(
             sat.add((app, "document"))
         if tree_people_org(text):
             sat.add((app, "org_structure"))
+        if agent_only_selector_empty(text):
+            sat.add((app, "empty_region_honesty"))
         if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))
         # Goal C freeze: distilled cells stay planner-saturated so a later
