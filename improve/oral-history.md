@@ -213,6 +213,15 @@ Doctrine source of truth remains
     cycle (2129). Do not slip the sweep a third consecutive product cycle
     after green (2129–2131). Inventory is not a Goal B coat.
 
+33. **Leftover-honesty that changes a Hyperpart's gallery markup or copy
+    must refresh that part's visual baselines in the same ship.** Cycle
+    2134 made the slider companion an editable input and rewrote
+    seams/pitfalls; linux `part-slider-*` stayed on the July readout
+    shots (5–7% pixel drift). HM visual red → Dazzle badge red via
+    `hm_standalone_ci_status`. Darwin: `HM_UPDATE_BASELINES=1` on the
+    part; linux: `gh workflow run update-baselines.yml` and commit only
+    the failing PNGs. Do not wait for the next cimonitor cycle.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

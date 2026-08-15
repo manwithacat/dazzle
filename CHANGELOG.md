@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **HM slider visual baselines stale after leftover-honesty (cycle 2136)** —
+  linux/darwin `part-slider-{light,dark}` still showed the July readout
+  after 2134 turned the companion into an editable text field (and
+  rewrote gallery copy). HM visual red'd main via the standalone
+  mirror. Refresh those four PNGs only.
 - **Combobox leftover typed filter invented the previous option (cycle 2135)** —
   leftover filter text (`zzz`, a prefix that is not an exact option) no
   longer reverts to the selected label on blur. The overlay and the
