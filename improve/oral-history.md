@@ -203,6 +203,11 @@ Doctrine source of truth remains
     palette empty query **is** the catalog (⌘K); a leftover non-match
     must not invent the full canned list (name=q + mock filter, 2130).
 
+32. **Capability-sweep cadence is hard preemption once tip CI is green.**
+    Widget-honesty ships may continue while CodeQL/CI repair claims the
+    cycle (2129). Do not slip the sweep a third consecutive product cycle
+    after green (2129–2131). Inventory is not a Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
