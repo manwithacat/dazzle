@@ -48,12 +48,13 @@ audit, window = the last 15 `improve:` commits.
 git log --oneline <last-audit-sha>..HEAD
 
 # Improve-relevant commits (conventional subjects + legacy prefix):
-#   - subject contains "(cycle N)" / "(cycle NNNN)"  ← primary post-2026-08 style
+#   - subject contains "cycle N" (primary 2026-08 tip: `fix: cycle 2126 …`)
+#   - subject contains "(cycle N)" / "(cycle NNNN)" (older `feat/fix … (cycle 1889)`)
 #   - subject matches '^improve:'                      ← legacy
 #   - or the SHA is named in an improve-log Cycle entry inside the window
-# Do NOT require '^improve: cycle' alone — that filter is empty on modern tips
-# and falsely short-circuits the self-audit workflow.
-git log --oneline --grep '(cycle [0-9]' <last-audit-sha>..HEAD
+# Do NOT require '^improve: cycle' or only parenthesized `(cycle N)` — both
+# miss `fix: cycle N` tips and falsely short-circuit the workflow (AUD-011/017).
+git log --oneline --grep 'cycle [0-9]' <last-audit-sha>..HEAD
 git log --oneline --grep '^improve:' <last-audit-sha>..HEAD
 ```
 

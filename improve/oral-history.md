@@ -103,10 +103,11 @@ Doctrine source of truth remains
     in three places, stop and re-apply `docs/reference/agent-harness-distill.md`
     criteria — the loop must not re-inflate oral thrash.
 
-17. **Self-audit sample is not `^improve: cycle`.** Modern ships are
-    `feat/fix … (cycle N)`. Grepping only the legacy prefix empties the audit
-    window while real improve commits sit on HEAD (AUD-011 / cycle 1890). Sample
-    `(cycle N)` + `^improve:` + log-named SHAs.
+17. **Self-audit sample is not `^improve: cycle` or only `(cycle N)`.**
+    Tips are `fix: cycle 2126 …` (no parens). Grepping the legacy prefix
+    or parenthesized-only `(cycle N)` empties the window while real ships
+    sit on HEAD (AUD-011 / 1890; AUD-017 / 2127). Sample `cycle N` +
+    `^improve:` + log-named SHAs.
 
 18. **Self-audit cadence is hard preemption.** When ≥15 cycles since
     `lane: self-audit`, run it this cycle — do not arithmetic-defer with
@@ -192,6 +193,13 @@ Doctrine source of truth remains
     icon cells are live-saturated, policy rotates to framework-ux. Do not
     invent another detector. Capability-sweep cadence still applies (2045→2109
     was 64 late because saturate monomania).
+
+31. **Empty/invalid input must not invent results or values.** Search-box /
+    search-select / grid whitespace must not hx-get canned Aurora hits or
+    a fake `q=`. Money leftover junk must not post 0. Date-range From>To
+    must not empty the region. Hidden carriers must not own `required`
+    (file-upload, search-select, combobox/tags). Restore coaching via
+    WeakMap `cloneNode` — never `innerHTML` a data attr (#223).
 
 ## What not to re-learn
 
