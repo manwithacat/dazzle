@@ -1004,46 +1004,12 @@ surface managerlink_edit "End Reporting Line":
 
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
-  # Goal B media (cycle 1879) + command_density (1837) + document (1838):
-  # headshot shelf first, then dual attention + employment documents before
-  # notes — peer Workday / BambooHR put pixels + letters above discussion.
-  purpose: "Multi-panel staff home — headshots, dual attention, document composition, then people notes"
+  # Cycle 2092 directory_work_first (empty_region_honesty): BambooHR / Workday
+  # people directory leads with the roster you act on, not a 2-thumb photo
+  # theater + 8-tile wall. Media shelf stays filled below fold (limit 8).
+  purpose: "Multi-panel staff home — current roster + starters, status mix, documents, then people notes"
 
-  # Goal B media FIRST — staff home is a people shelf (photo_url thumbs).
-  media_shelf:
-    source: Person
-    filter: ended_at = null
-    display: grid
-    sort: started_at desc
-    # Cap 2 so dual attention + docs share the above-fold command dens.
-    limit: 2
-    action: person_detail
-    empty: "No headshots yet — add photo URLs on people records"
-
-  # Job strip — headcount + assignment status mix (acceptance criteria:
-  # active / on leave / terminated visible without hunting employment rows).
-  headcount:
-    source: Person
-    display: metrics
-    aggregate:
-      people: count(Person)
-      departments: count(Department)
-      roles: count(Role)
-      active: count(Employment where status = active and end_date = null)
-      on_leave: count(Employment where status = on_leave and end_date = null)
-      terminated: count(Employment where status = terminated)
-      documents: count(HrDocument)
-      conversation: count(PersonNote)
-    tones:
-      people: accent
-      active: accent
-      on_leave: warning
-      terminated: danger
-      documents: accent
-      conversation: accent
-
-  # Dual attention — active roster + onboarding starters above fold (caps
-  # for fold share with media + documents + notes trail).
+  # Dual attention FIRST — active roster + onboarding starters (work queues).
   current_staff:
     source: Person
     filter: ended_at = null
@@ -1067,6 +1033,28 @@ workspace staff_directory "Staff Directory":
     # arithmetic in filters isn't first-class for list region filters
     # outside aggregate where clauses.
 
+  # Job strip — headcount + assignment status mix (acceptance criteria:
+  # active / on leave / terminated visible without hunting employment rows).
+  headcount:
+    source: Person
+    display: metrics
+    aggregate:
+      people: count(Person)
+      departments: count(Department)
+      roles: count(Role)
+      active: count(Employment where status = active and end_date = null)
+      on_leave: count(Employment where status = on_leave and end_date = null)
+      terminated: count(Employment where status = terminated)
+      documents: count(HrDocument)
+      conversation: count(PersonNote)
+    tones:
+      people: accent
+      active: accent
+      on_leave: warning
+      terminated: danger
+      documents: accent
+      conversation: accent
+
   # Goal B document composition AFTER dual attention — named offer/policy
   # headlines (display_field: headline) before the notes trail.
   composition:
@@ -1087,24 +1075,33 @@ workspace staff_directory "Staff Directory":
     action: person_note_detail
     empty: "No conversation yet — notes on people and onboarding appear here"
 
+  # Goal B media AFTER work — filled people shelf (not 2-of-12 theater).
+  media_shelf:
+    source: Person
+    filter: ended_at = null
+    display: grid
+    sort: started_at desc
+    limit: 8
+    action: person_detail
+    empty: "No headshots yet — add photo URLs on people records"
+
   ux:
     # Focus ≤4 (cycle 1950): full 6-name focus expanded fold to _MAX and
     # stormed nested Playwright (ERR_INSUFFICIENT_RESOURCES / htmx Failed
-    # to fetch). Keep acceptance-critical shelf + status mix + dual
-    # attention eager; composition + conversation remain on the desk but
-    # intersect-once after scroll (still in region list above org queues).
+    # to fetch). Cycle 2092: work queues + status mix + letters eager;
+    # media shelf + notes remain on the desk, intersect-once after scroll.
     as hr_admin:
-      purpose: "Multi-panel staff — headshots, dual attention, documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters
+      purpose: "Multi-panel staff — roster, starters, status mix, documents before notes"
+      focus: current_staff, recent_starters, headcount, composition
     as manager:
-      purpose: "Multi-panel team view — headshots, roster, starters, documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters
+      purpose: "Multi-panel team view — roster, starters, status mix, documents before notes"
+      focus: current_staff, recent_starters, headcount, composition
     as finance:
-      purpose: "Headshots + headcount dual attention + documents before compensation hop"
-      focus: media_shelf, headcount, current_staff, recent_starters
+      purpose: "Roster + starters + headcount + documents before compensation hop"
+      focus: current_staff, recent_starters, headcount, composition
     as employee:
-      purpose: "Directory headshots, dual attention, and documents before notes"
-      focus: media_shelf, headcount, current_staff, recent_starters
+      purpose: "Directory roster, starters, status mix, and documents before notes"
+      focus: current_staff, recent_starters, headcount, composition
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:

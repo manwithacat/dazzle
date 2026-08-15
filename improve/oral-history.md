@@ -49,6 +49,12 @@ Doctrine source of truth remains
 9. **LFS / empty-hero pointers.** Git LFS still stubs break empty-hero gates —
    untrack pointer stubs or skip them in residual. Recapture real PNGs.
 
+10. **empty_region is not always prune.** A 2-thumb media shelf + metric wall
+    that buries the roster is dishonest even when every region is filled.
+    Recipe `directory_work_first` (lead with actable queues; keep the shelf
+    below fold) is a different family than `empty_region_prune`. Peer refuse
+    still bans office/remote on Reporting after unassigned seats exist.
+
 10. **create_all missing columns.** DSL adds fields; SQLite/PG tables lag —
     `ensure_missing_entity_columns` (or equivalent) after create_all is a
     real product-blocker class, not a one-off.

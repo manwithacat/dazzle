@@ -33,9 +33,12 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "dept_mix:" not in block
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
-    # Cycle 1950: focus ≤4 — composition/notes remain regions, not focus-eager.
-    assert "focus: media_shelf, headcount, current_staff, recent_starters" in block
+    # Cycle 2092 directory_work_first: roster + starters lead; media not fold-eager.
+    assert "focus: current_staff, recent_starters, headcount, composition" in block
     assert "composition:" in block
+    assert "directory_work_first" in block
+    assert block.index("current_staff:") < block.index("media_shelf:")
+    assert block.index("recent_starters:") < block.index("headcount:")
 
 
 def test_my_team_omits_redundant_org_bar_charts() -> None:

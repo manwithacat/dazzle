@@ -177,9 +177,10 @@ Job homes lead with **metrics**, then the directory/salary work — not a bare
 staff table as the only region.
 
 ### Workspace: `staff_directory` (default landing for hr_admin + manager)
-- **Multi-panel** (Goal B command_density + document): headcount metrics → dual
-  attention (active roster + recent starters) → **document composition**
-  (named offer / policy / promo letters) → people notes trail
+- **Multi-panel** (Goal B command_density + document + empty_region 2092
+  `directory_work_first`): dual attention (active roster + recent starters)
+  → headcount status mix → **document composition** (named offer / policy /
+  promo letters) → people notes trail → filled media shelf (not 2-thumb lead)
 - Recent starters + department/role context hubs (no under-fold status/dept bar theater)
 - **Filters**: by department, by role level, by "starting in last 90 days", by "ended in last 90 days"
 - **Sort**: by name, by tenure (started_at desc), by department

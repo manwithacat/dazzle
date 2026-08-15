@@ -14,7 +14,7 @@ was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
 Staff desks are multi-panel command dens: dual attention pressure (active roster
-+ recent starters on Staff Directory (headshot shelf first, then dual attention); level + department + **work-location** boards on My Team (IC vs manager career-track density — cycle 2065)) and
++ recent starters on Staff Directory (work-first roster, then status mix — cycle 2092 `directory_work_first`); level + department + **work-location** boards on My Team (IC vs manager career-track density — cycle 2065)) and
 **named employment documents** (HrDocument composition with display_field
 headline — offer / policy / promo / contract letters) sit above a **people notes**
 trail (PersonNote with display_field body) — not only directory metrics or
@@ -75,11 +75,13 @@ dedicated screens — fourteen in all, from the staff directory to
 ## Where work happens
 
 - **Staff Directory** — multi-panel staff home (command_density + document):
-  headcount metrics, dual attention (active roster + recent starters capped for
-  fold share), **document composition** (named HR letters), then people-notes
-  trail, plus department/role context hubs (no under-fold status/dept bar
-  theater). Employment history triple-opens assignment hub, person career hub,
-  and role catalogue (`Employment|Person|Role`).
+  work-first dual attention (active roster + recent starters above fold —
+  cycle 2092 `directory_work_first`, not a 2-thumb headshot theater), then
+  headcount status mix, **document composition** (named HR letters), then
+  people-notes trail and a filled media shelf below fold, plus department/role
+  context hubs (no under-fold status/dept bar theater). Employment history
+  triple-opens assignment hub, person career hub, and role catalogue
+  (`Employment|Person|Role`).
 - **Career Desk** — fleet career timeline desk (one employment spine + salary +
   reporting timelines + salary reason chart; cycle 2072
   `career_desk_employment_twin_prune` drops twin `employment_trail`). Opening a person from Staff Directory
@@ -149,4 +151,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:74ddf905ff248d97fa6804facfb18f1e466d4a12fe2a9769ce0d98aa2a1b5261 -->
+<!-- dazzle-spec-brief: sha256:e249fe400ae0358ca171308aa7821dcf013ab31f2f757851f1e11be8a445996c -->

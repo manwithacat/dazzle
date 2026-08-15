@@ -36,6 +36,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B empty_region work-first directory (cycle 2092)** — hr_records
+  Staff Directory leads with Current Staff + Recent Starters
+  (`directory_work_first`; BambooHR/Workday roster, not a 2-of-12 photo
+  theater + metric wall). Filled media shelf stays below fold. Unit pin;
+  SPEC; recapture.
 - **Goal B empty_region identity chips (cycle 2091)** — project_tracker
   User `repr_fields` name/role/dept so Dashboard Media Shelf and People
   kanban drop Photo Url / Email / Is Active dump

@@ -25,10 +25,9 @@ def test_staff_desks_declare_live_conversation_spine() -> None:
     assert "source: PersonNote" in text
     assert "conversation: count(PersonNote)" in text
     # Cycle 1837/1838: notes trail after dual attention + documents (region remains).
-    # Cycle 1950: focus ≤4 (shelf+metrics+dual attention) so fold thrash stays off;
-    # live_conversation still on desk, not all focus-eager.
+    # Cycle 2092: work-first focus ≤4; live_conversation still on desk, not eager.
     assert "live_conversation" in text
-    assert "focus: media_shelf, headcount, current_staff, recent_starters" in text
+    assert "focus: current_staff, recent_starters, headcount, composition" in text
     assert "live_conversation:" in text
 
 

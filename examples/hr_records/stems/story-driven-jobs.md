@@ -6,9 +6,9 @@ HR homes open with headcount/compensation metrics before dense directories.
 
 ## Reconstruct
 
-- staff_directory: people notes + headcount + staff/starter queues (no under-fold
-  status/dept bar theater — Goal B empty_region). Assignment lifecycle status
-  lives on employment list/detail for ST-001/ST-005.
+- staff_directory: staff/starter queues first, then headcount + documents +
+  people notes (no 2-thumb media theater — Goal B `directory_work_first`).
+  Assignment lifecycle status lives on employment list/detail for ST-001/ST-005.
 - compensation_review: compensation metrics then salary list.
 - employment_list + person hub related employment show status alongside dates.
 - Temporal/history surfaces stay list/timeline for the teaching gap.

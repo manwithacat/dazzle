@@ -59,6 +59,10 @@ _APP_ALIASES: dict[str, str] = {
 
 # Soft recipe tags derived from dig notes / commit subjects (closed set).
 _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    # Specific empty_region families first — greedy honesty/empty_region
+    # must not collapse identity chips or work-first reorder into prune.
+    ("directory_work_first", re.compile(r"directory_work_first", re.I)),
+    ("identity_chip_not_schema", re.compile(r"identity_chip_not_schema", re.I)),
     ("headshot_shelf", re.compile(r"headshot|photo_url|media_shelf", re.I)),
     ("dual_attention", re.compile(r"dual attention|command_density|multi-panel|multi panel", re.I)),
     ("team_org_desk", re.compile(r"\bTeam desk\b|org_structure|People desk|reporting", re.I)),

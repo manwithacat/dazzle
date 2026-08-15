@@ -39,15 +39,18 @@ def test_person_repr_fields_are_identity_chips_not_schema_dump() -> None:
     assert "photo_url" not in line
 
 
-def test_staff_directory_media_shelf_first() -> None:
+def test_staff_directory_media_shelf_after_work() -> None:
+    """Cycle 2092: filled shelf stays on the desk after roster (not 2-thumb lead)."""
     block = _workspace_block("staff_directory")
     assert "media_shelf:" in block
     assert "source: Person" in block
     assert "display: grid" in block
-    assert block.index("media_shelf:") < block.index("headcount:")
-    assert block.index("media_shelf:") < block.index("current_staff:")
-    # Cycle 1950: focus ≤4 (media leads; docs/notes still on desk, not all eager).
-    assert "focus: media_shelf, headcount, current_staff, recent_starters" in block
+    assert block.index("current_staff:") < block.index("media_shelf:")
+    assert block.index("recent_starters:") < block.index("media_shelf:")
+    assert block.index("live_conversation:") < block.index("media_shelf:")
+    # Filled shelf (not cap-2 theater). Focus is work-first; shelf not eager.
+    assert "limit: 8" in block.split("media_shelf:", 1)[1].split("\n  ux:", 1)[0]
+    assert "focus: current_staff, recent_starters, headcount, composition" in block
     assert "composition:" in block
     assert "live_conversation:" in block
 

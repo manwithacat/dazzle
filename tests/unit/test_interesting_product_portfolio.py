@@ -178,6 +178,21 @@ def test_recipe_family_collapses_coat_synonyms() -> None:
     assert recipe_family("sla_stage_density") == "stage_queue_slice"
     assert recipe_family("headshot_shelf") == "headshot_shelf"
     assert recipe_family(None, "User.photo_url + media_shelf headshot") == "headshot_shelf"
+    assert recipe_family("directory_work_first") == "directory_work_first"
+    assert (
+        recipe_family(
+            "directory_work_first",
+            "depth_id=empty_region_honesty recipe=directory_work_first",
+        )
+        == "directory_work_first"
+    )
+    assert (
+        recipe_family(
+            "identity_chip_not_schema",
+            "depth_id=empty_region_honesty recipe=identity_chip_not_schema",
+        )
+        == "identity_chip_not_schema"
+    )
 
 
 def test_coat_family_ship_saturates_cell() -> None:

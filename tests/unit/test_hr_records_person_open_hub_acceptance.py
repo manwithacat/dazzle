@@ -93,8 +93,8 @@ def test_staff_directory_persona_focus_capped_for_trial_fold() -> None:
     """Cycle 1950: staff_directory focus ≤4 so fold expand avoids thrash.
 
     Six focus names + _MAX_FOCUS_FOLD storm nested Playwright (htmx
-    ERR_INSUFFICIENT_RESOURCES). Keep shelf + metrics + dual attention
-    eager; docs/notes remain on desk but not all focus-eager.
+    ERR_INSUFFICIENT_RESOURCES). Cycle 2092: roster + starters + status
+    mix + letters eager; media shelf stays on desk, not fold-eager.
     """
     block = _workspace_block("staff_directory")
     # ux block only (before department_context)
@@ -105,6 +105,7 @@ def test_staff_directory_persona_focus_capped_for_trial_fold() -> None:
             continue
         names = [p.strip() for p in stripped.removeprefix("focus:").split(",") if p.strip()]
         assert 1 <= len(names) <= 4, names
-        assert "media_shelf" in names
-        assert "headcount" in names
         assert "current_staff" in names
+        assert "recent_starters" in names
+        assert "headcount" in names
+        assert "media_shelf" not in names
