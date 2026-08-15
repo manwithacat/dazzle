@@ -173,6 +173,8 @@ Doctrine source of truth remains
 27. **project_tracker empty_region grain is identity chips, not another
     chart prune.** Media Shelf / People kanban dumping Photo Url / Email
     / Is Active is schema theater. Fix is User `repr_fields` name/role/dept.
+    Machine: `identity_chip_empty` saturates `(app, empty_region_honesty)`
+    when `entity User` has `repr_fields: [name, role, department]`.
 
 28. **Riding-along notes must not collapse recipe family.** Cycle 2095
     `tree_people_seat` notes mentioned `2094 approved_stamp_wall rides this

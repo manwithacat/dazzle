@@ -389,6 +389,18 @@ def agent_only_selector_empty(text: str) -> bool:
     return False
 
 
+def identity_chip_empty(text: str) -> bool:
+    """User identity chips name/role/dept — not schema dump (oral #27)."""
+    for m in re.finditer(r"^entity\s+(\w+)\b", text, re.M):
+        if m.group(1) != "User":
+            continue
+        nxt = re.search(r"^entity\s+\w+\b", text[m.end() :], re.M)
+        body = text[m.start() : m.end() + (nxt.start() if nxt else len(text) - m.end())]
+        if re.search(r"repr_fields:\s*\[name,\s*role,\s*department\]", body):
+            return True
+    return False
+
+
 def directory_work_first_empty(text: str) -> bool:
     """Roster + starters lead before media shelf (oral #10)."""
     by_ws: dict[str, list[tuple[str, str]]] = {}
@@ -459,7 +471,11 @@ def live_saturated_cells(
             sat.add((app, "document"))
         if tree_people_org(text) or pending_join_org(text) or billing_escalations_org(text):
             sat.add((app, "org_structure"))
-        if agent_only_selector_empty(text) or directory_work_first_empty(text):
+        if (
+            agent_only_selector_empty(text)
+            or directory_work_first_empty(text)
+            or identity_chip_empty(text)
+        ):
             sat.add((app, "empty_region_honesty"))
         if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))

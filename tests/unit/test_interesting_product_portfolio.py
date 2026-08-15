@@ -345,6 +345,17 @@ def test_live_support_tickets_org_not_recommended() -> None:
         assert not (rec["app"] == "support_tickets" and rec["depth_id"] == "org_structure")
 
 
+def test_live_project_tracker_empty_region_not_recommended() -> None:
+    """User identity chips saturate project_tracker empty_region (oral #27)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["project_tracker", "empty_region_honesty"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "project_tracker" and rec["depth_id"] == "empty_region_honesty")
+
+
 def test_live_hr_records_empty_region_not_recommended() -> None:
     """Work-first roster + starters saturate hr empty_region (oral #10)."""
     from scripts.interesting_product_portfolio import snapshot

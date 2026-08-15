@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: identity chips saturate empty_region (cycle 2108)** —
+  User `repr_fields: [name, role, department]` saturates
+  `(app, empty_region_honesty)` so project_tracker is not recommended for
+  another chart prune (oral #27).
 - **Goal B planner: billing vs escalations saturates org (cycle 2107)** —
   exclusive `billing_staff` + `escalations_staff` queues saturate
   `(app, org_structure)` so support_tickets is not recommended for another

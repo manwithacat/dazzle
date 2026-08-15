@@ -14,6 +14,7 @@ from scripts.goal_b_coat import (
     coat_residual,
     directory_work_first_empty,
     freeze_breaches,
+    identity_chip_empty,
     line_composition_document,
     live_saturated_cells,
     measure,
@@ -375,6 +376,48 @@ def test_directory_work_first_empty_rejects_media_first(tmp_path: Path) -> None:
 def test_hr_records_directory_work_first_saturates_empty_region() -> None:
     sat = live_saturated_cells(["hr_records", "acme_billing"])
     assert ("hr_records", "empty_region_honesty") in sat
+    assert ("acme_billing", "empty_region_honesty") not in sat
+
+
+def test_identity_chip_empty_saturates(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        'entity User "Team Member":\n'
+        "  fields:\n"
+        "    name: text\n"
+        "    role: text\n"
+        "    department: text\n"
+        "    email: email\n"
+        "  repr_fields: [name, role, department]\n"
+        "\n"
+        'entity Project "Project":\n'
+        "  fields:\n"
+        "    name: text\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "empty_region_honesty") in sat
+    assert identity_chip_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_identity_chip_empty_rejects_extra_repr_fields(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        'entity User "Staff":\n  repr_fields: [name, role, department, support_tier]\n',
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "empty_region_honesty") not in sat
+    assert identity_chip_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is False
+
+
+def test_project_tracker_identity_chip_saturates_empty_region() -> None:
+    sat = live_saturated_cells(["project_tracker", "acme_billing"])
+    assert ("project_tracker", "empty_region_honesty") in sat
     assert ("acme_billing", "empty_region_honesty") not in sat
 
 
