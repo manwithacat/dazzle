@@ -60,10 +60,23 @@ def test_engineering_dashboard_declares_composition_after_dual_attention() -> No
     assert "documents: count(TestDocument)" in block
     assert block.index("triage_pressure:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert (
-        "focus: fleet_overview, device_attention, triage_pressure, composition, "
-        "live_conversation" in block
-    )
+
+
+def test_engineering_dashboard_exclusive_protocol_vs_acceptance() -> None:
+    """Cycle 2088 document: recipe protocol_acceptance_split.
+
+    Peer TestRail/qTest: run protocols vs ship-gate acceptance as exclusive
+    queues — mixed composition stays below fold (not another brief dump).
+    """
+    block = _engineering_dashboard_block()
+    assert "protocols:" in block
+    assert "filter: doc_kind = protocol and status != archived" in block
+    assert "acceptance_packets:" in block
+    assert "filter: doc_kind = acceptance_criteria and status != archived" in block
+    assert block.index("protocols:") < block.index("acceptance_packets:")
+    assert block.index("acceptance_packets:") < block.index("device_attention:")
+    assert "focus: fleet_overview, protocols, acceptance_packets, live_conversation" in block
+    assert "limit: 4" in block  # device_attention capped so docs stay above fold
 
 
 def test_test_document_list_dual_open_and_device_hub() -> None:

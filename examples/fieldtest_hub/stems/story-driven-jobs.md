@@ -7,9 +7,10 @@ and fleet metrics for engineer/manager; personal queues for testers.
 
 ## Reconstruct
 
-- Engineer/manager: `engineering_dashboard` = fleet metrics + `device_attention`
-  queue (non-active devices — TR-35) + triage/critical queues + open task queue;
-  keep kanban/map/tree as secondary demos.
+- Engineer/manager: `engineering_dashboard` = fleet metrics + exclusive
+  protocol vs acceptance-packet document queues (cycle 2088
+  `protocol_acceptance_split`) + `device_attention` (non-active — TR-35)
+  + triage queues; keep kanban/map/tree as secondary demos.
 - Tester: `tester_dashboard` = personal metrics + device/issue/task queues.
 - ST-037–041 own the manager/engineer job surfaces; ST-042–044 own tester.
 - Device hub related issues/sessions and tester hub activity/assignments are

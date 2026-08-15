@@ -24,4 +24,5 @@ surprise_prompts = [
   "Can a manager pick the right physical unit from a photo before opening the serial queue?",
   "Are defect screenshots and hardware identity on different desks, or did we clone the same shelf?",
   "Does the triage trail label steps-to-reproduce, or is repro just another comment?",
+  "Are run protocols and ship-gate acceptance separate queues, or one mixed brief dump?",
 ]

@@ -31,6 +31,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B document protocol vs acceptance (cycle 2088)** — fieldtest_hub
+  Engineering Dashboard leads with exclusive run-protocol vs ship-gate
+  acceptance queues (`protocol_acceptance_split`; TestRail/qTest grain).
+  Mixed composition stays below fold; device_attention capped at 4.
+  Extra acceptance seed; unit pin; SPEC; recapture.
 - **Goal B empty_region_honesty agent inspector (cycle 2086)** —
   `context_selector` accepts `filter:` (same ConditionExpr as a region).
   support_tickets Agent Console lists frontline staff only

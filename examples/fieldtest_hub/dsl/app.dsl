@@ -1341,13 +1341,34 @@ workspace engineering_dashboard "Engineering Dashboard":
       documents: accent
       conversation: accent
 
+  # Goal B document (cycle 2088): recipe protocol_acceptance_split —
+  # TestRail/qTest put run protocols vs ship-gate acceptance as exclusive
+  # queues, not one mixed brief/decision dump. Mixed composition stays
+  # below fold.
+  protocols:
+    source: TestDocument
+    filter: doc_kind = protocol and status != archived
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: test_document_detail
+    empty: "No run protocols — attach a protocol on a device hub"
+  acceptance_packets:
+    source: TestDocument
+    filter: doc_kind = acceptance_criteria and status != archived
+    sort: created_at desc
+    limit: 3
+    display: queue
+    action: test_document_detail
+    empty: "No acceptance packets — ship-gate criteria land here"
+
   # TR-35: fleet status without click-through to /app/device — non-active
-  # devices as a review queue next to the KPI strip (dual attention A).
+  # devices as a review queue (capped so document queues stay above fold).
   device_attention:
     source: Device
     filter: status != active
     sort: status asc, name asc
-    limit: 15
+    limit: 4
     display: queue
     action: device_detail
     empty: "All registered devices are active"
@@ -1362,7 +1383,7 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_edit
     empty: "No open reports to triage"
 
-  # Goal B document composition after dual attention — named briefs before notes.
+  # Mixed composition below fold — exclusive protocol/acceptance own the fold.
   composition:
     source: TestDocument
     sort: created_at desc
@@ -1556,12 +1577,12 @@ workspace engineering_dashboard "Engineering Dashboard":
 
   ux:
     as engineer:
-      purpose: "Fleet pulse, dual attention, test docs, then triage notes — multi-panel eng home"
-      focus: fleet_overview, device_attention, triage_pressure, composition, live_conversation
+      purpose: "Fleet pulse, exclusive protocols vs acceptance packets, then notes"
+      focus: fleet_overview, protocols, acceptance_packets, live_conversation
     as manager:
-      # TR-17/TR-35 + Goal B document: fleet KPIs + dual attention + docs before notes.
-      purpose: "Fleet overview, dual attention, test documents, and triage notes"
-      focus: fleet_overview, device_attention, triage_pressure, composition, live_conversation
+      # TR-17/TR-35 + Goal B document cycle 2088 protocol_acceptance_split.
+      purpose: "Fleet overview, run protocols vs ship-gate acceptance, then notes"
+      focus: fleet_overview, protocols, acceptance_packets, live_conversation
 
 # Workspace: Tester Dashboard
 # ST-042–044: personal metrics + assigned devices + open issues/tasks as queues

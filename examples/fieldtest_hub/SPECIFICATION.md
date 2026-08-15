@@ -31,7 +31,9 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
 ## Where work happens
 
 - **Engineering Dashboard** — multi-panel eng home (command_density + document):
-  fleet metrics (including document + conversation counts), dual attention
+  fleet metrics (including document + conversation counts), exclusive
+  **run protocols** vs **ship-gate acceptance** queues (cycle 2088
+  `protocol_acceptance_split`; mixed composition below fold), dual attention
   (non-active devices + open triage pressure), test-document composition with
   domain-true headlines, then live triage notes and secondary views.
 - **Manager Ops** — manager home multi-panel command density + document: quality
@@ -104,4 +106,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:144c5a42ba599a206f22e7e141c3afac759dea7750616edcbb23096e9f738107 -->
+<!-- dazzle-spec-brief: sha256:d9cbbfa3e64f4f218f4e0b8951ee436daf13c610c574079e217beee6f70f66ca -->

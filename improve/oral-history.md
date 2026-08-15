@@ -120,7 +120,13 @@ Doctrine source of truth remains
     parent) as the default first option — two giant empty regions. Fix is
     `filter: support_tier = l1 and department != External` on the selector
     (framework primitive; `role =` is reserved for role()). Do not put
-    requesters back in that picker.
+    requesters back in that picker. Seed users must carry department/tier
+    or `!= External` empties the picker (2087 CI).
+
+25. **fieldtest document grain is protocol vs acceptance, not another mixed
+    composition dump.** After TestDocument composition exists, exclusive
+    run-protocol vs ship-gate acceptance queues are the TestRail hole.
+    Do not AND-filter brief/decision onto the same fold.
 
 ## What not to re-learn
 
