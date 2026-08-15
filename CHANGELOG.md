@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Tags leftover typed token vanished on blur (cycle 2131)** —
+  `dz-tags.js` now commits a leftover (trimmed) token on `focusout`, so
+  tab-away / click-away submits what the user typed instead of discarding
+  it. Whitespace-only leftover is not a tag. Same honesty class as
+  command leftover query inventing the catalog (2130) and money leftover
+  junk inventing 0 (2121).
 - **Command palette leftover query invented the full catalog (cycle 2130)** —
   gallery `dz-command` now posts `name=q` (product shell already did) and
   the mock filters the catalog. Empty / focus-once still returns every

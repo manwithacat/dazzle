@@ -2464,8 +2464,8 @@ def select(source: str, id: str) -> str:
             "Multi-value chips + free create — a native text input carrying a "
             "comma-joined value, progressively enhanced into a chips UI. JS off: "
             "a usable comma-separated text field. JS on: type + Enter/comma "
-            "creates a chip, × removes; the native input stays as the submitted "
-            "value.",
+            "creates a chip, blur commits a leftover token, × removes; the "
+            "native input stays as the submitted value.",
             '<label class="dz-field hm-measure" for="hm-tags-field">'
             '<span class="dz-field__label">Labels</span>'
             '<input id="hm-tags-field" name="labels" type="text" '
@@ -2484,7 +2484,8 @@ def select(source: str, id: str) -> str:
             "the "
             "comma-joined chip list and fires <code>change</code>, so the submit "
             "shape never changes. Type + Enter or comma creates a chip "
-            "(trim/dedup/skip-empty); paste splits on comma/newline; × or "
+            "(trim/dedup/skip-empty); leftover typed text commits on blur "
+            "(must not vanish — cycle 2131); paste splits on comma/newline; × or "
             "Backspace-on-empty removes a chip; add/remove is announced via a "
             "visually-hidden <code>aria-live</code> region.",
             tags=("forms",),
@@ -2507,7 +2508,7 @@ def select(source: str, id: str) -> str:
                 ),
                 a11y_keys=(
                     "chips are role=list of listitem; each × is labelled Remove {tag}",
-                    "Enter or comma creates a chip; Backspace on empty entry removes the last",
+                    "Enter or comma creates a chip; blur commits leftover; Backspace on empty entry removes the last",
                 ),
                 composes_with=("field",),
             ),

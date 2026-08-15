@@ -4,6 +4,10 @@ Required: after enhance the native input is hidden, so ``required`` moves
 off it. The visible entry uses ``setCustomValidity`` until at least one
 chip exists (cycle 2120). Do not put native ``required`` on the entry —
 it is empty whenever chips exist.
+
+Leftover honesty (cycle 2131): a typed-but-uncommitted token must not
+vanish on blur — ``commitLeftover`` on focusout (trim / dedup / skip
+empty) so tab-away submits what the user typed.
 """
 
 import html

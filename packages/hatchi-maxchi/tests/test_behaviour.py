@@ -3356,6 +3356,31 @@ def test_tags_remove_chip(page) -> None:  # type: ignore[no-untyped-def]
     assert preview.locator("input[data-tags]").input_value() == "backend"
 
 
+def test_tags_leftover_token_commits_on_blur(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover typed token must become a chip on blur (cycle 2131).
+
+    Same honesty class as command leftover query (2130) and money leftover
+    junk (2121): typed-but-uncommitted text must not vanish.
+    """
+    goto_part(page, "tags")
+    preview = page.locator(".hm-preview")
+    preview.locator("input[data-tags]").dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    entry = preview.locator(".tags-entry")
+    entry.fill("frontend")
+    entry.evaluate("el => el.blur()")
+    page.wait_for_timeout(50)
+    assert preview.locator(".tags-chip").count() == 3
+    assert preview.locator("input[data-tags]").input_value() == "urgent,backend,frontend"
+    assert entry.input_value() == ""
+    # Whitespace leftover is not a tag.
+    entry.fill("   ")
+    entry.evaluate("el => el.blur()")
+    page.wait_for_timeout(50)
+    assert preview.locator(".tags-chip").count() == 3
+    assert preview.locator("input[data-tags]").input_value() == "urgent,backend,frontend"
+
+
 def test_tags_required_validity_after_enhance(page) -> None:  # type: ignore[no-untyped-def]
     """Hidden native required must not be the gate after enhance (cycle 2120).
 

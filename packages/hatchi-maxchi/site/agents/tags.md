@@ -1,6 +1,6 @@
 # Tags (`tags`)
 
-Multi-value chips + free create — a native text input carrying a comma-joined value, progressively enhanced into a chips UI. JS off: a usable comma-separated text field. JS on: type + Enter/comma creates a chip, × removes; the native input stays as the submitted value.
+Multi-value chips + free create — a native text input carrying a comma-joined value, progressively enhanced into a chips UI. JS off: a usable comma-separated text field. JS on: type + Enter/comma creates a chip, blur commits a leftover token, × removes; the native input stays as the submitted value.
 
 > **Layer:** L1 surface · **Recipe:** `multi-label-form` — multi free-form labels
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -65,7 +65,7 @@ Do **not** re-own the slot:
 ### Keyboard / AT
 
 - chips are role=list of listitem; each × is labelled Remove {tag}
-- Enter or comma creates a chip; Backspace on empty entry removes the last
+- Enter or comma creates a chip; blur commits leftover; Backspace on empty entry removes the last
 
 ### Related parts
 
@@ -110,7 +110,7 @@ def render(field: TagsField) -> str:
 
 ## Notes
 
-Progressive enhancement: the server renders a plain <input type="text" data-dz-tags> whose value is a COMMA-JOINED tag string — usable and submittable with no JS (type a, b, c; the server splits on comma), native required intact. Seeded non-empty values enhance on DOM ready; empty fields enhance on first interaction. dz-tags.js wraps the input in a .dz-tags root — a role="list" of removable chips + a borderless entry — and hides the native input (kept in the DOM as the submitted value). Every add/remove rewrites the native input to the comma-joined chip list and fires change, so the submit shape never changes. Type + Enter or comma creates a chip (trim/dedup/skip-empty); paste splits on comma/newline; × or Backspace-on-empty removes a chip; add/remove is announced via a visually-hidden aria-live region.
+Progressive enhancement: the server renders a plain <input type="text" data-dz-tags> whose value is a COMMA-JOINED tag string — usable and submittable with no JS (type a, b, c; the server splits on comma), native required intact. Seeded non-empty values enhance on DOM ready; empty fields enhance on first interaction. dz-tags.js wraps the input in a .dz-tags root — a role="list" of removable chips + a borderless entry — and hides the native input (kept in the DOM as the submitted value). Every add/remove rewrites the native input to the comma-joined chip list and fires change, so the submit shape never changes. Type + Enter or comma creates a chip (trim/dedup/skip-empty); leftover typed text commits on blur (must not vanish — cycle 2131); paste splits on comma/newline; × or Backspace-on-empty removes a chip; add/remove is announced via a visually-hidden aria-live region.
 
 ## Source files
 

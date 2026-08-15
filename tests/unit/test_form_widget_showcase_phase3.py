@@ -185,6 +185,21 @@ def test_tags_controller_required_validity() -> None:
     assert "Add at least one tag" in src
 
 
+def test_tags_controller_commits_leftover_on_blur() -> None:
+    """dz-tags.js must commit leftover typed token on blur (2131)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-tags.js"
+    ).read_text(encoding="utf-8")
+    assert "function commitLeftover" in src
+    assert "must not vanish" in src
+
+
 def test_tags_widget() -> None:
     fd = {"name": "labels", "label": "Labels", "widget": "tags"}
     assert isinstance(_field_to_primitive(fd), TagsField)

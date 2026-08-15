@@ -5892,6 +5892,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  * removes the last chip; the × button removes its chip (Enter/Space fire
  * it). Tab reaches the entry and each × like any control.
  *
+ * Leftover honesty (cycle 2131): a typed-but-uncommitted token must not
+ * vanish on blur. focusout commits the leftover (trim / dedup / skip
+ * empty) so tab-away / click-away submits what the user typed — same
+ * class as command leftover query (2130) and money leftover junk (2121).
+ *
  * Required honesty (cycle 2120): after enhance, the native input is hidden
  * so its `required` would block submit with an unfocusable error. Drop it
  * and setCustomValidity on the visible entry until at least one chip
@@ -5991,6 +5996,15 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     (text || "").split(/[,\n\r]+/).forEach(function (part) {
       addTag(root, part);
     });
+  }
+
+  // Commit leftover typed text so it must not vanish on blur.
+  function commitLeftover(root) {
+    var entry = root.querySelector(".tags-entry");
+    if (!entry) return;
+    var raw = entry.value;
+    if (raw.trim()) addTag(root, raw);
+    entry.value = "";
   }
 
   function removeChip(root, chip) {
@@ -6155,6 +6169,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
         removeChip(root, cs[cs.length - 1]);
       }
     }
+  });
+
+  document.addEventListener("focusout", function (evt) {
+    var entry = evt.target.closest && evt.target.closest(".tags-entry");
+    if (!entry) return;
+    var root = entry.closest(".tags");
+    if (root) commitLeftover(root);
   });
 
   document.addEventListener("paste", function (evt) {
