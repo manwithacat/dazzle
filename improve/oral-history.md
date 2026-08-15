@@ -128,6 +128,10 @@ Doctrine source of truth remains
     run-protocol vs ship-gate acceptance queues are the TestRail hole.
     Do not AND-filter brief/decision onto the same fold.
 
+26. **domain_join org grain is pending join seats, not another title board.**
+    After title/dept kanban exists, Entra/Okta hole is who is waiting to
+    join. Do not re-stack department filters on Team.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

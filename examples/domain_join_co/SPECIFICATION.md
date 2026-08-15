@@ -14,7 +14,7 @@ Announcements, the tenant-scoped posts a workspace admin publishes to keep the
 team informed; Workspace Documents, named briefs, onboarding guides, join
 playbooks, policies, and decision logs buyers scan above the discussion trail;
 and Workspace Members, joined staff with department and job title so the Team
-desk shows org shape (title kanban + department queue) before a flat roster or
+desk shows org shape (pending join seats then title kanban + department queue) before a flat roster or
 board load — peer directory tools (Okta / Google Workspace Admin / Microsoft
 Entra / Rippling) place people after domain join the same way.
 
@@ -66,8 +66,9 @@ board. Staff rows are tenant-scoped and dual-open to the workspace hub.
   queue and join-readiness dual attention, workspace document composition, then
   live discussion in Message chrome, board timeline, and tenant roots (no
   duplicate board dumps or empty chart theater).
-- **Team** — org structure desk: joined staff by job title (kanban) and
-  department placement before flat roster and board load (org_structure Goal B).
+- **Team** — org structure desk: **pending join seats** then job title
+  (kanban) and department placement before flat roster (cycle 2090
+  `pending_join_seat`; Entra/Okta grain).
 - **Team Board** — multi-panel member home: board pulse, post feed and
   join-context dual attention, workspace document composition, then live
   discussion in Message chrome and post trail — without twin empty queues or
@@ -121,4 +122,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Workspace Member lifecycle.** Joined staff move pending → active → offboarded under admin control (rejoin and re-invite paths included).
 
-<!-- dazzle-spec-brief: sha256:37eb0cde0d000ec88e0bd836f050d45b5e2972d387be419472596309bd6110d4 -->
+<!-- dazzle-spec-brief: sha256:acadc59fb36c6a26fe141890393eaa94235a8978ffe41ba9ef6d056b5e799988 -->

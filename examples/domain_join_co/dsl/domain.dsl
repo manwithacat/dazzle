@@ -725,7 +725,7 @@ workspace publish_desk "Publish":
 # Workspace Admin / Microsoft Entra / Rippling) show joined staff by title and
 # department after domain join — not a flat announcement dump before placement.
 workspace team_home "Team":
-  purpose: "Org structure for the joined company — title and department before flat roster and board load"
+  purpose: "Org structure for the joined company — pending join seats then title and department before flat roster"
   access: persona(admin, member)
 
   team_pulse:
@@ -733,29 +733,46 @@ workspace team_home "Team":
     display: metrics
     aggregate:
       staff: count(WorkspaceMember)
+      pending: count(WorkspaceMember where status = pending)
+      active: count(WorkspaceMember where status = active)
       announcements: count(Announcement)
       documents: count(WorkspaceDocument)
     tones:
       staff: positive
+      pending: warning
+      active: accent
       announcements: accent
       documents: accent
 
-  # Title board — Workspace Admin / IT Lead / People Ops / …
+  # Goal B org_structure (cycle 2090): recipe pending_join_seat —
+  # Entra/Okta/Rippling show who is waiting to join before the title board.
+  pending_joins:
+    source: WorkspaceMember
+    filter: status = pending
+    sort: name asc
+    limit: 4
+    display: queue
+    action: workspace_member_detail
+    empty: "No pending joiners — everyone on the roster is active"
+
+  # Title board — active seats only (pending stay on the join queue).
   by_title:
     source: WorkspaceMember
+    filter: status = active
     display: kanban
     group_by: job_title
     sort: name asc
-    limit: 40
+    limit: 12
     action: workspace_member_detail
     empty: "No titled staff yet"
 
   # Department placement — IT / People Ops / Security / Facilities.
   by_department:
     source: WorkspaceMember
+    filter: status = active
     display: queue
     sort: department asc, name asc
-    limit: 40
+    limit: 12
     action: workspace_member_detail
     empty: "No staff placed in departments yet"
 
@@ -795,8 +812,8 @@ workspace team_home "Team":
 
   ux:
     as admin:
-      purpose: "See joined staff by title and department before board load"
-      focus: team_pulse, by_title, by_department, people
+      purpose: "Pending join seats then title/department — Entra/Okta grain"
+      focus: team_pulse, pending_joins, by_title, by_department
     as member:
-      purpose: "Org structure for your company — title board then department"
-      focus: team_pulse, by_title, by_department, people
+      purpose: "See who is waiting to join, then title board"
+      focus: team_pulse, pending_joins, by_title, by_department

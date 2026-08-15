@@ -15,6 +15,8 @@ strip vs member announcement board — not a bare announcement list warehouse.
 - Announcement list pipe dual open: **Announcement hub** (id) + **Workspace hub** (workspace FK).
 - Announcement hub lifecycle strip includes status (draft/published/archived).
 - Join-request queue stays in runtime auth admin — do not invent DSL for it here.
+- Team desk `pending_joins` (cycle 2090 `pending_join_seat`) is the Entra/Okta
+  hole: who is waiting to join before the title board.
 
 ## Not this
 

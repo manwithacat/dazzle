@@ -47,8 +47,9 @@ def test_team_home_declares_title_board_and_dept_before_load() -> None:
     board_load = "\n  board_load:\n    source: Announcement"
     assert roster in block
     assert board_load in block
-    # Order: pulse → title board → department queue → flat roster → board load
-    assert block.index("team_pulse:") < block.index("by_title:")
+    # Order: pulse → pending joins → title board → department → roster → load
+    assert block.index("team_pulse:") < block.index("pending_joins:")
+    assert block.index("pending_joins:") < block.index("by_title:")
     assert block.index("by_title:") < block.index("by_department:")
     assert block.index("by_department:") < block.index(roster)
     assert block.index(roster) < block.index(board_load)
@@ -56,8 +57,20 @@ def test_team_home_declares_title_board_and_dept_before_load() -> None:
 
 def test_team_home_ux_focus_org_before_load() -> None:
     block = _workspace_block("team_home")
-    assert "focus: team_pulse, by_title, by_department, people" in block
-    assert "org structure" in block.lower() or "title and department" in block.lower()
+    assert "focus: team_pulse, pending_joins, by_title, by_department" in block
+    assert "pending join" in block.lower() or "entra" in block.lower()
+
+
+def test_team_home_pending_join_seat() -> None:
+    """Cycle 2090 org_structure: recipe pending_join_seat.
+
+    Peer Entra/Okta/Rippling: who is waiting to join before the title board.
+    """
+    block = _workspace_block("team_home")
+    assert "pending_joins:" in block
+    assert "filter: status = pending" in block
+    assert "pending: count(WorkspaceMember where status = pending)" in block
+    assert "filter: status = active" in block
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert "as admin:" in block

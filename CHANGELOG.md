@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B org pending join seats (cycle 2090)** — domain_join_co Team
+  desk leads with exclusive pending joiners (`pending_join_seat`;
+  Entra/Okta/Rippling). Title/department boards are active-only. Extra
+  pending seeds; unit pin; SPEC; recapture.
 - **Goal B document protocol vs acceptance (cycle 2088)** — fieldtest_hub
   Engineering Dashboard leads with exclusive run-protocol vs ship-gate
   acceptance queues (`protocol_acceptance_split`; TestRail/qTest grain).
