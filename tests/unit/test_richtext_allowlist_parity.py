@@ -115,7 +115,7 @@ class TestServerSanitiserContract:
             "code",
             "br",
         ]:
-            out = clean_rich_text(f"<{tag}>x</{tag}>" if tag != "br" else "<br>")
+            out = clean_rich_text(f"<{tag}>x</{tag}>" if tag != "br" else "x<br>y")
             assert f"<{tag}" in out, f"{tag} stripped unexpectedly"
 
     def test_keeps_safe_href(self) -> None:
@@ -144,6 +144,27 @@ class TestServerSanitiserContract:
 
     def test_empty_input_returns_empty(self) -> None:
         assert clean_rich_text("") == ""
+
+    def test_visual_empty_placeholder_returns_empty(self) -> None:
+        """Empty editor shell must not persist as a filled paragraph (2128)."""
+        from dazzle.http.runtime.richtext_field import is_visually_empty_rich_text
+
+        for raw in (
+            "<p><br></p>",
+            "<p><br/></p>",
+            "<p><br /></p>",
+            "<p></p>",
+            "<p> </p>",
+            "<p>&nbsp;</p>",
+            "<p>\u200b</p>",
+            "<p><br></p><p><br></p>",
+            "<br>",
+        ):
+            assert is_visually_empty_rich_text(raw), raw
+            assert clean_rich_text(raw) == "", raw
+        assert not is_visually_empty_rich_text("<p>hi</p>")
+        assert "<p>hi</p>" in clean_rich_text("<p>hi</p>")
+        assert not is_visually_empty_rich_text("<p>hi<br></p>")
 
     def test_long_input_raises(self) -> None:
         import pytest

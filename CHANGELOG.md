@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Rich-text empty editor invented a filled `<p><br></p>` (cycle 2128)** —
+  `dz-richtext.js` `emit()` now collapses the contenteditable placeholder
+  (and other whitespace-only markup) to `""`, so required fields fail
+  native validity instead of posting a fake paragraph. The visually-hidden
+  textarea's `invalid` event focuses the editor (same unfocusable-bubble
+  class as combobox/tags 2120). Server `clean_rich_text` treats the same
+  placeholder as empty. Same honesty class as money inventing 0 (2121).
 - **Search-select empty query invented Aurora hits (cycle 2126)** —
   `dz-search-select.js` now stops empty/whitespace typeahead exchanges
   and restores the author's prompt (WeakMap clone, no `innerHTML`).

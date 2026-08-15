@@ -344,6 +344,26 @@ def test_rich_text_required_on_textarea_not_hidden() -> None:
     assert 'aria-required="true"' in ta
 
 
+def test_richtext_controller_collapses_visual_empty() -> None:
+    """dz-richtext emit must not invent <p><br></p> as filled (cycle 2128)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "dazzle"
+        / "page"
+        / "runtime"
+        / "static"
+        / "js"
+        / "dz-richtext.js"
+    ).read_text(encoding="utf-8")
+    assert "function isVisuallyEmpty" in src
+    assert 'isVisuallyEmpty(html) ? ""' in src or 'isVisuallyEmpty(html) ? ""' in src
+    assert "function syncRequiredValidity" in src
+    assert "Enter some text" in src
+
+
 # NOTE: the `def test_parity_with_legacy_widgets` legacy-vs-substrate parity test was removed in ADR-0049
 # Phase 3b — `form_renderer` is deleted, so there is no legacy renderer left to
 # compare against; the substrate is now the source of truth (parity is recorded

@@ -14,6 +14,9 @@ string, return a sanitised string, raise `ValueError` if too long.
 
 from __future__ import annotations
 
+import re
+from html import unescape
+
 import bleach  # type: ignore[import-untyped,unused-ignore]
 
 from dazzle.core.ir.richtext import (
@@ -22,6 +25,15 @@ from dazzle.core.ir.richtext import (
     RICH_TEXT_MAX_LENGTH_DEFAULT,
     RICH_TEXT_PROTOCOL_PATTERN,
     is_safe_href,
+)
+
+# Tags + nbsp / ZWSP / whitespace — the contenteditable empty shell is
+# ``<p><br></p>``. That must not persist as a filled required value
+# (cycle 2128 — same honesty class as money inventing 0).
+_TAG = re.compile(r"<[^>]+>")
+_EMPTY_TOKEN = re.compile(
+    r"(?:&nbsp;|&#160;|&#x0*a0;|[\s\u00a0\u200b])+",
+    re.IGNORECASE,
 )
 
 
@@ -39,6 +51,19 @@ def _attr_filter(tag: str, name: str, value: str) -> bool:
 # Protocols bleach permits at the URI level. Belt-and-braces with the
 # attribute callback above — both must accept the href for it to land.
 _BLEACH_PROTOCOLS = ["http", "https", "mailto"]
+
+
+def is_visually_empty_rich_text(html: str) -> bool:
+    """True when markup has no user-visible text.
+
+    The editor SSRs ``<p><br></p>`` as the caret host. Required fields
+    and persistence must treat that (and whitespace-only siblings) as
+    empty, not as a filled paragraph.
+    """
+    if not html or not str(html).strip():
+        return True
+    text = unescape(_TAG.sub("", str(html)))
+    return not _EMPTY_TOKEN.sub("", text)
 
 
 def clean_rich_text(
@@ -62,7 +87,7 @@ def clean_rich_text(
     Raises:
         ValueError: If the sanitised output exceeds `max_length`.
     """
-    if not raw:
+    if is_visually_empty_rich_text(raw):
         return ""
     cleaned: str = bleach.clean(
         raw,
@@ -81,4 +106,5 @@ def clean_rich_text(
 __all__ = [
     "RICH_TEXT_PROTOCOL_PATTERN",
     "clean_rich_text",
+    "is_visually_empty_rich_text",
 ]

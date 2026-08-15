@@ -542,6 +542,18 @@
     return rootClone;
   }
 
+  // The contenteditable shell is ``<p><br></p>`` when the user has
+  // typed nothing. That must not post as a filled value (cycle 2128 —
+  // same honesty class as money inventing 0 from garbage).
+  function isVisuallyEmpty(html) {
+    if (!html) return true;
+    var text = String(html)
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;|&#160;|&#x0*a0;/gi, "")
+      .replace(/[\s\u00a0\u200b]+/g, "");
+    return !text;
+  }
+
   function emit(editor) {
     var clone = editor.cloneNode(true);
     sanitiseTree(clone);
@@ -549,10 +561,11 @@
     Array.prototype.forEach.call(clone.childNodes, function (n) {
       html += n.nodeType === 3 ? n.data : n.outerHTML;
     });
-    return html
+    html = html
       .replace(/\u200B/g, "")
       .replace(/<p\/>|<p><\/p>/g, "")
       .trim();
+    return isVisuallyEmpty(html) ? "" : html;
   }
 
   function replaceEditorContents(editor, html) {
@@ -830,8 +843,18 @@
         50000;
       var warnedAt90 = false;
 
+      function syncRequiredValidity() {
+        if (!hidden) return;
+        var empty = !hidden.value;
+        editor.setAttribute(
+          "aria-invalid",
+          hidden.required && empty ? "true" : "false",
+        );
+      }
+
       function commit() {
         if (hidden) hidden.value = emit(editor);
+        syncRequiredValidity();
         var len = (hidden && hidden.value.length) || 0;
         if (len > 0.9 * maxLength && !warnedAt90) {
           warnedAt90 = true;
@@ -900,6 +923,15 @@
         handlePaste(editor, e);
         commit();
       });
+      // Visually-hidden required textarea would pop an unfocusable
+      // bubble (cycle 2120 class). Point invalid at the editor.
+      if (hidden) {
+        on(hidden, "invalid", function (e) {
+          e.preventDefault();
+          editor.focus();
+          announce(host, "Enter some text");
+        });
+      }
       on(document, "selectionchange", function () {
         if (
           document.activeElement === editor ||
@@ -938,6 +970,7 @@
 
   window.dzRichText = {
     _emit: emit,
+    _isVisuallyEmpty: isVisuallyEmpty,
     _toggleInline: toggleInline,
     _setBlock: setBlock,
     _toggleList: toggleList,
