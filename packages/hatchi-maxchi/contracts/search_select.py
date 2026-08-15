@@ -11,7 +11,9 @@ Two surfaces, one Hyperpart:
 
 Selection is a second exchange per row (``hx-get`` on the row → confirm
 fragment + hidden FK filled server-side). The form posts the hidden input,
-never the visible text.
+never the visible text. The controller never invents a selected id; it
+*clears* a stale FK when the user types in the typeahead (and blocks
+submit via ``setCustomValidity`` when the typeahead is required).
 """
 
 import html

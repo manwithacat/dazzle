@@ -173,7 +173,7 @@ Correct response for body_only into .dz-search-results (innerHTML / innerMorph).
 - data-dz-blur-grace-ms (default 200) — blur→close delay so row clicks land; data-dz-confirm-hold-ms (default 1500, alias confirm-dwell-ms) — auto-dismiss hold after .dz-select-result-confirm paints
 - search exchange returns N× fixed result-row fragments (or `.dz-search-result-empty`) — map domain into name / secondary / optional media (omit media for text-only rows)
 - each row carries its own hx-get to the select exchange
-- select exchange: confirm line (+ OOB hidden FK / label) — never client-side write of the id
+- select exchange: confirm line (+ OOB hidden FK / label) — never invent a selected id client-side; typing clears a stale FK
 
 ### Do / Don't
 
@@ -186,7 +186,7 @@ Correct response for body_only into .dz-search-results (innerHTML / innerMorph).
 ### Pitfalls
 
 - blur grace is NOT confirm hold — without confirm-hold-ms the select feedback is hidden as soon as focus leaves (~200ms)
-- form posts the hidden input, never the visible text
+- form posts the hidden input, never the visible text (typeahead input clears a stale FK; required uses setCustomValidity)
 - do not invent a new combobox Hyperpart for 'users vs companies' — same row anatomy, different field mapping; missing media is valid
 - media is optional free HTML inside `.dz-search-result-media` (img, initials, icon) — keep primary text in `.dz-search-result-name`
 

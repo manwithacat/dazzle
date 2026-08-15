@@ -2201,12 +2201,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "name / secondary / optional media (omit media for text-only rows)",
                     "each row carries its own hx-get to the select exchange",
                     "select exchange: confirm line (+ OOB hidden FK / label) — "
-                    "never client-side write of the id",
+                    "never invent a selected id client-side; typing clears a stale FK",
                 ),
                 pitfalls=(
                     "blur grace is NOT confirm hold — without confirm-hold-ms the "
                     "select feedback is hidden as soon as focus leaves (~200ms)",
-                    "form posts the hidden input, never the visible text",
+                    "form posts the hidden input, never the visible text "
+                    "(typeahead input clears a stale FK; required uses setCustomValidity)",
                     "do not invent a new combobox Hyperpart for 'users vs companies' — "
                     "same row anatomy, different field mapping; missing media is valid",
                     "media is optional free HTML inside `.dz-search-result-media` "

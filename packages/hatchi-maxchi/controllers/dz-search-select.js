@@ -20,6 +20,12 @@
  *
  * pointerdown on a result row marks "selecting" so blur-grace will not
  * close before the swap; after:swap then starts the confirm hold.
+ *
+ * Hidden FK honesty (cycle 2118): the select exchange writes the id
+ * server-side (never invent a selected id here). Typing in the
+ * typeahead *clears* a stale FK — same class as money empty→clear
+ * minor — and setCustomValidity blocks submit when the field is
+ * required but the text is no longer a confirmed selection.
  */
 (function () {
   "use strict";
@@ -47,7 +53,7 @@
     return readMs(
       root,
       ["data-dz-blur-grace-ms", "data-blur-grace-ms"],
-      DEFAULT_BLUR_GRACE_MS
+      DEFAULT_BLUR_GRACE_MS,
     );
   }
 
@@ -61,7 +67,7 @@
         "data-dz-confirm-dwell-ms",
         "data-confirm-dwell-ms",
       ],
-      DEFAULT_CONFIRM_HOLD_MS
+      DEFAULT_CONFIRM_HOLD_MS,
     );
   }
 
@@ -126,6 +132,40 @@
     );
   }
 
+  function typeaheadOf(root) {
+    return (
+      root.querySelector(".dz-search-select-input") ||
+      root.querySelector(".search-select-input")
+    );
+  }
+
+  function hiddenFkOf(root) {
+    return root.querySelector('input[type="hidden"]');
+  }
+
+  function isRequiredTypeahead(input) {
+    return (
+      input.hasAttribute("required") ||
+      input.getAttribute("aria-required") === "true"
+    );
+  }
+
+  function clearStaleFk(root, input) {
+    var hidden = hiddenFkOf(root);
+    if (hidden) hidden.value = "";
+    if (!input) return;
+    if (isRequiredTypeahead(input) && input.value.trim()) {
+      input.setCustomValidity("Select a value from the list");
+    } else {
+      input.setCustomValidity("");
+    }
+  }
+
+  function clearFkValidity(root) {
+    var input = typeaheadOf(root);
+    if (input) input.setCustomValidity("");
+  }
+
   // Mark selecting on pointerdown so blur-grace will not close before swap.
   document.addEventListener(
     "pointerdown",
@@ -138,15 +178,14 @@
       clearCloseTimer(root);
       setOpen(root, true);
     },
-    true
+    true,
   );
 
   document.addEventListener("focusin", function (evt) {
     var input =
       evt.target.closest && evt.target.closest(".dz-search-select-input");
     if (!input) {
-      input =
-        evt.target.closest && evt.target.closest(".search-select-input");
+      input = evt.target.closest && evt.target.closest(".search-select-input");
     }
     if (!input) return;
     var root = rootOf(input);
@@ -160,8 +199,7 @@
     var input =
       evt.target.closest && evt.target.closest(".dz-search-select-input");
     if (!input) {
-      input =
-        evt.target.closest && evt.target.closest(".search-select-input");
+      input = evt.target.closest && evt.target.closest(".search-select-input");
     }
     if (!input) return;
     var root = rootOf(input);
@@ -203,8 +241,21 @@
     selecting.delete(root);
     clearCloseTimer(root);
     setOpen(root, true);
+    clearFkValidity(root);
     scheduleClose(root, confirmHoldMs(root));
   }
+
+  document.addEventListener("input", function (evt) {
+    var input =
+      evt.target.closest && evt.target.closest(".dz-search-select-input");
+    if (!input) {
+      input = evt.target.closest && evt.target.closest(".search-select-input");
+    }
+    if (!input) return;
+    var root = rootOf(input);
+    if (!root) return;
+    clearStaleFk(root, input);
+  });
 
   document.addEventListener("htmx:after:swap", onAfterSwap);
   document.addEventListener("htmx:afterSwap", onAfterSwap);

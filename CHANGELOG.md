@@ -7,6 +7,10 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-select stale FK on type (cycle 2118)** — typing in the typeahead
+  clears the hidden id (server still writes the selected id). Required
+  fields use `setCustomValidity` so a leftover label cannot submit an
+  empty or previous FK. Same honesty class as money empty→clear minor.
 - **Fidelity required-check on hidden carriers (cycle 2117)** — extracted
   `_check_required_attributes` (complexity ratchet after 2116) and require a
   visible sibling `required` when the named control is `type=hidden`. Hidden

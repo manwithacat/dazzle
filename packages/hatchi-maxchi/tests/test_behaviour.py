@@ -2715,6 +2715,40 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     page.reload()
 
 
+def test_search_select_type_clears_stale_fk(page) -> None:  # type: ignore[no-untyped-def]
+    """Typing in the typeahead must drop a stale hidden FK (cycle 2118).
+
+    Select writes the id server-side; the client must not keep posting a
+    previous id after the visible label no longer matches. Required
+    typeaheads with leftover text fail native validity until re-select.
+    """
+    goto_part(page, "search-select")
+    root = "#search-select .search-select"
+    hidden = f"{root} input[type=hidden]"
+    inp = f"{root} input[type=text]"
+
+    page.evaluate(
+        """() => {
+          const h = document.querySelector(
+            '#search-select .search-select input[type=hidden]'
+          );
+          const i = document.querySelector(
+            '#search-select .search-select input[type=text]'
+          );
+          h.value = 'co-aurora';
+          i.setAttribute('required', '');
+        }"""
+    )
+    assert page.input_value(hidden) == "co-aurora"
+    page.fill(inp, "beta")
+    assert page.input_value(hidden) == "", "typing must clear the stale FK"
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is False
+    page.fill(inp, "")
+    # empty + required: custom validity cleared; native required owns the bubble
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is False
+    page.reload()
+
+
 def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: ignore[no-untyped-def]
     """F4c: typing a major amount keeps the hidden minor carrier in sync
     (input event); blur normalizes the display to the scale."""
