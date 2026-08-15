@@ -188,6 +188,11 @@ Doctrine source of truth remains
     hole. Coat-family ships age out of the 40-receipt window and the
     planner re-opens the icon cell. Machine: `line_composition_document`.
 
+30. **Goal B recommend=- is a stop, not the next saturate synonym.** After
+    icon cells are live-saturated, policy rotates to framework-ux. Do not
+    invent another detector. Capability-sweep cadence still applies (2045→2109
+    was 64 late because saturate monomania).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
