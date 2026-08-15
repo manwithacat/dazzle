@@ -1761,7 +1761,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'class="dz-search-box-input" placeholder="Search records…" '
             'autocomplete="off" '
             'hx-get="/mock/search" '
-            'hx-trigger="input changed delay:250ms, search" '
+            'hx-trigger="input changed delay:250ms[this.value.trim().length>0], '
+            'search[this.value.trim().length>0]" '
             'hx-target="#hm-search-results" '
             'hx-swap="innerHTML">'
             "</div>"
@@ -1770,25 +1771,48 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<div class="dz-search-box-empty">Type a title or keyword</div>'
             "</div></div>",
             notes="Dual-lock root is <code>data-dz-search-box</code> "
-            "(<code>contracts/search_box.py</code>). No JS beyond htmx: the "
-            "250ms debounce is "
-            "<code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, "
-            "the results land in an <code>aria-live=&quot;polite&quot;</code> "
-            "region, and the coaching line is hidden by "
-            "<code>:has(input:not(:placeholder-shown))</code> — no client "
-            "state. Results are server-rendered "
+            "(<code>contracts/search_box.py</code>). The 250ms debounce is "
+            "<code>hx-trigger</code> with a min-length filter; "
+            "<code>dz-search-box.js</code> still blocks empty/whitespace "
+            "queries (gallery mock ignores the filter) and restores the "
+            "coaching line so clear does not swap a fake hit list. Results "
+            "land in an <code>aria-live=&quot;polite&quot;</code> region; "
+            "the coaching line is hidden by "
+            "<code>:has(input:not(:placeholder-shown))</code> until a swap. "
+            "Results are server-rendered "
             "<code>dz-search-box-result</code> rows (title + per-field "
             "<code>&lt;mark&gt;</code>-highlighted snippets, count line above); "
             "the no-results state reuses <code>dz-search-box-empty</code> with "
             "the <code>--no-results</code> modifier.",
             contracts=("contracts/search_box.py",),
             tags=("forms", "htmx"),
+            controller="controllers/dz-search-box.js",
+            guidance=Guidance(
+                seams=(
+                    "native type=search is the query; [data-dz-search-box] owns the results slot",
+                    "hx-trigger debounce + min-length filter; controller restores coaching on clear",
+                ),
+                pitfalls=(
+                    "empty / whitespace query must not hx-get a silent or fake result list",
+                    "clear after a hit must restore coaching — do not leave stale Aurora rows",
+                ),
+                do_dont=(
+                    (
+                        "stop empty exchanges and restore the coaching empty line",
+                        "GET q= and let /mock/search invent Aurora/Beacon hits",
+                    ),
+                ),
+                a11y_keys=(
+                    "type=search keeps Esc/clear and the native search event",
+                    "results region stays aria-live=polite; coaching is not a live hit list",
+                ),
+            ),
             exchanges=(
                 Exchange(
                     method="GET",
                     endpoint="/app/fts/{entity}?q=&html=1",
-                    trigger="the input, debounced 250ms (and the native "
-                    "`search` event — Esc/clear on type=search)",
+                    trigger="the input, debounced 250ms when q is non-empty "
+                    "(native `search` / Esc/clear restores coaching — no GET)",
                     response="the results fragment: a `dz-search-box-result-count` "
                     "line + a `dz-search-box-result-list` of linked rows with "
                     "`<mark>`-highlighted snippets; zero hits return the "
@@ -1796,6 +1820,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "toggle deliberately never hides). Empty queries aren't "
                     "sent (min length 1)",
                     swap="innerHTML",
+                    envelope="body_only",
                 ),
             ),
         ),

@@ -1485,7 +1485,8 @@ def render_search_box(s: SearchBox) -> str:
         f'class="dz-search-box-input" placeholder="{placeholder}" '
         f'autocomplete="off" '
         f'hx-get="{endpoint}" '
-        f'hx-trigger="input changed delay:250ms, search" '
+        f'hx-trigger="input changed delay:250ms[this.value.trim().length>0], '
+        f'search[this.value.trim().length>0]" '
         f'hx-target="#{results_id}" '
         f'hx-swap="innerHTML">'
         f"</div>"

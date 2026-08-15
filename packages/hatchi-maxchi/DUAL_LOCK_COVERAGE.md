@@ -9,7 +9,7 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Metric | Count |
 |--------|------:|
 | Component CSS modules | 76 |
-| Controllers | 30 |
+| Controllers | 31 |
 | Contract modules | 143 |
 | Dual-lock schema+DOM | 42 |
 | Dual-lock DOM-only | 99 |
@@ -129,7 +129,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `region` | `region.py` | `—` | yes | no | no | **DOM-only** |
 | `related_group` | `related_group.py` | `—` | yes | no | no | **DOM-only** |
 | `rich_text` | `rich_text.py` | `—` | yes | no | no | **DOM-only** |
-| `search_box` | `search_box.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `search_box` | `search_box.py` | `dz-search-box.js` | yes | yes | yes | **schema+DOM** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | yes | yes | **schema+DOM** |
 | `separator` | `separator.py` | `—` | yes | no | no | **DOM-only** |
 | `sidebar` | `sidebar.py` | `—` | yes | no | no | **DOM-only** |

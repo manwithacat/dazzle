@@ -1330,7 +1330,7 @@ def test_search_box_renders_typed_search_box_primitive() -> None:
     html = _render(fragment)
     assert "dz-search-box-region" in html
     assert 'hx-get="/_dazzle/fts/Manuscript?html=1"' in html
-    assert 'hx-trigger="input changed delay:250ms, search"' in html
+    assert "this.value.trim().length>0" in html
     assert 'aria-live="polite"' in html
     assert "x-show" not in html  # coaching visibility is CSS-only now
     assert "x-data" not in html

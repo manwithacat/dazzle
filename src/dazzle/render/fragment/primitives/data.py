@@ -1681,8 +1681,9 @@ class SearchBox:
 
     Used by `display: search_box` regions. Emits:
       - A search `<input type="search">` with HTMX wiring that hits
-        the FTS endpoint on every keystroke (250ms debounce) and
-        swaps the result list under the input.
+        the FTS endpoint on non-empty keystrokes (250ms debounce) and
+        swaps the result list under the input. Empty / whitespace
+        queries do not exchange (dz-search-box.js + trigger filter).
       - A results `<div role="region" aria-live="polite">` that starts
         with a coaching empty-state; the dual-locked SearchBox Hyperpart
         (`data-dz-search-box`) owns show/hide via CSS + the controller

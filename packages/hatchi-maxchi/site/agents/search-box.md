@@ -15,7 +15,7 @@ The FTS search region: a debounced search input, an aria-live results panel, and
 <div class="search-box-region hm-measure" data-search-box>
   <div class="search-box-input-row">
     <label for="hm-search-input" class="visually-hidden">Search records</label>
-    <input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms, search" hx-target="#hm-search-results" hx-swap="innerHTML">
+    <input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms[this.value.trim().length>0], search[this.value.trim().length>0]" hx-target="#hm-search-results" hx-swap="innerHTML">
   </div>
   <div id="hm-search-results" class="search-box-results" role="region" aria-live="polite">
     <div class="search-box-empty">Type a title or keyword</div>
@@ -31,7 +31,7 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 | Request | Trigger | Response fragment | Swap | Envelope | States |
 |---|---|---|---|---|---|
-| `GET /app/fts/{entity}?q=&html=1` | the input, debounced 250ms (and the native `search` event — Esc/clear on type=search) | the results fragment: a `dz-search-box-result-count` line + a `dz-search-box-result-list` of linked rows with `<mark>`-highlighted snippets; zero hits return the `--no-results` variant of the empty line (which the CSS toggle deliberately never hides). Empty queries aren't sent (min length 1) | innerHTML | `body_only` | — |
+| `GET /app/fts/{entity}?q=&html=1` | the input, debounced 250ms when q is non-empty (native `search` / Esc/clear restores coaching — no GET) | the results fragment: a `dz-search-box-result-count` line + a `dz-search-box-result-list` of linked rows with `<mark>`-highlighted snippets; zero hits return the `--no-results` variant of the empty line (which the CSS toggle deliberately never hides). Empty queries aren't sent (min length 1) | innerHTML | `body_only` | — |
 
 ## Swap contract
 
@@ -86,13 +86,26 @@ Correct response for body_only into .dz-search-box-results (innerHTML / innerMor
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- implement Server exchange endpoints; return HTML fragments, not JSON
-- satisfy the DOM contract tables (CI stop-ship)
+- native type=search is the query; [data-dz-search-box] owns the results slot
+- hx-trigger debounce + min-length filter; controller restores coaching on clear
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| stop empty exchanges and restore the coaching empty line | GET q= and let /mock/search invent Aurora/Beacon hits |
+
+### Pitfalls
+
+- empty / whitespace query must not hx-get a silent or fake result list
+- clear after a hit must restore coaching — do not leave stale Aurora rows
+
+### Keyboard / AT
+
+- type=search keeps Esc/clear and the native search event
+- results region stays aria-live=polite; coaching is not a live hit list
 
 ## DOM contract
 
@@ -136,7 +149,8 @@ def render(s: SearchBox) -> str:
         f'class="dz-search-box-input" placeholder="{placeholder}" '
         f'autocomplete="off" '
         f'hx-get="{endpoint}" '
-        f'hx-trigger="input changed delay:250ms, search" '
+        f'hx-trigger="input changed delay:250ms[this.value.trim().length>0], '
+        f'search[this.value.trim().length>0]" '
         f'hx-target="#{results_id}" '
         f'hx-swap="innerHTML">'
         f"</div>"
@@ -150,9 +164,10 @@ def render(s: SearchBox) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-search-box (contracts/search_box.py). No JS beyond htmx: the 250ms debounce is hx-trigger="input changed delay:250ms, search", the results land in an aria-live="polite" region, and the coaching line is hidden by :has(input:not(:placeholder-shown)) — no client state. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
+Dual-lock root is data-dz-search-box (contracts/search_box.py). The 250ms debounce is hx-trigger with a min-length filter; dz-search-box.js still blocks empty/whitespace queries (gallery mock ignores the filter) and restores the coaching line so clear does not swap a fake hit list. Results land in an aria-live="polite" region; the coaching line is hidden by :has(input:not(:placeholder-shown)) until a swap. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/search_box.py`
+- `controllers/dz-search-box.js`

@@ -69,6 +69,22 @@ def test_combobox_controller_required_validity() -> None:
     assert "Select a value from the list" in src
 
 
+def test_search_box_controller_rejects_empty_query() -> None:
+    """dz-search-box.js must not hx-get empty q (cycle 2123)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-search-box.js"
+    ).read_text(encoding="utf-8")
+    assert "function onQuery" in src
+    assert "Type a title or keyword" in src
+    assert "stopImmediatePropagation" in src
+
+
 def test_date_range_controller_rejects_inverted() -> None:
     """dz-date-range.js must not hx-get From>To (cycle 2122)."""
     from pathlib import Path

@@ -2681,6 +2681,39 @@ def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: 
     )
 
 
+def test_search_box_empty_does_not_fire_search(page) -> None:  # type: ignore[no-untyped-def]
+    """Clear / empty q must not hx-get a fake result list (cycle 2123).
+
+    Same honesty class as date-range inverted (2122). After a real hit,
+    clearing must restore coaching — not swap /mock/search's Aurora rows
+    for an empty query.
+    """
+    goto_part(page, "search-box")
+    region = page.locator("#search-box .search-box-region").first
+    inp = region.locator("input[type=search]")
+    results = region.locator(".search-box-results")
+
+    inp.fill("substation")
+    page.wait_for_timeout(400)
+    assert "Aurora" in results.inner_text(), "non-empty query must still exchange"
+
+    page.evaluate(
+        """() => {
+          const i = document.querySelector(
+            '#search-box .search-box-region input[type=search]'
+          );
+          i.value = '';
+          i.dispatchEvent(new Event('input', {bubbles: true}));
+          i.dispatchEvent(new Event('search', {bubbles: true}));
+        }"""
+    )
+    page.wait_for_timeout(80)
+    text = results.inner_text()
+    assert "Type a title or keyword" in text, "empty must restore coaching"
+    assert "Aurora" not in text, "empty must not hx-get fake hits"
+    page.reload()
+
+
 def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # type: ignore[no-untyped-def]
     """SEV-1 regression pin (F3 review): the coaching-hide rule must NOT
     catch the server's zero-hit state — `dz-search-box-empty
