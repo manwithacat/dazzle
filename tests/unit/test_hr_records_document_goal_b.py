@@ -59,7 +59,7 @@ def test_hero_desks_declare_composition_queue() -> None:
     assert "documents: count(HrDocument)" in team
     assert team.index("\n  reporting_lines:") < team.index("composition:")
     assert team.index("composition:") < team.index("live_conversation:")
-    assert "focus: career_pulse, ic_track, manager_track, by_department" in team
+    assert "focus: in_tree, apex_people, reporting_lines, career_pulse" in team
 
 
 def test_hr_document_list_dual_open_declared() -> None:

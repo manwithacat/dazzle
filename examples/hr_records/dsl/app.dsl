@@ -1453,7 +1453,9 @@ workspace my_team "My Team":
   # BambooHR / Workday / Lattice put exclusive IC track vs people-manager track
   # role queues before a mixed by_level kanban (not office_remote-only or dept
   # metric tiles alone — people partners lean into career ladder shape).
-  purpose: "Multi-panel manager desk — IC vs manager career-track density, then location/dept boards, documents, notes"
+  # Cycle 2095 recipe tree_people_seat — exclusive in-tree vs apex *people*
+  # (not Role catalog, not office/remote on Reporting, not unassigned restack).
+  purpose: "Multi-panel manager desk — in-tree vs apex people, then IC/manager career tracks, location/dept boards"
   access: persona(manager, hr_admin)
 
   team_pulse:
@@ -1492,6 +1494,26 @@ workspace my_team "My Team":
       ic_roles: accent
       manager_roles: warning
       roles: positive
+
+  # Cycle 2095 tree_people_seat — BambooHR/Workday My Team is people in the
+  # tree vs expected apex, not a job-title catalog as the first fold.
+  in_tree:
+    source: Person
+    filter: ended_at = null and reporting_seat = has_manager
+    sort: legal_name asc
+    limit: 4
+    display: queue
+    action: person_detail
+    empty: "No people with a manager — tree seats land here"
+
+  apex_people:
+    source: Person
+    filter: ended_at = null and reporting_seat = top_of_house
+    sort: legal_name asc
+    limit: 3
+    display: queue
+    action: person_detail
+    empty: "No top-of-house apex — expected CEO/chair seat"
 
   # Dual exclusive career tracks (soft IC ladder vs hard people-manager track).
   ic_track:
@@ -1582,13 +1604,13 @@ workspace my_team "My Team":
     empty: "No team documents yet — attach an offer or promo letter on a report"
 
   ux:
-    # Cycle 2065: career-track density eager (≤4); office/remote secondary.
+    # Cycle 2095: tree people eager (≤4); career tracks + office/remote secondary.
     as manager:
-      purpose: "IC vs people-manager career-track density before location and department boards"
-      focus: career_pulse, ic_track, manager_track, by_department
+      purpose: "In-tree vs apex people before career-track catalog and placement boards"
+      focus: in_tree, apex_people, reporting_lines, career_pulse
     as hr_admin:
-      purpose: "IC vs people-manager career-track density before placement boards"
-      focus: career_pulse, ic_track, manager_track, by_department
+      purpose: "In-tree vs apex people before career-track catalog and placement boards"
+      focus: in_tree, apex_people, reporting_lines, career_pulse
 
   # Conversation trail after dual attention org boards + documents.
   live_conversation:

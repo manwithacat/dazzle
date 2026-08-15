@@ -53,7 +53,7 @@ def test_my_team_omits_redundant_org_bar_charts() -> None:
     assert "role_mix_chart:" not in block
     assert "display: bar_chart" not in block
     # Cycle 2057: focus ≤4 (fold honesty) — regions remain; secondary not eager.
-    assert "focus: career_pulse, ic_track, manager_track, by_department" in block
+    assert "focus: in_tree, apex_people, reporting_lines, career_pulse" in block
 
 
 def test_starters_desk_omits_twin_person_cards() -> None:

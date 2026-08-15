@@ -65,6 +65,10 @@ Doctrine source of truth remains
     in-review thumbs with **approved stamp** thumbs (`approved_stamp_wall`).
     Peer refuse: photo_url chips with no design content.
 
+13. **hr My Team is people in the tree, not a Role catalog.** IC/manager
+    *job-title* tracks are not hierarchy. Recipe `tree_people_seat` (in-tree
+    vs apex people). Peer refuse still bans office/remote on Reporting.
+
 10. **create_all missing columns.** DSL adds fields; SQLite/PG tables lag —
     `ensure_missing_entity_columns` (or equivalent) after create_all is a
     real product-blocker class, not a one-off.

@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B org tree people seats (cycle 2095)** — hr_records My Team leads
+  with exclusive in-tree vs apex people (`tree_people_seat`; BambooHR/
+  Workday hierarchy, not Role catalog or office/remote on Reporting).
+  Unit pin; SPEC; recapture.
 - **Goal B media approved stamp wall (cycle 2094)** — design_studio Review
   Desk pairs exclusive approved pixel thumbs with in-review pixels
   (`approved_stamp_wall`; Frame.io/Figma version stamps). Focus ≤4.

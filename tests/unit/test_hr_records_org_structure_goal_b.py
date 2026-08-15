@@ -61,8 +61,10 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block
     assert "\n  reporting_lines:" in block
-    # Order: career pulse → IC track → manager track → office/remote → level board
-    assert block.index("career_pulse:") < block.index("\n  ic_track:")
+    # Cycle 2095: in-tree vs apex people before Role career tracks
+    assert block.index("career_pulse:") < block.index("\n  in_tree:")
+    assert block.index("\n  in_tree:") < block.index("\n  apex_people:")
+    assert block.index("\n  apex_people:") < block.index("\n  ic_track:")
     assert block.index("\n  ic_track:") < block.index("\n  manager_track:")
     assert block.index("\n  manager_track:") < block.index("\n  office_sites:")
     assert block.index("\n  office_sites:") < block.index("\n  remote_flex:")
@@ -75,11 +77,13 @@ def test_my_team_declares_level_dept_location_boards_before_conversation() -> No
 
 def test_my_team_ux_focus_org_before_load() -> None:
     block = _my_team_block()
-    assert "focus: career_pulse, ic_track, manager_track, by_department" in block
+    assert "focus: in_tree, apex_people, reporting_lines, career_pulse" in block
+    assert "tree_people_seat" in block
     assert (
         "career_track_density" in block.lower()
         or "ic vs" in block.lower()
         or "people-manager" in block.lower()
+        or "in-tree" in block.lower()
     )
     # Cycle 1819 empty_region: no under-fold bar theater (kanbans own org shape)
     assert "dept_mix:" not in block
@@ -97,6 +101,26 @@ def test_my_team_ux_focus_org_before_load() -> None:
     mgr = [r for r in roles if str(r.get("level", "")).startswith("m")]
     assert len(ic) >= 3
     assert len(mgr) >= 2
+
+
+def test_my_team_tree_people_seat_exclusive_person_queues() -> None:
+    """Cycle 2095 recipe tree_people_seat — people in the tree vs apex, not Role dump."""
+    block = _my_team_block()
+    tree = block.split("\n  in_tree:\n", 1)[1].split("\n  apex_people:", 1)[0]
+    apex = block.split("\n  apex_people:\n", 1)[1].split("\n  ic_track:", 1)[0]
+    assert "source: Person" in tree
+    assert "reporting_seat = has_manager" in tree
+    assert "display: queue" in tree
+    assert "action: person_detail" in tree
+    assert "source: Person" in apex
+    assert "reporting_seat = top_of_house" in apex
+    assert "display: queue" in apex
+    assert "tree_people_seat" in block
+    rows = [json.loads(line) for line in PERSON_SEEDS.read_text().splitlines() if line.strip()]
+    in_tree = [r for r in rows if r.get("reporting_seat") == "has_manager"]
+    apex_rows = [r for r in rows if r.get("reporting_seat") == "top_of_house"]
+    assert len(in_tree) >= 4
+    assert len(apex_rows) >= 1
 
 
 def test_my_team_reporting_lines_are_queue_not_only_timeline() -> None:

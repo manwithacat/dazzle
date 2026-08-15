@@ -94,12 +94,11 @@ dedicated screens — fourteen in all, from the staff directory to
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
   timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
 - **My Team** — multi-panel manager desk (org_structure + command_density + document):
-  office↔remote dual presence queues first (cycle 2050 peer BambooHR/Workday
-  office_remote_density — HQ/Manchester/client vs remote/hybrid work queues, not
-  by_location-only re-stack), then dual attention level + department boards,
-  work-location kanban, capped reporting pressure, document composition, then
-  people-notes trail and secondary report roster (no redundant under-fold org bar
-  charts; cycle 2057 focus ≤4 fold honesty — secondary regions not focus-eager).
+  exclusive **in-tree vs apex people** first (cycle 2095 `tree_people_seat` —
+  BambooHR/Workday hierarchy people, not a Role catalog as the fold lead;
+  office/remote stays here, not on Reporting), then IC vs manager career-track
+  density, location/department boards, capped reporting lines, document
+  composition, then people-notes trail (cycle 2057 focus ≤4 fold honesty).
 - **New Starters** — HR onboarding desk with one starter queue + employment trail
   (cycle 2057 `hr_desk_twin_queue_prune` — no twin starter_cards Person dump).
 - **Active Staff** — headcount pulse + one active queue + hire trail (cycle 2057
@@ -151,4 +150,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:e249fe400ae0358ca171308aa7821dcf013ab31f2f757851f1e11be8a445996c -->
+<!-- dazzle-spec-brief: sha256:62ad22cea5f0cd3ffcdd9868b664cf05bbe9b46332de73a0b086ee2aa2468634 -->
