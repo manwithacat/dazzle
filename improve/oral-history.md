@@ -117,6 +117,8 @@ Doctrine source of truth remains
     vs high evidence; Device Fleet now has hardware identity (unit photos).
     Do not AND-filter either `photo_url` again — that is coat theatre.
     Peer pack: `improve/peer_packs/fieldtest_hub.toml`.
+    Machine: `goal_b_coat.live_saturated_cells` saturates `(app, media)` when
+    live DSL has `photo_url` grids on ≥2 entities.
 
 21. **Goal C subtract is not a prior Goal B lie.** Distill that removes a
     density recipe (`open_decisions`, SLA speech twins) does not REGRESSION
@@ -155,6 +157,11 @@ Doctrine source of truth remains
 27. **project_tracker empty_region grain is identity chips, not another
     chart prune.** Media Shelf / People kanban dumping Photo Url / Email
     / Is Active is schema theater. Fix is User `repr_fields` name/role/dept.
+
+28. **Riding-along notes must not collapse recipe family.** Cycle 2095
+    `tree_people_seat` notes mentioned `2094 approved_stamp_wall rides this
+    push` and anti-recipe treated org as a stamp-wall streak. Structured
+    `recipe:` wins over notes in `recipe_family`.
 
 ## What not to re-learn
 

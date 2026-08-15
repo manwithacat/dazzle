@@ -180,6 +180,16 @@ def test_recipe_family_collapses_coat_synonyms() -> None:
     assert recipe_family(None, "User.photo_url + media_shelf headshot") == "headshot_shelf"
     assert recipe_family("tree_people_seat") == "tree_people_seat"
     assert recipe_family("approved_stamp_wall") == "approved_stamp_wall"
+    assert recipe_family("device_identity_wall") == "device_identity_wall"
+    assert recipe_family("severity_evidence_density") == "severity_evidence_density"
+    # Cycle 2096: riding-along notes must not collapse the structured recipe.
+    assert (
+        recipe_family(
+            "tree_people_seat",
+            "2094 approved_stamp_wall rides this push; densify_allowed=0",
+        )
+        == "tree_people_seat"
+    )
     assert recipe_family("billing_escalations_seat") == "billing_escalations_seat"
     assert recipe_family("directory_work_first") == "directory_work_first"
     assert (
@@ -256,6 +266,17 @@ def test_all_icon_cells_saturated_stops() -> None:
     rec, _, _, notes = recommend_pick(covered=covered, apps=apps, recent=recent)
     assert rec is None
     assert any("stop" in n for n in notes)
+
+
+def test_live_fieldtest_media_not_recommended() -> None:
+    """Two exclusive photo desks saturate fieldtest media (oral #20)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["fieldtest_hub", "media"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
 
 
 def test_live_portfolio_status_runs() -> None:

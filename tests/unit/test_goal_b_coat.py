@@ -13,6 +13,7 @@ from scripts.goal_b_coat import (
     freeze_breaches,
     live_saturated_cells,
     measure,
+    photo_grid_entities,
 )
 
 pytestmark = pytest.mark.gate
@@ -92,6 +93,55 @@ def test_acme_billing_not_flagged_as_conversation_coat() -> None:
     assert m.conv_siblings <= 2
     assert m.slice_cartesian == 0
     assert m.coat_flag == 0
+
+
+def test_two_entity_photo_grids_saturate_media(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace fleet:\n"
+        "  hardware:\n"
+        "    source: Device\n"
+        "    filter: photo_url != null\n"
+        "    display: grid\n"
+        "workspace triage:\n"
+        "  evidence:\n"
+        "    source: IssueReport\n"
+        "    filter: photo_url != null\n"
+        "    display: grid\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "media") in sat
+    text = (dsl / "app.dsl").read_text(encoding="utf-8")
+    assert photo_grid_entities(text) == {"Device", "IssueReport"}
+
+
+def test_single_photo_entity_does_not_saturate_media(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace fleet:\n"
+        "  hardware:\n"
+        "    source: Device\n"
+        "    filter: photo_url != null\n"
+        "    display: grid\n"
+        "  also_devices:\n"
+        "    source: Device\n"
+        "    filter: status = active and photo_url != null\n"
+        "    display: grid\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "media") not in sat
+
+
+def test_fieldtest_two_desk_media_saturates() -> None:
+    sat = live_saturated_cells(["fieldtest_hub", "support_tickets"])
+    assert ("fieldtest_hub", "media") in sat
+    assert ("support_tickets", "media") not in sat
 
 
 def test_freeze_detects_growth(tmp_path: Path) -> None:

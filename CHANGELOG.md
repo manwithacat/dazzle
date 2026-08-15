@@ -36,6 +36,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: two-desk media saturates (cycle 2096)** — live DSL with
+  `photo_url` grids on ≥2 entities saturates `(app, media)` so the portfolio
+  stops recommending another fieldtest photo_url AND. Structured `recipe:`
+  wins over riding-along notes (2095 `tree_people_seat` no longer collapses
+  onto `approved_stamp_wall`).
 - **Goal B org tree people seats (cycle 2095)** — hr_records My Team leads
   with exclusive in-tree vs apex people (`tree_people_seat`; BambooHR/
   Workday hierarchy, not Role catalog or office/remote on Reporting).

@@ -33,6 +33,9 @@ HONEST_FOCUS = 12
 HONEST_METRICS = 8
 HONEST_SIBLINGS = 2
 HONEST_CARTESIAN = 0
+# Two exclusive photo-entity grids (Device bench vs IssueReport defect) is
+# media honest grain — a third photo_url AND is coat theatre (oral #20).
+HONEST_MEDIA_ENTITIES = 2
 
 # Freeze ratchet — measured 2026-08-14. Lower only when a distill lands.
 FREEZE: dict[str, dict[str, int]] = {
@@ -269,6 +272,20 @@ def coat_residual(
     return len(flagged), flagged[0].app
 
 
+def photo_grid_entities(text: str) -> set[str]:
+    """Entities that already have a photo_url grid (media honest grain)."""
+    ents: set[str] = set()
+    for _ws, _name, body in _workspace_region_windows(text):
+        if not re.search(r"display:\s*grid", body):
+            continue
+        if not re.search(r"photo_url\s*!=", body):
+            continue
+        sm = _SOURCE_LINE.search(body)
+        if sm:
+            ents.add(sm.group(1))
+    return ents
+
+
 def live_saturated_cells(
     apps: list[str],
     *,
@@ -285,6 +302,7 @@ def live_saturated_cells(
     """Cells the planner must not upgrade."""
     sat: set[tuple[str, str]] = set()
     for app in apps:
+        text = dsl_blob(app, examples=examples)
         m = measure(app, examples=examples)
         if m.max_focus > HONEST_FOCUS or m.conv_siblings > HONEST_SIBLINGS:
             for depth in depths:
@@ -294,6 +312,8 @@ def live_saturated_cells(
             sat.add((app, "conversation"))
         if m.document_rails > HONEST_DOCUMENT_RAILS:
             sat.add((app, "document"))
+        if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES:
+            sat.add((app, "media"))
     return sat
 
 

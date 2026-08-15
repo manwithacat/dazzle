@@ -66,6 +66,8 @@ _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("billing_escalations_seat", re.compile(r"billing_escalations_seat", re.I)),
     ("approved_stamp_wall", re.compile(r"approved_stamp_wall", re.I)),
     ("tree_people_seat", re.compile(r"tree_people_seat", re.I)),
+    ("device_identity_wall", re.compile(r"device_identity_wall", re.I)),
+    ("severity_evidence_density", re.compile(r"severity_evidence_density", re.I)),
     ("headshot_shelf", re.compile(r"headshot|photo_url|media_shelf", re.I)),
     ("dual_attention", re.compile(r"dual attention|command_density|multi-panel|multi panel", re.I)),
     ("team_org_desk", re.compile(r"\bTeam desk\b|org_structure|People desk|reporting", re.I)),
@@ -178,20 +180,30 @@ def _recipe_from_text(text: str) -> str | None:
     return None
 
 
-def recipe_family(recipe: str | None, text: str = "") -> str | None:
-    """Collapse a free recipe tag (or notes) onto a closed family.
-
-    Coat synonyms (thankful_needs_reply_trail, receipt_settle_rail_evidence)
-    must not count as novel. Honest first grains (message_chrome, dual_attention)
-    stay on the original six families.
-    """
-    blob = f"{recipe or ''} {text or ''}".strip()
+def _family_from_blob(blob: str) -> str | None:
     if not blob:
         return None
     for name, pat in _FAMILY_PATTERNS:
         if pat.search(blob):
             return name
     return _recipe_from_text(blob)
+
+
+def recipe_family(recipe: str | None, text: str = "") -> str | None:
+    """Collapse a free recipe tag (or notes) onto a closed family.
+
+    Coat synonyms (thankful_needs_reply_trail, receipt_settle_rail_evidence)
+    must not count as novel. Honest first grains (message_chrome, dual_attention)
+    stay on the original six families.
+
+    Structured ``recipe`` wins over notes. Dig notes often mention a riding
+    ship (``2094 approved_stamp_wall rides this push``) and must not collapse
+    ``tree_people_seat`` onto that prior family.
+    """
+    tagged = _family_from_blob((recipe or "").strip())
+    if tagged:
+        return tagged
+    return _family_from_blob((text or "").strip())
 
 
 def covered_from_unit_pins(*, unit_dir: Path = UNIT) -> set[tuple[str, str]]:
