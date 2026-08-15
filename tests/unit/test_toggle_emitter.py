@@ -77,6 +77,16 @@ def test_toggle_field_unchecked() -> None:
     assert 'value="false"' in html
 
 
+def test_toggle_controller_syncs_field_carrier() -> None:
+    """dz-toggle.js must re-sync ToggleField's hidden POST carrier (cycle 2119)."""
+    src = (ROOT / "packages" / "hatchi-maxchi" / "controllers" / "dz-toggle.js").read_text(
+        encoding="utf-8"
+    )
+    assert "data-dz-field-widget='toggle'" in src
+    assert "function syncCarrier" in src
+    assert "function formCarrierOf" in src
+
+
 def test_widget_toggle_maps_via_form_field() -> None:
     prim = field_dict_to_primitive(
         {"name": "is_starred", "label": "Starred", "widget": "toggle", "value": "true"}

@@ -614,7 +614,8 @@ class _RenderFormsMixin:
         Dual-lock root is the button. No ``data-dz-widget`` wrapper so
         ``dz-toggle.js`` can flip ``aria-pressed`` (controller skips
         ``[data-dz-widget]`` hosts). Hidden input carries SSR initial for
-        progressive form POST (name=true|false); hosts may re-sync on click.
+        progressive form POST (name=true|false); the controller re-syncs
+        that carrier on click (cycle 2119).
         """
         name = ctx.escape_attr(t.name)
         raw = str(t.initial_value or "").strip().lower()

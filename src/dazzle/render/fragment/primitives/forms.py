@@ -341,9 +341,9 @@ class ToggleField:
     """HM Toggle hyperpart as a form-authored control (`widget=toggle`).
 
     Pressable mode button (not switch track). Dual-lock root is the
-    ``button[data-dz-toggle]``. Client controller owns press flips; optional
-    hidden input carries SSR/initial value for progressive form POST when
-    ``name`` is set. Prefer :class:`SwitchField` for account settings booleans.
+    ``button[data-dz-toggle]``. Client controller owns press flips and
+    re-syncs the hidden carrier (``true``/``false``) so form POST matches
+    ``aria-pressed``. Prefer :class:`SwitchField` for account settings booleans.
     """
 
     name: str

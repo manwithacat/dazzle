@@ -6147,6 +6147,12 @@
  *
  * Skips disabled buttons. Does not invent group exclusivity — that is
  * toggle-group's job.
+ *
+ * Form-carrier honesty (cycle 2119): a host that emits a named hidden
+ * input under [data-field-widget=toggle] (Dazzle ToggleField) must
+ * re-sync that carrier on press — same class as search-select type
+ * clearing a stale FK (2118) and money empty→clear minor. Toolbar
+ * toggles without a field host stay chrome-only.
  */
 (function () {
   "use strict";
@@ -6163,6 +6169,27 @@
     el.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
+  function fieldHostOf(btn) {
+    return (
+      (btn.closest && btn.closest("[data-field-widget='toggle']")) ||
+      (btn.closest && btn.closest("[data-field-widget='toggle']")) ||
+      null
+    );
+  }
+
+  function formCarrierOf(btn) {
+    var host = fieldHostOf(btn);
+    if (!host) return null;
+    return host.querySelector('input[type="hidden"][name]');
+  }
+
+  function syncCarrier(btn, on) {
+    var hidden = formCarrierOf(btn);
+    if (!hidden) return;
+    hidden.value = on ? "true" : "false";
+    hidden.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
   document.addEventListener("click", function (evt) {
     var t = evt.target;
     if (!t || !t.closest) return;
@@ -6171,6 +6198,8 @@
     if (btn.disabled || btn.getAttribute("aria-disabled") === "true") return;
     // Hosts that own their own bridge can opt out.
     if (btn.closest("[data-widget]") || btn.closest("[data-widget]")) return;
-    setPressed(btn, !isPressed(btn));
+    var next = !isPressed(btn);
+    setPressed(btn, next);
+    syncCarrier(btn, next);
   });
 })();

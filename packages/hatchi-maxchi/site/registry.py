@@ -2563,7 +2563,9 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="Distinct from switch (form boolean) and toggle-group (exclusive "
             "radios). Initial aria-pressed may come from SSR; dz-toggle.js flips "
-            "it on click. Dual-lock root [data-dz-toggle] (HMC-130).",
+            "it on click and syncs a named hidden carrier when the host is "
+            "[data-dz-field-widget=toggle]. Dual-lock root [data-dz-toggle] "
+            "(HMC-130).",
             tags=("form", "interactive"),
             controller="controllers/dz-toggle.js",
             contracts=("contracts/toggle.py",),
@@ -2572,6 +2574,7 @@ def select(source: str, id: str) -> str:
                     "button root carries data-dz-toggle (gallery: data-toggle)",
                     "aria-pressed is the live state; SSR may set the initial value",
                     "dz-toggle.js flips aria-pressed on click (no round-trip)",
+                    "named hidden under [data-dz-field-widget=toggle] syncs to aria-pressed",
                 ),
                 pitfalls=(
                     "do not use toggle for form booleans — use switch/checkbox",

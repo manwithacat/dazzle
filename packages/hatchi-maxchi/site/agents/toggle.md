@@ -55,6 +55,7 @@ Do **not** re-own the slot:
 - button root carries data-dz-toggle (gallery: data-toggle)
 - aria-pressed is the live state; SSR may set the initial value
 - dz-toggle.js flips aria-pressed on click (no round-trip)
+- named hidden under [data-dz-field-widget=toggle] syncs to aria-pressed
 
 ### Do / Don't
 
@@ -105,6 +106,8 @@ are host-owned. Selector ``[data-dz-toggle]`` is the stable substrate root
 
 Emitter: ``widget=toggle`` → ToggleField / free Toggle fragment
 (``button.dz-toggle[data-dz-toggle]`` + aria-pressed; ``dz-toggle.js``).
+Form hosts may wrap a named hidden carrier in ``[data-dz-field-widget=toggle]``;
+the controller syncs that carrier to ``aria-pressed`` on click.
 """
 
 from contracts._kit import DomContract, Node, Present
@@ -125,7 +128,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Distinct from switch (form boolean) and toggle-group (exclusive radios). Initial aria-pressed may come from SSR; dz-toggle.js flips it on click. Dual-lock root [data-dz-toggle] (HMC-130).
+Distinct from switch (form boolean) and toggle-group (exclusive radios). Initial aria-pressed may come from SSR; dz-toggle.js flips it on click and syncs a named hidden carrier when the host is [data-dz-field-widget=toggle]. Dual-lock root [data-dz-toggle] (HMC-130).
 
 ## Source files
 

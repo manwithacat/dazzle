@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Toggle form carrier stays stale on press (cycle 2119)** — `widget=toggle`
+  posts a hidden `true`/`false` that never moved with `aria-pressed`, so
+  starring/unstarring submitted the SSR value. `dz-toggle.js` now syncs the
+  named carrier under `[data-dz-field-widget=toggle]` (toolbar toggles
+  without a field host stay chrome-only). Same honesty class as 2118.
 - **Search-select stale FK on type (cycle 2118)** — typing in the typeahead
   clears the hidden id (server still writes the selected id). Required
   fields use `setCustomValidity` so a leftover label cannot submit an

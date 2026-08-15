@@ -1830,6 +1830,44 @@ def test_toggle_flips_aria_pressed(page) -> None:  # type: ignore[no-untyped-def
     )
 
 
+def test_toggle_form_carrier_syncs_hidden(page) -> None:  # type: ignore[no-untyped-def]
+    """Form-authored toggle must re-sync a named hidden carrier (cycle 2119).
+
+    Toolbar Bold stays chrome-only. A [data-field-widget=toggle] host
+    (Dazzle ToggleField / unprefixed gallery twin) posts true|false.
+    """
+    goto_part(page, "toggle")
+    page.evaluate(
+        """() => {
+          const host = document.querySelector('#toggle .hm-preview')
+            || document.querySelector('#toggle');
+          const wrap = document.createElement('div');
+          wrap.id = 'toggle-form-carrier';
+          wrap.setAttribute('data-field-widget', 'toggle');
+          wrap.innerHTML =
+            '<input type="hidden" name="is_starred" value="true">' +
+            '<button type="button" class="toggle" data-toggle ' +
+            'aria-pressed="true">Starred</button>';
+          host.appendChild(wrap);
+        }"""
+    )
+    hidden = "#toggle-form-carrier input[type=hidden]"
+    btn = page.locator("#toggle-form-carrier button[data-toggle]")
+    assert page.input_value(hidden) == "true"
+    btn.click()
+    page.wait_for_timeout(80)
+    assert page.input_value(hidden) == "false", (
+        "first click must post false after releasing a pressed form toggle"
+    )
+    assert btn.get_attribute("aria-pressed") == "false"
+    btn.click()
+    page.wait_for_timeout(80)
+    assert page.input_value(hidden) == "true", (
+        "second click must restore the hidden carrier to true"
+    )
+    page.reload()
+
+
 def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignore[no-untyped-def]
     """The drawer is a native <dialog> anchored to the edge; it reuses the
     dialog's opener (no drawer-specific JS) and closes natively. Proves the

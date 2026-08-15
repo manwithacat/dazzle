@@ -6,6 +6,8 @@ are host-owned. Selector ``[data-dz-toggle]`` is the stable substrate root
 
 Emitter: ``widget=toggle`` → ToggleField / free Toggle fragment
 (``button.dz-toggle[data-dz-toggle]`` + aria-pressed; ``dz-toggle.js``).
+Form hosts may wrap a named hidden carrier in ``[data-dz-field-widget=toggle]``;
+the controller syncs that carrier to ``aria-pressed`` on click.
 """
 
 from contracts._kit import DomContract, Node, Present
