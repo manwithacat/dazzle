@@ -73,12 +73,13 @@ def test_device_fleet_declares_model_and_lifecycle_before_queues() -> None:
     assert "sort: model asc" in block
     assert "unassigned_devices:" in block
     assert "active_devices:" in block
-    # Order: pulse → lifecycle board → model roster → capacity pressure.
-    assert block.index("fleet_metrics:") < block.index("by_status:")
+    # Order: pulse → hardware identity → lifecycle board → model roster → capacity.
+    assert block.index("fleet_metrics:") < block.index("hardware_identity:")
+    assert block.index("hardware_identity:") < block.index("by_status:")
     assert block.index("by_status:") < block.index("by_model:")
     assert block.index("by_model:") < block.index("unassigned_devices:")
     assert block.index("unassigned_devices:") < block.index("active_devices:")
-    assert "focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices" in block
+    assert "focus: fleet_metrics, hardware_identity, by_status, by_model" in block
     assert "unassigned: count(Device where assigned_tester_id = null)" in block
     assert "org" in block.lower() or "lifecycle" in block.lower() or "model" in block.lower()
 

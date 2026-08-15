@@ -190,17 +190,38 @@ def compact_backlog(text: str, closed_issues: set[int]) -> tuple[str, dict[str, 
     return "\n".join(kept) + "\n", archived
 
 
+_CYCLE_HEAD = re.compile(r"^## Cycle (\d+)\b")
+
+
 def compact_log(text: str) -> tuple[str, str]:
-    """Return (new_log_text, archived_text). Keeps the last KEEP_CYCLES blocks."""
+    """Keep the highest-numbered KEEP_CYCLES blocks (newest-first).
+
+    File order is not chronological — newer cycles are prepended, but older
+    sweeps were sometimes inserted mid-file. Slicing the file tail therefore
+    archived tip cycles (2070–2079) and kept 2045–2069. Rank by cycle id.
+    """
     lines = text.splitlines()
     starts = [i for i, line in enumerate(lines) if line.startswith("## Cycle")]
     if len(starts) <= KEEP_CYCLES:
-        return text, ""
-    cut = starts[-KEEP_CYCLES]
-    preamble_end = starts[0]
-    kept = lines[:preamble_end] + lines[cut:]
-    archived = lines[preamble_end:cut]
-    return "\n".join(kept) + "\n", "\n".join(archived) + "\n"
+        return text if text.endswith("\n") else text + "\n", ""
+    preamble = lines[: starts[0]]
+    blocks: list[tuple[int, list[str]]] = []
+    for idx, start in enumerate(starts):
+        end = starts[idx + 1] if idx + 1 < len(starts) else len(lines)
+        head = lines[start]
+        match = _CYCLE_HEAD.match(head)
+        num = int(match.group(1)) if match else -1
+        blocks.append((num, lines[start:end]))
+    newest = sorted(blocks, key=lambda item: item[0], reverse=True)
+    keep = newest[:KEEP_CYCLES]
+    archive = sorted(newest[KEEP_CYCLES:], key=lambda item: item[0])
+    kept_lines = list(preamble)
+    for _, body in keep:
+        kept_lines.extend(body)
+    archived_lines: list[str] = []
+    for _, body in archive:
+        archived_lines.extend(body)
+    return "\n".join(kept_lines) + "\n", "\n".join(archived_lines) + "\n"
 
 
 def _append(path: Path, title: str, body: str) -> None:

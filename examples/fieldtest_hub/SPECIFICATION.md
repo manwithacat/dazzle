@@ -45,9 +45,12 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   the same desk (empty_region_honesty).
 - **Firmware Pipeline** — release desk: draft/live metrics, release history,
   status board, and open-task queue — not a release status bar dump.
-- **Device Fleet** — fleet org structure: model-family and lifecycle kanban
+- **Device Fleet** — hardware identity wall first (cycle 2080
+  `device_identity_wall`; peer TestFlight / Apple Configurator / LabTrack
+  bench photos), then fleet org: model-family and lifecycle kanban
   columns before active + recalled pressure queues (cycle 1938) — not
-  twin device trail + status mix chart theater.
+  twin device trail + status mix chart theater, not another IssueReport
+  photo filter.
 - **Draft Releases** — unshipped builds: draft pulse + one pull queue — not twin
   draft queues, trail, and status chart.
 - **Tester Roster** — engineer/manager org-structure desk: tester metrics, a
@@ -100,4 +103,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:bdce5fe0899edbfbf7c6bcc1921e1fbfc16897ef0017be28794c8bdf8303b7ee -->
+<!-- dazzle-spec-brief: sha256:506e615adcc360029a3d24b4c2dd6073ff7de23b5f30ec387b109f5308e4cb40 -->

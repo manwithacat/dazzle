@@ -6,6 +6,7 @@ Short, closed constraint files for `interesting_product` SELECT.
 |------|------|
 | `invoice_ops.toml` | Bill.com / Melio / Tipalti |
 | `support_tickets.toml` | Zendesk / Front / Intercom |
+| `fieldtest_hub.toml` | TestFlight / Apple Configurator / LabTrack |
 | `design_studio.toml` | Figma / Frame.io / Bynder |
 | `hr_records.toml` | BambooHR / Workday slice |
 | `acme_billing.toml` | Stripe Billing / Chargebee slice |

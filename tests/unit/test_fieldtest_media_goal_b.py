@@ -10,6 +10,7 @@ from dazzle.render.cell_chrome import _safe_media_image_url
 
 ROOT = Path(__file__).resolve().parents[2]
 ISSUE_SEEDS = ROOT / "examples/fieldtest_hub/dsl/seeds/demo_data/IssueReport.jsonl"
+DEVICE_SEEDS = ROOT / "examples/fieldtest_hub/dsl/seeds/demo_data/Device.jsonl"
 APP_DSL = ROOT / "examples/fieldtest_hub/dsl/app.dsl"
 
 
@@ -111,3 +112,55 @@ def test_field_kit_declares_field_evidence_media_first() -> None:
         "focus: kit_pulse, field_evidence, assigned_devices, recent_sessions, my_open_tasks"
         in block
     )
+
+
+def _device_fleet_block() -> str:
+    text = APP_DSL.read_text()
+    start = text.index('workspace device_fleet "Device Fleet":')
+    end = text.find("\nworkspace ", start + 1)
+    return text[start:] if end < 0 else text[start:end]
+
+
+def test_device_entity_declares_unit_photo_url() -> None:
+    """Cycle 2080: Device.photo_url is hardware identity, not defect evidence."""
+    text = APP_DSL.read_text()
+    start = text.index('entity Device "Device"')
+    block = text[start : text.index('entity Tester "Tester"')]
+    assert "photo_url: url" in block
+    line = block.split("repr_fields:")[1].split("\n")[0]
+    assert "photo_url" in line
+    assert "serial_number" in line
+
+
+def test_device_fleet_declares_hardware_identity_wall() -> None:
+    """Cycle 2080: unit photos first on fleet — not another IssueReport filter."""
+    block = _device_fleet_block()
+    assert "hardware_identity:" in block
+    assert "source: Device" in block
+    assert "photo_url != null" in block
+    assert "display: grid" in block
+    assert "identified: count(Device where photo_url != null)" in block
+    assert block.index("fleet_metrics:") < block.index("hardware_identity:")
+    assert block.index("hardware_identity:") < block.index("by_status:")
+    assert block.index("by_status:") < block.index("by_model:")
+    assert "focus: fleet_metrics, hardware_identity, by_status, by_model" in block
+    assert "device_identity_wall" in block.lower() or "hardware identity" in block.lower()
+    assert "media_shelf:" not in block
+    # Org boards remain; capacity queues stay under the fold.
+    assert "unassigned_devices:" in block
+    assert "active_devices:" in block
+    # Surfaces expose the unit photo (list/detail/create/edit).
+    text = APP_DSL.read_text()
+    assert 'field photo_url "Unit Photo"' in text
+
+
+def test_device_seeds_have_safe_https_unit_photos() -> None:
+    rows = [json.loads(line) for line in DEVICE_SEEDS.read_text().splitlines() if line.strip()]
+    with_photo = [r for r in rows if r.get("photo_url")]
+    assert len(with_photo) >= 12, "Goal B media expects bench photos on fleet units"
+    models = {str(r.get("model") or "") for r in with_photo}
+    assert len(models) >= 4
+    for row in with_photo:
+        url = str(row["photo_url"])
+        assert _safe_media_image_url(url) == url, url
+        assert "placehold.co" in url

@@ -93,6 +93,11 @@ Doctrine source of truth remains
     collapse. `/improve` picks `example-apps distill` when
     `coat_residual_total>0` (Goal C). Distill lowers FREEZE in the same ship.
 
+20. **fieldtest media grain is two desks.** Issue triage already has critical
+    vs high evidence; Device Fleet now has hardware identity (unit photos).
+    Do not AND-filter either `photo_url` again — that is coat theatre.
+    Peer pack: `improve/peer_packs/fieldtest_hub.toml`.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

@@ -95,6 +95,8 @@ entity Device "Device":
   status: enum[prototype,active,recalled,retired]=prototype
   assigned_tester_id: ref Tester
   deployed_at: datetime
+  # Goal B media (cycle 2080): bench/unit photo — pixels of the fleet, not defect evidence.
+  photo_url: url
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
@@ -138,7 +140,7 @@ entity Device "Device":
   fitness:
     # serial_number first — queue/list identity (unique serial) must survive
     # fitness workspace projection (cycle 1928; peer of Ticket.ticket_number).
-    repr_fields: [serial_number, name, model, status, firmware_version, assigned_tester_id]
+    repr_fields: [serial_number, name, model, photo_url, status, firmware_version, assigned_tester_id]
 
 # Entity: Tester
 entity Tester "Tester":
@@ -521,6 +523,7 @@ surface device_list "Device Dashboard":
   section main "Devices":
     field name "Name"
     field model "Model"
+    field photo_url "Unit Photo"
     field batch_number "Batch"
     field firmware_version "Firmware"
     field status "Status"
@@ -563,6 +566,7 @@ surface device_detail "Device Detail":
     field name "Name"
     field model "Model"
     field serial_number "Serial Number"
+    field photo_url "Unit Photo"
 
   section production "Production":
     layout: strip
@@ -614,6 +618,7 @@ surface device_create "Register Device":
     field name "Device Name"
     field model "Model"
     field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
+    field photo_url "Unit Photo"
 
   section production "Production":
     field batch_number "Batch Number"
@@ -641,6 +646,7 @@ surface device_edit "Edit Device":
     field name "Device Name"
     field model "Model"
     field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
+    field photo_url "Unit Photo"
 
   section production "Production":
     field batch_number "Batch Number"
@@ -2031,7 +2037,12 @@ workspace device_fleet "Device Fleet":
   # columns before flat load — hardware ops parse Probe/Gateway/Sensor shape
   # and prototype→active→recalled stages (recipe fleet_model_hierarchy; not
   # dual_attention / headshot_shelf).
-  purpose: "Fleet org structure — model and lifecycle before pressure queues"
+  # Goal B media upgrade (cycle 2080): recipe device_identity_wall — TestFlight /
+  # Apple Configurator / LabTrack put hardware unit photos on the fleet desk so
+  # operators pick the right bench unit. Defect pixels stay on issue_triage
+  # (severity_evidence_density); this is pixels of the fleet, not another
+  # IssueReport photo filter or headshot_shelf.
+  purpose: "Hardware identity wall, then fleet org — model and lifecycle before pressure queues"
   access: persona(engineer, manager)
 
   fleet_metrics:
@@ -2042,11 +2053,23 @@ workspace device_fleet "Device Fleet":
       prototype: count(Device where status = prototype)
       recalled: count(Device where status = recalled)
       unassigned: count(Device where assigned_tester_id = null)
+      identified: count(Device where photo_url != null)
     tones:
       active: positive
       prototype: accent
       recalled: destructive
       unassigned: warning
+      identified: accent
+
+  # Goal B media FIRST — bench/unit photos (preview thumbs) before org boards.
+  hardware_identity:
+    source: Device
+    filter: photo_url != null
+    sort: model asc, serial_number asc
+    limit: 8
+    display: grid
+    action: device_detail
+    empty: "No unit photos yet — attach a bench photo when you register a device"
 
   # Org structure: lifecycle columns (enum kanban — status is the fleet hierarchy).
   by_status:
@@ -2099,11 +2122,11 @@ workspace device_fleet "Device Fleet":
 
   ux:
     as engineer:
-      purpose: "Fleet org — lifecycle board + model roster before unassigned/active pressure"
-      focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices
+      purpose: "Hardware identity first, then lifecycle board + model roster"
+      focus: fleet_metrics, hardware_identity, by_status, by_model
     as manager:
-      purpose: "Fleet org shape — lifecycle and model placement before capacity pressure"
-      focus: fleet_metrics, by_status, by_model, unassigned_devices, active_devices
+      purpose: "Unit photos first — fleet shape after hardware identity"
+      focus: fleet_metrics, hardware_identity, by_status, by_model
 
 workspace draft_releases "Draft Releases":
   # Goal B empty_region_honesty (cycle 1855): one draft queue + pulse — not twin

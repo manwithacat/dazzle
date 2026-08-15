@@ -1,0 +1,24 @@
+# R3 peer pack — Goal B context for fieldtest_hub
+
+app = "fieldtest_hub"
+peer = "TestFlight / Apple Configurator / LabTrack / TestRail / BrowserStack"
+domain = "field_quality"
+
+above_fold = [
+  "Hardware unit photos on the fleet desk — pixels of the bench, not serial-only queues",
+  "Defect evidence photos stay on issue triage (critical vs high), not cloned onto fleet",
+  "Field kit puts the tester's own evidence first on the road",
+]
+
+refuse = [
+  "Another IssueReport photo filter (severity/category/status AND) as a media upgrade",
+  "Headshot shelf of testers as the only media claim",
+  "Metric tile proliferation on Device Fleet",
+  "Isomorphic *_ops densify while densify_allowed=0",
+]
+
+icon_depths = ["media", "conversation", "document"]
+surprise_prompts = [
+  "Can a manager pick the right physical unit from a photo before opening the serial queue?",
+  "Are defect screenshots and hardware identity on different desks, or did we clone the same shelf?",
+]

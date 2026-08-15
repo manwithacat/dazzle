@@ -26,6 +26,7 @@ The key outcome is faster product iteration and early detection of systemic fail
 - **Status** – Active, Recalled, Prototype, Retired
 - **Assigned Tester** – optional link
 - **Deployed At** – timestamp
+- **Unit Photo** – optional bench/unit photo URL (fleet identity, not defect evidence)
 
 ### **Tester**
 - **Name** (required)
