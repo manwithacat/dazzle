@@ -40,6 +40,73 @@
 
   // ── Range slider with value tooltip ─────────────────────────────────
 
+  // ── File upload (#1648) — nameless <input type=file> + hidden FK ──
+  function readCsrfCookie() {
+    var prefix = "dazzle_csrf=";
+    var parts = document.cookie ? document.cookie.split("; ") : [];
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(prefix) === 0) {
+        return parts[i].slice(prefix.length);
+      }
+    }
+    return "";
+  }
+
+  bridge.registerWidget("file-upload", {
+    mount: function (el) {
+      var picker = el.querySelector('input[type="file"]');
+      var hidden = el.querySelector("input[data-dz-file-value]");
+      var status = el.querySelector("[data-dz-file-name]");
+      if (!picker || !hidden) return null;
+      var max = parseInt(el.getAttribute("data-dz-max-size") || "0", 10);
+      var url = el.getAttribute("data-dz-target") || "";
+      function onChange() {
+        var file = picker.files && picker.files[0];
+        if (!file) return;
+        if (max > 0 && file.size > max) {
+          if (status) status.textContent = "File too large";
+          picker.value = "";
+          return;
+        }
+        if (!url) {
+          if (status) status.textContent = file.name;
+          return;
+        }
+        var fd = new FormData();
+        fd.append("file", file);
+        var headers = {};
+        var tok = readCsrfCookie();
+        if (tok) headers["X-CSRF-Token"] = tok;
+        if (status) status.textContent = "Uploading…";
+        fetch(url, {
+          method: "POST",
+          body: fd,
+          credentials: "same-origin",
+          headers: headers,
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error("upload " + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            hidden.value = data.id || data.url || "";
+            if (status) status.textContent = data.filename || file.name;
+          })
+          .catch(function () {
+            if (status) status.textContent = "Upload failed";
+            hidden.value = "";
+          });
+      }
+      picker.addEventListener("change", onChange);
+      return { picker: picker, handler: onChange };
+    },
+    unmount: function (_el, instance) {
+      if (instance && instance.picker) {
+        instance.picker.removeEventListener("change", instance.handler);
+      }
+    },
+  });
+
   bridge.registerWidget("range-tooltip", {
     mount: function (el) {
       var input = el.querySelector("input[type=range]");

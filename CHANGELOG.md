@@ -7,6 +7,10 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **File-upload widget hollow after Alpine retirement (cycle 2110 / #1648)** —
+  `_emit_file_upload` now emits a nameless `<input type="file">` picker plus
+  a status span; `dz-widget-registry` POSTs multipart to `data-dz-target`
+  and writes id/url into the hidden FK. Native picker is usable again.
 - **INTERACTION_WALK never seeded (cycle 2089)** — `dazzle ux verify
   --interactions` did not reset+seed (unlike `--contracts`), so
   `context_selector.filter` listed only the mirrored login User and

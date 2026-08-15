@@ -51,13 +51,26 @@ def test_file_upload_defaults_clean() -> None:
 
 def test_file_upload_emits_widget_drop_zone_attrs() -> None:
     """The outer wrapper carries `data-dz-widget="file-upload"` +
-    `data-dz-target="<upload_url>"` — the contract the Alpine
-    `dz.fileUpload` controller reads."""
+    `data-dz-target="<upload_url>"` — the contract the vanilla
+    widget-registry mount reads."""
     html = FragmentRenderer().render(
         FileUpload(name="doc", label="Document", upload_url=URL("/uploads/docs"))
     )
     assert 'data-dz-widget="file-upload"' in html
     assert 'data-dz-target="/uploads/docs"' in html
+
+
+def test_file_upload_emits_nameless_file_picker() -> None:
+    """#1648: Alpine retirement left a hollow shell. The picker is a
+    real ``<input type=file>`` with no name (hidden FK keeps the field)."""
+    html = FragmentRenderer().render(
+        FileUpload(name="document_file", label="Doc", upload_url=URL("/u"))
+    )
+    assert 'type="file"' in html
+    assert "dz-file-upload-input" in html
+    assert "data-dz-file-name" in html
+    # Picker must not steal the form field name from the hidden FK.
+    assert "name=" not in html.split('type="file"', 1)[1].split(">", 1)[0]
 
 
 def test_file_upload_emits_hidden_fk_input_with_dz_attrs() -> None:
@@ -86,6 +99,7 @@ def test_file_upload_threads_accept_and_max_size_when_set() -> None:
         )
     )
     assert 'data-dz-accept=".pdf,.doc"' in html
+    assert 'accept=".pdf,.doc"' in html
     assert 'data-dz-max-size="10485760"' in html
 
     html_clean = FragmentRenderer().render(FileUpload(name="f", label="F", upload_url=URL("/u")))

@@ -149,19 +149,15 @@ class RefPicker:
 
 @dataclass(frozen=True, slots=True)
 class FileUpload:
-    """File-upload widget for `field type: file` (issue #1033).
+    """File-upload widget for `field type: file` (issue #1033 / #1648).
 
     Renders as a `<div data-dz-widget="file-upload">` carrying a
-    hidden `<input>` that holds the FK to a stored Document (or any
-    file-resource entity) once upload completes. The drop-zone UI
-    + multipart POST to `upload_url` was wired by the retired dzFileUpload
-    Alpine island (never mounted; orphan-swept 2026-07-06) — this primitive emits the
-    DOM contract the legacy Jinja path already produces.
+    hidden `<input>` (FK / stored key — form POST source of truth) plus a
+    nameless `<input type="file">` picker. Vanilla `dz-widget-registry`
+    mounts the picker and POSTs multipart to `upload_url`.
 
-    `initial_value` carries the persisted file URL/key in EDIT mode
-    so the widget can show the existing filename. `initial_label` is
-    the human-readable display text (typically the original
-    filename); when present, displays alongside the drop-zone."""
+    `initial_value` carries the persisted file URL/key in EDIT mode.
+    `initial_label` is the human-readable filename shown next to the picker."""
 
     name: str
     label: str
