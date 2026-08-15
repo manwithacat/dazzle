@@ -202,6 +202,9 @@ Doctrine source of truth remains
     WeakMap `cloneNode` — never `innerHTML` a data attr (#223). Command
     palette empty query **is** the catalog (⌘K); a leftover non-match
     must not invent the full canned list (name=q + mock filter, 2130).
+    Colour leftover hex must not invent a swatch (2133). Slider leftover
+    readout must not invent a range position (`70abc` / `zzz` / out-of-
+    range clamp, 2134).
 
 32. **Capability-sweep cadence is hard preemption once tip CI is green.**
     Widget-honesty ships may continue while CodeQL/CI repair claims the

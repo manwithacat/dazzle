@@ -1626,40 +1626,43 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "slider",
             "Slider",
             "Forms",
-            "Native <input type=range> — styled track + thumb, both themes, with a "
-            "live value readout via a tiny delegated controller.",
+            "Native <input type=range> — styled track + thumb, both themes, with an "
+            "editable value companion via a tiny delegated controller.",
             '<div class="hm-stack hm-measure">'
             '<label class="dz-form-label" for="hm-slider-vol">Volume</label>'
             '<div class="dz-form-slider-group">'
             '<input id="hm-slider-vol" type="range" data-dz-slider class="dz-form-slider" '
             'min="0" max="100" step="1" value="70">'
-            '<span data-dz-range-value class="dz-form-slider-value" aria-hidden="true">70</span>'
+            '<input data-dz-range-value class="dz-form-slider-value" type="text" '
+            'inputmode="decimal" spellcheck="false" autocomplete="off" '
+            'aria-label="Slider value" value="70">'
             "</div></div>",
-            notes="The track + thumb are styled for both themes with a focus ring; the native "
-            "range already announces its value to assistive tech, so the visible readout is "
-            "<code>aria-hidden</code>. <code>dz-slider.js</code> writes the value into "
-            "<code>[data-dz-range-value]</code> on input, scoped to each slider's own group so "
-            "many coexist.",
+            notes="The track + thumb are styled for both themes with a focus ring. "
+            "The native range is the submitted value (the companion has no "
+            "<code>name</code>). <code>dz-slider.js</code> mirrors both ways, scoped "
+            "to each slider's own group so many coexist. Leftover junk in the "
+            "companion must not invent a range position (cycle 2134).",
             tags=("forms",),
             controller="controllers/dz-slider.js",
             contracts=("contracts/slider.py",),
             guidance=Guidance(
                 seams=(
-                    "native <input type=range> is the value source; [data-dz-range-value] is the readout",
+                    "native <input type=range> is the submitted value; [data-dz-range-value] is the editable companion",
                     "each slider group is scoped so many coexist on one page",
                 ),
                 pitfalls=(
-                    "the visible readout is aria-hidden — the range already announces to AT",
+                    "leftover junk in the companion must not invent a range position",
                     "do not invent a custom thumb/track in JS; style the native control",
                 ),
                 do_dont=(
                     (
-                        "write the live value into [data-dz-range-value] on input",
+                        "write a valid companion number into the range; refuse leftover junk",
                         "replace the native range with a div-based slider",
                     ),
                 ),
                 a11y_keys=(
                     "Arrow keys adjust the native range (browser default)",
+                    "companion has aria-label; leftover junk fails custom validity",
                     "focus ring is theme-aware on the track/thumb",
                 ),
                 composes_with=("field",),

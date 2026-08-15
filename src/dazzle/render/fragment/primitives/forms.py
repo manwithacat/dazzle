@@ -274,9 +274,13 @@ class ColorField:
 
 @dataclass(frozen=True, slots=True)
 class SliderField:
-    """Range slider with a tooltip value readout (`widget=slider`). Parity with
-    the legacy `_render_slider` — `data-dz-widget="range-tooltip"` mounts the
-    dzRangeTooltip controller; `min`/`max`/`step` come from the field `extra`."""
+    """Range slider with an editable value companion (`widget=slider`).
+
+    The native range is the submitted value. Leftover junk in the
+    companion must not invent a range position (cycle 2134). HM
+    ``dz-slider.js`` owns the group — no ``range-tooltip`` widget.
+    ``min``/``max``/``step`` come from the field ``extra``.
+    """
 
     name: str
     label: str

@@ -558,16 +558,21 @@ class _RenderFormsMixin:
     def _emit_slider_field(self, s: SliderField, ctx: RenderContext) -> str:
         name = ctx.escape_attr(s.name)
         required_attr = ' required aria-required="true"' if s.required else ""
+        # HM owns the readout (cycle 2134). No range-tooltip widget —
+        # leftover junk in the companion must not invent a range
+        # position. Companion has no name; the native range is submitted.
         inner = (
-            '<div data-dz-widget="range-tooltip" class="dz-form-slider-group">'
+            '<div class="dz-form-slider-group">'
             f'<input id="field-{name}" name="{name}" type="range" '
             'data-dz-slider class="dz-form-slider" '
             f'min="{ctx.escape_attr(s.min_val)}" '
             f'max="{ctx.escape_attr(s.max_val)}" '
             f'step="{ctx.escape_attr(s.step)}" '
             f'value="{ctx.escape_attr(s.initial_value)}"{required_attr}>'
-            '<span data-dz-range-value class="dz-form-slider-value" '
-            f'aria-hidden="true">{ctx.escape(s.initial_value)}</span>'
+            '<input data-dz-range-value class="dz-form-slider-value" '
+            'type="text" inputmode="decimal" spellcheck="false" '
+            'autocomplete="off" aria-label="Slider value" '
+            f'value="{ctx.escape_attr(s.initial_value)}">'
             "</div>"
         )
         return self._widget_label(ctx.escape(s.label), name, inner)

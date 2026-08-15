@@ -1882,16 +1882,69 @@ def test_color_leftover_hex_does_not_invent_swatch(page) -> None:  # type: ignor
 
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
     """dz-slider.js writes the range value into the group's [data-range-value]
-    readout on input, scoped to the slider's own group."""
+    companion on input, scoped to the slider's own group."""
     goto_part(page, "slider")
     page.eval_on_selector(
         "#slider input[type=range]",
         "el => { el.value = '30'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
     )
     page.wait_for_timeout(100)
-    assert page.inner_text("#slider [data-range-value]").strip() == "30", (
-        "the value readout must reflect the slider value on input"
+    assert page.input_value("#slider [data-range-value]").strip() == "30", (
+        "the value companion must reflect the slider value on input"
     )
+
+
+def test_slider_leftover_readout_does_not_invent_range(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover readout junk must not invent a range position (cycle 2134).
+
+    Same honesty class as colour leftover hex (2133) and money leftover
+    junk (2121): typed-but-uncommitted text is not a silent parse.
+    """
+    goto_part(page, "slider")
+    group = "#slider .form-slider-group"
+    rng = f"{group} input[type=range]"
+    out = f"{group} [data-range-value]"
+
+    assert page.input_value(rng) == "70"
+    assert page.input_value(out) == "70"
+
+    page.fill(out, "70abc")
+    assert page.input_value(rng) == "70", "leftover suffix is not a silent 70"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+    assert page.eval_on_selector(rng, "el => el.validity.customError") is True
+
+    page.fill(out, "zzz")
+    assert page.input_value(rng) == "70", "named leftover must not invent a range"
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "zzz", "blur must not revert leftover junk"
+    assert page.input_value(rng) == "70"
+
+    page.fill(out, "200")
+    assert page.input_value(rng) == "70", "out-of-range must not invent by clamping"
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+
+    page.fill(out, "30")
+    assert page.input_value(rng) == "30"
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "30"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is True
+
+    page.eval_on_selector(
+        rng,
+        "el => { el.value = '45'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "45"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is True
+
+    page.fill(out, "")
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "45", "empty companion on blur restores from the range"
+    page.reload()
 
 
 def test_slider_skips_widget_managed_inputs(page) -> None:  # type: ignore[no-untyped-def]

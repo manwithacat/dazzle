@@ -262,7 +262,8 @@ def test_slider_widget_min_max_step() -> None:
     }
     assert isinstance(_field_to_primitive(fd), SliderField)
     html = _render(fd)
-    assert 'data-dz-widget="range-tooltip"' in html
+    # Cycle 2134 — HM owns the companion; no range-tooltip widget.
+    assert 'data-dz-widget="range-tooltip"' not in html
     assert 'type="range"' in html
     assert "data-dz-slider" in html
     assert 'min="1"' in html
@@ -270,6 +271,24 @@ def test_slider_widget_min_max_step() -> None:
     assert 'step="1"' in html
     assert 'value="3"' in html
     assert "data-dz-range-value" in html
+    assert 'aria-label="Slider value"' in html
+    assert ">3</span>" not in html
+
+
+def test_slider_controller_leftover_does_not_invent() -> None:
+    """dz-slider.js must refuse leftover readout junk (2134)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-slider.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseNumber" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
 
 
 def test_switch_widget_hm_anatomy() -> None:

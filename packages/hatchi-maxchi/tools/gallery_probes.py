@@ -2108,7 +2108,13 @@ def _run_range_value_readout(page: Any, probe: Probe) -> dict[str, Any]:
     if out is None:
         return {"verdict": "ERROR", "detail": f"readout not found ({readout_sel})"}
 
-    before = (out.inner_text() or "").strip()
+    def _readout_text() -> str:
+        tag = (out.evaluate("el => el.tagName") or "").upper()
+        if tag == "INPUT":
+            return (out.input_value() or "").strip()
+        return (out.inner_text() or "").strip()
+
+    before = _readout_text()
     # Playwright fill on range + input event so delegated controllers fire.
     inp.evaluate(
         """(el, v) => {
@@ -2118,7 +2124,7 @@ def _run_range_value_readout(page: Any, probe: Probe) -> dict[str, Any]:
         target,
     )
     page.wait_for_timeout(settle)
-    after = (out.inner_text() or "").strip()
+    after = _readout_text()
     if after != target:
         return {
             "verdict": "FAIL",

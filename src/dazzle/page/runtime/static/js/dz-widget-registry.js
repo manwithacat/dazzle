@@ -113,7 +113,8 @@
       var tooltip = el.querySelector("[data-dz-range-value]");
       if (!input || !tooltip) return null;
       var update = function () {
-        tooltip.textContent = input.value;
+        if (tooltip.tagName === "INPUT") tooltip.value = input.value;
+        else tooltip.textContent = input.value;
       };
       input.addEventListener("input", update);
       update();

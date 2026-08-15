@@ -7,6 +7,17 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Slider leftover readout invented a committed range (cycle 2134)** —
+  the value companion is now an editable text field (no `name` — the
+  native `type=range` is still the submitted value). Leftover junk
+  (`70abc`, `zzz`) fails custom validity on both controls and does not
+  write the range, so submit cannot post the previous number as if the
+  leftover were accepted. Out-of-range does not invent by clamping.
+  Blur keeps leftover visible; empty companion restores from the range;
+  a valid number writes the range (blur normalizes after native step
+  snap). Product emit no longer wraps `range-tooltip` — HM owns the
+  group. Same honesty class as colour leftover hex (2133) and money
+  leftover junk inventing 0 (2121).
 - **Colour leftover hex invented a committed swatch (cycle 2133)** —
   the hex companion is now an editable text field (no `name` — the
   native `type=color` swatch is still the submitted value). Leftover
