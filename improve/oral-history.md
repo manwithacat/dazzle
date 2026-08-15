@@ -161,7 +161,9 @@ Doctrine source of truth remains
 28. **Riding-along notes must not collapse recipe family.** Cycle 2095
     `tree_people_seat` notes mentioned `2094 approved_stamp_wall rides this
     push` and anti-recipe treated org as a stamp-wall streak. Structured
-    `recipe:` wins over notes in `recipe_family`.
+    `recipe:` wins over notes **only when the tag is registered**. Unknown
+    `two_desk_media_saturate` (2096) still scanned notes (`photo_url` →
+    `headshot_shelf`). Non-empty unknown recipe must stay `None` (AUD-015).
 
 ## What not to re-learn
 
