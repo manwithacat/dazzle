@@ -193,6 +193,69 @@ class TestLiveGreen:
         assert receipt_mod.is_walk_live_green(ex, "land_and_see")
         assert not receipt_mod.is_walk_live_green(ex, "other")
 
+    def test_zero_live_run_is_not_green(self, receipt_mod, monkeypatch, tmp_path: Path) -> None:
+        """AUD-012: walk_live_run=0 must not stamp live prove."""
+        d = tmp_path / "digs-live0"
+        d.mkdir()
+        monkeypatch.setattr(receipt_mod, "RECEIPT_DIR", d)
+        monkeypatch.setattr(receipt_mod, "receipt_dir", lambda: d)
+        monkeypatch.setattr(receipt_mod, "REPO", tmp_path)
+        ex = tmp_path / "examples" / "myapp"
+        (ex / "fixtures" / "scene_walks").mkdir(parents=True)
+        receipt_mod.write_receipt(
+            receipt_mod.DigReceipt(
+                app="myapp",
+                strategy="story_walk",
+                stories=["ST-1"],
+                maps_cited=[{"path": "s.md", "kind": "stem"}],
+                walks_touched=["land_and_see"],
+                actuators={"walk_validate": 0, "walk_dry_run": 0, "walk_live_run": 0},
+                outcome="PASS",
+            )
+        )
+        assert not receipt_mod.is_walk_live_green(ex, "land_and_see")
+
+    def test_positive_live_run_is_green(self, receipt_mod, monkeypatch, tmp_path: Path) -> None:
+        d = tmp_path / "digs-live1"
+        d.mkdir()
+        monkeypatch.setattr(receipt_mod, "RECEIPT_DIR", d)
+        monkeypatch.setattr(receipt_mod, "receipt_dir", lambda: d)
+        monkeypatch.setattr(receipt_mod, "REPO", tmp_path)
+        ex = tmp_path / "examples" / "myapp"
+        (ex / "fixtures" / "scene_walks").mkdir(parents=True)
+        receipt_mod.write_receipt(
+            receipt_mod.DigReceipt(
+                app="myapp",
+                strategy="story_walk",
+                stories=["ST-1"],
+                maps_cited=[{"path": "s.md", "kind": "stem"}],
+                walks_touched=["land_and_see"],
+                actuators={"walk_validate": 1, "walk_dry_run": 1, "walk_live_run": 1},
+                outcome="PASS",
+            )
+        )
+        assert receipt_mod.is_walk_live_green(ex, "land_and_see")
+
+    def test_write_tags_live_unproven_when_live_count_zero(
+        self, receipt_mod, monkeypatch, tmp_path: Path
+    ) -> None:
+        d = tmp_path / "digs-tag"
+        d.mkdir()
+        monkeypatch.setattr(receipt_mod, "RECEIPT_DIR", d)
+        monkeypatch.setattr(receipt_mod, "receipt_dir", lambda: d)
+        path = receipt_mod.write_receipt(
+            receipt_mod.DigReceipt(
+                app="x",
+                strategy="story_walk",
+                stories=["ST-1"],
+                maps_cited=[{"path": "s.md", "kind": "stem"}],
+                actuators={"walk_validate": 0, "walk_dry_run": 0},
+                outcome="PASS",
+            )
+        )
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert "live_unproven" in data["epistemic"]
+
 
 class TestProbesWire:
     def test_process_dig_in_status(self) -> None:

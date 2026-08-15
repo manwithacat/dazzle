@@ -101,6 +101,18 @@ def receipt_dir() -> Path:
     return RECEIPT_DIR
 
 
+def _count_ran(value: Any) -> bool:
+    """True when an actuator count means the work actually ran (AUD-012).
+
+    Exit-code ``0`` remains valid for contract_ok validate/dry (cycle 1610).
+    Live prove requires a positive count — ``0`` means unproven, not green.
+    """
+    try:
+        return int(value) > 0
+    except (TypeError, ValueError):
+        return False
+
+
 def write_receipt(receipt: DigReceipt) -> Path:
     d = receipt_dir()
     ts_slug = re.sub(r"[^\d]", "", receipt.ts or _now_iso())[:14]
@@ -108,6 +120,11 @@ def write_receipt(receipt: DigReceipt) -> Path:
     path = d / name
     if not receipt.ts:
         receipt.ts = _now_iso()
+    if receipt.strategy == "story_walk":
+        live = receipt.actuators.get("walk_live_run")
+        skip = receipt.actuators.get("live_skip_reason")
+        if not _count_ran(live) and not skip and "live_unproven" not in receipt.epistemic:
+            receipt.epistemic.append("live_unproven")
     if not receipt.contract_ok() and receipt.outcome == "PASS":
         receipt.outcome = "contract_incomplete"
     path.write_text(json.dumps(asdict(receipt), indent=2) + "\n", encoding="utf-8")
@@ -220,7 +237,7 @@ def is_walk_live_green(app_dir: Path, walk_id: str) -> bool:
                 r = load_receipt(rp)
             except (OSError, json.JSONDecodeError, TypeError, ValueError):
                 continue
-            if r.actuators.get("walk_live_run") in (0, "0") and (
+            if _count_ran(r.actuators.get("walk_live_run")) and (
                 not walk_id or walk_id in (r.walks_touched or []) or walk_id in str(r.walks_touched)
             ):
                 return True

@@ -7,6 +7,9 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Story-walk live prove treated count 0 as green (cycle 2114 / AUD-012)** —
+  `is_walk_live_green` now requires `walk_live_run > 0`. A zero/missing live
+  count tags `live_unproven` on write instead of stamping live prove.
 - **Dig receipt loader crashed on list actuators (cycle 2113 / AUD-014)** —
   `improve_dig_receipt.load_receipt` now coerces a name list to a count-map
   so `check` does not `dict(["coat_detector", …])`.

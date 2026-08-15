@@ -69,6 +69,7 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
     # AUD-014 list actuators must not crash load_receipt (cycle 2113)
     "tests/unit/test_improve_dig_contracts.py::test_load_receipt_coerces_actuator_name_list",
+    "tests/unit/test_improve_dig_contracts.py::TestLiveGreen::test_zero_live_run_is_not_green",
     # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
     # depth on contact_manager — display_field + home region rename ×3 Pythons)
     "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
