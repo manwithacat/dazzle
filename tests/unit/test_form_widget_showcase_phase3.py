@@ -69,6 +69,22 @@ def test_combobox_controller_required_validity() -> None:
     assert "Select a value from the list" in src
 
 
+def test_date_range_controller_rejects_inverted() -> None:
+    """dz-date-range.js must not hx-get From>To (cycle 2122)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-date-range.js"
+    ).read_text(encoding="utf-8")
+    assert "function inverted" in src
+    assert "From must be on or before To" in src
+    assert "stopImmediatePropagation" in src
+
+
 def test_money_controller_rejects_invalid_text() -> None:
     """dz-money.js must not invent 0 from garbage (cycle 2121)."""
     from pathlib import Path

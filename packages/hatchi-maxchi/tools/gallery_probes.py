@@ -1077,7 +1077,7 @@ PROBES: tuple[Probe, ...] = (
                 'input[name="date_from"], input#hm-dr-from, .date-range-input[name="date_from"]'
             ),
             "out": ("#hm-dr-out, [data-date-range-out], [data-dz-date-range-out]"),
-            "set_value": "2026-07-15",
+            "set_value": "2026-06-15",
             "expect_out_contains": "result",
             "settle_ms": 250,
             "scope": ".hm-preview",
@@ -2484,9 +2484,7 @@ def _run_carousel_keyboard_arrows(page: Any, probe: Probe) -> dict[str, Any]:
     if _index() != expect_last:
         return {
             "verdict": "FAIL",
-            "detail": (
-                f"End must jump to last index={expect_last!r}; got {_index()!r}"
-            ),
+            "detail": (f"End must jump to last index={expect_last!r}; got {_index()!r}"),
             "dom_hint": root_sel,
         }
 
@@ -2504,9 +2502,7 @@ def _run_carousel_keyboard_arrows(page: Any, probe: Probe) -> dict[str, Any]:
 
     return {
         "verdict": "PASS",
-        "detail": (
-            f"ArrowRight/Left 0↔1; End→{expect_last}; Home→0 (keyboard clamp strip)"
-        ),
+        "detail": (f"ArrowRight/Left 0↔1; End→{expect_last}; Home→0 (keyboard clamp strip)"),
         "last_index": expect_last,
     }
 
@@ -3846,7 +3842,7 @@ def _run_date_range_change(page: Any, probe: Probe) -> dict[str, Any]:
         'input[name="date_from"], input#hm-dr-from',
     )
     out_sel = params.get("out", "#hm-dr-out")
-    set_value = str(params.get("set_value", "2026-07-15"))
+    set_value = str(params.get("set_value", "2026-06-15"))
     expect = str(params.get("expect_out_contains", "result"))
     settle = int(params.get("settle_ms", 250))
 

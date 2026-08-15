@@ -2,6 +2,7 @@
 
 Dual-lock unit is the region root. HTMX endpoint and region target are
 host-owned; both inputs share ``hx-include="closest .date-range-bar"``.
+``dz-date-range.js`` blocks inverted From>To before the exchange (cycle 2122).
 """
 
 from __future__ import annotations

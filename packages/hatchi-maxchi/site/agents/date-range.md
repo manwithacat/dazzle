@@ -83,13 +83,26 @@ Correct response for body_only into #{region}-body (innerHTML / innerMorph). Wro
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- implement Server exchange endpoints; return HTML fragments, not JSON
-- satisfy the DOM contract tables (CI stop-ship)
+- root data-dz-date-range owns both native date inputs
+- hx-include closest .date-range-bar sends both bounds on either change
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| block inverted ranges with setCustomValidity before the exchange | POST From after To and let the server return an unexplained empty list |
+
+### Pitfalls
+
+- inverted From>To must not hx-get a silent empty region
+- empty either bound is an open range — do not invent a missing date
+
+### Keyboard / AT
+
+- native type=date keeps the platform picker and constraint UI
+- custom validity names the inversion so the bubble is not a generic required miss
 
 ## DOM contract
 
@@ -141,9 +154,10 @@ def render(d: DateRange) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-date-range (contracts/date_range.py). Native type="date" inputs — no picker JS. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range.
+Dual-lock root is data-dz-date-range (contracts/date_range.py). Native type="date" inputs. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range. dz-date-range.js blocks an inverted From>To change (custom validity + no silent empty-region GET).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/date_range.py`
+- `controllers/dz-date-range.js`

@@ -2808,6 +2808,54 @@ def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: 
     page.reload()
 
 
+def test_date_range_inverted_does_not_fire_search(page) -> None:  # type: ignore[no-untyped-def]
+    """From after To must not hx-get a silent empty region (cycle 2122).
+
+    Same honesty class as money invalid text inventing 0 (2121). Equal
+    dates and open (one-empty) ranges stay valid and may exchange.
+    """
+    goto_part(page, "date-range")
+    root = "#date-range [data-date-range]"
+    frm = f'{root} input[name="date_from"]'
+    to = f'{root} input[name="date_to"]'
+    out = "#hm-dr-out"
+
+    # Avoid Playwright fill (focus fires the gallery mock GET on the
+    # still-valid SSR range). Set the value in-DOM and dispatch.
+    page.evaluate(
+        """() => {
+          const o = document.querySelector('#hm-dr-out');
+          if (o) { o.hidden = false; o.textContent = 'SENTINEL'; }
+          const f = document.querySelector(
+            '#date-range [data-date-range] input[name="date_from"]'
+          );
+          f.value = '2026-07-15';
+          f.dispatchEvent(new Event('input', {bubbles: true}));
+          f.dispatchEvent(new Event('change', {bubbles: true}));
+        }"""
+    )
+    page.wait_for_timeout(80)
+    assert page.eval_on_selector(frm, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(frm, "el => el.validity.customError") is True
+    assert page.inner_text(out) == "SENTINEL", "inverted must not hx-get"
+
+    page.evaluate(
+        """() => {
+          const f = document.querySelector(
+            '#date-range [data-date-range] input[name="date_from"]'
+          );
+          f.value = '2026-06-15';
+          f.dispatchEvent(new Event('input', {bubbles: true}));
+          f.dispatchEvent(new Event('change', {bubbles: true}));
+        }"""
+    )
+    page.wait_for_timeout(80)
+    assert page.eval_on_selector(frm, "el => el.checkValidity()") is True
+    assert page.eval_on_selector(to, "el => el.checkValidity()") is True
+    assert "SENTINEL" not in page.inner_text(out), "valid From must still exchange"
+    page.reload()
+
+
 def test_money_invalid_text_does_not_invent_zero(page) -> None:  # type: ignore[no-untyped-def]
     """Garbage display must not post a silent 0 (cycle 2121).
 

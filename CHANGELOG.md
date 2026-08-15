@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Date-range inverted From>To emptied the region (cycle 2122)** —
+  `dz-date-range.js` now `setCustomValidity` and stops the change before
+  htmx fires when both bounds are set and From is after To. Empty either
+  bound stays an open range; equal dates stay a one-day window. Same
+  honesty class as money invalid text (2121). The gallery probe that
+  used to set From to 2026-07-15 (after To 2026-06-30) now uses a valid
+  2026-06-15 change.
 - **Money invalid text invented £0.00 (cycle 2121)** — `dz-money.js`
   treated `parseFloat("abc")` as 0 and `parseFloat("12abc")` as 12, so
   leftover junk posted a silent minor-unit amount (and blur rewrote the

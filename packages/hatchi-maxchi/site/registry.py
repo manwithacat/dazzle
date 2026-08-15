@@ -2497,12 +2497,35 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="Dual-lock root is <code>data-dz-date-range</code> "
             "(<code>contracts/date_range.py</code>). Native "
-            "<code>type=&quot;date&quot;</code> inputs — no picker JS. Each "
-            "input fires the region's hx-get on change and "
+            "<code>type=&quot;date&quot;</code> inputs. Each input fires the "
+            "region's hx-get on change and "
             "<code>hx-include=&quot;closest .date-range-bar&quot;</code> sends "
-            "BOTH bounds every time, so the server always sees the full range.",
+            "BOTH bounds every time, so the server always sees the full range. "
+            "<code>dz-date-range.js</code> blocks an inverted From&gt;To "
+            "change (custom validity + no silent empty-region GET).",
             tags=("forms", "htmx"),
+            controller="controllers/dz-date-range.js",
             contracts=("contracts/date_range.py",),
+            guidance=Guidance(
+                seams=(
+                    "root data-dz-date-range owns both native date inputs",
+                    "hx-include closest .date-range-bar sends both bounds on either change",
+                ),
+                pitfalls=(
+                    "inverted From>To must not hx-get a silent empty region",
+                    "empty either bound is an open range — do not invent a missing date",
+                ),
+                do_dont=(
+                    (
+                        "block inverted ranges with setCustomValidity before the exchange",
+                        "POST From after To and let the server return an unexplained empty list",
+                    ),
+                ),
+                a11y_keys=(
+                    "native type=date keeps the platform picker and constraint UI",
+                    "custom validity names the inversion so the bubble is not a generic required miss",
+                ),
+            ),
             exchanges=(
                 Exchange(
                     method="GET",

@@ -145,6 +145,7 @@ JS_SOURCES = [
     "controllers/dz-combobox.js",
     "controllers/dz-tags.js",
     "controllers/dz-money.js",
+    "controllers/dz-date-range.js",
     "controllers/dz-wizard.js",
     "controllers/dz-color.js",
     "controllers/dz-pdf.js",
