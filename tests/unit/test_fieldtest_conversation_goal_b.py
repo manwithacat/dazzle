@@ -61,18 +61,20 @@ def test_issue_note_seeds_have_domain_true_field_copy() -> None:
         assert row.get("note_kind") in ("note", "repro")
 
 
-def test_issue_triage_repro_note_trail() -> None:
-    """Cycle 2083 recipe repro_note_trail — TestRail/Jira reproduction notes."""
+def test_issue_triage_note_kind_chrome_not_filter_slice() -> None:
+    """Cycle 2084 recipe note_kind_chrome — labels on the existing trail."""
     text = APP.read_text()
     block = text.split("workspace issue_triage", 1)[1].split("workspace firmware_pipeline", 1)[0]
-    assert "\n  repro_notes:\n" in block
-    region = block.split("\n  repro_notes:\n", 1)[1].split("\n  live_conversation:", 1)[0]
-    assert "source: IssueNote" in region
-    assert "note_kind = repro" in region
-    assert "display: conversation" in region
-    assert "repro_notes: count(IssueNote where note_kind = repro)" in block
-    assert "focus: open_pressure, repro_notes, critical_evidence, high_evidence" in block
+    assert "\n  repro_notes:\n" not in block
+    assert "note_kind = repro" not in block
+    assert "repro_notes: count(" not in block
+    assert "focus: open_pressure, live_conversation, critical_evidence, high_evidence" in block
+    assert "\n  live_conversation:\n" in block
+    live = block.split("\n  live_conversation:\n", 1)[1].split("\n  critical_evidence:", 1)[0]
+    assert "display: conversation" in live
+    assert "source: IssueNote" in live
     ent = text.split('entity IssueNote "Issue Note":', 1)[1].split("entity ", 1)[0]
     assert "note_kind: enum[note,repro]=note" in ent
+    assert "note_kind_chrome" in ent or "note_kind" in ent
     rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
     assert sum(1 for r in rows if r.get("note_kind") == "repro") >= 3

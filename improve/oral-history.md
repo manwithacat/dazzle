@@ -104,6 +104,12 @@ Doctrine source of truth remains
     honest. Audit the distill commit for subtract-only. Do not re-add the
     slice.
 
+22. **fieldtest conversation grain is chrome, not a second list.** After
+    `live_conversation` exists, `note_kind=repro` labels the same trail
+    (author suffix + danger). Do not add `repro_notes` as a sibling
+    `display: conversation` — that is conversation_filter_slice coat
+    theatre (oral #19) even if the tag evades the family regex.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

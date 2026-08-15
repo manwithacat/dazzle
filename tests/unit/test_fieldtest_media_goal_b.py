@@ -57,10 +57,10 @@ def test_issue_triage_declares_severity_evidence_density() -> None:
     assert "display: grid" in block
     assert "critical_photos: count(IssueReport" in block
     assert "high_photos: count(IssueReport" in block
-    assert block.index("open_pressure:") < block.index("critical_evidence:")
+    assert block.index("open_pressure:") < block.index("live_conversation:")
+    assert block.index("live_conversation:") < block.index("critical_evidence:")
     assert block.index("critical_evidence:") < block.index("high_evidence:")
-    assert block.index("high_evidence:") < block.index("live_conversation:")
-    assert "focus: open_pressure, repro_notes, critical_evidence, high_evidence" in block
+    assert "focus: open_pressure, live_conversation, critical_evidence, high_evidence" in block
     assert "severity_evidence_density" in block.lower() or "critical vs high" in block.lower()
     # Mixed field_evidence remains under fold (not focus twin of dual shelves)
     assert "field_evidence:" in block

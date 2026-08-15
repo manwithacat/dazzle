@@ -20,10 +20,16 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal C distill + note_kind chrome (cycle 2084)** — subtract 2083
+  `repro_notes` conversation sibling on fieldtest issue_triage (coat theatre
+  / conversation_filter_slice). Keep `IssueNote.note_kind`; framework
+  conversation maps `repro` to author suffix + danger bubble on the existing
+  live trail (TestRail/Jira steps-to-reproduce labels, not a second list).
+  Still proof **· repro** above fold.
 - **Goal B conversation repro notes (cycle 2083)** — fieldtest_hub Issue
   Triage leads with reproduction-note conversation (`repro_note_trail`;
   TestRail/Jira steps-to-reproduce vs mixed live trail). Still proof
-  **Repro Notes** above fold.
+  **Repro Notes** above fold. Distilled in cycle 2084.
 - **Goal B media type/pattern density (cycle 2081)** — design_studio Asset
   Catalog puts exclusive typography specimens vs pattern boards above fold
   (`type_pattern_density`; not headshot_shelf, not logo/photo re-stack).

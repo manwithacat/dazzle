@@ -40,10 +40,10 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   dual attention and named briefs above fold, not a single conversation list.
 - **Issue Triage** — shared engineer/manager desk: dual **critical vs high** field
   photo evidence density (cycle 2059 `severity_evidence_density`; peer TestRail /
-  BrowserStack P0/P1 screenshots), **reproduction notes** (cycle 2083
-  `repro_note_trail` — TestRail/Jira steps-to-reproduce vs mixed live trail),
-  live conversation, open and critical queues — not a twin critical timeline
-  under the same desk (empty_region_honesty).
+  BrowserStack P0/P1 screenshots), live conversation with **repro-labeled**
+  steps-to-reproduce (cycle 2083 `note_kind_chrome` — TestRail/Jira kind on the
+  same trail, not a second comment list), open and critical queues — not a twin
+  critical timeline under the same desk (empty_region_honesty).
 - **Firmware Pipeline** — release desk: draft/live metrics, release history,
   status board, and open-task queue — not a release status bar dump.
 - **Device Fleet** — hardware identity wall first (cycle 2080
@@ -104,4 +104,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:59f05db8bf52bcb32895d08f7a5180c23a9e607a04d6ee9aa0a4203cf48b9795 -->
+<!-- dazzle-spec-brief: sha256:144c5a42ba599a206f22e7e141c3afac759dea7750616edcbb23096e9f738107 -->

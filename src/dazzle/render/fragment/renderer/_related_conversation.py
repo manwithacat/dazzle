@@ -47,6 +47,7 @@ _CONV_TONE_KEYS = frozenset(
 )
 # Inbound channel (portal/email/chat/phone) — append to author for trail label.
 # Ops page_channel (bridge/slack/pager/status_page) uses the same suffix path.
+# QA note_kind (repro vs note) uses the same suffix path; default "note" skips.
 _CONV_CHANNEL_KEYS = frozenset(
     {
         "channel",
@@ -57,6 +58,8 @@ _CONV_CHANNEL_KEYS = frozenset(
         "page_channel",
         "notify_channel",
         "page",
+        "note_kind",
+        "kind",
     }
 )
 _CONV_ORIENT_OUT = frozenset({"yes", "true", "1", "out", "outbound", "internal", "agent"})
@@ -75,12 +78,19 @@ _CONV_TONE_DANGER = frozenset(
         # Ops timeline lean-in phases (PagerDuty bridge trail).
         "escalate",
         "mitigate",
+        # QA/lab steps-to-reproduce (TestRail/Jira) on the same trail.
+        "repro",
+        "reproduction",
+        "steps_to_reproduce",
     }
 )
 # Channel values that are noise when default — skip author suffix.
 # ``portal`` is the product default inbound path (not a lean-in signal).
 # ``bridge`` is the ops default page path (parity with portal skip).
-_CONV_CHANNEL_SKIP = frozenset({"", "none", "unknown", "n/a", "na", "portal", "bridge"})
+# ``note`` is the default IssueNote/TaskComment kind (not a lean-in signal).
+_CONV_CHANNEL_SKIP = frozenset(
+    {"", "none", "unknown", "n/a", "na", "portal", "bridge", "note", "comment"}
+)
 
 
 def _header_key(header: str) -> str:
@@ -242,6 +252,9 @@ def conversation_row_fields(
         author = "Agent" if orient == "out" else "Customer"
     if channel:
         author = f"{author} · {channel}"
+        # note_kind=repro is channel-mapped (suffix) — also lean-in the bubble.
+        if not bubble_tone and conversation_bubble_tone(channel) == "danger":
+            bubble_tone = "danger"
     return text, author, time_raw, orient, bubble_tone
 
 

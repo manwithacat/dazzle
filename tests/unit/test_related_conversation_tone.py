@@ -28,6 +28,42 @@ def test_conversation_roles_map_note_phase_and_page_channel() -> None:
     assert roles == ["text", "author", "tone", "channel", "time"]
 
 
+def test_conversation_roles_map_note_kind_as_channel() -> None:
+    """QA/lab note_kind is channel-mapped (suffix), not a second trail (cycle 2083)."""
+    roles = conversation_roles(("body", "author", "note_kind", "created_at"))
+    assert roles == ["text", "author", "channel", "time"]
+
+
+def test_related_conversation_note_kind_repro_suffix_and_danger() -> None:
+    """TestRail/Jira repro notes label the same trail; default note stays unsuffixed."""
+    tab = RelatedTab(
+        tab_id="discussion",
+        label="Discussion",
+        headers=("body", "author", "note_kind", "created_at"),
+        rows=(
+            (
+                "Battery 40% drop reproduces on continuous sample.",
+                "engineer",
+                "repro",
+                "2026-07-28T09:15:00",
+            ),
+            (
+                "Prioritise fix ahead of mechanical polish.",
+                "manager",
+                "note",
+                "2026-07-26T15:30:00",
+            ),
+        ),
+        row_drill=("", ""),
+    )
+    msgs = related_conversation_messages(tab)
+    assert len(msgs) == 2
+    assert msgs[0].author == "engineer · repro"
+    assert msgs[0].bubble.tone == "danger"
+    assert msgs[1].author == "manager"
+    assert msgs[1].bubble.tone == ""
+
+
 def test_conversation_bubble_tone_danger_values() -> None:
     assert conversation_bubble_tone("frustrated") == "danger"
     assert conversation_bubble_tone("urgent") == "danger"
@@ -35,6 +71,7 @@ def test_conversation_bubble_tone_danger_values() -> None:
     assert conversation_bubble_tone("critical") == "danger"
     assert conversation_bubble_tone("escalate") == "danger"
     assert conversation_bubble_tone("mitigate") == "danger"
+    assert conversation_bubble_tone("repro") == "danger"
     assert conversation_bubble_tone("neutral") == ""
     assert conversation_bubble_tone("thankful") == ""
     assert conversation_bubble_tone("none") == ""

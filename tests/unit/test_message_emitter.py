@@ -127,6 +127,37 @@ def test_build_conversation_from_comment_items_message_rows() -> None:
     assert "MR" in html or "M" in html
 
 
+def test_build_conversation_note_kind_repro_suffix_and_danger() -> None:
+    """Live trail: note_kind=repro suffixes author + danger; default note skips."""
+
+    class _A(_BuildersTimelineMixin):
+        pass
+
+    region = type("R", (), {"name": "live", "title": "Live", "empty_message": None})()
+    ctx: RegionContext = {
+        "items": [
+            {
+                "body": "Battery 40% drop reproduces on continuous sample.",
+                "author": "engineer",
+                "note_kind": "repro",
+            },
+            {
+                "body": "Prioritise fix ahead of mechanical polish.",
+                "author": "manager",
+                "note_kind": "note",
+            },
+        ],
+        "status_entries": [],
+        "empty_message": "none",
+    }
+    surface = _A()._build_conversation(region, ctx)
+    html = FragmentRenderer().render(surface)
+    assert "engineer · repro" in html
+    assert "manager · note" not in html
+    assert "manager" in html
+    assert html.count('data-dz-tone="danger"') >= 1
+
+
 def test_simple_task_sample_thread_is_conversation() -> None:
     appspec = load_project_appspec(SIMPLE)
     workspaces = list(getattr(appspec, "workspaces", None) or [])

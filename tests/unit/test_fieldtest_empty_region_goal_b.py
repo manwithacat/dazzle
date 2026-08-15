@@ -35,7 +35,7 @@ def test_issue_triage_omits_critical_trail() -> None:
     assert "critical_trail:" not in block
     assert "display: timeline" not in block
     assert "display: bar_chart" not in block
-    assert "focus: open_pressure, repro_notes, critical_evidence, high_evidence" in block
+    assert "focus: open_pressure, live_conversation, critical_evidence, high_evidence" in block
 
 
 def test_firmware_pipeline_omits_status_bar_and_task_timeline() -> None:

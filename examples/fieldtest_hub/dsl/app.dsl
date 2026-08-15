@@ -275,8 +275,8 @@ entity IssueNote "Issue Note":
   issue: ref IssueReport required
   author: str(120) required
   body: text required
-  # Cycle 2083 recipe repro_note_trail — TestRail/Jira steps-to-reproduce
-  # notes vs mixed live trail (not conversation_filter_slice).
+  # Cycle 2084 recipe note_kind_chrome — TestRail/Jira steps-to-reproduce
+  # labels on the existing live trail (not a second conversation filter).
   note_kind: enum[note,repro]=note
   created_at: datetime auto_add
 
@@ -1760,7 +1760,6 @@ workspace issue_triage "Issue Triage":
       critical_photos: count(IssueReport where severity = critical and photo_url != null and status != closed)
       high_photos: count(IssueReport where severity = high and photo_url != null and status != closed)
       conversation: count(IssueNote)
-      repro_notes: count(IssueNote where note_kind = repro)
     tones:
       open: warning
       critical: destructive
@@ -1768,18 +1767,16 @@ workspace issue_triage "Issue Triage":
       critical_photos: danger
       high_photos: warning
       conversation: accent
-      repro_notes: warning
 
-  # Cycle 2083 recipe repro_note_trail — TestRail/Jira reproduction notes
-  # above photo walls so stills show steps-to-reproduce speech first.
-  repro_notes:
+  # Cycle 2084 — labeled live trail after pulse so · repro is above fold
+  # (not a second filtered conversation region).
+  live_conversation:
     source: IssueNote
-    filter: note_kind = repro
     sort: created_at desc
     limit: 4
     display: conversation
     action: issue_note_detail
-    empty: "No reproduction notes — testers log steps-to-reproduce here"
+    empty: "No triage conversation yet — engineer notes on open issues appear here"
 
   # Goal B media dual density — exclusive severity photo grids (caps for fold).
   critical_evidence:
@@ -1799,15 +1796,6 @@ workspace issue_triage "Issue Triage":
     display: grid
     action: issue_report_detail
     empty: "No high-severity field photos yet"
-
-  # Conversation trail after dual media density (still Message chrome).
-  live_conversation:
-    source: IssueNote
-    sort: created_at desc
-    limit: 4
-    display: conversation
-    action: issue_note_detail
-    empty: "No triage conversation yet — engineer notes on open issues appear here"
 
   # Mixed photo shelf under dual density (scroll) — not a third focus twin.
   field_evidence:
@@ -1840,11 +1828,11 @@ workspace issue_triage "Issue Triage":
 
   ux:
     as engineer:
-      purpose: "Critical vs high field photos, then reproduction notes before mixed trail"
-      focus: open_pressure, repro_notes, critical_evidence, high_evidence
+      purpose: "Repro-labeled triage notes after pulse, then critical vs high field photos"
+      focus: open_pressure, live_conversation, critical_evidence, high_evidence
     as manager:
-      purpose: "Critical vs high field photos, then reproduction notes before mixed trail"
-      focus: open_pressure, repro_notes, critical_evidence, high_evidence
+      purpose: "Repro-labeled triage notes after pulse, then critical vs high field photos"
+      focus: open_pressure, live_conversation, critical_evidence, high_evidence
 
 workspace firmware_pipeline "Firmware Pipeline":
   # Goal B empty_region_honesty (cycle 1855): peer ship desks keep pulse + board

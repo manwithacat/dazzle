@@ -164,6 +164,8 @@ def _conversation_bubble_tone(item: dict[str, Any]) -> str:
         "phase",
         "timeline_phase",
         "incident_phase",
+        "note_kind",
+        "kind",
     ):
         raw = item.get(key)
         if raw is None or raw == "":
@@ -427,6 +429,8 @@ class _BuildersTimelineMixin:
                     or item.get("contact_channel")
                     or item.get("page_channel")
                     or item.get("notify_channel")
+                    or item.get("note_kind")
+                    or item.get("kind")
                     or ""
                 )
                 .strip()
@@ -440,6 +444,8 @@ class _BuildersTimelineMixin:
                 "na",
                 "portal",
                 "bridge",
+                "note",
+                "comment",
             }:
                 author = f"{author} · {channel}" if author else channel
             time_label, time_dt = _conversation_time(item)
