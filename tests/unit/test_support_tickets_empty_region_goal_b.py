@@ -98,6 +98,25 @@ def test_agent_console_omits_twin_open_queue_and_comment_trail() -> None:
     assert "as admin:" in block
 
 
+def test_agent_console_selector_lists_agents_only() -> None:
+    """Cycle 2086 empty_region_honesty: recipe agent_only_selector.
+
+    Peer Zendesk/Front inspectors pick a staff agent — not a customer
+    requester. Default first option used to be Trial parent → two giant
+    empty voids above fold. L1 + department != External fills the plate
+    (``role =`` is reserved for role() checks).
+    """
+    text = APP.read_text()
+    marker = 'workspace agent_console "'
+    start = text.index(marker)
+    rest = text[start + 1 :]
+    nxt = rest.find("\nworkspace ")
+    block = text[start : start + 1 + nxt]
+    assert "context_selector:" in block
+    assert "filter: support_tier = l1 and department != External" in block
+    assert "entity: User" in block
+
+
 def test_manager_ops_omits_funnel_and_secondary_ticket_trail() -> None:
     """Manager Ops: dual queues + docs + conversation — not funnel/trail thrash."""
     block = _workspace_block("manager_ops")

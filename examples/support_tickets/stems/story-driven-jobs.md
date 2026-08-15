@@ -17,7 +17,8 @@ ST-013–018 own surfaces.
 - Manager default: `manager_ops` = team metrics + status_list SLA strip +
   critical/unassigned queues (limit 4) + SLA waiver composition (limit 4) +
   live conversation (limit 4) — no status funnel or secondary ticket trail
-  (empty_region honesty cycle 1850; funnel_chart coverage on agent_console).
+  (empty_region honesty cycle 1850; funnel_chart coverage on agent_console;
+  cycle 2086 agent_only_selector keeps the inspector picker staff-only).
   Not an empty personal list; no second open-board kanban — lifecycle board
   stays on agent_dashboard.
 - Customer default: `my_tickets` = my metrics + open/WIP queues + **one**
@@ -29,6 +30,10 @@ ST-013–018 own surfaces.
 - Ticket list triple open `Ticket via id | User via assigned_to | User via created_by`
   (cycle 1591 journey_dogfood) — ticket hub first; assignee hub for load /
   reassignment; creator hub for customer context (ST-019/028).
+- Agent Console inspector `context_selector` lists frontline staff only
+  (`support_tier = l1 and department != External`; cycle 2086
+  `agent_only_selector`) — Zendesk/Front pickers do not default to a
+  customer requester void.
 - Prefer queue/metrics/kanban/timeline over bare list for open-work and event streams.
 - Keep story `given:` workspace names aligned with persona defaults.
 

@@ -248,14 +248,35 @@ async def test_context_options_survives_out_of_enum_row(app) -> None:
         f"{resp.status_code} {resp.text[:300]!r}"
     )
     options = resp.json().get("options", [])
-    # The selector must be populated (not empty) AND must include the
-    # non-conforming row — the projection returns it by id+label regardless of
-    # its enum-invalid role.
+    # The selector must stay populated (not 422 / empty). Cycle 2086
+    # staff filter excludes the role_staff / External row from labels —
+    # the load-bearing #1304 property is "endpoint survives", not "every
+    # User appears".
+    assert resp.status_code == 200
     assert len(options) >= 1, (
         f"selector options empty — selector would be inert: {resp.text[:300]!r}"
     )
-    labels = {o.get("label") for o in options}
-    assert bad_label in labels, (
-        f"the out-of-enum User is missing from options ({sorted(labels)}); "
-        "the projection should surface every row by id+label."
+
+
+async def test_context_options_lists_agents_not_customers(app) -> None:
+    """Cycle 2086 empty_region_honesty: Agent Console picker is staff-only.
+
+    Customers (Trial parent / requesters) must not appear; at least one
+    agent must, so the default first option is a filled plate.
+    """
+    client = await app.client_as("manager")
+    try:
+        resp = await client.get(f"/api/workspaces/{_WS}/context-options")
+    finally:
+        await client.aclose()
+
+    assert resp.status_code == 200, resp.text[:300]
+    labels = [o.get("label") or "" for o in resp.json().get("options", [])]
+    assert labels, "selector empty — Agent Console would land on a void"
+    joined = " ".join(labels).lower()
+    assert "parent" not in joined and "customer" not in joined, (
+        f"customer requester leaked into agent inspector options: {labels}"
+    )
+    assert any("agent" in (lab or "").lower() for lab in labels), (
+        f"no agent label in inspector options: {labels}"
     )

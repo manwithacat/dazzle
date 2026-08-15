@@ -582,6 +582,7 @@ ir_class: ContextSelectorSpec
     - entity: str
   optional:
     - display_field: str = 'name'
+    - filter: ConditionExpr | None = None
     - scope_field: str | None = None
 
 ir_class: Contradiction

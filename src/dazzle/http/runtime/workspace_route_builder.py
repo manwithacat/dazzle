@@ -14,6 +14,7 @@ from dazzle.core.admin_builder import boot_log_line
 from dazzle.core.ir import AppSpec, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
+from dazzle.http.runtime.scope_filters import _extract_condition_filters
 from dazzle.http.runtime.workspace_columns import (
     _fitness_repr_field_names,
 )
@@ -33,6 +34,21 @@ from dazzle.page import app_paths
 from dazzle.page.runtime.action_urls import region_row_drill_url
 
 logger = logging.getLogger(__name__)
+
+
+def context_selector_option_filters(sel: Any) -> dict[str, Any]:
+    """Repository filters from ``context_selector.filter`` (cycle 2086).
+
+    Lets Agent Console list staff only so the default first option is a
+    real agent plate — not a customer void (empty_region_honesty).
+    """
+    cond = getattr(sel, "filter", None)
+    if cond is None:
+        return {}
+    out: dict[str, Any] = {}
+    _extract_condition_filters(cond, user_id="", filters=out, _logger=logger)
+    return out
+
 
 # #1420 S2.3 — workspace redirect-route HTTP method → CRUD op.
 _WS_COLLECTION_METHOD_OP = {"GET": "list", "POST": "create"}
@@ -571,6 +587,7 @@ class WorkspaceRouteBuilder:
                         sel_entity_name: str = "",
                         sel_fk_graph: Any = None,
                         sel_scope_field: str | None = None,
+                        sel_option_filters: dict[str, Any] | None = None,
                     ) -> Any:
                         async def context_options(request: Request) -> Any:
                             # SECURITY: apply scope predicates to context selector (#574)
@@ -651,6 +668,15 @@ class WorkspaceRouteBuilder:
                                         exc_info=True,
                                     )
 
+                            # Author filter (cycle 2086): merge after RBAC /
+                            # scope_field so a deny-all scope still wins, but a
+                            # successful list still excludes non-work contexts
+                            # (customers on an agent inspector).
+                            if sel_option_filters:
+                                merged = dict(scope_filters or {})
+                                merged.update(sel_option_filters)
+                                scope_filters = merged
+
                             # #1304: project only id + the display field. The
                             # selector needs nothing else, and a projection
                             # makes the query robust to rows that don't satisfy
@@ -664,6 +690,7 @@ class WorkspaceRouteBuilder:
                                 page_size=500,
                                 filters=scope_filters,
                                 select_fields=_select,
+                                sort=display or "name",
                             )
                             items = result.get("items", []) if isinstance(result, dict) else result
                             options = []
@@ -691,6 +718,7 @@ class WorkspaceRouteBuilder:
                             sel_entity_name=_ctx_sel.entity,
                             sel_fk_graph=self._fk_graph,
                             sel_scope_field=_ctx_sel.scope_field,
+                            sel_option_filters=context_selector_option_filters(_ctx_sel) or None,
                         )
                     )
 

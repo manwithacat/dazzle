@@ -120,7 +120,10 @@ lifecycle progress, category chart, and (below fold) full ticket list + coverage
 displays under context_selector (funnel/progress/feed/bar charts live here, not
 on Manager Ops / Agent Dashboard heroes). Cycle 2067 `agent_console_twin_queue_prune`
 drops twin open-ticket cards and a second comment trail — peer Zendesk/Front
-inspectors are one plate + one trail, not scroll theater.
+inspectors are one plate + one trail, not scroll theater. Cycle 2086
+`agent_only_selector` restricts the people picker to frontline staff
+(`support_tier = l1 and department != External`) so the default first
+option is a filled agent plate (not a customer requester void).
 
 ## How work flows through it
 

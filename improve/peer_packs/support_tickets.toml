@@ -18,6 +18,7 @@ refuse = [
   "Enum × ball_in_court cartesian slices (thankful/medium/channel × needs_reply)",
   "Denormalized parent enums on Comment (case_priority, sla_pressure) so count() can filter",
   "Another display: conversation region on an already-saturated ticket desk",
+  "Customers / requesters in the Agent Console context_selector (staff-only picker)",
 ]
 
 icon_depths = ["conversation", "command_density", "empty_region_honesty"]

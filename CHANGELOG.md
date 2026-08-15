@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Agent Guidance
+- **`context_selector.filter`** — optional `ConditionExpr` on the picker
+  entity (same grammar as a region `filter:`). `role = agent` is **not**
+  valid (`role` is reserved for `role()`); use `department != External`
+  / `support_tier = l1` for staff-only inspectors.
+
 ### Fixed
 - **hr_records ST-004 story walk after career_desk rename (cycle 1919)** —
   employee_st_004 walk still targeted workspace `person_detail` after 1918
@@ -20,6 +26,12 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B empty_region_honesty agent inspector (cycle 2086)** —
+  `context_selector` accepts `filter:` (same ConditionExpr as a region).
+  support_tickets Agent Console lists frontline staff only
+  (`support_tier = l1 and department != External`; `agent_only_selector`)
+  so the default first option is a staff plate — not Trial parent empty
+  voids. Unit + parser pins; still recapture.
 - **Goal B org unassigned reporting seats (cycle 2085)** — hr_records
   Reporting desk leads with exclusive Unassigned vs Top of House
   (`unassigned_reporting_seat`; BambooHR/Workday hole in the tree). Subtract

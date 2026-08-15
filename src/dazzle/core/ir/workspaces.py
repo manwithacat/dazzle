@@ -1332,11 +1332,17 @@ class ContextSelectorSpec(BaseModel):
         scope_field: Optional FK field on the entity to restrict choices
             to the current user's scope (e.g., "trust" to filter by
             the user's trust).
+        filter: Optional predicate on the selector entity (same
+            ``ConditionExpr`` as a region ``filter:``). Applied to
+            ``context-options`` so the default first option is a
+            real work context — not a customer/requester void
+            (empty_region_honesty / cycle 2086).
     """
 
     entity: str
     display_field: str = "name"
     scope_field: str | None = None
+    filter: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 

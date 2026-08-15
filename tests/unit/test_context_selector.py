@@ -26,6 +26,7 @@ class TestContextSelectorSpec:
         assert spec.entity == "School"
         assert spec.display_field == "name"
         assert spec.scope_field is None
+        assert spec.filter is None
 
     def test_custom_fields(self) -> None:
         from dazzle.core.ir.workspaces import ContextSelectorSpec
@@ -238,3 +239,46 @@ class TestRegionContextIdPropagation:
             _filter_context["current_context"] = _context_id
 
         assert _filter_context == {}
+
+
+class TestContextSelectorOptionFilters:
+    def test_role_eq_agent_becomes_list_filter(self) -> None:
+        from dazzle.core.ir.conditions import (
+            Comparison,
+            ComparisonOperator,
+            ConditionExpr,
+            ConditionValue,
+        )
+        from dazzle.core.ir.workspaces import ContextSelectorSpec
+        from dazzle.http.runtime.workspace_route_builder import context_selector_option_filters
+
+        sel = ContextSelectorSpec(
+            entity="User",
+            filter=ConditionExpr(
+                comparison=Comparison(
+                    field="role",
+                    operator=ComparisonOperator.EQUALS,
+                    value=ConditionValue(literal="agent"),
+                )
+            ),
+        )
+        assert context_selector_option_filters(sel) == {"role": "agent"}
+
+    def test_missing_filter_is_empty(self) -> None:
+        from dazzle.core.ir.workspaces import ContextSelectorSpec
+        from dazzle.http.runtime.workspace_route_builder import context_selector_option_filters
+
+        assert context_selector_option_filters(ContextSelectorSpec(entity="User")) == {}
+
+    def test_support_tickets_agent_console_filter_extracts_staff_grain(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.http.runtime.workspace_route_builder import context_selector_option_filters
+
+        spec = load_project_appspec(Path("examples/support_tickets"))
+        ws = next(w for w in spec.workspaces if w.name == "agent_console")
+        assert ws.context_selector is not None
+        filters = context_selector_option_filters(ws.context_selector)
+        assert filters.get("support_tier") == "l1"
+        assert filters.get("department__ne") == "External"

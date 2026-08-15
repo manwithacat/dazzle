@@ -115,6 +115,13 @@ Doctrine source of truth remains
     the people-partner hole (who is missing from the tree). Do not AND-filter
     `work_location` again on Reporting. Location coat stays on My Team.
 
+24. **support_tickets empty_region grain is staff-only inspector picker.**
+    Agent Console voids were `context_selector` listing customers (Trial
+    parent) as the default first option — two giant empty regions. Fix is
+    `filter: support_tier = l1 and department != External` on the selector
+    (framework primitive; `role =` is reserved for role()). Do not put
+    requesters back in that picker.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

@@ -2877,6 +2877,40 @@ workspace school_dashboard "School Dashboard":
         assert ws.context_selector.entity == "School"
         assert ws.context_selector.display_field == "name"
         assert ws.context_selector.scope_field is None
+        assert ws.context_selector.filter is None
+
+    def test_context_selector_with_filter(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity User "User":
+  id: uuid pk
+  name: str(100) required
+  role: enum[customer,agent]=customer
+
+entity Ticket "Ticket":
+  id: uuid pk
+
+workspace agent_console "Agent Console":
+  context_selector:
+    entity: User
+    display_field: name
+    filter: department != External
+
+  tickets:
+    source: Ticket
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.context_selector is not None
+        assert ws.context_selector.filter is not None
+        # `role = agent` is reserved as role(); staff grain is department.
+        comp = ws.context_selector.filter.comparison
+        assert comp is not None
+        assert comp.field == "department"
+        assert comp.operator.value == "!="
+        assert comp.value.literal == "External"
 
     def test_context_selector_with_scope_field(self):
         dsl = """

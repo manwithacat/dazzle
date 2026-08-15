@@ -2589,6 +2589,7 @@ class WorkspaceParserMixin:
               entity: School
               display_field: name
               scope_field: trust
+              filter: department != External
         """
         self.advance()  # consume context_selector
         self.expect(TokenType.COLON)
@@ -2598,6 +2599,7 @@ class WorkspaceParserMixin:
         entity: str | None = None
         display_field = "name"
         scope_field: str | None = None
+        filter_expr: ir.ConditionExpr | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -2614,6 +2616,8 @@ class WorkspaceParserMixin:
                 display_field = self.expect_identifier_or_keyword().value
             elif key == "scope_field":
                 scope_field = self.expect_identifier_or_keyword().value
+            elif key == "filter":
+                filter_expr = self.parse_condition_expr()
             else:
                 # Skip unknown keys — consume tokens until newline
                 while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
@@ -2636,6 +2640,7 @@ class WorkspaceParserMixin:
             entity=entity,
             display_field=display_field,
             scope_field=scope_field,
+            filter=filter_expr,
         )
 
     def _parse_hyphenated_identifier(self) -> str:

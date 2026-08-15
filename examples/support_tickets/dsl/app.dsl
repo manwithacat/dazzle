@@ -1057,6 +1057,12 @@ workspace agent_console "Agent Console":
   context_selector:
     entity: User
     display_field: name
+    # Goal B empty_region_honesty (cycle 2086): recipe agent_only_selector —
+    # Zendesk/Front inspector pickers list frontline staff, not customer
+    # requesters. `role = …` is reserved for role() checks; staff grain is
+    # department != External (same as People desk). L1 so the name-sorted
+    # default is Alex Agent's filled plate, not Admin's empty one.
+    filter: support_tier = l1 and department != External
 
   # 1-hop: tickets directly assigned to the selected agent.
   # Work-surface utility: assigned open work is a pull queue ranked by priority.
@@ -1155,6 +1161,8 @@ workspace agent_console "Agent Console":
   # plate + one trail under the people selector, not triple ticket dumps or
   # dual timelines that scroll as empty theater. #1304/#1305 keep agent_tickets
   # + agent_ticket_comments + bar/progress/funnel coverage below fold.
+  # Cycle 2086 agent_only_selector: L1 + not External so the default first
+  # option is a frontline plate (not Trial parent / Admin voids).
   ux:
     as manager:
       purpose: "One open plate + one comment trail under agent selector — no twin dumps"
