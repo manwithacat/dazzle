@@ -277,6 +277,7 @@ async def test_context_options_lists_agents_not_customers(app) -> None:
     assert "parent" not in joined and "customer" not in joined, (
         f"customer requester leaked into agent inspector options: {labels}"
     )
-    assert any("agent" in (lab or "").lower() for lab in labels), (
+    assert "Agent Alpha" in labels or any("agent" in (lab or "").lower() for lab in labels), (
         f"no agent label in inspector options: {labels}"
     )
+    assert "Manager Mike" not in labels, f"L3 manager leaked into L1 picker: {labels}"

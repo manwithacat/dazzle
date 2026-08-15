@@ -231,6 +231,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_via_1603.py::test_support_tickets_sla_waiver_list_dual_open",
     # support_tickets Goal B empty_region (cycle 1812 agent_dashboard + my_tickets prune)
     "tests/unit/test_support_tickets_empty_region_goal_b.py",
+    # cycle 2087: context_selector.filter emptied INTERACTION_WALK + PG e2e
+    # when UX User fixtures skipped department/support_tier (NULL != External).
+    "tests/unit/test_ux_fixtures.py::TestFixtureGeneration::test_support_tickets_user_fixtures_pass_staff_selector_filter",
     # support_tickets Goal B media (cycle 1883 headshot shelf; cycle 2044 pin lag
     # after priority_awaiting_customer focus strip ×3 Pythons — conversation/
     # command_density/empty_region were already in ship-surface; media was not)

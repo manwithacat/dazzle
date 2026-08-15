@@ -263,9 +263,13 @@ def generate_seed_payload(
                         fixture_refs[field.name] = first_fixture_id[ref_entity]
                     continue
 
-                # Skip optional fields sometimes (keep data payload small)
+                # Skip optional fields sometimes (keep data payload small).
+                # Cycle 2087: always emit department/support_tier/role so a
+                # context_selector.filter (staff grain) still has ≥2 options
+                # for INTERACTION_WALK — NULL department fails `!= External`.
                 is_required = "required" in modifiers or "pk" in modifiers
-                if not is_required and i > 2:
+                _selector_grain = field.name in {"department", "support_tier", "role"}
+                if not is_required and i > 2 and not _selector_grain:
                     continue
 
                 # For enum types, use first enum value if available

@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **context_selector.filter emptied Agent Console options (cycle 2087)** —
+  staff grain `department != External` dropped harness/UX User rows with
+  NULL department (PostgreSQL Tests + INTERACTION_WALK context_select).
+  Harness now sets L1/Support; UX fixtures always emit role/department/
+  support_tier; ship-surface pins the fixture grain.
 - **hr_records ST-004 story walk after career_desk rename (cycle 1919)** —
   employee_st_004 walk still targeted workspace `person_detail` after 1918
   rename → story_walk diverge residual + CI Python Tests red. Co-update

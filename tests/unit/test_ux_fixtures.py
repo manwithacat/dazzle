@@ -39,6 +39,35 @@ class TestFixtureGeneration:
             assert "data" in fixture
             assert isinstance(fixture["data"], dict)
 
+    def test_support_tickets_user_fixtures_pass_staff_selector_filter(self) -> None:
+        """Cycle 2087: INTERACTION_WALK needs ≥2 context-options after
+        agent_console ``filter: support_tier = l1 and department != External``.
+        NULL department/tier (optional-skip) would empty the picker.
+        """
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.http.runtime.workspace_route_builder import (
+            context_selector_option_filters,
+        )
+
+        project = Path(__file__).resolve().parents[2] / "examples" / "support_tickets"
+        appspec = load_project_appspec(project)
+        ws = next(w for w in appspec.workspaces if w.name == "agent_console")
+        assert ws.context_selector is not None
+        opt = context_selector_option_filters(ws.context_selector)
+        payload = generate_seed_payload(appspec)
+        users = [f["data"] for f in payload["fixtures"] if f["entity"] == "User"]
+        matching = [
+            u
+            for u in users
+            if u.get("support_tier") == opt.get("support_tier")
+            and u.get("department") != opt.get("department__ne")
+            and u.get("department") is not None
+        ]
+        assert len(matching) >= 2, (
+            f"UX seed User rows must populate staff grain for context_select; "
+            f"got {len(matching)} matching of {len(users)} ({opt=})"
+        )
+
     def test_fk_chain_seeds_in_dependency_order(self) -> None:
         """Regression: fixtures are emitted FK-dependency-first so a required
         FK resolves to an already-emitted fixture id.
