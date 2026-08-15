@@ -33,7 +33,9 @@ the **Project Board**. Both places stay available to everyone with access.
 
 ## Where work happens
 
-- **Dashboard** — multi-panel portfolio: teammate **media shelf** headshots first, then task metrics (including document
+- **Dashboard** — multi-panel portfolio: teammate **media shelf** identity
+  chips (name/role/dept — cycle 2091 `identity_chip_not_schema`, not Photo Url
+  / Email / Is Active dump), then task metrics (including document
   count and conversation honesty), dual attention (open-task queue + named
   project-document composition with domain-true headlines) before the live
   discussion trail, then project grid and task-flow kanban (no priority chart

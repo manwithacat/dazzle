@@ -31,10 +31,22 @@ def test_dashboard_omits_priority_mix_bar_chart() -> None:
     assert "priority_mix:" not in block
     assert "display: bar_chart" not in block
     assert (
-        "focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, "
-        "project_overview, task_flow" in block
+        "focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation"
+        in block
     )
     assert "ux:" in block
+
+
+def test_user_repr_omits_schema_dump_on_people_grids() -> None:
+    """Cycle 2091 empty_region_honesty: recipe identity_chip_not_schema.
+
+    Peer Linear/Asana: name/role/dept chips — not Photo Url / Email / Is Active.
+    """
+    text = APP.read_text()
+    start = text.index('entity User "Team Member":')
+    end = text.index("entity Project ", start)
+    block = text[start:end]
+    assert "repr_fields: [name, role, department]" in block
 
 
 def test_project_board_omits_status_mix_bar_chart() -> None:

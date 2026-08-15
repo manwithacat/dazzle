@@ -132,6 +132,10 @@ Doctrine source of truth remains
     After title/dept kanban exists, Entra/Okta hole is who is waiting to
     join. Do not re-stack department filters on Team.
 
+27. **project_tracker empty_region grain is identity chips, not another
+    chart prune.** Media Shelf / People kanban dumping Photo Url / Email
+    / Is Active is schema theater. Fix is User `repr_fields` name/role/dept.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

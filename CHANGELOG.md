@@ -36,6 +36,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B empty_region identity chips (cycle 2091)** — project_tracker
+  User `repr_fields` name/role/dept so Dashboard Media Shelf and People
+  kanban drop Photo Url / Email / Is Active dump
+  (`identity_chip_not_schema`). Fold omits project_overview/task_flow.
+  Unit pin; SPEC; recapture.
 - **Goal B org pending join seats (cycle 2090)** — domain_join_co Team
   desk leads with exclusive pending joiners (`pending_join_seat`;
   Entra/Okta/Rippling). Title/department boards are active-only. Extra

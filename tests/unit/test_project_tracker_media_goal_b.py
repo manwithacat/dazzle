@@ -39,7 +39,7 @@ def test_dashboard_media_shelf_first() -> None:
     assert block.index("media_shelf:") < block.index("open_task_queue:")
     assert (
         "focus: media_shelf, portfolio_metrics, open_task_queue, composition, "
-        "live_conversation, project_overview, task_flow" in block
+        "live_conversation" in block
     )
 
 

@@ -6,8 +6,9 @@ Dashboard/board/my-tasks are job homes: metrics + queues before warehouse lists.
 
 ## Reconstruct
 
-- admin/manager default: `dashboard` = portfolio metrics + composition +
-  conversation + open task queue + grid + kanban (no priority bar-chart void).
+- admin/manager default: `dashboard` = identity-chip media shelf (name/role/dept,
+  cycle 2091) + portfolio metrics + composition + conversation + open task
+  queue (no Photo Url schema dump or priority bar-chart void).
 - member default: `my_tasks` = personal load + conversation + assigned queue +
   board (no chart / twin comment timeline).
 - `project_board` = delivery kanban + unassigned queue + milestones (metrics

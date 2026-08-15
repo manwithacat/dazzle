@@ -99,6 +99,12 @@ entity User "Team Member":
     delete: all
       as: admin
 
+  fitness:
+    # Cycle 2091 empty_region_honesty: recipe identity_chip_not_schema —
+    # Linear/Asana people shelves show name/role/dept chips, not Photo Url /
+    # Email / Is Active schema dump (peer simple_task / support_tickets).
+    repr_fields: [name, role, department]
+
 entity Project "Project":
   display_field: name
   id: uuid pk
@@ -421,14 +427,14 @@ workspace dashboard "Dashboard":
 
   ux:
     as admin:
-      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
-      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Identity chips + open work + docs — no schema dump or kanban void"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation
     as manager:
-      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
-      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Identity chips + open work + docs — no schema dump or kanban void"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation
     as member:
-      purpose: "Multi-panel portfolio — headshots, open work + docs before discussion trail"
-      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation, project_overview, task_flow
+      purpose: "Identity chips + open work + docs — no schema dump or kanban void"
+      focus: media_shelf, portfolio_metrics, open_task_queue, composition, live_conversation
 
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
