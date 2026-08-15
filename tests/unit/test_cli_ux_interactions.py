@@ -20,6 +20,7 @@ from dazzle.cli.ux_interactions import (
     _build_default_walk,
     _render_human_report,
     _render_json_report,
+    _seed_interaction_app,
 )
 from dazzle.testing.ux.interactions import (
     CardAddInteraction,
@@ -27,6 +28,24 @@ from dazzle.testing.ux.interactions import (
     CardRemoveReachableInteraction,
     InteractionResult,
 )
+
+
+class TestSeedInteractionApp:
+    def test_sets_secret_and_delegates_to_reset_and_seed(self, monkeypatch: object) -> None:
+        import os
+        from pathlib import Path
+
+        called: dict[str, object] = {}
+
+        def _fake(root: Path, api_url: str) -> None:
+            called["root"] = root
+            called["api_url"] = api_url
+            called["secret"] = os.environ.get("DAZZLE_TEST_SECRET")
+
+        monkeypatch.setattr("dazzle.cli.ux_interactions._reset_and_seed", _fake)  # type: ignore[attr-defined]
+        _seed_interaction_app(Path("/tmp/app"), "http://127.0.0.1:9", "sekrit")
+        assert called["api_url"] == "http://127.0.0.1:9"
+        assert called["secret"] == "sekrit"
 
 
 class TestExitCodes:

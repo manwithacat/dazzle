@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **INTERACTION_WALK never seeded (cycle 2089)** — `dazzle ux verify
+  --interactions` did not reset+seed (unlike `--contracts`), so
+  `context_selector.filter` listed only the mirrored login User and
+  `context_select` stayed at options=1. Seed the walk the same way
+  contracts do; unit pin in ship-surface.
 - **context_selector.filter emptied Agent Console options (cycle 2087)** —
   staff grain `department != External` dropped harness/UX User rows with
   NULL department (PostgreSQL Tests + INTERACTION_WALK context_select).

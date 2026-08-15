@@ -234,6 +234,9 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2087: context_selector.filter emptied INTERACTION_WALK + PG e2e
     # when UX User fixtures skipped department/support_tier (NULL != External).
     "tests/unit/test_ux_fixtures.py::TestFixtureGeneration::test_support_tickets_user_fixtures_pass_staff_selector_filter",
+    # cycle 2089: INTERACTION_WALK must seed (same as --contracts) or
+    # context_selector.filter sees only the login User and stays empty.
+    "tests/unit/test_cli_ux_interactions.py::TestSeedInteractionApp::test_sets_secret_and_delegates_to_reset_and_seed",
     # support_tickets Goal B media (cycle 1883 headshot shelf; cycle 2044 pin lag
     # after priority_awaiting_customer focus strip ×3 Pythons — conversation/
     # command_density/empty_region were already in ship-surface; media was not)

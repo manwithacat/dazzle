@@ -27,6 +27,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.cli.ux import _reset_and_seed
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.testing.ux.interactions import (
     CardAddInteraction,
@@ -327,6 +328,21 @@ def run_guide_walk(project_root: Path, *, json_output: bool = False, persona: st
     return EXIT_PASS if all(r.passed for r in results) else EXIT_REGRESSION
 
 
+def _seed_interaction_app(project_root: Path, api_url: str, test_secret: str) -> None:
+    """Reset+seed the interaction-walk DB the same way ``--contracts`` does.
+
+    Cycle 2089: ``context_selector.filter`` (staff grain) lists no rows
+    when INTERACTION_WALK only has the mirrored login User (NULL
+    department fails ``!= External``). Contracts already seed; the walk
+    did not.
+    """
+    import os
+
+    if test_secret:
+        os.environ["DAZZLE_TEST_SECRET"] = test_secret
+    _reset_and_seed(project_root, api_url)
+
+
 def run_interaction_walk(
     project_root: Path,
     *,
@@ -359,6 +375,7 @@ def run_interaction_walk(
     try:
         with launch_interaction_server(project_root) as conn:
             test_secret = read_runtime_test_secret(project_root) or ""
+            _seed_interaction_app(project_root, conn.api_url, test_secret)
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=headless)
                 context = browser.new_context()
