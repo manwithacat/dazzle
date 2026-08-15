@@ -14,6 +14,12 @@ fragment + hidden FK filled server-side). The form posts the hidden input,
 never the visible text. The controller never invents a selected id; it
 *clears* a stale FK when the user types in the typeahead (and blocks
 submit via ``setCustomValidity`` when the typeahead is required).
+
+Leftover honesty (cycle 2138): the typeahead posts ``name=q`` (with
+``form=""`` so leftover text is not submitted with the enclosing form)
+so leftover typed query reaches the search exchange. A leftover
+non-match (``zzz``) must return empty — not invent a canned hit list.
+Same class as command leftover query (2130).
 """
 
 import html
@@ -160,7 +166,7 @@ def render_shell(shell: SearchSelectShell) -> str:
         f'id="{html.escape(shell.field_id, quote=True)}" '
         f'value="{html.escape(shell.initial_value, quote=True)}">'
         f'<input type="text" id="{html.escape(shell.input_id, quote=True)}" '
-        f'class="dz-search-select-input" '
+        f'class="dz-search-select-input" name="q" form="" '
         f'placeholder="{html.escape(shell.placeholder, quote=True)}" '
         f'autocomplete="off" role="combobox" aria-expanded="false" '
         f'aria-controls="{html.escape(shell.results_id, quote=True)}" '

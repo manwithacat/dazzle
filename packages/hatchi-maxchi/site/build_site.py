@@ -2087,33 +2087,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
-    // search-select: FIXED result-row anatomy (name / secondary / optional media).
-    // Domain maps into slots — not a new widget per entity. Path-only match
-    // (query string ignored) so `?id=` select URLs still resolve.
-    "/mock/typeahead":
-      '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-aurora" '
-      + 'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" hx-swap="innerHTML">'
-      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Energy Ltd</div>'
-      + '<div class="dz-search-result-secondary">Company no. 09182736 · Utilities</div></div></div>'
-      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-foods" '
-      + 'hx-get="/mock/typeahead/select?id=co-foods" hx-target="#hm-ss-results" hx-swap="innerHTML">'
-      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Foods plc</div>'
-      + '<div class="dz-search-result-secondary">Company no. 10448291 · FMCG</div></div></div>'
-      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-jd" '
-      + 'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" hx-swap="innerHTML">'
-      + '<div class="dz-search-result-media" aria-hidden="true">JD</div>'
-      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Jordan Dias</div>'
-      + '<div class="dz-search-result-secondary">jordan@acme.example · Ops lead</div></div></div>'
-      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-ak" '
-      + 'hx-get="/mock/typeahead/select?id=user-ak" hx-target="#hm-ss-results" hx-swap="innerHTML">'
-      + '<div class="dz-search-result-media" aria-hidden="true">AK</div>'
-      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aisha Khan</div>'
-      + '<div class="dz-search-result-secondary">aisha@acme.example · Finance</div></div></div>'
-      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="sku-42" '
-      + 'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" hx-swap="innerHTML">'
-      + '<div class="dz-search-result-media" aria-hidden="true">SP</div>'
-      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Sensor pack · SP-42</div>'
-      + '<div class="dz-search-result-secondary">SKU · In stock (14)</div></div></div>',
+    // search-select: /mock/typeahead is computed by renderTypeaheadResults
+    // (leftover query must not invent the canned Aurora list — cycle 2138).
+    // Select rows still path-match so `?id=` URLs resolve.
     "/mock/typeahead/select":
       '<div class="dz-select-result-confirm" role="status">'
       + "Selected — hidden FK filled server-side; form posts the id, not this label."
@@ -2623,9 +2599,64 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     return html;
   }
 
+  // Search-select catalog — leftover typed query must not invent the
+  // canned Aurora list (cycle 2138). Empty q restores the prompt
+  // (controller already stops empty hx-get; this is the last line).
+  var TYPEAHEAD_ITEMS = [
+    { hay: "aurora energy ltd company no. 09182736 utilities",
+      html: '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-aurora" '
+      + 'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Energy Ltd</div>'
+      + '<div class="dz-search-result-secondary">Company no. 09182736 · Utilities</div></div></div>' },
+    { hay: "aurora foods plc company no. 10448291 fmcg",
+      html: '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-foods" '
+      + 'hx-get="/mock/typeahead/select?id=co-foods" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Foods plc</div>'
+      + '<div class="dz-search-result-secondary">Company no. 10448291 · FMCG</div></div></div>' },
+    { hay: "jordan dias jordan@acme.example ops lead",
+      html: '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-jd" '
+      + 'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">JD</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Jordan Dias</div>'
+      + '<div class="dz-search-result-secondary">jordan@acme.example · Ops lead</div></div></div>' },
+    { hay: "aisha khan aisha@acme.example finance",
+      html: '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-ak" '
+      + 'hx-get="/mock/typeahead/select?id=user-ak" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">AK</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aisha Khan</div>'
+      + '<div class="dz-search-result-secondary">aisha@acme.example · Finance</div></div></div>' },
+    { hay: "sensor pack sp-42 sku in stock 14",
+      html: '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="sku-42" '
+      + 'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">SP</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Sensor pack · SP-42</div>'
+      + '<div class="dz-search-result-secondary">SKU · In stock (14)</div></div></div>' }
+  ];
+  function escapeTypeaheadQ(q) {
+    return String(q).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  }
+  function renderTypeaheadResults(url) {
+    var q = (parseQuery(url).q || "").trim().toLowerCase();
+    if (!q) {
+      return '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
+        + "Type to search — rows share one anatomy; media is optional</div>";
+    }
+    var hits = TYPEAHEAD_ITEMS.filter(function (e) {
+      return e.hay.indexOf(q) >= 0;
+    });
+    if (!hits.length) {
+      return '<div class="dz-search-result-empty">No results found for "'
+        + escapeTypeaheadQ(q) + '"</div>';
+    }
+    var html = "";
+    hits.forEach(function (e) { html += e.html; });
+    return html;
+  }
+
   // Real htmx includes the initiating named input as a query param
-  // (command palette name=q). Path-only /mock/command invented the
-  // full catalog for every keystroke (cycle 2130).
+  // (command palette name=q; search-select leftover name=q). Path-only
+  // /mock/command and /mock/typeahead invented the full canned list
+  // (cycles 2130 / 2138).
   function requestUrl(el) {
     var url = el.getAttribute("hx-get") || "";
     if (el && el.name && (
@@ -2644,6 +2675,8 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var body;
     if (path === "/mock/command") {
       body = expand(renderCommandResults(url));
+    } else if (path === "/mock/typeahead") {
+      body = expand(renderTypeaheadResults(url));
     } else if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);

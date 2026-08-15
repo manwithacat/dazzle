@@ -2191,6 +2191,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'data-dz-blur-grace-ms="200" data-dz-confirm-hold-ms="1800">'
             '<input type="hidden" name="company" id="hm-ss-field" value="">'
             '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
+            'name="q" form="" '
             'placeholder="Search companies, people, SKUs…" autocomplete="off" '
             'role="combobox" aria-expanded="false" aria-controls="hm-ss-results" '
             'aria-autocomplete="list" aria-haspopup="listbox" '
@@ -2238,9 +2239,14 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "never invent a selected id client-side; typing clears a stale FK",
                     "hx-trigger debounce + min-length filter; controller restores "
                     "the prompt on empty/whitespace (do not hx-get q=)",
+                    'name=q on the typeahead (form="" so leftover is not posted) '
+                    "so leftover query reaches the search exchange — mock must "
+                    "filter; leftover zzz must not invent Aurora (cycle 2138)",
                 ),
                 pitfalls=(
                     "empty / whitespace query must not hx-get a canned hit list",
+                    "leftover typed query must not invent the canned Aurora list "
+                    "(name=q + mock filter; same class as command leftover 2130)",
                     "clear after a hit must restore the prompt — do not leave stale Aurora rows",
                     "blur grace is NOT confirm hold — without confirm-hold-ms the "
                     "select feedback is hidden as soon as focus leaves (~200ms)",
@@ -2266,8 +2272,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         "copy the visible label into a hidden field from client JS",
                     ),
                     (
-                        "stop empty exchanges and restore the coaching prompt",
-                        "GET q= / load-seed /mock/typeahead and invent Aurora rows",
+                        "stop empty exchanges and restore the coaching prompt; leftover non-match returns empty",
+                        "GET q= / load-seed / leftover zzz /mock/typeahead and invent Aurora rows",
                     ),
                 ),
                 a11y_keys=(

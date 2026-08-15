@@ -75,6 +75,10 @@ def test_endpoint_and_typeahead_wiring() -> None:
     assert 'hx-trigger="keyup changed delay:400ms[this.value.trim().length>0]"' in html
     assert 'hx-target="#search-results-company"' in html
     assert 'hx-params="q"' in html
+    # Cycle 2138: leftover query must reach the search exchange as name=q
+    # (form="" so leftover is not posted with the hidden FK).
+    assert 'name="q"' in html
+    assert 'form=""' in html
     # min_chars>0 → hx-vals carries the floor.
     assert "hx-vals='{\"min_chars\": 3}'" in html
     # Open/close is state-in-DOM (F4b): SSR aria-expanded="false", the

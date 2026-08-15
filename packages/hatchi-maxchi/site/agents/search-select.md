@@ -14,7 +14,7 @@ The FK typeahead: debounced remote search into a listbox, then a per-row select 
 ```html
 <div class="search-select hm-measure" data-widget="search_select" data-blur-grace-ms="200" data-confirm-hold-ms="1800">
   <input type="hidden" name="company" id="hm-ss-field" value="">
-  <input type="text" id="hm-ss-input" class="search-select-input" placeholder="Search companies, people, SKUs…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hm-ss-results" aria-autocomplete="list" aria-haspopup="listbox" hx-get="/mock/typeahead" hx-trigger="keyup changed delay:300ms[this.value.trim().length>0]" hx-target="#hm-ss-results" hx-params="q">
+  <input type="text" id="hm-ss-input" class="search-select-input" name="q" form="" placeholder="Search companies, people, SKUs…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hm-ss-results" aria-autocomplete="list" aria-haspopup="listbox" hx-get="/mock/typeahead" hx-trigger="keyup changed delay:300ms[this.value.trim().length>0]" hx-target="#hm-ss-results" hx-params="q">
   <div id="hm-ss-results" role="listbox" aria-label="Suggestions" class="search-select-results">
     <div class="search-select-prompt" role="option" aria-disabled="true">Type to search — rows share one anatomy; media is optional</div>
   </div>
@@ -175,6 +175,7 @@ Correct response for body_only into .dz-search-results (innerHTML / innerMorph).
 - each row carries its own hx-get to the select exchange
 - select exchange: confirm line (+ OOB hidden FK / label) — never invent a selected id client-side; typing clears a stale FK
 - hx-trigger debounce + min-length filter; controller restores the prompt on empty/whitespace (do not hx-get q=)
+- name=q on the typeahead (form="" so leftover is not posted) so leftover query reaches the search exchange — mock must filter; leftover zzz must not invent Aurora (cycle 2138)
 
 ### Do / Don't
 
@@ -183,11 +184,12 @@ Correct response for body_only into .dz-search-results (innerHTML / innerMorph).
 | map any record to SearchResultRow (id, name, secondary?, media_html?) and render_result_row | build a bespoke listbox DOM per entity or return JSON for the client to paint |
 | set data-dz-confirm-hold-ms when the confirm line is user-facing | rely on blur grace alone to show select feedback |
 | swap the panel with a confirmation fragment that fills the hidden FK server-side | copy the visible label into a hidden field from client JS |
-| stop empty exchanges and restore the coaching prompt | GET q= / load-seed /mock/typeahead and invent Aurora rows |
+| stop empty exchanges and restore the coaching prompt; leftover non-match returns empty | GET q= / load-seed / leftover zzz /mock/typeahead and invent Aurora rows |
 
 ### Pitfalls
 
 - empty / whitespace query must not hx-get a canned hit list
+- leftover typed query must not invent the canned Aurora list (name=q + mock filter; same class as command leftover 2130)
 - clear after a hit must restore the prompt — do not leave stale Aurora rows
 - blur grace is NOT confirm hold — without confirm-hold-ms the select feedback is hidden as soon as focus leaves (~200ms)
 - form posts the hidden input, never the visible text (typeahead input clears a stale FK; required uses setCustomValidity)

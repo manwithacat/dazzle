@@ -460,6 +460,17 @@ def test_command_preview_posts_named_query() -> None:
     assert "full persona catalog" in cmd.exchanges[0].response
 
 
+def test_search_select_preview_posts_named_query() -> None:
+    """Cycle 2138: leftover query must reach /mock/typeahead as name=q.
+
+    Path-only /mock/typeahead invented the canned Aurora list for zzz.
+    form=\"\" keeps leftover off the enclosing form POST.
+    """
+    ss = next(c for c in HYPERPARTS if c.id == "search-select")
+    assert 'name="q"' in ss.partial
+    assert 'form=""' in ss.partial
+
+
 _DATA_ATTR_RE = re.compile(r"\bdata-([a-z][a-z0-9-]*)=")
 
 

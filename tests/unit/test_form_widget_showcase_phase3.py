@@ -115,6 +115,7 @@ def test_search_select_controller_rejects_empty_query() -> None:
     assert "function onEmptyQuery" in src
     assert "Type to search" in src
     assert "stopImmediatePropagation" in src
+    assert "leftover typed text" in src
     assert "innerHTML" not in src
 
 

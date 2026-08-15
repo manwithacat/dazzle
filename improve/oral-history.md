@@ -207,6 +207,8 @@ Doctrine source of truth remains
     range clamp, 2134). Combobox leftover typed filter must not invent
     the previous option (`zzz` / prefix stay visible + fail validity,
     exact label commits, allow-create leftover Add "…", 2135).
+    Search-select leftover typed query must not invent Aurora (`name=q`
+    + mock filter; leftover `zzz` is empty, 2138).
 
 32. **Capability-sweep cadence is hard preemption once tip CI is green.**
     Widget-honesty ships may continue while CodeQL/CI repair claims the

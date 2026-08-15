@@ -3024,6 +3024,34 @@ def test_search_select_type_clears_stale_fk(page) -> None:  # type: ignore[no-un
     page.reload()
 
 
+def test_search_select_leftover_query_does_not_invent_hits(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover typed query must not invent Aurora hits (cycle 2138).
+
+    Same honesty class as command leftover query (2130): leftover 'zzz'
+    used to keep Aurora Energy because the mock ignored q=. Matching
+    'auro' still exchanges. name=q (form=\"\") carries the leftover.
+    """
+    goto_part(page, "search-select")
+    root = "#search-select .search-select"
+    inp = f"{root} input[type=text]"
+    panel = f"{root} .search-select-results"
+
+    page.focus(inp)
+    page.fill(inp, "auro")
+    page.wait_for_timeout(450)
+    assert "Aurora Energy" in page.inner_text(panel)
+    assert page.locator(f"{panel} .search-result-row").count() >= 1
+
+    page.fill(inp, "zzz")
+    page.wait_for_timeout(450)
+    text = page.inner_text(panel)
+    assert "Aurora Energy" not in text, "leftover must not invent Aurora"
+    assert "Jordan Dias" not in text
+    assert page.locator(f"{panel} .search-result-row").count() == 0
+    assert "No results found" in text
+    page.reload()
+
+
 def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: ignore[no-untyped-def]
     """F4c: typing a major amount keeps the hidden minor carrier in sync
     (input event); blur normalizes the display to the scale."""

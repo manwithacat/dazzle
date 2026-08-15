@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-select leftover query invented Aurora hits (cycle 2138)** —
+  leftover typed query (`zzz`) no longer returns the canned typeahead
+  catalog. The typeahead posts `name=q` (`form=""` so leftover is not
+  submitted with the hidden FK) and the gallery mock filters. A
+  matching prefix (`auro`) still exchanges; leftover non-match is
+  empty. Same honesty class as command leftover query inventing the
+  catalog (2130) and search-select empty query (2126).
 - **HM slider visual baselines stale after leftover-honesty (cycle 2136)** —
   linux/darwin `part-slider-{light,dark}` still showed the July readout
   after 2134 turned the companion into an editable text field (and

@@ -4182,10 +4182,16 @@
  * required but the text is no longer a confirmed selection.
  *
  * Empty-query honesty (cycle 2126): whitespace / empty typeahead must
- * not hx-get a canned hit list (gallery /mock/typeahead always returns
- * Aurora). Restore the author's prompt node (WeakMap clone — never
- * write markup from a data attr; CodeQL js/xss-through-dom #223). Same
- * class as search-box empty query (2123) and grid whitespace q= (2125).
+ * not hx-get a canned hit list. Restore the author's prompt node
+ * (WeakMap clone — never write markup from a data attr; CodeQL
+ * js/xss-through-dom #223). Same class as search-box empty query
+ * (2123) and grid whitespace q= (2125).
+ *
+ * Leftover-query honesty (cycle 2138): leftover typed text ("zzz")
+ * must reach the search exchange as name=q (form="" so leftover is
+ * not posted with the hidden FK). The exchange must filter — leftover
+ * non-match is empty, not a canned Aurora list. Same class as command
+ * leftover query inventing the catalog (2130).
  */
 (function () {
   "use strict";

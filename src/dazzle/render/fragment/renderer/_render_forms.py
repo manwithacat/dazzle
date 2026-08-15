@@ -346,6 +346,8 @@ class _RenderFormsMixin:
         # place field name and endpoint meet. URL params survive
         # hx-params="q", so the search endpoint can key its result rows
         # + select links to the WIDGET's field-name ids.
+        # Cycle 2138: typeahead name=q (form="") so leftover query
+        # reaches the exchange; leftover is not posted with the FK.
         from urllib.parse import quote_plus as _qp
 
         sep = "&" if "?" in str(s.endpoint) else "?"
@@ -379,6 +381,7 @@ class _RenderFormsMixin:
             f'data-dazzle-field="{name}" value="{init_id}">'
             '<input type="text" '
             f'id="{input_id}" '
+            'name="q" form="" '
             'class="dz-search-select-input" '
             f'placeholder="{placeholder}" '
             'autocomplete="off" role="combobox" '
