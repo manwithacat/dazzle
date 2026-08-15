@@ -55,6 +55,11 @@ Doctrine source of truth remains
     below fold) is a different family than `empty_region_prune`. Peer refuse
     still bans office/remote on Reporting after unassigned seats exist.
 
+11. **support org is routing groups, not another L1/L2/L3 restack.** Zendesk /
+    Front leads assign by Billing vs Escalations, not a third tier-density
+    coat. Recipe `billing_escalations_seat`. Peer refuse still bans a
+    decorative Team desk clone and customers in the Agent Console picker.
+
 10. **create_all missing columns.** DSL adds fields; SQLite/PG tables lag —
     `ensure_missing_entity_columns` (or equivalent) after create_all is a
     real product-blocker class, not a one-off.

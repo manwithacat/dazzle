@@ -42,14 +42,16 @@ def test_people_desk_declares_tier_density_before_dept() -> None:
     assert "group_by: department" in block
     assert "unassigned_work:" in block
     assert "roster:" not in block  # cycle 2052 twin prune
-    # Order: pulse → L1 → L3 → L2 → role → department → load (L1|L3 fold pair)
-    assert block.index("people_pulse:") < block.index("l1_frontline:")
+    # Cycle 2093: pulse → billing → escalations → unassigned → L1 → L3 → L2
+    assert block.index("people_pulse:") < block.index("billing_staff:")
+    assert block.index("billing_staff:") < block.index("escalations_staff:")
+    assert block.index("escalations_staff:") < block.index("unassigned_work:")
+    assert block.index("unassigned_work:") < block.index("l1_frontline:")
     assert block.index("l1_frontline:") < block.index("l3_lead:")
     assert block.index("l3_lead:") < block.index("l2_escalation:")
     assert block.index("l2_escalation:") < block.index("by_role:")
     assert block.index("by_role:") < block.index("by_department:")
-    assert block.index("by_department:") < block.index("unassigned_work:")
-    assert block.index("unassigned_work:") < block.index("plate_by_person:")
+    assert block.index("by_department:") < block.index("plate_by_person:")
     # Tier metrics for routing read
     assert "l1: count(User where" in block
     assert "l2: count(User where" in block
@@ -58,7 +60,8 @@ def test_people_desk_declares_tier_density_before_dept() -> None:
 
 def test_people_desk_ux_focus_tier_density() -> None:
     block = _people_desk_block()
-    assert "focus: people_pulse, l1_frontline, l3_lead, l2_escalation" in block
+    assert "focus: people_pulse, billing_staff, escalations_staff, unassigned_work" in block
+    assert "billing_escalations_seat" in block
     assert (
         "l3_lead_density" in block.lower()
         or "l1→l2→l3" in block.lower()
@@ -67,6 +70,22 @@ def test_people_desk_ux_focus_tier_density() -> None:
         or "tier" in block.lower()
     )
     assert "twin roster" in block.lower() or "no twin" in block.lower()
+
+
+def test_billing_escalations_seat_exclusive_dept_queues() -> None:
+    """Cycle 2093 recipe billing_escalations_seat — exclusive Billing vs Escalations."""
+    block = _people_desk_block()
+    billing = block.split("\n  billing_staff:\n", 1)[1].split("\n  escalations_staff:", 1)[0]
+    esc = block.split("\n  escalations_staff:\n", 1)[1].split("\n  unassigned_work:", 1)[0]
+    assert "source: User" in billing
+    assert "department = Billing" in billing
+    assert "display: queue" in billing
+    assert "support_tier =" not in billing
+    assert "source: User" in esc
+    assert "department = Escalations" in esc
+    assert "display: queue" in esc
+    assert "support_tier =" not in esc
+    assert "billing_escalations_seat" in block
 
 
 def test_l3_lead_density_queue_filters_exclusive_l3() -> None:

@@ -178,6 +178,7 @@ def test_recipe_family_collapses_coat_synonyms() -> None:
     assert recipe_family("sla_stage_density") == "stage_queue_slice"
     assert recipe_family("headshot_shelf") == "headshot_shelf"
     assert recipe_family(None, "User.photo_url + media_shelf headshot") == "headshot_shelf"
+    assert recipe_family("billing_escalations_seat") == "billing_escalations_seat"
     assert recipe_family("directory_work_first") == "directory_work_first"
     assert (
         recipe_family(

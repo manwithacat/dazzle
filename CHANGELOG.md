@@ -36,6 +36,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B org billing vs escalations seats (cycle 2093)** — support_tickets
+  People desk leads with exclusive Billing vs Escalations routing groups
+  (`billing_escalations_seat`; Zendesk/Front group queues). Unassigned
+  load sits next to the groups. Extra Billing seed; unit pin; SPEC;
+  recapture.
 - **Goal B empty_region work-first directory (cycle 2092)** — hr_records
   Staff Directory leads with Current Staff + Recent Starters
   (`directory_work_first`; BambooHR/Workday roster, not a 2-of-12 photo

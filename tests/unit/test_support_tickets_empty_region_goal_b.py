@@ -155,6 +155,6 @@ def test_people_desk_omits_twin_roster_dump() -> None:
     assert "plate_by_person:" in block
     assert "roster:" not in block
     assert "display: bar_chart" not in block
-    assert "focus: people_pulse, l1_frontline, l3_lead, l2_escalation" in block
-    assert block.index("by_department:") < block.index("unassigned_work:")
+    assert "focus: people_pulse, billing_staff, escalations_staff, unassigned_work" in block
+    assert block.index("billing_staff:") < block.index("unassigned_work:")
     assert block.index("unassigned_work:") < block.index("plate_by_person:")

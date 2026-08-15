@@ -1185,7 +1185,10 @@ workspace people_desk "People":
   # Cycle 2073 org_structure peer-pack: recipe l3_lead_density — exclusive L3
   # lead queue paired with L1 above fold (Zendesk/Front/Service Cloud ladder;
   # not L1/L2-only re-stack, not department kanban alone, not twin roster).
-  purpose: "Org structure managers can parse — L1/L2/L3 support-tier ladder for routing, then department placement before open load"
+  # Cycle 2093 org_structure peer-pack: recipe billing_escalations_seat —
+  # exclusive Billing vs Escalations routing groups above fold (Zendesk group
+  # queues). Not another L1/L2/L3 restack; not a decorative Team desk clone.
+  purpose: "Org structure managers can parse — Billing vs Escalations routing groups, then L1/L2/L3 ladder and department placement"
   stage: "command_center"
   access: persona(manager, agent)
 
@@ -1207,6 +1210,36 @@ workspace people_desk "People":
       l3: positive
       open_tickets: warning
       unassigned: warning
+
+  # Cycle 2093 billing_escalations_seat — Zendesk/Front route billing vs
+  # escalations as exclusive groups, not mixed into the L1 dump.
+  billing_staff:
+    source: User
+    filter: is_active = true and department = Billing
+    sort: name asc
+    limit: 3
+    display: queue
+    action: user_detail
+    empty: "No billing specialists — seed department = Billing on staff"
+
+  escalations_staff:
+    source: User
+    filter: is_active = true and department = Escalations
+    sort: name asc
+    limit: 3
+    display: queue
+    action: user_detail
+    empty: "No escalation specialists — seed department = Escalations on staff"
+
+  # Open load next to routing groups — tickets with no owner.
+  unassigned_work:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: priority desc, created_at asc
+    limit: 4
+    display: queue
+    action: ticket_edit
+    empty: "Every open ticket has an assignee"
 
   # L1 frontline — first-response agents managers reassign soft work to
   # (exclusive support_tier = l1; customers never appear).
@@ -1263,16 +1296,6 @@ workspace people_desk "People":
     action: user_detail
     empty: "No support staff yet"
 
-  # Open load after org shape — who still has unassigned work to claim.
-  unassigned_work:
-    source: Ticket
-    filter: assigned_to = null and status = open
-    sort: priority desc, created_at asc
-    limit: 8
-    display: queue
-    action: ticket_edit
-    empty: "Every open ticket has an assignee"
-
   # Assignee columns for Monday capacity after org shape (reassignment clarity).
   plate_by_person:
     source: Ticket
@@ -1287,26 +1310,26 @@ workspace people_desk "People":
   org_hint:
     display: status_list
     entries:
-      - title: "L1 / L2 / L3 tier ladder"
-        caption: "Frontline + lead + escalation people queues for routing reassignment"
-        icon: "users"
-        state: accent
-      - title: "Department board"
-        caption: "Support, Escalations, Billing columns after tier density"
+      - title: "Billing vs Escalations"
+        caption: "Exclusive department routing groups — not mixed into L1 dump"
         icon: "building"
+        state: accent
+      - title: "L1 / L2 / L3 tier ladder"
+        caption: "Frontline + lead + escalation people queues after routing groups"
+        icon: "users"
         state: positive
       - title: "Unassigned + plate"
-        caption: "Open load and assignee columns after org shape — no twin staff roster"
+        caption: "Open load next to routing groups — no twin staff roster"
         icon: "list-checks"
         state: warning
 
   ux:
     as manager:
-      purpose: "Route via L1+L3 (+L2) tier ladder density, then department - no twin roster dump"
-      focus: people_pulse, l1_frontline, l3_lead, l2_escalation
+      purpose: "Route via Billing vs Escalations groups + unassigned load - no twin roster dump"
+      focus: people_pulse, billing_staff, escalations_staff, unassigned_work
     as agent:
-      purpose: "Read L1+L3 (+L2) tier ladder for handoff - no twin roster dump"
-      focus: people_pulse, l1_frontline, l3_lead, l2_escalation
+      purpose: "Read Billing vs Escalations groups for handoff - no twin roster dump"
+      focus: people_pulse, billing_staff, escalations_staff, unassigned_work
 
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
