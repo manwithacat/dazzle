@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: note_kind chrome saturates conversation (cycle 2100)** —
+  `live_conversation` + `note_kind` enum without a `note_kind =` filter
+  saturates `(app, conversation)` so fieldtest is not recommended for
+  another IssueNote slice (peer refuse / oral #22).
 - **Goal B planner: FREEZE cells stay saturated (cycle 2099)** — after
   Goal C distill, `invoice_ops`/`document` dropped under `HONEST_DOCUMENT_RAILS`
   and the planner tried to re-add a rail. FREEZE table keys now saturate

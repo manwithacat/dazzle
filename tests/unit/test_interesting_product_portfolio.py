@@ -289,6 +289,17 @@ def test_live_fieldtest_media_not_recommended() -> None:
         assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
 
 
+def test_live_fieldtest_conversation_not_recommended() -> None:
+    """note_kind chrome saturates fieldtest conversation (oral #22)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["fieldtest_hub", "conversation"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "conversation")
+
+
 def test_live_invoice_ops_document_not_recommended() -> None:
     """FREEZE document_rails keeps invoice_ops/document saturated after distill."""
     from scripts.interesting_product_portfolio import snapshot

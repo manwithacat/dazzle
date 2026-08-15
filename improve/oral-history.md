@@ -134,6 +134,7 @@ Doctrine source of truth remains
     (author suffix + danger). Do not add `repro_notes` as a sibling
     `display: conversation` — that is conversation_filter_slice coat
     theatre (oral #19) even if the tag evades the family regex.
+    Machine: `note_kind_chrome_conversation` saturates `(app, conversation)`.
 
 23. **hr_records org grain is reporting seat, not another location board.**
     After office/remote + career tracks exist, Unassigned vs Top of House is

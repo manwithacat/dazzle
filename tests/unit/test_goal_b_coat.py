@@ -13,6 +13,7 @@ from scripts.goal_b_coat import (
     freeze_breaches,
     live_saturated_cells,
     measure,
+    note_kind_chrome_conversation,
     photo_grid_entities,
     stamp_pair_media,
 )
@@ -175,6 +176,51 @@ def test_stamp_pair_grids_saturate_media(tmp_path: Path) -> None:
     assert ("demo", "media") in sat
     text = (dsl / "app.dsl").read_text(encoding="utf-8")
     assert stamp_pair_media(text) is True
+
+
+def test_note_kind_chrome_saturates_conversation(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        'entity IssueNote "Issue Note":\n'
+        "  note_kind: enum[note,repro]=note\n"
+        "workspace issue_triage:\n"
+        "  live_conversation:\n"
+        "    source: IssueNote\n"
+        "    display: conversation\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "conversation") in sat
+    text = (dsl / "app.dsl").read_text(encoding="utf-8")
+    assert note_kind_chrome_conversation(text) is True
+
+
+def test_note_kind_filter_slice_does_not_saturate(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        'entity IssueNote "Issue Note":\n'
+        "  note_kind: enum[note,repro]=note\n"
+        "workspace issue_triage:\n"
+        "  live_conversation:\n"
+        "    source: IssueNote\n"
+        "    display: conversation\n"
+        "  repro_notes:\n"
+        "    source: IssueNote\n"
+        "    filter: note_kind = repro\n"
+        "    display: conversation\n",
+        encoding="utf-8",
+    )
+    assert note_kind_chrome_conversation((dsl / "app.dsl").read_text(encoding="utf-8")) is False
+
+
+def test_fieldtest_note_kind_chrome_saturates_conversation() -> None:
+    sat = live_saturated_cells(["fieldtest_hub", "acme_billing"])
+    assert ("fieldtest_hub", "conversation") in sat
+    assert ("acme_billing", "conversation") not in sat
 
 
 def test_design_studio_stamp_pair_media_saturates() -> None:

@@ -286,6 +286,28 @@ def photo_grid_entities(text: str) -> set[str]:
     return ents
 
 
+def note_kind_chrome_conversation(text: str) -> bool:
+    """live_conversation trail labeled by note_kind — not a sibling filter slice.
+
+    Oral #22: fieldtest conversation grain is chrome on the existing trail.
+    A ``note_kind = repro`` region filter is coat theatre.
+    """
+    has_live = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if name == "live_conversation" and re.search(r"display:\s*conversation", body):
+            has_live = True
+            break
+    if not has_live:
+        return False
+    if not re.search(r"note_kind:\s*enum", text):
+        return False
+    for _ws, _name, body in _workspace_region_windows(text):
+        fm = _FILTER_LINE.search(body)
+        if fm and re.search(r"note_kind\s*=", fm.group(1)):
+            return False
+    return True
+
+
 def stamp_pair_media(text: str) -> bool:
     """Exclusive in-review + approved pixel grids (Frame.io honest grain)."""
     has_review = False
@@ -322,7 +344,11 @@ def live_saturated_cells(
             for depth in depths:
                 sat.add((app, depth))
             continue
-        if m.conversation_sites > HONEST_CONVERSATION_SITES or m.slice_cartesian > 0:
+        if (
+            m.conversation_sites > HONEST_CONVERSATION_SITES
+            or m.slice_cartesian > 0
+            or note_kind_chrome_conversation(text)
+        ):
             sat.add((app, "conversation"))
         if m.document_rails > HONEST_DOCUMENT_RAILS:
             sat.add((app, "document"))
