@@ -16,6 +16,7 @@ from scripts.goal_b_coat import (
     live_saturated_cells,
     measure,
     note_kind_chrome_conversation,
+    pending_join_org,
     photo_grid_entities,
     protocol_acceptance_document,
     stamp_pair_media,
@@ -323,6 +324,29 @@ def test_support_tickets_agent_only_selector_saturates() -> None:
     sat = live_saturated_cells(["support_tickets", "acme_billing"])
     assert ("support_tickets", "empty_region_honesty") in sat
     assert ("acme_billing", "empty_region_honesty") not in sat
+
+
+def test_pending_join_org_saturates(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace team_home:\n"
+        "  pending_joins:\n"
+        "    source: WorkspaceMember\n"
+        "    filter: status = pending\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "org_structure") in sat
+    assert pending_join_org((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_domain_join_pending_join_saturates_org() -> None:
+    sat = live_saturated_cells(["domain_join_co", "acme_billing"])
+    assert ("domain_join_co", "org_structure") in sat
+    assert ("acme_billing", "org_structure") not in sat
 
 
 def test_hr_records_tree_people_saturates_org() -> None:

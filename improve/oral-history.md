@@ -163,6 +163,8 @@ Doctrine source of truth remains
 26. **domain_join org grain is pending join seats, not another title board.**
     After title/dept kanban exists, Entra/Okta hole is who is waiting to
     join. Do not re-stack department filters on Team.
+    Machine: `pending_join_org` saturates `(app, org_structure)` when a
+    `pending_joins` queue filters `status = pending`.
 
 27. **project_tracker empty_region grain is identity chips, not another
     chart prune.** Media Shelf / People kanban dumping Photo Url / Email

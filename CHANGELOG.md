@@ -36,6 +36,9 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: pending join seats saturate org (cycle 2105)** —
+  `pending_joins` queue (`status = pending`) saturates `(app, org_structure)`
+  so domain_join_co is not recommended for another title board (oral #26).
 - **Goal B planner: line composition saturates document (cycle 2104)** —
   `composition` + subscription/usage LineItem queues saturate
   `(app, document)` so acme_billing is not recommended after coat-family

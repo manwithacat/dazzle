@@ -289,6 +289,17 @@ def test_live_fieldtest_media_not_recommended() -> None:
         assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
 
 
+def test_live_domain_join_org_not_recommended() -> None:
+    """pending_joins queue saturates domain_join org (oral #26)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["domain_join_co", "org_structure"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "domain_join_co" and rec["depth_id"] == "org_structure")
+
+
 def test_live_acme_billing_document_not_recommended() -> None:
     """Line composition + kind queues saturate acme document (peer pack)."""
     from scripts.interesting_product_portfolio import snapshot

@@ -308,6 +308,16 @@ def note_kind_chrome_conversation(text: str) -> bool:
     return True
 
 
+def pending_join_org(text: str) -> bool:
+    """Exclusive pending-join queue before title/dept boards (oral #26)."""
+    for _ws, name, body in _workspace_region_windows(text):
+        if name != "pending_joins":
+            continue
+        if re.search(r"status\s*=\s*pending", body) and re.search(r"display:\s*queue", body):
+            return True
+    return False
+
+
 def tree_people_org(text: str) -> bool:
     """Exclusive in-tree vs apex people plus reporting_seat (oral #13/#23)."""
     has_in_tree = False
@@ -407,7 +417,7 @@ def live_saturated_cells(
             or line_composition_document(text)
         ):
             sat.add((app, "document"))
-        if tree_people_org(text):
+        if tree_people_org(text) or pending_join_org(text):
             sat.add((app, "org_structure"))
         if agent_only_selector_empty(text):
             sat.add((app, "empty_region_honesty"))
