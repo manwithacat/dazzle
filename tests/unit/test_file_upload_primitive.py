@@ -137,12 +137,24 @@ def test_file_upload_threads_initial_label_data_attr() -> None:
 
 
 def test_file_upload_required_attribute() -> None:
-    """`required=True` emits the `required` HTML attribute on the
-    hidden input — form validation gates POST when no file is set."""
+    """`required=True` gates the visible picker — hidden `required` is invalid HTML."""
     html = FragmentRenderer().render(
         FileUpload(name="f", label="F", upload_url=URL("/u"), required=True)
     )
-    assert "required" in html
+    picker = html.split('type="file"', 1)[1].split(">", 1)[0]
+    hidden = html.split('type="hidden"', 1)[1].split(">", 1)[0]
+    assert "required" in picker
+    assert "required" not in hidden
+    filled = FragmentRenderer().render(
+        FileUpload(
+            name="f",
+            label="F",
+            upload_url=URL("/u"),
+            required=True,
+            initial_value="docs/a.pdf",
+        )
+    )
+    assert "required" not in filled.split('type="file"', 1)[1].split(">", 1)[0]
 
 
 def test_file_upload_escapes_label_and_attrs() -> None:

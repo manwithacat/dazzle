@@ -280,7 +280,6 @@ class _RenderFormsMixin:
         accept_attr = f' data-dz-accept="{ctx.escape_attr(f.accept)}"' if f.accept else ""
         picker_accept = f' accept="{ctx.escape_attr(f.accept)}"' if f.accept else ""
         max_attr = f' data-dz-max-size="{f.max_size_bytes}"' if f.max_size_bytes > 0 else ""
-        required_attr = " required" if f.required else ""
         picker_required = " required" if f.required and not f.initial_value else ""
         value_attr = ctx.escape_attr(f.initial_value)
         initial_label_attr = (
@@ -296,7 +295,7 @@ class _RenderFormsMixin:
             f"{accept_attr}{max_attr}{initial_label_attr}>"
             f'<input type="hidden" name="{name}" id="field-{name}" '
             f'data-dazzle-field="{name}" data-dz-file-value '
-            f'value="{value_attr}"{required_attr}>'
+            f'value="{value_attr}">'
             f'<input type="file" class="dz-file-upload-input"{picker_accept}'
             f"{picker_required}>"
             f'<span class="dz-file-upload-zone-prompt" data-dz-file-name>'

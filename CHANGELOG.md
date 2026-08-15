@@ -7,6 +7,9 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **File-upload `required` on hidden FK (cycle 2115)** — native constraint
+  belongs on the `<input type="file">` picker. Hidden `required` is invalid
+  HTML and was ignored by browsers; omit it when an initial value exists.
 - **Story-walk live prove treated count 0 as green (cycle 2114 / AUD-012)** —
   `is_walk_live_green` now requires `walk_live_run > 0`. A zero/missing live
   count tags `live_unproven` on write instead of stamping live prove.
