@@ -821,7 +821,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   // `focus once`). Non-input `[hx-get]` affordances (links/buttons) fire on
   // click below, matching real htmx's default trigger for those elements.
   document.addEventListener("focus", function (e) {
-    if (e.target.matches && e.target.matches("input[hx-get]")) doGet(e.target);
+    if (!e.target.matches || !e.target.matches("input[hx-get]")) return;
+    // Real htmx only fires focus when hx-trigger says so (command
+    // `focus once`). A typeahead with keyup-only must not invent hits
+    // on empty focus (cycle 2126).
+    var trig = e.target.getAttribute("hx-trigger") || "";
+    if (trig.indexOf("focus") < 0) return;
+    doGet(e.target);
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);
@@ -5006,12 +5012,21 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  * typeahead *clears* a stale FK — same class as money empty→clear
  * minor — and setCustomValidity blocks submit when the field is
  * required but the text is no longer a confirmed selection.
+ *
+ * Empty-query honesty (cycle 2126): whitespace / empty typeahead must
+ * not hx-get a canned hit list (gallery /mock/typeahead always returns
+ * Aurora). Restore the author's prompt node (WeakMap clone — never
+ * write markup from a data attr; CodeQL js/xss-through-dom #223). Same
+ * class as search-box empty query (2123) and grid whitespace q= (2125).
  */
 (function () {
   "use strict";
 
   var DEFAULT_BLUR_GRACE_MS = 200;
   var DEFAULT_CONFIRM_HOLD_MS = 1500;
+  var FALLBACK_PROMPT = "Type to search";
+  /** @type {WeakMap<Element, Element>} */
+  var promptByRoot = new WeakMap();
 
   /** @type {WeakMap<Element, number>} */
   var closeTimers = new WeakMap();
@@ -5095,6 +5110,57 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     );
   }
 
+  function promptOf(results) {
+    if (!results) return null;
+    return (
+      results.querySelector(".search-select-prompt") ||
+      results.querySelector(".search-select-prompt")
+    );
+  }
+
+  function fallbackPrompt() {
+    var d = document.createElement("div");
+    d.className = "search-select-prompt search-select-prompt";
+    d.setAttribute("role", "option");
+    d.setAttribute("aria-disabled", "true");
+    d.textContent = FALLBACK_PROMPT;
+    return d;
+  }
+
+  function cachePrompt(root) {
+    if (promptByRoot.has(root)) return;
+    var prompt = promptOf(resultsOf(root));
+    promptByRoot.set(root, prompt ? prompt.cloneNode(true) : fallbackPrompt());
+  }
+
+  function restorePrompt(root) {
+    var results = resultsOf(root);
+    if (!results) return;
+    cachePrompt(root);
+    var node = promptByRoot.get(root) || fallbackPrompt();
+    results.textContent = "";
+    results.appendChild(node.cloneNode(true));
+  }
+
+  function onEmptyQuery(evt) {
+    var t = evt.target;
+    if (!t || !t.closest) return;
+    var input =
+      t.closest(".search-select-input") || t.closest(".search-select-input");
+    if (!input) return;
+    var root = rootOf(input);
+    if (!root) return;
+    cachePrompt(root);
+    if (String(input.value || "").trim()) return;
+    // Capture + stop so htmx and the gallery mock never exchange an
+    // empty q. Restore the prompt — do not leave stale Aurora rows.
+    // stopImmediatePropagation would skip the bubble clearStaleFk
+    // listener, so clear here.
+    clearStaleFk(root, input);
+    evt.stopImmediatePropagation();
+    restorePrompt(root);
+  }
+
   function hasConfirm(root) {
     var results = resultsOf(root);
     if (!results) return false;
@@ -5173,6 +5239,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     selecting.delete(root);
     clearCloseTimer(root);
     setOpen(root, true);
+    cachePrompt(root);
   });
 
   document.addEventListener("focusout", function (evt) {
@@ -5224,6 +5291,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     clearFkValidity(root);
     scheduleClose(root, confirmHoldMs(root));
   }
+
+  document.addEventListener("input", onEmptyQuery, true);
+  document.addEventListener("keyup", onEmptyQuery, true);
 
   document.addEventListener("input", function (evt) {
     var input =

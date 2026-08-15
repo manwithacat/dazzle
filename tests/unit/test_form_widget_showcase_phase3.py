@@ -85,6 +85,23 @@ def test_grid_controller_rejects_whitespace_query() -> None:
     assert "encodeURIComponent(term)" in src
 
 
+def test_search_select_controller_rejects_empty_query() -> None:
+    """dz-search-select.js must not hx-get empty q (cycle 2126)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-search-select.js"
+    ).read_text(encoding="utf-8")
+    assert "function onEmptyQuery" in src
+    assert "Type to search" in src
+    assert "stopImmediatePropagation" in src
+    assert "innerHTML" not in src
+
+
 def test_search_box_controller_rejects_empty_query() -> None:
     """dz-search-box.js must not hx-get empty q (cycle 2123)."""
     from pathlib import Path

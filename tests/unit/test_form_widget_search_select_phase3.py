@@ -72,7 +72,7 @@ def test_endpoint_and_typeahead_wiring() -> None:
     # #1547: the emitter appends the field name so the endpoint keys
     # its rows to the widget's ids
     assert 'hx-get="/_dazzle/fragments/search?source=companieshouse&amp;field_name=company"' in html
-    assert 'hx-trigger="keyup changed delay:400ms"' in html
+    assert 'hx-trigger="keyup changed delay:400ms[this.value.trim().length>0]"' in html
     assert 'hx-target="#search-results-company"' in html
     assert 'hx-params="q"' in html
     # min_chars>0 → hx-vals carries the floor.

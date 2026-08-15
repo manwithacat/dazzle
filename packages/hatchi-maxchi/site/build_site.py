@@ -2887,7 +2887,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // `focus once`). Non-input `[hx-get]` affordances (links/buttons) fire on
   // click below, matching real htmx's default trigger for those elements.
   document.addEventListener("focus", function (e) {
-    if (e.target.matches && e.target.matches("input[hx-get]")) doGet(e.target);
+    if (!e.target.matches || !e.target.matches("input[hx-get]")) return;
+    // Real htmx only fires focus when hx-trigger says so (command
+    // `focus once`). A typeahead with keyup-only must not invent hits
+    // on empty focus (cycle 2126).
+    var trig = e.target.getAttribute("hx-trigger") || "";
+    if (trig.indexOf("focus") < 0) return;
+    doGet(e.target);
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches("[hx-get]")) doGet(e.target);

@@ -2815,6 +2815,46 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     page.reload()
 
 
+def test_search_select_empty_query_does_not_invent_hits(page) -> None:  # type: ignore[no-untyped-def]
+    """Whitespace / empty typeahead must not invent Aurora hits (cycle 2126).
+
+    Same honesty class as search-box empty query (2123). After a real
+    hit, spaces restore the coaching prompt; the panel must not keep
+    /mock/typeahead rows.
+    """
+    goto_part(page, "search-select")
+    root = "#search-select .search-select"
+    inp = f"{root} input[type=text]"
+    panel = f"{root} .search-select-results"
+
+    page.focus(inp)
+    page.wait_for_timeout(80)
+    assert page.locator(f"{panel} .search-result-row").count() == 0, (
+        "empty focus must not seed canned typeahead rows"
+    )
+    assert "Type to search" in page.inner_text(panel)
+
+    page.fill(inp, "auro")
+    page.wait_for_timeout(450)
+    assert "Aurora Energy" in page.inner_text(panel)
+
+    page.evaluate(
+        """() => {
+          const i = document.querySelector(
+            '#search-select .search-select input[type=text]'
+          );
+          i.value = '   ';
+          i.dispatchEvent(new Event('input', {bubbles: true}));
+        }"""
+    )
+    page.wait_for_timeout(80)
+    assert page.locator(f"{panel} .search-result-row").count() == 0, (
+        "whitespace must restore the prompt, not leave Aurora"
+    )
+    assert "Type to search" in page.inner_text(panel)
+    page.reload()
+
+
 def test_search_select_type_clears_stale_fk(page) -> None:  # type: ignore[no-untyped-def]
     """Typing in the typeahead must drop a stale hidden FK (cycle 2118).
 

@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-select empty query invented Aurora hits (cycle 2126)** —
+  `dz-search-select.js` now stops empty/whitespace typeahead exchanges
+  and restores the author's prompt (WeakMap clone, no `innerHTML`).
+  Gallery `hx-trigger` drops the `load` seed and adds a min-length
+  filter; the mock only focus-gets when `hx-trigger` contains `focus`
+  (command `focus once` still works). Same honesty class as search-box
+  empty query (2123) and grid whitespace `q=` (2125).
 - **Grid search whitespace invented a `q=` filter (cycle 2125)** —
   `dz-grid.js` now trims the search box before composing `q=` / the
   matched-set scope key. Spaces after a real hit restore the unfiltered

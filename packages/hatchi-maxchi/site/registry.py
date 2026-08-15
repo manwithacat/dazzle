@@ -2176,8 +2176,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "— do not invent a new combobox per entity. "
             "Demo: focus the input (or type) to open; media is optional so some "
             "rows are text-only.",
-            # Production-shaped shell: closed + prompt. Gallery mock seeds rich
-            # rows on `load` (and keyup); open only on focus. Confirm dwell keeps
+            # Production-shaped shell: closed + prompt. Open on focus;
+            # typeahead exchanges only on non-empty keyup (empty/whitespace
+            # must not invent Aurora — cycle 2126). Confirm dwell keeps
             # the select feedback visible after a row click.
             '<div class="dz-search-select hm-measure" data-dz-widget="search_select" '
             'data-dz-blur-grace-ms="200" data-dz-confirm-hold-ms="1800">'
@@ -2187,7 +2188,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'role="combobox" aria-expanded="false" aria-controls="hm-ss-results" '
             'aria-autocomplete="list" aria-haspopup="listbox" '
             'hx-get="/mock/typeahead" '
-            'hx-trigger="load, keyup changed delay:300ms" '
+            'hx-trigger="keyup changed delay:300ms[this.value.trim().length>0]" '
             'hx-target="#hm-ss-results" hx-params="q">'
             '<div id="hm-ss-results" role="listbox" '
             'aria-label="Suggestions" class="dz-search-select-results">'
@@ -2228,8 +2229,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "each row carries its own hx-get to the select exchange",
                     "select exchange: confirm line (+ OOB hidden FK / label) — "
                     "never invent a selected id client-side; typing clears a stale FK",
+                    "hx-trigger debounce + min-length filter; controller restores "
+                    "the prompt on empty/whitespace (do not hx-get q=)",
                 ),
                 pitfalls=(
+                    "empty / whitespace query must not hx-get a canned hit list",
+                    "clear after a hit must restore the prompt — do not leave stale Aurora rows",
                     "blur grace is NOT confirm hold — without confirm-hold-ms the "
                     "select feedback is hidden as soon as focus leaves (~200ms)",
                     "form posts the hidden input, never the visible text "
@@ -2252,6 +2257,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     (
                         "swap the panel with a confirmation fragment that fills the hidden FK server-side",
                         "copy the visible label into a hidden field from client JS",
+                    ),
+                    (
+                        "stop empty exchanges and restore the coaching prompt",
+                        "GET q= / load-seed /mock/typeahead and invent Aurora rows",
                     ),
                 ),
                 a11y_keys=(
