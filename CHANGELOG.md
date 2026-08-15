@@ -20,6 +20,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B media type/pattern density (cycle 2081)** — design_studio Asset
+  Catalog puts exclusive typography specimens vs pattern boards above fold
+  (`type_pattern_density`; not headshot_shelf, not logo/photo re-stack).
+  Extra type seed; unit pin; SPEC; designer catalog still recaptured.
 - **Grok 4.6 judgment default** — `DEFAULT_GROK_JUDGMENT_MODEL` is now
   `grok-4.6` (Grok Build CLI default as of grok 1.0.3 / 2026-08-12).
   `GROK_JUDGMENT_MODELS` catalogs still-served IDs; the model-defaults

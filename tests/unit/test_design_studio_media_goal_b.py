@@ -33,16 +33,39 @@ def test_asset_catalog_media_grid_before_brand_palette() -> None:
     assert block.index("logo_icons:") < block.index("photo_stills:")
     assert block.index("photo_stills:") < block.index("media_grid:")
     assert block.index("media_grid:") < block.index("brand_palette:")
-    assert "focus: media_pulse, logo_icons, photo_stills, brand_palette" in block
+    assert "focus: type_specimens, pattern_stills, logo_icons, photo_stills" in block
     assert "creative_type_density" in block.lower() or "logo/icon vs photo" in block.lower()
+    assert "type_pattern_density" in block.lower() or "type specimens" in block.lower()
     # Cap palette so it cannot re-eat the fold after reorder
     assert "limit: 4" in block
     assert "swatch" in block.lower() or "palette" in block.lower()
     rows = [json.loads(line) for line in ASSET_SEEDS.read_text().splitlines() if line.strip()]
     logos = [r for r in rows if r.get("asset_type") in ("logo", "icon_glyph")]
     photos = [r for r in rows if r.get("asset_type") in ("photo", "illustration")]
+    types = [r for r in rows if r.get("asset_type") == "typography"]
+    patterns = [r for r in rows if r.get("asset_type") == "pattern"]
     assert len(logos) >= 2
     assert len(photos) >= 2
+    assert len(types) >= 2
+    assert len(patterns) >= 2
+
+
+def test_asset_catalog_type_pattern_density() -> None:
+    """Cycle 2081: exclusive typography vs pattern walls (not logo/photo re-stack)."""
+    block = _workspace_block("asset_catalog")
+    assert "\n  type_specimens:\n" in block
+    assert "\n  pattern_stills:\n" in block
+    types = block.split("\n  type_specimens:\n", 1)[1].split("\n  pattern_stills:", 1)[0]
+    pats = block.split("\n  pattern_stills:\n", 1)[1].split("\n  media_grid:", 1)[0]
+    assert "asset_type = typography" in types
+    assert "display: grid" in types
+    assert "asset_type = pattern" in pats
+    assert "display: grid" in pats
+    assert "type_specimens: count(Asset where asset_type = typography)" in block
+    assert "patterns: count(Asset where asset_type = pattern)" in block
+    assert "focus: type_specimens, pattern_stills, logo_icons, photo_stills" in block
+    assert block.index("\n  type_specimens:\n") < block.index("\n  pattern_stills:\n")
+    assert block.index("\n  photo_stills:\n") < block.index("\n  type_specimens:\n")
 
 
 def test_brand_desk_declares_asset_media_shelf() -> None:

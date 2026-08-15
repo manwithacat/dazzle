@@ -82,10 +82,12 @@ records, and that grant is itself an explicit, auditable declaration.
   review-load metrics (including document + conversation counts), dual attention
   (awaiting-review + draft queues), design-document composition, then live critique
   trail (Feedback copy), recently approved, and pipeline kanban.
-- **Asset Catalog** — media shelf first: asset preview thumbs above fold, then
-  compact brand palette with logo + Primary/Secondary/Accent swatch columns,
-  review queue, pipeline kanban; under-fold status mix chart and recent-activity
-  timeline host bar_chart/timeline dogfood for the studio.
+- **Asset Catalog** — media shelf first: exclusive **type specimens** vs
+  **pattern boards** above fold (cycle 2081 `type_pattern_density` — Figma/Bynder
+  type + repeat libraries, not logo/photo re-stack), then logo/icon and
+  photo/illustration walls, brand palette, review queue, pipeline kanban;
+  under-fold status mix chart and recent-activity timeline host
+  bar_chart/timeline dogfood for the studio.
 - **Campaigns** — campaign media desk: assigned creative preview thumbs above the fold,
   compact schedule metrics, active briefs, and status board; campaign detail hubs show
   an assigned creative media wall (not a bare name table).
@@ -153,4 +155,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:ea439346d9be8455cec665f44a7b9ae145162dc01f75b38c7d74d778132208e9 -->
+<!-- dazzle-spec-brief: sha256:c3da8abdb028cc14aa3376b4ca1430c503c1b9253836b284123ebbb8dfc30a18 -->

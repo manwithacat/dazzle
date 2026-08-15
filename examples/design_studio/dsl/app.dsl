@@ -401,7 +401,7 @@ workspace studio_dashboard "Studio Dashboard":
 # Bynder / Figma / Frame.io put exclusive logo/icon walls vs photo/illustration
 # walls before a mixed dump (not headshot_shelf or review_pixels_wall re-stack).
 workspace asset_catalog "Asset Catalog":
-  purpose: "Media shelf — logo/icon vs photo/illustration type density above fold, then brand palette"
+  purpose: "Media shelf — type specimens vs pattern boards above fold, then logo/photo walls"
   access: persona(admin, designer, reviewer)
 
   media_pulse:
@@ -411,11 +411,15 @@ workspace asset_catalog "Asset Catalog":
       assets: count(Asset)
       logos: count(Asset where asset_type = logo or asset_type = icon_glyph)
       photos: count(Asset where asset_type = photo or asset_type = illustration)
+      type_specimens: count(Asset where asset_type = typography)
+      patterns: count(Asset where asset_type = pattern)
       in_review: count(Asset where status = review)
     tones:
       assets: accent
       logos: positive
       photos: accent
+      type_specimens: accent
+      patterns: warning
       in_review: warning
 
   # Dual type density — exclusive soft logo/icon vs hard photo/illustration walls.
@@ -436,6 +440,28 @@ workspace asset_catalog "Asset Catalog":
     limit: 6
     action: asset_detail
     empty: "No photo or illustration previews yet"
+
+  # Cycle 2081 recipe type_pattern_density — Figma/Bynder put exclusive
+  # typography specimens vs pattern/repeat boards before mixed logo/photo
+  # (not headshot_shelf, not creative_type_density logo/photo re-stack,
+  # not brand_swatch_wall).
+  type_specimens:
+    source: Asset
+    filter: asset_type = typography
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: asset_detail
+    empty: "No type specimens — seed typography assets with preview thumbs"
+
+  pattern_stills:
+    source: Asset
+    filter: asset_type = pattern
+    display: grid
+    sort: created_at desc
+    limit: 4
+    action: asset_detail
+    empty: "No pattern boards — seed repeat/pattern assets with preview thumbs"
 
   # Mixed shelf under dual type walls (scroll).
   media_grid:
@@ -492,14 +518,14 @@ workspace asset_catalog "Asset Catalog":
 
   ux:
     as designer:
-      purpose: "Logo/icon vs photo/illustration type density before brand palette"
-      focus: media_pulse, logo_icons, photo_stills, brand_palette
+      purpose: "Type specimens vs pattern boards before logo/photo walls"
+      focus: type_specimens, pattern_stills, logo_icons, photo_stills
     as admin:
-      purpose: "Creative type density first — dual media walls, then brand identity"
-      focus: media_pulse, logo_icons, photo_stills, brand_palette
+      purpose: "Type/pattern density first — exclusive specimen walls, then logo/photo"
+      focus: type_specimens, pattern_stills, logo_icons, photo_stills
     as reviewer:
-      purpose: "Scan dual type media walls before brand meta"
-      focus: media_pulse, logo_icons, photo_stills, brand_palette
+      purpose: "Scan type specimens and pattern boards before mixed creatives"
+      focus: type_specimens, pattern_stills, logo_icons, photo_stills
 
 # Goal B media: brand desk is asset media shelf first, then brand swatch wall.
 # empty_region_honesty (cycle 1856): drop asset_trail + campaign_mix thrash —
