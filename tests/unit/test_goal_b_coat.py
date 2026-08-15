@@ -14,6 +14,7 @@ from scripts.goal_b_coat import (
     live_saturated_cells,
     measure,
     photo_grid_entities,
+    stamp_pair_media,
 )
 
 pytestmark = pytest.mark.gate
@@ -141,6 +142,34 @@ def test_single_photo_entity_does_not_saturate_media(tmp_path: Path) -> None:
 def test_fieldtest_two_desk_media_saturates() -> None:
     sat = live_saturated_cells(["fieldtest_hub", "support_tickets"])
     assert ("fieldtest_hub", "media") in sat
+    assert ("support_tickets", "media") not in sat
+
+
+def test_stamp_pair_grids_saturate_media(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace review_desk:\n"
+        "  review_pixels:\n"
+        "    source: Asset\n"
+        "    filter: status = review\n"
+        "    display: grid\n"
+        "  approved_pixels:\n"
+        "    source: Asset\n"
+        "    filter: status = approved\n"
+        "    display: grid\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "media") in sat
+    text = (dsl / "app.dsl").read_text(encoding="utf-8")
+    assert stamp_pair_media(text) is True
+
+
+def test_design_studio_stamp_pair_media_saturates() -> None:
+    sat = live_saturated_cells(["design_studio", "support_tickets"])
+    assert ("design_studio", "media") in sat
     assert ("support_tickets", "media") not in sat
 
 

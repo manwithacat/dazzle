@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: stamp-pair media saturates (cycle 2098)** — exclusive
+  `review_pixels` + `approved_pixels` grids saturate `(app, media)` so
+  design_studio is not recommended for another type-wall. AUD-015: unknown
+  structured `recipe:` stays `None` (does not inherit notes).
 - **Goal B planner: two-desk media saturates (cycle 2096)** — live DSL with
   `photo_url` grids on ≥2 entities saturates `(app, media)` so the portfolio
   stops recommending another fieldtest photo_url AND. Structured `recipe:`

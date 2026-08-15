@@ -64,6 +64,8 @@ Doctrine source of truth remains
     Catalog already has type/pattern + logo/photo. Frame.io review homes pair
     in-review thumbs with **approved stamp** thumbs (`approved_stamp_wall`).
     Peer refuse: photo_url chips with no design content.
+    Machine: `stamp_pair_media` saturates `(app, media)` when both
+    `review_pixels` and `approved_pixels` grids exist.
 
 13. **hr My Team is people in the tree, not a Role catalog.** IC/manager
     *job-title* tracks are not hierarchy. Recipe `tree_people_seat` (in-tree

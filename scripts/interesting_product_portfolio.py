@@ -68,6 +68,7 @@ _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("tree_people_seat", re.compile(r"tree_people_seat", re.I)),
     ("device_identity_wall", re.compile(r"device_identity_wall", re.I)),
     ("severity_evidence_density", re.compile(r"severity_evidence_density", re.I)),
+    ("two_desk_media_saturate", re.compile(r"two_desk_media_saturate", re.I)),
     ("headshot_shelf", re.compile(r"headshot|photo_url|media_shelf", re.I)),
     ("dual_attention", re.compile(r"dual attention|command_density|multi-panel|multi panel", re.I)),
     ("team_org_desk", re.compile(r"\bTeam desk\b|org_structure|People desk|reporting", re.I)),
@@ -199,10 +200,16 @@ def recipe_family(recipe: str | None, text: str = "") -> str | None:
     Structured ``recipe`` wins over notes. Dig notes often mention a riding
     ship (``2094 approved_stamp_wall rides this push``) and must not collapse
     ``tree_people_seat`` onto that prior family.
+
+    AUD-015: a *non-empty unknown* recipe stays ``None`` — do not scan notes
+    (``two_desk_media_saturate`` + ``photo_url`` used to become headshot_shelf).
     """
-    tagged = _family_from_blob((recipe or "").strip())
-    if tagged:
-        return tagged
+    rec = (recipe or "").strip()
+    if rec:
+        tagged = _family_from_blob(rec)
+        if tagged:
+            return tagged
+        return None
     return _family_from_blob((text or "").strip())
 
 

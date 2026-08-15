@@ -286,6 +286,20 @@ def photo_grid_entities(text: str) -> set[str]:
     return ents
 
 
+def stamp_pair_media(text: str) -> bool:
+    """Exclusive in-review + approved pixel grids (Frame.io honest grain)."""
+    has_review = False
+    has_approved = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if not re.search(r"display:\s*grid", body):
+            continue
+        if name == "review_pixels":
+            has_review = True
+        if name == "approved_pixels":
+            has_approved = True
+    return has_review and has_approved
+
+
 def live_saturated_cells(
     apps: list[str],
     *,
@@ -312,7 +326,7 @@ def live_saturated_cells(
             sat.add((app, "conversation"))
         if m.document_rails > HONEST_DOCUMENT_RAILS:
             sat.add((app, "document"))
-        if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES:
+        if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))
     return sat
 

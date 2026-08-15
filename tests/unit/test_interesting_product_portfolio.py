@@ -182,6 +182,16 @@ def test_recipe_family_collapses_coat_synonyms() -> None:
     assert recipe_family("approved_stamp_wall") == "approved_stamp_wall"
     assert recipe_family("device_identity_wall") == "device_identity_wall"
     assert recipe_family("severity_evidence_density") == "severity_evidence_density"
+    assert recipe_family("two_desk_media_saturate") == "two_desk_media_saturate"
+    # AUD-015: unknown structured recipe must not inherit notes.
+    assert (
+        recipe_family(
+            "two_desk_media_saturate",
+            "live photo_url grids on Device+IssueReport",
+        )
+        == "two_desk_media_saturate"
+    )
+    assert recipe_family("not_a_registered_recipe", "2094 approved_stamp_wall rides") is None
     # Cycle 2096: riding-along notes must not collapse the structured recipe.
     assert (
         recipe_family(
@@ -277,6 +287,17 @@ def test_live_fieldtest_media_not_recommended() -> None:
     rec = snap.recommend
     if rec is not None:
         assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
+
+
+def test_live_design_studio_media_not_recommended() -> None:
+    """Review + approved stamp pair saturates design_studio media (oral #12)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["design_studio", "media"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "design_studio" and rec["depth_id"] == "media")
 
 
 def test_live_portfolio_status_runs() -> None:
