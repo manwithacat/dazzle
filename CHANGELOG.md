@@ -7,6 +7,9 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Dig receipt loader crashed on list actuators (cycle 2113 / AUD-014)** —
+  `improve_dig_receipt.load_receipt` now coerces a name list to a count-map
+  so `check` does not `dict(["coat_detector", …])`.
 - **File-upload widget hollow after Alpine retirement (cycle 2110 / #1648)** —
   `_emit_file_upload` now emits a nameless `<input type="file">` picker plus
   a status span; `dz-widget-registry` POSTs multipart to `data-dz-target`

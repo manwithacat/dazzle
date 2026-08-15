@@ -207,3 +207,32 @@ class TestProbesWire:
         assert code == 0
         assert "process_dig" in out
         assert "story_walk" in out
+
+
+def test_load_receipt_coerces_actuator_name_list(receipt_mod, tmp_path: Path) -> None:
+    """AUD-014: older Goal B receipts stored actuators as a name list."""
+    path = tmp_path / "list-actuators.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "app": "fieldtest_hub",
+                "strategy": "interesting_product",
+                "actuators": ["coat_detector", "unit_pins", "coat_detector"],
+                "outcome": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
+    rec = receipt_mod.load_receipt(path)
+    assert rec.actuators == {"coat_detector": 2, "unit_pins": 1}
+
+
+def test_load_receipt_keeps_actuator_count_map(receipt_mod, tmp_path: Path) -> None:
+    path = tmp_path / "map-actuators.json"
+    path.write_text(
+        json.dumps({"actuators": {"walk_validate": 0, "walk_dry_run": 1}}),
+        encoding="utf-8",
+    )
+    rec = receipt_mod.load_receipt(path)
+    assert rec.actuators == {"walk_validate": 0, "walk_dry_run": 1}

@@ -133,6 +133,28 @@ def list_receipts(*, app: str | None = None, strategy: str | None = None) -> lis
     return out
 
 
+def coerce_actuators(raw: Any) -> dict[str, Any]:
+    """Normalize receipt actuators to a count-map (AUD-014).
+
+    Writers should emit ``{"walk_validate": 1, ...}``. Older Goal B receipts
+    stored a name list (``["coat_detector", "unit_pins"]``); ``dict(list)``
+    crashed ``check``. Lists become ``{name: count}``.
+    """
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    if isinstance(raw, (list, tuple)):
+        out: dict[str, Any] = {}
+        for item in raw:
+            if isinstance(item, str) and item:
+                out[item] = int(out.get(item, 0) or 0) + 1
+            elif isinstance(item, dict):
+                out.update(item)
+        return out
+    return {}
+
+
 def load_receipt(path: Path) -> DigReceipt:
     data = json.loads(path.read_text(encoding="utf-8"))
     return DigReceipt(
@@ -144,7 +166,7 @@ def load_receipt(path: Path) -> DigReceipt:
         stories=list(data.get("stories") or []),
         maps_cited=list(data.get("maps_cited") or []),
         walks_touched=list(data.get("walks_touched") or []),
-        actuators=dict(data.get("actuators") or {}),
+        actuators=coerce_actuators(data.get("actuators")),
         outcome=str(data.get("outcome") or "PASS"),
         epistemic=list(data.get("epistemic") or []),
         residual_before=data.get("residual_before"),
