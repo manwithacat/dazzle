@@ -98,6 +98,12 @@ Doctrine source of truth remains
     Do not AND-filter either `photo_url` again — that is coat theatre.
     Peer pack: `improve/peer_packs/fieldtest_hub.toml`.
 
+21. **Goal C subtract is not a prior Goal B lie.** Distill that removes a
+    density recipe (`open_decisions`, SLA speech twins) does not REGRESSION
+    the earlier interesting_product SHA if that ship’s receipt + pins were
+    honest. Audit the distill commit for subtract-only. Do not re-add the
+    slice.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
