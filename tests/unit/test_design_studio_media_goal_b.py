@@ -229,20 +229,42 @@ def test_review_desk_review_pixels_wall_first() -> None:
     """
     block = _workspace_block("review_desk")
     assert "\n  review_pixels:\n" in block
-    region = block.split("\n  review_pixels:\n", 1)[1].split("\n  review_load:", 1)[0]
+    region = block.split("\n  review_pixels:\n", 1)[1].split("\n  approved_pixels:", 1)[0]
     assert "source: Asset" in region
     assert "filter: status = review" in region
     assert "display: grid" in region
-    assert "limit: 6" in region
+    assert "limit: 4" in region
     assert "action: asset_detail" in region
-    assert block.index("\n  review_pixels:\n") < block.index("\n  review_load:\n")
+    assert block.index("\n  review_pixels:\n") < block.index("\n  approved_pixels:\n")
+    assert block.index("\n  approved_pixels:\n") < block.index("\n  review_load:\n")
     assert block.index("\n  review_pixels:\n") < block.index("\n  awaiting_review:\n")
-    assert (
-        "focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation"
-        in block
-    )
+    assert "focus: review_pixels, approved_pixels, awaiting_review, draft_queue" in block
     rows = [json.loads(line) for line in ASSET_SEEDS.read_text().splitlines() if line.strip()]
     in_review = [r for r in rows if r.get("status") == "review"]
     assert len(in_review) >= 4
     for r in in_review:
         assert str(r.get("preview_url") or "").startswith("https://")
+
+
+def test_review_desk_approved_stamp_wall() -> None:
+    """Cycle 2094: Frame.io/Figma — exclusive approved stamp pixels next to in-review.
+
+    Recipe approved_stamp_wall — not type/pattern restack, not review_pixels_wall
+    alone, not headshot_shelf.
+    """
+    block = _workspace_block("review_desk")
+    assert "\n  approved_pixels:\n" in block
+    region = block.split("\n  approved_pixels:\n", 1)[1].split("\n  review_load:", 1)[0]
+    assert "source: Asset" in region
+    assert "filter: status = approved" in region
+    assert "display: grid" in region
+    assert "limit: 4" in region
+    assert "action: asset_detail" in region
+    assert "approved_stamp_wall" in block
+    assert "focus: review_pixels, approved_pixels, awaiting_review, draft_queue" in block
+    rows = [json.loads(line) for line in ASSET_SEEDS.read_text().splitlines() if line.strip()]
+    approved = [r for r in rows if r.get("status") == "approved"]
+    assert len(approved) >= 3
+    for r in approved:
+        assert str(r.get("preview_url") or "").startswith("https://")
+        assert r.get("approved_at")

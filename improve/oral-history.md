@@ -60,6 +60,11 @@ Doctrine source of truth remains
     coat. Recipe `billing_escalations_seat`. Peer refuse still bans a
     decorative Team desk clone and customers in the Agent Console picker.
 
+12. **design_studio media is status-stamped pixels, not another type wall.**
+    Catalog already has type/pattern + logo/photo. Frame.io review homes pair
+    in-review thumbs with **approved stamp** thumbs (`approved_stamp_wall`).
+    Peer refuse: photo_url chips with no design content.
+
 10. **create_all missing columns.** DSL adds fields; SQLite/PG tables lag —
     `ensure_missing_entity_columns` (or equivalent) after create_all is a
     real product-blocker class, not a one-off.

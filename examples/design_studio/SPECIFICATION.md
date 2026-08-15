@@ -78,10 +78,11 @@ records, and that grant is itself an explicit, auditable declaration.
   queue (no trail/bar thrash — bar_chart/timeline dogfood lives on Asset Catalog (logo/icon vs photo/illustration type density — cycle 2063)).
 - **Review Desk** — multi-panel review home (media + command_density + document):
   in-review creative pixel wall first (status=review Asset preview_url grid —
-  cycle 2048 peer Frame.io/Figma review_pixels_wall, not media_shelf re-stack),
-  review-load metrics (including document + conversation counts), dual attention
-  (awaiting-review + draft queues), design-document composition, then live critique
-  trail (Feedback copy), recently approved, and pipeline kanban.
+  cycle 2048 peer Frame.io/Figma review_pixels_wall), then exclusive **approved
+  stamp** pixels (cycle 2094 `approved_stamp_wall` — versioned approved thumbs,
+  not type/pattern restack), dual attention (awaiting-review + draft queues),
+  design-document composition, then live critique trail (Feedback copy),
+  recently approved queue, and pipeline kanban.
 - **Asset Catalog** — media shelf first: exclusive **type specimens** vs
   **pattern boards** above fold (cycle 2081 `type_pattern_density` — Figma/Bynder
   type + repeat libraries, not logo/photo re-stack), then logo/icon and
@@ -155,4 +156,4 @@ outside it without being explicitly listed. (Verify:
 
 **Design Document lifecycle.** Design Documents move draft → published → archived (designer publishes; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:c3da8abdb028cc14aa3376b4ca1430c503c1b9253836b284123ebbb8dfc30a18 -->
+<!-- dazzle-spec-brief: sha256:be8572c1c04c391478d2924224f1494e036830f16002a06bcb75c7e1e403993c -->

@@ -60,10 +60,7 @@ def test_review_desk_dual_attention_before_conversation() -> None:
     assert block.index("draft_queue:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
     assert "Multi-panel" in block or "multi-panel" in block.lower()
-    assert (
-        "focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation"
-        in block
-    )
+    assert "focus: review_pixels, approved_pixels, awaiting_review, draft_queue" in block
 
 
 def test_attention_queues_capped_for_fold_share() -> None:

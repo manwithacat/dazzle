@@ -64,6 +64,7 @@ _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("directory_work_first", re.compile(r"directory_work_first", re.I)),
     ("identity_chip_not_schema", re.compile(r"identity_chip_not_schema", re.I)),
     ("billing_escalations_seat", re.compile(r"billing_escalations_seat", re.I)),
+    ("approved_stamp_wall", re.compile(r"approved_stamp_wall", re.I)),
     ("headshot_shelf", re.compile(r"headshot|photo_url|media_shelf", re.I)),
     ("dual_attention", re.compile(r"dual attention|command_density|multi-panel|multi panel", re.I)),
     ("team_org_desk", re.compile(r"\bTeam desk\b|org_structure|People desk|reporting", re.I)),

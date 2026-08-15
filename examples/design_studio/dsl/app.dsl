@@ -587,20 +587,32 @@ workspace review_desk "Review Desk":
   # Goal B command_density (cycle 1836): dual attention (awaiting + drafts)
   # before conversation trail — after the review pixels wall so stills show
   # multi-panel review ops with pixels first.
-  purpose: "Multi-panel review — in-review creative pixels, dual attention, design docs, then live critique trail"
+  purpose: "Multi-panel review — in-review vs approved stamp pixels, dual attention, design docs, then live critique trail"
   access: persona(admin, designer, reviewer)
 
-  # Review pixels FIRST — status=review Asset preview_url grid (cap 6 so dual
-  # attention + docs still share the fold). Peer Frame.io review boards are
+  # Review pixels FIRST — status=review Asset preview_url grid (cap 4 so the
+  # approved stamp wall shares the fold). Peer Frame.io review boards are
   # thumbs of work under critique, not metrics-only.
   review_pixels:
     source: Asset
     filter: status = review
     sort: updated_at asc
-    limit: 6
+    limit: 4
     display: grid
     action: asset_detail
     empty: "No creatives in review — nothing to critique yet"
+
+  # Cycle 2094 recipe approved_stamp_wall — exclusive approved pixel wall
+  # (version + approval stamp) next to in-review thumbs. Not type/pattern
+  # restack, not review_pixels_wall alone, not headshot_shelf.
+  approved_pixels:
+    source: Asset
+    filter: status = approved
+    sort: approved_at desc
+    limit: 4
+    display: grid
+    action: asset_detail
+    empty: "No stamped approvals — approved creatives land here"
 
   review_load:
     source: Asset
@@ -672,14 +684,14 @@ workspace review_desk "Review Desk":
 
   ux:
     as reviewer:
-      purpose: "Multi-panel review — in-review pixels + dual attention + docs before critique trail"
-      focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation
+      purpose: "Multi-panel review — in-review vs approved stamp pixels + dual attention"
+      focus: review_pixels, approved_pixels, awaiting_review, draft_queue
     as designer:
-      purpose: "Multi-panel review — in-review pixels + dual attention + docs before critique trail"
-      focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation
+      purpose: "Multi-panel review — in-review vs approved stamp pixels + dual attention"
+      focus: review_pixels, approved_pixels, awaiting_review, draft_queue
     as admin:
-      purpose: "Multi-panel review ops — in-review pixels + dual attention + docs before critique trail"
-      focus: review_pixels, review_load, awaiting_review, draft_queue, composition, live_conversation
+      purpose: "Multi-panel review ops — in-review vs approved stamp pixels + dual attention"
+      focus: review_pixels, approved_pixels, awaiting_review, draft_queue
 
 # Fifth product workspace: campaign desk vs bare campaign list.
 # Goal B media (cycle 1803): peer creative ops (Frame.io / Bynder / Adobe) put
