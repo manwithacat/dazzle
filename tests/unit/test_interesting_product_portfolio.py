@@ -289,6 +289,17 @@ def test_live_fieldtest_media_not_recommended() -> None:
         assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
 
 
+def test_live_acme_billing_document_not_recommended() -> None:
+    """Line composition + kind queues saturate acme document (peer pack)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["acme_billing", "document"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "acme_billing" and rec["depth_id"] == "document")
+
+
 def test_live_fieldtest_document_not_recommended() -> None:
     """Protocol vs acceptance queues saturate fieldtest document (oral #25)."""
     from scripts.interesting_product_portfolio import snapshot

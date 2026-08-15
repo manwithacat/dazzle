@@ -12,6 +12,7 @@ from scripts.goal_b_coat import (
     agent_only_selector_empty,
     coat_residual,
     freeze_breaches,
+    line_composition_document,
     live_saturated_cells,
     measure,
     note_kind_chrome_conversation,
@@ -83,7 +84,7 @@ def test_freeze_table_saturates_invoice_ops_document() -> None:
     sat = live_saturated_cells(["invoice_ops", "acme_billing"])
     assert ("invoice_ops", "document") in sat
     assert ("invoice_ops", "conversation") in sat
-    assert ("acme_billing", "document") not in sat
+    # acme document is sat via line composition (not FREEZE).
 
 
 def test_support_tickets_signature_is_siblings_and_cartesian() -> None:
@@ -279,6 +280,36 @@ def test_protocol_acceptance_saturates_document(tmp_path: Path) -> None:
     sat = live_saturated_cells(["demo"], examples=tmp_path)
     assert ("demo", "document") in sat
     assert protocol_acceptance_document((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_line_composition_saturates_document(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace billing:\n"
+        "  composition:\n"
+        "    source: LineItem\n"
+        "    display: queue\n"
+        "  subscription_lines:\n"
+        "    source: LineItem\n"
+        "    filter: line_kind = subscription\n"
+        "    display: queue\n"
+        "  usage_lines:\n"
+        "    source: LineItem\n"
+        "    filter: line_kind = usage\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "document") in sat
+    assert line_composition_document((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_acme_billing_line_composition_saturates_document() -> None:
+    sat = live_saturated_cells(["acme_billing", "simple_task"])
+    assert ("acme_billing", "document") in sat
+    assert ("simple_task", "document") not in sat
 
 
 def test_fieldtest_protocol_acceptance_saturates_document() -> None:

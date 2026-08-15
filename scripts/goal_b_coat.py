@@ -322,6 +322,21 @@ def tree_people_org(text: str) -> bool:
     return has_in_tree and has_apex and bool(re.search(r"reporting_seat:\s*enum", text))
 
 
+def line_composition_document(text: str) -> bool:
+    """Invoice line composition + subscription vs usage queues (acme grain)."""
+    has_comp = False
+    has_sub = False
+    has_usage = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if name == "composition" and re.search(r"source:\s*LineItem", body):
+            has_comp = True
+        if name == "subscription_lines" and re.search(r"line_kind\s*=\s*subscription", body):
+            has_sub = True
+        if name == "usage_lines" and re.search(r"line_kind\s*=\s*usage", body):
+            has_usage = True
+    return has_comp and has_sub and has_usage
+
+
 def protocol_acceptance_document(text: str) -> bool:
     """Exclusive run-protocol vs ship-gate acceptance queues (oral #25)."""
     has_proto = False
@@ -386,7 +401,11 @@ def live_saturated_cells(
             or note_kind_chrome_conversation(text)
         ):
             sat.add((app, "conversation"))
-        if m.document_rails > HONEST_DOCUMENT_RAILS or protocol_acceptance_document(text):
+        if (
+            m.document_rails > HONEST_DOCUMENT_RAILS
+            or protocol_acceptance_document(text)
+            or line_composition_document(text)
+        ):
             sat.add((app, "document"))
         if tree_people_org(text):
             sat.add((app, "org_structure"))

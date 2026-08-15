@@ -175,6 +175,11 @@ Doctrine source of truth remains
     `two_desk_media_saturate` (2096) still scanned notes (`photo_url` →
     `headshot_shelf`). Non-empty unknown recipe must stay `None` (AUD-015).
 
+29. **acme document grain is line composition, not another dunning restack.**
+    LineItem + `composition` + subscription vs usage queues is the Stripe
+    hole. Coat-family ships age out of the 40-receipt window and the
+    planner re-opens the icon cell. Machine: `line_composition_document`.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

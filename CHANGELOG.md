@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: line composition saturates document (cycle 2104)** —
+  `composition` + subscription/usage LineItem queues saturate
+  `(app, document)` so acme_billing is not recommended after coat-family
+  receipts age out (oral #29).
 - **Goal B planner: protocol vs acceptance saturates document (cycle 2103)** —
   exclusive `protocols` + `acceptance_packets` queues saturate
   `(app, document)` so fieldtest is not recommended for another mixed
