@@ -90,11 +90,21 @@ def pick_run(
                 return r
         return None
     if prefer_completed:
-        # Mirror mode: ignore an in-flight tip so a new sync does not
-        # fail every concurrent Dazzle CI while HM is still running.
-        for r in runs:
-            if r.get("status") == "completed":
-                return r
+        # Mirror mode: skip an in-flight tip when the last completed
+        # run is green so a new sync does not flake every concurrent
+        # Dazzle CI. Do *not* sample a stale red/cancelled completed
+        # run while a newer tip is still running (cycle 2136/2137:
+        # leftover-honesty baseline refresh was already in flight).
+        newest = runs[0]
+        if newest.get("status") == "completed":
+            return newest
+        newest_completed = next(
+            (r for r in runs if r.get("status") == "completed"),
+            None,
+        )
+        if newest_completed is not None and newest_completed.get("conclusion") == "success":
+            return newest_completed
+        return newest
     return runs[0]
 
 
@@ -155,8 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         "--prefer-completed",
         action="store_true",
         help=(
-            "select the newest *completed* main run (skip in-flight tips). "
-            "Default for Dazzle CI mirror so concurrent HM syncs do not flake."
+            "skip an in-flight tip when the last completed run is green. "
+            "A stale red completed run never wins over a newer in-flight tip."
         ),
     )
     p.add_argument(

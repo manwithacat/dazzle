@@ -222,6 +222,15 @@ Doctrine source of truth remains
     part; linux: `gh workflow run update-baselines.yml` and commit only
     the failing PNGs. Do not wait for the next cimonitor cycle.
 
+34. **`--prefer-completed` must not sample a stale HM red.** After a
+    visual-baseline (or any HM) repair, Dazzle CI often starts while the
+    new HM tip is still in flight. Picking the previous completed
+    *failure* re-reds the Dazzle badge even though HM is already
+    re-running the fix (2136 → 2137, run 31907105242 vs HM 31907155918).
+    Skip in-flight only when last completed is green; otherwise wait on
+    the tip (`--wait 900`). Re-running the mirror job is the no-code
+    recovery once HM is green.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

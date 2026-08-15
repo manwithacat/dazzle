@@ -72,6 +72,67 @@ def test_wait_early_exits_when_job_already_failed() -> None:
     assert code == 1
 
 
+def _run(
+    *,
+    run_id: int,
+    status: str,
+    conclusion: str | None,
+    sha: str = "abc12345",
+) -> dict[str, Any]:
+    return {
+        "id": run_id,
+        "status": status,
+        "conclusion": conclusion,
+        "head_sha": sha,
+        "html_url": f"https://example.test/run/{run_id}",
+    }
+
+
+def test_prefer_completed_skips_inflight_when_last_completed_is_green() -> None:
+    mod = _load_mod()
+    inflight = _run(run_id=2, status="in_progress", conclusion=None)
+    green = _run(run_id=1, status="completed", conclusion="success")
+    picked = mod.pick_run([inflight, green], sha=None, prefer_completed=True)
+    assert picked is not None
+    assert picked["id"] == 1
+
+
+def test_prefer_completed_does_not_sample_stale_red_over_inflight() -> None:
+    """Cycle 2136/2137: last completed red + newer tip running → pick tip."""
+    mod = _load_mod()
+    inflight = _run(run_id=2, status="in_progress", conclusion=None)
+    red = _run(run_id=1, status="completed", conclusion="failure")
+    picked = mod.pick_run([inflight, red], sha=None, prefer_completed=True)
+    assert picked is not None
+    assert picked["id"] == 2
+    assert picked["status"] == "in_progress"
+
+
+def test_prefer_completed_picks_newest_completed_even_when_red() -> None:
+    mod = _load_mod()
+    red = _run(run_id=2, status="completed", conclusion="failure")
+    green = _run(run_id=1, status="completed", conclusion="success")
+    picked = mod.pick_run([red, green], sha=None, prefer_completed=True)
+    assert picked is not None
+    assert picked["id"] == 2
+    assert picked["conclusion"] == "failure"
+
+
+def test_prefer_completed_wait_follows_tip_after_stale_red() -> None:
+    """CI --wait must poll the in-flight tip, not exit 1 on stale red."""
+    mod = _load_mod()
+    inflight = _run(run_id=2, status="in_progress", conclusion=None)
+    red = _run(run_id=1, status="completed", conclusion="failure")
+    green = _run(run_id=2, status="completed", conclusion="success")
+    with (
+        patch.object(mod, "latest_runs", side_effect=[[inflight, red], [green, red]]),
+        patch.object(mod, "first_failed_job", return_value=None),
+        patch.object(mod.time, "sleep"),
+    ):
+        code = mod.main(["--prefer-completed", "--wait", "30", "--poll", "1"])
+    assert code == 0
+
+
 def test_wait_continues_when_no_failed_job_yet() -> None:
     mod = _load_mod()
     running = {
