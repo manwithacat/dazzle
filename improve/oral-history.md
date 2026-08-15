@@ -204,7 +204,9 @@ Doctrine source of truth remains
     must not invent the full canned list (name=q + mock filter, 2130).
     Colour leftover hex must not invent a swatch (2133). Slider leftover
     readout must not invent a range position (`70abc` / `zzz` / out-of-
-    range clamp, 2134).
+    range clamp, 2134). Combobox leftover typed filter must not invent
+    the previous option (`zzz` / prefix stay visible + fail validity,
+    exact label commits, allow-create leftover Add "…", 2135).
 
 32. **Capability-sweep cadence is hard preemption once tip CI is green.**
     Widget-honesty ships may continue while CodeQL/CI repair claims the

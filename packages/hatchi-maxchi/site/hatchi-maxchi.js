@@ -5505,6 +5505,20 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  * display:none so its `required` would block submit with an unfocusable
  * error. Drop it and setCustomValidity on the visible overlay input until
  * a real option is committed — same class as search-select 2118.
+ *
+ * Leftover honesty (cycle 2135): leftover typed filter ("zzz", "Hi")
+ * must not invent the previous option. Blur used to revert the overlay
+ * to the selected label so submit posted Medium as if leftover were
+ * abandoned. Leftover junk now stays visible and both the overlay and
+ * the native select fail custom validity so submit cannot post the
+ * previous value as if the leftover were accepted. Empty leftover on
+ * blur restores the selected label (empty is not leftover junk). An
+ * exact option label/value on blur commits that option. Growing-list
+ * leftover (allow-create) commits as Add "…" — same class as tags
+ * leftover token (2131). Escape still cancels to the selected label.
+ *
+ * Same class as slider leftover readout (2134) and colour leftover
+ * hex (2133).
  */
 (function () {
   "use strict";
@@ -5611,6 +5625,51 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     input.setCustomValidity(has ? "" : "Select a value from the list");
   }
 
+  // kind: empty | invalid | ok. Prefix / leftover junk is not a silent
+  // commit of the previous option. Exact label or value (case-insensitive)
+  // is ok and may carry the matching row for blur-commit.
+  function leftoverKind(root, raw) {
+    var text = String(raw == null ? "" : raw).trim();
+    if (!text) return { kind: "empty" };
+    var chosen = selectedLabel(root).trim();
+    if (text === chosen) return { kind: "ok" };
+    var match = null;
+    options(root).forEach(function (o) {
+      var label = (o.textContent || "").trim();
+      var value = (o.getAttribute("data-value") || "").trim();
+      if (
+        label.toLowerCase() === text.toLowerCase() ||
+        value.toLowerCase() === text.toLowerCase()
+      ) {
+        match = o;
+      }
+    });
+    if (match) return { kind: "ok", option: match };
+    return { kind: "invalid" };
+  }
+
+  function leftoverMessage() {
+    return "Pick a listed option — leftover text is not a value";
+  }
+
+  function syncLeftoverValidity(root, parsed) {
+    var input = root.querySelector(".combobox-input");
+    var select = root.querySelector("select[data-combobox]");
+    if (!input) return;
+    if (parsed && parsed.kind === "invalid") {
+      var msg = leftoverMessage();
+      input.setCustomValidity(msg);
+      if (select && select.setCustomValidity) select.setCustomValidity(msg);
+      return;
+    }
+    if (select && select.setCustomValidity) select.setCustomValidity("");
+    if (isRequiredCombobox(root)) {
+      syncRequiredValidity(root);
+    } else {
+      input.setCustomValidity("");
+    }
+  }
+
   // Commit a choice: write the native <select> value, sync the input
   // display + aria-selected, close, and fire `change` so the form and any
   // listeners react exactly as they did with the bare <select>.
@@ -5630,7 +5689,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     setOpen(root, false);
     filter(root, "");
     select.dispatchEvent(new Event("change", { bubbles: true }));
-    syncRequiredValidity(root);
+    syncLeftoverValidity(root, { kind: "ok" });
 
     var mode = focusAfterSelect(root, select);
     if (mode === "keep" || mode === "focus") return;
@@ -5899,9 +5958,25 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (!root) return;
     setTimeout(function () {
       if (root.contains(document.activeElement)) return; // re-focused
-      // Restore the display text to the current selection (a half-typed
-      // filter must not stick as a phantom value).
-      input.value = selectedLabel(root);
+      var parsed = leftoverKind(root, input.value);
+      var select = root.querySelector("select[data-combobox]");
+      if (parsed.kind === "empty") {
+        input.value = selectedLabel(root);
+        syncLeftoverValidity(root, { kind: "ok" });
+      } else if (parsed.kind === "ok" && parsed.option) {
+        choose(root, parsed.option);
+        return;
+      } else if (parsed.kind === "invalid" && allowCreate(select)) {
+        createAndChoose(root, input.value);
+        return;
+      } else if (parsed.kind === "invalid") {
+        // leftover junk stays visible — must not vanish / revert
+        // (never invent the previous option as if leftover were accepted)
+        syncLeftoverValidity(root, parsed);
+      } else {
+        input.value = selectedLabel(root);
+        syncLeftoverValidity(root, { kind: "ok" });
+      }
       setOpen(root, false);
     }, 200);
   });
@@ -5913,6 +5988,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (!root) return;
     setOpen(root, true);
     filter(root, input.value);
+    syncLeftoverValidity(root, leftoverKind(root, input.value));
   });
 
   document.addEventListener("keydown", function (evt) {
@@ -5953,6 +6029,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       if (root.hasAttribute("data-open")) {
         evt.preventDefault();
         input.value = selectedLabel(root);
+        syncLeftoverValidity(root, { kind: "ok" });
         setOpen(root, false);
       }
     }

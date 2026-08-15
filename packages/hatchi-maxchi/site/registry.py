@@ -2395,7 +2395,13 @@ def select(source: str, id: str) -> str:
             "Do not invent a fourth picker. "
             "<strong>After select:</strong> "
             "<code>data-dz-focus-after-select=blur|keep|select</code> "
-            "(default <code>blur</code>).",
+            "(default <code>blur</code>). "
+            "Leftover typed filter must not invent the previous option "
+            "(cycle 2135): leftover junk stays visible and fails custom "
+            "validity so submit cannot post the previous value as if the "
+            "leftover were accepted. Empty leftover on blur restores the "
+            "selected label; exact option label/value commits; growing-list "
+            "leftover commits as Add &quot;&hellip;&quot;.",
             tags=("forms",),
             controller="controllers/dz-combobox.js",
             contracts=("contracts/combobox.py",),
@@ -2432,6 +2438,7 @@ def select(source: str, id: str) -> str:
                 pitfalls=(
                     "pointerdown on the bare select must enhance first and swallow the native menu",
                     "state is data-dz-open on the root — not a JS open flag a morph would drop",
+                    "leftover typed filter must not invent the previous option (do not revert on blur)",
                     "allow-create is client option-list UX only — the enclosing form handler must "
                     "accept/upsert unknown values; do not treat the new option as durable alone",
                     "multi free-create chips are tags, not combobox; remote ids are search-select",
@@ -2450,6 +2457,10 @@ def select(source: str, id: str) -> str:
                         "replace the select with a div and invent a new submit contract",
                     ),
                     (
+                        "keep leftover filter visible and fail validity until a listed option is committed",
+                        "revert leftover junk to the previous label so submit invents that option",
+                    ),
+                    (
                         "use tags for multi free-form labels; search-select for remote FKs",
                         "overload combobox for multi-create or server-search FK flows",
                     ),
@@ -2458,6 +2469,7 @@ def select(source: str, id: str) -> str:
                     "input is role=combobox with aria-expanded / aria-activedescendant",
                     "ArrowUp/Down move highlight; Enter selects or creates; Esc closes",
                     'Add "…" row is role=option (same listbox semantics)',
+                    "leftover junk fails custom validity on overlay and native select",
                 ),
                 composes_with=("field", "tags", "search-select"),
             ),

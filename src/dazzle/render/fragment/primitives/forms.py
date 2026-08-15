@@ -222,7 +222,8 @@ class WidgetCombobox:
     with JS off (submits, native required) — that controllers/dz-combobox.js
     progressively enhances into a searchable role=combobox overlay. Distinct
     from the plain `Combobox` (a vanilla `<select>`) by the `data-dz-combobox`
-    enhancement hook. A leading empty/placeholder option is always rendered."""
+    enhancement hook. A leading empty/placeholder option is always rendered.
+    Leftover typed filter must not invent the previous option (cycle 2135)."""
 
     name: str
     label: str

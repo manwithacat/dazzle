@@ -69,6 +69,22 @@ def test_combobox_controller_required_validity() -> None:
     assert "Select a value from the list" in src
 
 
+def test_combobox_controller_leftover_does_not_invent() -> None:
+    """dz-combobox.js must refuse leftover typed filter (2135)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-combobox.js"
+    ).read_text(encoding="utf-8")
+    assert "function leftoverKind" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
+
+
 def test_grid_controller_rejects_whitespace_query() -> None:
     """dz-grid.js must not send q= for whitespace (cycle 2125)."""
     from pathlib import Path

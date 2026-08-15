@@ -7,6 +7,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Combobox leftover typed filter invented the previous option (cycle 2135)** —
+  leftover filter text (`zzz`, a prefix that is not an exact option) no
+  longer reverts to the selected label on blur. The overlay and the
+  native `<select>` fail custom validity so submit cannot post the
+  previous value as if the leftover were accepted. Empty leftover on
+  blur restores the selected label; exact option label/value commits;
+  growing-list leftover (allow-create) commits as Add "…"; Escape
+  still cancels. Same honesty class as slider leftover readout (2134)
+  and colour leftover hex (2133).
 - **Slider leftover readout invented a committed range (cycle 2134)** —
   the value companion is now an editable text field (no `name` — the
   native `type=range` is still the submitted value). Leftover junk

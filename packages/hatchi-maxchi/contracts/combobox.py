@@ -12,6 +12,14 @@ Required: after enhance the native select is hidden, so ``required`` moves
 off it. The overlay input uses ``setCustomValidity`` until a real option is
 committed (cycle 2120 / search-select 2118).
 
+Leftover honesty (cycle 2135): leftover typed filter (``zzz``, a prefix
+that is not an exact option) must not invent the previous option. Blur
+keeps leftover visible; both the overlay and the native select fail
+custom validity so submit cannot post the previous value as if the
+leftover were accepted. Empty leftover on blur restores the selected
+label. Exact option label/value on blur commits. Growing-list leftover
+(allow-create) commits as Add "…". Escape cancels to the selected label.
+
 Optional on the <select>:
   data-dz-focus-after-select = blur | keep | select
     blur   (default) — after a pick, blur the overlay input (committed select UX)

@@ -87,12 +87,14 @@ Do **not** re-own the slot:
 | use combobox + data-dz-allow-create for single growing-list / add-if-missing | invent a new Hyperpart or bespoke create-dropdown for 'add to catalogue' |
 | on growing-list form submit, upsert unknown values into the catalogue | reject every value not in the original seed options (breaks Add "…") |
 | filter options client-side from the server-rendered <option> list | replace the select with a div and invent a new submit contract |
+| keep leftover filter visible and fail validity until a listed option is committed | revert leftover junk to the previous label so submit invents that option |
 | use tags for multi free-form labels; search-select for remote FKs | overload combobox for multi-create or server-search FK flows |
 
 ### Pitfalls
 
 - pointerdown on the bare select must enhance first and swallow the native menu
 - state is data-dz-open on the root — not a JS open flag a morph would drop
+- leftover typed filter must not invent the previous option (do not revert on blur)
 - allow-create is client option-list UX only — the enclosing form handler must accept/upsert unknown values; do not treat the new option as durable alone
 - multi free-create chips are tags, not combobox; remote ids are search-select
 
@@ -101,6 +103,7 @@ Do **not** re-own the slot:
 - input is role=combobox with aria-expanded / aria-activedescendant
 - ArrowUp/Down move highlight; Enter selects or creates; Esc closes
 - Add "…" row is role=option (same listbox semantics)
+- leftover junk fails custom validity on overlay and native select
 
 ### Related parts
 
@@ -150,7 +153,7 @@ def render(field: ComboboxField) -> str:
 
 ## Notes
 
-Same Hyperpart, two recipes. Progressive enhancement: server renders a real <select data-dz-combobox> (placeholder option first). JS builds a filterable listbox; the native select remains the submit value. Fixed list (priority above): the set is authoritative and closed — filter and pick only (workflow priority, severity tiers, anything you do not let users invent). Growing list / mutable catalogue (department above): set data-dz-allow-create on the <select>. When the typed query has no exact match, an Add "…" row appears; Enter/click appends a new <option> and commits it (value = label string). That is the common "pick from our list, or add one" pattern — departments, cost centres, queues, product lines — not a new Hyperpart. Server still owns persistence: on submit upsert the catalogue row if the value is new; the client only extends the option list for this page. Not this part: multi free-form chips → tags; remote FK typeahead → search-select. Do not invent a fourth picker. After select: data-dz-focus-after-select=blur|keep|select (default blur).
+Same Hyperpart, two recipes. Progressive enhancement: server renders a real <select data-dz-combobox> (placeholder option first). JS builds a filterable listbox; the native select remains the submit value. Fixed list (priority above): the set is authoritative and closed — filter and pick only (workflow priority, severity tiers, anything you do not let users invent). Growing list / mutable catalogue (department above): set data-dz-allow-create on the <select>. When the typed query has no exact match, an Add "…" row appears; Enter/click appends a new <option> and commits it (value = label string). That is the common "pick from our list, or add one" pattern — departments, cost centres, queues, product lines — not a new Hyperpart. Server still owns persistence: on submit upsert the catalogue row if the value is new; the client only extends the option list for this page. Not this part: multi free-form chips → tags; remote FK typeahead → search-select. Do not invent a fourth picker. After select: data-dz-focus-after-select=blur|keep|select (default blur). Leftover typed filter must not invent the previous option (cycle 2135): leftover junk stays visible and fails custom validity so submit cannot post the previous value as if the leftover were accepted. Empty leftover on blur restores the selected label; exact option label/value commits; growing-list leftover commits as Add "…".
 
 ## Source files
 

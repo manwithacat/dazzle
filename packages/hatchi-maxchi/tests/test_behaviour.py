@@ -3405,6 +3405,63 @@ def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped
     assert labels == ["Urgent"], labels
 
 
+def test_combobox_leftover_query_does_not_invent_option(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover typed filter must not invent the previous option (cycle 2135).
+
+    Same honesty class as slider leftover readout (2134) and colour leftover
+    hex (2133): typed-but-uncommitted text is not a silent commit.
+    """
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-combobox]").first
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator(".combobox[data-enhanced]").first
+    inp = root.locator(".combobox-input")
+    assert sel.input_value() == "medium"
+    assert inp.input_value() == "Medium"
+
+    inp.fill("zzz")
+    page.wait_for_timeout(50)
+    assert sel.input_value() == "medium", "leftover must not invent a new option"
+    assert inp.evaluate("el => el.checkValidity()") is False
+    assert inp.evaluate("el => el.validity.customError") is True
+    assert sel.evaluate("el => el.validity.customError") is True
+
+    inp.evaluate("el => el.blur()")
+    page.wait_for_timeout(250)
+    assert inp.input_value() == "zzz", "blur must not revert leftover junk"
+    assert sel.input_value() == "medium"
+
+    inp.fill("")
+    inp.evaluate("el => el.blur()")
+    page.wait_for_timeout(250)
+    assert inp.input_value() == "Medium", "empty leftover on blur restores the selected label"
+    assert inp.evaluate("el => el.checkValidity()") is True
+
+    inp.fill("High")
+    inp.evaluate("el => el.blur()")
+    page.wait_for_timeout(250)
+    assert sel.input_value() == "high"
+    assert inp.input_value() == "High"
+    assert inp.evaluate("el => el.checkValidity()") is True
+
+    grow = preview.locator("select[data-allow-create], select[data-dz-allow-create]")
+    grow.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    grow_root = grow.locator(
+        "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' combobox ')][1]"
+    )
+    grow_inp = grow_root.locator(".combobox-input")
+    grow_inp.fill("docs")
+    grow_inp.evaluate("el => el.blur()")
+    page.wait_for_timeout(250)
+    assert grow.input_value() == "docs", "allow-create leftover commits as Add"
+    values = grow.evaluate("el => Array.from(el.options).map(o => o.value)")
+    assert "docs" in values
+    page.reload()
+
+
 def test_combobox_required_validity_after_enhance(page) -> None:  # type: ignore[no-untyped-def]
     """Hidden native required must not be the gate after enhance (cycle 2120).
 
