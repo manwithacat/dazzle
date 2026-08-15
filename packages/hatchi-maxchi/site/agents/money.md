@@ -65,6 +65,7 @@ Do **not** re-own the slot:
 
 - display value is SERVER-computed from the minor carrier — no client init pass
 - empty blur clears the carrier; never invent a client-side float source of truth
+- invalid text (`abc`, `12abc`) clears the carrier — do not post 0 or rewrite to `0.00`
 
 ### Keyboard / AT
 

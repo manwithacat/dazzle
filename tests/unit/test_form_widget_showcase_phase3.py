@@ -69,6 +69,22 @@ def test_combobox_controller_required_validity() -> None:
     assert "Select a value from the list" in src
 
 
+def test_money_controller_rejects_invalid_text() -> None:
+    """dz-money.js must not invent 0 from garbage (cycle 2121)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-money.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseMajor" in src
+    assert "Enter a valid amount" in src
+    assert "never 0" in src
+
+
 def test_tags_controller_required_validity() -> None:
     """dz-tags.js must gate required on the entry after enhance (2120)."""
     from pathlib import Path

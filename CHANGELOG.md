@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Money invalid text invented £0.00 (cycle 2121)** — `dz-money.js`
+  treated `parseFloat("abc")` as 0 and `parseFloat("12abc")` as 12, so
+  leftover junk posted a silent minor-unit amount (and blur rewrote the
+  display to `0.00`). Empty/invalid now clears the `*_minor` carrier;
+  required leftover text uses `setCustomValidity`. Same honesty class as
+  search-select type clearing a stale FK (2118).
 - **Combobox / tags required after enhance (cycle 2120)** — progressive
   enhance hid the native `required` control (unfocusable browser error).
   Overlay/entry now use `setCustomValidity` until a real option/chip exists

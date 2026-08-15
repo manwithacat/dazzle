@@ -2808,6 +2808,41 @@ def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: 
     page.reload()
 
 
+def test_money_invalid_text_does_not_invent_zero(page) -> None:  # type: ignore[no-untyped-def]
+    """Garbage display must not post a silent 0 (cycle 2121).
+
+    parseFloat('abc') is NaN and used to become 0; parseFloat('12abc')
+    is 12. Neither is a committed amount. Required leftover junk must
+    fail custom validity; empty + required stays on native required.
+    """
+    goto_part(page, "money")
+    root = "#money [data-money]"
+    inp = f"{root} input[inputmode=decimal]"
+    minor = f"{root} input[name=amount_minor]"
+
+    assert page.input_value(minor) == "1500"
+    page.fill(inp, "abc")
+    assert page.input_value(minor) == "", "NaN text must not write 0"
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(minor) == ""
+    assert page.input_value(inp) == "abc", "blur must not rewrite garbage to 0.00"
+
+    page.fill(inp, "12abc")
+    assert page.input_value(minor) == "", "leftover junk is not a silent 12.00"
+    page.eval_on_selector(
+        inp,
+        "el => { el.setAttribute('required', ''); el.setAttribute('aria-required', 'true'); }",
+    )
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "")
+    assert page.input_value(minor) == ""
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is False
+    page.reload()
+
+
 def test_wizard_forward_gated_on_validity_back_free(page) -> None:  # type: ignore[no-untyped-def]
     """F4d: forward navigation requires the current stage's required
     inputs to be valid; back navigation is always free; completed steps
