@@ -328,6 +328,13 @@ def live_saturated_cells(
             sat.add((app, "document"))
         if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))
+        # Goal C freeze: distilled cells stay planner-saturated so a later
+        # interesting_product cycle cannot re-add rails/trails the freeze locked.
+        caps = FREEZE.get(app) or {}
+        if "document_rails" in caps:
+            sat.add((app, "document"))
+        if "conversation_sites" in caps or "conversation_names" in caps:
+            sat.add((app, "conversation"))
     return sat
 
 

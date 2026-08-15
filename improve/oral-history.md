@@ -126,7 +126,8 @@ Doctrine source of truth remains
     density recipe (`open_decisions`, SLA speech twins) does not REGRESSION
     the earlier interesting_product SHA if that ship’s receipt + pins were
     honest. Audit the distill commit for subtract-only. Do not re-add the
-    slice.
+    slice. Machine: `FREEZE` keys keep the cell planner-saturated after
+    rails drop under `HONEST_*` (else invoice_ops/document re-opens).
 
 22. **fieldtest conversation grain is chrome, not a second list.** After
     `live_conversation` exists, `note_kind=repro` labels the same trail

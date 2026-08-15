@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: FREEZE cells stay saturated (cycle 2099)** — after
+  Goal C distill, `invoice_ops`/`document` dropped under `HONEST_DOCUMENT_RAILS`
+  and the planner tried to re-add a rail. FREEZE table keys now saturate
+  those cells (peer refuse another settle/watch rail).
 - **Goal B planner: stamp-pair media saturates (cycle 2098)** — exclusive
   `review_pixels` + `approved_pixels` grids saturate `(app, media)` so
   design_studio is not recommended for another type-wall. AUD-015: unknown

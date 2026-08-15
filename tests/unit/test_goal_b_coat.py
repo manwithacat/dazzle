@@ -59,9 +59,11 @@ def test_freeze_breaches_empty_at_current_counts() -> None:
 def test_honest_grain_saturates_icon_coats() -> None:
     apps = ["support_tickets", "invoice_ops", "simple_task", "acme_billing"]
     sat = live_saturated_cells(apps)
-    # Cycle 2077 distilled support_tickets; 2079 distilled invoice_ops rails.
-    assert ("support_tickets", "conversation") not in sat
-    assert ("invoice_ops", "document") not in sat
+    # Distill cleared coat_flag, but FREEZE cells stay planner-saturated
+    # so interesting_product cannot re-add rails/trails (cycle 2099).
+    assert ("support_tickets", "conversation") in sat
+    assert ("invoice_ops", "document") in sat
+    assert ("simple_task", "conversation") in sat
     assert ("support_tickets", "media") not in sat
     assert ("invoice_ops", "command_density") not in sat
     st = measure("support_tickets")
@@ -70,6 +72,14 @@ def test_honest_grain_saturates_icon_coats() -> None:
     inv = measure("invoice_ops")
     assert inv.document_rails <= 8
     assert inv.max_focus <= HONEST_FOCUS
+    assert inv.coat_flag == 0
+
+
+def test_freeze_table_saturates_invoice_ops_document() -> None:
+    sat = live_saturated_cells(["invoice_ops", "acme_billing"])
+    assert ("invoice_ops", "document") in sat
+    assert ("invoice_ops", "conversation") in sat
+    assert ("acme_billing", "document") not in sat
 
 
 def test_support_tickets_signature_is_siblings_and_cartesian() -> None:
