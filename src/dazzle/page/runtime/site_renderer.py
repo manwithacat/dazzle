@@ -118,6 +118,7 @@ def render_task_surface_page(
     {get_shared_head_html(title)}
 </head>
 <body class="dz-site">
+    <form id="hm-detached-q" hidden></form>
     <header class="dz-site-header">
         <nav class="dz-site-nav">
             <a href="/workspaces/tasks" class="dz-site-logo">{product_name}</a>

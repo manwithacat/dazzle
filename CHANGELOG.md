@@ -7,6 +7,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-select `form=""` failed Nu/W3C (cycle 2140)** —
+  leftover typeahead still posts `name=q`, but `form=""` is invalid
+  HTML (`An ID must not be the empty string`). Associate with the
+  document singleton `#hm-detached-q` (gallery body chrome + product
+  Page emit) so leftover is not submitted with the hidden FK. Same
+  honesty as 2138; closes HM Markup validity red that re-redded the
+  Dazzle badge via the standalone mirror.
 - **Date-range leftover ISO invented a bound (cycle 2139)** —
   leftover typed ISO (`zzz`, `2026-06-01zzz`) no longer writes the
   native From/To date or fires the bar's hx-get. Each bound has an
@@ -17,8 +24,9 @@
   (2134) and colour leftover hex (2133).
 - **Search-select leftover query invented Aurora hits (cycle 2138)** —
   leftover typed query (`zzz`) no longer returns the canned typeahead
-  catalog. The typeahead posts `name=q` (`form=""` so leftover is not
-  submitted with the hidden FK) and the gallery mock filters. A
+  catalog. The typeahead posts `name=q` (`form="hm-detached-q"` so
+  leftover is not submitted with the hidden FK; cycle 2140 replaced
+  invalid `form=""`) and the gallery mock filters. A
   matching prefix (`auro`) still exchanges; leftover non-match is
   empty. Same honesty class as command leftover query inventing the
   catalog (2130) and search-select empty query (2126).

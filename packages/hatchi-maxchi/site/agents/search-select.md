@@ -14,7 +14,7 @@ The FK typeahead: debounced remote search into a listbox, then a per-row select 
 ```html
 <div class="search-select hm-measure" data-widget="search_select" data-blur-grace-ms="200" data-confirm-hold-ms="1800">
   <input type="hidden" name="company" id="hm-ss-field" value="">
-  <input type="text" id="hm-ss-input" class="search-select-input" name="q" form="" placeholder="Search companies, people, SKUs…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hm-ss-results" aria-autocomplete="list" aria-haspopup="listbox" hx-get="/mock/typeahead" hx-trigger="keyup changed delay:300ms[this.value.trim().length>0]" hx-target="#hm-ss-results" hx-params="q">
+  <input type="text" id="hm-ss-input" class="search-select-input" name="q" form="hm-detached-q" placeholder="Search companies, people, SKUs…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hm-ss-results" aria-autocomplete="list" aria-haspopup="listbox" hx-get="/mock/typeahead" hx-trigger="keyup changed delay:300ms[this.value.trim().length>0]" hx-target="#hm-ss-results" hx-params="q">
   <div id="hm-ss-results" role="listbox" aria-label="Suggestions" class="search-select-results">
     <div class="search-select-prompt" role="option" aria-disabled="true">Type to search — rows share one anatomy; media is optional</div>
   </div>
@@ -175,7 +175,7 @@ Correct response for body_only into .dz-search-results (innerHTML / innerMorph).
 - each row carries its own hx-get to the select exchange
 - select exchange: confirm line (+ OOB hidden FK / label) — never invent a selected id client-side; typing clears a stale FK
 - hx-trigger debounce + min-length filter; controller restores the prompt on empty/whitespace (do not hx-get q=)
-- name=q on the typeahead (form="" so leftover is not posted) so leftover query reaches the search exchange — mock must filter; leftover zzz must not invent Aurora (cycle 2138)
+- name=q on the typeahead (form=hm-detached-q so leftover is not posted; form="" is invalid HTML, cycle 2140) so leftover query reaches the search exchange — mock must filter; leftover zzz must not invent Aurora (cycle 2138)
 
 ### Do / Don't
 

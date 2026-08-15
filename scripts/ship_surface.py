@@ -66,6 +66,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator",
     # #1648 file-upload picker emit (cycle 2110 — Alpine hollow shell)
     "tests/unit/test_file_upload_primitive.py",
+    # cycle 2140: empty form="" fails HM Nu/W3C (search-select leftover)
+    "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
+    "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
     # AUD-014 list actuators must not crash load_receipt (cycle 2113)
     "tests/unit/test_improve_dig_contracts.py::test_load_receipt_coerces_actuator_name_list",

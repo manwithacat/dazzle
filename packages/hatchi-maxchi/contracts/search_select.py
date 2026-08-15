@@ -15,11 +15,12 @@ never the visible text. The controller never invents a selected id; it
 *clears* a stale FK when the user types in the typeahead (and blocks
 submit via ``setCustomValidity`` when the typeahead is required).
 
-Leftover honesty (cycle 2138): the typeahead posts ``name=q`` (with
-``form=""`` so leftover text is not submitted with the enclosing form)
-so leftover typed query reaches the search exchange. A leftover
-non-match (``zzz``) must return empty — not invent a canned hit list.
-Same class as command leftover query (2130).
+Leftover honesty (cycle 2138): the typeahead posts ``name=q`` so leftover
+typed query reaches the search exchange. Cycle 2140: ``form=""`` is
+invalid HTML (Nu: empty ID). Associate the typeahead with the document
+singleton ``#hm-detached-q`` so leftover is not submitted with the
+enclosing form. A leftover non-match (``zzz``) must return empty — not
+invent a canned hit list. Same class as command leftover query (2130).
 """
 
 import html
@@ -27,6 +28,11 @@ import html
 from pydantic import BaseModel, Field
 
 from contracts._kit import DomContract, Node
+
+# Document-level form owner for typeahead ``name=q``. Must exist as a
+# real ``<form>`` (gallery body chrome + product Page emit) — empty
+# ``form=""`` fails Nu/W3C (cycle 2140).
+DETACHED_Q_FORM_ID = "hm-detached-q"
 
 # Widget shell (always present). Result rows are swapped in by the search
 # exchange — see DOM_CONTRACT_RESULT_ROW + SearchResultRow.
@@ -166,7 +172,7 @@ def render_shell(shell: SearchSelectShell) -> str:
         f'id="{html.escape(shell.field_id, quote=True)}" '
         f'value="{html.escape(shell.initial_value, quote=True)}">'
         f'<input type="text" id="{html.escape(shell.input_id, quote=True)}" '
-        f'class="dz-search-select-input" name="q" form="" '
+        f'class="dz-search-select-input" name="q" form="{DETACHED_Q_FORM_ID}" '
         f'placeholder="{html.escape(shell.placeholder, quote=True)}" '
         f'autocomplete="off" role="combobox" aria-expanded="false" '
         f'aria-controls="{html.escape(shell.results_id, quote=True)}" '
@@ -190,6 +196,7 @@ def render(row: SearchResultRow) -> str:
 
 
 __all__ = [
+    "DETACHED_Q_FORM_ID",
     "DOM_CONTRACT",
     "DOM_CONTRACT_RESULT_ROW",
     "SearchResultRow",

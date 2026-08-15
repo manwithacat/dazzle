@@ -193,6 +193,10 @@ class _RenderShellMixin:
 
         # ── <body> ──
         parts.append('<body class="dz-page">')
+        # Cycle 2140: search-select leftover name=q lives on
+        # form="hm-detached-q" (empty form="" fails Nu). Must be a
+        # sibling of app forms, never nested.
+        parts.append('<form id="hm-detached-q" hidden></form>')
         parts.append(self._emit(p.body, ctx))  # type: ignore[arg-type]
         if p.toast_container:
             parts.append(

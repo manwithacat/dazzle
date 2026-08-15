@@ -78,7 +78,8 @@ def test_select_oob_input_satisfies_the_widget_contract() -> None:
     assert 'id="search-input-manufacturer"' in r.text
     assert 'class="dz-search-select-input"' in r.text
     assert 'name="q"' in r.text
-    assert 'form=""' in r.text
+    assert 'form="hm-detached-q"' in r.text
+    assert 'form=""' not in r.text
     assert 'role="combobox"' in r.text
     assert "/_dazzle/fragments/search?source=companieshouse" in r.text
     assert "field_name=manufacturer" in r.text

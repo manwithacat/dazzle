@@ -211,6 +211,9 @@ Doctrine source of truth remains
     + mock filter; leftover `zzz` is empty, 2138). Date-range leftover
     ISO must not invent a bound (`2026-06-01zzz` / `zzz` stay visible
     + fail validity; empty restores from the native date, 2139).
+    **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
+    uses `form="hm-detached-q"` plus a document-level singleton form
+    (2140). Do not re-ship empty `form` to dodge native submit.
 
 32. **Capability-sweep cadence is hard preemption once tip CI is green.**
     Widget-honesty ships may continue while CodeQL/CI repair claims the
@@ -234,6 +237,14 @@ Doctrine source of truth remains
     Skip in-flight only when last completed is green; otherwise wait on
     the tip (`--wait 900`). Re-running the mirror job is the no-code
     recovery once HM is green.
+
+35. **`form=""` fails HM Markup validity and re-reds Dazzle via the
+    standalone mirror.** Cycle 2138 used empty `form` so leftover `q`
+    stayed off the enclosing POST; Nu rejected it (`An ID must not be
+    the empty string` + `must refer to a form element`). Prefer a
+    named detached form owner in gallery body chrome *and* product
+    Page emit. Nested `<form>` inside a widget that lives in a product
+    form is worse (parser closes the outer form).
 
 ## What not to re-learn
 

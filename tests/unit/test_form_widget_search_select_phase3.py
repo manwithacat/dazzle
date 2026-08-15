@@ -75,10 +75,12 @@ def test_endpoint_and_typeahead_wiring() -> None:
     assert 'hx-trigger="keyup changed delay:400ms[this.value.trim().length>0]"' in html
     assert 'hx-target="#search-results-company"' in html
     assert 'hx-params="q"' in html
-    # Cycle 2138: leftover query must reach the search exchange as name=q
-    # (form="" so leftover is not posted with the hidden FK).
+    # Cycle 2138/2140: leftover query must reach the search exchange as
+    # name=q (form=hm-detached-q so leftover is not posted with the FK).
+    # form="" is invalid HTML (Nu empty ID) — cycle 2140.
     assert 'name="q"' in html
-    assert 'form=""' in html
+    assert 'form="hm-detached-q"' in html
+    assert 'form=""' not in html
     # min_chars>0 → hx-vals carries the floor.
     assert "hx-vals='{\"min_chars\": 3}'" in html
     # Open/close is state-in-DOM (F4b): SSR aria-expanded="false", the
@@ -167,3 +169,18 @@ def test_field_name_is_url_escaped() -> None:
     odd = dict(_BASE, name="weird name&x")
     html = _render(odd)
     assert "field_name=weird+name%26x" in html
+
+
+def test_no_empty_form_attribute_in_search_select_emit_sources() -> None:
+    """Cycle 2140: form=\"\" fails Nu/W3C (empty ID). Pin emit sources."""
+    from pathlib import Path
+
+    roots = (
+        Path("src/dazzle/render/fragment/renderer/_render_forms.py"),
+        Path("src/dazzle/http/runtime/fragment_routes.py"),
+        Path("packages/hatchi-maxchi/contracts/search_select.py"),
+        Path("packages/hatchi-maxchi/site/registry.py"),
+    )
+    for path in roots:
+        text = path.read_text(encoding="utf-8")
+        assert 'name="q" form=""' not in text, f"{path} still emits empty form attr"

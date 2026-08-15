@@ -176,6 +176,8 @@ def test_page_emits_body_with_dz_page_class_and_renders_body_fragment() -> None:
     html = _render(Page(title="X", body=Heading("Welcome", level=1)))
     assert '<body class="dz-page">' in html
     assert "Welcome" in html
+    # Cycle 2140: search-select leftover form owner (Nu rejects form="").
+    assert '<form id="hm-detached-q" hidden></form>' in html
 
 
 def test_page_default_emits_toast_modal_announcer_slots() -> None:

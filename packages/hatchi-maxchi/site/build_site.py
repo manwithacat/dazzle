@@ -125,6 +125,12 @@ _HM_MONOREPO = "https://github.com/manwithacat/dazzle/tree/main/packages/hatchi-
 # Fallback when the monorepo vendor pin file is not present (standalone tree).
 _HTMX_PIN_FALLBACK = "4.0.0-beta5"
 
+# Cycle 2140: search-select leftover name=q uses form="hm-detached-q".
+# Empty form="" fails Nu ("An ID must not be the empty string"). The
+# singleton must exist in every gallery document that embeds the
+# typeahead (index + hyperparts + live frames). Harmless elsewhere.
+HM_DETACHED_Q_FORM = '<form id="hm-detached-q" hidden></form>'
+
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
 # Runtime mock-htmx only — not expanded at build time (see MOCK_HTMX expand()).
@@ -3549,6 +3555,7 @@ window.addEventListener('storage', function (e) {{
 }});</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 {live_part}
 <script src="../hatchi-maxchi.js" defer></script>
@@ -3686,6 +3693,7 @@ window.addEventListener('storage', function (e) {{
 <script>{theme_js}</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 <div class="hm-wrap">
 <nav class="hm-nav">{"".join(nav_parts)}</nav>
@@ -3789,6 +3797,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <script>{theme_js}</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 <div class="hm-wrap hm-single">
 <main class="hm-main">
@@ -3854,6 +3863,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <script>{theme_js}</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 <div class="hm-wrap hm-single">
 <main class="hm-main">
@@ -3900,6 +3910,7 @@ deep links resolve on GitHub Pages.
 <script>{theme_js}</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 <div class="hm-wrap hm-single">
 <main class="hm-main">
@@ -3968,6 +3979,7 @@ window.addEventListener('storage', function (e) {{
 }});</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 {bp_live}
 <script src="../hatchi-maxchi.js" defer></script>
@@ -3986,6 +3998,7 @@ window.addEventListener('storage', function (e) {{
 <script>{theme_js}</script>
 </head>
 <body>
+{HM_DETACHED_Q_FORM}
 {sheet}
 <div class="hm-blueprint-page">
 <header class="hm-blueprint-head">

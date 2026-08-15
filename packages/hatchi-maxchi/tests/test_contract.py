@@ -464,11 +464,24 @@ def test_search_select_preview_posts_named_query() -> None:
     """Cycle 2138: leftover query must reach /mock/typeahead as name=q.
 
     Path-only /mock/typeahead invented the canned Aurora list for zzz.
-    form=\"\" keeps leftover off the enclosing form POST.
+    form=\"hm-detached-q\" keeps leftover off the enclosing form POST.
+    Cycle 2140: form=\"\" is invalid HTML (Nu empty ID).
     """
     ss = next(c for c in HYPERPARTS if c.id == "search-select")
     assert 'name="q"' in ss.partial
-    assert 'form=""' in ss.partial
+    assert 'form="hm-detached-q"' in ss.partial
+    assert 'form=""' not in ss.partial
+
+
+def test_gallery_pages_host_detached_q_form() -> None:
+    """Cycle 2140: Nu requires form= to name a real form element."""
+    site = Path(__file__).resolve().parents[1] / "site"
+    index = (site / "index.html").read_text(encoding="utf-8")
+    part = (site / "hyperparts" / "search-select.html").read_text(encoding="utf-8")
+    assert 'id="hm-detached-q"' in index
+    assert 'id="hm-detached-q"' in part
+    assert 'form=""' not in index
+    assert 'form=""' not in part
 
 
 _DATA_ATTR_RE = re.compile(r"\bdata-([a-z][a-z0-9-]*)=")

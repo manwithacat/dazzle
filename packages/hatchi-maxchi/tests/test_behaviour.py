@@ -3029,7 +3029,7 @@ def test_search_select_leftover_query_does_not_invent_hits(page) -> None:  # typ
 
     Same honesty class as command leftover query (2130): leftover 'zzz'
     used to keep Aurora Energy because the mock ignored q=. Matching
-    'auro' still exchanges. name=q (form=\"\") carries the leftover.
+    'auro' still exchanges. name=q (form=hm-detached-q) carries the leftover.
     """
     goto_part(page, "search-select")
     root = "#search-select .search-select"

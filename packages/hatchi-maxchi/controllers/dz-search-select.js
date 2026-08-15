@@ -34,10 +34,11 @@
  * (2123) and grid whitespace q= (2125).
  *
  * Leftover-query honesty (cycle 2138): leftover typed text ("zzz")
- * must reach the search exchange as name=q (form="" so leftover is
- * not posted with the hidden FK). The exchange must filter — leftover
- * non-match is empty, not a canned Aurora list. Same class as command
- * leftover query inventing the catalog (2130).
+ * must reach the search exchange as name=q. Cycle 2140: form="" is
+ * invalid HTML (Nu empty ID) — associate with #hm-detached-q so
+ * leftover is not posted with the hidden FK. The exchange must filter
+ * — leftover non-match is empty, not a canned Aurora list. Same class
+ * as command leftover query inventing the catalog (2130).
  */
 (function () {
   "use strict";
@@ -331,4 +332,21 @@
   document.addEventListener("htmx:afterSwap", onAfterSwap);
   document.addEventListener("htmx:after:settle", onAfterSwap);
   document.addEventListener("htmx:afterSettle", onAfterSwap);
+
+  function ensureDetachedQForm() {
+    if (typeof document === "undefined") return;
+    if (document.getElementById("hm-detached-q")) return;
+    if (!document.body) return;
+    var f = document.createElement("form");
+    f.id = "hm-detached-q";
+    f.hidden = true;
+    f.setAttribute("aria-hidden", "true");
+    document.body.insertBefore(f, document.body.firstChild);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", ensureDetachedQForm);
+  } else {
+    ensureDetachedQForm();
+  }
 })();

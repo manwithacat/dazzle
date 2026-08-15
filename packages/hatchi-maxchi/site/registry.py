@@ -2191,7 +2191,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'data-dz-blur-grace-ms="200" data-dz-confirm-hold-ms="1800">'
             '<input type="hidden" name="company" id="hm-ss-field" value="">'
             '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
-            'name="q" form="" '
+            'name="q" form="hm-detached-q" '
             'placeholder="Search companies, people, SKUs…" autocomplete="off" '
             'role="combobox" aria-expanded="false" aria-controls="hm-ss-results" '
             'aria-autocomplete="list" aria-haspopup="listbox" '
@@ -2239,7 +2239,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "never invent a selected id client-side; typing clears a stale FK",
                     "hx-trigger debounce + min-length filter; controller restores "
                     "the prompt on empty/whitespace (do not hx-get q=)",
-                    'name=q on the typeahead (form="" so leftover is not posted) '
+                    "name=q on the typeahead (form=hm-detached-q so leftover "
+                    'is not posted; form="" is invalid HTML, cycle 2140) '
                     "so leftover query reaches the search exchange — mock must "
                     "filter; leftover zzz must not invent Aurora (cycle 2138)",
                 ),

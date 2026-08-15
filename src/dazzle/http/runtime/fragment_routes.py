@@ -276,7 +276,7 @@ def create_fragment_router(
                 # selection must keep working. Widget defaults for
                 # debounce; min_chars is enforced server-side.
                 f'<input type="text" id="search-input-{fn_attr}" '  # nosemgrep
-                f'name="q" form="" '
+                f'name="q" form="hm-detached-q" '
                 f'class="dz-search-select-input" value="{dv_attr}" '
                 f'autocomplete="off" role="combobox" aria-expanded="false" '
                 f'aria-controls="search-results-{fn_attr}" '
