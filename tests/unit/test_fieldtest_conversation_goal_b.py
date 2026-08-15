@@ -47,7 +47,7 @@ def test_issue_detail_discussion_uses_conversation_chrome() -> None:
     related = block.split('related discussion "Discussion"', 1)[1][:240]
     assert "display: conversation" in related
     assert "show: IssueNote" in related
-    assert "columns: body, author, created_at" in related
+    assert "columns: body, author, note_kind, created_at" in related
     assert "display: queue" not in related
 
 
@@ -58,3 +58,21 @@ def test_issue_note_seeds_have_domain_true_field_copy() -> None:
         body = str(row.get("body") or "")
         assert len(body) >= 24, body
         assert " " in body
+        assert row.get("note_kind") in ("note", "repro")
+
+
+def test_issue_triage_repro_note_trail() -> None:
+    """Cycle 2083 recipe repro_note_trail — TestRail/Jira reproduction notes."""
+    text = APP.read_text()
+    block = text.split("workspace issue_triage", 1)[1].split("workspace firmware_pipeline", 1)[0]
+    assert "\n  repro_notes:\n" in block
+    region = block.split("\n  repro_notes:\n", 1)[1].split("\n  live_conversation:", 1)[0]
+    assert "source: IssueNote" in region
+    assert "note_kind = repro" in region
+    assert "display: conversation" in region
+    assert "repro_notes: count(IssueNote where note_kind = repro)" in block
+    assert "focus: open_pressure, repro_notes, critical_evidence, high_evidence" in block
+    ent = text.split('entity IssueNote "Issue Note":', 1)[1].split("entity ", 1)[0]
+    assert "note_kind: enum[note,repro]=note" in ent
+    rows = [json.loads(line) for line in NOTE_SEEDS.read_text().splitlines() if line.strip()]
+    assert sum(1 for r in rows if r.get("note_kind") == "repro") >= 3

@@ -275,6 +275,9 @@ entity IssueNote "Issue Note":
   issue: ref IssueReport required
   author: str(120) required
   body: text required
+  # Cycle 2083 recipe repro_note_trail — TestRail/Jira steps-to-reproduce
+  # notes vs mixed live trail (not conversation_filter_slice).
+  note_kind: enum[note,repro]=note
   created_at: datetime auto_add
 
   permit:
@@ -297,7 +300,7 @@ entity IssueNote "Issue Note":
       as: engineer
 
   fitness:
-    repr_fields: [issue, author, body]
+    repr_fields: [issue, author, body, note_kind]
 
 
 
@@ -851,7 +854,7 @@ surface issue_report_detail "Issue Detail":
   related discussion "Discussion":
     display: conversation
     show: IssueNote
-    columns: body, author, created_at
+    columns: body, author, note_kind, created_at
 
   ux:
     purpose: "Issue hub — classification, evidence, and triage discussion"
@@ -929,6 +932,7 @@ surface issue_note_list "Issue Notes":
 
   section main "Notes":
     field body "Note"
+    field note_kind "Kind"
     field author "Author"
     field issue "Issue"
     field created_at "When"
@@ -946,6 +950,7 @@ surface issue_note_detail "Issue Note":
 
   section summary "Note":
     field body "Note"
+    field note_kind "Kind"
     field author "Author"
     field issue "Issue"
     field created_at "When"
@@ -960,6 +965,7 @@ surface issue_note_create "Add Issue Note":
   section main "New note":
     field issue "Issue"
     field author "Author"
+    field note_kind "Kind"
     field body "Note"
 
 surface test_session_list "Test Sessions":
@@ -1754,6 +1760,7 @@ workspace issue_triage "Issue Triage":
       critical_photos: count(IssueReport where severity = critical and photo_url != null and status != closed)
       high_photos: count(IssueReport where severity = high and photo_url != null and status != closed)
       conversation: count(IssueNote)
+      repro_notes: count(IssueNote where note_kind = repro)
     tones:
       open: warning
       critical: destructive
@@ -1761,6 +1768,18 @@ workspace issue_triage "Issue Triage":
       critical_photos: danger
       high_photos: warning
       conversation: accent
+      repro_notes: warning
+
+  # Cycle 2083 recipe repro_note_trail — TestRail/Jira reproduction notes
+  # above photo walls so stills show steps-to-reproduce speech first.
+  repro_notes:
+    source: IssueNote
+    filter: note_kind = repro
+    sort: created_at desc
+    limit: 4
+    display: conversation
+    action: issue_note_detail
+    empty: "No reproduction notes — testers log steps-to-reproduce here"
 
   # Goal B media dual density — exclusive severity photo grids (caps for fold).
   critical_evidence:
@@ -1821,11 +1840,11 @@ workspace issue_triage "Issue Triage":
 
   ux:
     as engineer:
-      purpose: "Critical vs high field photo density before notes and open triage queue"
-      focus: open_pressure, critical_evidence, high_evidence, live_conversation
+      purpose: "Critical vs high field photos, then reproduction notes before mixed trail"
+      focus: open_pressure, repro_notes, critical_evidence, high_evidence
     as manager:
-      purpose: "Critical vs high field photo density — quality pressure with pixels first"
-      focus: open_pressure, critical_evidence, high_evidence, live_conversation
+      purpose: "Critical vs high field photos, then reproduction notes before mixed trail"
+      focus: open_pressure, repro_notes, critical_evidence, high_evidence
 
 workspace firmware_pipeline "Firmware Pipeline":
   # Goal B empty_region_honesty (cycle 1855): peer ship desks keep pulse + board

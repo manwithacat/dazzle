@@ -20,6 +20,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B conversation repro notes (cycle 2083)** — fieldtest_hub Issue
+  Triage leads with reproduction-note conversation (`repro_note_trail`;
+  TestRail/Jira steps-to-reproduce vs mixed live trail). Still proof
+  **Repro Notes** above fold.
 - **Goal B media type/pattern density (cycle 2081)** — design_studio Asset
   Catalog puts exclusive typography specimens vs pattern boards above fold
   (`type_pattern_density`; not headshot_shelf, not logo/photo re-stack).
