@@ -4311,6 +4311,11 @@
  * Keyboard: type filters (substring, case-insensitive); ArrowUp/Down move
  * the active descendant over visible rows; Enter/click selects; Esc closes;
  * focus opens.
+ *
+ * Required honesty (cycle 2120): after enhance, the native <select> is
+ * display:none so its `required` would block submit with an unfocusable
+ * error. Drop it and setCustomValidity on the visible overlay input until
+ * a real option is committed — same class as search-select 2118.
  */
 (function () {
   "use strict";
@@ -4404,6 +4409,19 @@
     return String(raw).toLowerCase();
   }
 
+  function isRequiredCombobox(root) {
+    var input = root.querySelector(".combobox-input");
+    return !!(input && input.getAttribute("aria-required") === "true");
+  }
+
+  function syncRequiredValidity(root) {
+    var input = root.querySelector(".combobox-input");
+    var select = root.querySelector("select[data-combobox]");
+    if (!input || !isRequiredCombobox(root)) return;
+    var has = !!(select && String(select.value || "").trim());
+    input.setCustomValidity(has ? "" : "Select a value from the list");
+  }
+
   // Commit a choice: write the native <select> value, sync the input
   // display + aria-selected, close, and fire `change` so the form and any
   // listeners react exactly as they did with the bare <select>.
@@ -4423,6 +4441,7 @@
     setOpen(root, false);
     filter(root, "");
     select.dispatchEvent(new Event("change", { bubbles: true }));
+    syncRequiredValidity(root);
 
     var mode = focusAfterSelect(root, select);
     if (mode === "keep" || mode === "focus") return;
@@ -4482,7 +4501,7 @@
       var name = select.id || select.name || "combobox";
       var li = document.createElement("li");
       li.className = "combobox-option";
-      li.id = name + "-opt-" + (options(root).length);
+      li.id = name + "-opt-" + options(root).length;
       li.setAttribute("role", "option");
       li.setAttribute("data-value", value);
       li.setAttribute("aria-selected", "false");
@@ -4506,10 +4525,7 @@
       li.hasAttribute("data-create") ||
       li.classList.contains("combobox-create")
     ) {
-      createAndChoose(
-        root,
-        li.getAttribute("data-value") || input.value,
-      );
+      createAndChoose(root, li.getAttribute("data-value") || input.value);
       return;
     }
     commitValue(
@@ -4592,7 +4608,8 @@
     input.setAttribute("aria-haspopup", "listbox");
     if (labelText) input.setAttribute("aria-label", labelText);
     if (placeholder) input.setAttribute("placeholder", placeholder);
-    if (select.hasAttribute("required")) {
+    var wasRequired = select.hasAttribute("required");
+    if (wasRequired) {
       input.setAttribute("aria-required", "true");
     }
 
@@ -4630,8 +4647,9 @@
     // `required` off the now-`display:none` select: a hidden required control
     // would make the browser block submit with an unfocusable console error
     // and no visible bubble. The visible input carries `aria-required` for
-    // AT (set above); server-side validation is the enforcement backstop, and
-    // the no-JS path still uses native `required` on the unhidden select.
+    // AT (set above) and setCustomValidity until a real option is committed
+    // (cycle 2120). The no-JS path still uses native `required` on the
+    // unhidden select.
     select.removeAttribute("required");
     select.parentNode.insertBefore(root, select);
     select.setAttribute("tabindex", "-1");
@@ -4639,6 +4657,7 @@
     root.appendChild(select);
     root.appendChild(list);
     root.setAttribute("data-enhanced", "");
+    if (wasRequired) syncRequiredValidity(root);
     return root;
   }
 
@@ -4797,6 +4816,12 @@
  * empty); paste splits on comma / newline; Backspace on an empty entry
  * removes the last chip; the × button removes its chip (Enter/Space fire
  * it). Tab reaches the entry and each × like any control.
+ *
+ * Required honesty (cycle 2120): after enhance, the native input is hidden
+ * so its `required` would block submit with an unfocusable error. Drop it
+ * and setCustomValidity on the visible entry until at least one chip
+ * exists — same class as combobox / search-select 2118. Do not put native
+ * `required` on the entry: it is empty whenever chips exist.
  */
 (function () {
   "use strict";
@@ -4825,6 +4850,19 @@
     });
   }
 
+  function isRequiredTags(root) {
+    var entry = root.querySelector(".tags-entry");
+    return !!(entry && entry.getAttribute("aria-required") === "true");
+  }
+
+  function syncRequiredValidity(root) {
+    var entry = root.querySelector(".tags-entry");
+    if (!entry || !isRequiredTags(root)) return;
+    entry.setCustomValidity(
+      chipValues(root).length ? "" : "Add at least one tag",
+    );
+  }
+
   // Rewrite the native input (the submitted value) to the comma-joined chip
   // list and fire `change`, so the form + any listeners react exactly as
   // they did with the bare input.
@@ -4833,6 +4871,7 @@
     if (!native) return;
     native.value = chipValues(root).join(",");
     native.dispatchEvent(new Event("change", { bubbles: true }));
+    syncRequiredValidity(root);
   }
 
   function announce(root, msg) {
@@ -4951,6 +4990,7 @@
       list.appendChild(makeChip(value));
     });
     native.value = chipValues(root).join(",");
+    syncRequiredValidity(root);
 
     root.setAttribute("data-enhanced", "");
     return root;

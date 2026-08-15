@@ -3085,6 +3085,32 @@ def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped
     assert labels == ["Urgent"], labels
 
 
+def test_combobox_required_validity_after_enhance(page) -> None:  # type: ignore[no-untyped-def]
+    """Hidden native required must not be the gate after enhance (cycle 2120).
+
+    Overlay input uses setCustomValidity until a real option is committed.
+    """
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-combobox]").first
+    sel.evaluate(
+        """el => {
+          el.value = '';
+          el.setAttribute('required', '');
+        }"""
+    )
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator(".combobox[data-enhanced]").first
+    inp = root.locator(".combobox-input")
+    assert inp.evaluate("el => el.getAttribute('aria-required')") == "true"
+    assert inp.evaluate("el => el.checkValidity()") is False
+    root.locator('.combobox-option[data-value="high"]').click()
+    page.wait_for_timeout(50)
+    assert sel.input_value() == "high"
+    assert inp.evaluate("el => el.checkValidity()") is True
+
+
 def test_tags_seed_and_add_chip(page) -> None:  # type: ignore[no-untyped-def]
     """Native data-tags input upgrades; seeds from comma value; Enter adds chip."""
     goto_part(page, "tags")
@@ -3111,6 +3137,45 @@ def test_tags_remove_chip(page) -> None:  # type: ignore[no-untyped-def]
     page.wait_for_timeout(50)
     assert preview.locator(".tags-chip").count() == 1
     assert preview.locator("input[data-tags]").input_value() == "backend"
+
+
+def test_tags_required_validity_after_enhance(page) -> None:  # type: ignore[no-untyped-def]
+    """Hidden native required must not be the gate after enhance (cycle 2120).
+
+    Visible entry uses setCustomValidity until at least one chip exists.
+    Native required on the entry would fail after chips (entry is empty).
+    """
+    goto_part(page, "tags")
+    preview = page.locator(".hm-preview")
+    preview.evaluate(
+        """() => {
+          const preview = document.querySelector('.hm-preview');
+          const label = document.createElement('label');
+          label.className = 'field';
+          label.innerHTML =
+            '<span class="field__label">Must tag</span>' +
+            '<input id="must-tag" name="must_tag" type="text" ' +
+            'data-tags class="form-input" required>';
+          preview.appendChild(label);
+        }"""
+    )
+    preview.locator("#must-tag").dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator("#must-tag").locator(
+        "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' tags ')][1]"
+    )
+    entry = root.locator(".tags-entry")
+    assert entry.evaluate("el => el.getAttribute('aria-required')") == "true"
+    assert entry.evaluate("el => el.checkValidity()") is False
+    entry.fill("urgent")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(50)
+    assert root.locator(".tags-chip").count() == 1
+    assert entry.evaluate("el => el.checkValidity()") is True
+    root.locator('button[aria-label="Remove urgent"]').click()
+    page.wait_for_timeout(50)
+    assert root.locator(".tags-chip").count() == 0
+    assert entry.evaluate("el => el.checkValidity()") is False
 
 
 def test_app_shell_sidebar_toggle(page) -> None:  # type: ignore[no-untyped-def]

@@ -1,4 +1,10 @@
-"""HYPERPART: tags — comma-joined native input, chips progressive enhancement."""
+"""HYPERPART: tags — comma-joined native input, chips progressive enhancement.
+
+Required: after enhance the native input is hidden, so ``required`` moves
+off it. The visible entry uses ``setCustomValidity`` until at least one
+chip exists (cycle 2120). Do not put native ``required`` on the entry —
+it is empty whenever chips exist.
+"""
 
 import html
 

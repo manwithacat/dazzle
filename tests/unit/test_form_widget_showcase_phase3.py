@@ -54,6 +54,36 @@ def test_combobox_widget_maps_and_renders() -> None:
     assert '<option value="">' in html
 
 
+def test_combobox_controller_required_validity() -> None:
+    """dz-combobox.js must gate required on the overlay after enhance (2120)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-combobox.js"
+    ).read_text(encoding="utf-8")
+    assert "function syncRequiredValidity" in src
+    assert "Select a value from the list" in src
+
+
+def test_tags_controller_required_validity() -> None:
+    """dz-tags.js must gate required on the entry after enhance (2120)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-tags.js"
+    ).read_text(encoding="utf-8")
+    assert "function syncRequiredValidity" in src
+    assert "Add at least one tag" in src
+
+
 def test_tags_widget() -> None:
     fd = {"name": "labels", "label": "Labels", "widget": "tags"}
     assert isinstance(_field_to_primitive(fd), TagsField)

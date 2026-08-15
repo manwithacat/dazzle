@@ -8,6 +8,10 @@ enclosing form. Fixed list = closed enum on that POST. Growing list
 (data-dz-allow-create) = form handler MUST accept unknown strings and upsert
 the catalogue (client create is page-local only). See registry exchange_empty.
 
+Required: after enhance the native select is hidden, so ``required`` moves
+off it. The overlay input uses ``setCustomValidity`` until a real option is
+committed (cycle 2120 / search-select 2118).
+
 Optional on the <select>:
   data-dz-focus-after-select = blur | keep | select
     blur   (default) — after a pick, blur the overlay input (committed select UX)

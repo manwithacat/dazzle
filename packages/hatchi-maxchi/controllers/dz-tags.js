@@ -27,6 +27,12 @@
  * empty); paste splits on comma / newline; Backspace on an empty entry
  * removes the last chip; the × button removes its chip (Enter/Space fire
  * it). Tab reaches the entry and each × like any control.
+ *
+ * Required honesty (cycle 2120): after enhance, the native input is hidden
+ * so its `required` would block submit with an unfocusable error. Drop it
+ * and setCustomValidity on the visible entry until at least one chip
+ * exists — same class as combobox / search-select 2118. Do not put native
+ * `required` on the entry: it is empty whenever chips exist.
  */
 (function () {
   "use strict";
@@ -55,6 +61,19 @@
     });
   }
 
+  function isRequiredTags(root) {
+    var entry = root.querySelector(".dz-tags-entry");
+    return !!(entry && entry.getAttribute("aria-required") === "true");
+  }
+
+  function syncRequiredValidity(root) {
+    var entry = root.querySelector(".dz-tags-entry");
+    if (!entry || !isRequiredTags(root)) return;
+    entry.setCustomValidity(
+      chipValues(root).length ? "" : "Add at least one tag",
+    );
+  }
+
   // Rewrite the native input (the submitted value) to the comma-joined chip
   // list and fire `change`, so the form + any listeners react exactly as
   // they did with the bare input.
@@ -63,6 +82,7 @@
     if (!native) return;
     native.value = chipValues(root).join(",");
     native.dispatchEvent(new Event("change", { bubbles: true }));
+    syncRequiredValidity(root);
   }
 
   function announce(root, msg) {
@@ -181,6 +201,7 @@
       list.appendChild(makeChip(value));
     });
     native.value = chipValues(root).join(",");
+    syncRequiredValidity(root);
 
     root.setAttribute("data-dz-enhanced", "");
     return root;

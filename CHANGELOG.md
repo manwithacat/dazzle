@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Combobox / tags required after enhance (cycle 2120)** — progressive
+  enhance hid the native `required` control (unfocusable browser error).
+  Overlay/entry now use `setCustomValidity` until a real option/chip exists
+  (same class as search-select 2118). Do not put native `required` on the
+  tags entry — it is empty whenever chips exist.
 - **Toggle form carrier stays stale on press (cycle 2119)** — `widget=toggle`
   posts a hidden `true`/`false` that never moved with `aria-pressed`, so
   starring/unstarring submitted the SSR value. `dz-toggle.js` now syncs the
