@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: protocol vs acceptance saturates document (cycle 2103)** —
+  exclusive `protocols` + `acceptance_packets` queues saturate
+  `(app, document)` so fieldtest is not recommended for another mixed
+  brief dump (oral #25).
 - **Goal B planner: staff-only picker saturates empty_region (cycle 2102)** —
   `context_selector` with `department != External` saturates
   `(app, empty_region_honesty)` so support_tickets is not recommended for

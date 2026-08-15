@@ -157,6 +157,8 @@ Doctrine source of truth remains
     composition dump.** After TestDocument composition exists, exclusive
     run-protocol vs ship-gate acceptance queues are the TestRail hole.
     Do not AND-filter brief/decision onto the same fold.
+    Machine: `protocol_acceptance_document` saturates `(app, document)` when
+    exclusive `protocols` + `acceptance_packets` queues exist.
 
 26. **domain_join org grain is pending join seats, not another title board.**
     After title/dept kanban exists, Entra/Okta hole is who is waiting to

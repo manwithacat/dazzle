@@ -322,6 +322,18 @@ def tree_people_org(text: str) -> bool:
     return has_in_tree and has_apex and bool(re.search(r"reporting_seat:\s*enum", text))
 
 
+def protocol_acceptance_document(text: str) -> bool:
+    """Exclusive run-protocol vs ship-gate acceptance queues (oral #25)."""
+    has_proto = False
+    has_accept = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if name == "protocols" and re.search(r"doc_kind\s*=\s*protocol", body):
+            has_proto = True
+        if name == "acceptance_packets" and re.search(r"doc_kind\s*=\s*acceptance_criteria", body):
+            has_accept = True
+    return has_proto and has_accept
+
+
 def agent_only_selector_empty(text: str) -> bool:
     """Staff-only context_selector (oral #24) — not customers in the picker."""
     for _ws, name, body in _workspace_region_windows(text):
@@ -374,7 +386,7 @@ def live_saturated_cells(
             or note_kind_chrome_conversation(text)
         ):
             sat.add((app, "conversation"))
-        if m.document_rails > HONEST_DOCUMENT_RAILS:
+        if m.document_rails > HONEST_DOCUMENT_RAILS or protocol_acceptance_document(text):
             sat.add((app, "document"))
         if tree_people_org(text):
             sat.add((app, "org_structure"))

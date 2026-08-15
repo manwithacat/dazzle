@@ -16,6 +16,7 @@ from scripts.goal_b_coat import (
     measure,
     note_kind_chrome_conversation,
     photo_grid_entities,
+    protocol_acceptance_document,
     stamp_pair_media,
     tree_people_org,
 )
@@ -257,6 +258,34 @@ def test_agent_only_selector_saturates_empty_region(tmp_path: Path) -> None:
     sat = live_saturated_cells(["demo"], examples=tmp_path)
     assert ("demo", "empty_region_honesty") in sat
     assert agent_only_selector_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_protocol_acceptance_saturates_document(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace engineering_dashboard:\n"
+        "  protocols:\n"
+        "    source: TestDocument\n"
+        "    filter: doc_kind = protocol and status != archived\n"
+        "    display: queue\n"
+        "  acceptance_packets:\n"
+        "    source: TestDocument\n"
+        "    filter: doc_kind = acceptance_criteria and status != archived\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "document") in sat
+    assert protocol_acceptance_document((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_fieldtest_protocol_acceptance_saturates_document() -> None:
+    sat = live_saturated_cells(["fieldtest_hub", "acme_billing"])
+    assert ("fieldtest_hub", "document") in sat
+    # acme document may already be sat via other rules
+    assert ("fieldtest_hub", "document") in sat
 
 
 def test_support_tickets_agent_only_selector_saturates() -> None:
