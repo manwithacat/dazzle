@@ -370,12 +370,13 @@ class _RenderFormsMixin:
         input_id = ctx.escape_attr(shell.input_id)
         results_id = ctx.escape_attr(shell.results_id)
         root = search_select_root_attrs(shell)
+        # Hidden FK required is invalid HTML (same class as file-upload 2115).
         required_attr = ' required aria-required="true"' if s.required else ""
         hx_min_chars = f" hx-vals='{{\"min_chars\": {s.min_chars}}}'" if s.min_chars else ""
         return (
             f'<div class="dz-search-select" {root}>'
             f'<input type="hidden" name="{name}" id="{field_id}" '
-            f'data-dazzle-field="{name}" value="{init_id}"{required_attr}>'
+            f'data-dazzle-field="{name}" value="{init_id}">'
             '<input type="text" '
             f'id="{input_id}" '
             'class="dz-search-select-input" '
@@ -384,7 +385,7 @@ class _RenderFormsMixin:
             'aria-expanded="false" '
             f'aria-controls="{results_id}" '
             'aria-autocomplete="list" aria-haspopup="listbox" '
-            f'value="{init_display}" '
+            f'value="{init_display}"{required_attr} '
             f'hx-get="{endpoint}" '
             f'hx-trigger="keyup changed delay:{shell.debounce_ms}ms" '
             f'hx-target="#{results_id}" '
@@ -678,12 +679,16 @@ class _RenderFormsMixin:
         if r.max_length:
             rt_opts["maxLength"] = r.max_length
         rt_opts_json = ctx.escape_attr(json.dumps(rt_opts))
+        # Payload is a visually-hidden textarea so `required` is valid HTML
+        # (hidden input required is ignored). dz-richtext.js already prefers
+        # input[type=hidden] then textarea.
         inner = (
             '<div data-dz-widget="richtext" '
             f"data-dz-options='{rt_opts_json}' "
             'class="dz-form-richtext">'
-            f'<input type="hidden" id="field-{name}" name="{name}" '
-            f'value="{ctx.escape_attr(r.initial_value)}"{required_attr}>'
+            f'<textarea id="field-{name}" name="{name}" '
+            f'class="visually-hidden" data-dazzle-field="{name}" '
+            f'rows="1"{required_attr}>{ctx.escape(r.initial_value)}</textarea>'
             "<div data-dz-editor></div>"
             "</div>"
         )

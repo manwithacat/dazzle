@@ -7,6 +7,10 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Search-select / rich-text `required` on hidden carriers (cycle 2116)** —
+  same class as file-upload 2115. Typeahead `required` lives on the visible
+  combobox; rich-text payload is a visually-hidden `<textarea>` so native
+  constraint validation is valid HTML.
 - **File-upload `required` on hidden FK (cycle 2115)** — native constraint
   belongs on the `<input type="file">` picker. Hidden `required` is invalid
   HTML and was ignored by browsers; omit it when an initial value exists.

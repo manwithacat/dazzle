@@ -84,7 +84,8 @@ class SearchSelect:
     client-side from a `ref_api` and renders a `<select>`, SearchSelect
     is a debounced remote-search combobox — a visible text input drives
     `hx-get` typeahead requests against `endpoint`, results swap into a
-    listbox, and a hidden `<input name="{name}">` holds the selected id.
+    listbox, and a hidden `<input name="{name}">` holds the selected id
+    (`required` lives on the typeahead, not the hidden FK).
     Used for large/external option sets (companies-house, user search).
 
     Emits the exact DOM contract the fidelity scorer's interaction check
@@ -385,8 +386,9 @@ class ToggleGroupField:
 @dataclass(frozen=True, slots=True)
 class RichTextField:
     """Rich-text editor (`widget=rich_text`). Parity with the legacy
-    `_render_rich_text` — a hidden input holds the HTML, `data-dz-editor`
-    mounts the editor, and `data-dz-options` carries `toolbar`/`maxLength`."""
+    `_render_rich_text` — a visually-hidden textarea holds the HTML (so
+    `required` is valid), `data-dz-editor` mounts the editor, and
+    `data-dz-options` carries `toolbar`/`maxLength`."""
 
     name: str
     label: str

@@ -98,9 +98,9 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1817 | STALE |
-| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 1817 | STALE |
-| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 1817 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 2116 | USED |
+| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 2116 | USED |
+| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2116 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1676 | STALE |

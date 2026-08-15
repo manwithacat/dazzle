@@ -484,6 +484,10 @@ def _check_semantic_fidelity(
 
         inputs = root.find_all("input") + root.find_all("textarea") + root.find_all("select")
         for inp in inputs:
+            # Hidden inputs are barred from constraint validation — `required`
+            # there is invalid HTML (file-upload 2115, search-select/richtext 2116).
+            if (inp.get_attr("type") or "").lower() == "hidden":
+                continue
             name = inp.get_attr("name")
             if name in required_in_surface and not inp.has_attr("required"):
                 gaps.append(

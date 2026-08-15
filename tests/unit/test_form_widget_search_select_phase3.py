@@ -89,7 +89,30 @@ def test_endpoint_and_typeahead_wiring() -> None:
 
 def test_required_emits_aria_required() -> None:
     html = _render(_BASE)
-    assert 'required aria-required="true"' in html
+    picker = html.split('type="text"', 1)[1].split(">", 1)[0]
+    hidden = html.split('type="hidden"', 1)[1].split(">", 1)[0]
+    assert "required" in picker
+    assert 'aria-required="true"' in picker
+    assert "required" not in hidden
+
+
+def test_required_never_on_hidden_carriers() -> None:
+    """Ratchet: hidden inputs are barred from constraint validation."""
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.forms import FileUpload, RichTextField
+
+    samples = [
+        _render(_BASE),
+        FragmentRenderer().render(
+            FileUpload(name="f", label="F", upload_url=URL("/u"), required=True)
+        ),
+        FragmentRenderer().render(RichTextField(name="b", label="B", required=True)),
+    ]
+    for html in samples:
+        rest = html
+        while 'type="hidden"' in rest:
+            tag, _, rest = rest.partition('type="hidden"')[2].partition(">")
+            assert "required" not in tag, html
 
 
 def test_edit_mode_prefills_visible_and_hidden() -> None:

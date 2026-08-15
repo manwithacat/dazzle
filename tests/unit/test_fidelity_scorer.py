@@ -16,6 +16,7 @@ import pytest
 
 from dazzle.core.fidelity_scorer import (
     _check_form_structure,
+    _check_semantic_fidelity,
     _check_story_embodiment,
     _expand_field_names,
     _load_stories_for_scoring,
@@ -24,7 +25,7 @@ from dazzle.core.fidelity_scorer import (
     score_surface_fidelity,
 )
 from dazzle.core.ir.fidelity import FidelityGapCategory
-from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
+from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.stories import (
     StoryCondition,
     StoryException,
@@ -1185,3 +1186,36 @@ class TestStatusChangedTriggerExclusion:
             story = self._story("ST-008", StoryTrigger.STATUS_CHANGED)
             matched = _match_stories_to_surfaces(surface, [story])
             assert matched == [story], f"mode={mode} should still match"
+
+
+class TestHiddenRequiredIsIgnored:
+    """Hidden `required` is invalid HTML — scorer must not demand it (2115/2116)."""
+
+    def test_hidden_carrier_without_required_is_not_a_gap(self) -> None:
+        surface = _make_surface(
+            name="ticket_create",
+            entity_ref="Ticket",
+            mode=SurfaceMode.CREATE,
+            field_names=["company"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="company",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=80),
+                    modifiers=[FieldModifier.REQUIRED],
+                )
+            ]
+        )
+        html = """
+        <form hx-post="/tickets">
+          <div data-dz-widget="search_select">
+            <input type="hidden" name="company" value="">
+            <input type="text" required aria-required="true">
+          </div>
+        </form>
+        """
+        gaps = _check_semantic_fidelity(surface, entity, parse_html(html))
+        assert not [
+            g for g in gaps if g.category == FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE
+        ]

@@ -190,7 +190,7 @@ def test_rich_text_widget_options() -> None:
     html = _render(fd)
     assert 'data-dz-widget="richtext"' in html
     assert "data-dz-editor" in html
-    assert 'type="hidden"' in html  # holds the HTML payload
+    assert "<textarea" in html  # payload carrier (required-valid, not hidden input)
     # data-dz-options JSON is HTML-escaped inside the attribute (&quot;) — assert
     # on the un-ambiguous bare substrings present in the escaped form.
     assert "toolbar" in html
@@ -203,6 +203,14 @@ def test_rich_text_empty_options() -> None:
     html = _render({"name": "notes", "label": "Notes", "widget": "rich_text"})
     assert 'data-dz-widget="richtext"' in html
     assert "data-dz-options='{}'" in html
+
+
+def test_rich_text_required_on_textarea_not_hidden() -> None:
+    html = _render({"name": "notes", "label": "Notes", "widget": "rich_text", "required": True})
+    assert 'type="hidden"' not in html
+    ta = html.split("<textarea", 1)[1].split(">", 1)[0]
+    assert "required" in ta
+    assert 'aria-required="true"' in ta
 
 
 # NOTE: the `def test_parity_with_legacy_widgets` legacy-vs-substrate parity test was removed in ADR-0049
