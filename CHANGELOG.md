@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: tree-people org saturates (cycle 2101)** — exclusive
+  `in_tree` + `apex_people` queues with `reporting_seat` saturate
+  `(app, org_structure)` so hr_records is not recommended for another
+  location/role board (oral #13/#23).
 - **Goal B planner: note_kind chrome saturates conversation (cycle 2100)** —
   `live_conversation` + `note_kind` enum without a `note_kind =` filter
   saturates `(app, conversation)` so fieldtest is not recommended for

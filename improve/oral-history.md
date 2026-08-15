@@ -70,6 +70,8 @@ Doctrine source of truth remains
 13. **hr My Team is people in the tree, not a Role catalog.** IC/manager
     *job-title* tracks are not hierarchy. Recipe `tree_people_seat` (in-tree
     vs apex people). Peer refuse still bans office/remote on Reporting.
+    Machine: `tree_people_org` saturates `(app, org_structure)` when
+    `in_tree` + `apex_people` queues and `reporting_seat` exist.
 
 10. **create_all missing columns.** DSL adds fields; SQLite/PG tables lag —
     `ensure_missing_entity_columns` (or equivalent) after create_all is a

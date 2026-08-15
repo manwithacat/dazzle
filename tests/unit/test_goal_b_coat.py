@@ -16,6 +16,7 @@ from scripts.goal_b_coat import (
     note_kind_chrome_conversation,
     photo_grid_entities,
     stamp_pair_media,
+    tree_people_org,
 )
 
 pytestmark = pytest.mark.gate
@@ -215,6 +216,35 @@ def test_note_kind_filter_slice_does_not_saturate(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert note_kind_chrome_conversation((dsl / "app.dsl").read_text(encoding="utf-8")) is False
+
+
+def test_tree_people_org_saturates(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        'entity Person "Person":\n'
+        "  reporting_seat: enum[has_manager,unassigned,top_of_house]=unassigned\n"
+        "workspace my_team:\n"
+        "  in_tree:\n"
+        "    source: Person\n"
+        "    filter: reporting_seat = has_manager\n"
+        "    display: queue\n"
+        "  apex_people:\n"
+        "    source: Person\n"
+        "    filter: reporting_seat = top_of_house\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "org_structure") in sat
+    assert tree_people_org((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_hr_records_tree_people_saturates_org() -> None:
+    sat = live_saturated_cells(["hr_records", "acme_billing"])
+    assert ("hr_records", "org_structure") in sat
+    assert ("acme_billing", "org_structure") not in sat
 
 
 def test_fieldtest_note_kind_chrome_saturates_conversation() -> None:

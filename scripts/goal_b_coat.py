@@ -308,6 +308,20 @@ def note_kind_chrome_conversation(text: str) -> bool:
     return True
 
 
+def tree_people_org(text: str) -> bool:
+    """Exclusive in-tree vs apex people plus reporting_seat (oral #13/#23)."""
+    has_in_tree = False
+    has_apex = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if not re.search(r"display:\s*queue", body):
+            continue
+        if name == "in_tree":
+            has_in_tree = True
+        if name == "apex_people":
+            has_apex = True
+    return has_in_tree and has_apex and bool(re.search(r"reporting_seat:\s*enum", text))
+
+
 def stamp_pair_media(text: str) -> bool:
     """Exclusive in-review + approved pixel grids (Frame.io honest grain)."""
     has_review = False
@@ -352,6 +366,8 @@ def live_saturated_cells(
             sat.add((app, "conversation"))
         if m.document_rails > HONEST_DOCUMENT_RAILS:
             sat.add((app, "document"))
+        if tree_people_org(text):
+            sat.add((app, "org_structure"))
         if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))
         # Goal C freeze: distilled cells stay planner-saturated so a later

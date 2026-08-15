@@ -289,6 +289,17 @@ def test_live_fieldtest_media_not_recommended() -> None:
         assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
 
 
+def test_live_hr_records_org_not_recommended() -> None:
+    """in_tree + apex_people + reporting_seat saturates hr org (oral #13/#23)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["hr_records", "org_structure"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "hr_records" and rec["depth_id"] == "org_structure")
+
+
 def test_live_fieldtest_conversation_not_recommended() -> None:
     """note_kind chrome saturates fieldtest conversation (oral #22)."""
     from scripts.interesting_product_portfolio import snapshot
