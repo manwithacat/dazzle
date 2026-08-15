@@ -318,6 +318,26 @@ def pending_join_org(text: str) -> bool:
     return False
 
 
+def billing_escalations_org(text: str) -> bool:
+    """Exclusive Billing vs Escalations routing groups (oral #11)."""
+    has_billing = False
+    has_esc = False
+    for _ws, name, body in _workspace_region_windows(text):
+        if (
+            name == "billing_staff"
+            and re.search(r"department\s*=\s*Billing", body)
+            and re.search(r"display:\s*queue", body)
+        ):
+            has_billing = True
+        if (
+            name == "escalations_staff"
+            and re.search(r"department\s*=\s*Escalations", body)
+            and re.search(r"display:\s*queue", body)
+        ):
+            has_esc = True
+    return has_billing and has_esc
+
+
 def tree_people_org(text: str) -> bool:
     """Exclusive in-tree vs apex people plus reporting_seat (oral #13/#23)."""
     has_in_tree = False
@@ -437,7 +457,7 @@ def live_saturated_cells(
             or line_composition_document(text)
         ):
             sat.add((app, "document"))
-        if tree_people_org(text) or pending_join_org(text):
+        if tree_people_org(text) or pending_join_org(text) or billing_escalations_org(text):
             sat.add((app, "org_structure"))
         if agent_only_selector_empty(text) or directory_work_first_empty(text):
             sat.add((app, "empty_region_honesty"))

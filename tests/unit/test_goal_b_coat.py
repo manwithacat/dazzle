@@ -10,6 +10,7 @@ from scripts.goal_b_coat import (
     HONEST_CONVERSATION_SITES,
     HONEST_FOCUS,
     agent_only_selector_empty,
+    billing_escalations_org,
     coat_residual,
     directory_work_first_empty,
     freeze_breaches,
@@ -397,6 +398,33 @@ def test_pending_join_org_saturates(tmp_path: Path) -> None:
 def test_domain_join_pending_join_saturates_org() -> None:
     sat = live_saturated_cells(["domain_join_co", "acme_billing"])
     assert ("domain_join_co", "org_structure") in sat
+    assert ("acme_billing", "org_structure") not in sat
+
+
+def test_billing_escalations_org_saturates(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace people_desk:\n"
+        "  billing_staff:\n"
+        "    source: User\n"
+        "    filter: is_active = true and department = Billing\n"
+        "    display: queue\n"
+        "  escalations_staff:\n"
+        "    source: User\n"
+        "    filter: is_active = true and department = Escalations\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "org_structure") in sat
+    assert billing_escalations_org((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_support_tickets_billing_escalations_saturates_org() -> None:
+    sat = live_saturated_cells(["support_tickets", "acme_billing"])
+    assert ("support_tickets", "org_structure") in sat
     assert ("acme_billing", "org_structure") not in sat
 
 

@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: billing vs escalations saturates org (cycle 2107)** —
+  exclusive `billing_staff` + `escalations_staff` queues saturate
+  `(app, org_structure)` so support_tickets is not recommended for another
+  L1/L2/L3 restack (oral #11).
 - **Goal B planner: work-first directory saturates empty_region (cycle 2106)** —
   `current_staff` + `recent_starters` queues before `media_shelf` saturate
   `(app, empty_region_honesty)` so hr_records is not recommended for another

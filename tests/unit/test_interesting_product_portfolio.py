@@ -334,6 +334,17 @@ def test_live_support_tickets_empty_region_not_recommended() -> None:
         assert not (rec["app"] == "support_tickets" and rec["depth_id"] == "empty_region_honesty")
 
 
+def test_live_support_tickets_org_not_recommended() -> None:
+    """Billing vs Escalations queues saturate support org (oral #11)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["support_tickets", "org_structure"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "support_tickets" and rec["depth_id"] == "org_structure")
+
+
 def test_live_hr_records_empty_region_not_recommended() -> None:
     """Work-first roster + starters saturate hr empty_region (oral #10)."""
     from scripts.interesting_product_portfolio import snapshot

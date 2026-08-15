@@ -61,6 +61,8 @@ Doctrine source of truth remains
     Front leads assign by Billing vs Escalations, not a third tier-density
     coat. Recipe `billing_escalations_seat`. Peer refuse still bans a
     decorative Team desk clone and customers in the Agent Console picker.
+    Machine: `billing_escalations_org` saturates `(app, org_structure)` when
+    exclusive `billing_staff` + `escalations_staff` queues exist.
 
 12. **design_studio media is status-stamped pixels, not another type wall.**
     Catalog already has type/pattern + logo/photo. Frame.io review homes pair
