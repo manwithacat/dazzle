@@ -68,5 +68,7 @@ def test_join_requested_no_form() -> None:
     """The confirmation page is informational — no form or submit button."""
     client = _make_client()
     response = client.get("/auth/join-requested")
+    # Cycle 2141: Page chrome owns #hm-detached-q; ignore that singleton.
+    html = response.text.replace('<form id="hm-detached-q" hidden></form>', "")
     # No <form> action pointing to an action endpoint
-    assert "<form" not in response.text
+    assert "<form" not in html

@@ -14,9 +14,17 @@ from dazzle.http.runtime.error_views import (
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
+# Cycle 2141: Page chrome always owns #hm-detached-q for search-select leftover
+# (Nu rejects form=""). Confirmation/error pages must still have no user form.
+_CHROME_DETACHED_Q = '<form id="hm-detached-q" hidden></form>'
+
 
 def _render(page: object) -> str:
     return FragmentRenderer().render(page)  # type: ignore[arg-type]
+
+
+def _assert_no_user_form(html: str) -> None:
+    assert "<form" not in html.replace(_CHROME_DETACHED_Q, "")
 
 
 # ───────────────── build_site_404_view ─────────────────
@@ -72,7 +80,7 @@ def test_404_view_escapes_product_name() -> None:
 def test_404_view_renders_no_form() -> None:
     page = build_site_404_view(product_name="Acme")
     html = _render(page)
-    assert "<form" not in html
+    _assert_no_user_form(html)
 
 
 # ───────────────── build_site_403_view ─────────────────
@@ -145,7 +153,7 @@ def test_403_view_escapes_message() -> None:
 def test_403_view_renders_no_form() -> None:
     page = build_site_403_view(product_name="Acme")
     html = _render(page)
-    assert "<form" not in html
+    _assert_no_user_form(html)
 
 
 # ───────────────── build_site_500_view ─────────────────
@@ -192,7 +200,7 @@ def test_500_view_renders_generic_apology_copy() -> None:
 def test_500_view_renders_no_form() -> None:
     page = build_site_500_view(product_name="Acme")
     html = _render(page)
-    assert "<form" not in html
+    _assert_no_user_form(html)
 
 
 def test_500_view_escapes_product_name() -> None:

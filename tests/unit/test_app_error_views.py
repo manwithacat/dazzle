@@ -14,9 +14,16 @@ from dazzle.http.runtime.app_error_views import (
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
+# Cycle 2141: Page chrome always owns #hm-detached-q (search-select leftover).
+_CHROME_DETACHED_Q = '<form id="hm-detached-q" hidden></form>'
+
 
 def _render(page: object) -> str:
     return FragmentRenderer().render(page)  # type: ignore[arg-type]
+
+
+def _assert_no_user_form(html: str) -> None:
+    assert "<form" not in html.replace(_CHROME_DETACHED_Q, "")
 
 
 # ───────────────── build_app_403_view ─────────────────
@@ -206,7 +213,7 @@ def test_app_500_renders_back_affordance_when_supplied() -> None:
 
 def test_app_500_no_form_no_inline_script() -> None:
     html = _render(build_app_500_view(app_name="Acme"))
-    assert "<form" not in html
+    _assert_no_user_form(html)
     assert "<script>" not in html
 
 

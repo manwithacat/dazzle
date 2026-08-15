@@ -69,6 +69,14 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2140: empty form="" fails HM Nu/W3C (search-select leftover)
     "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
+    # cycle 2141: Page chrome #hm-detached-q must not trip no-user-form pins
+    "tests/unit/test_error_views.py::test_404_view_renders_no_form",
+    "tests/unit/test_error_views.py::test_403_view_renders_no_form",
+    "tests/unit/test_error_views.py::test_500_view_renders_no_form",
+    "tests/unit/test_auth_views_password_reset.py::test_reset_password_done_view_no_form",
+    "tests/unit/test_auth_views_password_reset.py::test_forgot_password_sent_view_does_not_render_form",
+    "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
+    "tests/unit/test_join_request_view.py::test_join_requested_no_form",
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
     # AUD-014 list actuators must not crash load_receipt (cycle 2113)
     "tests/unit/test_improve_dig_contracts.py::test_load_receipt_coerces_actuator_name_list",

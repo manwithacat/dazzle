@@ -7,6 +7,12 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Cycle 2141 cimonitor — 2140 chrome form + stale linux date-range** —
+  Page `#hm-detached-q` tripped seven confirmation/error `no-form` pins
+  (user-form invariant still holds; chrome singleton ignored). Linux
+  `part-date-range-{light,dark}` still showed July shots after 2139's
+  leftover-ISO companion (oral #33). Promoted the seven pins to
+  ship-surface.
 - **Search-select `form=""` failed Nu/W3C (cycle 2140)** —
   leftover typeahead still posts `name=q`, but `form=""` is invalid
   HTML (`An ID must not be the empty string`). Associate with the

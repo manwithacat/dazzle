@@ -246,6 +246,12 @@ Doctrine source of truth remains
     Page emit. Nested `<form>` inside a widget that lives in a product
     form is worse (parser closes the outer form).
 
+36. **Always-emit `#hm-detached-q` re-reds naive `'<form' not in html`
+    pins.** Confirmation/error/auth-done views are still no-user-form;
+    ignore the chrome singleton. Promote those pins to ship-surface
+    (2141). Linux date-range baselines from 2139 leftover-ISO must
+    land in the same repair if visual is the other red job.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

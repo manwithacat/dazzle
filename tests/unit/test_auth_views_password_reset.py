@@ -15,9 +15,16 @@ from dazzle.http.runtime.auth.auth_views import (
 )
 from dazzle.render.fragment.renderer import FragmentRenderer
 
+# Cycle 2141: Page chrome always owns #hm-detached-q (search-select leftover).
+_CHROME_DETACHED_Q = '<form id="hm-detached-q" hidden></form>'
+
 
 def _render(page: object) -> str:
     return FragmentRenderer().render(page)  # type: ignore[arg-type]
+
+
+def _assert_no_user_form(html: str) -> None:
+    assert "<form" not in html.replace(_CHROME_DETACHED_Q, "")
 
 
 # ───────────────── build_forgot_password_view ─────────────────
@@ -105,7 +112,7 @@ def test_forgot_password_sent_view_offers_retry_link() -> None:
 def test_forgot_password_sent_view_does_not_render_form() -> None:
     page = build_forgot_password_sent_view(product_name="Acme")
     html = _render(page)
-    assert "<form" not in html
+    _assert_no_user_form(html)
 
 
 # ───────────────── build_reset_password_view ─────────────────
@@ -168,7 +175,7 @@ def test_reset_password_done_view_links_to_login() -> None:
 def test_reset_password_done_view_no_form() -> None:
     page = build_reset_password_done_view(product_name="Acme")
     html = _render(page)
-    assert "<form" not in html
+    _assert_no_user_form(html)
 
 
 def test_reset_password_done_view_announces_success() -> None:
