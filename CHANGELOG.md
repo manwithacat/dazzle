@@ -36,6 +36,10 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B planner: work-first directory saturates empty_region (cycle 2106)** —
+  `current_staff` + `recent_starters` queues before `media_shelf` saturate
+  `(app, empty_region_honesty)` so hr_records is not recommended for another
+  photo-theater prune (oral #10).
 - **Goal B planner: pending join seats saturate org (cycle 2105)** —
   `pending_joins` queue (`status = pending`) saturates `(app, org_structure)`
   so domain_join_co is not recommended for another title board (oral #26).

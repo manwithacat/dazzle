@@ -202,6 +202,7 @@ def test_recipe_family_collapses_coat_synonyms() -> None:
     )
     assert recipe_family("billing_escalations_seat") == "billing_escalations_seat"
     assert recipe_family("directory_work_first") == "directory_work_first"
+    assert recipe_family("directory_work_first_saturate") == "directory_work_first"
     assert (
         recipe_family(
             "directory_work_first",
@@ -331,6 +332,17 @@ def test_live_support_tickets_empty_region_not_recommended() -> None:
     rec = snap.recommend
     if rec is not None:
         assert not (rec["app"] == "support_tickets" and rec["depth_id"] == "empty_region_honesty")
+
+
+def test_live_hr_records_empty_region_not_recommended() -> None:
+    """Work-first roster + starters saturate hr empty_region (oral #10)."""
+    from scripts.interesting_product_portfolio import snapshot
+
+    snap = snapshot()
+    assert ["hr_records", "empty_region_honesty"] in snap.saturated_cells
+    rec = snap.recommend
+    if rec is not None:
+        assert not (rec["app"] == "hr_records" and rec["depth_id"] == "empty_region_honesty")
 
 
 def test_live_hr_records_org_not_recommended() -> None:

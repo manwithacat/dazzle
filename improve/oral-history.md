@@ -54,6 +54,8 @@ Doctrine source of truth remains
     Recipe `directory_work_first` (lead with actable queues; keep the shelf
     below fold) is a different family than `empty_region_prune`. Peer refuse
     still bans office/remote on Reporting after unassigned seats exist.
+    Machine: `directory_work_first_empty` saturates `(app, empty_region_honesty)`
+    when `current_staff` + `recent_starters` queues lead before `media_shelf`.
 
 11. **support org is routing groups, not another L1/L2/L3 restack.** Zendesk /
     Front leads assign by Billing vs Escalations, not a third tier-density

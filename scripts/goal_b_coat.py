@@ -369,6 +369,26 @@ def agent_only_selector_empty(text: str) -> bool:
     return False
 
 
+def directory_work_first_empty(text: str) -> bool:
+    """Roster + starters lead before media shelf (oral #10)."""
+    by_ws: dict[str, list[tuple[str, str]]] = {}
+    for ws, name, body in _workspace_region_windows(text):
+        by_ws.setdefault(ws, []).append((name, body))
+    for _ws, regions in by_ws.items():
+        bodies = dict(regions)
+        names = [n for n, _ in regions]
+        if "current_staff" not in bodies or "recent_starters" not in bodies:
+            continue
+        if not re.search(r"display:\s*queue", bodies["current_staff"]):
+            continue
+        if not re.search(r"display:\s*queue", bodies["recent_starters"]):
+            continue
+        if "media_shelf" in names:
+            return names.index("current_staff") < names.index("media_shelf")
+        return True
+    return False
+
+
 def stamp_pair_media(text: str) -> bool:
     """Exclusive in-review + approved pixel grids (Frame.io honest grain)."""
     has_review = False
@@ -419,7 +439,7 @@ def live_saturated_cells(
             sat.add((app, "document"))
         if tree_people_org(text) or pending_join_org(text):
             sat.add((app, "org_structure"))
-        if agent_only_selector_empty(text):
+        if agent_only_selector_empty(text) or directory_work_first_empty(text):
             sat.add((app, "empty_region_honesty"))
         if len(photo_grid_entities(text)) >= HONEST_MEDIA_ENTITIES or stamp_pair_media(text):
             sat.add((app, "media"))

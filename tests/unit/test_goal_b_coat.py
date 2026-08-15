@@ -11,6 +11,7 @@ from scripts.goal_b_coat import (
     HONEST_FOCUS,
     agent_only_selector_empty,
     coat_residual,
+    directory_work_first_empty,
     freeze_breaches,
     line_composition_document,
     live_saturated_cells,
@@ -323,6 +324,56 @@ def test_fieldtest_protocol_acceptance_saturates_document() -> None:
 def test_support_tickets_agent_only_selector_saturates() -> None:
     sat = live_saturated_cells(["support_tickets", "acme_billing"])
     assert ("support_tickets", "empty_region_honesty") in sat
+    assert ("acme_billing", "empty_region_honesty") not in sat
+
+
+def test_directory_work_first_empty_saturates(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace staff_directory:\n"
+        "  current_staff:\n"
+        "    source: Person\n"
+        "    display: queue\n"
+        "  recent_starters:\n"
+        "    source: Person\n"
+        "    display: queue\n"
+        "  media_shelf:\n"
+        "    source: Person\n"
+        "    display: grid\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "empty_region_honesty") in sat
+    assert directory_work_first_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is True
+
+
+def test_directory_work_first_empty_rejects_media_first(tmp_path: Path) -> None:
+    app = tmp_path / "demo"
+    dsl = app / "dsl"
+    dsl.mkdir(parents=True)
+    (dsl / "app.dsl").write_text(
+        "workspace staff_directory:\n"
+        "  media_shelf:\n"
+        "    source: Person\n"
+        "    display: grid\n"
+        "  current_staff:\n"
+        "    source: Person\n"
+        "    display: queue\n"
+        "  recent_starters:\n"
+        "    source: Person\n"
+        "    display: queue\n",
+        encoding="utf-8",
+    )
+    sat = live_saturated_cells(["demo"], examples=tmp_path)
+    assert ("demo", "empty_region_honesty") not in sat
+    assert directory_work_first_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is False
+
+
+def test_hr_records_directory_work_first_saturates_empty_region() -> None:
+    sat = live_saturated_cells(["hr_records", "acme_billing"])
+    assert ("hr_records", "empty_region_honesty") in sat
     assert ("acme_billing", "empty_region_honesty") not in sat
 
 
