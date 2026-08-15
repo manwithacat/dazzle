@@ -97,10 +97,7 @@ def test_reporting_desk_span_is_filled_queue_not_empty_kanban() -> None:
     # No second primary link region competing for fold as empty twin
     assert "\n  active_links:" not in block
     assert "people_cards:" not in block
-    assert (
-        "focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location"
-        in block
-    )
+    assert "focus: reporting_pulse, unassigned, top_of_house, span_of_control" in block
     # Placement boards still present for org shape (not only metrics)
     assert "\n  by_department:" in block
     assert "\n  by_location:" in block

@@ -185,6 +185,10 @@ entity Person "Person":
   # BambooHR / Workday people partners parse HQ vs remote vs hybrid, not only
   # level/dept boards. Recipe work_location_grain (not headshot_shelf).
   work_location: enum[london_hq,manchester,remote_uk,hybrid,client_site]=london_hq
+  # Goal B org_structure (cycle 2085): reporting_seat grain —
+  # BambooHR / Workday people partners close Unassigned vs expected apex
+  # (top of house), not another office/remote location filter.
+  reporting_seat: enum[has_manager,unassigned,top_of_house]=unassigned
   started_at: date required
   ended_at: date    # NULL = currently employed
 
@@ -252,7 +256,7 @@ entity Person "Person":
     # Cycle 1935 agent_acceptance: staff media/people cards skip Email schema
     # dump (peer support_tickets User 1933, fieldtest Tester 1935). email stays
     # on list/detail; photo_url still media-injects.
-    repr_fields: [legal_name, preferred_name, work_location, started_at]
+    repr_fields: [legal_name, preferred_name, work_location, reporting_seat, started_at]
 
   index work_location
 
@@ -569,11 +573,12 @@ surface person_list "People":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field work_location "Work location"
+    field reporting_seat "Reporting seat"
     field email "Email"
     field photo_url "Photo"
     field started_at "Started"
   ux:
-    purpose: "Staff directory — open a row for the person career hub (location grain)"
+    purpose: "Staff directory — open a row for the person career hub (location + reporting-seat grain)"
 
 surface person_detail "Person":
   uses entity Person
@@ -584,6 +589,7 @@ surface person_detail "Person":
     field email "Email"
     field photo_url "Photo"
     field work_location "Work location"
+    field reporting_seat "Reporting seat"
   section tenure "Tenure":
     layout: strip
     field started_at "Started"
@@ -629,6 +635,7 @@ surface person_create "Add Person":
     field email "Email"
     field photo_url "Photo URL"
     field work_location "Work location"
+    field reporting_seat "Reporting seat"
     field started_at "Start date"
 
 surface person_edit "Edit Person":
@@ -640,6 +647,7 @@ surface person_edit "Edit Person":
     field email "Email"
     field photo_url "Photo URL"
     field work_location "Work location"
+    field reporting_seat "Reporting seat"
     field ended_at "Ended"
 
 
@@ -1677,8 +1685,11 @@ workspace starters_desk "New Starters":
 # giant empty void while Links metric counted 8 — honesty is a filled queue of
 # active ManagerLink rows + department/location placement boards (not empty
 # kanban theater). Full recursive tree remains TODO #hr-hierarchy.
+# Cycle 2085: recipe unassigned_reporting_seat — subtract office/remote dual
+# queues (location coat stays on My Team) and lead with Unassigned vs Top of
+# House (who is missing from the tree vs expected apex).
 workspace reporting_desk "Reporting":
-  purpose: "People hierarchy — office/remote density, filled report→manager span, department + work-location placement (no empty span void)"
+  purpose: "People hierarchy — unassigned vs top-of-house reporting seats, filled report→manager span, department + work-location placement (no empty span void)"
   access: persona(hr_admin, manager)
 
   reporting_pulse:
@@ -1687,39 +1698,35 @@ workspace reporting_desk "Reporting":
     aggregate:
       links: count(ManagerLink)
       people: count(Person)
-      departments: count(Department)
-      roles: count(Role)
-      remote_uk: count(Person where work_location = remote_uk and ended_at = null)
-      hybrid: count(Person where work_location = hybrid and ended_at = null)
-      office_sites: count(Person where ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site))
-      remote_flex: count(Person where ended_at = null and (work_location = remote_uk or work_location = hybrid))
+      unassigned: count(Person where reporting_seat = unassigned and ended_at = null)
+      top_of_house: count(Person where reporting_seat = top_of_house and ended_at = null)
+      has_manager: count(Person where reporting_seat = has_manager and ended_at = null)
     tones:
       links: accent
       people: positive
-      remote_uk: warning
-      hybrid: accent
-      office_sites: accent
-      remote_flex: warning
+      unassigned: warning
+      top_of_house: accent
+      has_manager: positive
 
-  # Goal B org_structure (cycle 2050): office↔remote dual presence before span
-  # (recipe office_remote_density — peer BambooHR hybrid workforce view).
-  office_sites:
+  # Goal B org_structure (cycle 2085): exclusive reporting-seat queues —
+  # people partners close the hole in the tree before mixed span dump.
+  unassigned:
     source: Person
-    filter: ended_at = null and (work_location = london_hq or work_location = manchester or work_location = client_site)
+    filter: ended_at = null and reporting_seat = unassigned
+    sort: legal_name asc
+    limit: 6
+    display: queue
+    action: person_detail
+    empty: "No unassigned people — every active seat has a manager or is apex"
+
+  top_of_house:
+    source: Person
+    filter: ended_at = null and reporting_seat = top_of_house
     sort: legal_name asc
     limit: 4
     display: queue
     action: person_detail
-    empty: "No active people at office or client sites"
-
-  remote_flex:
-    source: Person
-    filter: ended_at = null and (work_location = remote_uk or work_location = hybrid)
-    sort: legal_name asc
-    limit: 4
-    display: queue
-    action: person_detail
-    empty: "No active remote or hybrid people"
+    empty: "No top-of-house seat — mark the expected apex"
 
   # Span of control — active report→manager lines as a pull queue (fitness
   # shows report + manager names). Queue fills when Links>0; empty kanban
@@ -1757,11 +1764,11 @@ workspace reporting_desk "Reporting":
 
   ux:
     as hr_admin:
-      purpose: "Office/remote density + filled reporting lines + department/location placement — no empty span theater"
-      focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location
+      purpose: "Unassigned vs top-of-house reporting seats + filled span — no office/remote coat on this desk"
+      focus: reporting_pulse, unassigned, top_of_house, span_of_control
     as manager:
-      purpose: "See office/remote density, report→manager lines, and open a reporting line or person hub"
-      focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location
+      purpose: "See report→manager lines in scope — org-wide unassigned is an HR-admin job"
+      focus: reporting_pulse, span_of_control
 
   # Dated link history under the fold (not a second empty primary region).
   link_trail:
@@ -1773,16 +1780,16 @@ workspace reporting_desk "Reporting":
   org_readiness:
     display: status_list
     entries:
+      - title: "Unassigned seats"
+        caption: "People missing a manager — close the hole in the tree"
+        icon: "user-x"
+        state: warning
       - title: "Span of control"
         caption: "Active ManagerLink queue — open a row for report and manager hubs"
         icon: "network"
         state: accent
-      - title: "Temporal links"
-        caption: "ManagerLink rows are time-bounded — use Time Machine for as-of snapshots"
-        icon: "clock"
-        state: positive
       - title: "Team desk"
-        caption: "Line managers start from My Team for level and department boards"
+        caption: "Office/remote + career-track boards live on My Team"
         icon: "users"
         state: positive
 

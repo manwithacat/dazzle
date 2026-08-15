@@ -1,13 +1,13 @@
-id,legal_name,preferred_name,email,started_at,ended_at,photo_url,work_location
-a1000000-0000-4000-8000-000000000011,William Jennings,Will,hr_admin@demo.dazzle.local,2024-12-28,,https://placehold.co/320x200/1E3A5F/F8FAFC/png?text=Will,london_hq
-114a877f-041f-48ce-a5e3-898d474e552c,Abdul Hopkins,Abdul,abdul.hopkins.7924@northwind.test,2022-08-21,,https://placehold.co/320x200/0F766E/ECFDF5/png?text=Abdul,manchester
-a1000000-0000-4000-8000-000000000010,Tina Foster,Tina,employee@demo.dazzle.local,2025-05-11,,https://placehold.co/320x200/7C2D12/FEF3C7/png?text=Tina,remote_uk
-11967423-8944-4f28-98fa-25b528d62ff4,Abdul Burton-Patterson,Abdul,abdul.burton-patterson.6514@northwind.test,2021-08-06,,https://placehold.co/320x200/4C1D95/F5F3FF/png?text=Abdul,hybrid
-54b06ea7-6ff0-4a05-b1a7-1628863a1e93,Miss Olivia Bryan,Olivia,miss.olivia.bryan.7224@northwind.test,2023-02-03,,https://placehold.co/320x200/9F1239/FFE4E6/png?text=Olivia,client_site
-b749a352-af97-431e-82f9-37c5b43cfcd8,Eleanor Baker,Ellie,eleanor.baker.6635@northwind.test,2025-08-08,,https://placehold.co/320x200/14532D/DCFCE7/png?text=Ellie,london_hq
-312f12e6-6bf7-46d7-a4ab-22850e603b9b,Bernard Wilkinson-Simpson,Bernie,bernard.wilkinson-simpson.1711@northwind.test,2024-02-01,,https://placehold.co/320x200/1E3A5F/F8FAFC/png?text=Bernie,remote_uk
-5ea1cd81-54ea-4a82-8913-a2d528bca8c7,Dylan Young,Dylan,dylan.young.3045@northwind.test,2021-07-09,,https://placehold.co/320x200/0F766E/ECFDF5/png?text=Dylan,hybrid
-a1000000-0000-4000-8000-000000000002,Geoffrey Griffin,Geoff,manager@demo.dazzle.local,2024-04-25,,https://placehold.co/320x200/7C2D12/FEF3C7/png?text=Geoff,manchester
-a1000000-0000-4000-8000-000000000008,Miss Carole Woods,Carole,finance@demo.dazzle.local,2021-05-02,,https://placehold.co/320x200/4C1D95/F5F3FF/png?text=Carole,london_hq
-797ae955-b629-4e41-a623-197d6c145076,Aaron Harrison,Aaron,aaron.harrison.4733@northwind.test,2021-07-11,,https://placehold.co/320x200/9F1239/FFE4E6/png?text=Aaron,hybrid
-aaecc863-706d-4f00-8dd4-345040113b73,Graham Wilkinson,Graham,graham.wilkinson.4814@northwind.test,2023-03-18,,https://placehold.co/320x200/14532D/DCFCE7/png?text=Graham,remote_uk
+id,legal_name,preferred_name,email,started_at,ended_at,photo_url,work_location,reporting_seat
+a1000000-0000-4000-8000-000000000011,William Jennings,Will,hr_admin@demo.dazzle.local,2024-12-28,,https://placehold.co/320x200/1E3A5F/F8FAFC/png?text=Will,london_hq,top_of_house
+114a877f-041f-48ce-a5e3-898d474e552c,Abdul Hopkins,Abdul,abdul.hopkins.7924@northwind.test,2022-08-21,,https://placehold.co/320x200/0F766E/ECFDF5/png?text=Abdul,manchester,has_manager
+a1000000-0000-4000-8000-000000000010,Tina Foster,Tina,employee@demo.dazzle.local,2025-05-11,,https://placehold.co/320x200/7C2D12/FEF3C7/png?text=Tina,remote_uk,has_manager
+11967423-8944-4f28-98fa-25b528d62ff4,Abdul Burton-Patterson,Abdul,abdul.burton-patterson.6514@northwind.test,2021-08-06,,https://placehold.co/320x200/4C1D95/F5F3FF/png?text=Abdul,hybrid,has_manager
+54b06ea7-6ff0-4a05-b1a7-1628863a1e93,Miss Olivia Bryan,Olivia,miss.olivia.bryan.7224@northwind.test,2023-02-03,,https://placehold.co/320x200/9F1239/FFE4E6/png?text=Olivia,client_site,has_manager
+b749a352-af97-431e-82f9-37c5b43cfcd8,Eleanor Baker,Ellie,eleanor.baker.6635@northwind.test,2025-08-08,,https://placehold.co/320x200/14532D/DCFCE7/png?text=Ellie,london_hq,has_manager
+312f12e6-6bf7-46d7-a4ab-22850e603b9b,Bernard Wilkinson-Simpson,Bernie,bernard.wilkinson-simpson.1711@northwind.test,2024-02-01,,https://placehold.co/320x200/1E3A5F/F8FAFC/png?text=Bernie,remote_uk,unassigned
+5ea1cd81-54ea-4a82-8913-a2d528bca8c7,Dylan Young,Dylan,dylan.young.3045@northwind.test,2021-07-09,,https://placehold.co/320x200/0F766E/ECFDF5/png?text=Dylan,hybrid,unassigned
+a1000000-0000-4000-8000-000000000002,Geoffrey Griffin,Geoff,manager@demo.dazzle.local,2024-04-25,,https://placehold.co/320x200/7C2D12/FEF3C7/png?text=Geoff,manchester,has_manager
+a1000000-0000-4000-8000-000000000008,Miss Carole Woods,Carole,finance@demo.dazzle.local,2021-05-02,,https://placehold.co/320x200/4C1D95/F5F3FF/png?text=Carole,london_hq,unassigned
+797ae955-b629-4e41-a623-197d6c145076,Aaron Harrison,Aaron,aaron.harrison.4733@northwind.test,2021-07-11,,https://placehold.co/320x200/9F1239/FFE4E6/png?text=Aaron,hybrid,unassigned
+aaecc863-706d-4f00-8dd4-345040113b73,Graham Wilkinson,Graham,graham.wilkinson.4814@northwind.test,2023-03-18,,https://placehold.co/320x200/14532D/DCFCE7/png?text=Graham,remote_uk,unassigned

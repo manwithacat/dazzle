@@ -102,7 +102,9 @@ dedicated screens — fourteen in all, from the staff directory to
   (cycle 2057 `hr_desk_twin_queue_prune` — no twin starter_cards Person dump).
 - **Active Staff** — headcount pulse + one active queue + hire trail (cycle 2057
   twin prune — no active_grid twin of active_queue).
-- **Reporting** — office↔remote density, filled active ManagerLink span queue
+- **Reporting** — unassigned vs top-of-house reporting seats (cycle 2085
+  `unassigned_reporting_seat` — who is missing from the tree vs expected apex;
+  office/remote coat stays on My Team), filled active ManagerLink span queue
   (report→manager), then department + work-location placement boards (not an empty
   span kanban void or dept-name bar chart theater).
 
@@ -147,4 +149,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:6d3797d140b7bf6c4e3d71013102fa99a7ea207ad297eefd3a5daa5c9ed3ee1c -->
+<!-- dazzle-spec-brief: sha256:74ddf905ff248d97fa6804facfb18f1e466d4a12fe2a9769ce0d98aa2a1b5261 -->

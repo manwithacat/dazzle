@@ -110,6 +110,11 @@ Doctrine source of truth remains
     `display: conversation` — that is conversation_filter_slice coat
     theatre (oral #19) even if the tag evades the family regex.
 
+23. **hr_records org grain is reporting seat, not another location board.**
+    After office/remote + career tracks exist, Unassigned vs Top of House is
+    the people-partner hole (who is missing from the tree). Do not AND-filter
+    `work_location` again on Reporting. Location coat stays on My Team.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

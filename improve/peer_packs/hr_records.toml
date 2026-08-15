@@ -6,6 +6,7 @@ domain = "hr"
 
 above_fold = [
   "Hierarchy people can parse (manager + reports), not only department bars",
+  "Unassigned vs top-of-house seats — who is missing from the tree",
   "Person as Avatar / name — never dict-repr",
   "Notes or documents only when domain-true (reviews, not fake chat)",
 ]
@@ -13,9 +14,11 @@ above_fold = [
 refuse = [
   "Org structure that is only department metric tiles",
   "Media headshot shelf with no reporting structure when org is claimed",
+  "Office/remote dual queues on Reporting after unassigned_reporting_seat exists",
 ]
 
 icon_depths = ["org_structure", "empty_region_honesty", "document"]
 surprise_prompts = [
   "What one HR-true detail (span of control, location, level) would a people partner use?",
+  "Who is missing a manager, and is that expected apex or a hole in the tree?",
 ]

@@ -2,7 +2,9 @@
 
 Cycle 1914 peer-pack upgrade: work_location_grain (BambooHR / Workday place
 grain) — Person.work_location + by_location boards + remote/hybrid metrics.
-Not headshot_shelf; not media/document/conversation/command_density re-stack.
+Cycle 2085: unassigned_reporting_seat — Reporting desk leads with exclusive
+Unassigned vs Top of House (who is missing from the tree), not office/remote
+location coat. Not headshot_shelf; not media/document/conversation re-stack.
 """
 
 from __future__ import annotations
@@ -37,7 +39,9 @@ def test_person_entity_declares_work_location() -> None:
     assert (
         "work_location: enum[london_hq,manchester,remote_uk,hybrid,client_site]=london_hq" in block
     )
+    assert "reporting_seat: enum[has_manager,unassigned,top_of_house]=unassigned" in block
     assert "work_location" in block.split("repr_fields:")[1].split("]")[0]
+    assert "reporting_seat" in block.split("repr_fields:")[1].split("]")[0]
 
 
 def test_my_team_declares_level_dept_location_boards_before_conversation() -> None:
@@ -122,12 +126,14 @@ def test_reporting_desk_span_of_control_before_flat_queue() -> None:
     assert "action: managerlink_detail" in span
     assert "group_by: manager" not in span
     assert "filter: end_date = null" in span
-    # People hierarchy before dept-name bar theater
-    assert block.index("reporting_pulse:") < block.index("\n  office_sites:")
-    assert block.index("\n  office_sites:") < block.index("\n  remote_flex:")
-    assert block.index("\n  remote_flex:") < block.index("\n  span_of_control:")
+    # Cycle 2085: reporting-seat queues before span; no office/remote coat
+    assert block.index("reporting_pulse:") < block.index("\n  unassigned:")
+    assert block.index("\n  unassigned:") < block.index("\n  top_of_house:")
+    assert block.index("\n  top_of_house:") < block.index("\n  span_of_control:")
     assert block.index("\n  span_of_control:") < block.index("\n  by_department:")
     assert block.index("\n  by_department:") < block.index("\n  by_location:")
+    assert "\n  office_sites:" not in block
+    assert "\n  remote_flex:" not in block
     assert "dept_mix:" not in block
     assert "bar_chart" not in block
     assert "\n  active_links:" not in block
@@ -136,16 +142,21 @@ def test_reporting_desk_span_of_control_before_flat_queue() -> None:
 
 def test_reporting_desk_ux_focus_org_people() -> None:
     block = _reporting_desk_block()
+    assert "focus: reporting_pulse, unassigned, top_of_house, span_of_control" in block
+    assert "focus: reporting_pulse, span_of_control" in block
     assert (
-        "focus: reporting_pulse, office_sites, remote_flex, span_of_control, by_department, by_location"
+        "unassigned" in block.lower()
+        or "reporting seat" in block.lower()
+        or "top-of-house" in block.lower()
+        or "top of house" in block.lower()
+    )
+    assert (
+        "unassigned: count(Person where reporting_seat = unassigned and ended_at = null)" in block
+    )
+    assert (
+        "top_of_house: count(Person where reporting_seat = top_of_house and ended_at = null)"
         in block
     )
-    assert (
-        "span of control" in block.lower()
-        or "Span of control" in block
-        or "report→manager" in block
-    )
-    assert "remote_uk: count(Person where work_location = remote_uk" in block
 
 
 def test_person_surfaces_expose_work_location() -> None:
@@ -153,6 +164,7 @@ def test_person_surfaces_expose_work_location() -> None:
     assert 'field work_location "Work location"' in text
     # list + detail + create + edit
     assert text.count('field work_location "Work location"') >= 4
+    assert text.count('field reporting_seat "Reporting seat"') >= 4
 
 
 def test_person_seeds_span_work_locations() -> None:
@@ -171,7 +183,7 @@ def test_person_seeds_span_work_locations() -> None:
 def test_my_team_and_reporting_office_remote_density() -> None:
     """Cycle 2050: BambooHR/Workday office↔remote dual presence (office_remote_density).
 
-    Not by_location-only work_location_grain re-stack, not department metric tiles alone.
+    Lives on My Team. Cycle 2085 distilled the same coat from Reporting.
     """
     office_filter = (
         "ended_at = null and (work_location = london_hq or work_location = manchester "
@@ -196,7 +208,32 @@ def test_my_team_and_reporting_office_remote_density() -> None:
     assert team.index("\n  office_sites:\n") < team.index("\n  by_level:\n")
 
     desk = _reporting_desk_block()
-    assert "\n  office_sites:\n" in desk
-    assert "\n  remote_flex:\n" in desk
-    assert desk.index("\n  office_sites:\n") < desk.index("\n  span_of_control:\n")
-    assert f"office_sites: count(Person where {office_filter})" in desk
+    assert "\n  office_sites:\n" not in desk
+    assert "\n  remote_flex:\n" not in desk
+
+
+def test_reporting_desk_unassigned_reporting_seat() -> None:
+    """Cycle 2085: BambooHR/Workday Unassigned vs Top of House (unassigned_reporting_seat).
+
+    Not office_remote_density re-stack, not department metric tiles alone.
+    """
+    desk = _reporting_desk_block()
+    assert "\n  unassigned:\n" in desk
+    assert "\n  top_of_house:\n" in desk
+    unassigned = desk.split("\n  unassigned:\n", 1)[1].split("\n  top_of_house:", 1)[0]
+    assert "source: Person" in unassigned
+    assert "reporting_seat = unassigned" in unassigned
+    assert "display: queue" in unassigned
+    assert "action: person_detail" in unassigned
+    apex = desk.split("\n  top_of_house:\n", 1)[1].split("\n  span_of_control:", 1)[0]
+    assert "source: Person" in apex
+    assert "reporting_seat = top_of_house" in apex
+    assert "display: queue" in apex
+    assert desk.index("\n  unassigned:\n") < desk.index("\n  span_of_control:\n")
+    rows = [json.loads(line) for line in PERSON_SEEDS.read_text().splitlines() if line.strip()]
+    seats = {str(r.get("reporting_seat") or "") for r in rows}
+    assert "unassigned" in seats
+    assert "top_of_house" in seats
+    assert "has_manager" in seats
+    assert len([r for r in rows if r.get("reporting_seat") == "unassigned"]) >= 4
+    assert len([r for r in rows if r.get("reporting_seat") == "top_of_house"]) >= 1

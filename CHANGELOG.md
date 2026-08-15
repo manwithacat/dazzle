@@ -20,6 +20,11 @@
   demo_fleet stills recaptured (my_invoices requester empty_hero residual clear).
 
 ### Changed
+- **Goal B org unassigned reporting seats (cycle 2085)** — hr_records
+  Reporting desk leads with exclusive Unassigned vs Top of House
+  (`unassigned_reporting_seat`; BambooHR/Workday hole in the tree). Subtract
+  office/remote dual queues from this desk (location coat stays on My Team).
+  `Person.reporting_seat` + seeds; still proof **Unassigned** above fold.
 - **Goal C distill + note_kind chrome (cycle 2084)** — subtract 2083
   `repro_notes` conversation sibling on fieldtest issue_triage (coat theatre
   / conversation_filter_slice). Keep `IssueNote.note_kind`; framework
