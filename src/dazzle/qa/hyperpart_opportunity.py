@@ -44,6 +44,7 @@ __all__ = [
     "scan_person_timeline_meta_opportunities",
     "scan_person_card_meta_opportunities",
     "scan_person_metrics_tile_opportunities",
+    "scan_person_kanban_field_opportunities",
     "scan_queue_opportunities",
 ]
 
@@ -276,6 +277,7 @@ def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportun
 _TIMELINE_DISPLAYS = frozenset({"activity_feed", "timeline"})
 _CARD_META_DISPLAYS = frozenset({"grid"})
 _METRICS_TILE_DISPLAYS = frozenset({"metrics", "summary"})
+_KANBAN_FIELD_DISPLAYS = frozenset({"kanban"})
 
 
 def _person_host_opportunity(
@@ -413,6 +415,26 @@ def scan_person_metrics_tile_opportunities(appspec: Any) -> list[HyperpartOpport
     )
 
 
+def scan_person_kanban_field_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: kanban`` cards — kanban_field host.
+
+    Status is ``emit_covered`` when framework ``present(person, kanban_field)``
+    is live (Avatar chip). Scalar leftover (``Ada`` / ``System``) stays
+    escaped field text — do not invent a chip from a bare string.
+    """
+    return _scan_person_host_opportunities(
+        appspec,
+        displays=_KANBAN_FIELD_DISPLAYS,
+        host="kanban_field",
+        kind="person_ref_kanban_field",
+        notes="present(person, kanban_field) → avatar_name",
+        description_fn=lambda ent, fn, display, wname, rname: (
+            f"{ent}.{fn} on {display} {wname}/{rname} — "
+            f"presentation matrix emits Avatar (kanban_field), not person-as-text."
+        ),
+    )
+
+
 def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     """All static hyperpart opportunities for one app."""
     rows = scan_person_ref_opportunities(appspec)
@@ -420,6 +442,7 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     rows.extend(scan_person_timeline_meta_opportunities(appspec))
     rows.extend(scan_person_card_meta_opportunities(appspec))
     rows.extend(scan_person_metrics_tile_opportunities(appspec))
+    rows.extend(scan_person_kanban_field_opportunities(appspec))
     rows.extend(scan_queue_opportunities(appspec))
     rows.extend(scan_scenario_opportunities(appspec))
     return rows
@@ -428,7 +451,8 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
 _GUIDANCE = {
     "avatar": (
         "Role person → Avatar via presentation matrix "
-        "(list/detail + queue_meta + timeline_meta + card_meta; metrics_tile refuses). "
+        "(list/detail + queue_meta + kanban_field + timeline_meta + card_meta; "
+        "metrics_tile refuses). "
         "Doctrine: docs/reference/hyperpart-presentation.md. "
         "Statuses: emit_covered (all listed hosts), emit_partial (some hosts), "
         "never treat list-only chip as full green while queue_meta stringifies."

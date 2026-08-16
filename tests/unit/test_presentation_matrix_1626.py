@@ -122,8 +122,13 @@ def test_cognition_snapshot_honest_about_audit_scope() -> None:
     assert "card_meta" in c["hosts_audited_by_scanner"]
     assert "metrics_tile" in c["hosts_wired_to_seam"]
     assert "metrics_tile" in c["hosts_audited_by_scanner"]
+    assert "kanban_field" in c["hosts_wired_to_seam"]
+    assert "kanban_field" in c["hosts_audited_by_scanner"]
+    assert "kanban_field" not in c["hosts_not_yet_audited"]
     assert "card_meta" not in c["hosts_matrix_only_or_partial_wire"]
     assert "metrics_tile" not in c["hosts_matrix_only_or_partial_wire"]
+    assert "kanban_field" not in c["hosts_matrix_only_or_partial_wire"]
+    assert c["hosts_not_yet_audited"] == []
 
 
 def test_present_money_and_swatch_not_stub_plain_only() -> None:

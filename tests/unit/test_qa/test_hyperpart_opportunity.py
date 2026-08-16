@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from dazzle.qa.hyperpart_opportunity import (
     build_opportunity_report,
     scan_appspec,
+    scan_person_kanban_field_opportunities,
     scan_person_ref_opportunities,
 )
 from dazzle.qa.hyperpart_scenarios import catalogue_snapshot, load_scenarios
@@ -120,6 +121,36 @@ class TestScan:
         )
         # Client is not person
         assert not any(o.field == "client" for o in opps)
+
+    def test_kanban_field_person_ref_emit_covered(self) -> None:
+        """display: kanban person refs are scanned as kanban_field (cycle 2163)."""
+        appspec = _appspec()
+        appspec.workspaces = [
+            SimpleNamespace(
+                name="board",
+                regions=[
+                    SimpleNamespace(
+                        name="ticket_board",
+                        title="Board",
+                        source="Task",
+                        display=SimpleNamespace(value="kanban"),
+                    ),
+                ],
+            )
+        ]
+        opps = scan_person_kanban_field_opportunities(appspec)
+        rows = [o for o in opps if o.kind == "person_ref_kanban_field"]
+        assert rows
+        assert all(o.status == "emit_covered" for o in rows)
+        assert all(o.hosts == "kanban_field" for o in rows)
+        assert any(o.field == "assigned_to" for o in rows)
+        assert not any(o.field == "client" for o in rows)
+        report = build_opportunity_report(
+            app="support_tickets", opportunities=scan_appspec(appspec)
+        )
+        cog = report["presentation_cognition"]
+        assert "kanban_field" in cog["hosts_audited_by_scanner"]
+        assert "kanban_field" not in cog["hosts_not_yet_audited"]
 
     def test_queue_opportunity(self) -> None:
         report = build_opportunity_report(app="simple_task", opportunities=scan_appspec(_appspec()))

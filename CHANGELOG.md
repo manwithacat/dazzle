@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Agent Guidance
+- **Kanban scanner now audits `kanban_field` (cycle 2163)** —
+  static hyperpart opportunity scan walks `display: kanban` person
+  refs (`person_ref_kanban_field` emit_covered). `present()` was
+  already wired (2161). `hosts_not_yet_audited` is empty — every
+  matrix host is scanned. Cognition snapshot + unit pin.
 - **`context_selector.filter`** — optional `ConditionExpr` on the picker
   entity (same grammar as a region `filter:`). `role = agent` is **not**
   valid (`role` is reserved for `role()`); use `department != External`

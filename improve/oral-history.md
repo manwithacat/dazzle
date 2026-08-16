@@ -378,6 +378,14 @@ Doctrine source of truth remains
     window. Do not clone leftover-scalar refuse (oral #45). Not
     Goal B coat.
 
+47. **Kanban scanner closes hosts_not_yet_audited.** Cycle 2163:
+    ``display: kanban`` person refs are ``person_ref_kanban_field``
+    ``emit_covered`` (present already wired in 2161). Scanner now
+    walks every matrix host — ``hosts_not_yet_audited`` is empty.
+    Do **not** clone another host scan unless a new matrix host
+    exists. Not leftover-scalar refuse. Not leftover page. Not
+    Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

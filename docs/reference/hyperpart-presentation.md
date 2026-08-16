@@ -169,8 +169,8 @@ Opportunity reports are **schema_version 2** with `presentation_cognition`:
 
 | Field | Meaning |
 |-------|---------|
-| `hosts_audited_by_scanner` | Static scan actually walks these hosts |
-| `hosts_not_yet_audited` | Matrix rows exist; scan does not residual them yet |
+| `hosts_audited_by_scanner` | Static scan actually walks these hosts (all matrix hosts as of cycle 2163) |
+| `hosts_not_yet_audited` | Matrix rows exist; scan does not residual them yet (empty after kanban_field scan) |
 | `hosts_wired_to_seam` | Emit calls `present()` or equivalent chip path (list/detail/queue/kanban/timeline/card_meta/metrics_tile) |
 | `person_rows_all_emit_covered` | True only for **audited** person rows |
 | `caveat` | Do not treat all-green as fleet presentation done |

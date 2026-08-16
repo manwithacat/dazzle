@@ -77,6 +77,7 @@ HOSTS_AUDITED_BY_SCANNER: frozenset[str] = frozenset(
         "list_cell",
         "detail_cell",
         "queue_meta",
+        "kanban_field",
         "timeline_meta",
         "card_meta",
         "metrics_tile",
