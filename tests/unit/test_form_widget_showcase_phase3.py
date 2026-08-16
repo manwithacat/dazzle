@@ -331,6 +331,29 @@ def test_pdf_controller_leftover_zoom_does_not_invent() -> None:
     assert "leftover junk stays visible" in src
 
 
+def test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale() -> None:
+    """Cycle 2156 — leftover-zoom prove must not use 1.25 (fit collision).
+
+    CI Chromium fit-width rendered 876px, which equals 1.25× the sample
+    page. ``valid zoom must render`` then failed with ``876px != 876px``
+    and the HM behaviour job re-redded the Dazzle badge. The pin uses 2×.
+    """
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "tests"
+        / "test_behaviour.py"
+    ).read_text(encoding="utf-8")
+    assert "def test_pdf_leftover_zoom_does_not_invent_zoom" in src
+    assert 'page.fill(inp, "2")' in src
+    assert "valid zoom must render" in src
+    assert 'page.fill(inp, "1.25")' not in src
+    assert "2× cannot collide with fit" in src
+
+
 def test_grid_edit_controller_leftover_iso_does_not_invent() -> None:
     """dz-grid-edit.js must refuse leftover date ISO junk (2150)."""
     from pathlib import Path

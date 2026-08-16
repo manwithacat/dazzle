@@ -320,6 +320,15 @@ Doctrine source of truth remains
     Re-running the mirror job is still the no-code recovery once HM is
     already green.
 
+41. **PDF leftover-zoom prove must not use a scale that can equal
+    fit-width.** Cycle 2152 asserted `1.25` changes canvas
+    `style.width` vs the default `fit`. CI Chromium fit was already
+    876px (≈1.25× the sample page) so `876px != 876px` and the HM
+    behaviour job re-redded Dazzle (2156). Leftover honesty itself
+    was fine. Use `2` (cannot collide with fit) and wait for the
+    canvas width, not only the companion value. Ship-surface pin
+    `test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale`.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

@@ -3845,12 +3845,16 @@ def _assert_pdf_zoom_leftover(page) -> None:  # type: ignore[no-untyped-def]
     assert page.input_value(inp) == "99", "out-of-range must not invent by clamping"
     assert page.eval_on_selector(inp, "el => el.validity.customError") is True
 
-    page.fill(inp, "1.25")
+    # Cycle 2156: do not prove with 1.25 — CI Chromium fit-width was
+    # already 876px (≈1.25× page), so style.width did not move and the
+    # leftover pin reded the Dazzle badge. 2× cannot collide with fit.
+    page.fill(inp, "2")
     page.eval_on_selector(
         inp,
         "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
     )
-    page.wait_for_function(f"document.querySelector('{inp}').value === '1.25'")
+    page.wait_for_function(f"document.querySelector('{inp}').value === '2'")
+    page.wait_for_function(f"document.querySelector('{canvas}').style.width !== '{before}'")
     assert page.eval_on_selector(inp, "el => el.checkValidity()") is True
     after = page.eval_on_selector(canvas, "el => el.style.width")
     assert after != before, "valid zoom must render"
@@ -3858,7 +3862,7 @@ def _assert_pdf_zoom_leftover(page) -> None:  # type: ignore[no-untyped-def]
     page.fill(inp, "")
     page.eval_on_selector(inp, "el => el.blur()")
     page.wait_for_timeout(50)
-    assert page.input_value(inp) == "1.25", "empty companion on blur restores from the current zoom"
+    assert page.input_value(inp) == "2", "empty companion on blur restores from the current zoom"
 
     page.fill(inp, "zzz")
     page.eval_on_selector(inp, "el => el.blur()")
