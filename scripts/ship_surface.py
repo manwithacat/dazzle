@@ -102,6 +102,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_related_tab_as_of_leftover.py",
     # cycle 2168: HTML list include_closed must not invent the open-only collection
     "tests/unit/test_list_include_closed_leftover.py",
+    # cycle 2169: bulk all-matching echo include_closed / as_of must not invent 422
+    "tests/unit/test_bulk_temporal_echo_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

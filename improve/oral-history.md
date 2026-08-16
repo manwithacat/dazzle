@@ -440,6 +440,17 @@ Doctrine source of truth remains
     leftover list as_of (oral #49). Not leftover sort/page. Not
     leftover-scalar refuse. Not Goal B coat.
 
+53. **Bulk all-matching echo include_closed / as_of invents 422
+    or the open-only / current set.** Cycle 2169: `_echo_to_query`
+    treated ``as_of`` / ``include_closed`` as unconsumable (422);
+    `resolve_all_matching_ids` never forwarded them to
+    `gated_list` (dropped → open-only / current). Leftover-honest
+    parse (same as HTML list). Valid ``true`` / YYYY-MM-DD still
+    reach gated_list. Do **not** clone leftover list
+    include_closed / related-tab as_of / DETAIL as_of onto the
+    edit form. Not leftover list as_of / sort / page. Not
+    leftover-scalar refuse. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

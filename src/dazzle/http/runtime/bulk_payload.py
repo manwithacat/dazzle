@@ -21,6 +21,8 @@ Fail-closed rules (the C0b contract):
 - an unconsumable bare echo key is REJECTED for the same reason (bracket
   ``filter[field]`` keys pass through exactly as the list route applies them —
   parity with what the view showed);
+- leftover-honest ``as_of`` / ``include_closed`` are consumed (cycle 2169),
+  not 422'd or dropped — leftover junk restores current / open-only;
 - a matched set larger than ``cap`` is REJECTED ("narrow the query") rather
   than silently truncated.
 """
@@ -29,6 +31,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.http.runtime.access.gated import gated_list
+from dazzle.http.runtime.page_routes import (
+    _parse_list_as_of,
+    _parse_list_include_closed,
+)
 
 # The four bulk-payload keys (never part of the query echo).
 PAYLOAD_KEYS = frozenset({"action", "selected_ids", "all_matching_selected", "excluded_ids"})
@@ -38,6 +44,15 @@ _WINDOW_KEYS = frozenset({"sort", "dir", "page", "page_size", "format"})
 
 # Echo keys carrying the free-text search (q is the spec alias, #596).
 _SEARCH_KEYS = frozenset({"q", "search"})
+
+# Leftover-honest temporal echo (cycle 2169). Grid hx-get can carry the same
+# ``?as_of=`` / ``?include_closed=`` the HTML list already leftover-parses.
+# Treating them as unconsumable invented 422; dropping them invented the
+# open-only / current matched set. Empty / leftover restores default.
+_TEMPORAL_ECHO_KEYS = frozenset({"as_of", "include_closed"})
+
+# Window + search + leftover-honest temporal — not user filters, not 422.
+_IGNORABLE_ECHO_KEYS = _WINDOW_KEYS | _SEARCH_KEYS | _TEMPORAL_ECHO_KEYS
 
 
 class BulkQueryError(ValueError):
@@ -114,7 +129,7 @@ def _echo_to_query(
     allowed_bare = set(filter_fields or [])
     user_filters: dict[str, Any] = {}
     for key, value in echo.items():
-        if key in _WINDOW_KEYS or key in _SEARCH_KEYS or not value:
+        if key in _IGNORABLE_ECHO_KEYS or not value:
             continue
         if key.startswith("filter[") and key.endswith("]"):
             user_filters[key[7:-1]] = value
@@ -126,6 +141,18 @@ def _echo_to_query(
                 "consume — refusing to apply the action wider than the view"
             )
     return search, (user_filters or None)
+
+
+def _echo_temporal(echo: dict[str, str]) -> tuple[str | None, bool]:
+    """Leftover-honest ``as_of`` / ``include_closed`` from the grid echo.
+
+    Same parsers as the HTML list (cycle 2165 / 2168). Valid flags reach
+    ``gated_list``; leftover junk restores *no as_of* / open-only.
+    """
+    return (
+        _parse_list_as_of(echo.get("as_of")),
+        _parse_list_include_closed(echo.get("include_closed")),
+    )
 
 
 async def resolve_all_matching_ids(
@@ -153,6 +180,7 @@ async def resolve_all_matching_ids(
     search, user_filters = _echo_to_query(
         echo, search_fields=search_fields, filter_fields=filter_fields
     )
+    as_of_raw, include_closed = _echo_temporal(echo)
     ids: list[str] = []
     page = 1
     while True:
@@ -166,6 +194,8 @@ async def resolve_all_matching_ids(
             search_fields=search_fields,
             access_spec=access_spec,
             ref_targets=ref_targets,
+            temporal_as_of_raw=as_of_raw,
+            temporal_include_closed=include_closed,
         )
         items = result.get("items") or []
         total = int(result.get("total") or 0)

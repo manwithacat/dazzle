@@ -600,6 +600,40 @@ class TestGridBulkPayload:
         assert resp.status_code == 422, "an unconsumable narrowing param must fail closed"
         assert all(r["status"] == "new" for r in rows)
 
+    def test_all_matching_leftover_temporal_echo_does_not_422(self) -> None:
+        """include_closed / as_of are leftover-honest (cycle 2169), not unconsumable.
+
+        Leftover junk restores open-only / current (same as the HTML list).
+        Valid flags must not invent 422. Non-temporal fakes ignore the
+        parsed keys (no entity_spec.temporal) — the action still applies.
+        """
+        rows = [dict(r) for r in self._ROWS]
+        client, _svc = self._build(rows)
+        leftover = client.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "all_matching_selected": "true",
+                "include_closed": "zzz",
+                "as_of": "2abc",
+            },
+        )
+        assert leftover.status_code == 200, leftover.text
+        assert all(r["status"] == "active" for r in rows)
+        rows2 = [dict(r) for r in self._ROWS]
+        client2, _svc2 = self._build(rows2)
+        valid = client2.post(
+            "/api/insertionpoints/bulk",
+            data={
+                "action": "accept",
+                "all_matching_selected": "true",
+                "include_closed": "true",
+                "as_of": "2026-06-20",
+            },
+        )
+        assert valid.status_code == 200, valid.text
+        assert all(r["status"] == "active" for r in rows2)
+
     def test_all_matching_search_without_search_fields_rejected(self) -> None:
         rows = [dict(r) for r in self._ROWS]
         client, _svc = self._build(rows)  # no search_fields
