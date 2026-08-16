@@ -397,6 +397,15 @@ Doctrine source of truth remains
     search. Do not clone leftover page. Not leftover-scalar refuse.
     Not host-scan. Not Goal B coat.
 
+49. **List leftover as_of invents an empty collection.** Cycle 2165:
+    ``?as_of=2abc`` / ``zzz`` / ``not-a-date`` used to raise
+    ``InvalidTemporalParam``; ``_list_entity_in_process`` invented
+    items=[] via ``return _empty``. Leftover-honest parse restores
+    *no as_of* (current collection); valid YYYY-MM-DD still
+    time-travels. Defense retries without as_of instead of inventing
+    empty. Not leftover sort/q (oral #48). Not leftover page
+    (oral #46). Not leftover-scalar refuse. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

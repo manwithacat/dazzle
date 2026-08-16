@@ -12,6 +12,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **List leftover as_of invented an empty collection (cycle 2165)** —
+  leftover URL `?as_of=2abc` / `zzz` / `not-a-date` no longer raises
+  `InvalidTemporalParam` into `_list_entity_in_process`'s
+  `return _empty` (empty table theater). Empty / invalid restores
+  the current collection (no as_of); valid YYYY-MM-DD still
+  time-travels. HTML list fetch now honours leftover-honest
+  `as_of` (entity `as_of_param`, default `as_of`). New invent
+  class: leftover temporal invents empty, not leftover sort/q
+  (2164) or leftover page (2162).
 - **List leftover sort/filter/q invented a fetch (cycle 2164)** —
   leftover URL `?sort=2abc` / `?sort=zzz` / `?dir=zzz` /
   `?filter[zzz]=1` no longer raise into `_handle_table`'s bare

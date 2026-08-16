@@ -199,6 +199,28 @@ def _parse_list_search(*raws: Any) -> str | None:
     return None
 
 
+def _parse_list_as_of(raw: Any) -> str | None:
+    """Parse leftover-honest list ``as_of``.
+
+    Leftover junk (``2abc``, ``zzz``, ``not-a-date``) must not invent
+    an empty collection. ``date.fromisoformat`` raises;
+    ``_list_entity_in_process`` then invented items=[] via
+    ``except InvalidTemporalParam: return _empty``. Empty / invalid
+    restores *no as_of* (current collection). Valid YYYY-MM-DD still
+    time-travels. Cycle 2165.
+    """
+    from datetime import date as _date
+
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return None
+    try:
+        _date.fromisoformat(text)
+    except (ValueError, TypeError):
+        return None
+    return text
+
+
 def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[str, str]:
     """Parse leftover-honest ``filter[key]``. Invalid / unknown keys dropped."""
     out: dict[str, str] = {}
@@ -1591,22 +1613,26 @@ async def _list_entity_in_process(
         admin_personas=prc.deps.entity_admin_personas,
     )
     sort_list = [f"-{sort}" if direction == "desc" else sort] if sort else None
+    # Leftover-honest as_of (cycle 2165). Junk must not invent empty via
+    # InvalidTemporalParam → _empty. Empty / invalid restores current.
+    as_of_raw = _parse_list_as_of(as_of_raw)
+    _list_kwargs: dict[str, Any] = {
+        "page": page,
+        "page_size": page_size,
+        "sort_list": sort_list,
+        "search": search,
+        "user_filters": filters or None,
+        "auto_include": prc.deps.entity_auto_includes.get(entity_name),
+        "access_spec": prc.deps.entity_access_specs.get(entity_name),
+        "temporal_include_closed": include_closed,
+    }
     try:
-        result = await gated_list(
-            service,
-            access,
-            page=page,
-            page_size=page_size,
-            sort_list=sort_list,
-            search=search,
-            user_filters=filters or None,
-            auto_include=prc.deps.entity_auto_includes.get(entity_name),
-            access_spec=prc.deps.entity_access_specs.get(entity_name),
-            temporal_as_of_raw=as_of_raw,
-            temporal_include_closed=include_closed,
-        )
-    except InvalidTemporalParam:
-        return _empty
+        try:
+            result = await gated_list(service, access, temporal_as_of_raw=as_of_raw, **_list_kwargs)
+        except InvalidTemporalParam:
+            if not as_of_raw:
+                raise
+            result = await gated_list(service, access, temporal_as_of_raw=None, **_list_kwargs)
     except AccessForbidden as e:
         # #1541: a scope/permit denial must not be indistinguishable from
         # a genuinely-empty collection in the logs — the zero-rows class
@@ -1888,6 +1914,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     # Leftover-honest list query (cycle 2164). dz-grid writes q/sort/dir;
     # leftover sort/filter used to invent empty (exception theater);
     # leftover q used to invent the unfiltered collection.
+    # Leftover as_of (cycle 2165) must not invent empty via InvalidTemporalParam.
     _qparams = prc.request.query_params
     _allowed = _list_known_fields(req_table)
     _list_sort = _parse_list_sort(
@@ -1901,6 +1928,10 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _list_filters = _parse_list_filters(_qparams, allowed=_allowed)
+    _svc = prc.deps.entity_services.get(req_table.entity_name)
+    _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
+    _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
+    _list_as_of = _parse_list_as_of(_qparams.get(_as_of_param))
 
     # search_first: skip initial fetch until user provides search/filter
     _has_search = bool(_list_search)
@@ -1934,6 +1965,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
                 direction=_list_dir,
                 search=_list_search,
                 filters=_list_filters or None,
+                as_of_raw=_list_as_of,
             )
             items = data.get("items", [])
             if items and isinstance(items[0], dict):
