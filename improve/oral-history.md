@@ -329,6 +329,16 @@ Doctrine source of truth remains
     canvas width, not only the companion value. Ship-surface pin
     `test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale`.
 
+42. **Leftover-honesty parse-invent is saturated on Field / grid /
+    PDF companions.** Cycles 2144–2157 shipped time/date/number
+    companions, grid date/time/number/page, and PDF page/zoom. The
+    remaining `dz-*` controllers either already refuse leftover
+    (money 2121, colour/slider/search/combobox/tags) or have no
+    parse-invent surface (command is open/keyboard only). Next
+    framework-ux mutation must be a **new invent class** (found
+    in-cycle) or **presentation MCP STALE (1554)** — do not clone
+    another `parseInt` leftover onto a sibling control.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
