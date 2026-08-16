@@ -217,6 +217,9 @@ Doctrine source of truth remains
     Standalone date leftover ISO must not invent a date
     (`2026-06-01zzz` / `zzz` / `June 1` stay visible + fail
     validity; empty restores from the native, 2145).
+    Search-box leftover typed query must not invent Aurora
+    (`name=q` + mock filter; leftover `zzz` is empty, matching
+    `substation` still hits; date-range no-q keeps canned, 2148).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.

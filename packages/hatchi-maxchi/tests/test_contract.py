@@ -473,6 +473,23 @@ def test_search_select_preview_posts_named_query() -> None:
     assert 'form=""' not in ss.partial
 
 
+def test_search_box_preview_posts_named_query() -> None:
+    """Cycle 2148: leftover query must reach /mock/search as name=q.
+
+    Path-only /mock/search invented the canned Aurora list for zzz.
+    Date-range still uses /mock/search without q= (canned fragment).
+    """
+    sb = next(c for c in HYPERPARTS if c.id == "search-box")
+    assert 'name="q"' in sb.partial
+    assert 'hx-get="/mock/search"' in sb.partial
+    src = (Path(__file__).resolve().parents[1] / "site" / "build_site.py").read_text(
+        encoding="utf-8"
+    )
+    assert "function renderSearchResults" in src
+    assert "SEARCH_BOX_ITEMS" in src
+    assert 'path === "/mock/search"' in src
+
+
 def test_gallery_pages_host_detached_q_form() -> None:
     """Cycle 2140: Nu requires form= to name a real form element."""
     site = Path(__file__).resolve().parents[1] / "site"

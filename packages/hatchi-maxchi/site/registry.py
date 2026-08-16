@@ -1818,7 +1818,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>hx-trigger</code> with a min-length filter; "
             "<code>dz-search-box.js</code> still blocks empty/whitespace "
             "queries (gallery mock ignores the filter) and restores the "
-            "coaching line so clear does not swap a fake hit list. Results "
+            "coaching line so clear does not swap a fake hit list. The "
+            "input posts <code>name=q</code> so leftover text reaches "
+            "<code>/mock/search</code> — leftover <code>zzz</code> is empty, "
+            "not canned Aurora (cycle 2148). Results "
             "land in an <code>aria-live=&quot;polite&quot;</code> region; "
             "the coaching line is hidden by "
             "<code>:has(input:not(:placeholder-shown))</code> until a swap. "
@@ -1838,11 +1841,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 pitfalls=(
                     "empty / whitespace query must not hx-get a silent or fake result list",
                     "clear after a hit must restore coaching — do not leave stale Aurora rows",
+                    "leftover typed q (zzz) must not invent Aurora — /mock/search filters",
                 ),
                 do_dont=(
                     (
                         "stop empty exchanges and restore the coaching empty line",
-                        "GET q= and let /mock/search invent Aurora/Beacon hits",
+                        "GET empty q= and let /mock/search invent Aurora/Beacon hits",
+                    ),
+                    (
+                        "filter leftover q= so zzz is empty and substation still hits",
+                        "path-only /mock/search that ignores q= and invents Aurora",
                     ),
                 ),
                 a11y_keys=(

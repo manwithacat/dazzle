@@ -135,6 +135,23 @@ def test_search_box_controller_rejects_empty_query() -> None:
     assert "stopImmediatePropagation" in src
 
 
+def test_search_box_mock_leftover_query_does_not_invent() -> None:
+    """Gallery /mock/search must filter leftover q= (cycle 2148)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "site"
+        / "build_site.py"
+    ).read_text(encoding="utf-8")
+    assert "function renderSearchResults" in src
+    assert "SEARCH_BOX_ITEMS" in src
+    assert "must not invent Aurora" in src
+    assert 'path === "/mock/search"' in src
+
+
 def test_search_box_controller_does_not_reparse_dom_text() -> None:
     """Coaching restore must clone a node, not innerHTML a data attr (2124 / #223)."""
     from pathlib import Path

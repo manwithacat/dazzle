@@ -5761,6 +5761,11 @@
  * (always Aurora/Beacon) or a product empty region. Same honesty class
  * as date-range inverted emptying the region (cycle 2122).
  *
+ * Leftover-query honesty (cycle 2148): non-empty leftover ("zzz") must
+ * still exchange — the mock / product filters by name=q. Path-only
+ * /mock/search invented Aurora. Same class as search-select leftover
+ * (2138) and command leftover (2130).
+ *
  * Re-query the DOM on every event (morph-safe). Cache a clone of the
  * author's coaching node on first touch (WeakMap — never store markup in
  * a data attribute and write it back; CodeQL js/xss-through-dom #223).

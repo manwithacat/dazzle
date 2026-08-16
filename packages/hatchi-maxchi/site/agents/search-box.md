@@ -95,12 +95,14 @@ Correct response for body_only into .dz-search-box-results (innerHTML / innerMor
 
 | Do | Don't |
 |---|---|
-| stop empty exchanges and restore the coaching empty line | GET q= and let /mock/search invent Aurora/Beacon hits |
+| stop empty exchanges and restore the coaching empty line | GET empty q= and let /mock/search invent Aurora/Beacon hits |
+| filter leftover q= so zzz is empty and substation still hits | path-only /mock/search that ignores q= and invents Aurora |
 
 ### Pitfalls
 
 - empty / whitespace query must not hx-get a silent or fake result list
 - clear after a hit must restore coaching — do not leave stale Aurora rows
+- leftover typed q (zzz) must not invent Aurora — /mock/search filters
 
 ### Keyboard / AT
 
@@ -164,7 +166,7 @@ def render(s: SearchBox) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-search-box (contracts/search_box.py). The 250ms debounce is hx-trigger with a min-length filter; dz-search-box.js still blocks empty/whitespace queries (gallery mock ignores the filter) and restores the coaching line so clear does not swap a fake hit list. Results land in an aria-live="polite" region; the coaching line is hidden by :has(input:not(:placeholder-shown)) until a swap. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
+Dual-lock root is data-dz-search-box (contracts/search_box.py). The 250ms debounce is hx-trigger with a min-length filter; dz-search-box.js still blocks empty/whitespace queries (gallery mock ignores the filter) and restores the coaching line so clear does not swap a fake hit list. The input posts name=q so leftover text reaches /mock/search — leftover zzz is empty, not canned Aurora (cycle 2148). Results land in an aria-live="polite" region; the coaching line is hidden by :has(input:not(:placeholder-shown)) until a swap. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
 
 ## Source files
 

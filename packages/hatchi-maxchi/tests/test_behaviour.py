@@ -3012,6 +3012,33 @@ def test_search_box_empty_does_not_fire_search(page) -> None:  # type: ignore[no
     page.reload()
 
 
+def test_search_box_leftover_query_does_not_invent_hits(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover typed query must not invent Aurora hits (cycle 2148).
+
+    Same honesty class as search-select leftover (2138) and command leftover
+    (2130): leftover 'zzz' used to keep Aurora/Beacon because /mock/search
+    ignored q=. Matching 'substation' still exchanges. name=q carries leftover.
+    """
+    goto_part(page, "search-box")
+    region = page.locator("#search-box .search-box-region").first
+    inp = region.locator("input[type=search]")
+    results = region.locator(".search-box-results")
+
+    inp.fill("substation")
+    page.wait_for_timeout(400)
+    assert "Aurora" in results.inner_text(), "matching query must still exchange"
+    assert "Beacon" in results.inner_text()
+
+    inp.fill("zzz")
+    page.wait_for_timeout(400)
+    text = results.inner_text()
+    assert "Aurora" not in text, "leftover must not invent Aurora"
+    assert "Beacon" not in text
+    assert page.locator("#search-box .search-box-result").count() == 0
+    assert "No results found" in text
+    page.reload()
+
+
 def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # type: ignore[no-untyped-def]
     """SEV-1 regression pin (F3 review): the coaching-hide rule must NOT
     catch the server's zero-hit state — `dz-search-box-empty

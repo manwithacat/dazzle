@@ -28,7 +28,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       '<div class="select-result-confirm" role="status">'
       + "Selected — hidden FK filled server-side; form posts the id, not this label."
       + "</div>",
-    "/mock/search": '<div class="search-box-result-count">2 results</div><ul class="search-box-result-list" role="list"><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Aurora <mark>Substation</mark></span><ul class="search-box-result-snippets"><li class="search-box-result-snippet"><span class="search-box-result-snippet-field">Region:</span><span class="search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
+    // /mock/search is computed by renderSearchResults (leftover q must not
+    // invent Aurora — cycle 2148). Date-range (no q=) keeps the canned
+    // fragment via SEARCH_BOX_CANNED.
     // Composed peek fragment for the drawer Hyperpart demo. Honest guest DOM:
     // card-label/value title stack, one KPI card per metric in auto-grid,
     // meta as card-label + primary text (not form-field+hint), alert role=alert.
@@ -587,10 +589,47 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return html;
   }
 
+  // Search-box catalog — leftover typed query must not invent Aurora
+  // (cycle 2148). Same class as /mock/typeahead leftover (2138).
+  // Callers without q= (date-range filter bar) keep the canned fragment.
+  var SEARCH_BOX_ITEMS = [
+    { hay: "aurora substation north grid cluster a",
+      html: '<li class="search-box-result"><a href="#" class="search-box-result-link">'
+      + '<span class="search-box-result-title">Aurora <mark>Substation</mark></span>'
+      + '<ul class="search-box-result-snippets"><li class="search-box-result-snippet">'
+      + '<span class="search-box-result-snippet-field">Region:</span>'
+      + '<span class="search-box-result-snippet-text">North grid, '
+      + '<mark>substation</mark> cluster A</span></li></ul></a></li>' },
+    { hay: "beacon substation",
+      html: '<li class="search-box-result"><a href="#" class="search-box-result-link">'
+      + '<span class="search-box-result-title">Beacon <mark>Substation</mark></span>'
+      + '</a></li>' }
+  ];
+  var SEARCH_BOX_CANNED =
+    '<div class="search-box-result-count">2 results</div>'
+    + '<ul class="search-box-result-list" role="list">'
+    + SEARCH_BOX_ITEMS[0].html + SEARCH_BOX_ITEMS[1].html + "</ul>";
+  function renderSearchResults(url) {
+    var q = (parseQuery(url).q || "").trim().toLowerCase();
+    if (!q) return SEARCH_BOX_CANNED;
+    var hits = SEARCH_BOX_ITEMS.filter(function (e) {
+      return e.hay.indexOf(q) >= 0;
+    });
+    if (!hits.length) {
+      return '<div class="search-box-empty search-box-empty--no-results">'
+        + 'No results found for "' + escapeTypeaheadQ(q) + '"</div>';
+    }
+    var html = '<div class="search-box-result-count">'
+      + hits.length + (hits.length === 1 ? " result" : " results")
+      + '</div><ul class="search-box-result-list" role="list">';
+    hits.forEach(function (e) { html += e.html; });
+    return html + "</ul>";
+  }
+
   // Real htmx includes the initiating named input as a query param
-  // (command palette name=q; search-select leftover name=q). Path-only
-  // /mock/command and /mock/typeahead invented the full canned list
-  // (cycles 2130 / 2138).
+  // (command palette name=q; search-select leftover name=q; search-box
+  // leftover name=q). Path-only /mock/command, /mock/typeahead, and
+  // /mock/search invented the full canned list (cycles 2130 / 2138 / 2148).
   function requestUrl(el) {
     var url = el.getAttribute("hx-get") || "";
     if (el && el.name && (
@@ -611,6 +650,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       body = expand(renderCommandResults(url));
     } else if (path === "/mock/typeahead") {
       body = expand(renderTypeaheadResults(url));
+    } else if (path === "/mock/search") {
+      body = expand(renderSearchResults(url));
     } else if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
@@ -6784,6 +6825,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  * the trigger had no filter — clearing after a hit swapped /mock/search
  * (always Aurora/Beacon) or a product empty region. Same honesty class
  * as date-range inverted emptying the region (cycle 2122).
+ *
+ * Leftover-query honesty (cycle 2148): non-empty leftover ("zzz") must
+ * still exchange — the mock / product filters by name=q. Path-only
+ * /mock/search invented Aurora. Same class as search-select leftover
+ * (2138) and command leftover (2130).
  *
  * Re-query the DOM on every event (morph-safe). Cache a clone of the
  * author's coaching node on first touch (WeakMap — never store markup in
