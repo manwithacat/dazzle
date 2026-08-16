@@ -275,6 +275,13 @@ Doctrine source of truth remains
     the heading — do not rely on commit subject alone. Compact must not
     eat headings in the middle of the working log.
 
+39. **Darwin leftover-honesty without matching linux PNGs re-reds the
+    Dazzle badge.** 2144/2145 refreshed `part-field-*` on darwin only;
+    linux stayed July. HM visual 1.55%/10.02% → mirror red. Ship-surface
+    pin `test_hm_visual_baseline_pairs` fails when darwin is newer (or
+    dirty) than linux. Dispatch `update-baselines.yml` and commit only
+    the failing pair in the same ship (oral #33).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

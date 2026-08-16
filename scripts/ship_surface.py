@@ -78,6 +78,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
     # cycle 2142: --wait must not fail immediately on stale completed HM red
     "tests/unit/test_hm_standalone_ci_status.py",
+    # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs
+    "tests/unit/test_hm_visual_baseline_pairs.py",
     # cycle 2141: Page chrome #hm-detached-q must not trip no-user-form pins
     "tests/unit/test_error_views.py::test_404_view_renders_no_form",
     "tests/unit/test_error_views.py::test_403_view_renders_no_form",
