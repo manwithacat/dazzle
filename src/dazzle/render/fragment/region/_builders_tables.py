@@ -65,6 +65,7 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
     _render_row_action_button,
 )
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
 from dazzle.render.presentation import infer_role, present
 
 # Cap queue meta density lines so rows stay scannable (#1626).
@@ -379,6 +380,11 @@ class _BuildersTablesMixin:
 
         endpoint = ctx.get("endpoint")
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
+        # Leftover-honest temporal (cycle 2178). Extract before chrome so
+        # search / CSV / ListRegion share one raw pair. Valid true /
+        # YYYY-MM-DD ride; leftover junk omits.
+        include_closed = str(ctx.get("include_closed") or "")
+        as_of = str(ctx.get("as_of") or "")
 
         # Build chrome elements in declared order.
         chrome_parts: list[Fragment] = []
@@ -392,6 +398,13 @@ class _BuildersTablesMixin:
             import html as _html
 
             ep = _html.escape(str(endpoint), quote=True)
+            # Leftover-honest include_closed / as_of (cycle 2178). Bare
+            # hx-get="{ep}" + hx-include="closest .filter-bar" used to drop
+            # them so find invented open-only / current. Leftover junk
+            # must not invent. Valid true / YYYY-MM-DD ride; leftover
+            # junk (zzz / 2abc / maybe / not-a-date) omits.
+            temporal = leftover_honest_temporal_query(include_closed, as_of)
+            hx_get = f"{ep}?{temporal}" if temporal else ep
             val = _html.escape(active_search, quote=True)
             # Pilot-facing copy from declared search fields (name/email/…) so
             # the single list filter is obvious when FTS search_box is absent.
@@ -427,7 +440,7 @@ class _BuildersTablesMixin:
                     f'class="dz-list-search-input filter-input dz-filter-input" '
                     f'placeholder="{placeholder}" value="{val}" autocomplete="off" '
                     f"data-dz-list-search-input "
-                    f'hx-get="{ep}" '
+                    f'hx-get="{hx_get}" '
                     f'hx-target="closest [data-dz-region]" '
                     f'hx-swap="innerHTML" '
                     f'hx-trigger="input changed delay:250ms, search" '
@@ -494,8 +507,6 @@ class _BuildersTablesMixin:
             )
 
         # CsvExportButton — when csv_export flag is set
-        include_closed = str(ctx.get("include_closed") or "")
-        as_of = str(ctx.get("as_of") or "")
         if endpoint and ctx.get("csv_export"):
             chrome_parts.append(
                 CsvExportButton(

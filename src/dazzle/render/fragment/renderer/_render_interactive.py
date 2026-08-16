@@ -86,7 +86,8 @@ def leftover_honest_temporal_query(
     (``zzz``, ``2abc``, ``maybe``, ``not-a-date``) omits so a click does
     not invent open-only / current. Cycle 2172 sort-header; cycle 2174
     CSV endpoint; cycle 2175 pagination hx-get; cycle 2177 infinite-
-    scroll sentinel. Returns ``&amp;``-joined pairs with no leading sep.
+    scroll sentinel; cycle 2178 list search chrome. Returns
+    ``&amp;``-joined pairs with no leading sep.
     """
     parts: list[str] = []
     ic_raw = str(include_closed or "").strip().lower()

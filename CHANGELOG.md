@@ -12,6 +12,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **List search chrome hx-get dropped `include_closed` / `as_of` (cycle 2178)** —
+  workspace list find wrote `hx-get="{ep}"` +
+  `hx-include="closest .filter-bar"` only, so typeahead invented
+  the open-only / current collection after leftover-honest
+  temporal had reached sentinel / pagination / CSV / sort-header.
+  Valid `true` / YYYY-MM-DD now ride find; leftover junk
+  (`zzz`, `2abc`, `maybe`, `not-a-date`) still omits.
+  Rest-state gallery unchanged.
 - **List-region sort-header hx-get dropped `include_closed` / `as_of` (cycle 2172)** —
   `_emit_sort_header` wrote `?sort=&dir=` only, so a sort click
   invented the open-only / current collection after leftover-honest

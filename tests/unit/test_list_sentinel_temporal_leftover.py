@@ -189,15 +189,13 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_list_search_chrome_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): list search chrome
-    ``hx-get="{ep}"`` + ``hx-include="closest .filter-bar"`` still
-    omits leftover-honest include_closed / as_of."""
+def test_list_search_chrome_now_echoes_temporal() -> None:
+    """Closed 2178: list search chrome leftover-honest echo.
+    Sibling invent class moved to test_list_search_temporal_leftover."""
     src = _BUILDERS.read_text(encoding="utf-8")
     assert "dz-list-search-chrome" in src
-    search = src.split("dz-list-search-chrome")[1].split("# FilterBar")[0]
+    search = src.split("# Free-text list search")[1].split("# FilterBar")[0]
     assert "hx-get=" in search
-    assert 'hx-get="{ep}"' in search
-    assert "include_closed" not in search
-    assert "as_of" not in search
-    assert "leftover_honest" not in search
+    assert "leftover_honest_temporal_query" in search
+    assert "include_closed" in search
+    assert "as_of" in search

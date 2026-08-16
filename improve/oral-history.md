@@ -549,6 +549,23 @@ Doctrine source of truth remains
     include_closed / as_of (invents open-only / current on
     find).
 
+61. **List search chrome hx-get drops include_closed / as_of
+    (invents open-only / current on find).** Cycle 2178:
+    ``_builders_tables`` search wrote ``hx-get="{ep}"`` +
+    ``hx-include="closest .filter-bar"`` only. Leftover-honest
+    ``true`` / YYYY-MM-DD now ride find; leftover junk still
+    omits. Rest-state gallery unchanged (oral #33). Do **not**
+    clone leftover list include_closed / related-tab as_of /
+    DETAIL as_of onto the edit form. Not leftover sentinel /
+    pagination / CSV / sort-header echo (oral #56/#58/#59/#60).
+    Not leftover list as_of / sort / page. Not leftover-scalar
+    refuse. Not Goal B coat. After wiring leftover-honest
+    temporal on a list/grid control, scan sibling emitters —
+    next: FilterBar ``_emit_filter_bar`` ``hx-get="{endpoint}"``
+    + ``hx-include="closest .filter-bar"`` still omits
+    include_closed / as_of (invents open-only / current on a
+    filter change).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
