@@ -3530,6 +3530,14 @@ def test_pdf_viewer_renders_and_pages(page) -> None:  # type: ignore[no-untyped-
     real sample.pdf to a canvas, pages forward/back, and reports the
     count. Skips when the CDN is unreachable (offline CI runners) —
     the Dazzle-side P3 e2e is the vendored-lib oracle."""
+    # PDF.js fetches the document — fetch() is blocked on file:// pages,
+    # so this test serves the built site over an EPHEMERAL http port
+    # (port 0; the fixed-port pdf-viewer-gates flake class is avoided).
+    _pdf_cdn_or_skip()
+    _serve_pdf_gallery(page, _assert_pdf_viewer)
+
+
+def _pdf_cdn_or_skip() -> None:
     import urllib.request
 
     try:
@@ -3542,9 +3550,8 @@ def test_pdf_viewer_renders_and_pages(page) -> None:  # type: ignore[no-untyped-
 
         pytest.skip("PDF.js CDN unreachable")
 
-    # PDF.js fetches the document — fetch() is blocked on file:// pages,
-    # so this test serves the built site over an EPHEMERAL http port
-    # (port 0; the fixed-port pdf-viewer-gates flake class is avoided).
+
+def _serve_pdf_gallery(page, assert_fn) -> None:  # type: ignore[no-untyped-def]
     import functools
     import http.server
     import socketserver
@@ -3560,9 +3567,74 @@ def test_pdf_viewer_renders_and_pages(page) -> None:  # type: ignore[no-untyped-
         try:
             page.goto(f"http://127.0.0.1:{port}/hyperparts/pdf.html")
             page.wait_for_timeout(300)
-            _assert_pdf_viewer(page)
+            assert_fn(page)
         finally:
             httpd.shutdown()
+
+
+def test_pdf_leftover_page_does_not_invent_page(page) -> None:  # type: ignore[no-untyped-def]
+    """PDF leftover page junk must not invent a page (cycle 2151).
+
+    Same honesty class as standalone number leftover (2149) and money
+    leftover junk (2121): typed-but-uncommitted text is not a silent
+    parseInt. Rest-state gallery stays unchanged (oral #33).
+    """
+    _pdf_cdn_or_skip()
+    _serve_pdf_gallery(page, _assert_pdf_leftover)
+
+
+def _assert_pdf_leftover(page) -> None:  # type: ignore[no-untyped-def]
+    root = "#pdf [data-pdf]"
+    page.eval_on_selector(root, "el => el.scrollIntoView()")
+    page.wait_for_selector(f'{root}[data-pdf-ready="true"]', timeout=30000)
+    inp = f"{root} [data-pdf-page]"
+    assert page.input_value(inp) == "1"
+
+    page.fill(inp, "zzz")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "zzz", "named leftover must not invent a page"
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "2abc")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "2abc", "leftover suffix is not a silent page 2"
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "99")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "99", "out-of-range must not invent by clamping"
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "2")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_function(f"document.querySelector('{inp}').value === '2'")
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is True
+
+    page.fill(inp, "")
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(inp) == "2", "empty companion on blur restores from the current page"
+
+    page.fill(inp, "zzz")
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(inp) == "zzz", "blur must not revert leftover junk"
 
 
 def _assert_pdf_viewer(page) -> None:  # type: ignore[no-untyped-def]

@@ -135,7 +135,13 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: pdf — progressive PDF shell (access + lazy PDF.js)."""
+"""HYPERPART: pdf — progressive PDF shell (access + lazy PDF.js).
+
+Leftover honesty (cycle 2151): leftover page junk (``2abc``, ``zzz``,
+out-of-range) must not invent a page jump. ``parseInt("2abc")`` is not
+a committed page. Empty input on blur restores from the current page.
+Rest-state toolbar markup is unchanged.
+"""
 
 from contracts._kit import DomContract, Node, Present
 

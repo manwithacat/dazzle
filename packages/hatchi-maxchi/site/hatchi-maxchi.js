@@ -7718,6 +7718,16 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *   [data-pdf-page-count] [data-pdf-zoom-in] [data-pdf-zoom-out]
  *   [data-pdf-fit-width] [data-pdf-status] [data-pdf-viewer]
  *
+ * Leftover honesty (cycle 2151): leftover page junk must not invent a
+ * page. parseInt("2abc", 10) === 2 / "zzz" / "99" on a 2-page doc is
+ * invalid — the canvas stays put and the input fails custom validity
+ * so change/Enter cannot jump as if the leftover were accepted.
+ * Empty input on blur restores from the current page (empty is not
+ * leftover junk). Valid whole numbers in [1, numPages] render.
+ * Out-of-range does not invent by clamping. Same class as number
+ * leftover junk (2149) and money leftover junk (2121). Gallery
+ * rest-state is unchanged (oral #33).
+ *
  * No JS → the <noscript> download link inside the viewer region is the
  * whole experience (progressive enhancement, spec §2).
  */
@@ -7745,10 +7755,36 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return root.querySelector("[data-pdf-" + slot + "]");
   }
 
+  function leftoverMessage() {
+    return "Enter a page number";
+  }
+
+  function markPage(el, bad) {
+    if (!el) return;
+    if (el.setCustomValidity)
+      el.setCustomValidity(bad ? leftoverMessage() : "");
+    if (bad) el.setAttribute("aria-invalid", "true");
+    else el.removeAttribute("aria-invalid");
+  }
+
+  // kind: empty | invalid | ok. parseInt("2abc", 10) === 2, so leftover
+  // junk is invalid — not a silent page jump. Out-of-[1,max] is
+  // invalid (do not invent by clamping).
+  function parsePage(val, max) {
+    var raw = String(val == null ? "" : val).trim();
+    if (!raw) return { kind: "empty" };
+    if (!/^\d+$/.test(raw)) return { kind: "invalid" };
+    var num = parseInt(raw, 10);
+    if (!isFinite(num) || num < 1) return { kind: "invalid" };
+    if (isFinite(max) && num > max) return { kind: "invalid" };
+    return { kind: "ok", value: num };
+  }
+
   function urlState() {
     var p = new URLSearchParams(location.search);
+    var parsed = parsePage(p.get("dzpdf-page") || "", Infinity);
     return {
-      page: parseInt(p.get("dzpdf-page") || "", 10) || null,
+      page: parsed.kind === "ok" ? parsed.value : null,
       zoom: p.get("dzpdf-zoom") || null,
     };
   }
@@ -7793,19 +7829,16 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 
       var syncUrl = root.getAttribute("data-pdf-state") === "url";
       var fromUrl = syncUrl ? urlState() : { page: null, zoom: null };
+      var seeded = fromUrl.page;
+      if (seeded == null) {
+        var initParsed = parsePage(
+          root.getAttribute("data-pdf-initial-page") || "1",
+          Infinity,
+        );
+        seeded = initParsed.kind === "ok" ? initParsed.value : 1;
+      }
       var state = {
-        page: Math.min(
-          doc.numPages,
-          Math.max(
-            1,
-            fromUrl.page ||
-              parseInt(
-                root.getAttribute("data-pdf-initial-page") || "1",
-                10,
-              ) ||
-              1,
-          ),
-        ),
+        page: Math.min(doc.numPages, Math.max(1, seeded)),
         // zoom: a number, or "fit" (fit-width, the default)
         zoom: fromUrl.zoom || "fit",
       };
@@ -7844,13 +7877,28 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 
       function go(page) {
         var target = Math.min(doc.numPages, Math.max(1, page || state.page));
-        if (target === state.page) {
-          // revert garbage typed into the page input
-          if (pageInput) pageInput.value = String(state.page);
-          return;
-        }
+        if (target === state.page) return;
         state.page = target;
         render();
+      }
+
+      function applyPageInput(normalize) {
+        if (!pageInput) return;
+        var parsed = parsePage(pageInput.value, doc.numPages);
+        if (parsed.kind === "ok") {
+          markPage(pageInput, false);
+          go(parsed.value);
+          if (normalize) pageInput.value = String(state.page);
+          return parsed;
+        }
+        if (parsed.kind === "empty") {
+          markPage(pageInput, false);
+          if (normalize) pageInput.value = String(state.page);
+          return parsed;
+        }
+        // leftover junk stays visible — must not vanish / revert
+        markPage(pageInput, true);
+        return parsed;
       }
 
       function rezoom(factor) {
@@ -7871,10 +7919,30 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
           render();
         }
       });
-      if (pageInput)
-        pageInput.addEventListener("change", function () {
-          go(parseInt(pageInput.value, 10) || state.page);
+      if (pageInput) {
+        pageInput.addEventListener("input", function () {
+          var parsed = parsePage(pageInput.value, doc.numPages);
+          markPage(pageInput, parsed.kind === "invalid");
         });
+        pageInput.addEventListener("change", function () {
+          applyPageInput(false);
+        });
+        pageInput.addEventListener(
+          "blur",
+          function () {
+            var parsed = parsePage(pageInput.value, doc.numPages);
+            if (parsed.kind === "empty") applyPageInput(true);
+            else if (parsed.kind === "ok") applyPageInput(true);
+            // leftover junk stays visible — must not vanish / revert
+          },
+          true,
+        );
+        pageInput.addEventListener("keydown", function (evt) {
+          if (evt.key !== "Enter") return;
+          evt.preventDefault();
+          applyPageInput(false);
+        });
+      }
 
       // teardown for the mount sweep: swapping this viewer out must
       // release the PDF.js document (and its worker) — spec §7 cleanup.

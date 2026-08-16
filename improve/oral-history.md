@@ -227,6 +227,10 @@ Doctrine source of truth remains
     (kind=date Field group; leftover `zzz` / suffix stay visible
     + fail validity; Enter/Tab do not PUT; valid ISO still commits;
     rest-state gallery unchanged, 2150).
+    PDF leftover page junk must not invent a page
+    (`2abc` / `zzz` / out-of-range stay visible + fail validity;
+    empty restores from the current page; valid whole numbers
+    still render; rest-state gallery unchanged, 2151).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.
