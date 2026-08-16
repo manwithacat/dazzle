@@ -248,6 +248,25 @@ def _detail_as_of(prc: Any, entity_name: str) -> Any:
     return _date.fromisoformat(raw)
 
 
+def _related_tab_as_of_raw(as_of: Any) -> str | None:
+    """ISO leftover-honest ``as_of`` for related-tab lists.
+
+    Related lists used to ignore parent DETAIL as_of and invent
+    *current* children while the parent time-travelled. Empty /
+    leftover already restored no as_of via ``_detail_as_of``.
+    Valid YYYY-MM-DD still time-travels children. Non-temporal
+    related entities ignore the raw (``_parse_temporal_filters``).
+    Cycle 2167.
+    """
+    if as_of is None:
+        return None
+    iso = getattr(as_of, "isoformat", None)
+    if callable(iso):
+        raw = iso()
+        return None if raw is None else str(raw)
+    return _parse_list_as_of(as_of)
+
+
 def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[str, str]:
     """Parse leftover-honest ``filter[key]``. Invalid / unknown keys dropped."""
     out: dict[str, str] = {}
@@ -1701,11 +1720,12 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # REST detail route applies (`gated_read` IS that enforcement, relocated),
     # serialized via `jsonable_encoder` to match the REST `response_model=None`
     # JSON shape the downstream FK-display / when_expr code expects.
+    _as_of = _detail_as_of(prc, prc.ctx.detail.entity_name)
     req_detail.item = await _read_entity_in_process(
         prc,
         prc.ctx.detail.entity_name,
         prc.path_id,
-        as_of=_detail_as_of(prc, prc.ctx.detail.entity_name),
+        as_of=_as_of,
     )
     # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
     if req_detail.item and "error" not in req_detail.item:
@@ -1824,8 +1844,15 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
             except (TypeError, ValueError):
                 _related_page_size = 8
             _related_page_size = max(1, min(_related_page_size, 50))
+            # Parent leftover-honest as_of must reach children (cycle 2167).
+            # Ignoring it invented *current* related rows.
             data = await _list_entity_in_process(
-                prc, tab.entity_name, page=1, page_size=_related_page_size, filters=_filters
+                prc,
+                tab.entity_name,
+                page=1,
+                page_size=_related_page_size,
+                filters=_filters,
+                as_of_raw=_related_tab_as_of_raw(_as_of),
             )
             tab.rows = data.get("items", [])
             tab.total = data.get("total", len(tab.rows))

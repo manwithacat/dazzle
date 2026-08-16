@@ -418,6 +418,18 @@ Doctrine source of truth remains
     sort/q (oral #48). Not leftover page (oral #46). Not Goal B
     coat.
 
+51. **DETAIL related-tab list ignores as_of (invents current
+    children).** Cycle 2167: parent DETAIL time-travelled via
+    leftover-honest ``?as_of=`` (oral #50) but related-tab
+    ``_list_entity_in_process`` dropped the date, so children
+    invented *now*. Empty / leftover still restores current
+    children; valid YYYY-MM-DD time-travels parent + children.
+    Non-temporal related entities ignore the raw. Edit form
+    stays current — do not clone DETAIL as_of onto the form
+    (oral #50). Not leftover list as_of (oral #49). Not leftover
+    sort/q (oral #48). Not leftover page (oral #46). Not Goal B
+    coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

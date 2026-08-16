@@ -116,7 +116,8 @@ def test_detail_as_of_reuses_leftover_honest_parse() -> None:
 def test_handle_detail_uses_leftover_honest_as_of() -> None:
     """``_handle_detail`` must parse leftover-honest as_of into the read."""
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
-    assert "as_of=_detail_as_of(" in src
+    assert "_as_of = _detail_as_of(" in src
+    assert "as_of=_as_of" in src
     assert "def _detail_as_of(" in src
     assert "invented the *current* row" in src or "invented the current row" in src
 
@@ -124,8 +125,9 @@ def test_handle_detail_uses_leftover_honest_as_of() -> None:
 def test_edit_form_does_not_time_travel() -> None:
     """Edit stays current — do not clone DETAIL as_of onto the form."""
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
-    # The only as_of=_detail_as_of call is the detail handler.
-    assert src.count("as_of=_detail_as_of(") == 1
+    edit = src.split("async def _handle_edit_form")[1].split("async def ")[0]
+    assert "_detail_as_of" not in edit
+    assert "as_of=" not in edit
     assert "Failed to fetch initial form values" in src
 
 
