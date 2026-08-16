@@ -254,8 +254,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     { id: "cust_6", first: "Jane", last: "Zimmerman", plan: "Free", signed: "2024-11-02", status: "Trialing" }
   ];
   // Query params handled specially, NOT as exact-match filters: sort/paging
-  // control + the free-text search `q`.
-  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1, q: 1 };
+  // control + the free-text search `q` + leftover-honest temporal
+  // (include_closed / as_of — cycle 2170). Treating those as field
+  // filters invented an empty catalog (no such columns).
+  var GRID_CONTROL = {
+    sort: 1, dir: 1, page: 1, page_size: 1, q: 1,
+    include_closed: 1, as_of: 1
+  };
   function parseQuery(url) {
     var out = {}, qs = (url.split("?")[1] || "");
     qs.split("&").forEach(function (p) {
@@ -3053,7 +3058,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *                  debounced (`data-grid-debounce`, default 250ms). Composes
  *                  with sort + filter into the same query. Empty / whitespace
  *                  is no `q=` (do not invent a spaces filter — cycle 2125).
- *                  NB `q`, `sort`, `dir`, `page`, `page_size` (query keys) and
+ *                  NB `q`, `sort`, `dir`, `page`, `page_size`,
+ *                  `include_closed`, `as_of` (query keys) and
  *                  `action`, `selected_ids`, `all_matching_selected`,
  *                  `excluded_ids` (bulk-payload keys) are reserved — don't use
  *                  them as a `data-grid-filter` value.
@@ -3090,6 +3096,16 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *                  Leftover junk is invalid (same class as PDF leftover
  *                  page, 2151). Empty / invalid restores the server
  *                  default. Valid whole numbers still window.
+ *   - temporal:    leftover-honest `include_closed` / `as_of` (cycle 2170)
+ *                  are grid-owned query keys. `ownedKeys` / `buildQuery`
+ *                  used to drop them (page URL foreign params survived
+ *                  but hx-get did not echo them), so all-matching invented
+ *                  open-only / current after a refresh. Valid `true` /
+ *                  YYYY-MM-DD ride hx-get; leftover junk (`zzz`, `2abc`,
+ *                  `maybe`, `not-a-date`) must not invent. Empty /
+ *                  invalid restores the server default (omit). Not
+ *                  leftover list include_closed / related-tab as_of /
+ *                  DETAIL as_of onto the edit form.
  *   - announcer:   `[data-grid-announce]` (a visually-hidden aria-live
  *                  region, static in the markup) — after every swap the
  *                  controller mirrors the footer's result-window summary into
@@ -3180,8 +3196,79 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return el && el.value ? String(el.value).trim() : "";
   }
 
-  // The matched-set-DEFINING part of the query: search + filters. Sort and
-  // page reorder/window the SAME set, so they're not part of the scope.
+  // Leftover-honest include_closed (cycle 2170 / 2168). Valid true/1/yes
+  // must ride hx-get — dropping them invented the open-only collection.
+  // Leftover junk (zzz / 2abc / maybe) is invalid, not a silent true.
+  function parseIncludeClosed(val) {
+    var raw = String(val == null ? "" : val)
+      .trim()
+      .toLowerCase();
+    if (!raw) return { kind: "empty" };
+    if (raw === "true" || raw === "1" || raw === "yes") {
+      return { kind: "ok", value: "true" };
+    }
+    return { kind: "invalid" };
+  }
+
+  // Leftover-honest as_of (cycle 2170 / 2165). Valid YYYY-MM-DD must ride
+  // hx-get — dropping it invented the current collection. Leftover junk
+  // (2abc / zzz / not-a-date / 2026-13-01) is invalid, not a silent date.
+  function parseAsOf(val) {
+    var raw = String(val == null ? "" : val).trim();
+    if (!raw) return { kind: "empty" };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { kind: "invalid" };
+    var p = raw.split("-");
+    var y = Number(p[0]),
+      m = Number(p[1]),
+      d = Number(p[2]);
+    var dt = new Date(Date.UTC(y, m - 1, d));
+    if (
+      dt.getUTCFullYear() !== y ||
+      dt.getUTCMonth() + 1 !== m ||
+      dt.getUTCDate() !== d
+    ) {
+      return { kind: "invalid" };
+    }
+    return { kind: "ok", value: raw };
+  }
+
+  // Attribute set (restore / leftover refuse) wins; else URL; else the
+  // immutable data-grid-src query the server baked. Absent attr falls
+  // through; empty attr means leftover was refused (do not re-invent
+  // from src).
+  function srcQueryParams(root) {
+    var body = root.querySelector("[data-grid-body]");
+    var srcQs =
+      ((body && body.getAttribute("data-grid-src")) || "").split("?")[1] ||
+      "";
+    return new URLSearchParams(srcQs);
+  }
+
+  function readIncludeClosed(root) {
+    if (root.hasAttribute("data-grid-include-closed")) {
+      return parseIncludeClosed(
+        root.getAttribute("data-grid-include-closed"),
+      );
+    }
+    var urlSp = new URLSearchParams(location.search);
+    if (urlSp.has("include_closed")) {
+      return parseIncludeClosed(urlSp.get("include_closed"));
+    }
+    return parseIncludeClosed(srcQueryParams(root).get("include_closed"));
+  }
+
+  function readAsOf(root) {
+    if (root.hasAttribute("data-grid-as-of")) {
+      return parseAsOf(root.getAttribute("data-grid-as-of"));
+    }
+    var urlSp = new URLSearchParams(location.search);
+    if (urlSp.has("as_of")) return parseAsOf(urlSp.get("as_of"));
+    return parseAsOf(srcQueryParams(root).get("as_of"));
+  }
+
+  // The matched-set-DEFINING part of the query: search + filters + leftover-
+  // honest temporal (include_closed / as_of). Sort and page reorder/window
+  // the SAME set, so they're not part of the scope.
   function scopeKey(root) {
     var parts = [];
     var search = root.querySelector("[data-grid-search]");
@@ -3192,6 +3279,10 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       var k = filters[i].getAttribute("data-grid-filter");
       if (k && filters[i].value) parts.push(k + "=" + filters[i].value);
     }
+    var ic = readIncludeClosed(root);
+    if (ic.kind === "ok") parts.push("include_closed=" + ic.value);
+    var ao = readAsOf(root);
+    if (ao.kind === "ok") parts.push("as_of=" + ao.value);
     return parts.join("&");
   }
 
@@ -3358,6 +3449,17 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (parsedPage.kind === "ok" && parsedPage.value !== 1) {
       q.push("page=" + encodeURIComponent(String(parsedPage.value)));
     }
+    // Leftover-honest temporal (cycle 2170): include_closed / as_of used
+    // to be dropped here (foreign URL params survived; hx-get invented
+    // open-only / current). Valid flags ride; leftover junk does not.
+    var ic = readIncludeClosed(root);
+    if (ic.kind === "ok") {
+      q.push("include_closed=" + encodeURIComponent(ic.value));
+    }
+    var ao = readAsOf(root);
+    if (ao.kind === "ok") {
+      q.push("as_of=" + encodeURIComponent(ao.value));
+    }
     return q.join("&");
   }
 
@@ -3379,15 +3481,23 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 
   // ── URL-synced state (opt-in: `data-grid-url` on the root) ──────────
   // The grid's query lands in the address bar as the SAME human-readable
-  // params the server sees (spec §7) — q / sort / dir / page / page_size plus
-  // this grid's filter keys. The grid only ever touches its OWN keys, so
-  // foreign params on the page URL survive. Discrete actions (sort / filter /
-  // page / size) PUSH a history entry — Back walks grid states; the debounced
-  // search REPLACES (a keystroke burst is not N history entries). The
-  // all-matching selection is ephemeral UI state and is deliberately NOT in
-  // the URL.
+  // params the server sees (spec §7) — q / sort / dir / page / page_size /
+  // include_closed / as_of plus this grid's filter keys. The grid only
+  // ever touches its OWN keys, so foreign params on the page URL survive.
+  // Discrete actions (sort / filter / page / size) PUSH a history entry —
+  // Back walks grid states; the debounced search REPLACES (a keystroke
+  // burst is not N history entries). The all-matching selection is
+  // ephemeral UI state and is deliberately NOT in the URL.
   function ownedKeys(root) {
-    var keys = { q: 1, sort: 1, dir: 1, page: 1, page_size: 1 };
+    var keys = {
+      q: 1,
+      sort: 1,
+      dir: 1,
+      page: 1,
+      page_size: 1,
+      include_closed: 1,
+      as_of: 1,
+    };
     var filters = root.querySelectorAll("[data-grid-filter]");
     for (var i = 0; i < filters.length; i++) {
       var k = filters[i].getAttribute("data-grid-filter");
@@ -3440,6 +3550,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       filters: {},
       size: "",
       page: root.getAttribute("data-grid-page") || "1",
+      include_closed: "",
+      as_of: "",
     };
     var search = root.querySelector("[data-grid-search]");
     if (search) state.search = search.value;
@@ -3458,6 +3570,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     }
     var size = root.querySelector("[data-grid-page-size]");
     if (size) state.size = size.value;
+    var srcSp = srcQueryParams(root);
+    var ic = parseIncludeClosed(srcSp.get("include_closed"));
+    state.include_closed = ic.kind === "ok" ? ic.value : "";
+    var ao = parseAsOf(srcSp.get("as_of"));
+    state.as_of = ao.kind === "ok" ? ao.value : "";
     root._dzInitial = state;
   }
 
@@ -3482,6 +3599,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       filters: {},
       size: "",
       page: "1",
+      include_closed: "",
+      as_of: "",
     };
     var search = root.querySelector("[data-grid-search]");
     if (search) {
@@ -3523,6 +3642,27 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       "data-grid-page",
       parsedPage.kind === "ok" ? String(parsedPage.value) : init.page,
     );
+    if (sp.has("include_closed")) {
+      var parsedIc = parseIncludeClosed(sp.get("include_closed"));
+      root.setAttribute(
+        "data-grid-include-closed",
+        parsedIc.kind === "ok" ? parsedIc.value : "",
+      );
+    } else {
+      root.setAttribute(
+        "data-grid-include-closed",
+        init.include_closed || "",
+      );
+    }
+    if (sp.has("as_of")) {
+      var parsedAo = parseAsOf(sp.get("as_of"));
+      root.setAttribute(
+        "data-grid-as-of",
+        parsedAo.kind === "ok" ? parsedAo.value : "",
+      );
+    } else {
+      root.setAttribute("data-grid-as-of", init.as_of || "");
+    }
     setQuery(root);
   }
 

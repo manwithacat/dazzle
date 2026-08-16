@@ -1376,6 +1376,54 @@ def test_grid_leftover_page_query_does_not_invent_page(page) -> None:  # type: i
     assert page.eval_on_selector("[data-grid-page-size]", "e => e.value") == "4"
 
 
+def test_grid_leftover_temporal_query_echoes_on_hx_get(page) -> None:  # type: ignore[no-untyped-def]
+    """URL include_closed / as_of must ride hx-get after refresh (cycle 2170).
+
+    ownedKeys / buildQuery used to drop them (foreign URL params survived
+    but all-matching echo invented open-only / current). Leftover junk
+    must not invent include_closed=true / a date, and must not invent an
+    empty catalog via the mock treating them as field filters.
+    Rest-state gallery unchanged (oral #33).
+    """
+    page.goto(part_uri("grid") + "?include_closed=zzz")
+    page.wait_for_timeout(300)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "include_closed=" not in hx, f"leftover must not ride hx-get: {hx}"
+    leftover_names = _grid_names(page)
+    assert leftover_names == ["Mia", "Ravi", "Amir", "Sofia"], (
+        f"leftover include_closed must not invent empty: {leftover_names}"
+    )
+
+    page.goto(part_uri("grid") + "?as_of=2abc")
+    page.wait_for_timeout(300)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "as_of=" not in hx, f"leftover as_of must not ride hx-get: {hx}"
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"]
+
+    page.goto(part_uri("grid") + "?include_closed=true")
+    page.wait_for_timeout(300)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "include_closed=true" in hx, f"valid include_closed must ride hx-get: {hx}"
+    assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], (
+        "valid include_closed must not invent empty via mock field-filter"
+    )
+    page.click("[data-grid-sort='first']")
+    page.wait_for_timeout(150)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "include_closed=true" in hx, f"refresh must echo include_closed: {hx}"
+    assert _url_params(page).get("include_closed") == "true"
+
+    page.goto(part_uri("grid") + "?as_of=2026-06-20")
+    page.wait_for_timeout(300)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "as_of=2026-06-20" in hx, f"valid as_of must ride hx-get: {hx}"
+    page.click("[data-grid-sort='first']")
+    page.wait_for_timeout(150)
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "as_of=2026-06-20" in hx, f"refresh must echo as_of: {hx}"
+    assert _url_params(page).get("as_of") == "2026-06-20"
+
+
 def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyped-def]
     """Deep link: loading the page WITH grid params applies them — controls
     reflect the state, and the hydration fetch uses the restored query (no

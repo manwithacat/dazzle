@@ -12,6 +12,19 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Grid hx-get dropped `include_closed` / `as_of` after refresh (cycle 2170)** —
+  `ownedKeys` / `buildQuery` treated leftover-honest temporal params
+  as foreign URL keys, so they survived on the page URL but were
+  stripped from the tbody `hx-get`. All-matching then invented the
+  open-only / current set even after 2169 consumed the echo. Valid
+  `true` / YYYY-MM-DD now ride hx-get and survive sort/filter/page.
+  Leftover junk (`zzz`, `2abc`, `maybe`, `not-a-date`) still omits.
+  Gallery mock no longer treats them as field filters (empty catalog).
+- **Bulk all-matching echo `include_closed` / `as_of` invented 422 or the open-only set (cycle 2169)** —
+  `_echo_to_query` treated leftover-honest temporal keys as
+  unconsumable; `resolve_all_matching_ids` never forwarded them to
+  `gated_list`. Valid `true` / YYYY-MM-DD now reach the matched set;
+  leftover junk still restores open-only / current.
 - **HTML list `?include_closed=true` invented the open-only collection (cycle 2168)** —
   `_handle_table` never forwarded `include_closed` to
   `_list_entity_in_process` (REST already honours `true` / `1` /

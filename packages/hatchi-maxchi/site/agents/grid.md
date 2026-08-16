@@ -272,6 +272,7 @@ Correct response for none (raw fetch / no HTML swap).
 - leftover clock ISO (zzz / 14:30zzz / 2026-07-16T01:30zzz) must not PUT the previous time — datetime leftover must not invent a date
 - leftover number junk (zzz / 12abc / 1e2) must not PUT the previous number — parseFloat leftover must not invent a value
 - leftover page / page_size (2abc / zzz) must not invent a window — parseInt leftover must not deep-link to page 2
+- ownedKeys / buildQuery must echo leftover-honest include_closed / as_of — dropping them invents open-only / current after refresh
 - do not mount data-dz-combobox inside a grid cell expecting grid-edit to drive it — that is a future composition, not current seam
 
 ### Keyboard / AT
@@ -313,6 +314,14 @@ must not invent a window. ``parseInt("2abc", 10) === 2`` is leftover
 junk — same class as PDF leftover page (2151). Empty / invalid
 restores the server default. Valid whole numbers still window.
 Rest-state gallery is unchanged (oral #33).
+
+Leftover honesty (cycle 2170): ``ownedKeys`` / ``buildQuery`` must
+echo leftover-honest ``include_closed`` / ``as_of``. Dropping them
+from hx-get invented open-only / current after a refresh (page URL
+foreign params survived; all-matching echo then invented). Leftover
+junk (``zzz``, ``2abc``, ``maybe``, ``not-a-date``) must not invent.
+Valid ``true`` / YYYY-MM-DD still ride hx-get. Not leftover list
+include_closed / related-tab as_of / DETAIL as_of onto the edit form.
 """
 
 from contracts._kit import DomContract

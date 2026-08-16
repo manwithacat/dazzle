@@ -908,6 +908,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "number — parseFloat leftover must not invent a value",
                     "leftover page / page_size (2abc / zzz) must not invent a window — "
                     "parseInt leftover must not deep-link to page 2",
+                    "ownedKeys / buildQuery must echo leftover-honest include_closed / "
+                    "as_of — dropping them invents open-only / current after refresh",
                     "do not mount data-dz-combobox inside a grid cell expecting "
                     "grid-edit to drive it — that is a future composition, not current seam",
                 ),

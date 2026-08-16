@@ -451,6 +451,18 @@ Doctrine source of truth remains
     edit form. Not leftover list as_of / sort / page. Not
     leftover-scalar refuse. Not Goal B coat.
 
+54. **Grid ownedKeys / buildQuery drop include_closed / as_of
+    (invents open-only / current after refresh).** Cycle 2170:
+    page URL foreign params survived but hx-get did not echo
+    them, so all-matching invented open-only / current even
+    though 2169 consumed the echo. Leftover-honest ``true`` /
+    YYYY-MM-DD now ride hx-get; leftover junk still restores
+    omit. Gallery mock must not treat them as field filters
+    (empty catalog). Do **not** clone leftover list
+    include_closed / related-tab as_of / DETAIL as_of onto the
+    edit form. Not leftover list as_of / sort / page. Not
+    leftover-scalar refuse. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

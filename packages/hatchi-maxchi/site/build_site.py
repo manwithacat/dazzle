@@ -2326,8 +2326,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     { id: "cust_6", first: "Jane", last: "Zimmerman", plan: "Free", signed: "2024-11-02", status: "Trialing" }
   ];
   // Query params handled specially, NOT as exact-match filters: sort/paging
-  // control + the free-text search `q`.
-  var GRID_CONTROL = { sort: 1, dir: 1, page: 1, page_size: 1, q: 1 };
+  // control + the free-text search `q` + leftover-honest temporal
+  // (include_closed / as_of — cycle 2170). Treating those as field
+  // filters invented an empty catalog (no such columns).
+  var GRID_CONTROL = {
+    sort: 1, dir: 1, page: 1, page_size: 1, q: 1,
+    include_closed: 1, as_of: 1
+  };
   function parseQuery(url) {
     var out = {}, qs = (url.split("?")[1] || "");
     qs.split("&").forEach(function (p) {
