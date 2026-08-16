@@ -72,7 +72,9 @@ PRESENTATION_MATRIX: dict[tuple[Role, Host], Density] = {
 }
 
 # Static opportunity scan currently walks these hosts only.
-HOSTS_AUDITED_BY_SCANNER: frozenset[str] = frozenset({"list_cell", "detail_cell", "queue_meta"})
+HOSTS_AUDITED_BY_SCANNER: frozenset[str] = frozenset(
+    {"list_cell", "detail_cell", "queue_meta", "timeline_meta"}
+)
 
 # Emit paths that call present() or equivalent shared person chip.
 HOSTS_WIRED_TO_SEAM: frozenset[str] = frozenset(
@@ -81,6 +83,7 @@ HOSTS_WIRED_TO_SEAM: frozenset[str] = frozenset(
         "detail_cell",
         "queue_meta",  # present()
         "kanban_field",  # present() via kanban card fields
+        "timeline_meta",  # present() via activity-feed actor + timeline fields
     }
 )
 

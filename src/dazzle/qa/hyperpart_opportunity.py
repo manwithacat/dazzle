@@ -41,6 +41,7 @@ __all__ = [
     "build_opportunity_report",
     "scan_appspec",
     "scan_person_ref_opportunities",
+    "scan_person_timeline_meta_opportunities",
     "scan_queue_opportunities",
 ]
 
@@ -270,10 +271,82 @@ def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportun
     return out
 
 
+_TIMELINE_DISPLAYS = frozenset({"activity_feed", "timeline"})
+
+
+def _timeline_person_opportunity(
+    *,
+    wname: str,
+    rname: str,
+    display: str,
+    ent_name: str,
+    fn: str,
+    fspec: Any,
+) -> HyperpartOpportunity | None:
+    ft = getattr(fspec, "type", None)
+    if _field_type_kind(ft) not in _REF_KINDS:
+        return None
+    ref_ent = _ref_entity(ft)
+    if not _is_person_ref(fn, ref_ent):
+        return None
+    return HyperpartOpportunity(
+        hyperpart="avatar",
+        kind="person_ref_timeline_meta",
+        entity=ent_name,
+        field=fn,
+        surface=wname,
+        location=f"workspace:{wname}.region:{rname}.field:{fn}",
+        status="emit_covered",
+        severity="low",
+        description=(
+            f"{ent_name}.{fn} on {display} {wname}/{rname} — "
+            f"presentation matrix emits Avatar (timeline_meta), not actor prose."
+        ),
+        ownership="framework",
+        notes="present(person, timeline_meta) → avatar_name",
+        hosts="timeline_meta",
+    )
+
+
+def scan_person_timeline_meta_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: activity_feed`` / ``timeline`` — timeline_meta host.
+
+    Status is ``emit_covered`` when framework ``present(person, timeline_meta)``
+    is live (Avatar chip). Scalar leftover actors stay escaped text.
+    """
+    out: list[HyperpartOpportunity] = []
+    entity_by_name = _entity_by_name(appspec)
+    for ws in list(getattr(appspec, "workspaces", None) or []):
+        wname = str(getattr(ws, "name", "") or "")
+        for region in list(getattr(ws, "regions", None) or []):
+            display = _region_display(region)
+            if display not in _TIMELINE_DISPLAYS:
+                continue
+            rname = str(getattr(region, "name", "") or "")
+            ent_name = str(getattr(region, "source", None) or getattr(region, "entity", "") or "")
+            entity = entity_by_name.get(ent_name)
+            if not entity:
+                continue
+            field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
+            for fn, fspec in field_map.items():
+                row = _timeline_person_opportunity(
+                    wname=wname,
+                    rname=rname,
+                    display=display,
+                    ent_name=ent_name,
+                    fn=fn,
+                    fspec=fspec,
+                )
+                if row is not None:
+                    out.append(row)
+    return out
+
+
 def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     """All static hyperpart opportunities for one app."""
     rows = scan_person_ref_opportunities(appspec)
     rows.extend(scan_person_queue_meta_opportunities(appspec))
+    rows.extend(scan_person_timeline_meta_opportunities(appspec))
     rows.extend(scan_queue_opportunities(appspec))
     rows.extend(scan_scenario_opportunities(appspec))
     return rows
@@ -281,7 +354,7 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
 
 _GUIDANCE = {
     "avatar": (
-        "Role person → Avatar via presentation matrix (list/detail + queue_meta). "
+        "Role person → Avatar via presentation matrix (list/detail + queue_meta + timeline_meta). "
         "Doctrine: docs/reference/hyperpart-presentation.md. "
         "Statuses: emit_covered (all listed hosts), emit_partial (some hosts), "
         "never treat list-only chip as full green while queue_meta stringifies."

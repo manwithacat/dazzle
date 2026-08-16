@@ -4,8 +4,11 @@ One row is the dual-lock unit. The feed list is layout furniture; validate
 rows with ``require_root`` on the row root.
 
 ``description`` is plain text (escaped). Optional ``actor`` renders a leading
-span inside the bubble. Optional ``drill_url`` wraps description in a hub
-link (same #1303 class as timeline title / list row).
+span inside the bubble. Optional ``actor_html`` is trusted ``present()``
+markup (person × timeline_meta Avatar) and replaces the escaped span when
+set. Optional ``drill_url`` wraps description in a hub link (same #1303
+class as timeline title / list row). Gallery exemplars stay plain ``actor``
+(rest-state unchanged).
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ class ActivityRow(BaseModel):
 
     - ``time_str`` → already-formatted relative/absolute time
     - ``actor`` → optional who-did-it span (empty = omit)
+    - ``actor_html`` → trusted present() Avatar markup; wins over ``actor``
     - ``description`` → action text
     - ``drill_url`` → when set, description becomes an ``<a href>`` hub drill
       (host gates EDIT paths when UPDATE denied)
@@ -47,6 +51,10 @@ class ActivityRow(BaseModel):
     time_str: str
     description: str
     actor: str = ""
+    actor_html: str = Field(
+        default="",
+        description="Trusted present() markup; when set, replaces the escaped actor span.",
+    )
     drill_url: str = Field(
         default="",
         description="Optional hub URL; description becomes a link when set.",
@@ -75,7 +83,10 @@ def render(row: ActivityRow) -> str:
     """Model → one ``<li>`` activity row."""
     time_s = html.escape(row.time_str)
     actor_html = ""
-    if row.actor:
+    trusted = (row.actor_html or "").strip()
+    if trusted:
+        actor_html = f'<span class="dz-activity-actor">{trusted}</span> '
+    elif row.actor:
         actor_html = f'<span class="dz-activity-actor">{html.escape(row.actor)}</span> '
     desc = html.escape(row.description)
     if row.drill_url:

@@ -339,6 +339,15 @@ Doctrine source of truth remains
     in-cycle) or **presentation MCP STALE (1554)** — do not clone
     another `parseInt` leftover onto a sibling control.
 
+43. **Activity-feed actor person-as-text is a new invent class, not
+    leftover parseInt.** Cycle 2159 wired `present(person,
+    timeline_meta)` for person-ref actor dicts (Comment.author) so
+    the feed does not invent escaped prose. Scalar actors (`Ada`,
+    `System`) stay text — do not invent a chip from a bare string.
+    Dual-lock `actor_html` is trusted SSR (gallery exemplars stay
+    plain `actor`; rest-state unchanged). card_meta / metrics_tile
+    remain matrix-only.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

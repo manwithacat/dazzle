@@ -58,6 +58,17 @@ def test_queue_meta_columns_person_is_html_chip_without_label() -> None:
     assert "Assigned To" not in person_bits[0].value
 
 
+def test_present_person_timeline_meta_is_avatar_name() -> None:
+    assert PRESENTATION_MATRIX[("person", "timeline_meta")] == "avatar_name"
+    col = {"key": "author", "label": "Author", "ref_entity": "User", "type": "ref"}
+    value = {"id": "u1", "name": "Alex Agent", "email": "alex@demo.dazzle.local"}
+    r = present("person", "timeline_meta", value, col)
+    assert r.is_html
+    assert r.density == "avatar_name"
+    assert "dz-avatar" in r.html
+    assert "Alex Agent" in r.html
+
+
 def test_infer_role_person_from_field_key() -> None:
     assert infer_role("x", {"key": "assigned_to", "type": "ref", "ref_entity": "User"}) == "person"
 
@@ -71,6 +82,8 @@ def test_cognition_snapshot_honest_about_audit_scope() -> None:
     assert "creativity_boundary" in c
     # Matrix may list hosts the scanner does not walk yet
     assert isinstance(c["hosts_not_yet_audited"], list)
+    assert "timeline_meta" in c["hosts_wired_to_seam"]
+    assert "timeline_meta" in c["hosts_audited_by_scanner"]
 
 
 def test_present_money_and_swatch_not_stub_plain_only() -> None:

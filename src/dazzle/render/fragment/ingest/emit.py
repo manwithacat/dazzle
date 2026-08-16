@@ -604,7 +604,10 @@ def render_activity_row(row: ActivityRow) -> str:
     """Model → one activity feed row (matches HM contracts/activity_feed.py)."""
     time_s = _html.escape(row.time_str)
     actor_html = ""
-    if row.actor:
+    trusted = (getattr(row, "actor_html", "") or "").strip()
+    if trusted:
+        actor_html = f'<span class="dz-activity-actor">{trusted}</span> '
+    elif row.actor:
         actor_html = f'<span class="dz-activity-actor">{_html.escape(row.actor)}</span> '
     desc = _html.escape(row.description)
     drill = getattr(row, "drill_url", "") or ""

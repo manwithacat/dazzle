@@ -126,6 +126,7 @@ def _render_typed_value(
     *,
     badge_size: str = "md",
     badge_bordered: bool = False,
+    host: str = "list_cell",
 ) -> Fragment:
     """Render a single field value as a typed Fragment based on `col["type"]`.
 
@@ -223,7 +224,7 @@ def _render_typed_value(
                 display = value
         display_str = str(display if display is not None else "")
 
-        # Person-like refs: presentation matrix (list_cell → avatar_name).
+        # Person-like refs: presentation matrix (host density; default list_cell).
         chip_probe = value if isinstance(value, dict) else {"name": display_str}
         if looks_like_person_ref(chip_probe if chip_probe is not None else {}, col):
             from dazzle.render.presentation import present
@@ -234,7 +235,7 @@ def _render_typed_value(
                 chip_val = {"name": display_str, "id": value}
             else:
                 chip_val = value
-            result = present("person", "list_cell", chip_val, col)
+            result = present("person", host, chip_val, col)  # type: ignore[arg-type]
             if result.is_html and result.html and result.html != "—":
                 return RawHTML(result.html)
 

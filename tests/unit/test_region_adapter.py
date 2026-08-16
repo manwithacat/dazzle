@@ -2156,7 +2156,11 @@ def test_activity_feed_accepts_comment_content_field() -> None:
     assert "Typed primitive render failed" not in html
     assert "Customer asked about SLA credit" in html
     assert "Internal note only" in html
-    assert "Alex Agent" in html or "Sam Manager" in html
+    assert "Alex Agent" in html
+    assert "dz-avatar" in html
+    assert "Sam Manager" in html
+    # Scalar leftover actor must not invent a chip (oral #43).
+    assert 'class="dz-activity-actor">Sam Manager<' in html
 
 
 def test_activity_feed_detail_url_template_drill() -> None:
@@ -2200,6 +2204,8 @@ def test_activity_feed_without_drill_stays_plain_text() -> None:
     assert "data-dz-activity-drill" not in html
     assert "Logged in" in html
     assert "<a " not in html or "data-dz-activity-drill" not in html
+    assert "dz-avatar" not in html
+    assert 'class="dz-activity-actor">Ada<' in html
 
 
 # ───────────────── CohortStrip (#1018, v0.67.7) ───────────────────

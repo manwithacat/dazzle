@@ -16,7 +16,7 @@ blast radius (who embeds / refuses this part).
 | `accordion` | `accordion` | `.dz-accordion` | .dz-accordion[] | — |
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
 | `action_grid_region` | `action-grid-region` | `.dz-action-grid-region` | .dz-action-grid-region[] | — |
-| `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; drill_url:str:opt; time_str:str:req) |
+| `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; actor_html:str:opt; description:str:req; drill_url:str:opt; time_str:str:req) |
 | `activity_feed_list` | `activity-feed-list` | `.dz-activity-feed` | .dz-activity-feed[] | — |
 | `add_card_row` | `add-card-row` | `.dz-add-card-row` | .dz-add-card-row[] | — |
 | `alert` | `alert` | `.dz-alert` | .dz-alert[] | — |

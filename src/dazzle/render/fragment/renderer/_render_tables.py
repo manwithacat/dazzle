@@ -901,6 +901,7 @@ class _RenderTablesMixin:
             actor = entry[1]
             description = entry[2]
             drill_url = entry[3] if len(entry) > 3 else ""
+            actor_html = entry[4] if len(entry) > 4 else ""
             rows.append(
                 render_activity_row(
                     ActivityRowSeam(
@@ -908,6 +909,7 @@ class _RenderTablesMixin:
                         actor=actor,
                         description=description,
                         drill_url=str(drill_url or ""),
+                        actor_html=str(actor_html or ""),
                     )
                 )
             )

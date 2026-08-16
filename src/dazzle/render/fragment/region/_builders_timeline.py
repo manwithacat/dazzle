@@ -43,6 +43,8 @@ from dazzle.render.fragment.region._shared import (
     _wrap_surface,
 )
 from dazzle.render.fragment.renderer._related_conversation import conversation_bubble_tone
+from dazzle.render.presentation import present
+from dazzle.render.user_chip import looks_like_person_ref
 
 # Body fields for activity-feed description (first non-empty wins).
 # Comment entities use `content`; generic feeds often use description/title.
@@ -91,6 +93,51 @@ def _activity_actor_label(item: dict[str, Any]) -> str:
         text = str(raw).strip()
         if text:
             return text
+    return ""
+
+
+def _activity_actor_col(key: str) -> dict[str, Any]:
+    return {
+        "key": key,
+        "label": key.replace("_", " ").title(),
+        "type": "ref",
+        "ref_entity": "User",
+    }
+
+
+def _present_timeline_person(value: Any, col: dict[str, Any]) -> str:
+    """Avatar HTML from present(person, timeline_meta), or empty."""
+    if not looks_like_person_ref(value, col):
+        return ""
+    pr = present("person", "timeline_meta", value, col)
+    if pr.is_html and pr.html and "dz-avatar" in pr.html:
+        return pr.html
+    return ""
+
+
+def _activity_actor_html(item: dict[str, Any]) -> str:
+    """Person-ref actors emit present(person, timeline_meta) Avatar.
+
+    Scalar leftover (``Ada``, ``System``) stays escaped text — do not invent
+    a chip from a bare string (cycle 2159; oral #43).
+    """
+    for key in _ACTIVITY_ACTOR_KEYS:
+        raw = item.get(key)
+        if isinstance(raw, dict):
+            html = _present_timeline_person(raw, _activity_actor_col(key))
+            if html:
+                return html
+    for key in _ACTIVITY_ACTOR_KEYS:
+        disp = item.get(f"{key}_display")
+        raw = item.get(key)
+        if not disp or raw is None or isinstance(raw, dict):
+            continue
+        name = str(disp).strip()
+        if not name:
+            continue
+        html = _present_timeline_person({"name": name, "id": raw}, _activity_actor_col(key))
+        if html:
+            return html
     return ""
 
 
@@ -225,22 +272,27 @@ def _activity_feed_rows(
     drill_by_id: dict[int, str],
     *,
     timeago: Callable[[Any], str],
-) -> list[tuple[str, str, str] | tuple[str, str, str, str]]:
-    """Build ActivityFeed item tuples (optional 4th drill_url)."""
-    rows: list[tuple[str, str, str] | tuple[str, str, str, str]] = []
+) -> list[tuple[str, str, str] | tuple[str, str, str, str] | tuple[str, str, str, str, str]]:
+    """Build ActivityFeed item tuples (optional 4th drill_url, 5th actor_html)."""
+    rows: list[
+        tuple[str, str, str] | tuple[str, str, str, str] | tuple[str, str, str, str, str]
+    ] = []
     for item in items:
         if not isinstance(item, dict):
             continue
         created = item.get("created_at")
         time_str = timeago(created) if created else ""
         actor = _activity_actor_label(item)
+        actor_html = _activity_actor_html(item)
         description = _activity_description(item)
         if not description:
             # ActivityRow forbids empty description — skip rather than
             # crash the whole region (TR-8 comment_activity / Comment.content).
             continue
         drill = drill_by_id.get(id(item), "")
-        if drill:
+        if actor_html:
+            rows.append((time_str, actor, description, drill, actor_html))
+        elif drill:
             rows.append((time_str, actor, description, drill))
         else:
             rows.append((time_str, actor, description))
@@ -328,7 +380,12 @@ class _BuildersTimelineMixin:
                     continue
                 label = str(col.get("label") or key)
                 # TIMELINE renders badges with `size='sm'` per legacy macro call.
-                fields.append((label, _render_typed_value(item, col, badge_size="sm")))
+                fields.append(
+                    (
+                        label,
+                        _render_typed_value(item, col, badge_size="sm", host="timeline_meta"),
+                    )
+                )
             events.append(
                 TimelineEvent(
                     title=str(primary),

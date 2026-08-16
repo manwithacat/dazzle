@@ -1257,13 +1257,16 @@ class ActivityFeed:
     """Activity feed list — one row per event with time + optional actor +
     description.
 
-    Each `items` entry is `(time_str, actor, description)` or
-    `(time_str, actor, description, drill_url)`. `time_str` is the
-    already-formatted relative time (e.g. "5 hours ago" via the legacy
+    Each `items` entry is `(time_str, actor, description)`,
+    `(time_str, actor, description, drill_url)`, or
+    `(time_str, actor, description, drill_url, actor_html)`. `time_str` is
+    the already-formatted relative time (e.g. "5 hours ago" via the legacy
     `timeago` filter); `actor` is the optional person/agent who performed
     the action (rendered as a separate span when non-empty); `description`
     is the action description. Optional ``drill_url`` (#1303 / cycle 1415)
     turns the description into a hub link (VIEW/EDIT demote same as timeline).
+    Optional ``actor_html`` is trusted ``present(person, timeline_meta)``
+    markup (person-ref dicts); scalar actors stay escaped text.
 
     Phase 4B.4 wave 1: emits the legacy
     `workspace/regions/activity_feed.html` shape byte-for-byte —
@@ -1271,7 +1274,10 @@ class ActivityFeed:
     bubble containing actor + description.
     """
 
-    items: tuple[tuple[str, str, str] | tuple[str, str, str, str], ...]
+    items: tuple[
+        tuple[str, str, str] | tuple[str, str, str, str] | tuple[str, str, str, str, str],
+        ...,
+    ]
     empty_message: str = "No activity yet"
 
 

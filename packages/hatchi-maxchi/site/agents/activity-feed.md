@@ -90,6 +90,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `time_str` | `string` | yes |
 | `description` | `string` | yes |
 | `actor` | `string` | no |
+| `actor_html` | `string` | no |
 | `drill_url` | `string` | no |
 
 #### Exemplar `render()`
@@ -99,7 +100,10 @@ def render(row: ActivityRow) -> str:
     """Model → one ``<li>`` activity row."""
     time_s = html.escape(row.time_str)
     actor_html = ""
-    if row.actor:
+    trusted = (row.actor_html or "").strip()
+    if trusted:
+        actor_html = f'<span class="dz-activity-actor">{trusted}</span> '
+    elif row.actor:
         actor_html = f'<span class="dz-activity-actor">{html.escape(row.actor)}</span> '
     desc = html.escape(row.description)
     if row.drill_url:
