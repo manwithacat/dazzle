@@ -69,6 +69,17 @@ def test_present_person_timeline_meta_is_avatar_name() -> None:
     assert "Alex Agent" in r.html
 
 
+def test_present_person_kanban_field_is_avatar_name() -> None:
+    assert PRESENTATION_MATRIX[("person", "kanban_field")] == "avatar_name"
+    col = {"key": "assigned_to", "label": "Assigned To", "ref_entity": "User", "type": "ref"}
+    value = {"id": "u1", "name": "Alex Agent", "email": "alex@demo.dazzle.local"}
+    r = present("person", "kanban_field", value, col)
+    assert r.is_html
+    assert r.density == "avatar_name"
+    assert "dz-avatar" in r.html
+    assert "Alex Agent" in r.html
+
+
 def test_present_person_card_meta_is_avatar_name() -> None:
     assert PRESENTATION_MATRIX[("person", "card_meta")] == "avatar_name"
     col = {"key": "owner", "label": "Owner", "ref_entity": "User", "type": "ref"}

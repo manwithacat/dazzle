@@ -218,6 +218,117 @@ def test_kanban_no_items_renders_empty_state_or_minimal_board() -> None:
     assert "No tasks yet." in html or "All" in html or "dz-kanban" in html
 
 
+def test_kanban_person_ref_emits_avatar() -> None:
+    """person × kanban_field: resolved person-ref dict emits Avatar."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "id": "1",
+                "title": "Triage login",
+                "status": "todo",
+                "assigned_to": {
+                    "id": "u1",
+                    "name": "Alex Agent",
+                    "email": "alex@demo.dazzle.local",
+                },
+            }
+        ],
+        "kanban_columns": ["todo"],
+        "group_by": "status",
+        "display_key": "title",
+        "columns": [
+            {"key": "title", "label": "Title", "type": "text"},
+            {
+                "key": "assigned_to",
+                "label": "Assigned To",
+                "type": "ref",
+                "ref_entity": "User",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
+    assert "Triage login" in html
+    assert "dz-avatar" in html
+    assert "Alex Agent" in html
+    assert "{'id':" not in html
+
+
+def test_kanban_scalar_leftover_does_not_invent_chip() -> None:
+    """Bare leftover (`Ada` / `System`) must stay field text — no Avatar.
+
+    Same invent class as activity-feed actor leftover (oral #43): do not
+    mint a chip from a scalar string (cycle 2161).
+    """
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "id": "1",
+                "title": "Triage login",
+                "status": "todo",
+                "assigned_to": "Ada",
+            },
+            {
+                "id": "2",
+                "title": "Nightly sweep",
+                "status": "todo",
+                "assigned_to": "System",
+            },
+        ],
+        "kanban_columns": ["todo"],
+        "group_by": "status",
+        "display_key": "title",
+        "columns": [
+            {"key": "title", "label": "Title", "type": "text"},
+            {
+                "key": "assigned_to",
+                "label": "Assigned To",
+                "type": "ref",
+                "ref_entity": "User",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
+    assert "Triage login" in html
+    assert "Nightly sweep" in html
+    assert "Ada" in html
+    assert "System" in html
+    assert "dz-avatar" not in html
+    assert "dz-user-chip" not in html
+
+
+def test_kanban_display_sibling_still_emits_avatar() -> None:
+    """Resolved ``{key}_display`` + id is honest — still Avatar."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "id": "1",
+                "title": "Triage login",
+                "status": "todo",
+                "assigned_to": "u1",
+                "assigned_to_display": "Alex Agent",
+            }
+        ],
+        "kanban_columns": ["todo"],
+        "group_by": "status",
+        "display_key": "title",
+        "columns": [
+            {"key": "title", "label": "Title", "type": "text"},
+            {
+                "key": "assigned_to",
+                "label": "Assigned To",
+                "type": "ref",
+                "ref_entity": "User",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("board", display="kanban"), ctx))
+    assert "dz-avatar" in html
+    assert "Alex Agent" in html
+
+
 # ───────────────── End-to-end render ──────────────
 
 

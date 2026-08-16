@@ -358,6 +358,14 @@ Doctrine source of truth remains
     new invent class found in-cycle or hm-convergence
     hyperpart_coherence / gallery_probes (policy rotation).
 
+45. **Kanban leftover scalar must not invent Avatar.** Cycle 2161:
+    person × kanban_field still emits Avatar for person-ref dicts and
+    ``{key}_display`` + id. Bare leftover (``Ada``, ``System``) stays
+    escaped field text — same invent class as activity-feed actor
+    leftover (oral #43). Do not mint a chip from a string. Not another
+    present() host wire (already wired). Not leftover parseInt.
+    Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

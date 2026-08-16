@@ -47,6 +47,34 @@ from dazzle.render.fragment.region._shared import (
     _render_typed_value,
     _wrap_surface,
 )
+from dazzle.render.presentation import infer_role, present
+
+
+def _kanban_person_field(item: dict[str, Any], col: dict[str, Any]) -> tuple[str, object] | None:
+    """Person × kanban_field emit, or None to use the typed fallback.
+
+    Person-ref dicts and ``{key}_display`` + id emit Avatar. Scalar leftover
+    (``Ada``, ``System``) stays escaped field text — do not invent a chip
+    from a bare string (cycle 2161; oral #43 sibling).
+    """
+    key = str(col.get("key") or "")
+    raw = item.get(key)
+    probe = raw if raw is not None else item.get(f"{key}_display")
+    if infer_role(probe, col) != "person":
+        return None
+    label = str(col.get("label") or key)
+    chip_val: Any = raw if isinstance(raw, dict) else None
+    if chip_val is None:
+        disp = item.get(f"{key}_display")
+        if disp:
+            chip_val = {"name": disp, "id": raw}
+    if chip_val is not None:
+        pr = present("person", "kanban_field", chip_val, col)
+        if pr.is_html and pr.html:
+            return (label, RawHTML(pr.html))
+    if raw is None or raw == "":
+        return None
+    return (label, str(raw))
 
 
 class _BuildersCardsMixin:
@@ -203,27 +231,10 @@ class _BuildersCardsMixin:
                         date_str = _timeago_filter(date_val) if date_val else ""
                         fields.append((label, RawHTML(date_str)))
                         continue
-                    # Presentation matrix: person × kanban_field → Avatar chip.
-                    key = str(col.get("key") or "")
-                    raw = item.get(key)
-                    from dazzle.render.presentation import infer_role, present
-
-                    if infer_role(raw if raw is not None else item.get(f"{key}_display"), col) == (
-                        "person"
-                    ):
-                        chip_val = raw if isinstance(raw, dict) else None
-                        if chip_val is None and item.get(f"{key}_display"):
-                            chip_val = {
-                                "name": item.get(f"{key}_display"),
-                                "id": raw,
-                            }
-                        if chip_val is None and raw is not None:
-                            chip_val = {"name": str(raw), "id": raw}
-                        if chip_val is not None:
-                            pr = present("person", "kanban_field", chip_val, col)
-                            if pr.is_html and pr.html:
-                                fields.append((label, RawHTML(pr.html)))
-                                continue
+                    person_field = _kanban_person_field(item, col)
+                    if person_field is not None:
+                        fields.append(person_field)
+                        continue
                     # KANBAN renders badges with size='sm' per legacy.
                     fields.append((label, _render_typed_value(item, col, badge_size="sm")))
                 attn_raw = item.get("_attention") if hasattr(item, "get") else None
