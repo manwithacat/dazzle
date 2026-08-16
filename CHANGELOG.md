@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **PDF leftover zoom invented a scale (cycle 2152)** —
+  leftover typed zoom (`zzz`, `2abc`, `1e2`, out-of-[0.25, 8]) no
+  longer rezooms via `parseFloat`. Optional `[data-dz-pdf-zoom]`
+  companion fails custom validity; blur keeps leftover visible;
+  empty restores from the current zoom; valid decimals and `fit`
+  render. URL `?dzpdf-zoom` leftover is the same parse (not a
+  silent scale). Rest-state gallery unchanged. Same honesty class
+  as leftover page (2151) and number leftover (2149).
 - **Cycle 2147 cimonitor — HM mirror wait expired 46s before visual green** —
   `--prefer-completed --wait 900` started with Dazzle CI, hunted stale
   red #31919355191, then followed HM #31920607365. The 900s clock

@@ -313,6 +313,24 @@ def test_pdf_controller_leftover_page_does_not_invent() -> None:
     assert "leftover junk stays visible" in src
 
 
+def test_pdf_controller_leftover_zoom_does_not_invent() -> None:
+    """dz-pdf.js must refuse leftover zoom junk (2152)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-pdf.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseZoom" in src
+    assert "leftoverZoomMessage" in src
+    assert "?dzpdf-zoom leftover" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
+
+
 def test_grid_edit_controller_leftover_iso_does_not_invent() -> None:
     """dz-grid-edit.js must refuse leftover date ISO junk (2150)."""
     from pathlib import Path

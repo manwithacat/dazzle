@@ -2140,10 +2140,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "data-dz-pdf-src points at the document bytes (or range proxy)",
                     "data-dz-pdf-lib lazy-loads PDF.js as an ES module on first intersect",
                     "data-dz-pdf-state=url enables ?dzpdf-page / ?dzpdf-zoom deep-links",
+                    "optional [data-dz-pdf-zoom] companion is leftover-honest (parseZoom; rest-state gallery omits it)",
                 ),
                 pitfalls=(
                     "application controls ACCESS; PDF.js only renders — do not embed bytes in the bundle",
                     "without JS the noscript download link IS the experience",
+                    "leftover zoom junk must not invent a scale (do not parseFloat leftover / URL junk)",
                 ),
                 do_dont=(
                     (

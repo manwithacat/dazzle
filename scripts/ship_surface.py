@@ -85,6 +85,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_iso_does_not_invent",
     # cycle 2151: PDF leftover page junk must not invent a page
     "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_page_does_not_invent",
+    # cycle 2152: PDF leftover zoom junk must not invent a scale
+    "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_zoom_does_not_invent",
     # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs

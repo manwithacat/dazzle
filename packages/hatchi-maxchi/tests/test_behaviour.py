@@ -3637,6 +3637,113 @@ def _assert_pdf_leftover(page) -> None:  # type: ignore[no-untyped-def]
     assert page.input_value(inp) == "zzz", "blur must not revert leftover junk"
 
 
+_PDF_ZOOM_COMPANION_INIT = """
+document.addEventListener('DOMContentLoaded', function () {
+  var toolbar = document.querySelector('#pdf [data-pdf] [data-pdf-toolbar]');
+  if (!toolbar || toolbar.querySelector('[data-pdf-zoom]')) return;
+  var inp = document.createElement('input');
+  inp.setAttribute('data-pdf-zoom', '');
+  inp.className = 'pdf-zoom-input';
+  inp.setAttribute('inputmode', 'decimal');
+  inp.setAttribute('spellcheck', 'false');
+  inp.setAttribute('aria-label', 'Zoom');
+  inp.value = 'fit';
+  toolbar.appendChild(inp);
+}, {once: true});
+"""
+
+
+def test_pdf_leftover_zoom_does_not_invent_zoom(page) -> None:  # type: ignore[no-untyped-def]
+    """PDF leftover zoom junk must not invent a scale (cycle 2152).
+
+    Same honesty class as leftover page (2151) and number leftover
+    (2149): typed-but-uncommitted text is not a silent parseFloat.
+    Optional [data-pdf-zoom] companion is injected so rest-state
+    gallery stays unchanged (oral #33).
+    """
+    _pdf_cdn_or_skip()
+    page.add_init_script(_PDF_ZOOM_COMPANION_INIT)
+    _serve_pdf_gallery(page, _assert_pdf_zoom_leftover)
+
+
+def _assert_pdf_zoom_leftover(page) -> None:  # type: ignore[no-untyped-def]
+    root = "#pdf [data-pdf]"
+    page.eval_on_selector(root, "el => el.scrollIntoView()")
+    page.wait_for_selector(f'{root}[data-pdf-ready="true"]', timeout=30000)
+    inp = f"{root} [data-pdf-zoom]"
+    assert page.query_selector(inp) is not None
+    assert page.input_value(inp) == "fit"
+    canvas = f"{root} [data-pdf-viewer] canvas"
+    before = page.eval_on_selector(canvas, "el => el.style.width")
+
+    page.fill(inp, "zzz")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "zzz", "named leftover must not invent a zoom"
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+    assert page.eval_on_selector(canvas, "el => el.style.width") == before
+
+    page.fill(inp, "2abc")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "2abc", "leftover suffix is not a silent 2"
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+    assert page.eval_on_selector(canvas, "el => el.style.width") == before
+
+    page.fill(inp, "1e2")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "1e2", "scientific leftover is not a silent 100"
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "99")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_timeout(80)
+    assert page.input_value(inp) == "99", "out-of-range must not invent by clamping"
+    assert page.eval_on_selector(inp, "el => el.validity.customError") is True
+
+    page.fill(inp, "1.25")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_function(f"document.querySelector('{inp}').value === '1.25'")
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is True
+    after = page.eval_on_selector(canvas, "el => el.style.width")
+    assert after != before, "valid zoom must render"
+
+    page.fill(inp, "")
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(inp) == "1.25", "empty companion on blur restores from the current zoom"
+
+    page.fill(inp, "zzz")
+    page.eval_on_selector(inp, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(inp) == "zzz", "blur must not revert leftover junk"
+
+    page.fill(inp, "fit")
+    page.eval_on_selector(
+        inp,
+        "el => el.dispatchEvent(new Event('change', {bubbles: true}))",
+    )
+    page.wait_for_function(f"document.querySelector('{inp}').value === 'fit'")
+    assert page.eval_on_selector(inp, "el => el.checkValidity()") is True
+
+
 def _assert_pdf_viewer(page) -> None:  # type: ignore[no-untyped-def]
     root = "#pdf [data-pdf]"
     page.eval_on_selector(root, "el => el.scrollIntoView()")

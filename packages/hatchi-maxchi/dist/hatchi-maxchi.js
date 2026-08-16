@@ -6651,7 +6651,8 @@
  * Toolbar slots (wired when present, all optional):
  *   [data-pdf-prev] [data-pdf-next] [data-pdf-page]
  *   [data-pdf-page-count] [data-pdf-zoom-in] [data-pdf-zoom-out]
- *   [data-pdf-fit-width] [data-pdf-status] [data-pdf-viewer]
+ *   [data-pdf-zoom] [data-pdf-fit-width] [data-pdf-status]
+ *   [data-pdf-viewer]
  *
  * Leftover honesty (cycle 2151): leftover page junk must not invent a
  * page. parseInt("2abc", 10) === 2 / "zzz" / "99" on a 2-page doc is
@@ -6662,6 +6663,17 @@
  * Out-of-range does not invent by clamping. Same class as number
  * leftover junk (2149) and money leftover junk (2121). Gallery
  * rest-state is unchanged (oral #33).
+ *
+ * Leftover honesty (cycle 2152): leftover zoom junk must not invent a
+ * scale. parseFloat("2abc") === 2 / "zzz" / "1e2" / "0.1" / "99" is
+ * invalid — the canvas stays put and the optional [data-pdf-zoom]
+ * companion fails custom validity so change/Enter cannot rezoom as if
+ * the leftover were accepted. Empty companion on blur restores from
+ * the current zoom (empty is not leftover junk). Valid decimals in
+ * [0.25, 8] and the token "fit" render. Out-of-range does not invent
+ * by clamping. URL ?dzpdf-zoom leftover is the same parse (not a
+ * silent scale). Same class as page leftover (2151) and number leftover
+ * junk (2149). Gallery rest-state is unchanged (oral #33).
  *
  * No JS → the <noscript> download link inside the viewer region is the
  * whole experience (progressive enhancement, spec §2).
@@ -6694,10 +6706,22 @@
     return "Enter a page number";
   }
 
+  function leftoverZoomMessage() {
+    return "Enter a zoom (0.25–8 or fit)";
+  }
+
   function markPage(el, bad) {
     if (!el) return;
     if (el.setCustomValidity)
       el.setCustomValidity(bad ? leftoverMessage() : "");
+    if (bad) el.setAttribute("aria-invalid", "true");
+    else el.removeAttribute("aria-invalid");
+  }
+
+  function markZoom(el, bad) {
+    if (!el) return;
+    if (el.setCustomValidity)
+      el.setCustomValidity(bad ? leftoverZoomMessage() : "");
     if (bad) el.setAttribute("aria-invalid", "true");
     else el.removeAttribute("aria-invalid");
   }
@@ -6715,12 +6739,28 @@
     return { kind: "ok", value: num };
   }
 
+  // kind: empty | invalid | ok. parseFloat("2abc") === 2, so leftover
+  // junk is invalid — not a silent scale. "fit" is the committed
+  // fit-width token. Out-of-[0.25,8] is invalid (do not invent by
+  // clamping). Scientific leftover ("1e2") is invalid — the companion
+  // is decimal text, not JS parseFloat.
+  function parseZoom(val) {
+    var raw = String(val == null ? "" : val).trim();
+    if (!raw) return { kind: "empty" };
+    if (raw === "fit") return { kind: "ok", value: "fit" };
+    if (!/^\d+(?:\.\d+)?$/.test(raw)) return { kind: "invalid" };
+    var num = Number(raw);
+    if (!isFinite(num) || num < 0.25 || num > 8) return { kind: "invalid" };
+    return { kind: "ok", value: String(num) };
+  }
+
   function urlState() {
     var p = new URLSearchParams(location.search);
     var parsed = parsePage(p.get("dzpdf-page") || "", Infinity);
+    var parsedZoom = parseZoom(p.get("dzpdf-zoom") || "");
     return {
       page: parsed.kind === "ok" ? parsed.value : null,
-      zoom: p.get("dzpdf-zoom") || null,
+      zoom: parsedZoom.kind === "ok" ? parsedZoom.value : null,
     };
   }
 
@@ -6774,13 +6814,14 @@
       }
       var state = {
         page: Math.min(doc.numPages, Math.max(1, seeded)),
-        // zoom: a number, or "fit" (fit-width, the default)
-        zoom: fromUrl.zoom || "fit",
+        // zoom: a number string, or "fit" (fit-width, the default)
+        zoom: fromUrl.zoom != null ? fromUrl.zoom : "fit",
       };
 
       var pageCount = q(root, "page-count");
       if (pageCount) pageCount.textContent = "of " + doc.numPages;
       var pageInput = q(root, "page");
+      var zoomInput = q(root, "zoom");
       var gen = 0;
 
       async function render() {
@@ -6790,7 +6831,8 @@
         var scale =
           state.zoom === "fit"
             ? Math.max(0.1, (viewer.clientWidth - 16) / base.width)
-            : parseFloat(state.zoom) || 1;
+            : Number(state.zoom);
+        if (!isFinite(scale) || scale <= 0) scale = 1;
         state.renderedScale = scale;
         var viewport = page.getViewport({ scale: scale });
         var canvas = document.createElement("canvas");
@@ -6805,6 +6847,7 @@
         if (g !== gen) return; // a newer render superseded this one
         viewer.replaceChildren(canvas);
         if (pageInput) pageInput.value = String(state.page);
+        if (zoomInput) zoomInput.value = String(state.zoom);
         if (syncUrl) writeUrlState(state.page, state.zoom);
         say("");
         root.setAttribute("data-pdf-ready", "true");
@@ -6876,6 +6919,53 @@
           if (evt.key !== "Enter") return;
           evt.preventDefault();
           applyPageInput(false);
+        });
+      }
+
+      function applyZoomInput(normalize) {
+        if (!zoomInput) return;
+        var parsed = parseZoom(zoomInput.value);
+        if (parsed.kind === "ok") {
+          markZoom(zoomInput, false);
+          if (state.zoom !== parsed.value) {
+            state.zoom = parsed.value;
+            render();
+          }
+          if (normalize) zoomInput.value = String(state.zoom);
+          return parsed;
+        }
+        if (parsed.kind === "empty") {
+          markZoom(zoomInput, false);
+          if (normalize) zoomInput.value = String(state.zoom);
+          return parsed;
+        }
+        // leftover junk stays visible — must not vanish / revert
+        markZoom(zoomInput, true);
+        return parsed;
+      }
+
+      if (zoomInput) {
+        zoomInput.addEventListener("input", function () {
+          var parsed = parseZoom(zoomInput.value);
+          markZoom(zoomInput, parsed.kind === "invalid");
+        });
+        zoomInput.addEventListener("change", function () {
+          applyZoomInput(false);
+        });
+        zoomInput.addEventListener(
+          "blur",
+          function () {
+            var parsed = parseZoom(zoomInput.value);
+            if (parsed.kind === "empty") applyZoomInput(true);
+            else if (parsed.kind === "ok") applyZoomInput(true);
+            // leftover junk stays visible — must not vanish / revert
+          },
+          true,
+        );
+        zoomInput.addEventListener("keydown", function (evt) {
+          if (evt.key !== "Enter") return;
+          evt.preventDefault();
+          applyZoomInput(false);
         });
       }
 

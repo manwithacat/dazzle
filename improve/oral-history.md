@@ -231,6 +231,11 @@ Doctrine source of truth remains
     (`2abc` / `zzz` / out-of-range stay visible + fail validity;
     empty restores from the current page; valid whole numbers
     still render; rest-state gallery unchanged, 2151).
+    PDF leftover zoom junk must not invent a scale
+    (`2abc` / `zzz` / `1e2` / out-of-[0.25, 8] stay visible +
+    fail validity; empty restores from the current zoom; valid
+    decimals and `fit` still render; URL `?dzpdf-zoom` leftover
+    is the same parse; rest-state gallery unchanged, 2152).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.

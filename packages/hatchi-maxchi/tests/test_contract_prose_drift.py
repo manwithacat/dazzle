@@ -56,6 +56,7 @@ TRANSIENT_STATE_ATTRS: frozenset[str] = frozenset(
         "data-dz-pdf-next",
         "data-dz-pdf-zoom-in",
         "data-dz-pdf-zoom-out",
+        "data-dz-pdf-zoom",
         "data-dz-pdf-fit-width",
         "data-dz-pdf-worker",
         "data-dz-pdf-initial-page",
