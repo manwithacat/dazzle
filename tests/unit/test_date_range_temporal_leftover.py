@@ -190,15 +190,12 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_kanban_load_all_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): kanban overflow Load all
-    ``hx-get="{endpoint}?page_size={total}"`` — leftover-honest
-    include_closed / as_of do not ride expand (invents open-only /
-    current)."""
+def test_kanban_load_all_now_echoes_temporal() -> None:
+    """Cycle 2181 closed the 2180 seed: kanban Load all leftover-honest
+    include_closed / as_of now ride expand."""
     src = _KANBAN_EMIT.read_text(encoding="utf-8")
-    overflow = src.split("dz-kanban-load-all")[1].split("dz-kanban-announce")[0]
-    assert "?page_size=" in overflow
-    assert "include_closed" not in overflow
-    assert "as_of" not in overflow
-    assert "leftover_honest" not in overflow
-    assert "_with_leftover_honest_temporal" not in overflow
+    emit = src.split("def _emit_kanban_region")[1].split("def ", 1)[0]
+    assert "_with_leftover_honest_temporal" in emit
+    assert "include_closed" in emit
+    assert "as_of" in emit
+    assert "cycle 2181" in emit

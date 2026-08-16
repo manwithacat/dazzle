@@ -9,6 +9,15 @@ are host-owned. Class ``.dz-kanban-board`` is the stable substrate root
 When the host enables Linear-class rearrange, the board also carries
 ``data-dz-kanban-board`` + rearrange attrs; those are optional host chrome
 and are not dual-lock-required (read-only boards omit them).
+
+Leftover honesty (cycle 2181): overflow Load all ``hx-get`` (host-owned)
+must echo leftover-honest ``include_closed`` / ``as_of``. Bare
+``hx-get="{endpoint}?page_size={total}"`` dropped them and invented
+open-only / current on expand. Leftover junk (``zzz``, ``2abc``,
+``maybe``, ``not-a-date``) must not invent. Valid ``true`` /
+YYYY-MM-DD still ride. Rest-state gallery is unchanged (oral #33).
+Not leftover list include_closed / related-tab as_of / DETAIL as_of
+onto the edit form.
 """
 
 from contracts._kit import DomContract, Node

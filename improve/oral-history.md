@@ -601,6 +601,23 @@ Doctrine source of truth remains
     Load all ``hx-get="{endpoint}?page_size={total}"`` still omits
     include_closed / as_of (invents open-only / current on expand).
 
+64. **Kanban overflow Load all hx-get drops include_closed / as_of
+    (invents open-only / current on expand).** Cycle 2181:
+    ``_emit_kanban_region`` wrote
+    ``hx-get="{endpoint}?page_size={total}"`` only. Leftover-honest
+    ``true`` / YYYY-MM-DD now ride expand; leftover junk still
+    omits. Rest-state gallery unchanged (oral #33). Do **not**
+    clone leftover list include_closed / related-tab as_of /
+    DETAIL as_of onto the edit form. Not leftover DateRangePicker /
+    FilterBar / search chrome / sentinel / pagination / CSV /
+    sort-header echo (oral #56/#58/#59/#60/#61/#62/#63). Not leftover
+    list as_of / sort / page. Not leftover-scalar refuse. Not Goal B
+    coat. After wiring leftover-honest temporal on a list/grid
+    control, scan sibling emitters — next: cohort-strip lens
+    ``_emit_cohort_strip_region`` ``hx-get="{endpoint}?lens="`` still
+    omits include_closed / as_of (invents open-only / current on a
+    lens change).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

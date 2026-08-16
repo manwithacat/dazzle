@@ -120,6 +120,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_filter_bar_temporal_leftover.py",
     # cycle 2180: DateRangePicker hx-get drops include_closed / as_of
     "tests/unit/test_date_range_temporal_leftover.py",
+    # cycle 2181: kanban overflow Load all hx-get drops include_closed / as_of
+    "tests/unit/test_kanban_load_all_temporal_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

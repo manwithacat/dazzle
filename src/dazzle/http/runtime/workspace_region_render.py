@@ -572,6 +572,11 @@ def _build_list_adapter_ctx(
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
         adapter_ctx["endpoint"] = ctx_region.endpoint
         adapter_ctx["entity_name"] = ctx.source
+        adapter_ctx["total"] = inputs.total
+        # Leftover-honest temporal (cycle 2181) so overflow Load all
+        # echoes include_closed / as_of already on the region URL.
+        adapter_ctx["include_closed"] = env.request.query_params.get("include_closed", "")
+        adapter_ctx["as_of"] = env.request.query_params.get("as_of", "")
         # Linear-class rearrange — only when orchestration stamped status mode
         # after UPDATE gate (read-only personas get empty strings).
         adapter_ctx["kanban_rearrange"] = inputs.kanban_rearrange

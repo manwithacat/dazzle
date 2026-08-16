@@ -796,6 +796,11 @@ class KanbanRegion:
     `total` + `endpoint` drive the optional "Load all" button when
     the rendered items represent a paginated subset.
 
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2181) ride
+    overflow Load all ``hx-get``. Dropping them invented open-only /
+    current on expand. Leftover junk must not be stored here — the
+    emitter also leftover-parses before appending.
+
     Rearrange (Linear-class): when ``rearrange`` is ``"status"``, the board
     root and stacks carry drop/API attrs and cards with non-empty
     ``allowed_to`` become draggable. Default ``""`` is presentation-only.
@@ -813,6 +818,8 @@ class KanbanRegion:
     refresh_src: str = ""
     # Optional order field (rank / position / sort_order) for in-column DnD
     rank_field: str = ""
+    include_closed: str = ""
+    as_of: str = ""
 
 
 @dataclass(frozen=True, slots=True)

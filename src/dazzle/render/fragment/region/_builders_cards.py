@@ -122,6 +122,12 @@ class _BuildersCardsMixin:
         except (TypeError, ValueError):
             total = 0
         endpoint = str(ctx.get("endpoint") or "")
+        # Leftover-honest temporal (cycle 2181). Extract before overflow
+        # chrome so Load all shares the raw pair with list/FilterBar /
+        # DateRangePicker. Valid true / YYYY-MM-DD ride; leftover junk
+        # omits (open-only / current).
+        include_closed = str(ctx.get("include_closed") or "")
+        as_of = str(ctx.get("as_of") or "")
         detail_url_template = str(ctx.get("detail_url_template") or "")
         # Linear-class rearrange — host stamps only when UPDATE allowed.
         rearrange = str(ctx.get("kanban_rearrange") or "")
@@ -172,6 +178,8 @@ class _BuildersCardsMixin:
                     or getattr(region, "empty_message", None)
                     or "No items found."
                 ),
+                include_closed=include_closed,
+                as_of=as_of,
             )
             return _wrap_surface(title, "kanban", body)
 
@@ -284,6 +292,8 @@ class _BuildersCardsMixin:
             api_endpoint=api_endpoint if rearrange == "status" else "",
             refresh_src=refresh_src if rearrange == "status" else "",
             rank_field=rank_field if rearrange == "status" else "",
+            include_closed=include_closed,
+            as_of=as_of,
         )
         return _wrap_surface(title, "kanban", body)
 

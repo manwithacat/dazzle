@@ -88,7 +88,8 @@ def leftover_honest_temporal_query(
     CSV endpoint; cycle 2175 pagination hx-get; cycle 2177 infinite-
     scroll sentinel; cycle 2178 list search chrome; cycle 2179
     FilterBar ``_emit_filter_bar``; cycle 2180 DateRangePicker
-    ``_emit_date_range_picker``. Returns ``&amp;``-joined pairs
+    ``_emit_date_range_picker``; cycle 2181 kanban overflow Load all
+    ``_emit_kanban_region``. Returns ``&amp;``-joined pairs
     with no leading sep.
     """
     parts: list[str] = []

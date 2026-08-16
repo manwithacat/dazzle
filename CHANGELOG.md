@@ -12,6 +12,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Kanban overflow Load all hx-get dropped `include_closed` / `as_of` (cycle 2181)** —
+  `_emit_kanban_region` wrote `hx-get="{endpoint}?page_size={total}"`
+  only, so expand invented the open-only / current collection after
+  leftover-honest temporal had reached DateRangePicker / FilterBar /
+  search / sentinel / pagination / CSV / sort-header. Valid `true` /
+  YYYY-MM-DD now ride expand; leftover junk (`zzz`, `2abc`, `maybe`,
+  `not-a-date`) still omits. Workspace kanban adapter now threads
+  `total` + leftover-honest temporal onto the primitive. Rest-state
+  gallery unchanged.
 - **DateRangePicker hx-get dropped `include_closed` / `as_of` (cycle 2180)** —
   `_emit_date_range_picker` / `render_date_range` wrote
   `hx-get="{endpoint}"` + `hx-include="closest .date-range-bar"`

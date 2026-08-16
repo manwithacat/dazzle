@@ -84,6 +84,9 @@ from dazzle.render.fragment.primitives import (
     Tree,
     TreeNode,
 )
+from dazzle.render.fragment.renderer._render_interactive import (
+    _with_leftover_honest_temporal,
+)
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -640,13 +643,25 @@ class _RenderChartsMixin:
 
         overflow_html = ""
         if k.total > total_cards:
+            # Leftover-honest temporal (cycle 2181). Bare
+            # hx-get="{endpoint}?page_size={total}" used to drop
+            # include_closed / as_of and invent open-only / current
+            # after expand. Leftover junk must not invent. Valid true /
+            # YYYY-MM-DD ride; leftover junk (zzz / 2abc / maybe /
+            # not-a-date) omits.
+            load_href = _with_leftover_honest_temporal(
+                f"{ctx.escape_attr(k.endpoint)}?page_size={k.total}",
+                getattr(k, "include_closed", ""),
+                getattr(k, "as_of", ""),
+                escape_attr=ctx.escape_attr,
+            )
             overflow_html = (
                 f'<div class="dz-kanban-overflow">'
                 f'<p class="dz-kanban-overflow-text">'
                 f"Showing {total_cards} of {k.total}"
                 f"</p>"
                 f'<button type="button" class="dz-kanban-load-all" '
-                f'hx-get="{ctx.escape_attr(k.endpoint)}?page_size={k.total}" '
+                f'hx-get="{load_href}" '
                 f'hx-target="closest [data-dz-region]" '
                 f'hx-swap="outerHTML">Load all</button>'
                 f"</div>"
