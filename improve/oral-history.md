@@ -236,6 +236,11 @@ Doctrine source of truth remains
     fail validity; empty restores from the current zoom; valid
     decimals and `fit` still render; URL `?dzpdf-zoom` leftover
     is the same parse; rest-state gallery unchanged, 2152).
+    Grid leftover time ISO must not invent a clock
+    (kind=time Field group; leftover `zzz` / `14:30zzz` /
+    datetime `2026-07-16T01:30zzz` stay visible + fail
+    validity; Enter/Tab do not PUT; datetime columns map to
+    kind=time not date; rest-state gallery unchanged, 2153).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.

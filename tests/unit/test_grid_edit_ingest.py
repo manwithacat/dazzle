@@ -39,3 +39,9 @@ def test_edit_span_attrs_emits_the_contract_attributes() -> None:
 def test_non_select_omits_options_attr() -> None:
     attrs = edit_span_attrs(GridEditCell(col="t", kind="text", value="v", label="T"))
     assert "data-dz-edit-options" not in attrs
+
+
+def test_time_kind_is_a_first_class_seam() -> None:
+    attrs = edit_span_attrs(GridEditCell(col="due_at", kind="time", value="14:30", label="Due at"))
+    assert 'data-dz-edit-kind="time"' in attrs
+    assert "data-dz-edit-options" not in attrs

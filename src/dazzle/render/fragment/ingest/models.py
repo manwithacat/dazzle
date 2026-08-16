@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-Kind = Literal["text", "date", "bool", "select"]
+Kind = Literal["text", "date", "time", "bool", "select"]
 TimeSeriesView = Literal["line", "area"]
 
 

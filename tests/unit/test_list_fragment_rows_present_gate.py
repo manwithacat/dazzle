@@ -123,8 +123,9 @@ def test_datetime_column_humanises_and_is_inline_editable() -> None:
     """#1597: datetime cols must not render raw ISO or stamp edit-kind=text.
 
     ``build_surface_columns`` keeps type=datetime; C2.3 marks the field
-    inline-editable; the cell editor uses kind=date (date-time capable) while
-    display is UK date+time via ``_render_cell_display``.
+    inline-editable; the cell editor uses kind=time (datetime-local + ISO
+    companion) while display is UK date+time via ``_render_cell_display``.
+    Datetime leftover must not invent a date (cycle 2153).
     """
     cols = [
         {"key": "title", "type": "text", "label": "Title"},
@@ -156,7 +157,7 @@ def test_datetime_column_humanises_and_is_inline_editable() -> None:
     # Raw ISO may still sit in data-dz-edit-value for the editor.
     assert ">16 Jul 2026 02:30<" in html
     assert "2026-07-16T01:30:24" in html  # edit-value keeps stored UTC
-    assert 'data-dz-edit-kind="date"' in html  # datetime → date editor
+    assert 'data-dz-edit-kind="time"' in html  # datetime → time editor
     assert 'data-dz-grid-edit="assigned_at"' in html
     # title may still be text; assigned_at must not be
     assert 'data-dz-grid-edit="assigned_at" data-dz-edit-kind="text"' not in html

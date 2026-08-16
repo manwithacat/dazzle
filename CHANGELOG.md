@@ -7,6 +7,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Grid leftover time invented a clock (cycle 2153)** —
+  leftover typed ISO (`zzz`, `14:30zzz`, `2026-07-16T01:30zzz`)
+  no longer PUTs the previous clock from a grid cell. kind=time
+  opens a Field time group (native `type=time` / `datetime-local`
+  is the committed value; ISO companion has no name). Datetime
+  columns map to kind=time instead of kind=date so leftover ISO
+  cannot invent a date. Rest-state gallery unchanged. Same honesty
+  class as grid date leftover ISO (2150) and standalone time
+  leftover ISO (2144).
 - **PDF leftover zoom invented a scale (cycle 2152)** —
   leftover typed zoom (`zzz`, `2abc`, `1e2`, out-of-[0.25, 8]) no
   longer rezooms via `parseFloat`. Optional `[data-dz-pdf-zoom]`

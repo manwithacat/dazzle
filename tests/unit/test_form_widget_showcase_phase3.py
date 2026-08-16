@@ -347,6 +347,23 @@ def test_grid_edit_controller_leftover_iso_does_not_invent() -> None:
     assert "data-dz-date-iso" in src
 
 
+def test_grid_edit_controller_leftover_time_iso_does_not_invent() -> None:
+    """dz-grid-edit.js must refuse leftover time ISO junk (2153)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-grid-edit.js"
+    ).read_text(encoding="utf-8")
+    assert "function timeLeftoverBlocksCommit" in src
+    assert "function leftoverBlocksCommit" in src
+    assert "data-dz-time-iso" in src
+    assert "must not invent a clock commit" in src
+
+
 def test_number_controller_leftover_does_not_invent() -> None:
     """dz-number.js must refuse leftover number junk (2149)."""
     from pathlib import Path

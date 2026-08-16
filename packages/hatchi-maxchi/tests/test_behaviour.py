@@ -2595,6 +2595,67 @@ def test_grid_date_leftover_iso_does_not_invent_commit(page) -> None:  # type: i
     page.reload()
 
 
+def test_grid_time_leftover_iso_does_not_invent_commit(page) -> None:  # type: ignore[no-untyped-def]
+    """Grid-edit leftover ISO must not invent a clock commit (cycle 2153).
+
+    Same honesty class as grid date leftover ISO (2150) and standalone
+    time leftover ISO (2144). Inject a kind=time span so rest-state
+    gallery stays unchanged (oral #33).
+    """
+    goto_part(page, "grid")
+    _hydrate_grid(page)
+    injected = page.eval_on_selector(
+        "[data-grid-body] [data-row-id]",
+        """row => {
+          const td = document.createElement('td');
+          td.className = 'tr-cell';
+          td.setAttribute('data-col', 'due_at');
+          td.innerHTML = '<span class="tr-cell-display" data-grid-edit="due_at" '
+            + 'data-edit-kind="time" data-edit-value="14:30" '
+            + 'data-edit-label="Due at">14:30</span>';
+          row.appendChild(td);
+          return true;
+        }""",
+    )
+    assert injected is True
+    span = page.query_selector('[data-grid-body] [data-grid-edit="due_at"]')
+    assert span is not None, "injected time cell must carry the edit seam span"
+
+    span.dblclick()
+    page.wait_for_timeout(80)
+    host = "[data-grid-editor]"
+    iso = f"{host} [data-time-iso]"
+    native = f'{host} input[type="time"]'
+    assert page.query_selector(iso) is not None, "time editor must emit an ISO companion"
+    assert page.input_value(native) == "14:30"
+    assert page.input_value(iso) == "14:30"
+
+    page.fill(iso, "zzz")
+    assert page.input_value(native) == "14:30", "named leftover must not invent a clock"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None, "leftover must not PUT / close"
+    assert page.input_value(native) == "14:30"
+    assert page.input_value(iso) == "zzz", "Enter must not revert leftover junk"
+
+    page.fill(iso, "14:30zzz")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "14:30", "leftover suffix is not a silent clock"
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None
+    assert page.input_value(iso) == "14:30zzz"
+
+    page.fill(iso, "15:45")
+    page.wait_for_timeout(80)
+    assert page.input_value(native) == "15:45", "valid ISO must write the native"
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.query_selector(host) is None, "Escape still cancels"
+
+
 def test_grid_touch_resize_and_edit_accommodations(_engine_browser) -> None:  # type: ignore[no-untyped-def]
     """Touch (coarse pointer) accommodations for the grid extensions,
     chromium-only (WebKit has no mobile/pointer:coarse emulation):

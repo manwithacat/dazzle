@@ -3237,7 +3237,7 @@
  *             body — the entity's STANDARD gated update route (permit +
  *             scope pre-read + destination-scope + schema validation).
  *   - cell:   `[data-grid-edit="<col>"]` (the display span) with
- *             `data-edit-kind` (text|date|bool|select),
+ *             `data-edit-kind` (text|date|time|bool|select),
  *             `data-edit-value` (the raw value), `data-edit-label`
  *             (a11y), and for selects `data-edit-options`
  *             (JSON [[value,label],…]).
@@ -3252,7 +3252,17 @@
  *             blur restores from the native (date.js). Same class as
  *             standalone date leftover ISO (2145) and money leftover
  *             junk (2121). Gallery rest-state is unchanged (oral #33).
- *   - keys:   Enter commits (text/date), Escape cancels, Tab / Shift-Tab
+ *   - time:   kind=time opens a Field time group (native `type=time` /
+ *             `datetime-local` + ISO companion). Leftover honesty
+ *             (cycle 2153): leftover ISO junk (`14:30zzz`, `zzz`,
+ *             `2026-07-16T01:30zzz`) must not invent a commit of the
+ *             previous clock. Native clock is the committed value;
+ *             leftover stays visible, fails custom validity, and
+ *             Enter/Tab/change do not PUT. Empty ISO on blur restores
+ *             from the native (time.js). Datetime columns map here
+ *             (not kind=date) so leftover ISO cannot invent a date.
+ *             Gallery rest-state is unchanged (oral #33).
+ *   - keys:   Enter commits (text/date/time), Escape cancels, Tab / Shift-Tab
  *             commits then advances to the next/previous editable cell
  *             (wrapping to the adjacent row); bool/select commit on change.
  *   - state:  `is-saving` / `is-error` classes on the row (the same classes
@@ -3320,6 +3330,31 @@
       iso.setAttribute("spellcheck", "false");
       el.appendChild(native);
       el.appendChild(iso);
+    } else if (edit.kind === "time") {
+      // Native clock is the committed value; ISO companion is leftover-honest
+      // (cycle 2153). Compose Field time so time.js owns parse/validity.
+      var clock = clockType(edit);
+      var seed = normalizeClockValue(edit.value, clock);
+      el = document.createElement("span");
+      el.className = "inline-edit-time";
+      el.setAttribute("data-time-group", "");
+      var tNative = document.createElement("input");
+      tNative.type = clock;
+      tNative.className = "inline-edit-input inline-edit-time-native";
+      tNative.value = seed;
+      tNative.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+      var tIso = document.createElement("input");
+      tIso.type = "text";
+      tIso.className = "inline-edit-input inline-edit-time-iso";
+      tIso.setAttribute("data-time-iso", "");
+      tIso.value = edit.iso != null ? edit.iso : seed;
+      tIso.setAttribute(
+        "aria-label",
+        "Edit " + (edit.label || edit.colKey) + " ISO",
+      );
+      tIso.setAttribute("spellcheck", "false");
+      el.appendChild(tNative);
+      el.appendChild(tIso);
     } else {
       el = document.createElement("input");
       el.type = "text";
@@ -3327,7 +3362,7 @@
       el.value = edit.value;
     }
     el.setAttribute("data-grid-editor", "");
-    if (edit.kind !== "date") {
+    if (edit.kind !== "date" && edit.kind !== "time") {
       el.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
     }
     return el;
@@ -3345,7 +3380,9 @@
     span.style.display = "none";
     span.parentNode.insertBefore(editor, span.nextSibling);
     var iso =
-      editor.querySelector && editor.querySelector("[data-date-iso]");
+      editor.querySelector &&
+      (editor.querySelector("[data-date-iso]") ||
+        editor.querySelector("[data-time-iso]"));
     if (iso) {
       iso.focus();
       if (iso.select) iso.select();
@@ -3379,7 +3416,40 @@
       if (!native && editor.type === "date") native = editor;
       return native ? native.value : "";
     }
+    if (kind === "time") {
+      var tNative =
+        editor.querySelector &&
+        (editor.querySelector('input[type="datetime-local"]') ||
+          editor.querySelector('input[type="time"]'));
+      return tNative ? tNative.value : "";
+    }
     return editor.value;
+  }
+
+  function clockType(edit) {
+    var declared = edit && edit.clock;
+    if (declared === "datetime-local" || declared === "datetime") {
+      return "datetime-local";
+    }
+    if (declared === "time") return "time";
+    var s = String((edit && edit.value) || "");
+    if (/^\d{4}-\d{2}-\d{2}[T ]/.test(s)) return "datetime-local";
+    return "time";
+  }
+
+  function normalizeClockValue(raw, type) {
+    var s = String(raw == null ? "" : raw).trim();
+    if (!s) return "";
+    if (type === "datetime-local") {
+      s = s.replace(" ", "T");
+      s = s.replace(/[Zz]$/, "");
+      s = s.replace(/[+-]\d{2}:\d{2}$/, "");
+      s = s.replace(/\.\d+/, "");
+      var dm = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::\d{2})?/.exec(s);
+      return dm ? dm[1] : s;
+    }
+    var tm = /(\d{2}:\d{2})(?::\d{2})?/.exec(s);
+    return tm ? tm[1] : s;
   }
 
   // Leftover ISO junk must not invent a date commit (cycle 2150).
@@ -3401,6 +3471,39 @@
     if (iso.validity && iso.validity.customError) return true;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return true;
     return false;
+  }
+
+  // Leftover ISO junk must not invent a clock commit (cycle 2153).
+  function timeLeftoverBlocksCommit(root, target) {
+    var edit = root && root._dzEdit;
+    if (!edit || edit.kind !== "time") return false;
+    var editor = root.querySelector("[data-grid-editor]");
+    if (!editor) return false;
+    var native =
+      editor.querySelector('input[type="datetime-local"]') ||
+      editor.querySelector('input[type="time"]');
+    var iso = editor.querySelector("[data-time-iso]");
+    if (target && native && (target === native || native.contains(target))) {
+      return false;
+    }
+    if (!iso) return false;
+    var raw = String(iso.value == null ? "" : iso.value).trim();
+    if (!raw) return false;
+    if (iso.validity && iso.validity.customError) return true;
+    var datetime = !!(native && native.type === "datetime-local");
+    if (datetime) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(raw)) return true;
+    } else if (!/^\d{2}:\d{2}(?::\d{2})?$/.test(raw)) {
+      return true;
+    }
+    return false;
+  }
+
+  function leftoverBlocksCommit(root, target) {
+    return (
+      dateLeftoverBlocksCommit(root, target) ||
+      timeLeftoverBlocksCommit(root, target)
+    );
   }
 
   function rowOf(root, rowId) {
@@ -3461,6 +3564,7 @@
       value: span.getAttribute("data-edit-value") || "",
       label: span.getAttribute("data-edit-label") || "",
       options: span.getAttribute("data-edit-options") || "",
+      clock: span.getAttribute("data-edit-clock") || "",
     };
     openEditor(root);
   }
@@ -3546,11 +3650,16 @@
     var root = rootOf(host);
     if (!root || !root._dzEdit) return;
     var kind = root._dzEdit.kind;
-    // bool / select / date commit on change (dzTable parity); text commits
-    // on Enter/Tab so a blur-out mid-thought doesn't write. Leftover ISO
-    // on a date companion must not invent a PUT of the previous date.
-    if (kind === "bool" || kind === "select" || kind === "date") {
-      if (kind === "date" && dateLeftoverBlocksCommit(root, t)) return;
+    // bool / select / date / time commit on change (dzTable parity); text
+    // commits on Enter/Tab so a blur-out mid-thought doesn't write.
+    // Leftover ISO on a date/time companion must not invent a PUT.
+    if (
+      kind === "bool" ||
+      kind === "select" ||
+      kind === "date" ||
+      kind === "time"
+    ) {
+      if (leftoverBlocksCommit(root, t)) return;
       commit(root, editorValue(host, kind));
     }
   });
@@ -3567,10 +3676,10 @@
       closeEditor(root);
     } else if (evt.key === "Enter" && edit.kind !== "select") {
       evt.preventDefault();
-      if (edit.kind === "date" && dateLeftoverBlocksCommit(root, t)) return;
+      if (leftoverBlocksCommit(root, t)) return;
       commit(root, editorValue(host, edit.kind));
     } else if (evt.key === "Tab") {
-      if (edit.kind === "date" && dateLeftoverBlocksCommit(root, t)) {
+      if (leftoverBlocksCommit(root, t)) {
         evt.preventDefault();
         return;
       }
@@ -3600,7 +3709,9 @@
       if (editor) {
         edit.value = editorValue(editor, edit.kind);
         var iso =
-          editor.querySelector && editor.querySelector("[data-date-iso]");
+          editor.querySelector &&
+          (editor.querySelector("[data-date-iso]") ||
+            editor.querySelector("[data-time-iso]"));
         if (iso) edit.iso = iso.value;
       }
     }

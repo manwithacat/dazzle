@@ -11,7 +11,10 @@ Leftover honesty (cycle 2150): kind=date opens a Field date group
 (native ``type=date`` + ISO companion). Leftover ISO junk must not
 invent a PUT of the previous date — Enter/Tab/change refuse while the
 companion is invalid. Empty ISO on blur restores from the native.
-Rest-state display spans are unchanged.
+Leftover honesty (cycle 2153): kind=time opens a Field time group
+(native ``type=time`` / ``datetime-local`` + ISO companion). Leftover
+ISO junk must not invent a PUT of the previous clock. Rest-state
+display spans are unchanged.
 
 Non-composition: kind=select uses a bare <select class=dz-inline-edit-select>,
 NOT the combobox Hyperpart. Declared on grid.does_not_compose; flip path is
@@ -28,7 +31,7 @@ from pydantic import BaseModel, field_validator, model_validator
 
 from contracts._kit import DomContract, JsonPairs, Node, OneOf, Present
 
-Kind = Literal["text", "date", "bool", "select"]
+Kind = Literal["text", "date", "time", "bool", "select"]
 
 
 class GridEditCell(BaseModel):
@@ -73,7 +76,7 @@ DOM_CONTRACT = DomContract(
         Node(
             "[data-dz-grid-edit]",
             attrs={
-                "data-dz-edit-kind": OneOf("text", "date", "bool", "select"),
+                "data-dz-edit-kind": OneOf("text", "date", "time", "bool", "select"),
                 "data-dz-edit-value": Present(),
                 "data-dz-edit-label": Present(),
                 "data-dz-edit-options": JsonPairs(required_when={"data-dz-edit-kind": "select"}),
@@ -85,6 +88,7 @@ DOM_CONTRACT = DomContract(
 EXEMPLARS: list[GridEditCell] = [
     GridEditCell(col="title", kind="text", value="Fix the door", label="Title"),
     GridEditCell(col="due", kind="date", value="2026-07-10", label="Due date"),
+    GridEditCell(col="due_at", kind="time", value="14:30", label="Due at"),
     GridEditCell(col="done", kind="bool", value="false", label="Done"),
     # The #1573 producer shapes — permanent, executable regression docs:
     GridEditCell(

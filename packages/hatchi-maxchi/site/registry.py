@@ -882,6 +882,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "span (kind/value/label/options) — contract in contracts/grid_edit.py",
                     "kind=date cells open a Field date group (native type=date + ISO "
                     "companion) — leftover ISO must not invent a PUT of the previous date",
+                    "kind=time cells open a Field time group (native type=time / "
+                    "datetime-local + ISO companion) — leftover ISO must not invent "
+                    "a PUT of the previous clock (datetime columns map here, not date)",
                     "kind=select cells open a bare native <select> editor — NOT the "
                     "combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)",
                     "row identity: a row's id IS the idiomorph morph key and encodes "
@@ -896,6 +899,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "dz-grid:refresh so the server re-renders badges/dates",
                     "leftover ISO junk (zzz / 2025-06-20zzz) must not PUT the previous "
                     "date — Enter/Tab/change refuse while the companion is invalid",
+                    "leftover clock ISO (zzz / 14:30zzz / 2026-07-16T01:30zzz) must not "
+                    "PUT the previous time — datetime leftover must not invent a date",
                     "do not mount data-dz-combobox inside a grid cell expecting "
                     "grid-edit to drive it — that is a future composition, not current seam",
                 ),

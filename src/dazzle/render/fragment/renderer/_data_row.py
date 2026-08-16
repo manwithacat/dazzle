@@ -727,9 +727,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             # Alpine templates; the editor input is built by the controller
             # and the typed buffer lives on the grid root, out of the morph
             # path.
-            kind = {"bool": "bool", "badge": "select", "date": "date", "datetime": "date"}.get(
-                col_type, "text"
-            )
+            kind = {
+                "bool": "bool",
+                "badge": "select",
+                "date": "date",
+                "datetime": "time",
+                "time": "time",
+            }.get(col_type, "text")
             # A select editor with zero options was never usable — degrade to
             # text before the model (which forbids optionless selects) sees it.
             if kind == "select" and not col.get("filter_options"):
