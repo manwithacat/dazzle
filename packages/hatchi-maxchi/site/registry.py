@@ -1611,6 +1611,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<input class="dz-form-input" id="hm-field-due" type="time" value="14:30">'
             '<input data-dz-time-iso class="dz-form-time-iso" type="text" '
             'spellcheck="false" autocomplete="off" aria-label="ISO time" value="14:30">'
+            "</div></div>"
+            '<div class="dz-form-field">'
+            '<label class="dz-form-label" for="hm-field-on">On date</label>'
+            '<div class="dz-form-date-group" data-dz-date-group>'
+            '<input class="dz-form-input" id="hm-field-on" type="date" value="2026-06-01">'
+            '<input data-dz-date-iso class="dz-form-date-iso" type="text" '
+            'spellcheck="false" autocomplete="off" aria-label="ISO date" value="2026-06-01">'
             "</div></div></div>",
             notes="Reuses the <code>dz-form-*</code> family (label / hint / input / error). The "
             "invalid field needs no modifier class — the red border keys off "
@@ -1622,22 +1629,33 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>dz-time.js</code> can mirror the native clock and the ISO "
             "companion (contract: contracts/time.py). Leftover ISO junk must not "
             "invent a time (cycle 2144). "
+            "Standalone date uses <code>data-dz-date-group</code> so "
+            "<code>dz-date.js</code> can mirror the native date and the ISO "
+            "companion (contract: contracts/date.py). Leftover ISO junk must not "
+            "invent a date (cycle 2145). "
             "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
             "<code>contracts/color.py</code> + time <code>contracts/time.py</code> "
+            "+ date <code>contracts/date.py</code> "
             "(HMC-139).",
             tags=("forms",),
             # The colour widget's hex-readout mirror rides the field family
             # (delegated input listener on .dz-form-color-input; Tier F4e —
             # replaced the last inline Alpine x-data straggler). Time leftover
             # honesty is the same class on native type=time / datetime-local.
-            extensions=("controllers/dz-color.js", "controllers/dz-time.js"),
+            # Date leftover honesty is the same class on native type=date.
+            extensions=(
+                "controllers/dz-color.js",
+                "controllers/dz-time.js",
+                "controllers/dz-date.js",
+            ),
             # Dual-lock: form triad = form_field (.dz-form-field); colour swatch
-            # = color (HMC-139); time ISO = time. Gallery id "field" maps to
-            # form_field stem.
+            # = color (HMC-139); time ISO = time; date ISO = date. Gallery id
+            # "field" maps to form_field stem.
             contracts=(
                 "contracts/form_field.py",
                 "contracts/color.py",
                 "contracts/time.py",
+                "contracts/date.py",
             ),
         ),
         Hyperpart(

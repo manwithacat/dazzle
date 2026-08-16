@@ -1202,6 +1202,8 @@ def _emit_root_only_html(part_id: str) -> str:
         return r.render(ColorField(name="accent", label="Accent", initial_value="#3b82f6"))
     if part_id == "time":
         return r.render(Field(name="due", label="Due", kind="time", initial_value="14:30"))
+    if part_id == "date":
+        return r.render(Field(name="due", label="Due", kind="date", initial_value="2026-06-01"))
     if part_id == "app_shell":
         return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
     if part_id == "command":

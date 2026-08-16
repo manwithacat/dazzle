@@ -218,10 +218,25 @@ class _RenderFormsMixin:
                 f'placeholder="{ctx.escape_attr(f.placeholder)}"'
                 f'{a11y}{readonly_attr}{autofocus_attr} rows="4">{ctx.escape(f.initial_value)}</textarea>'
             )
+        elif f.kind == "date":
+            # Native date + ISO companion (cycle 2145). Companion has no
+            # name — leftover junk must not invent a date. Native date
+            # still suppresses the placeholder (legacy parity).
+            val = ctx.escape_attr(f.initial_value)
+            inner = (
+                f'<div class="dz-form-date-group" data-dz-date-group>'
+                f'<input id="field-{name}" type="date" name="{name}" '
+                f'data-dazzle-field="{name}" class="dz-form-input" '
+                f'value="{val}"{a11y}{readonly_attr}{autofocus_attr}>'
+                f'<input data-dz-date-iso class="dz-form-date-iso" type="text" '
+                f'spellcheck="false" autocomplete="off"{readonly_attr} '
+                f'aria-label="ISO date" value="{val}">'
+                "</div>"
+            )
         elif f.kind in ("time", "datetime-local"):
             # Native clock + ISO companion (cycle 2144). Companion has no
-            # name — leftover junk must not invent a time. Native date /
-            # datetime-local still suppress the placeholder (legacy parity).
+            # name — leftover junk must not invent a time. Native
+            # datetime-local still suppresses the placeholder (legacy parity).
             iso_label = "ISO time" if f.kind == "time" else "ISO datetime"
             val = ctx.escape_attr(f.initial_value)
             inner = (
@@ -235,10 +250,7 @@ class _RenderFormsMixin:
                 "</div>"
             )
         else:
-            # Native date inputs suppress the placeholder (legacy parity).
-            placeholder = (
-                "" if f.kind == "date" else f' placeholder="{ctx.escape_attr(f.placeholder)}"'
-            )
+            placeholder = f' placeholder="{ctx.escape_attr(f.placeholder)}"'
             inner = (
                 f'<input id="field-{name}" type="{f.kind}" name="{name}" '
                 f'data-dazzle-field="{name}" class="dz-form-input" '

@@ -2247,6 +2247,25 @@ min-inline-size: 16ch;
 .dz-form-time-iso:invalid {
 border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
 }
+.dz-form-date-group {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
+}
+.dz-form-date-iso {
+font-family: var(--font-mono, monospace);
+font-size: var(--text-xs);
+color: var(--colour-text);
+inline-size: 12ch;
+min-inline-size: 10ch;
+padding: 0.25rem 0.4rem;
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-sm);
+background: var(--colour-bg);
+}
+.dz-form-date-iso:invalid {
+border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
 .dz-form-richtext {
 border: 1px solid var(--colour-border);
 border-radius: var(--radius-sm);

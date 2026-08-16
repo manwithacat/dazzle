@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Date leftover ISO invented a date (cycle 2145)** —
+  leftover typed ISO (`zzz`, `2026-06-01zzz`, `June 1`) no longer
+  writes the native `type=date` value. Each standalone date field has
+  an editable ISO companion (no name; native still submits). Leftover
+  junk fails custom validity on both controls; blur keeps it visible;
+  empty companion restores from the native; valid `YYYY-MM-DD` writes
+  the date. Same honesty class as date-range leftover ISO (2139) and
+  time leftover ISO (2144).
 - **Time leftover ISO invented a clock (cycle 2144)** —
   leftover typed ISO (`zzz`, `14:30zzz`, `2pm`, `2026-06-01T14:30zzz`)
   no longer writes the native `type=time` / `datetime-local` value.

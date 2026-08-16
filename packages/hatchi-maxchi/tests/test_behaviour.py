@@ -1830,6 +1830,55 @@ def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ig
     assert "Autoplay" in (root.locator("[data-carousel-status]").inner_text() or "")
 
 
+def test_date_leftover_iso_does_not_invent_date(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover ISO junk must not invent a date (cycle 2145).
+
+    Same honesty class as date-range leftover ISO (2139) and time leftover
+    ISO (2144): typed-but-uncommitted text is not a silent parse.
+    """
+    goto_part(page, "field")
+    group = "#field [data-date-group]"
+    native = f'{group} input[type="date"]'
+    iso = f"{group} [data-date-iso]"
+
+    assert page.input_value(native) == "2026-06-01"
+    assert page.input_value(iso) == "2026-06-01"
+
+    page.fill(iso, "zzz")
+    assert page.input_value(native) == "2026-06-01", "named leftover must not invent a date"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    assert page.eval_on_selector(native, "el => el.validity.customError") is True
+
+    page.fill(iso, "2026-06-01zzz")
+    assert page.input_value(native) == "2026-06-01", "leftover suffix is not a silent 2026-06-01"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-01zzz", "blur must not revert leftover junk"
+    assert page.input_value(native) == "2026-06-01"
+
+    page.fill(iso, "2026-06-15")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "2026-06-15"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-15"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is True
+
+    page.eval_on_selector(
+        native,
+        "el => { el.value = '2026-07-04'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-07-04"
+
+    page.fill(iso, "")
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-07-04", "empty ISO on blur restores from the native date"
+    page.reload()
+
+
 def test_time_leftover_iso_does_not_invent_clock(page) -> None:  # type: ignore[no-untyped-def]
     """Leftover ISO junk must not invent a time (cycle 2144).
 

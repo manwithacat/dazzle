@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 144 |
+| Modules | 145 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -53,6 +53,7 @@ blast radius (who embeds / refuses this part).
 | `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
 | `dashboard_grid` | `dashboard-grid` | `.dz-dashboard-grid` | .dz-dashboard-grid[] | — |
 | `data_list_scroll` | `data-list-scroll` | `.dz-table` | .dz-table[] | — |
+| `date` | `date` | `[data-dz-date-group]` | [data-dz-date-group][data-dz-date-group=present]; [data-dz-date-iso][data-dz-date-iso=present] | — |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present]; [data-dz-date-iso][data-dz-date-iso=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `day_timeline` | `day-timeline` | `[data-dz-day-timeline]` | [data-dz-day-timeline][data-dz-day-timeline=present] | DayTimeline(body_html:str:opt; region_name:str:opt) |
 | `detail_grid` | `detail-grid` | `.dz-detail-region` | .dz-detail-region[] | — |

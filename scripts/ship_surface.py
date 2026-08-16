@@ -73,6 +73,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_showcase_phase3.py::test_time_controller_leftover_iso_does_not_invent",
     "tests/unit/test_form_field_parity_phase3b.py::test_time_field_emits_iso_companion",
     "tests/unit/test_form_field_parity_phase3b.py::test_datetime_local_field_emits_iso_companion",
+    # cycle 2145: standalone date leftover ISO must not invent a date
+    "tests/unit/test_form_widget_showcase_phase3.py::test_date_controller_leftover_iso_does_not_invent",
+    "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
     # cycle 2142: --wait must not fail immediately on stale completed HM red
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2141: Page chrome #hm-detached-q must not trip no-user-form pins

@@ -3253,6 +3253,30 @@ select.form-input {
   border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
 }
 
+.form-date-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.form-date-iso {
+  /* Companion ISO field (cycle 2145) — editable, not submitted.
+   * Compact mono input so leftover junk stays visible. */
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+  inline-size: 12ch;
+  min-inline-size: 10ch;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+}
+
+.form-date-iso:invalid {
+  border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
+
 /* ─────────────────────────── richtext (UX-025) ──────────────────
  * Quill editor wrapper. Border + radius live on the wrapper; Quill
  * internals manage their own toolbar/editor styling. */

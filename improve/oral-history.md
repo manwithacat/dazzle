@@ -214,6 +214,9 @@ Doctrine source of truth remains
     Time / datetime-local leftover ISO must not invent a clock
     (`14:30zzz` / `2pm` / `2026-06-01T14:30zzz` stay visible + fail
     validity; empty restores from the native, 2144).
+    Standalone date leftover ISO must not invent a date
+    (`2026-06-01zzz` / `zzz` / `June 1` stay visible + fail
+    validity; empty restores from the native, 2145).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.
