@@ -1204,6 +1204,8 @@ def _emit_root_only_html(part_id: str) -> str:
         return r.render(Field(name="due", label="Due", kind="time", initial_value="14:30"))
     if part_id == "date":
         return r.render(Field(name="due", label="Due", kind="date", initial_value="2026-06-01"))
+    if part_id == "number":
+        return r.render(Field(name="qty", label="Qty", kind="number", initial_value="12"))
     if part_id == "app_shell":
         return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
     if part_id == "command":

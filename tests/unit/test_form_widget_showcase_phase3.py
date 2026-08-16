@@ -297,6 +297,22 @@ def test_color_controller_leftover_hex_does_not_invent() -> None:
     assert "leftover junk stays visible" in src
 
 
+def test_number_controller_leftover_does_not_invent() -> None:
+    """dz-number.js must refuse leftover number junk (2149)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-number.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseNumber" in src
+    assert "must not invent" in src
+    assert "leftover junk stays visible" in src
+
+
 def test_date_controller_leftover_iso_does_not_invent() -> None:
     """dz-date.js must refuse leftover ISO junk (2145)."""
     from pathlib import Path

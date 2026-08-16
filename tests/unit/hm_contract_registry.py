@@ -342,6 +342,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/color.py", "color", True),
     ("contracts/time.py", "time", True),
     ("contracts/date.py", "date", True),
+    ("contracts/number.py", "number", True),
     ("contracts/app_shell.py", "app_shell", True),
     ("contracts/command.py", "command", True),
     ("contracts/confirm_panel.py", "confirm_panel", True),

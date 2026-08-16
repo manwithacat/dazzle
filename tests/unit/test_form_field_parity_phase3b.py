@@ -114,6 +114,18 @@ def test_date_input_suppresses_placeholder() -> None:
     assert "ignored" not in html  # native date inputs drop the placeholder (legacy parity)
 
 
+def test_number_field_emits_companion() -> None:
+    """Cycle 2149 — leftover junk must not invent a number. Companion has no name."""
+    html = _render({"name": "qty", "label": "Qty", "kind": "number", "value": "12"})
+    assert 'type="number"' in html
+    assert "data-dz-number-group" in html
+    assert "data-dz-number-value" in html
+    assert 'aria-label="Number value"' in html
+    assert 'name="qty"' in html
+    assert html.count("name=") == 1  # companion is not submitted
+    assert 'value="12"' in html
+
+
 def test_date_field_emits_iso_companion() -> None:
     """Cycle 2145 — leftover ISO must not invent a date. Companion has no name."""
     html = _render({"name": "due", "label": "Due", "kind": "date", "value": "2026-06-01"})

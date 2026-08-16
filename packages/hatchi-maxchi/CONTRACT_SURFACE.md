@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 145 |
+| Modules | 146 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -104,6 +104,7 @@ blast radius (who embeds / refuses this part).
 | `nav_group` | `nav-group` | `.dz-nav-group` | .dz-nav-group[] | — |
 | `nav_item` | `nav-item` | `.dz-nav-item` | .dz-nav-item[] | — |
 | `navigation_menu` | `navigation-menu` | `[data-dz-navigation-menu]` | [data-dz-navigation-menu][data-dz-navigation-menu=present] | — |
+| `number` | `number` | `[data-dz-number-group]` | [data-dz-number-group][data-dz-number-group=present]; [data-dz-number-value][data-dz-number-value=present] | — |
 | `pagination` | `pagination` | `[data-dz-pagination]` | [data-dz-pagination][data-dz-grid-pagination=present, data-dz-grid-total=present, data-dz-pagination=present] | Pagination(pages_html:str:opt; rows_label:str:opt; total:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
 | `pipeline` | `pipeline` | `[data-dz-pipeline]` | [data-dz-pipeline][data-dz-pipeline=present] | Pipeline(body_html:str:opt) |

@@ -1830,6 +1830,77 @@ def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ig
     assert "Autoplay" in (root.locator("[data-carousel-status]").inner_text() or "")
 
 
+def test_number_leftover_does_not_invent_value(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover number junk must not invent a value (cycle 2149).
+
+    Same honesty class as slider leftover readout (2134) and date leftover
+    ISO (2145): typed-but-uncommitted text is not a silent parse.
+    Injected fixture — Field gallery preview stays unchanged so
+    part-field visual baselines stay darwin/linux paired (oral #33 / #39).
+    """
+    goto_part(page, "field")
+    page.evaluate(
+        """() => {
+          const host = document.querySelector('#field .hm-stack') || document.querySelector('#field');
+          const wrap = document.createElement('div');
+          wrap.id = 'hm-num-fixture';
+          wrap.innerHTML = '<div class="form-number-group" data-number-group>'
+            + '<input class="form-input" type="number" min="0" max="100" value="12">'
+            + '<input data-number-value class="form-number-value" type="text" inputmode="decimal" value="12">'
+            + '</div>';
+          host.appendChild(wrap);
+        }"""
+    )
+    group = "#hm-num-fixture [data-number-group]"
+    native = f'{group} input[type="number"]'
+    out = f"{group} [data-number-value]"
+
+    assert page.input_value(native) == "12"
+    assert page.input_value(out) == "12"
+
+    page.fill(out, "zzz")
+    assert page.input_value(native) == "12", "named leftover must not invent a number"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+    assert page.eval_on_selector(native, "el => el.validity.customError") is True
+
+    page.fill(out, "12abc")
+    assert page.input_value(native) == "12", "leftover suffix is not a silent 12"
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "12abc", "blur must not revert leftover junk"
+    assert page.input_value(native) == "12"
+
+    page.fill(out, "1e2")
+    assert page.input_value(native) == "12", "scientific leftover is not a silent 100"
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+
+    page.fill(out, "999")
+    assert page.input_value(native) == "12", "out-of-max must not invent by clamping"
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+
+    page.fill(out, "15")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "15"
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "15"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is True
+
+    page.eval_on_selector(
+        native,
+        "el => { el.value = '8'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "8"
+
+    page.fill(out, "")
+    page.eval_on_selector(out, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(out) == "8", "empty companion on blur restores from the native"
+    page.reload()
+
+
 def test_date_leftover_iso_does_not_invent_date(page) -> None:  # type: ignore[no-untyped-def]
     """Leftover ISO junk must not invent a date (cycle 2145).
 

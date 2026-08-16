@@ -223,9 +223,48 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
+### `contracts/number.py`
+
+- **Required root:** `[data-dz-number-group]` (part `number`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-number-group]` | `data-dz-number-group` | present (any value) |
+| `[data-dz-number-value]` | `data-dz-number-value` | present (any value) |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: field (extension: dz-number) — standalone number group.
+
+Leftover honesty (cycle 2149): the companion is an editable text
+input (no ``name`` — the native ``type=number`` is the submitted
+value). Typed leftover junk (``12abc``, ``zzz``, ``1e2``) must not
+invent a number — the native stays put and both controls fail custom
+validity so submit cannot post the previous number as if the leftover
+were accepted. Empty companion on blur restores from the native.
+Out-of-[min,max] is invalid (do not invent by clamping).
+"""
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="number",
+    root="[data-dz-number-group]",
+    nodes=(
+        Node("[data-dz-number-group]", attrs={"data-dz-number-group": Present()}),
+        Node("[data-dz-number-value]", attrs={"data-dz-number-value": Present()}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
+
 ## Notes
 
-Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch and the hex companion (contract: contracts/color.py). Hex leftover junk must not invent a colour (cycle 2133). Time / datetime-local use data-dz-time-group so dz-time.js can mirror the native clock and the ISO companion (contract: contracts/time.py). Leftover ISO junk must not invent a time (cycle 2144). Standalone date uses data-dz-date-group so dz-date.js can mirror the native date and the ISO companion (contract: contracts/date.py). Leftover ISO junk must not invent a date (cycle 2145). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py + time contracts/time.py + date contracts/date.py (HMC-139).
+Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch and the hex companion (contract: contracts/color.py). Hex leftover junk must not invent a colour (cycle 2133). Time / datetime-local use data-dz-time-group so dz-time.js can mirror the native clock and the ISO companion (contract: contracts/time.py). Leftover ISO junk must not invent a time (cycle 2144). Standalone date uses data-dz-date-group so dz-date.js can mirror the native date and the ISO companion (contract: contracts/date.py). Leftover ISO junk must not invent a date (cycle 2145). Standalone number uses data-dz-number-group so dz-number.js can mirror the native number and the editable companion (contract: contracts/number.py). Leftover junk (12abc / zzz / 1e2) must not invent a number (cycle 2149). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py + time contracts/time.py + date contracts/date.py + number contracts/number.py (HMC-139).
 
 ## Source files
 
@@ -234,3 +273,4 @@ Reuses the dz-form-* family (label / hint / input / error). The invalid field ne
 - `contracts/color.py`
 - `contracts/time.py`
 - `contracts/date.py`
+- `contracts/number.py`

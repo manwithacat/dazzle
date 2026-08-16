@@ -249,6 +249,24 @@ class _RenderFormsMixin:
                 f'aria-label="{iso_label}" value="{val}">'
                 "</div>"
             )
+        elif f.kind == "number":
+            # Native number + editable companion (cycle 2149). Companion
+            # has no name — leftover junk must not invent a number.
+            val = ctx.escape_attr(f.initial_value)
+            placeholder = (
+                f' placeholder="{ctx.escape_attr(f.placeholder)}"' if f.placeholder else ""
+            )
+            inner = (
+                f'<div class="dz-form-number-group" data-dz-number-group>'
+                f'<input id="field-{name}" type="number" name="{name}" '
+                f'data-dazzle-field="{name}" class="dz-form-input" '
+                f'value="{val}"{placeholder}{a11y}{readonly_attr}{autofocus_attr}>'
+                f'<input data-dz-number-value class="dz-form-number-value" '
+                f'type="text" inputmode="decimal" spellcheck="false" '
+                f'autocomplete="off"{readonly_attr} aria-label="Number value" '
+                f'value="{val}">'
+                "</div>"
+            )
         else:
             placeholder = f' placeholder="{ctx.escape_attr(f.placeholder)}"'
             inner = (

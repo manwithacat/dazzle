@@ -1633,9 +1633,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>dz-date.js</code> can mirror the native date and the ISO "
             "companion (contract: contracts/date.py). Leftover ISO junk must not "
             "invent a date (cycle 2145). "
+            "Standalone number uses <code>data-dz-number-group</code> so "
+            "<code>dz-number.js</code> can mirror the native number and the "
+            "editable companion (contract: contracts/number.py). Leftover junk "
+            "(<code>12abc</code> / <code>zzz</code> / <code>1e2</code>) must not "
+            "invent a number (cycle 2149). "
             "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
             "<code>contracts/color.py</code> + time <code>contracts/time.py</code> "
-            "+ date <code>contracts/date.py</code> "
+            "+ date <code>contracts/date.py</code> + number "
+            "<code>contracts/number.py</code> "
             "(HMC-139).",
             tags=("forms",),
             # The colour widget's hex-readout mirror rides the field family
@@ -1643,19 +1649,24 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             # replaced the last inline Alpine x-data straggler). Time leftover
             # honesty is the same class on native type=time / datetime-local.
             # Date leftover honesty is the same class on native type=date.
+            # Number leftover honesty is the same class on native type=number
+            # (fixture-tested; preview markup unchanged so part-field baselines
+            # stay darwin/linux paired — oral #33 / #39).
             extensions=(
                 "controllers/dz-color.js",
                 "controllers/dz-time.js",
                 "controllers/dz-date.js",
+                "controllers/dz-number.js",
             ),
             # Dual-lock: form triad = form_field (.dz-form-field); colour swatch
-            # = color (HMC-139); time ISO = time; date ISO = date. Gallery id
-            # "field" maps to form_field stem.
+            # = color (HMC-139); time ISO = time; date ISO = date; number
+            # companion = number. Gallery id "field" maps to form_field stem.
             contracts=(
                 "contracts/form_field.py",
                 "contracts/color.py",
                 "contracts/time.py",
                 "contracts/date.py",
+                "contracts/number.py",
             ),
         ),
         Hyperpart(

@@ -220,6 +220,9 @@ Doctrine source of truth remains
     Search-box leftover typed query must not invent Aurora
     (`name=q` + mock filter; leftover `zzz` is empty, matching
     `substation` still hits; date-range no-q keeps canned, 2148).
+    Standalone number leftover junk must not invent a value
+    (`12abc` / `zzz` / `1e2` stay visible + fail validity; empty
+    restores from the native; out-of-[min,max] does not clamp, 2149).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.

@@ -78,6 +78,9 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2148: search-box leftover q must not invent Aurora
     "tests/unit/test_form_widget_showcase_phase3.py::test_search_box_mock_leftover_query_does_not_invent",
     "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
+    # cycle 2149: standalone number leftover junk must not invent a value
+    "tests/unit/test_form_widget_showcase_phase3.py::test_number_controller_leftover_does_not_invent",
+    "tests/unit/test_form_field_parity_phase3b.py::test_number_field_emits_companion",
     # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs
