@@ -262,6 +262,13 @@ Doctrine source of truth remains
     tip that just went red still fails now. Re-running the mirror job
     is the no-code recovery once HM is already green.
 
+38. **Every cycle entry must start with `## Cycle N`.** Self-audit and
+    cadence greps key that heading (`lane: self-audit`, `## Cycle 2135`).
+    Cycle 2135 wrote the combobox leftover body (dd3489451) without the
+    heading; 2143 sample treated the cycle as missing (AUD-018). Restore
+    the heading — do not rely on commit subject alone. Compact must not
+    eat headings in the middle of the working log.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
