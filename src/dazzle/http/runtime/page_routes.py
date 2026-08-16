@@ -221,6 +221,19 @@ def _parse_list_as_of(raw: Any) -> str | None:
     return text
 
 
+def _parse_list_include_closed(raw: Any) -> bool:
+    """Parse leftover-honest list ``include_closed``.
+
+    Valid ``true`` / ``1`` / ``yes`` (case-insensitive) must reach
+    ``gated_list`` — dropping them invented the open-only collection
+    (REST already honours the param). Leftover junk (``zzz``, ``2abc``,
+    ``maybe``) must not invent closed rows. Empty / invalid restores
+    *False* (active-only default). Cycle 2168.
+    """
+    text = str(raw if raw is not None else "").strip().lower()
+    return text in ("true", "1", "yes")
+
+
 def _detail_as_of(prc: Any, entity_name: str) -> Any:
     """Leftover-honest page DETAIL ``as_of``.
 
@@ -1646,6 +1659,12 @@ async def _list_entity_in_process(
     REST-shaped `{items,total,page,page_size}` dict (`jsonable_encoder` over the
     result, so `items` are plain dicts as the table renderer expects). A
     permit-denied / scope-empty / missing-service list yields an empty page.
+
+    ``include_closed`` (leftover-honest, cycle 2168) opts temporal lists
+    out of the active-only default. Callers parse via
+    ``_parse_list_include_closed`` so leftover junk stays open-only
+    instead of inventing closed rows, and valid ``true`` / ``1`` / ``yes``
+    reach ``gated_list`` (REST already honours the param).
     """
     from fastapi.encoders import jsonable_encoder
 
@@ -1670,7 +1689,10 @@ async def _list_entity_in_process(
     sort_list = [f"-{sort}" if direction == "desc" else sort] if sort else None
     # Leftover-honest as_of (cycle 2165). Junk must not invent empty via
     # InvalidTemporalParam → _empty. Empty / invalid restores current.
+    # Leftover-honest include_closed (cycle 2168): valid true/1/yes must
+    # reach gated_list; leftover junk stays False (open-only).
     as_of_raw = _parse_list_as_of(as_of_raw)
+    include_closed = _parse_list_include_closed(include_closed)
     _list_kwargs: dict[str, Any] = {
         "page": page,
         "page_size": page_size,
@@ -1983,6 +2005,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     # leftover sort/filter used to invent empty (exception theater);
     # leftover q used to invent the unfiltered collection.
     # Leftover as_of (cycle 2165) must not invent empty via InvalidTemporalParam.
+    # Leftover include_closed (cycle 2168) must not invent the open-only list.
     _qparams = prc.request.query_params
     _allowed = _list_known_fields(req_table)
     _list_sort = _parse_list_sort(
@@ -2000,6 +2023,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
     _list_as_of = _parse_list_as_of(_qparams.get(_as_of_param))
+    _list_include_closed = _parse_list_include_closed(_qparams.get("include_closed"))
 
     # search_first: skip initial fetch until user provides search/filter
     _has_search = bool(_list_search)
@@ -2034,6 +2058,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
                 search=_list_search,
                 filters=_list_filters or None,
                 as_of_raw=_list_as_of,
+                include_closed=_list_include_closed,
             )
             items = data.get("items", [])
             if items and isinstance(items[0], dict):

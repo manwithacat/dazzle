@@ -430,6 +430,16 @@ Doctrine source of truth remains
     sort/q (oral #48). Not leftover page (oral #46). Not Goal B
     coat.
 
+52. **HTML list include_closed invents the open-only collection.**
+    Cycle 2168: `_handle_table` never forwarded
+    `?include_closed=true` (REST already honours it). Dropping a
+    valid temporal opt-in invents the default active-only list.
+    Leftover junk (`zzz`, `2abc`, `maybe`) must not invent closed
+    rows. Empty / invalid restores False. Do not clone related-tab
+    as_of / DETAIL as_of onto the edit form (oral #50/#51). Not
+    leftover list as_of (oral #49). Not leftover sort/page. Not
+    leftover-scalar refuse. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

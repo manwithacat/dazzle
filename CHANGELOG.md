@@ -12,6 +12,18 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **HTML list `?include_closed=true` invented the open-only collection (cycle 2168)** —
+  `_handle_table` never forwarded `include_closed` to
+  `_list_entity_in_process` (REST already honours `true` / `1` /
+  `yes`). Leftover junk (`zzz`, `2abc`, `maybe`) still restores
+  active-only; valid flags now reach `gated_list`. New invent
+  class: dropping a temporal opt-in invents the default
+  collection, not leftover as_of (2165) or leftover sort/page.
+- **DETAIL related-tab leftover as_of invented current children (cycle 2167)** —
+  parent DETAIL time-travelled via leftover-honest `?as_of=` but
+  related-tab `_list_entity_in_process` dropped the date. Valid
+  YYYY-MM-DD now time-travels parent + children. Empty / leftover
+  restores current children. Edit form stays current.
 - **Page DETAIL leftover as_of invented the current row (cycle 2166)** —
   HTML detail ignored `?as_of=` (`_read_entity_in_process` never read
   the query; `CRUDService.read` dropped the kwarg before
