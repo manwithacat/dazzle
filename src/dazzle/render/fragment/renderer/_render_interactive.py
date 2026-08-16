@@ -622,6 +622,24 @@ class _RenderInteractiveMixin:
         column_key = ctx.escape_attr(s.column_key)
         # Use &amp; for the URL param separator inside the attribute value
         href = f"{endpoint}?sort={column_key}&amp;dir={next_dir}"
+        # Leftover-honest temporal (cycle 2172). ?sort=&dir= only used
+        # to drop include_closed / as_of and invent open-only / current
+        # after a click. Leftover junk must not invent. Valid true /
+        # YYYY-MM-DD ride; leftover junk (zzz / 2abc / maybe /
+        # not-a-date) omits.
+        ic_raw = str(s.include_closed or "").strip().lower()
+        if ic_raw in ("true", "1", "yes"):
+            href += "&amp;include_closed=true"
+        as_of_raw = str(s.as_of or "").strip()
+        if as_of_raw:
+            from datetime import date as _date
+
+            try:
+                _date.fromisoformat(as_of_raw)
+            except (ValueError, TypeError):
+                as_of_raw = ""
+            else:
+                href += f"&amp;as_of={ctx.escape_attr(as_of_raw)}"
         indicator = ""
         if is_active:
             indicator = f"<span>{'▼' if s.current_direction == 'desc' else '▲'}</span>"

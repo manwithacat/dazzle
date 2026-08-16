@@ -969,13 +969,20 @@ def _build_column_header(
     region_name: str,
     current_sort: str,
     current_direction: str,
+    include_closed: str = "",
+    as_of: str = "",
 ) -> object:
     """Issue #1029 phase 6: per-column header builder.
 
     Returns a `SortHeader` primitive when the column is `sortable=True`
     AND endpoint + region_name are configured; falls back to the plain
     string label otherwise. The Table primitive's column tuple is
-    `tuple[str | SortHeader, ...]` and the renderer dispatches per cell."""
+    `tuple[str | SortHeader, ...]` and the renderer dispatches per cell.
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2172) thread
+    onto the SortHeader so hx-get does not invent open-only / current
+    after a sort click.
+    """
     label = str(col.get("label", col.get("key", "")))
     if not col.get("sortable") or not endpoint or not region_name:
         return label
@@ -990,6 +997,8 @@ def _build_column_header(
         region_name=region_name,
         current_sort=current_sort,
         current_direction=direction,  # type: ignore[arg-type]
+        include_closed=include_closed,
+        as_of=as_of,
     )
 
 

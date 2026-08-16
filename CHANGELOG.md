@@ -12,6 +12,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **List-region sort-header hx-get dropped `include_closed` / `as_of` (cycle 2172)** —
+  `_emit_sort_header` wrote `?sort=&dir=` only, so a sort click
+  invented the open-only / current collection after leftover-honest
+  temporal had reached the list (2168/2165) and the grid (2170).
+  Valid `true` / YYYY-MM-DD now ride hx-get; leftover junk
+  (`zzz`, `2abc`, `maybe`, `not-a-date`) still omits. Gallery mock
+  echoes the same and does not treat them as field filters.
+  Rest-state gallery unchanged.
 - **Grid hx-get dropped `include_closed` / `as_of` after refresh (cycle 2170)** —
   `ownedKeys` / `buildQuery` treated leftover-honest temporal params
   as foreign URL keys, so they survived on the page URL but were

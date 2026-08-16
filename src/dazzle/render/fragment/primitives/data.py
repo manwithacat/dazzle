@@ -1522,6 +1522,11 @@ class SortHeader:
 
     `current_direction` is the direction *currently* active for the
     region (only meaningful when `current_sort == column_key`).
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2172) ride
+    the hx-get when already-parsed. Dropping them invented open-only
+    / current after a sort click. Leftover junk must not be stored
+    here — the emitter also leftover-parses before appending.
     """
 
     label: str
@@ -1530,6 +1535,8 @@ class SortHeader:
     region_name: str
     current_sort: str = ""
     current_direction: Literal["asc", "desc"] = "asc"
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.column_key:

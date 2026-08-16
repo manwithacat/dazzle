@@ -4956,10 +4956,13 @@ def select(source: str, id: str) -> str:
             "and <code>window.dz.downloadCsv</code> (gallery serves "
             "<code>sample-list-export.csv</code> as the downloadable artifact). "
             "Sortable headers are <code>dz-list-sort-link</code> anchors with "
-            "<code>hx-get ?sort=&amp;dir=</code> — the host re-renders the "
-            "region; the active column shows a caret. Rows with a drill URL "
-            "carry <code>is-clickable</code>. For selection/filters/pagination "
-            "use the <code>grid</code> Hyperpart.",
+            "<code>hx-get ?sort=&amp;dir=</code> — leftover-honest "
+            "<code>include_closed</code> / <code>as_of</code> ride the "
+            "hx-get (cycle 2172); dropping them invents open-only / current "
+            "after a sort click. Rest-state gallery omits them (oral #33). "
+            "The host re-renders the region; the active column shows a caret. "
+            "Rows with a drill URL carry <code>is-clickable</code>. For "
+            "selection/filters/pagination use the <code>grid</code> Hyperpart.",
             tags=("data",),
             contracts=("contracts/list_region.py",),
             exchanges=(
@@ -4968,7 +4971,8 @@ def select(source: str, id: str) -> str:
                     endpoint="/mock/list-region",
                     trigger="click on a sort header",
                     response=(
-                        "Full list-region outerHTML reordered by ?sort=&dir=; "
+                        "Full list-region outerHTML reordered by ?sort=&dir= "
+                        "(leftover-honest include_closed / as_of ride); "
                         "active column caret ▲/▼"
                     ),
                     swap="closest [data-dz-list-region] outerHTML",

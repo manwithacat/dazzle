@@ -106,6 +106,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_bulk_temporal_echo_leftover.py",
     # cycle 2170: grid ownedKeys / buildQuery drop include_closed / as_of
     "tests/unit/test_grid_temporal_query_leftover.py",
+    # cycle 2172: list-region sort-header hx-get drops include_closed / as_of
+    "tests/unit/test_list_sort_header_temporal_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

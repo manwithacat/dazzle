@@ -2493,6 +2493,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // Mirrors the product contract: sort headers hx-get ?sort=&dir= and the
   // host re-renders the region; CSV is a file download via dz.downloadCsv
   // (sample-list-export.csv is the gallery artifact, not a mock toast).
+  // Leftover-honest include_closed / as_of (cycle 2172) ride the sort
+  // hx-get. Dropping them invented open-only / current after a click.
+  // They are not row-field filters (no such columns — empty catalog).
   var LIST_ROWS = [
     { name: "Capacity review", owner: "J. Dias", status: "Active" },
     { name: "Load study", owner: "K. Novak", status: "Draft" },
@@ -2505,15 +2508,31 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     LIST_ROWS.map(function (r) {
       return r.name + "," + r.owner + "," + r.status;
     }).join("\\n") + "\\n";
+  var LIST_CONTROL = {
+    sort: 1, dir: 1, include_closed: 1, as_of: 1
+  };
 
-  function listSortHeader(label, col, activeCol, activeDir) {
+  function leftoverHonestIncludeClosed(raw) {
+    var t = String(raw == null ? "" : raw).trim().toLowerCase();
+    return (t === "true" || t === "1" || t === "yes") ? "true" : "";
+  }
+  function leftoverHonestAsOf(raw) {
+    var t = String(raw == null ? "" : raw).trim();
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(t)) return "";
+    var p = t.split("-").map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    if (d.getFullYear() !== p[0] || d.getMonth() !== p[1] - 1 || d.getDate() !== p[2]) return "";
+    return t;
+  }
+  function listSortHeader(label, col, activeCol, activeDir, extraQs) {
     var isActive = col === activeCol;
     var nextDir = isActive ? (activeDir === "asc" ? "desc" : "asc") : "asc";
     var caret = isActive ? (activeDir === "desc" ? "▼" : "▲") : "";
     var caretHtml = caret ? "<span>" + caret + "</span>" : "";
+    extraQs = extraQs || "";
     return (
       '<th><a class="dz-list-sort-link" ' +
-      'hx-get="/mock/list-region?sort=' + col + "&amp;dir=" + nextDir + '" ' +
+      'hx-get="/mock/list-region?sort=' + col + "&amp;dir=" + nextDir + extraQs + '" ' +
       'hx-target="closest [data-dz-list-region]" ' +
       'hx-swap="outerHTML">' +
       label + caretHtml +
@@ -2524,6 +2543,11 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var q = parseQuery(url);
     var sort = q.sort || "name";
     var dir = q.dir === "desc" ? "desc" : "asc";
+    var extra = "";
+    var ic = leftoverHonestIncludeClosed(q.include_closed);
+    var ao = leftoverHonestAsOf(q.as_of);
+    if (ic) extra += "&amp;include_closed=" + ic;
+    if (ao) extra += "&amp;as_of=" + ao;
     var rows = LIST_ROWS.slice();
     rows.sort(function (a, b) {
       var x = a[sort] || "", y = b[sort] || "";
@@ -2550,9 +2574,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       ')">{i:download}</button>' +
       "</div></div>" +
       '<div class="dz-list-scroll"><table class="dz-list-table"><thead><tr>' +
-      listSortHeader("Name", "name", sort, dir) +
-      listSortHeader("Owner", "owner", sort, dir) +
-      listSortHeader("Status", "status", sort, dir) +
+      listSortHeader("Name", "name", sort, dir, extra) +
+      listSortHeader("Owner", "owner", sort, dir, extra) +
+      listSortHeader("Status", "status", sort, dir, extra) +
       "</tr></thead><tbody>" + body + "</tbody></table></div>" +
       '<p class="dz-list-overflow">Showing ' + rows.length + " of " +
       LIST_ROWS.length + "</p></div>"

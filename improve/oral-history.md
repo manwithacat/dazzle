@@ -473,6 +473,16 @@ Doctrine source of truth remains
     pin `test_setup_dazzle_action`. Rerun-failed is the no-code
     recovery; do not treat this as a product/GUIDE_WALK assert.
 
+56. **List-region sort-header hx-get drops include_closed / as_of
+    (invents open-only / current after a sort click).** Cycle 2172:
+    `_emit_sort_header` wrote ``?sort=&dir=`` only. Leftover-honest
+    ``true`` / YYYY-MM-DD now ride hx-get; leftover junk still
+    omits. Gallery mock echoes the same and must not treat them as
+    field filters. Rest-state gallery unchanged (oral #33). Do
+    **not** clone leftover list include_closed / related-tab as_of
+    / DETAIL as_of onto the edit form. Not leftover list as_of /
+    sort / page. Not leftover-scalar refuse. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

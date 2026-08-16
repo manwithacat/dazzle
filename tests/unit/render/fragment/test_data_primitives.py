@@ -759,6 +759,8 @@ def test_sort_header_default_direction_is_asc() -> None:
     s = SortHeader(label="L", column_key="k", endpoint=URL("/x"), region_name="r")
     assert s.current_direction == "asc"
     assert s.current_sort == ""
+    assert s.include_closed == ""
+    assert s.as_of == ""
 
 
 # === CsvExportButton ===
