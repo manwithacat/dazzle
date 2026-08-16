@@ -4946,6 +4946,26 @@ cursor: pointer;
 opacity: 0.5;
 cursor: not-allowed;
 }
+.dz-inline-edit-date {
+display: flex;
+align-items: center;
+gap: var(--space-xs);
+width: 100%;
+}
+.dz-inline-edit-date-native {
+width: auto;
+min-width: 11ch;
+flex: 0 0 auto;
+}
+.dz-inline-edit-date-iso {
+flex: 1 1 12ch;
+min-width: 10ch;
+font-family: var(--font-mono, monospace);
+font-size: var(--text-xs);
+}
+.dz-inline-edit-date-iso:invalid {
+border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
 .dz-table-resize-handle {
 position: absolute;
 top: 0;

@@ -4308,6 +4308,15 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
  *             (JSON [[value,label],…]).
  *   - open:   dblclick the span (dzTable parity; pointer-first — a keyboard
  *             entry point is tracked follow-up work).
+ *   - date:   kind=date opens a Field date group (native `type=date` +
+ *             ISO companion). Leftover honesty (cycle 2150): leftover
+ *             ISO junk (`2025-06-20zzz`, `zzz`, `June 20`) must not
+ *             invent a commit of the previous date. Native date is the
+ *             committed value; leftover stays visible, fails custom
+ *             validity, and Enter/Tab/change do not PUT. Empty ISO on
+ *             blur restores from the native (date.js). Same class as
+ *             standalone date leftover ISO (2145) and money leftover
+ *             junk (2121). Gallery rest-state is unchanged (oral #33).
  *   - keys:   Enter commits (text/date), Escape cancels, Tab / Shift-Tab
  *             commits then advances to the next/previous editable cell
  *             (wrapping to the adjacent row); bool/select commit on change.
@@ -4353,14 +4362,39 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
         if (String(opts[i][0]) === edit.value) o.selected = true;
         el.appendChild(o);
       }
+    } else if (edit.kind === "date") {
+      // Native date is the committed value; ISO companion is leftover-honest
+      // (cycle 2150). Compose Field date so date.js owns parse/validity.
+      el = document.createElement("span");
+      el.className = "inline-edit-date";
+      el.setAttribute("data-date-group", "");
+      var native = document.createElement("input");
+      native.type = "date";
+      native.className = "inline-edit-input inline-edit-date-native";
+      native.value = edit.value;
+      native.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+      var iso = document.createElement("input");
+      iso.type = "text";
+      iso.className = "inline-edit-input inline-edit-date-iso";
+      iso.setAttribute("data-date-iso", "");
+      iso.value = edit.iso != null ? edit.iso : edit.value;
+      iso.setAttribute(
+        "aria-label",
+        "Edit " + (edit.label || edit.colKey) + " ISO",
+      );
+      iso.setAttribute("spellcheck", "false");
+      el.appendChild(native);
+      el.appendChild(iso);
     } else {
       el = document.createElement("input");
-      el.type = edit.kind === "date" ? "date" : "text";
+      el.type = "text";
       el.className = "inline-edit-input";
       el.value = edit.value;
     }
     el.setAttribute("data-grid-editor", "");
-    el.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+    if (edit.kind !== "date") {
+      el.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+    }
     return el;
   }
 
@@ -4375,8 +4409,15 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var editor = buildEditor(edit);
     span.style.display = "none";
     span.parentNode.insertBefore(editor, span.nextSibling);
-    editor.focus();
-    if (editor.select && edit.kind === "text") editor.select();
+    var iso =
+      editor.querySelector && editor.querySelector("[data-date-iso]");
+    if (iso) {
+      iso.focus();
+      if (iso.select) iso.select();
+    } else {
+      editor.focus();
+      if (editor.select && edit.kind === "text") editor.select();
+    }
     return true;
   }
 
@@ -4390,8 +4431,41 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     root._dzEdit = null;
   }
 
+  function editorHost(el) {
+    return el && el.closest ? el.closest("[data-grid-editor]") : null;
+  }
+
   function editorValue(editor, kind) {
-    return kind === "bool" ? String(editor.checked) : editor.value;
+    if (!editor) return "";
+    if (kind === "bool") return String(editor.checked);
+    if (kind === "date") {
+      var native =
+        editor.querySelector && editor.querySelector('input[type="date"]');
+      if (!native && editor.type === "date") native = editor;
+      return native ? native.value : "";
+    }
+    return editor.value;
+  }
+
+  // Leftover ISO junk must not invent a date commit (cycle 2150).
+  // Native picker changes are the source of truth — never block those.
+  // Empty ISO is not leftover (blur restores from the native).
+  function dateLeftoverBlocksCommit(root, target) {
+    var edit = root && root._dzEdit;
+    if (!edit || edit.kind !== "date") return false;
+    var editor = root.querySelector("[data-grid-editor]");
+    if (!editor) return false;
+    var native = editor.querySelector('input[type="date"]');
+    var iso = editor.querySelector("[data-date-iso]");
+    if (target && native && (target === native || native.contains(target))) {
+      return false;
+    }
+    if (!iso) return false;
+    var raw = String(iso.value == null ? "" : iso.value).trim();
+    if (!raw) return false;
+    if (iso.validity && iso.validity.customError) return true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return true;
+    return false;
   }
 
   function rowOf(root, rowId) {
@@ -4532,21 +4606,25 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
 
   document.addEventListener("change", function (evt) {
     var t = evt.target;
-    if (!t || !t.matches || !t.matches("[data-grid-editor]")) return;
-    var root = rootOf(t);
+    var host = editorHost(t);
+    if (!host) return;
+    var root = rootOf(host);
     if (!root || !root._dzEdit) return;
     var kind = root._dzEdit.kind;
     // bool / select / date commit on change (dzTable parity); text commits
-    // on Enter/Tab so a blur-out mid-thought doesn't write.
+    // on Enter/Tab so a blur-out mid-thought doesn't write. Leftover ISO
+    // on a date companion must not invent a PUT of the previous date.
     if (kind === "bool" || kind === "select" || kind === "date") {
-      commit(root, editorValue(t, kind));
+      if (kind === "date" && dateLeftoverBlocksCommit(root, t)) return;
+      commit(root, editorValue(host, kind));
     }
   });
 
   document.addEventListener("keydown", function (evt) {
     var t = evt.target;
-    if (!t || !t.matches || !t.matches("[data-grid-editor]")) return;
-    var root = rootOf(t);
+    var host = editorHost(t);
+    if (!host) return;
+    var root = rootOf(host);
     if (!root || !root._dzEdit) return;
     var edit = root._dzEdit;
     if (evt.key === "Escape") {
@@ -4554,8 +4632,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       closeEditor(root);
     } else if (evt.key === "Enter" && edit.kind !== "select") {
       evt.preventDefault();
-      commit(root, editorValue(t, edit.kind));
+      if (edit.kind === "date" && dateLeftoverBlocksCommit(root, t)) return;
+      commit(root, editorValue(host, edit.kind));
     } else if (evt.key === "Tab") {
+      if (edit.kind === "date" && dateLeftoverBlocksCommit(root, t)) {
+        evt.preventDefault();
+        return;
+      }
       evt.preventDefault();
       var target = nextEditable(
         root,
@@ -4563,7 +4646,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
         edit.colKey,
         evt.shiftKey ? "prev" : "next",
       );
-      commit(root, editorValue(t, edit.kind), function () {
+      commit(root, editorValue(host, edit.kind), function () {
         if (!target) return;
         var span = cellSpan(root, target.rowId, target.colKey);
         if (span) startEdit(root, span);
@@ -4579,7 +4662,12 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       var edit = grids[i]._dzEdit;
       if (!edit) continue;
       var editor = grids[i].querySelector("[data-grid-editor]");
-      if (editor) edit.value = editorValue(editor, edit.kind);
+      if (editor) {
+        edit.value = editorValue(editor, edit.kind);
+        var iso =
+          editor.querySelector && editor.querySelector("[data-date-iso]");
+        if (iso) edit.iso = iso.value;
+      }
     }
   }
   document.addEventListener("htmx:before:swap", onBeforeSwap); // htmx 4

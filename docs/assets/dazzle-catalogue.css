@@ -14186,6 +14186,32 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   cursor: not-allowed;
 }
 
+/* Date leftover honesty (cycle 2150): native picker + ISO companion.
+ * Rest-state gallery (display spans) is unchanged — editor-only chrome. */
+.dz-inline-edit-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+.dz-inline-edit-date-native {
+  width: auto;
+  min-width: 11ch;
+  flex: 0 0 auto;
+}
+
+.dz-inline-edit-date-iso {
+  flex: 1 1 12ch;
+  min-width: 10ch;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+}
+
+.dz-inline-edit-date-iso:invalid {
+  border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
+
 /* NB the select-column <col> class (dz-table-col-select, in the grid's
  * colgroup) is SEMANTIC_ONLY: a structural marker with no rule — the table
  * stays layout:auto, so the col carries no width. */

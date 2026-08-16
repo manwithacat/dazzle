@@ -2540,6 +2540,61 @@ def test_grid_inline_edit_commits_via_put_and_refreshes(page) -> None:  # type: 
     assert "Renamed" in names, f"the committed value must render from the server: {names}"
 
 
+def test_grid_date_leftover_iso_does_not_invent_commit(page) -> None:  # type: ignore[no-untyped-def]
+    """Grid-edit leftover ISO must not invent a date commit (cycle 2150).
+
+    Same honesty class as standalone date leftover ISO (2145) and money
+    leftover junk (2121): typed-but-uncommitted ISO is not a silent PUT
+    of the previous date. Rest-state gallery stays unchanged (oral #33).
+    """
+    goto_part(page, "grid")
+    _hydrate_grid(page)
+    span = page.query_selector('[data-grid-body] [data-grid-edit="signed"]')
+    assert span is not None, "hydrated date cells must carry the edit seam span"
+    original = span.get_attribute("data-edit-value") or ""
+    assert original, "signed cells must SSR a raw ISO value"
+
+    span.dblclick()
+    page.wait_for_timeout(80)
+    host = "[data-grid-editor]"
+    iso = f"{host} [data-date-iso]"
+    native = f'{host} input[type="date"]'
+    assert page.query_selector(iso) is not None, "date editor must emit an ISO companion"
+    assert page.input_value(native) == original
+    assert page.input_value(iso) == original
+
+    page.fill(iso, "zzz")
+    assert page.input_value(native) == original, "named leftover must not invent a date"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None, "leftover must not PUT / close"
+    assert page.input_value(native) == original
+    assert page.input_value(iso) == "zzz", "Enter must not revert leftover junk"
+
+    page.fill(iso, original + "zzz")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == original, "leftover suffix is not a silent date"
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None
+    assert page.input_value(iso) == original + "zzz"
+
+    page.fill(iso, "2026-08-15")
+    page.wait_for_timeout(80)
+    assert page.input_value(native) == "2026-08-15"
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(300)
+    assert page.query_selector(host) is None, "valid ISO must still commit"
+    values = page.eval_on_selector_all(
+        '[data-grid-body] [data-grid-edit="signed"]',
+        "els => els.map(e => e.getAttribute('data-edit-value'))",
+    )
+    assert "2026-08-15" in values, f"committed ISO must render from the server: {values}"
+    page.reload()
+
+
 def test_grid_touch_resize_and_edit_accommodations(_engine_browser) -> None:  # type: ignore[no-untyped-def]
     """Touch (coarse pointer) accommodations for the grid extensions,
     chromium-only (WebKit has no mobile/pointer:coarse emulation):

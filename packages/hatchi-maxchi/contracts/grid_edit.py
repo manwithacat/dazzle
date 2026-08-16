@@ -7,6 +7,12 @@ executable FastAPI exemplar mirroring how Dazzle feeds it. The exemplar
 payloads deliberately include the #1573 producer shapes (dict / tuple /
 bare-string options) as permanent regression documentation.
 
+Leftover honesty (cycle 2150): kind=date opens a Field date group
+(native ``type=date`` + ISO companion). Leftover ISO junk must not
+invent a PUT of the previous date — Enter/Tab/change refuse while the
+companion is invalid. Empty ISO on blur restores from the native.
+Rest-state display spans are unchanged.
+
 Non-composition: kind=select uses a bare <select class=dz-inline-edit-select>,
 NOT the combobox Hyperpart. Declared on grid.does_not_compose; flip path is
 docs/spikes/combobox-in-grid-cell.md. See CONSUMER_MAP.md.

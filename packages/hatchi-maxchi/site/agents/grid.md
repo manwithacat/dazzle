@@ -246,6 +246,7 @@ Correct response for none (raw fetch / no HTML swap).
 - column visibility: dz-grid-cols.js projects the hidden set onto [data-dz-col] cells after every swap — no per-cell bindings
 - column resize: dz-grid-resize.js rides the header cells
 - inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display span (kind/value/label/options) — contract in contracts/grid_edit.py
+- kind=date cells open a Field date group (native type=date + ISO companion) — leftover ISO must not invent a PUT of the previous date
 - kind=select cells open a bare native <select> editor — NOT the combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)
 - row identity: a row's id IS the idiomorph morph key and encodes data-dz-row-id (the bulk payload anchor)
 
@@ -265,6 +266,7 @@ Correct response for none (raw fetch / no HTML swap).
 - edit state in JS objects dies on morph — the typed buffer lives on the grid root (root._dzEdit) with before/after-swap hooks
 - select options must be JSON [[value,label],…] — producers with dicts/tuples/bare strings normalise at ONE boundary (#1573)
 - never patch committed values client-side — commit fires dz-grid:refresh so the server re-renders badges/dates
+- leftover ISO junk (zzz / 2025-06-20zzz) must not PUT the previous date — Enter/Tab/change refuse while the companion is invalid
 - do not mount data-dz-combobox inside a grid cell expecting grid-edit to drive it — that is a future composition, not current seam
 
 ### Keyboard / AT

@@ -880,6 +880,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "column resize: dz-grid-resize.js rides the header cells",
                     "inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display "
                     "span (kind/value/label/options) — contract in contracts/grid_edit.py",
+                    "kind=date cells open a Field date group (native type=date + ISO "
+                    "companion) — leftover ISO must not invent a PUT of the previous date",
                     "kind=select cells open a bare native <select> editor — NOT the "
                     "combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)",
                     "row identity: a row's id IS the idiomorph morph key and encodes "
@@ -892,6 +894,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "dicts/tuples/bare strings normalise at ONE boundary (#1573)",
                     "never patch committed values client-side — commit fires "
                     "dz-grid:refresh so the server re-renders badges/dates",
+                    "leftover ISO junk (zzz / 2025-06-20zzz) must not PUT the previous "
+                    "date — Enter/Tab/change refuse while the companion is invalid",
                     "do not mount data-dz-combobox inside a grid cell expecting "
                     "grid-edit to drive it — that is a future composition, not current seam",
                 ),
