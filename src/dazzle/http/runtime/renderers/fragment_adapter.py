@@ -590,6 +590,8 @@ class FragmentSurfaceAdapter:
         entity_title: str,
         endpoint: str,
         region_name: str,
+        include_closed: str = "",
+        as_of: str = "",
     ) -> tuple[Fragment, ...]:
         """Issue #1029 phase 5: compose the search box + filter bar
         for the list region toolbar.
@@ -629,6 +631,8 @@ class FragmentSurfaceAdapter:
                     endpoint=URL(endpoint),
                     region_name=region_name,
                     columns=filter_columns,
+                    include_closed=include_closed,
+                    as_of=as_of,
                 )
             )
 

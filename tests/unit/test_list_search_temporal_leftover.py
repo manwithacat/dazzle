@@ -184,14 +184,11 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_filter_bar_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): FilterBar ``_emit_filter_bar``
-    ``hx-get="{endpoint}"`` + ``hx-include="closest .filter-bar"`` still
-    omits leftover-honest include_closed / as_of."""
+def test_date_range_picker_still_drops_temporal() -> None:
+    """Sibling invent class (seed next): DateRangePicker
+    ``_emit_date_range_picker`` still forwards the bare endpoint."""
     src = _EMIT.read_text(encoding="utf-8")
-    emit = src.split("def _emit_filter_bar")[1].split("def _emit_list_filter_bar")[0]
-    assert 'hx-get="{endpoint}"' in emit
-    assert "hx-include" in emit
+    emit = src.split("def _emit_date_range_picker")[1].split("def ", 1)[0]
     assert "include_closed" not in emit
     assert "as_of" not in emit
     assert "leftover_honest" not in emit

@@ -1598,11 +1598,18 @@ class FilterBar:
     `endpoint` is the region's data URL; `region_name` namespaces the
     HTMX target id (`#region-<name>`) so the swap goes back into the
     same region's body.
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2179) ride
+    each select ``hx-get``. Dropping them invented open-only / current
+    after a filter change. Leftover junk must not be stored here —
+    the emitter also leftover-parses before appending.
     """
 
     endpoint: URL
     region_name: str
     columns: tuple[FilterColumn, ...]
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

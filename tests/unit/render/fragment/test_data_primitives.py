@@ -753,6 +753,16 @@ def test_filter_bar_rejects_duplicate_column_keys() -> None:
         )
 
 
+def test_filter_bar_default_temporal_empty() -> None:
+    f = FilterBar(
+        endpoint=URL("/x"),
+        region_name="r",
+        columns=(FilterColumn(key="k", label="L", options=()),),
+    )
+    assert f.include_closed == ""
+    assert f.as_of == ""
+
+
 # === SortHeader ===
 
 

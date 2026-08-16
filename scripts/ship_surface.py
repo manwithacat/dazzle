@@ -116,6 +116,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_list_sentinel_temporal_leftover.py",
     # cycle 2178: list search chrome hx-get drops include_closed / as_of
     "tests/unit/test_list_search_temporal_leftover.py",
+    # cycle 2179: FilterBar _emit_filter_bar hx-get drops include_closed / as_of
+    "tests/unit/test_filter_bar_temporal_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

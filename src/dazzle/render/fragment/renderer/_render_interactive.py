@@ -86,8 +86,9 @@ def leftover_honest_temporal_query(
     (``zzz``, ``2abc``, ``maybe``, ``not-a-date``) omits so a click does
     not invent open-only / current. Cycle 2172 sort-header; cycle 2174
     CSV endpoint; cycle 2175 pagination hx-get; cycle 2177 infinite-
-    scroll sentinel; cycle 2178 list search chrome. Returns
-    ``&amp;``-joined pairs with no leading sep.
+    scroll sentinel; cycle 2178 list search chrome; cycle 2179
+    FilterBar ``_emit_filter_bar``. Returns ``&amp;``-joined pairs
+    with no leading sep.
     """
     parts: list[str] = []
     ic_raw = str(include_closed or "").strip().lower()
@@ -581,7 +582,17 @@ class _RenderInteractiveMixin:
         # fragments omit the bare id (multi-card uniqueness). data-dz-region
         # is always present on the chrome wrapper.
         target = "closest [data-dz-region]"
-        endpoint = ctx.escape_attr(str(f.endpoint))
+        # Leftover-honest temporal (cycle 2179). Bare hx-get="{endpoint}"
+        # + hx-include="closest .filter-bar" used to drop include_closed
+        # / as_of and invent open-only / current after a filter change.
+        # Leftover junk must not invent. Valid true / YYYY-MM-DD ride;
+        # leftover junk (zzz / 2abc / maybe / not-a-date) omits.
+        endpoint = _with_leftover_honest_temporal(
+            ctx.escape_attr(str(f.endpoint)),
+            getattr(f, "include_closed", ""),
+            getattr(f, "as_of", ""),
+            escape_attr=ctx.escape_attr,
+        )
 
         def _render_column(col: FilterColumn) -> str:
             options_html = f'<option value="">All {ctx.escape(col.label)}</option>'
