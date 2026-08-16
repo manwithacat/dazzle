@@ -463,6 +463,16 @@ Doctrine source of truth remains
     edit form. Not leftover list as_of / sort / page. Not
     leftover-scalar refuse. Not Goal B coat.
 
+55. **setup-uv v8.2.0 still fetches uv.ndjson.** Pinning
+    `version: 0.11.19` did not skip
+    `raw.githubusercontent.com/astral-sh/versions` (cycle 2171
+    GUIDE_WALK contact_manager `fetch failed` on run 31953872726
+    while every other job was green). Close-the-loop: pin
+    `astral-sh/setup-uv` ≥ v10.0.1 (retries transient manifest
+    failures, #1016) and keep an explicit uv version. Ship-surface
+    pin `test_setup_dazzle_action`. Rerun-failed is the no-code
+    recovery; do not treat this as a product/GUIDE_WALK assert.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

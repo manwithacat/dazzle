@@ -114,6 +114,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_zoom_does_not_invent",
     # cycle 2156: leftover-zoom prove must not use 1.25 (fit collision)
     "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale",
+    # cycle 2171: setup-uv v8.2.0 still fetched uv.ndjson (GUIDE_WALK flake)
+    "tests/unit/test_setup_dazzle_action.py",
     # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs
