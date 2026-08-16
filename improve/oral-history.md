@@ -483,6 +483,20 @@ Doctrine source of truth remains
     / DETAIL as_of onto the edit form. Not leftover list as_of /
     sort / page. Not leftover-scalar refuse. Not Goal B coat.
 
+57. **Temporal leftover honesty is a sibling family, not one
+    control.** Cycles 2165–2172 re-learned include_closed / as_of
+    on list fetch, DETAIL, related-tab, bulk echo, grid
+    ownedKeys, and sort-header — one emitter per cycle. After
+    wiring leftover-honest temporal on a list/grid control, scan
+    sibling emitters (page, sort, csv, bulk echo, related-tab)
+    the same dig before claiming the class closed. Next: list
+    CSV ``data-dz-csv-endpoint`` is still the bare path (invents
+    open-only / current download). Do **not** clone leftover
+    list include_closed / related-tab as_of / DETAIL as_of onto
+    the edit form. Not leftover sort-header echo. Not leftover
+    list as_of / sort / page. Not leftover-scalar refuse. Not
+    Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
