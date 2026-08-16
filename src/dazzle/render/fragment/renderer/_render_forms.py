@@ -218,12 +218,26 @@ class _RenderFormsMixin:
                 f'placeholder="{ctx.escape_attr(f.placeholder)}"'
                 f'{a11y}{readonly_attr}{autofocus_attr} rows="4">{ctx.escape(f.initial_value)}</textarea>'
             )
+        elif f.kind in ("time", "datetime-local"):
+            # Native clock + ISO companion (cycle 2144). Companion has no
+            # name — leftover junk must not invent a time. Native date /
+            # datetime-local still suppress the placeholder (legacy parity).
+            iso_label = "ISO time" if f.kind == "time" else "ISO datetime"
+            val = ctx.escape_attr(f.initial_value)
+            inner = (
+                f'<div class="dz-form-time-group" data-dz-time-group>'
+                f'<input id="field-{name}" type="{f.kind}" name="{name}" '
+                f'data-dazzle-field="{name}" class="dz-form-input" '
+                f'value="{val}"{a11y}{readonly_attr}{autofocus_attr}>'
+                f'<input data-dz-time-iso class="dz-form-time-iso" type="text" '
+                f'spellcheck="false" autocomplete="off"{readonly_attr} '
+                f'aria-label="{iso_label}" value="{val}">'
+                "</div>"
+            )
         else:
-            # Native date/datetime inputs suppress the placeholder (legacy parity).
+            # Native date inputs suppress the placeholder (legacy parity).
             placeholder = (
-                ""
-                if f.kind in ("date", "datetime-local")
-                else f' placeholder="{ctx.escape_attr(f.placeholder)}"'
+                "" if f.kind == "date" else f' placeholder="{ctx.escape_attr(f.placeholder)}"'
             )
             inner = (
                 f'<input id="field-{name}" type="{f.kind}" name="{name}" '

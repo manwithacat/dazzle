@@ -1190,6 +1190,7 @@ def _emit_root_only_html(part_id: str) -> str:
     from dazzle.render.fragment.primitives.data import ConfirmCheckItem, ConfirmGate
     from dazzle.render.fragment.primitives.forms import (
         ColorField,
+        Field,
         SliderField,
     )
     from dazzle.render.fragment.renderer import FragmentRenderer
@@ -1199,6 +1200,8 @@ def _emit_root_only_html(part_id: str) -> str:
         return r.render(SliderField(name="vol", label="Volume", initial_value="40"))
     if part_id == "color":
         return r.render(ColorField(name="accent", label="Accent", initial_value="#3b82f6"))
+    if part_id == "time":
+        return r.render(Field(name="due", label="Due", kind="time", initial_value="14:30"))
     if part_id == "app_shell":
         return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
     if part_id == "command":

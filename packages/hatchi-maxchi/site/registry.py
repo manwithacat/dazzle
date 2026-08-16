@@ -1604,6 +1604,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<input class="dz-form-color-input" id="hm-field-color" type="color" value="#3b82f6">'
             '<input class="dz-form-color-hex" type="text" spellcheck="false" '
             'autocomplete="off" aria-label="Hex colour" value="#3b82f6">'
+            "</div></div>"
+            '<div class="dz-form-field">'
+            '<label class="dz-form-label" for="hm-field-due">Due time</label>'
+            '<div class="dz-form-time-group" data-dz-time-group>'
+            '<input class="dz-form-input" id="hm-field-due" type="time" value="14:30">'
+            '<input data-dz-time-iso class="dz-form-time-iso" type="text" '
+            'spellcheck="false" autocomplete="off" aria-label="ISO time" value="14:30">'
             "</div></div></div>",
             notes="Reuses the <code>dz-form-*</code> family (label / hint / input / error). The "
             "invalid field needs no modifier class — the red border keys off "
@@ -1611,16 +1618,27 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> "
             "can mirror the swatch and the hex companion (contract: contracts/color.py). "
             "Hex leftover junk must not invent a colour (cycle 2133). "
+            "Time / datetime-local use <code>data-dz-time-group</code> so "
+            "<code>dz-time.js</code> can mirror the native clock and the ISO "
+            "companion (contract: contracts/time.py). Leftover ISO junk must not "
+            "invent a time (cycle 2144). "
             "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
-            "<code>contracts/color.py</code> (HMC-139).",
+            "<code>contracts/color.py</code> + time <code>contracts/time.py</code> "
+            "(HMC-139).",
             tags=("forms",),
             # The colour widget's hex-readout mirror rides the field family
             # (delegated input listener on .dz-form-color-input; Tier F4e —
-            # replaced the last inline Alpine x-data straggler).
-            extensions=("controllers/dz-color.js",),
+            # replaced the last inline Alpine x-data straggler). Time leftover
+            # honesty is the same class on native type=time / datetime-local.
+            extensions=("controllers/dz-color.js", "controllers/dz-time.js"),
             # Dual-lock: form triad = form_field (.dz-form-field); colour swatch
-            # = color (HMC-139). Gallery id "field" maps to form_field stem.
-            contracts=("contracts/form_field.py", "contracts/color.py"),
+            # = color (HMC-139); time ISO = time. Gallery id "field" maps to
+            # form_field stem.
+            contracts=(
+                "contracts/form_field.py",
+                "contracts/color.py",
+                "contracts/time.py",
+            ),
         ),
         Hyperpart(
             "slider",

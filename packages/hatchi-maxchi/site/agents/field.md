@@ -27,6 +27,10 @@ The label + control + help + error triad as one accessible unit. Error state der
     <label class="form-label" for="hm-field-color">Brand colour</label>
     <div class="form-color-group" data-color-group><input class="form-color-input" id="hm-field-color" type="color" value="#3b82f6"><input class="form-color-hex" type="text" spellcheck="false" autocomplete="off" aria-label="Hex colour" value="#3b82f6"></div>
   </div>
+  <div class="form-field">
+    <label class="form-label" for="hm-field-due">Due time</label>
+    <div class="form-time-group" data-time-group><input class="form-input" id="hm-field-due" type="time" value="14:30"><input data-time-iso class="form-time-iso" type="text" spellcheck="false" autocomplete="off" aria-label="ISO time" value="14:30"></div>
+  </div>
 </div>
 ```
 
@@ -138,12 +142,52 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
+### `contracts/time.py`
+
+- **Required root:** `[data-dz-time-group]` (part `time`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-time-group]` | `data-dz-time-group` | present (any value) |
+| `[data-dz-time-iso]` | `data-dz-time-iso` | present (any value) |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: field (extension: dz-time) — time / datetime-local group.
+
+Leftover honesty (cycle 2144): the ISO companion is an editable text
+input (no ``name`` — the native ``type=time`` / ``datetime-local`` is
+the submitted value). Typed leftover junk (``14:30zzz``, ``2pm``,
+``2026-06-01T14:30zzz``) must not invent a clock — the native stays
+put and both controls fail custom validity so submit cannot post the
+previous time as if the leftover were accepted. Empty ISO on blur
+restores from the native.
+"""
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="time",
+    root="[data-dz-time-group]",
+    nodes=(
+        Node("[data-dz-time-group]", attrs={"data-dz-time-group": Present()}),
+        Node("[data-dz-time-iso]", attrs={"data-dz-time-iso": Present()}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
+
 ## Notes
 
-Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch and the hex companion (contract: contracts/color.py). Hex leftover junk must not invent a colour (cycle 2133). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py (HMC-139).
+Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch and the hex companion (contract: contracts/color.py). Hex leftover junk must not invent a colour (cycle 2133). Time / datetime-local use data-dz-time-group so dz-time.js can mirror the native clock and the ISO companion (contract: contracts/time.py). Leftover ISO junk must not invent a time (cycle 2144). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py + time contracts/time.py (HMC-139).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/form_field.py`
 - `contracts/color.py`
+- `contracts/time.py`

@@ -114,6 +114,37 @@ def test_date_input_suppresses_placeholder() -> None:
     assert "ignored" not in html  # native date inputs drop the placeholder (legacy parity)
 
 
+def test_time_field_emits_iso_companion() -> None:
+    """Cycle 2144 — leftover ISO must not invent a time. Companion has no name."""
+    html = _render({"name": "due", "label": "Due", "kind": "time", "value": "14:30"})
+    assert 'type="time"' in html
+    assert "data-dz-time-group" in html
+    assert "data-dz-time-iso" in html
+    assert 'aria-label="ISO time"' in html
+    assert 'name="due"' in html
+    assert html.count("name=") == 1  # companion is not submitted
+    assert 'value="14:30"' in html
+    assert "ignored" not in html
+
+
+def test_datetime_local_field_emits_iso_companion() -> None:
+    html = _render(
+        {
+            "name": "starts",
+            "label": "Starts",
+            "kind": "datetime-local",
+            "value": "2026-06-01T14:30",
+            "placeholder": "ignored",
+        }
+    )
+    assert 'type="datetime-local"' in html
+    assert "data-dz-time-group" in html
+    assert "data-dz-time-iso" in html
+    assert 'aria-label="ISO datetime"' in html
+    assert "ignored" not in html
+    assert html.count("name=") == 1
+
+
 # ── 5. help text ─────────────────────────────────────────────────────────────
 
 

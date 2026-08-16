@@ -1830,6 +1830,91 @@ def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ig
     assert "Autoplay" in (root.locator("[data-carousel-status]").inner_text() or "")
 
 
+def test_time_leftover_iso_does_not_invent_clock(page) -> None:  # type: ignore[no-untyped-def]
+    """Leftover ISO junk must not invent a time (cycle 2144).
+
+    Same honesty class as date-range leftover ISO (2139) and colour
+    leftover hex (2133): typed-but-uncommitted text is not a silent parse.
+    """
+    goto_part(page, "field")
+    group = "#field [data-time-group]"
+    native = f'{group} input[type="time"]'
+    iso = f"{group} [data-time-iso]"
+
+    assert page.input_value(native) == "14:30"
+    assert page.input_value(iso) == "14:30"
+
+    page.fill(iso, "zzz")
+    assert page.input_value(native) == "14:30", "named leftover must not invent a clock"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    assert page.eval_on_selector(native, "el => el.validity.customError") is True
+
+    page.fill(iso, "14:30zzz")
+    assert page.input_value(native) == "14:30", "leftover suffix is not a silent 14:30"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "14:30zzz", "blur must not revert leftover junk"
+    assert page.input_value(native) == "14:30"
+
+    page.fill(iso, "09:15")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "09:15"
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "09:15"
+    assert page.eval_on_selector(iso, "el => el.checkValidity()") is True
+
+    page.eval_on_selector(
+        native,
+        "el => { el.value = '18:00'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
+    )
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "18:00"
+
+    page.fill(iso, "")
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "18:00", "empty ISO on blur restores from the native time"
+    page.reload()
+
+
+def test_datetime_local_leftover_iso_does_not_invent_clock(page) -> None:  # type: ignore[no-untyped-def]
+    """datetime-local leftover ISO must not invent a clock (cycle 2144)."""
+    goto_part(page, "field")
+    page.evaluate(
+        """() => {
+          const host = document.querySelector('#field .hm-stack') || document.querySelector('#field');
+          const wrap = document.createElement('div');
+          wrap.id = 'hm-dt-fixture';
+          wrap.innerHTML = '<div class="form-time-group" data-time-group>'
+            + '<input class="form-input" type="datetime-local" value="2026-06-01T14:30">'
+            + '<input data-time-iso class="form-time-iso" type="text" value="2026-06-01T14:30">'
+            + '</div>';
+          host.appendChild(wrap);
+        }"""
+    )
+    group = "#hm-dt-fixture [data-time-group]"
+    native = f'{group} input[type="datetime-local"]'
+    iso = f"{group} [data-time-iso]"
+
+    assert page.input_value(native) == "2026-06-01T14:30"
+    page.fill(iso, "2026-06-01T14:30zzz")
+    assert page.input_value(native) == "2026-06-01T14:30", (
+        "leftover suffix is not a silent datetime"
+    )
+    assert page.eval_on_selector(iso, "el => el.validity.customError") is True
+    page.eval_on_selector(iso, "el => el.blur()")
+    page.wait_for_timeout(50)
+    assert page.input_value(iso) == "2026-06-01T14:30zzz"
+    assert page.input_value(native) == "2026-06-01T14:30"
+
+    page.fill(iso, "2026-06-15T09:00")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "2026-06-15T09:00"
+    page.reload()
+
+
 def test_color_leftover_hex_does_not_invent_swatch(page) -> None:  # type: ignore[no-untyped-def]
     """Leftover hex junk must not invent a colour (cycle 2133).
 

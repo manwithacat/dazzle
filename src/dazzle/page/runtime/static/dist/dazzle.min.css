@@ -2224,6 +2224,29 @@ background: var(--colour-bg);
 .dz-form-color-hex:invalid {
 border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
 }
+.dz-form-time-group {
+display: flex;
+align-items: center;
+gap: var(--space-sm);
+}
+.dz-form-time-iso {
+font-family: var(--font-mono, monospace);
+font-size: var(--text-xs);
+color: var(--colour-text);
+inline-size: 11ch;
+min-inline-size: 8ch;
+padding: 0.25rem 0.4rem;
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-sm);
+background: var(--colour-bg);
+}
+.dz-form-time-group:has(input[type="datetime-local"]) .dz-form-time-iso {
+inline-size: 18ch;
+min-inline-size: 16ch;
+}
+.dz-form-time-iso:invalid {
+border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
 .dz-form-richtext {
 border: 1px solid var(--colour-border);
 border-radius: var(--radius-sm);

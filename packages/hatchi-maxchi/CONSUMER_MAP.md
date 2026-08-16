@@ -440,6 +440,7 @@ _No composition edges declared._
 **Extensions on this part**
 
 - `controllers/dz-color.js`
+- `controllers/dz-time.js`
 
 ### `form-chrome`
 

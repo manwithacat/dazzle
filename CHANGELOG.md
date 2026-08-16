@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Time leftover ISO invented a clock (cycle 2144)** —
+  leftover typed ISO (`zzz`, `14:30zzz`, `2pm`, `2026-06-01T14:30zzz`)
+  no longer writes the native `type=time` / `datetime-local` value.
+  Each clock has an editable ISO companion (no name; native still
+  submits). Leftover junk fails custom validity on both controls; blur
+  keeps it visible; empty companion restores from the native; valid
+  `HH:MM` / `YYYY-MM-DDTHH:MM` writes the clock. Same honesty class as
+  date-range leftover ISO (2139) and colour leftover hex (2133).
 - **Cycle 2142 cimonitor — stale completed HM red raced the sibling tip** —
   Dazzle CI started before the post-sync hatchi-maxchi workflow was
   listed; `--prefer-completed --wait 900` still sampled the previous

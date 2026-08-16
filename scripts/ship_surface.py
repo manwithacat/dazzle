@@ -69,6 +69,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2140: empty form="" fails HM Nu/W3C (search-select leftover)
     "tests/unit/test_form_widget_search_select_phase3.py::test_no_empty_form_attribute_in_search_select_emit_sources",
     "tests/unit/test_form_widget_search_select_phase3.py::test_endpoint_and_typeahead_wiring",
+    # cycle 2144: time leftover ISO must not invent a clock
+    "tests/unit/test_form_widget_showcase_phase3.py::test_time_controller_leftover_iso_does_not_invent",
+    "tests/unit/test_form_field_parity_phase3b.py::test_time_field_emits_iso_companion",
+    "tests/unit/test_form_field_parity_phase3b.py::test_datetime_local_field_emits_iso_companion",
     # cycle 2142: --wait must not fail immediately on stale completed HM red
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2141: Page chrome #hm-detached-q must not trip no-user-form pins

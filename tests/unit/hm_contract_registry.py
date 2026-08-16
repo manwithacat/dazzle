@@ -340,6 +340,7 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
 DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/slider.py", "slider", True),
     ("contracts/color.py", "color", True),
+    ("contracts/time.py", "time", True),
     ("contracts/app_shell.py", "app_shell", True),
     ("contracts/command.py", "command", True),
     ("contracts/confirm_panel.py", "confirm_panel", True),
