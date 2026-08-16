@@ -32,6 +32,7 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
@@ -71,6 +72,58 @@ from dazzle.render.open_discovery import (
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
+
+
+def leftover_honest_temporal_query(
+    include_closed: str = "",
+    as_of: str = "",
+    *,
+    escape_attr: Callable[[str], str] | None = None,
+) -> str:
+    """Leftover-honest ``include_closed`` / ``as_of`` query fragment.
+
+    Valid ``true`` / ``1`` / ``yes`` and YYYY-MM-DD ride. Leftover junk
+    (``zzz``, ``2abc``, ``maybe``, ``not-a-date``) omits so a click does
+    not invent open-only / current. Cycle 2172 sort-header; cycle 2174
+    CSV endpoint. Returns ``&amp;``-joined pairs with no leading sep.
+    """
+    parts: list[str] = []
+    ic_raw = str(include_closed or "").strip().lower()
+    if ic_raw in ("true", "1", "yes"):
+        parts.append("include_closed=true")
+    as_of_raw = str(as_of or "").strip()
+    if as_of_raw:
+        from datetime import date as _date
+
+        try:
+            _date.fromisoformat(as_of_raw)
+        except (ValueError, TypeError):
+            as_of_raw = ""
+        else:
+            esc = escape_attr or (lambda s: s)
+            parts.append(f"as_of={esc(as_of_raw)}")
+    return "&amp;".join(parts)
+
+
+def _with_leftover_honest_temporal(
+    endpoint: str,
+    include_closed: str = "",
+    as_of: str = "",
+    *,
+    escape_attr: Callable[[str], str] | None = None,
+    leading: str = "?",
+) -> str:
+    """Append leftover-honest temporal pairs to ``endpoint``.
+
+    ``leading`` is ``?`` when the URL has no query yet (CSV path) or
+    ``&amp;`` when the caller already wrote ``?sort=&dir=``.
+    """
+    qs = leftover_honest_temporal_query(include_closed, as_of, escape_attr=escape_attr)
+    if not qs:
+        return endpoint
+    if "?" in endpoint:
+        return f"{endpoint}&amp;{qs}"
+    return f"{endpoint}{leading}{qs}"
 
 
 # Bulk-action toolbar (convergence C1.1): rides the HM grid controller's
@@ -627,19 +680,13 @@ class _RenderInteractiveMixin:
         # after a click. Leftover junk must not invent. Valid true /
         # YYYY-MM-DD ride; leftover junk (zzz / 2abc / maybe /
         # not-a-date) omits.
-        ic_raw = str(s.include_closed or "").strip().lower()
-        if ic_raw in ("true", "1", "yes"):
-            href += "&amp;include_closed=true"
-        as_of_raw = str(s.as_of or "").strip()
-        if as_of_raw:
-            from datetime import date as _date
-
-            try:
-                _date.fromisoformat(as_of_raw)
-            except (ValueError, TypeError):
-                as_of_raw = ""
-            else:
-                href += f"&amp;as_of={ctx.escape_attr(as_of_raw)}"
+        href = _with_leftover_honest_temporal(
+            href,
+            s.include_closed,
+            s.as_of,
+            escape_attr=ctx.escape_attr,
+            leading="&amp;",
+        )
         indicator = ""
         if is_active:
             indicator = f"<span>{'▼' if s.current_direction == 'desc' else '▲'}</span>"
@@ -658,7 +705,17 @@ class _RenderInteractiveMixin:
         export-button markup. The inline `onclick` defers to the
         global `dz.downloadCsv` helper so Safari's same-origin
         text/csv quirk is bypassed (#862)."""
-        endpoint = ctx.escape_attr(str(c.endpoint))
+        # Leftover-honest temporal (cycle 2174). Bare data-dz-csv-endpoint
+        # used to drop include_closed / as_of so CSV invented open-only /
+        # current. Leftover junk must not invent. Valid true / YYYY-MM-DD
+        # ride the download; leftover junk (zzz / 2abc / maybe /
+        # not-a-date) omits.
+        endpoint = _with_leftover_honest_temporal(
+            ctx.escape_attr(str(c.endpoint)),
+            getattr(c, "include_closed", ""),
+            getattr(c, "as_of", ""),
+            escape_attr=ctx.escape_attr,
+        )
         filename = ctx.escape_attr(c.filename)
         label = ctx.escape_attr(c.label)
         return (

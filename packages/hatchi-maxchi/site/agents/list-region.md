@@ -180,7 +180,7 @@ def render(lr: ListRegion) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-list-region (contracts/list_region.py). CSV export is wired with data-dz-csv-endpoint + data-dz-csv-filename and window.dz.downloadCsv (gallery serves sample-list-export.csv as the downloadable artifact). Sortable headers are dz-list-sort-link anchors with hx-get ?sort=&dir= — leftover-honest include_closed / as_of ride the hx-get (cycle 2172); dropping them invents open-only / current after a sort click. Rest-state gallery omits them (oral #33). The host re-renders the region; the active column shows a caret. Rows with a drill URL carry is-clickable. For selection/filters/pagination use the grid Hyperpart.
+Dual-lock root is data-dz-list-region (contracts/list_region.py). CSV export is wired with data-dz-csv-endpoint + data-dz-csv-filename and window.dz.downloadCsv (gallery serves sample-list-export.csv as the downloadable artifact). Leftover-honest include_closed / as_of ride data-dz-csv-endpoint (cycle 2174); the bare path invented open-only / current CSV. Sortable headers are dz-list-sort-link anchors with hx-get ?sort=&dir= — leftover-honest include_closed / as_of ride the hx-get (cycle 2172); dropping them invents open-only / current after a sort click. Rest-state gallery omits them (oral #33). The host re-renders the region; the active column shows a caret. Rows with a drill URL carry is-clickable. For selection/filters/pagination use the grid Hyperpart.
 
 ## Source files
 

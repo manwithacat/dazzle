@@ -497,6 +497,24 @@ Doctrine source of truth remains
     list as_of / sort / page. Not leftover-scalar refuse. Not
     Goal B coat.
 
+58. **List-region CSV endpoint drops include_closed / as_of
+    (invents open-only / current download).** Cycle 2174:
+    ``_emit_csv_export_button`` / ListRegion
+    ``data-dz-csv-endpoint`` was the bare path; workspace
+    fetch ignored the same params so ``?format=csv`` invented
+    the default collection even after 2172 rode sort-header.
+    Leftover-honest ``true`` / YYYY-MM-DD now ride the
+    download and ``fetch_region_items``. Leftover junk still
+    omits. Gallery mock echoes the same. Rest-state gallery
+    unchanged (oral #33). Do **not** clone leftover list
+    include_closed / related-tab as_of / DETAIL as_of onto
+    the edit form. Not leftover sort-header echo (oral #56).
+    Not leftover list as_of / sort / page. Not leftover-scalar
+    refuse. Not Goal B coat. After wiring leftover-honest
+    temporal on a list/grid control, scan sibling emitters
+    (page, sort, csv, bulk echo, related-tab, pagination)
+    the same dig before claiming the class closed.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

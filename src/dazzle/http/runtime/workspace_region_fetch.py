@@ -31,8 +31,13 @@ Returns a ``RegionItemsResult`` dataclass.
 
 import logging
 from dataclasses import dataclass, field
+from datetime import date as _date
 from typing import Any
 
+from dazzle.http.runtime.page_routes import (
+    _parse_list_as_of,
+    _parse_list_include_closed,
+)
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
@@ -76,6 +81,35 @@ class RegionItemsResult:
     # MUST surface as a denial — initialised True here to match the
     # original handler's #887 semantics.
     scope_denied: bool = True
+
+
+def _apply_leftover_honest_temporal(
+    request: Any, repo: Any, filters: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Fold leftover-honest ``include_closed`` / ``as_of`` into list filters.
+
+    Workspace CSV (`?format=csv`) reuses this fetch. Dropping valid
+    temporal params invented open-only / current (cycle 2174). Leftover
+    junk (`zzz`, `2abc`, `maybe`, `not-a-date`) restores default.
+    Non-temporal entities ignore the raw.
+    """
+    temporal = getattr(getattr(repo, "entity_spec", None), "temporal", None)
+    if temporal is None:
+        return filters
+    qparams = getattr(request, "query_params", None)
+    if qparams is None:
+        return filters
+    as_of_param = getattr(temporal, "as_of_param", None) or "as_of"
+    as_of_raw = _parse_list_as_of(qparams.get(as_of_param))
+    include_closed = _parse_list_include_closed(qparams.get("include_closed"))
+    if not as_of_raw and not include_closed:
+        return filters
+    out = dict(filters) if filters else {}
+    if as_of_raw:
+        out["__as_of"] = _date.fromisoformat(as_of_raw)
+    if include_closed:
+        out[f"{temporal.end_field}__isnull"] = False
+    return out
 
 
 async def fetch_region_items(
@@ -162,6 +196,12 @@ async def fetch_region_items(
             if filters is None:
                 filters = {}
             filters["id"] = item_id
+
+        # Leftover-honest include_closed / as_of (cycle 2174). Bare CSV
+        # downloads used to drop these so the file invented open-only /
+        # current. Leftover junk restores default; valid true / YYYY-MM-DD
+        # reach repo.list (__as_of / end_field__isnull=False).
+        filters = _apply_leftover_honest_temporal(request, repo, filters)
 
         date_field = ctx.ctx_region.date_field if hasattr(ctx.ctx_region, "date_field") else ""
         if date_field:

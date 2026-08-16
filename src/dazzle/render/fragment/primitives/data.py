@@ -617,6 +617,9 @@ class ListRegion:
     rows: tuple[tuple[object, ...], ...]
     csv_endpoint: str = ""
     csv_filename: str = "export.csv"
+    # Leftover-honest temporal (cycle 2174) ride the in-card CSV button.
+    include_closed: str = ""
+    as_of: str = ""
     total: int = 0
     empty_message: str = ""
     # #1148: optional per-row action column. When ``row_actions`` is
@@ -1498,11 +1501,18 @@ class CsvExportButton:
     `filename` is the suggested download name (e.g. `tickets.csv`);
     no extension enforcement here — the runtime author writes whatever
     makes sense.
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2174) ride
+    ``data-dz-csv-endpoint``. Dropping them invented open-only /
+    current CSV. Leftover junk must not be stored here — the emitter
+    also leftover-parses before appending.
     """
 
     endpoint: URL
     filename: str = "export.csv"
     label: str = "Export CSV"
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.filename:

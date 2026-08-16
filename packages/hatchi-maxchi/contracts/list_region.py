@@ -3,6 +3,11 @@
 Dual-lock unit is the region root. Table rows, CSV wiring, empty state,
 and overflow copy are host-owned trusted HTML (or Dazzle FragmentRenderer
 cells); the chrome root is schema+DOM dual-locked.
+
+Leftover honesty (cycle 2174): in-card CSV ``data-dz-csv-endpoint``
+must echo leftover-honest ``include_closed`` / ``as_of``. The bare
+path invented open-only / current CSV. Rest-state gallery omits them
+(oral #33).
 """
 
 from __future__ import annotations

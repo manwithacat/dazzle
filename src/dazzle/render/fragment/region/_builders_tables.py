@@ -494,11 +494,15 @@ class _BuildersTablesMixin:
             )
 
         # CsvExportButton — when csv_export flag is set
+        include_closed = str(ctx.get("include_closed") or "")
+        as_of = str(ctx.get("as_of") or "")
         if endpoint and ctx.get("csv_export"):
             chrome_parts.append(
                 CsvExportButton(
                     endpoint=URL(str(endpoint)),
                     filename=str(ctx.get("csv_filename") or f"{region_name}.csv"),
+                    include_closed=include_closed,
+                    as_of=as_of,
                 )
             )
 
@@ -630,6 +634,8 @@ class _BuildersTablesMixin:
             rows=tuple(list_rows),
             csv_endpoint=str(endpoint or ""),
             csv_filename=f"{region_name}.csv",
+            include_closed=include_closed,
+            as_of=as_of,
             total=total,
             empty_message=str(empty_msg),
             row_action_label=row_action_label,

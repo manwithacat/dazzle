@@ -770,6 +770,8 @@ def test_csv_export_button_defaults() -> None:
     c = CsvExportButton(endpoint=URL("/api/x"))
     assert c.filename == "export.csv"
     assert c.label == "Export CSV"
+    assert c.include_closed == ""
+    assert c.as_of == ""
 
 
 # === DateRangePicker ===

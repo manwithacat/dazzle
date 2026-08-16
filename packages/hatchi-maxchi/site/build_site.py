@@ -2548,6 +2548,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var ao = leftoverHonestAsOf(q.as_of);
     if (ic) extra += "&amp;include_closed=" + ic;
     if (ao) extra += "&amp;as_of=" + ao;
+    // Leftover-honest temporal (cycle 2174) ride the CSV download URL.
+    // Bare sample-list-export.csv invented open-only / current CSV.
+    var csvEndpoint = "sample-list-export.csv";
+    var csvQs = "";
+    if (ic) csvQs += (csvQs ? "&amp;" : "?") + "include_closed=" + ic;
+    if (ao) csvQs += (csvQs ? "&amp;" : "?") + "as_of=" + ao;
+    csvEndpoint += csvQs;
     var rows = LIST_ROWS.slice();
     rows.sort(function (a, b) {
       var x = a[sort] || "", y = b[sort] || "";
@@ -2566,7 +2573,7 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<div class="dz-list-region" data-dz-list-region id="hm-list-region-demo">' +
       '<div class="dz-list-actions"><div class="dz-list-action-group">' +
       '<button type="button" class="dz-list-csv-button" title="Export CSV" ' +
-      'aria-label="Export CSV" data-dz-csv-endpoint="sample-list-export.csv" ' +
+      'aria-label="Export CSV" data-dz-csv-endpoint="' + csvEndpoint + '" ' +
       'data-dz-csv-filename="work-items.csv" ' +
       'onclick="window.dz.downloadCsv(' +
       "this.dataset.dzCsvEndpoint||this.dataset.csvEndpoint, " +

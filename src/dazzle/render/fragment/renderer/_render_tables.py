@@ -100,6 +100,9 @@ from dazzle.render.fragment.renderer._helpers import _render_references
 from dazzle.render.fragment.renderer._related_conversation import (
     related_conversation_messages,
 )
+from dazzle.render.fragment.renderer._render_interactive import (
+    _with_leftover_honest_temporal,
+)
 from dazzle.render.open_discovery import create_cta_open_attr_suffix
 
 if TYPE_CHECKING:
@@ -1111,9 +1114,16 @@ class _RenderTablesMixin:
         ``data-dz-list-region`` on ``dz-list-region``.
         """
         # Action row — CSV button always rendered (legacy behaviour).
+        # Leftover-honest temporal (cycle 2174) ride data-dz-csv-endpoint.
+        csv_endpoint = _with_leftover_honest_temporal(
+            ctx.escape_attr(lst.csv_endpoint),
+            getattr(lst, "include_closed", ""),
+            getattr(lst, "as_of", ""),
+            escape_attr=ctx.escape_attr,
+        )
         csv_button = (
             f'<button type="button" '
-            f'data-dz-csv-endpoint="{ctx.escape_attr(lst.csv_endpoint)}" '
+            f'data-dz-csv-endpoint="{csv_endpoint}" '
             f'data-dz-csv-filename="{ctx.escape_attr(lst.csv_filename)}" '
             f'onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)" '
             f'class="dz-list-csv-button" title="Export CSV" aria-label="Export CSV">'

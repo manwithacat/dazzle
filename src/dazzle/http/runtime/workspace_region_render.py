@@ -541,6 +541,10 @@ def _build_list_adapter_ctx(
         adapter_ctx["date_from"] = env.request.query_params.get("date_from", "")
         adapter_ctx["date_to"] = env.request.query_params.get("date_to", "")
         adapter_ctx["csv_export"] = getattr(ctx_region, "csv_export", False)
+        # Leftover-honest temporal (cycle 2174) so CSV endpoint echoes
+        # include_closed / as_of already on the region URL.
+        adapter_ctx["include_closed"] = env.request.query_params.get("include_closed", "")
+        adapter_ctx["as_of"] = env.request.query_params.get("as_of", "")
         adapter_ctx["sort_field"] = env.sort or ""
         adapter_ctx["sort_dir"] = env.sort_dir
         # #1470 outlier_on — decorated column key + per-row flags.

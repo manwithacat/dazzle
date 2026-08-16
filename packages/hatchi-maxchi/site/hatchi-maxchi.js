@@ -476,6 +476,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var ao = leftoverHonestAsOf(q.as_of);
     if (ic) extra += "&amp;include_closed=" + ic;
     if (ao) extra += "&amp;as_of=" + ao;
+    // Leftover-honest temporal (cycle 2174) ride the CSV download URL.
+    // Bare sample-list-export.csv invented open-only / current CSV.
+    var csvEndpoint = "sample-list-export.csv";
+    var csvQs = "";
+    if (ic) csvQs += (csvQs ? "&amp;" : "?") + "include_closed=" + ic;
+    if (ao) csvQs += (csvQs ? "&amp;" : "?") + "as_of=" + ao;
+    csvEndpoint += csvQs;
     var rows = LIST_ROWS.slice();
     rows.sort(function (a, b) {
       var x = a[sort] || "", y = b[sort] || "";
@@ -494,7 +501,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       '<div class="list-region" data-list-region id="hm-list-region-demo">' +
       '<div class="list-actions"><div class="list-action-group">' +
       '<button type="button" class="list-csv-button" title="Export CSV" ' +
-      'aria-label="Export CSV" data-csv-endpoint="sample-list-export.csv" ' +
+      'aria-label="Export CSV" data-csv-endpoint="' + csvEndpoint + '" ' +
       'data-csv-filename="work-items.csv" ' +
       'onclick="window.dz.downloadCsv(' +
       "this.dataset.dzCsvEndpoint||this.dataset.csvEndpoint, " +
