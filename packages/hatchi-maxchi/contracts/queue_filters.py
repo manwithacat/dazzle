@@ -14,6 +14,9 @@ change. Leftover junk (``zzz``, ``2abc``, ``maybe``,
 still ride hx-get. Rest-state gallery is unchanged (oral #33).
 Not leftover list include_closed / related-tab as_of / DETAIL
 as_of onto the edit form.
+
+Leftover-honest catalog (cycle 2185): leftover enum junk
+restores All / no filter. Must not invent the first option.
 """
 
 from contracts._kit import DomContract, Node

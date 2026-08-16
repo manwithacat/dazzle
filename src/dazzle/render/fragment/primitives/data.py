@@ -311,6 +311,9 @@ class RelatedGroup:
     display: str  # "table" | "status_cards" | "file_list" | "queue" | "conversation"
     tabs: tuple[RelatedTab, ...]
     is_auto: bool = False
+    # Leftover-honest ``?tab=`` (cycle 2185). Valid tab_id rides;
+    # leftover junk restores first declared tab.
+    active_tab: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1806,6 +1809,9 @@ class LazyTabPanel:
     region_name: str
     tabs: tuple[LazyTab, ...]
     empty_message: str = "No data available."
+    # Leftover-honest ``?tab=`` (cycle 2185). Valid key rides;
+    # leftover junk restores first declared tab.
+    active_tab: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

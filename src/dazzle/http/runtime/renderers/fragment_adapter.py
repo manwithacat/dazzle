@@ -697,6 +697,7 @@ class FragmentSurfaceAdapter:
             display=str(group.get("display", "table") or "table"),
             tabs=tuple(tabs),
             is_auto=bool(group.get("is_auto", False)),
+            active_tab=str(group.get("active_tab", "") or ""),
         )
 
     def _build_detail_actions(self, ctx: dict[str, Any]) -> tuple[Fragment, ...]:

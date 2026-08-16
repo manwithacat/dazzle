@@ -269,7 +269,7 @@ def _append_subtype_panel_fields(
                 seen_keys.add(field_name)
 
 
-def _related_groups_from_detail(detail: Any) -> list[dict[str, Any]]:
+def _related_groups_from_detail(detail: Any, requested_tab: str = "") -> list[dict[str, Any]]:
     """Map fetched RelatedGroupContext list → adapter related_groups dicts."""
     related_groups_out: list[dict[str, Any]] = []
     for rg in getattr(detail, "related_groups", []) or []:
@@ -308,6 +308,7 @@ def _related_groups_from_detail(detail: Any) -> list[dict[str, Any]]:
                 "display": str(getattr(rg, "display", "table") or "table"),
                 "is_auto": bool(getattr(rg, "is_auto", False)),
                 "tabs": tabs_out,
+                "active_tab": requested_tab,
             }
         )
     return related_groups_out
@@ -379,6 +380,7 @@ def _dispatch_ctx_from_detail(
     surface: ir.SurfaceSpec | None,
     *,
     services: Any = None,
+    requested_tab: str = "",
 ) -> dict[str, Any]:
     """VIEW: DetailContext → flat detail-adapter ctx."""
     item = getattr(detail, "item", {}) or {}
@@ -393,7 +395,7 @@ def _dispatch_ctx_from_detail(
         "fields": detail_fields_out,
         "sections": _detail_sections_from_context(detail),
         "region_name": f"{entity_name}_detail",
-        "related_groups": _related_groups_from_detail(detail),
+        "related_groups": _related_groups_from_detail(detail, requested_tab),
         "delete_url": getattr(detail, "delete_url", None) or "",
         "back_url": getattr(detail, "back_url", "/") or "/",
         "entity_name": entity_name,
@@ -424,5 +426,13 @@ def _build_dispatch_ctx(
         return _dispatch_ctx_from_form(form)
     detail = getattr(render_ctx, "detail", None)
     if detail is not None:
-        return _dispatch_ctx_from_detail(detail, surface, services=services)
+        request = getattr(render_ctx, "request", None)
+        qparams = getattr(request, "query_params", None)
+        requested_tab = ""
+        if qparams is not None:
+            getter = getattr(qparams, "get", None)
+            requested_tab = str(getter("tab") or "") if getter is not None else ""
+        return _dispatch_ctx_from_detail(
+            detail, surface, services=services, requested_tab=requested_tab
+        )
     return {}

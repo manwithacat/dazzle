@@ -65,7 +65,11 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
     _render_row_action_button,
 )
-from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+    leftover_honest_temporal_query,
+)
 from dazzle.render.presentation import infer_role, present
 
 # Cap queue meta density lines so rows stay scannable (#1626).
@@ -474,10 +478,16 @@ class _BuildersTablesMixin:
                         opts.append((str(opt.get("value") or ""), str(opt.get("label") or "")))
                     else:
                         opts.append((str(opt), str(opt)))
-                selected = str(
+                selected_raw = str(
                     fc.get("selected")
                     or (active_filters.get(key) if isinstance(active_filters, dict) else "")
                     or ""
+                )
+                opt_ids = leftover_honest_catalog_option_values(opts)
+                selected = (
+                    leftover_honest_catalog_id(selected_raw, opt_ids, "", allow_empty_rest=True)
+                    if opt_ids
+                    else selected_raw
                 )
                 cols.append(
                     FilterColumn(
@@ -1030,6 +1040,7 @@ class _BuildersTablesMixin:
                     region_name=region_name,
                     tabs=tuple(built_lazy),
                     empty_message=getattr(region, "empty_message", None) or "No data available.",
+                    active_tab=str(ctx.get("active_tab") or ""),
                 )
             return _wrap_surface(title, "list", body)
 

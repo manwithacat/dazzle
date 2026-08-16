@@ -106,6 +106,9 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 Dual-lock unit is the group root for status_cards / file_list displays
 (``.dz-related-group``). Table display composes tabs Hyperpart. Nested
 tabs, create rows, and drill links are host-owned.
+
+Leftover-honest catalog (cycle 2185): valid ``?tab=`` rides the
+declared tab_id. Leftover junk restores the first declared tab.
 """
 
 from contracts._kit import DomContract, Node

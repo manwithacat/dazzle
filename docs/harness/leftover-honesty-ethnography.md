@@ -286,9 +286,8 @@ closes):
 
 - leftover parse-invent is saturated (oral #42)
 - leftover temporal echo is saturated (oral #67)
-- leftover catalog id (lens) opened cycle 2184 (oral #68) —
-  scan sibling pickers (tab / view / filter enum) next, do not
-  walk another temporal ``hx-get``
+- leftover catalog id (lens + tab / filter-enum) closed cycle
+  2185 (oral #69) — do not walk another catalog sibling
 - Goal B coat stays off
 
 If a week of commit subjects are again `… leftover

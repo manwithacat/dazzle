@@ -102,6 +102,7 @@ from dazzle.render.fragment.renderer._related_conversation import (
 )
 from dazzle.render.fragment.renderer._render_interactive import (
     _with_leftover_honest_temporal,
+    leftover_honest_catalog_id,
 )
 from dazzle.render.open_discovery import create_cta_open_attr_suffix
 
@@ -426,15 +427,16 @@ class _RenderTablesMixin:
         legacy detail related-group renderers. Cells are pre-formatted value
         strings (escaped here)."""
         tabs = list(g.tabs)
+        requested = getattr(g, "active_tab", "") or ""
         if g.display == "table":
-            return self._emit_related_table(tabs, ctx)
+            return self._emit_related_table(tabs, ctx, requested=requested)
         if g.display == "status_cards":
-            return self._emit_related_cards(tabs, ctx)
+            return self._emit_related_cards(tabs, ctx, requested=requested)
         if g.display == "queue":
-            return self._emit_related_queue(tabs, ctx)
+            return self._emit_related_queue(tabs, ctx, requested=requested)
         if g.display == "conversation":
-            return self._emit_related_conversation(tabs, ctx)
-        return self._emit_related_files(tabs, ctx)
+            return self._emit_related_conversation(tabs, ctx, requested=requested)
+        return self._emit_related_files(tabs, ctx, requested=requested)
 
     def _emit_related_conversation_body(self, t: RelatedTab, ctx: RenderContext) -> str:
         """Create-row + MessageScroller for one related conversation tab."""
@@ -452,7 +454,9 @@ class _RenderTablesMixin:
         parts.append(self._related_overflow_html(t, ctx, css_class="dz-related-overflow"))
         return "".join(parts)
 
-    def _emit_related_conversation(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+    def _emit_related_conversation(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, requested: str = ""
+    ) -> str:
         """Related discussion trail — MessageScroller of Message + Bubble chrome.
 
         RelatedDisplayMode.CONVERSATION (cycle 1893): hub discussion uses the
@@ -468,12 +472,14 @@ class _RenderTablesMixin:
                 f'<div class="dz-related-group">'
                 f"{self._emit_related_conversation_body(tabs[0], ctx)}</div>"
             )
+        active = self._related_active_tab_id(tabs, requested)
         parts = [
             '<div class="dz-tabs" data-dz-tabs>',
-            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+            f'<div class="dz-tabs__list">'
+            f"{self._related_hm_tab_buttons(tabs, ctx, requested)}</div>",
         ]
         for i, t in enumerate(tabs):
-            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx, active_id=active)
             parts.append(
                 f"<div{panel_attrs}>"
                 f'<div class="dz-related-group">'
@@ -533,41 +539,58 @@ class _RenderTablesMixin:
         )
 
     @staticmethod
-    def _related_hm_tab_buttons(tabs: list[RelatedTab], ctx: RenderContext) -> str:
+    def _related_active_tab_id(tabs: list[RelatedTab], requested: str) -> str:
+        """Valid ``?tab=`` rides; leftover junk restores first declared tab."""
+        known = [t.tab_id for t in tabs if t.tab_id]
+        rest = known[0] if known else ""
+        return leftover_honest_catalog_id(requested, known, rest)
+
+    @staticmethod
+    def _related_hm_tab_buttons(
+        tabs: list[RelatedTab], ctx: RenderContext, requested: str = ""
+    ) -> str:
         """HM tabs link-strip for multi related groups (table/queue/cards/files)."""
+        active = _RenderTablesMixin._related_active_tab_id(tabs, requested)
         return "".join(
             f'<button type="button" class="dz-tabs__tab"'
-            f"{' aria-current="true"' if i == 0 else ''} "
+            f"{' aria-current="true"' if t.tab_id == active else ''} "
             f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
             f"{ctx.escape(t.label)}"
             f'<span class="dz-related-tab-count">'
             f"{_RenderTablesMixin._related_tab_count(t)}</span>"
             "</button>"
-            for i, t in enumerate(tabs)
+            for t in tabs
         )
 
     @staticmethod
-    def _related_hm_panel_attrs(tab_id: str, index: int, multi: bool, ctx: RenderContext) -> str:
+    def _related_hm_panel_attrs(
+        tab_id: str, index: int, multi: bool, ctx: RenderContext, active_id: str = ""
+    ) -> str:
         """Panel id/class/hidden attrs when multi-tab; empty string for single."""
         if not multi:
             return ""
-        hidden = "" if index == 0 else " hidden"
+        is_active = (tab_id == active_id) if active_id else index == 0
+        hidden = "" if is_active else " hidden"
         return f' id="dz-related-tab-{ctx.escape_attr(tab_id)}" class="dz-tabs__panel"{hidden}'
 
-    def _emit_related_table(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+    def _emit_related_table(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, requested: str = ""
+    ) -> str:
         """Multi-tab strips ride the HM tabs Hyperpart (Tier F4): honest
         link-strip buttons (`aria-current`, no role=tablist) driven by the
         ingested dz-tabs.js — panels toggle via the native `hidden`
         attribute, keyed by `data-dz-tab-target` → panel id. Replaces the
         Alpine activeTab island (x-data/:class/x-show)."""
         multi = len(tabs) > 1
+        active = self._related_active_tab_id(tabs, requested)
         parts = ['<div class="dz-tabs" data-dz-tabs>']
         if multi:
             parts.append(
-                f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>'
+                f'<div class="dz-tabs__list">'
+                f"{self._related_hm_tab_buttons(tabs, ctx, requested)}</div>"
             )
         for i, t in enumerate(tabs):
-            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, multi, ctx)
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, multi, ctx, active_id=active)
             head = "".join(f'<th scope="col">{ctx.escape(h)}</th>' for h in t.headers)
             if t.rows:
                 body_rows = []
@@ -632,7 +655,7 @@ class _RenderTablesMixin:
         return "".join(parts)
 
     def _emit_related_cards_or_files(
-        self, tabs: list[RelatedTab], ctx: RenderContext, *, kind: str
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, kind: str, requested: str = ""
     ) -> str:
         """status_cards / file_list — multi-tab uses HM tabs (parity table/queue)."""
         if not tabs:
@@ -643,12 +666,14 @@ class _RenderTablesMixin:
                 f'<div class="dz-related-group">'
                 f"{self._emit_related_cards_or_files_body(tabs[0], ctx, kind=kind)}</div>"
             )
+        active = self._related_active_tab_id(tabs, requested)
         parts = [
             '<div class="dz-tabs" data-dz-tabs>',
-            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+            f'<div class="dz-tabs__list">'
+            f"{self._related_hm_tab_buttons(tabs, ctx, requested)}</div>",
         ]
         for i, t in enumerate(tabs):
-            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx, active_id=active)
             parts.append(
                 f"<div{panel_attrs}>"
                 f'<div class="dz-related-group">'
@@ -658,8 +683,10 @@ class _RenderTablesMixin:
         parts.append("</div>")
         return "".join(parts)
 
-    def _emit_related_cards(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
-        return self._emit_related_cards_or_files(tabs, ctx, kind="cards")
+    def _emit_related_cards(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, requested: str = ""
+    ) -> str:
+        return self._emit_related_cards_or_files(tabs, ctx, kind="cards", requested=requested)
 
     def _emit_related_queue_body(self, t: RelatedTab, ctx: RenderContext) -> str:
         """Create-row + queue region for one related tab (shared by multi/single)."""
@@ -720,7 +747,9 @@ class _RenderTablesMixin:
         )
         return "".join(parts)
 
-    def _emit_related_queue(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+    def _emit_related_queue(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, requested: str = ""
+    ) -> str:
         """Prioritised related roster — first column title, rest as meta.
 
         Uses the same ``dz-queue-*`` classes as workspace queues so hub
@@ -738,12 +767,14 @@ class _RenderTablesMixin:
             return (
                 f'<div class="dz-related-group">{self._emit_related_queue_body(tabs[0], ctx)}</div>'
             )
+        active = self._related_active_tab_id(tabs, requested)
         parts = [
             '<div class="dz-tabs" data-dz-tabs>',
-            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+            f'<div class="dz-tabs__list">'
+            f"{self._related_hm_tab_buttons(tabs, ctx, requested)}</div>",
         ]
         for i, t in enumerate(tabs):
-            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx, active_id=active)
             parts.append(
                 f"<div{panel_attrs}>"
                 f'<div class="dz-related-group">'
@@ -753,8 +784,10 @@ class _RenderTablesMixin:
         parts.append("</div>")
         return "".join(parts)
 
-    def _emit_related_files(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
-        return self._emit_related_cards_or_files(tabs, ctx, kind="files")
+    def _emit_related_files(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, requested: str = ""
+    ) -> str:
+        return self._emit_related_cards_or_files(tabs, ctx, kind="files", requested=requested)
 
     def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
         """Convergence C2.1 + popover dual-lock: column-visibility free panel.

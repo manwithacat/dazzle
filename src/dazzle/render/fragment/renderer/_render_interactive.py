@@ -33,7 +33,7 @@ See issue #1064 for the full decomposition plan.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.ingest import DateRange as DateRangeSeam
@@ -78,6 +78,8 @@ def leftover_honest_catalog_id(
     requested: str,
     known: list[str] | tuple[str, ...],
     rest: str = "",
+    *,
+    allow_empty_rest: bool = False,
 ) -> str:
     """Valid catalog id rides. Absent or leftover junk restores rest.
 
@@ -86,6 +88,10 @@ def leftover_honest_catalog_id(
     default exists — that was the cycle 2184 invent (ghost lens
     highlighted Attainment while ``default_lens`` was Attendance).
     Rest is ``default_lens`` when declared, else the first known id.
+
+    Optional catalogs (filter-enum, cycle 2185): ``allow_empty_rest``
+    keeps an empty rest (All / no filter) instead of inventing the
+    first option.
     """
     ids = [str(item) for item in known if str(item)]
     known_set = set(ids)
@@ -95,7 +101,24 @@ def leftover_honest_catalog_id(
     rest_id = str(rest or "").strip()
     if rest_id in known_set:
         return rest_id
+    if allow_empty_rest:
+        return rest_id
     return ids[0] if ids else ""
+
+
+def leftover_honest_catalog_option_values(raw: Any) -> tuple[str, ...]:
+    """Extract catalog ids from filter-option / tab-option payloads."""
+    out: list[str] = []
+    for opt in raw or ():
+        if isinstance(opt, dict):
+            val = str(opt.get("value") or opt.get("id") or opt.get("key") or "")
+        elif isinstance(opt, (tuple, list)) and opt:
+            val = str(opt[0])
+        else:
+            val = str(opt)
+        if val:
+            out.append(val)
+    return tuple(out)
 
 
 def leftover_honest_temporal_query(

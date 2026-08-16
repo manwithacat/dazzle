@@ -63,6 +63,7 @@ from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import RegionRenderInputs
 from dazzle.page.runtime.action_urls import fill_row_id_in_url
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 
 logger = logging.getLogger(__name__)
 
@@ -650,10 +651,13 @@ async def compute_region_render_inputs(
                 compute_cohort_aggregate_primary,
             )
 
-            active_lens_id = (
-                request.query_params.get("lens")
-                or getattr(cohort_cfg, "default_lens", "")
-                or (getattr(cohort_cfg.lenses[0], "id", "") if cohort_cfg.lenses else "")
+            known_lenses = [
+                str(getattr(lens, "id", "") or "") for lens in (cohort_cfg.lenses or [])
+            ]
+            active_lens_id = leftover_honest_catalog_id(
+                request.query_params.get("lens") or "",
+                known_lenses,
+                str(getattr(cohort_cfg, "default_lens", "") or ""),
             )
             active_lens = next(
                 (
@@ -661,7 +665,7 @@ async def compute_region_render_inputs(
                     for lens in (cohort_cfg.lenses or [])
                     if str(getattr(lens, "id", "")) == active_lens_id
                 ),
-                cohort_cfg.lenses[0] if cohort_cfg.lenses else None,
+                None,
             )
             if active_lens is not None and getattr(active_lens, "primary_aggregate", None):
                 cohort_aggregate_values = await compute_cohort_aggregate_primary(

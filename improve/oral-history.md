@@ -679,6 +679,15 @@ dialect formed — and where it started to Goodhart itself — is
     ops_dashboard ``systems_strip``. Not leftover temporal
     echo (oral #67). Standing refusals apply.
 
+69. **Leftover catalog siblings (tab / filter-enum).** Cycle
+    2185: scan remaining pickers in one ship. Valid ``?tab=``
+    rides related + tabbed_list; leftover junk restores first
+    (or default). Leftover filter-enum values restore All /
+    no filter via ``allow_empty_rest`` — they must not invent
+    the first option or an empty collection. Cohort aggregate
+    leftover ``?lens=`` uses the same helper. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -691,6 +700,7 @@ the end of every new oral *is* expensive — point here instead.
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
 | Temporal echo | Walk the next list/grid `hx-get` for `include_closed` / `as_of` after the helper exists | #67 |
+| Catalog leftover | Walk the next tab / view / filter-enum / lens site after `leftover_honest_catalog_id` exists | #69 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -709,6 +719,7 @@ how the handbook was learned.
 | Re-panel until green | Fix product friction or PENDING with actuator |
 | Invent residual forever | Accept residual=0; inject Goal B context |
 | One `hx-get` sibling per cycle after the helper exists | Call `leftover_honest_temporal_query` on remaining emitters in one ship, then STOP (oral #67) |
+| One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

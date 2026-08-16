@@ -65,6 +65,10 @@ from dazzle.render.context import CustomRenderCtx, TransitionContext
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.display_names import _inject_display_names
 from dazzle.render.fragment.errors import FragmentError
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 
 logger = logging.getLogger(__name__)
@@ -295,6 +299,39 @@ def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[s
         field = name[7:-1]
         if _list_ident_path(field) and _list_filter_field_known(field, allowed):
             out[field] = str(val)
+    return out
+
+
+def _list_filter_enum_options(req_table: Any) -> dict[str, tuple[str, ...]]:
+    """Declared enum/select option catalogs keyed by column."""
+    out: dict[str, tuple[str, ...]] = {}
+    for col in getattr(req_table, "columns", None) or ():
+        key = str(getattr(col, "key", "") or "")
+        opts = leftover_honest_catalog_option_values(getattr(col, "filter_options", None))
+        if key and opts:
+            out[key] = opts
+    return out
+
+
+def _parse_list_filter_enum_values(
+    filters: dict[str, str],
+    options_by_key: dict[str, tuple[str, ...]],
+) -> dict[str, str]:
+    """Leftover-honest filter-enum values (cycle 2185).
+
+    Valid declared options ride. Leftover junk (``ghost``, ``zzz``)
+    must not invent the first option or an empty collection. Empty
+    rest is All / no filter.
+    """
+    out: dict[str, str] = {}
+    for key, val in filters.items():
+        known = options_by_key.get(key)
+        if not known:
+            out[key] = val
+            continue
+        honest = leftover_honest_catalog_id(val, known, "", allow_empty_rest=True)
+        if honest:
+            out[key] = honest
     return out
 
 
@@ -2018,7 +2055,10 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         default=req_table.default_sort_dir or "asc",
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
-    _list_filters = _parse_list_filters(_qparams, allowed=_allowed)
+    _list_filters = _parse_list_filter_enum_values(
+        _parse_list_filters(_qparams, allowed=_allowed),
+        _list_filter_enum_options(req_table),
+    )
     _svc = prc.deps.entity_services.get(req_table.entity_name)
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

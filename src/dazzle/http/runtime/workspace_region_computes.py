@@ -27,6 +27,10 @@ from dazzle.http.runtime.workspace_card_data import (
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.fragment.insight import InsightNarrative, build_insight_narrative
 from dazzle.render.fragment.outliers import Flag, flag_outliers
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
 from dazzle.render.fragment.state_affordance import transition_action_label
 
 
@@ -1602,8 +1606,8 @@ def compute_filter_columns_and_active(
     """Build (filter_columns, active_filters) from column metadata + request.
 
     Filter columns are the subset of resolved columns marked
-    ``filterable``. Active filters are the ``filter_<key>=<value>``
-    query-param pairs.
+    ``filterable``. Active filters are leftover-honest
+    ``filter_<key>=<value>`` pairs — leftover enum junk restores All.
     """
     filter_columns = [
         {
@@ -1614,9 +1618,22 @@ def compute_filter_columns_and_active(
         for c in columns
         if c.get("filterable")
     ]
-    active_filters: dict[str, str] = {
-        k[7:]: v for k, v in query_params.items() if k.startswith("filter_") and v
+    options_by_key = {
+        str(col["key"]): leftover_honest_catalog_option_values(col.get("options"))
+        for col in filter_columns
     }
+    active_filters: dict[str, str] = {}
+    for key, val in query_params.items():
+        if not (str(key).startswith("filter_") and val):
+            continue
+        field = str(key)[7:]
+        known = options_by_key.get(field) or ()
+        if not known:
+            active_filters[field] = str(val)
+            continue
+        honest = leftover_honest_catalog_id(str(val), known, "", allow_empty_rest=True)
+        if honest:
+            active_filters[field] = honest
     return filter_columns, active_filters
 
 

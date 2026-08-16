@@ -126,6 +126,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_cohort_strip_lens_temporal_leftover.py",
     # cycle 2184: leftover-honest lens catalog (?lens=ghost must not invent first)
     "tests/unit/test_cohort_strip_lens_catalog_leftover.py",
+    # cycle 2185: leftover-honest catalog siblings (tab / filter-enum)
+    "tests/unit/test_catalog_sibling_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

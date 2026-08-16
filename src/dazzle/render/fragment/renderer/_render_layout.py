@@ -65,6 +65,7 @@ from dazzle.render.fragment.primitives import (
     Tabs,
     Text,
 )
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 from dazzle.render.open_discovery import hub_open_discovery_attrs
 
 if TYPE_CHECKING:
@@ -498,20 +499,23 @@ class _RenderLayoutMixin:
         for each panel.
         """
         rname = ctx.escape_attr(p.region_name)
+        known = [tab.key for tab in p.tabs if tab.key]
+        rest = known[0] if known else ""
+        active = leftover_honest_catalog_id(getattr(p, "active_tab", "") or "", known, rest)
 
         tab_buttons = "".join(
             f'<button type="button" '
-            f'class="dz-tabs__tab"{' aria-current="true"' if i == 0 else ""} '
+            f'class="dz-tabs__tab"{' aria-current="true"' if tab.key == active else ""} '
             f'data-dz-tab-target="tab-{rname}-{ctx.escape_attr(tab.key)}">'
             f"{ctx.escape(tab.label)}</button>"
-            for i, tab in enumerate(p.tabs)
+            for tab in p.tabs
         )
 
         panels = "".join(
             f'<div id="tab-{rname}-{ctx.escape_attr(tab.key)}" '
-            f'class="dz-tabs__panel"{"" if i == 0 else " hidden"} '
+            f'class="dz-tabs__panel"{"" if tab.key == active else " hidden"} '
             f'hx-get="{ctx.escape_attr(str(tab.endpoint))}" '
-            f'hx-trigger="{"load" if (tab.eager or i == 0) else "intersect once"}" '
+            f'hx-trigger="{"load" if (tab.eager or tab.key == active) else "intersect once"}" '
             f'hx-swap="innerHTML">'
             f'<div class="dz-tabs__loading">'
             f'<svg fill="none" viewBox="0 0 24 24" aria-hidden="true">'

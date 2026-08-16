@@ -138,7 +138,12 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: tabs — tablist root + panel targets."""
+"""HYPERPART: tabs — tablist root + panel targets.
+
+Leftover-honest catalog (cycle 2185): valid ``?tab=`` rides.
+Leftover junk (``ghost``, ``zzz``) must not invent the first
+declared tab when a later sibling is rest.
+"""
 
 from contracts._kit import DomContract, Node, Present
 

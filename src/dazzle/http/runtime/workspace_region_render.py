@@ -721,6 +721,32 @@ async def _build_card_adapter_ctx(
 # ─────────────────────────── dashboard family ──────────────────────────
 
 
+def _request_catalog_tab(request: Any) -> str:
+    """Leftover-honest ``?tab=`` raw (valid/junk resolved at emit)."""
+    qparams = getattr(request, "query_params", None)
+    getter = getattr(qparams, "get", None)
+    return str(getter("tab") or "") if getter is not None else ""
+
+
+def _tabbed_list_source_tabs(source_tabs: Any) -> list[dict[str, Any]]:
+    """Normalise SourceTabContext objects to the adapter dict shape (#1388)."""
+    out: list[dict[str, Any]] = []
+    for st in source_tabs or []:
+        if isinstance(st, dict):
+            out.append(st)
+            continue
+        out.append(
+            {
+                "entity_name": getattr(st, "entity_name", ""),
+                "key": (getattr(st, "entity_name", "") or "").lower(),
+                "label": getattr(st, "label", "") or getattr(st, "entity_name", ""),
+                "endpoint": getattr(st, "endpoint", ""),
+                "eager": bool(getattr(st, "eager", False)),
+            }
+        )
+    return out
+
+
 def _leftover_honest_lens_id(request: Any, cohort_cfg: Any) -> str:
     """Valid ``?lens=`` rides; leftover junk restores default else first."""
     known = [
@@ -863,23 +889,8 @@ def _build_specialty_adapter_ctx(
         adapter_ctx["coaching_message"] = getattr(ctx_region, "coaching_message", "") or ""
     elif display_upper == "TABBED_LIST":
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
-        # The tabbed_list adapter consumes plain dicts (entity_name / key /
-        # label / endpoint / eager); the runtime supplies SourceTabContext
-        # objects. Normalise to the dict shape so the lazy-tab strip renders
-        # (#1388 — before the base endpoint was registered this render path
-        # was never reached, so the object→dict gap went unnoticed).
-        adapter_ctx["source_tabs"] = [
-            st
-            if isinstance(st, dict)
-            else {
-                "entity_name": getattr(st, "entity_name", ""),
-                "key": (getattr(st, "entity_name", "") or "").lower(),
-                "label": getattr(st, "label", "") or getattr(st, "entity_name", ""),
-                "endpoint": getattr(st, "endpoint", ""),
-                "eager": bool(getattr(st, "eager", False)),
-            }
-            for st in (inputs.source_tabs or [])
-        ]
+        adapter_ctx["active_tab"] = _request_catalog_tab(env.request)
+        adapter_ctx["source_tabs"] = _tabbed_list_source_tabs(inputs.source_tabs)
     elif display_upper == "PIVOT_TABLE":
         adapter_ctx["pivot_buckets"] = inputs.pivot_buckets
         adapter_ctx["pivot_dim_specs"] = inputs.pivot_dim_specs
