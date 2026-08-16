@@ -366,6 +366,18 @@ Doctrine source of truth remains
     present() host wire (already wired). Not leftover parseInt.
     Not Goal B coat.
 
+46. **List leftover page invents an empty collection, not a silent
+    page 2.** Cycle 2162: HTML list `?page=2abc` / `?page_size=2abc`
+    / `zzz` / `1e2` used to raise in ``int()``; ``_handle_table``'s
+    bare ``except Exception`` then invented rows=[] +
+    ``empty_kind=loading``. That is leftover inventing "no items" /
+    error theater — a **new invent class** on the server list fetch,
+    not another ``parseInt`` sibling on a Field / grid / PDF
+    companion (oral #42). Empty / invalid restores page=1 /
+    page_size=20 and still fetches. Valid whole numbers still
+    window. Do not clone leftover-scalar refuse (oral #45). Not
+    Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

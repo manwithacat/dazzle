@@ -74,6 +74,32 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
+def _parse_list_window(
+    raw: Any,
+    *,
+    default: int,
+    lo: int = 1,
+    hi: int | None = None,
+) -> int:
+    """Parse leftover-honest list ``page`` / ``page_size``.
+
+    Leftover junk (``2abc``, ``zzz``, ``1e2``) must not invent a window.
+    ``int("2abc")`` raises; ``_handle_table``'s bare ``except Exception``
+    then invented an empty table (loading/empty theater). Empty / invalid
+    restores *default*. Valid whole numbers still window. Out-of-[lo, hi]
+    is invalid (do not invent by clamping). Cycle 2162.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text or not text.isdigit():
+        return default
+    num = int(text)
+    if num < lo:
+        return default
+    if hi is not None and num > hi:
+        return default
+    return num
+
+
 def _collect_request_params(request: Any) -> dict[str, str]:
     """#1129: merge ``request.path_params`` + ``request.query_params``
     into a flat ``{name: str}`` dict for ``CustomRenderCtx.params``.
@@ -1782,8 +1808,8 @@ async def _handle_table(prc: _PageRequestContext) -> None:
             data = await _list_entity_in_process(
                 prc,
                 req_table.entity_name,
-                page=int(api_params.get("page", "1") or 1),
-                page_size=int(api_params.get("page_size", "20") or 20),
+                page=_parse_list_window(api_params.get("page"), default=1),
+                page_size=_parse_list_window(api_params.get("page_size"), default=20, hi=100),
                 sort=api_params.get("sort"),
                 direction=api_params.get("dir", "asc"),
                 search=api_params.get("search"),

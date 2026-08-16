@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **List leftover page invented an empty window (cycle 2162)** —
+  leftover URL `?page=2abc` / `?page_size=2abc` / `?page=zzz` no
+  longer `int()`-raises into `_handle_table`'s bare `except
+  Exception` (empty table / loading theater). Empty / invalid
+  restores the server default; valid whole numbers still window.
+  Out-of-[1, 100] page_size does not clamp. New invent class:
+  leftover URL invents an empty collection, not a silent page 2
+  (grid leftover page 2157 is the JS sibling).
 - **Grid leftover page invented a window (cycle 2157)** —
   leftover URL `?page=2abc` / `?page_size=2abc` no longer windows
   via `parseInt`. Empty / invalid restores the server default;
