@@ -59,7 +59,8 @@ when you want the next dig soon). Log a one-liner in `dev_docs/improve-log.md`.
 # Goal B portfolio / Goal C coat:
 #   uv run python scripts/interesting_product_portfolio.py --status
 #   uv run python scripts/goal_b_coat.py --status
-# Oral history: improve/oral-history.md · peer packs: improve/peer_packs/
+# Oral history: improve/oral-history.md · ethnography: docs/harness/leftover-honesty-ethnography.md
+# Peer packs: improve/peer_packs/
 /improve framework-ux
 /improve cimonitor                    # snapshot; repair only if red
 /improve self-audit

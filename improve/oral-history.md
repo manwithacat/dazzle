@@ -6,7 +6,9 @@ picking under residual=0 or when a dig “feels productive but empty.”
 
 Doctrine source of truth remains
 `docs/reference/interesting-saas-context.md` and playbooks under
-`.claude/commands/improve/strategies/`. This file is the **compressed memory**.
+`.claude/commands/improve/strategies/`. This file is the **compressed memory**. How the leftover-honesty
+dialect formed — and where it started to Goodhart itself — is
+``improve/leftover-honesty-ethnography.md``.
 
 ---
 
@@ -637,6 +639,58 @@ Doctrine source of truth remains
     omits include_closed / as_of (invents open-only / current on
     SSE / poll / lazy-load refresh).
 
+66. **Dashboard-card hx-get drops include_closed / as_of (invents
+    open-only / current on SSE / poll / lazy-load refresh).** Cycle
+    2183: ``_emit_dashboard_card`` wrote ``hx-get="{c.hx_endpoint}"``
+    only. Leftover-honest ``true`` / YYYY-MM-DD now ride a card
+    refresh; leftover junk still omits. Rest-state gallery unchanged
+    (oral #33). Do **not** clone leftover list include_closed /
+    related-tab as_of / DETAIL as_of onto the edit form. Not leftover
+    cohort-strip lens / kanban Load all / DateRangePicker / FilterBar
+    / search chrome / sentinel / pagination / CSV / sort-header echo
+    (oral #56/#58/#59/#60/#61/#62/#63/#64/#65). Not leftover list
+    as_of / sort / page. Not leftover-scalar refuse. Not Goal B coat.
+
+67. **Leftover temporal echo is one class. Close remaining emitters
+    in one ship or stop.** Cycles 2165–2183 walked
+    ``include_closed`` / ``as_of`` onto list fetch, DETAIL,
+    related-tab, bulk, grid, sort-header, CSV, pagination,
+    sentinel, search chrome, FilterBar, DateRangePicker, kanban
+    Load all, cohort-strip, dashboard-card, and dual-pane
+    master-detail — one ``hx-get`` sibling per cycle after the
+    helper already existed. Oral #57 said scan siblings in the
+    same dig; the loop wrote that and then ignored it. Cycle 2183
+    ships dashboard-card **and** master-detail together and
+    **closes the class**. Do **not** write another "next: ``hx-get``
+    sibling still omits" seed. Do **not** add another 200-line
+    leftover pin file for a new chrome control that should have
+    called ``leftover_honest_temporal_query``. Field note:
+    ``improve/leftover-honesty-ethnography.md``. Next
+    framework-ux mutation is a **new invent class found in a live
+    app** or **presentation MCP STALE (1554)**. Standing
+    refusals apply — do not reprint the ancestor litany.
+
+## Standing refusals (apprentice handbook)
+
+This table is how a human apprentice is briefed on what **not**
+to do. It is not an anti-pattern. Repeating the whole table at
+the end of every new oral *is* expensive — point here instead.
+
+| Closed class | Do not | Oral |
+|--------------|--------|------|
+| Goal B coat | Add example-app density recipes (rails, chips, stills) to look busy | 2109; Goal C distill |
+| Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
+| Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
+| Temporal echo | Walk the next list/grid `hx-get` for `include_closed` / `as_of` after the helper exists | #67 |
+| Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
+
+**How to write the next oral.** Name the hole in one paragraph.
+Add at most **one** new row to this table if you closed a new
+class. Write `Standing refusals apply.` Do not append
+*not leftover page / not leftover-scalar / not Goal B coat / …*.
+Historical orals #42–#66 keep their litanies as the record of
+how the handbook was learned.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
@@ -645,6 +699,8 @@ Doctrine source of truth remains
 | Same headshot shelf on every CRM | Portfolio ban recipe; different media expression or icon-only media |
 | Re-panel until green | Fix product friction or PENDING with actuator |
 | Invent residual forever | Accept residual=0; inject Goal B context |
+| One `hx-get` sibling per cycle after the helper exists | Call `leftover_honest_temporal_query` on remaining emitters in one ship, then STOP (oral #67) |
+| Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
 
@@ -654,6 +710,7 @@ Doctrine source of truth remains
 
 | Surface | Role |
 |---------|------|
+| `improve/leftover-honesty-ethnography.md` | How leftover-honesty language formed; not doctrine |
 | `dev_docs/improve-log.md` | Per-cycle narrative (often local) |
 | `.claude/commands/improve/capability-map.md` | Registry table only (Last-exercised); lore not here |
 | `.dazzle/improve-digs/*` | Dig receipts (depth_id in notes) |

@@ -884,6 +884,8 @@ def render_workspace_content_typed(
     primary_actions: list[dict[str, str]],
     overflow_actions: list[dict[str, str]] | None = None,
     can_edit_layout: bool = False,
+    include_closed: str = "",
+    as_of: str = "",
 ) -> str:
     """Render the workspace content via the typed-Fragment substrate.
 
@@ -944,6 +946,8 @@ def render_workspace_content_typed(
             eager=True,
             list_card_id="md-list",
             detail_card_id="md-detail",
+            include_closed=include_closed,
+            as_of=as_of,
         )
 
     # ── DashboardCard list ──────────────────────────────────────────
@@ -972,6 +976,12 @@ def render_workspace_content_typed(
                 display=r.display,
                 col_span=r.col_span,
                 row_order=index,
+                # Leftover-honest temporal (cycle 2183). Bare
+                # hx_endpoint="/api/workspaces/{ws}/regions/{r}" used
+                # to drop include_closed / as_of so SSE / poll /
+                # lazy-load invented open-only / current. Thread the
+                # raw pair; leftover-honest emit echoes valid true /
+                # YYYY-MM-DD and omits leftover junk.
                 hx_endpoint=f"/api/workspaces/{workspace.name}/regions/{r.name}",
                 eager=eager,
                 sse_enabled=bool(workspace.sse_url),
@@ -980,6 +990,8 @@ def render_workspace_content_typed(
                 notice=notice,
                 refresh_interval=getattr(r, "refresh_interval", None),  # #1391
                 edit_enabled=can_edit_layout,
+                include_closed=include_closed,
+                as_of=as_of,
             )
         )
 

@@ -190,6 +190,19 @@ class _RenderDashboardMixin:
         if c.refresh_interval:
             trigger += f", every {c.refresh_interval}s"
 
+        # Leftover-honest temporal (cycle 2183). Bare
+        # hx-get="{c.hx_endpoint}" used to drop include_closed /
+        # as_of and invent open-only / current after SSE / poll /
+        # lazy-load refresh. Leftover junk must not invent. Valid
+        # true / YYYY-MM-DD ride; leftover junk (zzz / 2abc /
+        # maybe / not-a-date) omits.
+        hx_get = _with_leftover_honest_temporal(
+            ctx.escape_attr(c.hx_endpoint),
+            getattr(c, "include_closed", ""),
+            getattr(c, "as_of", ""),
+            escape_attr=ctx.escape_attr,
+        )
+
         # data-dz-region on the body slot: HTMX region fetches return typed
         # body only (no nested chrome), so this is the stable JS / closest
         # filter handle. Unique id remains region-{name}-{card_id}.
@@ -198,7 +211,7 @@ class _RenderDashboardMixin:
             f'id="region-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
             f'data-dz-region data-dz-region-name="{ctx.escape_attr(c.name)}" '
             f'data-display="{ctx.escape_attr(c.display.lower())}" '
-            f'hx-get="{ctx.escape_attr(c.hx_endpoint)}" '
+            f'hx-get="{hx_get}" '
             f'hx-trigger="{ctx.escape_attr(trigger)}" '
             f'hx-swap="innerHTML">'
             f'<div class="dz-card-skeleton">'

@@ -76,6 +76,85 @@ def test_render_master_detail_shell_has_contract_markers() -> None:
     assert f'id="{master_detail_pane_id("contact_detail")}"' in html
     assert "hx-get=" in html
     assert "Select an item" in html
+    assert "include_closed" not in html
+    assert "as_of" not in html
+
+
+def _list_pane_hx_get(html: str) -> str:
+    marker = 'data-dz-master-detail-list-body="true"'
+    assert marker in html
+    chunk = html.split(marker, 1)[1]
+    assert "hx-get=" in chunk
+    return chunk.split("hx-get=", 1)[1].split(" ", 1)[0].strip("\"'")
+
+
+def test_master_detail_list_echoes_leftover_honest_temporal() -> None:
+    """Cycle 2183 class-close: list pane load rides valid pair; junk omits."""
+    honest = render_master_detail_shell(
+        list_region="contact_list",
+        list_title="Contacts",
+        list_endpoint="/api/workspaces/contacts/regions/contact_list",
+        detail_region="contact_detail",
+        detail_title="Detail",
+        detail_endpoint_base="/api/workspaces/contacts/regions/contact_detail",
+        include_closed="true",
+        as_of="2026-01-15",
+    )
+    href = _list_pane_hx_get(honest)
+    assert href.startswith("/api/workspaces/contacts/regions/contact_list?")
+    assert "include_closed=true" in href
+    assert "as_of=2026-01-15" in href
+
+    junk = render_master_detail_shell(
+        list_region="contact_list",
+        list_title="Contacts",
+        list_endpoint="/api/workspaces/contacts/regions/contact_list",
+        detail_region="contact_detail",
+        detail_title="Detail",
+        detail_endpoint_base="/api/workspaces/contacts/regions/contact_detail",
+        include_closed="zzz",
+        as_of="not-a-date",
+    )
+    junk_href = _list_pane_hx_get(junk)
+    assert junk_href == "/api/workspaces/contacts/regions/contact_list"
+    assert "include_closed" not in junk_href
+    assert "as_of" not in junk_href
+
+
+def test_workspace_typed_threads_temporal_onto_master_detail() -> None:
+    pytest.importorskip("fastapi")
+    ws = WorkspaceContext(
+        name="contacts",
+        title="Contacts",
+        stage="dual_pane_flow",
+        regions=[
+            RegionContext(
+                name="contact_list",
+                title="Contact list",
+                source="Contact",
+                display="LIST",
+                col_span=6,
+            ),
+            RegionContext(
+                name="contact_detail",
+                title="Contact detail",
+                source="Contact",
+                display="DETAIL",
+                col_span=6,
+            ),
+        ],
+    )
+    html = render_workspace_content_typed(
+        ws,
+        catalog=[],
+        fold_count=4,
+        primary_actions=[],
+        include_closed="true",
+        as_of="2026-01-15",
+    )
+    href = _list_pane_hx_get(html)
+    assert "include_closed=true" in href
+    assert "as_of=2026-01-15" in href
 
 
 def test_pane_drill_row_attrs_target_detail_pane() -> None:

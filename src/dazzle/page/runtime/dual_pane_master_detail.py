@@ -13,6 +13,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from dazzle.render.fragment.renderer._render_interactive import (
+    _with_leftover_honest_temporal,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class DualPaneMasterDetailPair:
@@ -102,6 +106,8 @@ def render_master_detail_shell(
     eager: bool = True,
     list_card_id: str = "card-list",
     detail_card_id: str = "card-detail",
+    include_closed: str = "",
+    as_of: str = "",
 ) -> str:
     """Emit the dual-pane master-detail Hyperpart shell for a workspace pair.
 
@@ -120,6 +126,16 @@ def render_master_detail_shell(
     trigger = "load" if eager else "intersect once"
     list_body_id = f"region-{list_region}-{list_card_id}"
     detail_pane_id = master_detail_pane_id(detail_region)
+    # Leftover-honest temporal (cycle 2183 class-close). The list
+    # pane used to emit a bare endpoint and drop include_closed /
+    # as_of, inventing open-only / current on load. Valid true /
+    # YYYY-MM-DD ride; leftover junk omits.
+    list_hx = _with_leftover_honest_temporal(
+        esc(list_endpoint),
+        include_closed,
+        as_of,
+        escape_attr=esc,
+    )
 
     return (
         f'<div id="card-master-detail-{esc(card_id)}" '
@@ -144,7 +160,7 @@ def render_master_detail_shell(
         f'data-display="list" '
         f'data-dz-region data-dz-region-name="{esc(list_region)}" '
         f'data-dz-master-detail-list-body="true" '
-        f'hx-get="{esc(list_endpoint)}" '
+        f'hx-get="{list_hx}" '
         f'hx-trigger="{esc(trigger)}" '
         f'hx-swap="innerHTML">'
         f'<div class="dz-card-skeleton">'

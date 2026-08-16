@@ -124,6 +124,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_kanban_load_all_temporal_leftover.py",
     # cycle 2182: cohort-strip lens hx-get drops include_closed / as_of
     "tests/unit/test_cohort_strip_lens_temporal_leftover.py",
+    # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
+    "tests/unit/test_dashboard_card_temporal_leftover.py",
+    "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",
+    "tests/unit/test_dual_pane_master_detail.py::test_workspace_typed_threads_temporal_onto_master_detail",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

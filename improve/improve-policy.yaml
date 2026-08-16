@@ -121,7 +121,12 @@ campaigns:
       - force_args: "framework-ux"
         lane: framework-ux
         strategy: framework-ux
-        note: "Ship UX/fragment/runtime improvements; fix harness-class friction at root"
+        note: >-
+          Ship UX/fragment/runtime improvements; fix harness-class friction at root.
+          Leftover parse-invent (oral #42) and leftover temporal echo (oral #67)
+          are saturated — do not walk another hx-get sibling. Next is a new
+          invent class found in a live app, or presentation MCP STALE (1554).
+          See improve/leftover-honesty-ethnography.md.
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence
         strategy: hyperpart_coherence

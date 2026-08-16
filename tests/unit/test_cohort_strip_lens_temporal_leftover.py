@@ -198,18 +198,14 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_dashboard_card_hx_endpoint_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): dashboard card
-    ``hx_endpoint="/api/workspaces/{ws}/regions/{r}"`` /
-    ``_emit_dashboard_card`` ``hx-get="{c.hx_endpoint}"`` —
-    leftover-honest include_closed / as_of do not ride a card
-    refresh (SSE / poll / lazy load invents open-only / current)."""
+def test_dashboard_card_now_echoes_temporal() -> None:
+    """Cycle 2183 closed the 2182 seed: dashboard-card leftover-honest
+    include_closed / as_of now ride SSE / poll / lazy-load refresh."""
     src = _CARD_RENDERER.read_text(encoding="utf-8")
     assert 'hx_endpoint=f"/api/workspaces/{workspace.name}/regions/{r.name}"' in src
     emit = _EMIT.read_text(encoding="utf-8")
     card = emit.split("def _emit_dashboard_card")[1].split("def _emit_cohort_strip_region")[0]
-    assert "hx-get=" in card
-    assert "include_closed" not in card
-    assert "as_of" not in card
-    assert "leftover_honest" not in card
-    assert "_with_leftover_honest_temporal" not in card
+    assert "_with_leftover_honest_temporal" in card
+    assert "include_closed" in card
+    assert "as_of" in card
+    assert "cycle 2183" in card

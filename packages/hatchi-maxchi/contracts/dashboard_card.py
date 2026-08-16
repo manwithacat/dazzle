@@ -2,6 +2,15 @@
 
 Dual-lock unit is the outer card wrapper. Header, notice, HTMX body
 skeleton, and resize handle are host-owned trusted HTML.
+
+Leftover honesty (cycle 2183): card-body ``hx-get`` (host-owned)
+must echo leftover-honest ``include_closed`` / ``as_of``. Bare
+``hx-get="{hx_endpoint}"`` dropped them and invented open-only /
+current on SSE / poll / lazy-load refresh. Leftover junk
+(``zzz``, ``2abc``, ``maybe``, ``not-a-date``) must not invent.
+Valid ``true`` / YYYY-MM-DD still ride. Rest-state gallery is
+unchanged (oral #33). Not leftover list include_closed /
+related-tab as_of / DETAIL as_of onto the edit form.
 """
 
 from __future__ import annotations

@@ -90,8 +90,11 @@ def leftover_honest_temporal_query(
     FilterBar ``_emit_filter_bar``; cycle 2180 DateRangePicker
     ``_emit_date_range_picker``; cycle 2181 kanban overflow Load all
     ``_emit_kanban_region``; cycle 2182 cohort-strip lens
-    ``_emit_cohort_strip_region``. Returns ``&amp;``-joined pairs
-    with no leading sep.
+    ``_emit_cohort_strip_region``; cycle 2183 dashboard card
+    ``_emit_dashboard_card`` and dual-pane
+    ``render_master_detail_shell``. Class closed (oral #67) —
+    do not walk another ``hx-get`` sibling. Returns
+    ``&amp;``-joined pairs with no leading sep.
     """
     parts: list[str] = []
     ic_raw = str(include_closed or "").strip().lower()

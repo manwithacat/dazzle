@@ -1,6 +1,23 @@
 ## [Unreleased]
 
+## [0.112.0] - 2026-08-16
+
 ### Agent Guidance
+- **Leftover-honesty ethnography is evergreen** —
+  `docs/harness/leftover-honesty-ethnography.md` explains *invent*,
+  *coat*, and Goodhart for readers new to Dazzle. Linked from
+  README and the harness hub. Oral **Standing refusals** is the
+  apprentice handbook: point at it; do not reprint the ancestor
+  litany on every new oral.
+- **Tag human-initiated ships; leave `/improve` untagged** —
+  README position 11, CONTRIBUTING, AGENTS.md, `/ship`, and the
+  improve driver. Cycle commits stay on `main` without `/bump`.
+- **Leftover temporal echo is saturated (oral #67)** —
+  `include_closed` / `as_of` on list/grid `hx-get` is one class.
+  Do not walk another sibling. Field note:
+  `improve/leftover-honesty-ethnography.md`. Next framework-ux
+  mutation is a new invent class found in a live app, or
+  presentation MCP STALE (1554).
 - **Kanban scanner now audits `kanban_field` (cycle 2163)** —
   static hyperpart opportunity scan walks `display: kanban` person
   refs (`person_ref_kanban_field` emit_covered). `present()` was
@@ -12,6 +29,13 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Dashboard-card and master-detail leftover temporal echo (cycle 2183)** —
+  card-body SSE / poll / lazy-load and dual-pane list-pane load
+  now ride leftover-honest `include_closed` / `as_of`. Valid
+  `true` / YYYY-MM-DD survive refresh; leftover junk omits.
+  Temporal-echo class closed (oral #67) — remaining list/grid
+  chrome should call `leftover_honest_temporal_query` in the
+  same ship as the control, not as a sibling cycle.
 - **Cohort-strip lens hx-get dropped `include_closed` / `as_of` (cycle 2182)** —
   `_emit_cohort_strip_region` wrote `hx-get="{endpoint}?lens="` only,
   so a lens change invented the open-only / current collection after

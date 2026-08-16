@@ -1993,6 +1993,12 @@ class DashboardCard:
     # screen-reader click target. The page-route call site flips this to
     # True only for permitted users (currently `is_superuser`).
     edit_enabled: bool = False
+    # Leftover-honest temporal (cycle 2183). Raw query pair so SSE / poll
+    # / lazy-load hx-get can echo valid include_closed / as_of. Empty or
+    # leftover junk omits (open-only / current). Rest-state gallery
+    # leaves these empty (oral #33).
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.card_id:

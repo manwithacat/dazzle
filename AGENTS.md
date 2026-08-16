@@ -423,7 +423,7 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
 ## Ship Discipline
 
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
-- **Bump on every fix**: Run the bump workflow (patch level) after bug fixes before pushing. Every push gets a unique version for deployment traceability.
+- **Bump on human-initiated ships, not on `/improve` cycles**: `/bump` + `/ship` tag a defined change a person asked for. The autonomous improve loop commits on `main` **without** bump or tag (cycle subjects are the trace). Do not `/bump` from an improve cycle.
 - **Local CI tiers (concordance)** — laptop green ≠ GitHub badge. Canonical doc:
   `docs/contributing/local-ci-concordance.md`. Shared runner: `scripts/ci_local.sh`.
   | Habit | Command | When |
@@ -540,4 +540,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.111.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.112.0 | **Python**: 3.12+ | **Status**: Production Ready

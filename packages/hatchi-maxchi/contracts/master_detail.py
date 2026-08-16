@@ -4,6 +4,13 @@ Dazzle emission site (workspace dual_pane_flow LIST+DETAIL pair):
 ``dazzle.page.runtime.dual_pane_master_detail.render_master_detail_shell``.
 List rows carry ``.dz-master-detail__item`` and hx-get a detail fragment into
 ``.dz-master-detail__detail``; ``dz-master-detail.js`` owns aria-current.
+
+Leftover honesty (cycle 2183 class-close): list-pane ``hx-get``
+must echo leftover-honest ``include_closed`` / ``as_of``. Bare
+``hx-get="{list_endpoint}"`` dropped them and invented open-only /
+current on pane load. Leftover junk must not invent. Valid
+``true`` / YYYY-MM-DD still ride. Do not walk another ``hx-get``
+sibling (oral #67).
 """
 
 from contracts._kit import DomContract, Node

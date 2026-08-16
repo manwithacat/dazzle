@@ -8,7 +8,7 @@ the design). Executable truth for agents remains the runtime runbook:
 
 | Audience | Start here |
 |----------|------------|
-| **Curious outsider** | [Improve as harness exemplar](improve-exemplar.md) |
+| **Curious outsider** | [Improve as harness exemplar](improve-exemplar.md); [leftover-honesty ethnography](leftover-honesty-ethnography.md) |
 | **Operator** (status, rearm, force a dig) | [Operator field guide](operator-field-guide.md) |
 | **Strategy map** (what each playbook is for) | [Strategy catalog](strategy-catalog.md) |
 | **Executing agent** | `.claude/commands/improve.md` (not duplicated here) |

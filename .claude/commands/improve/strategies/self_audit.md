@@ -78,7 +78,14 @@ Its brief is to **refute**, not summarise:
 3. **Transition justification**: was a row moved to `DONE`/`VERIFIED` without
    the lane's own QA step (e.g. framework-ux Phase A/B) having run?
 4. **Scope honesty**: does the commit change files the log entry doesn't
-   mention (undeclared drive-by edits)?
+   mention, or omit files it claims?
+5. **Oral handbook**: if the cycle added an oral, does it name the hole
+   and point at Standing refusals — or reprint the ancestor *not leftover
+   … / not Goal B coat* litany? The litany is apprentice instruction
+   (`improve/oral-history.md`); recopying it every cycle is the finding
+   (AUD), not the existence of a refusal list.
+6. **No bump/tag**: improve commits must not have cut a `v*` tag or
+   run `/bump`. Those are human-initiated release moves.
 
 Verdict per commit: `CLEAN` | `DISCREPANCY` (with evidence: file:line, failing
 command output, missing test).

@@ -342,8 +342,10 @@ The harness is deliberately paranoid about a few things:
 - **Close-the-loop.** Recurrent CI failure classes get promoted into
   local ship-surface / preflight so the next dig fails before push.
 
-- **Versioning is traceable** when `/bump` is used for release trails;
-  not every improve dig bumps the public version.
+- **Versioning is traceable** when a **human** runs `/bump` + `/ship`
+  (tagged `vX.Y.Z`; minors publish). Autonomous `/improve` commits
+  are **not** bumped and **not** tagged — they are the git log, not
+  the release train. See README position 11 and CONTRIBUTING.
 
 ---
 

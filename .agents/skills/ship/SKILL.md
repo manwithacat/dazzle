@@ -134,6 +134,9 @@ See the concordance doc for Tier 2.
 
 ## 3. Tag (if version was bumped)
 
+Human-initiated `/ship` after `/bump` only. Autonomous `/improve`
+cycles **must not** bump or tag (README position 11).
+
 - Check if `pyproject.toml` was modified in this commit by running `git diff HEAD~1 HEAD -- pyproject.toml`.
 - If the `version = "X.Y.Z"` line changed, extract the new version and create a lightweight tag: `git tag vX.Y.Z`.
 - The tag MUST be created AFTER the commit so it points to the correct commit (not the parent).

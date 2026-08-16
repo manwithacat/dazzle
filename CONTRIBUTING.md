@@ -108,10 +108,19 @@ Closes #123
 
 ### Releases & versioning
 
-Every push to `main` gets a unique `vMAJOR.MINOR.PATCH` tag (via `/bump patch`) for
-deployment traceability — but **only minor/major releases (`vX.Y.0`) are published**
-to PyPI, Homebrew, and GitHub Releases. Patch tags (`vX.Y.1+`) exist for traceability
-and are **not** published. To cut a published release, bump the minor: `/bump minor`.
+**Human-initiated development** — a defined change a person asked for — is
+versioned with `/bump` and tagged by `/ship` as `vMAJOR.MINOR.PATCH`.
+**Only minor/major releases (`vX.Y.0`) are published** to PyPI, Homebrew,
+and GitHub Releases. Patch tags (`vX.Y.1+`) exist for traceability of those
+human ships and are **not** published. To cut a published release, bump
+the minor: `/bump minor`.
+
+**Autonomous `/improve` commits are not bumped and not tagged.** The loop
+lands `improve: cycle N …` / `fix: cycle N …` on `main` at high frequency.
+Those commits are the git log, not the release train. Tagging every
+15-minute cycle would drown PyPI/Homebrew machinery and contradict the
+point of an unattended loop. A human who wants a named release of
+improve-era work runs `/bump minor` (or patch) and `/ship` on purpose.
 
 To keep the public record tidy, on each minor release a workflow prunes patch
 **tags + GitHub Releases** whose minor series has fallen outside the most recent 5

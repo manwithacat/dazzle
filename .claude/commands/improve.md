@@ -457,8 +457,15 @@ If the lane requires sub-strategy dispatch, the lane reads from
    **Only the registry table** — never multi-paragraph cycle digests (those were oral
    history thrash; durable rules go in `improve/oral-history.md`). Capability-sweep may
    overwrite the short “Last sweep” block (≤5 one-liners). Commit the map when it changes.
-6. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
-7. **Push (only if this cycle ships code to origin)** — mandatory gate, never ad-hoc:
+6. **Oral, if you learned a rule.** Add at most one numbered bullet. Name the
+   hole. If you closed a class, add one row to **Standing refusals** and write
+   `Standing refusals apply.` Do **not** reprint the ancestor *not leftover
+   page / not Goal B coat / …* litany (that list is the apprentice handbook,
+   not a chorus). Field note: `improve/leftover-honesty-ethnography.md`.
+7. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
+   **Do not `/bump`. Do not tag.** Improve commits are untagged on `main`
+   (README position 11; CONTRIBUTING releases). A human cuts a named release.
+8. **Push (only if this cycle ships code to origin)** — mandatory gate, never ad-hoc:
    ```bash
    make preflight-surface
    make ship-surface

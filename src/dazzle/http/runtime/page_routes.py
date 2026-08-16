@@ -2919,6 +2919,11 @@ async def _workspace_handler(
         primary_actions=primary_actions,
         overflow_actions=overflow_actions,
         can_edit_layout=is_superuser,
+        # Leftover-honest temporal (cycle 2183). Raw query pair so
+        # dashboard-card hx-get can echo valid include_closed / as_of
+        # on SSE / poll / lazy-load. Leftover junk omits.
+        include_closed=request.query_params.get("include_closed", ""),
+        as_of=request.query_params.get("as_of", ""),
     )
 
     # Fragment targeting: return only the workspace content.

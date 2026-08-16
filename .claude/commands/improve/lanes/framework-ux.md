@@ -34,6 +34,18 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
 |-----------|----------|
 | `framework-ux hyperpart_presentation` | `improve/strategies/hyperpart_presentation.md` — role×host matrix + `present()`; residual `ref_as_repr` / `person_as_text` |
 
+## Leftover-honesty classes (do not walk siblings)
+
+- **Parse-invent** (widget companions) is saturated — oral #42.
+- **Temporal echo** (`include_closed` / `as_of` on list/grid `hx-get`)
+  is saturated — oral #67. Helper:
+  `leftover_honest_temporal_query`. Do **not** ship another
+  "must ride hx-get" sibling. If a new chrome control is added,
+  call the helper in that control's ship.
+- Next mutation here is a **new invent class found in a live app**
+  or **presentation MCP STALE (1554)**. Not Goal B coat.
+- Field note: `improve/leftover-honesty-ethnography.md`.
+
 **Probe / MCP (presentation residual from product_quality or presentation tool):**
 
 ```bash
