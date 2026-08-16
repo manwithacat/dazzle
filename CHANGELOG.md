@@ -7,6 +7,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Cycle 2147 cimonitor — HM mirror wait expired 46s before visual green** —
+  `--prefer-completed --wait 900` started with Dazzle CI, hunted stale
+  red #31919355191, then followed HM #31920607365. The 900s clock
+  expired at 02:07:54 while visual was still running; the tip went
+  green at 02:08:40. A new in-flight tip now resets the wait budget
+  (wait applies to the selected run). CI `--wait` is 1200s so the
+  ~15 min visual suite plus sync lag fit. Promoted wait-reset +
+  workflow floor pins to ship-surface (oral #40).
 - **Date leftover ISO invented a date (cycle 2145)** —
   leftover typed ISO (`zzz`, `2026-06-01zzz`, `June 1`) no longer
   writes the native `type=date` value. Each standalone date field has

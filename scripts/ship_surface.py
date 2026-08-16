@@ -76,7 +76,7 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2145: standalone date leftover ISO must not invent a date
     "tests/unit/test_form_widget_showcase_phase3.py::test_date_controller_leftover_iso_does_not_invent",
     "tests/unit/test_form_field_parity_phase3b.py::test_date_field_emits_iso_companion",
-    # cycle 2142: --wait must not fail immediately on stale completed HM red
+    # cycle 2142/2147: stale-red hunt + wait-reset + CI --wait floor
     "tests/unit/test_hm_standalone_ci_status.py",
     # cycle 2146: darwin leftover-honesty must land matching linux visual PNGs
     "tests/unit/test_hm_visual_baseline_pairs.py",

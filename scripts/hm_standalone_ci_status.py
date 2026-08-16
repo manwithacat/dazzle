@@ -23,10 +23,16 @@ must keep polling that previous completed failure until a newer run
 appears (or grace expires). A *fresh* completed red is the tip and
 still fails immediately.
 
+**New tip resets the wait budget (cycle 2147):** ``--wait`` is the
+budget for the *selected* run, not the whole script. Stale-red hunting
+plus a ~15 min HM visual suite burned a 900s clock in 2146 (HM
+#31920607365 finished 46s after Dazzle timed out). When pick_run
+switches to a new in-flight tip, restart the deadline.
+
 Usage (from monorepo root)::
 
     python scripts/hm_standalone_ci_status.py
-    python scripts/hm_standalone_ci_status.py --wait 900
+    python scripts/hm_standalone_ci_status.py --wait 1200
     python scripts/hm_standalone_ci_status.py --json
     python scripts/hm_standalone_ci_status.py --sha <full_or_prefix>
 
@@ -53,6 +59,9 @@ from typing import Any
 _DEFAULT_FRESH_RED_SECONDS = 90
 # How long --wait keeps polling that stale completed red for a newer tip.
 _DEFAULT_STALE_RED_GRACE = 180
+# CI workflows pass this (or more). HM visual is ~15 min; 900s expired
+# 46s early in cycle 2146 once sync lag + the visual suite stacked.
+_MIN_CI_WAIT_SECONDS = 1200
 
 REPO = "manwithacat/hatchi-maxchi"
 WORKFLOW = "ci.yml"  # path under .github/workflows
@@ -158,6 +167,33 @@ def is_fresh_completed_failure(
     if age is None:
         return False
     return age < fresh_red_seconds
+
+
+def maybe_reset_wait_deadline(
+    *,
+    wait: int,
+    run_id: Any,
+    status: str | None,
+    tracked_id: Any,
+    now_mono: float,
+) -> tuple[float | None, Any]:
+    """Restart ``--wait`` when pick_run switches to a new in-flight tip.
+
+    Cycle 2146: Dazzle mirror started 01:52:53, hunted stale red
+    #31919355191, then followed HM #31920607365 from 01:54:09. The
+    original 900s deadline expired at 02:07:54 while visual was still
+    running; the tip went green at 02:08:40. Wait applies to the
+    selected run, not the stale-red hunt that found it.
+    """
+    if not wait or run_id is None:
+        return None, tracked_id if run_id is None else run_id
+    if (
+        tracked_id is not None
+        and run_id != tracked_id
+        and status in ("in_progress", "queued", "waiting")
+    ):
+        return now_mono + wait, run_id
+    return None, run_id
 
 
 def should_poll_for_newer_after_completed_red(
@@ -284,6 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     run: dict[str, Any] | None = None
     prefer_completed = bool(args.prefer_completed) and not args.sha
     stale_red_wait: dict[str, Any] = {"id": None, "started": None}
+    tracked_id: Any = None
 
     while True:
         try:
@@ -309,6 +346,21 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(run, indent=2))
         else:
             print(format_run(run), flush=True)
+
+        # Cycle 2147: stale-red hunt must not steal the new tip's budget.
+        reset_at, tracked_id = maybe_reset_wait_deadline(
+            wait=args.wait,
+            run_id=run.get("id"),
+            status=status if isinstance(status, str) else None,
+            tracked_id=tracked_id,
+            now_mono=time.monotonic(),
+        )
+        if reset_at is not None:
+            deadline = reset_at
+            print(
+                f"waiting: new HM tip {run.get('id')} — reset wait budget to {args.wait}s",
+                flush=True,
+            )
 
         if status == "completed":
             if conclusion == "success":

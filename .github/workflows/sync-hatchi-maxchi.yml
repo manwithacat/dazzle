@@ -106,7 +106,7 @@ jobs:
           sleep 15
           # Prefer the tip SHA when known; fall back to latest main run.
           if [ -n "${HM_TIP:-}" ]; then
-            python scripts/hm_standalone_ci_status.py --sha "$HM_TIP" --wait 900 --poll 25
+            python scripts/hm_standalone_ci_status.py --sha "$HM_TIP" --wait 1200 --poll 25
           else
-            python scripts/hm_standalone_ci_status.py --wait 900 --poll 25
+            python scripts/hm_standalone_ci_status.py --wait 1200 --poll 25
           fi

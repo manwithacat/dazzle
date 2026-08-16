@@ -282,6 +282,15 @@ Doctrine source of truth remains
     dirty) than linux. Dispatch `update-baselines.yml` and commit only
     the failing pair in the same ship (oral #33).
 
+40. **`--wait` is the budget for the selected HM run, not the whole
+    script.** Cycle 2146 hunted stale red #31919355191 then followed
+    tip #31920607365; 900s from Dazzle start expired at 02:07:54 while
+    visual was still running, and HM went green at 02:08:40 (46s later).
+    Reset the deadline when pick_run switches to a new in-flight tip;
+    keep CI `--wait` ≥1200 (visual suite is ~15 min + sync lag).
+    Re-running the mirror job is still the no-code recovery once HM is
+    already green.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

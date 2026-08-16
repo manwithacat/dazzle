@@ -242,6 +242,119 @@ def test_completed_red_without_wait_fails_immediately() -> None:
     slept.assert_not_called()
 
 
+def test_maybe_reset_wait_deadline_on_new_inflight_tip() -> None:
+    """Cycle 2146: switching from stale red to a new tip restarts --wait."""
+    mod = _load_mod()
+    reset_at, tracked = mod.maybe_reset_wait_deadline(
+        wait=900,
+        run_id=31920607365,
+        status="in_progress",
+        tracked_id=31919355191,
+        now_mono=80.0,
+    )
+    assert reset_at == 980.0
+    assert tracked == 31920607365
+
+
+def test_maybe_reset_wait_deadline_skips_same_run_and_first_pick() -> None:
+    mod = _load_mod()
+    reset_at, tracked = mod.maybe_reset_wait_deadline(
+        wait=900,
+        run_id=2,
+        status="in_progress",
+        tracked_id=2,
+        now_mono=80.0,
+    )
+    assert reset_at is None
+    assert tracked == 2
+    reset_at, tracked = mod.maybe_reset_wait_deadline(
+        wait=900,
+        run_id=2,
+        status="in_progress",
+        tracked_id=None,
+        now_mono=0.0,
+    )
+    assert reset_at is None
+    assert tracked == 2
+    reset_at, tracked = mod.maybe_reset_wait_deadline(
+        wait=900,
+        run_id=2,
+        status="completed",
+        tracked_id=1,
+        now_mono=80.0,
+    )
+    assert reset_at is None
+    assert tracked == 2
+
+
+def test_wait_resets_deadline_when_new_tip_appears_after_stale_red() -> None:
+    """Stale-red hunt must not expire the budget for the sibling visual run."""
+    mod = _load_mod()
+    stale = _run(
+        run_id=31919355191,
+        status="completed",
+        conclusion="failure",
+        sha="0e151cfb",
+        updated_at="2026-08-16T01:27:18Z",
+    )
+    inflight = _run(
+        run_id=31920607365,
+        status="in_progress",
+        conclusion=None,
+        sha="ed9a6fd5",
+    )
+    green = _run(
+        run_id=31920607365,
+        status="completed",
+        conclusion="success",
+        sha="ed9a6fd5",
+    )
+    polls = [
+        [stale],
+        [inflight, stale],
+        [inflight, stale],
+        [inflight, stale],
+        [green, stale],
+    ]
+    clock = {"t": 0.0}
+
+    def mono() -> float:
+        return clock["t"]
+
+    def sleep(seconds: float) -> None:
+        clock["t"] += float(seconds)
+
+    with (
+        patch.object(mod, "latest_runs", side_effect=polls),
+        patch.object(mod, "first_failed_job", return_value=None),
+        patch.object(mod.time, "monotonic", side_effect=mono),
+        patch.object(mod.time, "sleep", side_effect=sleep),
+    ):
+        # wait=50 / poll=20: without reset, inflight at t=60 expires the
+        # original deadline (50). Reset at t=20 extends to 70, then green.
+        code = mod.main(["--prefer-completed", "--wait", "50", "--poll", "20"])
+    assert code == 0
+
+
+def test_ci_yml_hm_mirror_wait_covers_visual_suite() -> None:
+    """Cycle 2146: HM visual ~15m + sync; --wait 900 expired 46s early."""
+    import re
+
+    repo = Path(__file__).resolve().parents[2]
+    texts = [
+        (repo / ".github/workflows/ci.yml").read_text(encoding="utf-8"),
+        (repo / ".github/workflows/sync-hatchi-maxchi.yml").read_text(encoding="utf-8"),
+    ]
+    waits: list[int] = []
+    for text in texts:
+        waits.extend(
+            int(n) for n in re.findall(r"hm_standalone_ci_status\.py[^\n]*--wait (\d+)", text)
+        )
+    assert waits, "expected --wait on hm_standalone_ci_status in CI workflows"
+    floor = int(getattr(_load_mod(), "_MIN_CI_WAIT_SECONDS", 1200))
+    assert all(w >= floor for w in waits), waits
+
+
 def test_wait_continues_when_no_failed_job_yet() -> None:
     mod = _load_mod()
     running = {

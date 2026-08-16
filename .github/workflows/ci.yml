@@ -357,9 +357,12 @@ jobs:
         # does not fail every concurrent Dazzle matrix. If last
         # completed is red, wait on the in-flight tip — and if that
         # tip is not listed yet (sync lag), keep polling the stale
-        # completed red until a newer run appears (cycle 2142).
+        # completed red until a newer run appears (cycle 2142). A new
+        # in-flight tip also resets the wait budget (cycle 2147: 900s
+        # expired 46s before HM visual went green). 1200s covers the
+        # ~15 min visual suite + sync lag.
         # Sync workflow separately waits on the tip SHA.
-        run: python scripts/hm_standalone_ci_status.py --prefer-completed --wait 900 --poll 25
+        run: python scripts/hm_standalone_ci_status.py --prefer-completed --wait 1200 --poll 25
 
   type-check:
     runs-on: ubuntu-latest
