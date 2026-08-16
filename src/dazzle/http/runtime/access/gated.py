@@ -64,6 +64,7 @@ async def gated_read(
     entity_id: Any,
     *,
     include: list[str] | None = None,
+    as_of: Any = None,
     audit_logger: Any = None,
     request: Any = None,
 ) -> Any:
@@ -99,6 +100,7 @@ async def gated_read(
         entity_name=access.entity_name,
         fk_graph=access.fk_graph,
         admin_personas=access.admin_personas,
+        as_of=as_of,
     )
     if result is None:
         if audit_logger and request is not None:
@@ -120,7 +122,10 @@ async def gated_read(
     # re-fetch through the read path to restore the response shape (scope already
     # passed for this id above, so this re-fetch is intentionally unscoped).
     if include:
-        hydrated = await service.execute(operation="read", id=entity_id, include=include)
+        _read_kw: dict[str, Any] = {"include": include}
+        if as_of is not None:
+            _read_kw["as_of"] = as_of
+        hydrated = await service.execute(operation="read", id=entity_id, **_read_kw)
         if hydrated is not None:
             result = hydrated
 

@@ -12,6 +12,14 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Page DETAIL leftover as_of invented the current row (cycle 2166)** —
+  HTML detail ignored `?as_of=` (`_read_entity_in_process` never read
+  the query; `CRUDService.read` dropped the kwarg before
+  `Repository.read`). Leftover `?as_of=2abc` / `zzz` / `not-a-date`
+  now restores the current row (no as_of) instead of inventing 404
+  via `date.fromisoformat`. Valid YYYY-MM-DD still time-travels.
+  Edit form stays current. New invent class: leftover temporal on
+  DETAIL invents current/404, not leftover list as_of (2165).
 - **List leftover as_of invented an empty collection (cycle 2165)** —
   leftover URL `?as_of=2abc` / `zzz` / `not-a-date` no longer raises
   `InvalidTemporalParam` into `_list_entity_in_process`'s

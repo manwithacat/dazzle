@@ -314,10 +314,17 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
 
         return entity
 
-    async def read(self, id: UUID, include: list[str] | None = None) -> T | dict[str, Any] | None:
-        """Read an entity by ID, optionally eager-loading relations."""
+    async def read(
+        self, id: UUID, include: list[str] | None = None, *, as_of: Any = None
+    ) -> T | dict[str, Any] | None:
+        """Read an entity by ID, optionally eager-loading relations.
+
+        ``as_of`` time-travels temporal entities (#1223 3a.iv) and must
+        reach ``Repository.read``. Dropping it invented the *current*
+        row on HTML detail (cycle 2166).
+        """
         if self._repository:
-            return await self._repository.read(id, include=include)
+            return await self._repository.read(id, include=include, as_of=as_of)
         return self._store.get(id)
 
     async def update(

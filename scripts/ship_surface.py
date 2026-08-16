@@ -96,6 +96,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_list_query_leftover.py",
     # cycle 2165: list leftover as_of / InvalidTemporalParam must not invent empty
     "tests/unit/test_list_as_of_leftover.py",
+    # cycle 2166: page DETAIL leftover as_of must not invent current / 404
+    "tests/unit/test_detail_as_of_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page

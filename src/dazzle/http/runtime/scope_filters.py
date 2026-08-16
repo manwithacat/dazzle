@@ -785,6 +785,23 @@ def _resolve_scope_filters(
     return {}  # Matched but no resolvable condition — treat as no filter
 
 
+async def _execute_read_as_of(service: Any, entity_id: Any, as_of: Any) -> Any:
+    """Unscoped ``read`` that still threads temporal ``as_of`` (cycle 2166)."""
+    if as_of is None:
+        return await service.execute(operation="read", id=entity_id)
+    return await service.execute(operation="read", id=entity_id, as_of=as_of)
+
+
+def _scoped_list_filters(
+    entity_id: Any, scope_result: dict[str, Any], as_of: Any
+) -> dict[str, Any]:
+    """Fold id + scope + leftover-honest ``__as_of`` for the pre-read list."""
+    filters: dict[str, Any] = {"id": entity_id, **scope_result}
+    if as_of is not None:
+        filters["__as_of"] = as_of
+    return filters
+
+
 async def _scoped_pre_read(
     *,
     service: "BaseService[Any]",
@@ -795,6 +812,7 @@ async def _scoped_pre_read(
     entity_name: str,
     fk_graph: "FKGraph | None",
     admin_personas: list[str] | None,
+    as_of: Any = None,
 ) -> Any:
     """Pre-read with `scope: <operation>:` enforcement applied (#1123).
 
@@ -821,15 +839,14 @@ async def _scoped_pre_read(
     requires fk_graph; without it we cannot compile a scope predicate
     so we treat it as "no enforcement available here").
     """
-
     if not getattr(cedar_access_spec, "scopes", None):
-        return await service.execute(operation="read", id=id)
+        return await _execute_read_as_of(service, id, as_of)
 
     if fk_graph is None:
         # Predicate compiler needs fk_graph; without it we can't compile
         # the scope predicate. Fall back to unscoped pre-read so we don't
         # silently default-deny on test fixtures lacking the FK graph.
-        return await service.execute(operation="read", id=id)
+        return await _execute_read_as_of(service, id, as_of)
 
     user_roles: set[str] = set()
     user_id: str | None = None
@@ -847,7 +864,7 @@ async def _scoped_pre_read(
         # Unauthenticated path — fall back to unscoped (the permit gate
         # has already rejected unauth users with cedar_access_spec set;
         # this branch is defensive).
-        return await service.execute(operation="read", id=id)
+        return await _execute_read_as_of(service, id, as_of)
 
     scope_result = _resolve_scope_filters(
         cedar_access_spec,
@@ -866,7 +883,7 @@ async def _scoped_pre_read(
 
     if not scope_result:
         # `scope: all` for this op — no filter, unscoped read.
-        return await service.execute(operation="read", id=id)
+        return await _execute_read_as_of(service, id, as_of)
 
     # Scope predicate compiled to a filter dict. Fold {"id": id} on top
     # and use the list path's existing filter handling (which already
@@ -876,7 +893,7 @@ async def _scoped_pre_read(
         operation="list",
         page=1,
         page_size=1,
-        filters={"id": id, **scope_result},
+        filters=_scoped_list_filters(id, scope_result, as_of),
     )
     items = list_result.get("items") if isinstance(list_result, dict) else []
     return items[0] if items else None

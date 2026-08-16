@@ -221,6 +221,33 @@ def _parse_list_as_of(raw: Any) -> str | None:
     return text
 
 
+def _detail_as_of(prc: Any, entity_name: str) -> Any:
+    """Leftover-honest page DETAIL ``as_of``.
+
+    Unwired as_of invented the *current* row (``_read_entity_in_process``
+    never read the query; ``CRUDService.read`` dropped the kwarg).
+    Leftover junk (``2abc``, ``zzz``, ``not-a-date``) must not invent
+    404 via ``date.fromisoformat`` / REST-style 400. Empty / invalid
+    restores *no as_of* (current row). Valid YYYY-MM-DD still
+    time-travels. Cycle 2166.
+    """
+    from datetime import date as _date
+
+    svc = getattr(getattr(prc, "deps", None), "entity_services", None) or {}
+    getter = getattr(svc, "get", None)
+    service = getter(entity_name) if getter is not None else None
+    temporal = getattr(getattr(service, "entity_spec", None), "temporal", None)
+    if temporal is None:
+        return None
+    param = getattr(temporal, "as_of_param", None) or "as_of"
+    request = getattr(prc, "request", None)
+    qparams = getattr(request, "query_params", None)
+    raw = _parse_list_as_of(qparams.get(param) if qparams is not None else None)
+    if not raw:
+        return None
+    return _date.fromisoformat(raw)
+
+
 def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[str, str]:
     """Parse leftover-honest ``filter[key]``. Invalid / unknown keys dropped."""
     out: dict[str, str] = {}
@@ -1523,7 +1550,7 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
 
 
 async def _read_entity_in_process(
-    prc: _PageRequestContext, entity_name: str, path_id: Any
+    prc: _PageRequestContext, entity_name: str, path_id: Any, *, as_of: Any = None
 ) -> dict[str, Any]:
     """Read one entity row IN-PROCESS with scope + permit applied (#1422).
 
@@ -1537,6 +1564,10 @@ async def _read_entity_in_process(
     at ``create_page_routes`` time (boot-path-independent). Cedar entities go
     through ``gated_read``; entities with no cedar spec do a plain read, matching
     the REST ``_core`` path (no permit eval).
+
+    ``as_of`` (leftover-honest, cycle 2166) time-travels temporal entities.
+    Callers parse via ``_detail_as_of`` so leftover junk restores current
+    instead of inventing 404.
     """
     from fastapi.encoders import jsonable_encoder
 
@@ -1551,6 +1582,11 @@ async def _read_entity_in_process(
         return {"error": "not_found"}
     cedar = prc.deps.entity_cedar_specs.get(entity_name)
     auto_include = prc.deps.entity_auto_includes.get(entity_name)
+    # Leftover-honest as_of (cycle 2166). Must reach Repository.read;
+    # dropping it invented the current row / 404 theater.
+    _read_kw: dict[str, Any] = {"include": auto_include}
+    if as_of is not None:
+        _read_kw["as_of"] = as_of
     try:
         if cedar is not None:
             access = access_context_from(
@@ -1560,9 +1596,9 @@ async def _read_entity_in_process(
                 fk_graph=prc.deps.entity_fk_graph,
                 admin_personas=prc.deps.entity_admin_personas,
             )
-            item = await gated_read(service, access, path_id, include=auto_include)
+            item = await gated_read(service, access, path_id, **_read_kw)
         else:
-            item = await service.execute(operation="read", id=path_id, include=auto_include)
+            item = await service.execute(operation="read", id=path_id, **_read_kw)
     except RecordNotFound:
         return {"error": "not_found"}
     if item is None:
@@ -1665,7 +1701,12 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # REST detail route applies (`gated_read` IS that enforcement, relocated),
     # serialized via `jsonable_encoder` to match the REST `response_model=None`
     # JSON shape the downstream FK-display / when_expr code expects.
-    req_detail.item = await _read_entity_in_process(prc, prc.ctx.detail.entity_name, prc.path_id)
+    req_detail.item = await _read_entity_in_process(
+        prc,
+        prc.ctx.detail.entity_name,
+        prc.path_id,
+        as_of=_detail_as_of(prc, prc.ctx.detail.entity_name),
+    )
     # Resolve FK dicts -> display strings so detail fields show names not UUIDs (#663)
     if req_detail.item and "error" not in req_detail.item:
         req_detail.item = _inject_display_names(req_detail.item)

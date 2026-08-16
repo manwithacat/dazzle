@@ -406,6 +406,18 @@ Doctrine source of truth remains
     empty. Not leftover sort/q (oral #48). Not leftover page
     (oral #46). Not leftover-scalar refuse. Not Goal B coat.
 
+50. **Page DETAIL leftover as_of invents the current row / 404.**
+    Cycle 2166: HTML detail ignored ``?as_of=``
+    (``_read_entity_in_process`` never read the query;
+    ``CRUDService.read`` dropped the kwarg). Leftover
+    ``2abc`` / ``zzz`` / ``not-a-date`` must not invent 404
+    via ``fromisoformat``. Empty / invalid restores *no as_of*
+    (current row); valid YYYY-MM-DD still time-travels.
+    Edit form stays current — do not clone DETAIL as_of onto
+    the form. Not leftover list as_of (oral #49). Not leftover
+    sort/q (oral #48). Not leftover page (oral #46). Not Goal B
+    coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
