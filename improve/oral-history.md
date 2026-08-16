@@ -515,6 +515,23 @@ Doctrine source of truth remains
     (page, sort, csv, bulk echo, related-tab, pagination)
     the same dig before claiming the class closed.
 
+59. **List-region pagination hx-get drops include_closed / as_of
+    (invents open-only / current after a page click).** Cycle 2175:
+    ``_emit_pagination`` wrote ``?page=&page_size=`` + extra_query
+    only. Leftover-honest ``true`` / YYYY-MM-DD now ride hx-get;
+    leftover junk still omits. Rest-state gallery unchanged
+    (oral #33). Production table page buttons stay
+    ``data-dz-grid-goto`` (cycle 2170 ownedKeys). Do **not**
+    clone leftover list include_closed / related-tab as_of /
+    DETAIL as_of onto the edit form. Not leftover CSV /
+    sort-header echo (oral #56/#58). Not leftover list as_of /
+    sort / page. Not leftover-scalar refuse. Not Goal B coat.
+    After wiring leftover-honest temporal on a list/grid
+    control, scan sibling emitters — next: infinite-scroll
+    sentinel ``_build_table_url_params`` still omits
+    include_closed / as_of (invents open-only / current on
+    load-more).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

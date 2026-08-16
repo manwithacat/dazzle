@@ -3,6 +3,15 @@
 Dual-lock unit is the region root. Page buttons are host-trusted HTML
 (htmx hrefs, current markers). Grid selection reads ``data-dz-grid-total``
 and ``data-dz-grid-pagination`` on the same root.
+
+Leftover honesty (cycle 2175): ``_emit_pagination`` hx-get must echo
+leftover-honest ``include_closed`` / ``as_of``. ``?page=&page_size=``
++ extra_query dropped them and invented open-only / current after a
+page click. Leftover junk (``zzz``, ``2abc``, ``maybe``, ``not-a-date``)
+must not invent. Valid ``true`` / YYYY-MM-DD still ride hx-get.
+Rest-state gallery is unchanged (oral #33). Not leftover CSV /
+sort-header echo. Not leftover list include_closed / related-tab
+as_of / DETAIL as_of onto the edit form.
 """
 
 from __future__ import annotations

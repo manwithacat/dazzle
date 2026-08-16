@@ -85,7 +85,8 @@ def leftover_honest_temporal_query(
     Valid ``true`` / ``1`` / ``yes`` and YYYY-MM-DD ride. Leftover junk
     (``zzz``, ``2abc``, ``maybe``, ``not-a-date``) omits so a click does
     not invent open-only / current. Cycle 2172 sort-header; cycle 2174
-    CSV endpoint. Returns ``&amp;``-joined pairs with no leading sep.
+    CSV endpoint; cycle 2175 pagination hx-get. Returns ``&amp;``-joined
+    pairs with no leading sep.
     """
     parts: list[str] = []
     ic_raw = str(include_closed or "").strip().lower()
@@ -116,7 +117,8 @@ def _with_leftover_honest_temporal(
     """Append leftover-honest temporal pairs to ``endpoint``.
 
     ``leading`` is ``?`` when the URL has no query yet (CSV path) or
-    ``&amp;`` when the caller already wrote ``?sort=&dir=``.
+    ``&amp;`` when the caller already wrote ``?sort=&dir=`` /
+    ``?page=&page_size=``.
     """
     qs = leftover_honest_temporal_query(include_closed, as_of, escape_attr=escape_attr)
     if not qs:
@@ -367,9 +369,22 @@ class _RenderInteractiveMixin:
             is_current = entry == p.page
             cls = "dz-pagination-page is-current" if is_current else "dz-pagination-page"
             current_attr = ' aria-current="page"' if is_current else ""
+            href = f"{endpoint_str}?page={entry}&page_size={p.page_size}{extra}"
+            # Leftover-honest temporal (cycle 2175). ?page=&page_size=
+            # + extra_query used to drop include_closed / as_of and
+            # invent open-only / current after a page click. Leftover
+            # junk must not invent. Valid true / YYYY-MM-DD ride;
+            # leftover junk (zzz / 2abc / maybe / not-a-date) omits.
+            href = _with_leftover_honest_temporal(
+                href,
+                getattr(p, "include_closed", ""),
+                getattr(p, "as_of", ""),
+                escape_attr=ctx.escape_attr,
+                leading="&amp;",
+            )
             page_html_parts.append(
                 f'<button class="{cls}"{current_attr} '
-                f'hx-get="{endpoint_str}?page={entry}&page_size={p.page_size}{extra}" '
+                f'hx-get="{href}" '
                 f'hx-target="{target}" hx-swap="innerMorph" '
                 f'hx-headers=\'{{"Accept": "text/html"}}\' '
                 f'hx-indicator="#{ctx.escape_attr(p.region_name)}-loading">'

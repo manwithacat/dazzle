@@ -2094,7 +2094,12 @@ class Pagination:
 
     `extra_query` is an opaque pre-encoded string (e.g. `"&sort=name&dir=asc"`)
     appended to every page link — used by Phase 5+6 to preserve sort,
-    filter, and search state across page hops. Empty string when none."""
+    filter, and search state across page hops. Empty string when none.
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2175) ride
+    each page-button hx-get. Dropping them invented open-only /
+    current after a page click. Leftover junk must not be stored
+    here — the emitter also leftover-parses before appending."""
 
     region_name: str
     endpoint: object  # URL — typed object to keep the union simple
@@ -2102,6 +2107,8 @@ class Pagination:
     page: int
     page_size: int
     extra_query: str = ""
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

@@ -24,6 +24,7 @@ from dazzle.render.fragment.primitives.data import (
     LazyTab,
     LazyTabPanel,
     MetricTile,
+    Pagination,
     PivotTable,
     ProfileCard,
     Radar,
@@ -772,6 +773,22 @@ def test_csv_export_button_defaults() -> None:
     assert c.label == "Export CSV"
     assert c.include_closed == ""
     assert c.as_of == ""
+
+
+# === Pagination ===
+
+
+def test_pagination_temporal_defaults_empty() -> None:
+    p = Pagination(
+        region_name="t",
+        endpoint=URL("/api/x"),
+        total=100,
+        page=1,
+        page_size=10,
+    )
+    assert p.include_closed == ""
+    assert p.as_of == ""
+    assert p.extra_query == ""
 
 
 # === DateRangePicker ===

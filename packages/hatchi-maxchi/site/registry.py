@@ -513,7 +513,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "for grid selection. Production swaps use <code>innerMorph</code> of the "
             "region body (<code>#{region}-body</code>) so selection and focus can "
             "survive page changes. Each page button carries its own <code>hx-get</code>; "
-            "here the gallery mock approximates with <code>innerHTML</code> into "
+            "leftover-honest <code>include_closed</code> / <code>as_of</code> ride "
+            "that hx-get (cycle 2175) — dropping them invents open-only / current "
+            "after a page click. Rest-state gallery omits them (oral #33). "
+            "Here the gallery mock approximates with <code>innerHTML</code> into "
             "<code>#hm-pag-body</code>.",
             tags=("htmx",),
             contracts=("contracts/pagination.py",),
