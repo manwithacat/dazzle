@@ -626,6 +626,8 @@ class DateRange(BaseModel):
     date_from: str = ""
     date_to: str = ""
     target: str = ""
+    include_closed: str = ""
+    as_of: str = ""
 
 
 # ── List-region seam copy (contracts/list_region.py) ─────────────────

@@ -1473,6 +1473,11 @@ class DateRangePicker:
     (cycle 2139). `date_from` and `date_to` are pre-formatted
     iso-date strings (`YYYY-MM-DD`); empty string = no date set.
 
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2180) ride
+    each bound ``hx-get``. Dropping them invented open-only / current
+    after a bound change. Leftover junk must not be stored here —
+    the emitter also leftover-parses before appending.
+
     `region_name` namespaces the input ids (`date-from-<region>`,
     `date-to-<region>`) so multiple pickers can coexist on one page.
     """
@@ -1481,6 +1486,8 @@ class DateRangePicker:
     region_name: str
     date_from: str = ""
     date_to: str = ""
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

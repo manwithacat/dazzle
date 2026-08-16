@@ -584,6 +584,23 @@ Doctrine source of truth remains
     still omits include_closed / as_of (invents open-only /
     current on a bound change).
 
+63. **DateRangePicker hx-get drops include_closed / as_of (invents
+    open-only / current on a bound change).** Cycle 2180:
+    ``_emit_date_range_picker`` / ``render_date_range`` wrote
+    ``hx-get="{endpoint}"`` +
+    ``hx-include="closest .date-range-bar"`` only. Leftover-honest
+    ``true`` / YYYY-MM-DD now ride a bound change; leftover junk
+    still omits. Rest-state gallery unchanged (oral #33). Do **not**
+    clone leftover list include_closed / related-tab as_of /
+    DETAIL as_of onto the edit form. Not leftover FilterBar /
+    search chrome / sentinel / pagination / CSV / sort-header echo
+    (oral #56/#58/#59/#60/#61/#62). Not leftover list as_of /
+    sort / page. Not leftover-scalar refuse. Not Goal B coat.
+    After wiring leftover-honest temporal on a list/grid
+    control, scan sibling emitters — next: kanban overflow
+    Load all ``hx-get="{endpoint}?page_size={total}"`` still omits
+    include_closed / as_of (invents open-only / current on expand).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

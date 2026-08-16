@@ -808,3 +808,5 @@ def test_date_range_picker_defaults_empty() -> None:
     d = DateRangePicker(endpoint=URL("/x"), region_name="r")
     assert d.date_from == ""
     assert d.date_to == ""
+    assert d.include_closed == ""
+    assert d.as_of == ""

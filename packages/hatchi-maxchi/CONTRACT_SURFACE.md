@@ -54,7 +54,7 @@ blast radius (who embeds / refuses this part).
 | `dashboard_grid` | `dashboard-grid` | `.dz-dashboard-grid` | .dz-dashboard-grid[] | — |
 | `data_list_scroll` | `data-list-scroll` | `.dz-table` | .dz-table[] | — |
 | `date` | `date` | `[data-dz-date-group]` | [data-dz-date-group][data-dz-date-group=present]; [data-dz-date-iso][data-dz-date-iso=present] | — |
-| `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present]; [data-dz-date-iso][data-dz-date-iso=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
+| `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present]; [data-dz-date-iso][data-dz-date-iso=present] | DateRange(as_of:str:opt; date_from:str:opt; date_to:str:opt; endpoint:str:opt; include_closed:str:opt; region_name:str:opt; target:str:opt) |
 | `day_timeline` | `day-timeline` | `[data-dz-day-timeline]` | [data-dz-day-timeline][data-dz-day-timeline=present] | DayTimeline(body_html:str:opt; region_name:str:opt) |
 | `detail_grid` | `detail-grid` | `.dz-detail-region` | .dz-detail-region[] | — |
 | `diagram` | `diagram` | `[data-dz-diagram]` | [data-dz-diagram][data-dz-diagram=present] | Diagram(edges:list[tuple[str,str]]:opt; mermaid_source:str:opt; nodes:list[str]:opt) |

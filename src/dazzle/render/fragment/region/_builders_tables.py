@@ -380,9 +380,10 @@ class _BuildersTablesMixin:
 
         endpoint = ctx.get("endpoint")
         region_name = str(ctx.get("region_name") or getattr(region, "name", "") or "list")
-        # Leftover-honest temporal (cycle 2178/2179). Extract before chrome
-        # so search / FilterBar / CSV / ListRegion share one raw pair.
-        # Valid true / YYYY-MM-DD ride; leftover junk omits.
+        # Leftover-honest temporal (cycle 2178/2179/2180). Extract before
+        # chrome so search / FilterBar / DateRangePicker / CSV /
+        # ListRegion share one raw pair. Valid true / YYYY-MM-DD ride;
+        # leftover junk omits.
         include_closed = str(ctx.get("include_closed") or "")
         as_of = str(ctx.get("as_of") or "")
 
@@ -505,6 +506,8 @@ class _BuildersTablesMixin:
                     region_name=region_name,
                     date_from=str(ctx.get("date_from") or ""),
                     date_to=str(ctx.get("date_to") or ""),
+                    include_closed=include_closed,
+                    as_of=as_of,
                 )
             )
 

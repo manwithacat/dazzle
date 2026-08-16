@@ -166,14 +166,11 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_date_range_picker_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): date-range hx-get is still the
-    bare endpoint — leftover-honest include_closed / as_of do not ride
-    a bound change."""
+def test_date_range_picker_now_echoes_temporal() -> None:
+    """Cycle 2180 closed the 2179 seed: date-range hx-get leftover-honest
+    include_closed / as_of now ride a bound change."""
     src = _DATE_RANGE.read_text(encoding="utf-8")
-    bound = src.split("def _bound")[1].split("def render")[0]
-    assert 'hx-get="{endpoint}"' in bound
-    assert "hx-include" in bound
-    assert "include_closed" not in bound
-    assert "as_of" not in bound
-    assert "leftover_honest" not in bound
+    assert "include_closed" in src
+    assert "as_of" in src
+    assert "2180" in src
+    assert "_leftover_honest_temporal" in src

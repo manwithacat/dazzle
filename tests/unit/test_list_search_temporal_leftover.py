@@ -184,12 +184,12 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_date_range_picker_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): DateRangePicker
-    ``_emit_date_range_picker`` still forwards the bare endpoint."""
+def test_date_range_picker_now_echoes_temporal() -> None:
+    """Cycle 2180 closed the 2178 seed: DateRangePicker
+    ``_emit_date_range_picker`` leftover-honest include_closed / as_of
+    now ride a bound change."""
     src = _EMIT.read_text(encoding="utf-8")
     emit = src.split("def _emit_date_range_picker")[1].split("def ", 1)[0]
-    assert "include_closed" not in emit
-    assert "as_of" not in emit
-    assert "leftover_honest" not in emit
-    assert "_with_leftover_honest_temporal" not in emit
+    assert "include_closed" in emit
+    assert "as_of" in emit
+    assert "cycle 2180" in emit

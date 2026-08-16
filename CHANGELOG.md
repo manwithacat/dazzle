@@ -12,6 +12,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **DateRangePicker hx-get dropped `include_closed` / `as_of` (cycle 2180)** —
+  `_emit_date_range_picker` / `render_date_range` wrote
+  `hx-get="{endpoint}"` + `hx-include="closest .date-range-bar"`
+  only, so a bound change invented the open-only / current
+  collection after leftover-honest temporal had reached FilterBar
+  / search / sentinel / pagination / CSV / sort-header. Valid
+  `true` / YYYY-MM-DD now ride a bound change; leftover junk
+  (`zzz`, `2abc`, `maybe`, `not-a-date`) still omits. Rest-state
+  gallery unchanged.
 - **List search chrome hx-get dropped `include_closed` / `as_of` (cycle 2178)** —
   workspace list find wrote `hx-get="{ep}"` +
   `hx-include="closest .filter-bar"` only, so typeahead invented

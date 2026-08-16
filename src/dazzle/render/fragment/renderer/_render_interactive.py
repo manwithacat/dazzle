@@ -87,7 +87,8 @@ def leftover_honest_temporal_query(
     not invent open-only / current. Cycle 2172 sort-header; cycle 2174
     CSV endpoint; cycle 2175 pagination hx-get; cycle 2177 infinite-
     scroll sentinel; cycle 2178 list search chrome; cycle 2179
-    FilterBar ``_emit_filter_bar``. Returns ``&amp;``-joined pairs
+    FilterBar ``_emit_filter_bar``; cycle 2180 DateRangePicker
+    ``_emit_date_range_picker``. Returns ``&amp;``-joined pairs
     with no leading sep.
     """
     parts: list[str] = []
@@ -765,12 +766,29 @@ class _RenderInteractiveMixin:
     def _emit_date_range_picker(self, d: DateRangePicker, ctx: RenderContext) -> str:
         """Render a DateRangePicker via HM dual-lock DateRange seam."""
         rname = d.region_name
+        # Leftover-honest temporal (cycle 2180). Bare hx-get="{endpoint}"
+        # + hx-include="closest .date-range-bar" used to drop
+        # include_closed / as_of and invent open-only / current after a
+        # bound change. Leftover junk must not invent. Valid true /
+        # YYYY-MM-DD ride; leftover junk (zzz / 2abc / maybe /
+        # not-a-date) omits. Bake RAW query into endpoint so
+        # render_date_range's html.escape turns & into &amp; (no
+        # deferred ingest→renderer import).
+        qs = leftover_honest_temporal_query(
+            getattr(d, "include_closed", ""),
+            getattr(d, "as_of", ""),
+        ).replace("&amp;", "&")
+        endpoint = str(d.endpoint)
+        if qs:
+            endpoint = f"{endpoint}&{qs}" if "?" in endpoint else f"{endpoint}?{qs}"
         return render_date_range(
             DateRangeSeam(
                 region_name=rname,
-                endpoint=str(d.endpoint),
+                endpoint=endpoint,
                 date_from=d.date_from,
                 date_to=d.date_to,
                 target="closest [data-dz-region]",
+                include_closed=getattr(d, "include_closed", ""),
+                as_of=getattr(d, "as_of", ""),
             )
         )

@@ -11,6 +11,16 @@ submitted / hx-include value). Typed leftover junk (``2026-06-01zzz``,
 both controls fail custom validity so submit / hx-get cannot post the
 previous date as if the leftover were accepted. Empty ISO on blur
 restores from the native date.
+
+Leftover honesty (cycle 2180): each bound ``hx-get`` must echo
+leftover-honest ``include_closed`` / ``as_of``. Bare
+``hx-get="{endpoint}"`` + ``hx-include="closest .date-range-bar"``
+dropped them and invented open-only / current after a bound
+change. Leftover junk (``zzz``, ``2abc``, ``maybe``,
+``not-a-date``) must not invent. Valid ``true`` / YYYY-MM-DD
+still ride hx-get. Rest-state gallery is unchanged (oral #33).
+Not leftover list include_closed / related-tab as_of / DETAIL
+as_of onto the edit form.
 """
 
 from __future__ import annotations
@@ -41,6 +51,7 @@ class DateRange(BaseModel):
     - ``endpoint`` → hx-get URL
     - ``date_from`` / ``date_to`` → ISO date values (empty = unset)
     - ``target`` → optional hx-target override (default ``#region-{region_name}``)
+    - ``include_closed`` / ``as_of`` → leftover-honest temporal (cycle 2180)
     """
 
     region_name: str = "region"
@@ -48,6 +59,8 @@ class DateRange(BaseModel):
     date_from: str = ""
     date_to: str = ""
     target: str = ""
+    include_closed: str = ""
+    as_of: str = ""
 
 
 EXEMPLARS: list[DateRange] = [
@@ -60,6 +73,25 @@ EXEMPLARS: list[DateRange] = [
     ),
     DateRange(region_name="empty", endpoint="/app/region"),
 ]
+
+
+def _leftover_honest_temporal(include_closed: str, as_of: str) -> str:
+    """Valid ``true`` / YYYY-MM-DD ride; leftover junk omits (cycle 2180)."""
+    parts: list[str] = []
+    ic = str(include_closed or "").strip().lower()
+    if ic in ("true", "1", "yes"):
+        parts.append("include_closed=true")
+    ao = str(as_of or "").strip()
+    if ao:
+        from datetime import date as _date
+
+        try:
+            _date.fromisoformat(ao)
+        except (ValueError, TypeError):
+            ao = ""
+        else:
+            parts.append(f"as_of={html.escape(ao, quote=True)}")
+    return "&amp;".join(parts)
 
 
 def _bound(
@@ -90,6 +122,12 @@ def render(d: DateRange) -> str:
     """Model → date-range picker bar."""
     rname = html.escape(d.region_name, quote=True)
     endpoint = html.escape(d.endpoint, quote=True)
+    qs = _leftover_honest_temporal(
+        getattr(d, "include_closed", ""),
+        getattr(d, "as_of", ""),
+    )
+    if qs:
+        endpoint = f"{endpoint}&amp;{qs}" if "?" in endpoint else f"{endpoint}?{qs}"
     target = html.escape(d.target or f"#region-{d.region_name}", quote=True)
     date_from = html.escape(d.date_from, quote=True)
     date_to = html.escape(d.date_to, quote=True)

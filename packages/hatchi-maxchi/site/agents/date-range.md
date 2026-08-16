@@ -129,6 +129,8 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `date_from` | `string` | no |
 | `date_to` | `string` | no |
 | `target` | `string` | no |
+| `include_closed` | `string` | no |
+| `as_of` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -137,6 +139,12 @@ def render(d: DateRange) -> str:
     """Model → date-range picker bar."""
     rname = html.escape(d.region_name, quote=True)
     endpoint = html.escape(d.endpoint, quote=True)
+    qs = _leftover_honest_temporal(
+        getattr(d, "include_closed", ""),
+        getattr(d, "as_of", ""),
+    )
+    if qs:
+        endpoint = f"{endpoint}&amp;{qs}" if "?" in endpoint else f"{endpoint}?{qs}"
     target = html.escape(d.target or f"#region-{d.region_name}", quote=True)
     date_from = html.escape(d.date_from, quote=True)
     date_to = html.escape(d.date_to, quote=True)
