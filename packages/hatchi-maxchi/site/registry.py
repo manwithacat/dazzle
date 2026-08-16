@@ -906,6 +906,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "PUT the previous time — datetime leftover must not invent a date",
                     "leftover number junk (zzz / 12abc / 1e2) must not PUT the previous "
                     "number — parseFloat leftover must not invent a value",
+                    "leftover page / page_size (2abc / zzz) must not invent a window — "
+                    "parseInt leftover must not deep-link to page 2",
                     "do not mount data-dz-combobox inside a grid cell expecting "
                     "grid-edit to drive it — that is a future composition, not current seam",
                 ),

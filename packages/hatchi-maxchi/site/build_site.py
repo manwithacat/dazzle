@@ -2346,6 +2346,16 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     });
   }
   var GRID_PAGE_SIZE = 4; // the server's default page size for this demo
+  // Leftover honesty (cycle 2157): parseInt("2abc", 10) === 2 must not
+  // invent a page / page_size. Same class as PDF leftover page (2151).
+  function parseGridPage(val) {
+    var raw = String(val == null ? "" : val).trim();
+    if (!raw) return { kind: "empty" };
+    if (!/^\\d+$/.test(raw)) return { kind: "invalid" };
+    var num = parseInt(raw, 10);
+    if (!isFinite(num) || num < 1) return { kind: "invalid" };
+    return { kind: "ok", value: num };
+  }
 
   // The full result set for a query — search + filters + sort, WITHOUT paging.
   // The row slice and the pagination total both derive from this, so they can
@@ -2376,9 +2386,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     return rows;
   }
   function gridPaging(q, total) {
-    var size = parseInt(q.page_size, 10) || GRID_PAGE_SIZE;
+    var parsedSize = parseGridPage(q.page_size);
+    var size = parsedSize.kind === "ok" ? parsedSize.value : GRID_PAGE_SIZE;
     var pages = Math.max(1, Math.ceil(total / size));
-    var page = Math.min(Math.max(1, parseInt(q.page, 10) || 1), pages);
+    var parsedPage = parseGridPage(q.page);
+    var page = parsedPage.kind === "ok" ? parsedPage.value : 1;
+    page = Math.min(Math.max(1, page), pages);
     return { size: size, page: page, pages: pages };
   }
   function renderGridRows(url) {

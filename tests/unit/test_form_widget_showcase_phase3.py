@@ -354,6 +354,31 @@ def test_pdf_leftover_zoom_behaviour_does_not_use_fit_colliding_scale() -> None:
     assert "2× cannot collide with fit" in src
 
 
+def test_grid_controller_leftover_page_does_not_invent() -> None:
+    """dz-grid.js must refuse leftover page / page_size junk (2157)."""
+    from pathlib import Path
+
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "controllers"
+        / "dz-grid.js"
+    ).read_text(encoding="utf-8")
+    assert "function parseGridPage" in src
+    assert "must not invent" in src
+    assert "?page=2abc" in src
+    mock = (
+        Path(__file__).resolve().parents[2]
+        / "packages"
+        / "hatchi-maxchi"
+        / "site"
+        / "build_site.py"
+    ).read_text(encoding="utf-8")
+    assert "function parseGridPage" in mock
+    assert 'parsedSize.kind === "ok"' in mock or "parsedSize.kind === 'ok'" in mock
+
+
 def test_grid_edit_controller_leftover_iso_does_not_invent() -> None:
     """dz-grid-edit.js must refuse leftover date ISO junk (2150)."""
     from pathlib import Path

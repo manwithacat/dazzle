@@ -76,6 +76,11 @@
  *                  `[data-dz-grid-page-next]` (server-rendered footer buttons)
  *                  set it + refresh (`page=` in the query); the server disables
  *                  prev/next at the edges. Sort / filter / search reset it to 1.
+ *                  Leftover honesty (cycle 2157): URL `?page=2abc` /
+ *                  `?page_size=2abc` must not invent a window via parseInt.
+ *                  Leftover junk is invalid (same class as PDF leftover
+ *                  page, 2151). Empty / invalid restores the server
+ *                  default. Valid whole numbers still window.
  *   - announcer:   `[data-dz-grid-announce]` (a visually-hidden aria-live
  *                  region, static in the markup) — after every swap the
  *                  controller mirrors the footer's result-window summary into
@@ -293,6 +298,18 @@
     return null;
   }
 
+  // kind: empty | invalid | ok. parseInt("2abc", 10) === 2, so leftover
+  // junk is invalid — not a silent page / page_size invent (cycle 2157).
+  // Same class as PDF leftover page (2151).
+  function parseGridPage(val) {
+    var raw = String(val == null ? "" : val).trim();
+    if (!raw) return { kind: "empty" };
+    if (!/^\d+$/.test(raw)) return { kind: "invalid" };
+    var num = parseInt(raw, 10);
+    if (!isFinite(num) || num < 1) return { kind: "invalid" };
+    return { kind: "ok", value: num };
+  }
+
   // Build the tbody's request query from ALL current DOM state — the search
   // box, the active sort, every filter select, the page-size select, and the
   // root's page — so they all COMPOSE into one server query.
@@ -319,13 +336,19 @@
     // grid doesn't offer the choice.
     var size = root.querySelector("[data-dz-grid-page-size]");
     if (size && size.value) {
-      q.push("page_size=" + encodeURIComponent(size.value));
+      var parsedSize = parseGridPage(size.value);
+      if (parsedSize.kind === "ok") {
+        q.push("page_size=" + encodeURIComponent(String(parsedSize.value)));
+      }
     }
     // Current page lives on the root; page 1 is the default (omitted for a clean
     // query). Search / sort / filter reset it to 1 via resetPage() BEFORE calling
-    // refresh; a page-control click sets it, then refreshes.
-    var page = root.getAttribute("data-dz-grid-page");
-    if (page && page !== "1") q.push("page=" + encodeURIComponent(page));
+    // refresh; a page-control click sets it, then refreshes. Leftover junk
+    // (`2abc`) must not ride the query (cycle 2157).
+    var parsedPage = parseGridPage(root.getAttribute("data-dz-grid-page"));
+    if (parsedPage.kind === "ok" && parsedPage.value !== 1) {
+      q.push("page=" + encodeURIComponent(String(parsedPage.value)));
+    }
     return q.join("&");
   }
 
@@ -481,11 +504,15 @@
       filters[i].value = sp.has(k) ? sp.get(k) : init.filters[k] || "";
     }
     var size = root.querySelector("[data-dz-grid-page-size]");
-    if (size)
-      size.value = sp.has("page_size") ? sp.get("page_size") : init.size;
+    if (size) {
+      var parsedSize = parseGridPage(sp.get("page_size"));
+      size.value =
+        parsedSize.kind === "ok" ? String(parsedSize.value) : init.size;
+    }
+    var parsedPage = parseGridPage(sp.get("page"));
     root.setAttribute(
       "data-dz-grid-page",
-      sp.has("page") ? sp.get("page") : init.page,
+      parsedPage.kind === "ok" ? String(parsedPage.value) : init.page,
     );
     setQuery(root);
   }
@@ -619,12 +646,16 @@
       var proot = gridOf(goBtn);
       if (proot) {
         evt.preventDefault();
-        var cur = parseInt(proot.getAttribute("data-dz-grid-page"), 10) || 1;
+        var parsedCur = parseGridPage(proot.getAttribute("data-dz-grid-page"));
+        var cur = parsedCur.kind === "ok" ? parsedCur.value : 1;
         var to;
         if (goBtn.hasAttribute("data-dz-grid-page-prev"))
           to = Math.max(1, cur - 1);
         else if (goBtn.hasAttribute("data-dz-grid-page-next")) to = cur + 1;
-        else to = parseInt(goBtn.getAttribute("data-dz-grid-goto"), 10) || 1;
+        else {
+          var parsedTo = parseGridPage(goBtn.getAttribute("data-dz-grid-goto"));
+          to = parsedTo.kind === "ok" ? parsedTo.value : 1;
+        }
         proot.setAttribute("data-dz-grid-page", String(to));
         // The swap repaints the footer wholesale, destroying the focused
         // control — note the INTENT (not the node) so afterSwap can restore

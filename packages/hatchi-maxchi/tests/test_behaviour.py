@@ -1345,6 +1345,37 @@ def test_grid_url_syncs_state_to_the_address_bar(page) -> None:  # type: ignore[
     )
 
 
+def test_grid_leftover_page_query_does_not_invent_page(page) -> None:  # type: ignore[no-untyped-def]
+    """URL leftover page / page_size junk must not invent a window (cycle 2157).
+
+    Same honesty class as PDF leftover page (2151): parseInt("2abc") === 2
+    is leftover, not a silent page 2. Rest-state gallery unchanged (oral #33).
+    """
+    page.goto(part_uri("grid") + "?page=2abc")
+    page.wait_for_timeout(300)
+    leftover_names = _grid_names(page)
+    assert leftover_names == ["Mia", "Ravi", "Amir", "Sofia"], (
+        f"leftover page=2abc must not invent page 2: {leftover_names}"
+    )
+    hx = page.get_attribute("[data-grid-body]", "hx-get") or ""
+    assert "page=2" not in hx and "page=2abc" not in hx, f"leftover must not ride hx-get: {hx}"
+    assert page.get_attribute("[data-grid]", "data-grid-page") == "1"
+
+    page.goto(part_uri("grid") + "?page=zzz")
+    page.wait_for_timeout(300)
+    named = _grid_names(page)
+    assert named == ["Mia", "Ravi", "Amir", "Sofia"], f"named leftover must not invent: {named}"
+
+    page.goto(part_uri("grid") + "?page=2")
+    page.wait_for_timeout(300)
+    assert _grid_names(page) == ["Noah", "Jane"], "valid page=2 must still window"
+
+    page.goto(part_uri("grid") + "?page_size=2abc")
+    page.wait_for_timeout(300)
+    assert len(_grid_names(page)) == 4, "leftover page_size must not invent size 2"
+    assert page.eval_on_selector("[data-grid-page-size]", "e => e.value") == "4"
+
+
 def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyped-def]
     """Deep link: loading the page WITH grid params applies them — controls
     reflect the state, and the hydration fetch uses the restored query (no

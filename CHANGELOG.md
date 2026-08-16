@@ -7,6 +7,11 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Grid leftover page invented a window (cycle 2157)** —
+  leftover URL `?page=2abc` / `?page_size=2abc` no longer windows
+  via `parseInt`. Empty / invalid restores the server default;
+  valid whole numbers still deep-link. Rest-state gallery
+  unchanged. Same honesty class as PDF leftover page (2151).
 - **Grid leftover number invented a value (cycle 2155)** —
   leftover typed junk (`zzz`, `12abc`, `1e2`) no longer PUTs the
   previous number from a grid cell. kind=number opens a Field number

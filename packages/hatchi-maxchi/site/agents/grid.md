@@ -271,6 +271,7 @@ Correct response for none (raw fetch / no HTML swap).
 - leftover ISO junk (zzz / 2025-06-20zzz) must not PUT the previous date — Enter/Tab/change refuse while the companion is invalid
 - leftover clock ISO (zzz / 14:30zzz / 2026-07-16T01:30zzz) must not PUT the previous time — datetime leftover must not invent a date
 - leftover number junk (zzz / 12abc / 1e2) must not PUT the previous number — parseFloat leftover must not invent a value
+- leftover page / page_size (2abc / zzz) must not invent a window — parseInt leftover must not deep-link to page 2
 - do not mount data-dz-combobox inside a grid cell expecting grid-edit to drive it — that is a future composition, not current seam
 
 ### Keyboard / AT
@@ -305,7 +306,14 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: grid — root contract (thin). The base grid's structural
 root attributes; the data-bearing seams live in extension contracts
-(grid_edit). Root-only: no ingestion model, no exemplars."""
+(grid_edit). Root-only: no ingestion model, no exemplars.
+
+Leftover honesty (cycle 2157): URL ``?page=2abc`` / ``?page_size=2abc``
+must not invent a window. ``parseInt("2abc", 10) === 2`` is leftover
+junk — same class as PDF leftover page (2151). Empty / invalid
+restores the server default. Valid whole numbers still window.
+Rest-state gallery is unchanged (oral #33).
+"""
 
 from contracts._kit import DomContract
 
