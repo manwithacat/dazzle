@@ -670,6 +670,15 @@ dialect formed — and where it started to Goodhart itself — is
     app** or **presentation MCP STALE (1554)**. Standing
     refusals apply — do not reprint the ancestor litany.
 
+68. **Unknown catalog id invents the first declared sibling
+    (lens leftover).** Cycle 2184: ``?lens=ghost`` / ``zzz``
+    highlighted and resolved the first declared cohort-strip
+    lens even when ``default_lens`` was a later sibling. Valid
+    declared ids ride; leftover junk restores rest (default,
+    else first) via ``leftover_honest_catalog_id``. Live in
+    ops_dashboard ``systems_strip``. Not leftover temporal
+    echo (oral #67). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**

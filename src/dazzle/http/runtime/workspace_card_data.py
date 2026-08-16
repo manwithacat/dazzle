@@ -26,6 +26,7 @@ from typing import Any
 # they're reachable from ui/ without crossing the back↔ui boundary.
 # Re-exported here for back-internal callers.
 from dazzle.render.display_names import _inject_display_names, _resolve_display_name  # noqa: F401
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 
 logger = logging.getLogger(__name__)
 
@@ -286,8 +287,8 @@ def _build_cohort_cells(
     `items` are the rows from the source-entity query — RBAC scope is
     already enforced by that query, the data-resolution layer just
     shapes results. `config` is `WorkspaceRegion.cohort_strip_config`.
-    `active_lens_id` is the resolved active lens (already falling
-    through ?lens param → config.default_lens → first lens upstream).
+    `active_lens_id` is leftover-honest (cycle 2184): valid ?lens=
+    rides; leftover junk / absent restores default_lens else first.
 
     Member name resolution priority:
       1. The `member_via` FK target's `__display__` (resolved by
@@ -315,10 +316,16 @@ def _build_cohort_cells(
     lenses = list(getattr(config, "lenses", []) or [])
     if not lenses or not member_via:
         return []
-    # Resolve the active lens object (caller may have passed an id
-    # that already fell back to the first lens).
+    # Leftover-honest catalog (cycle 2184). Ghost / zzz must not
+    # invent the first declared lens when default_lens exists.
+    known_ids = [str(getattr(lens, "id", "") or "") for lens in lenses]
+    honest_id = leftover_honest_catalog_id(
+        active_lens_id,
+        known_ids,
+        str(getattr(config, "default_lens", "") or ""),
+    )
     active_lens = next(
-        (lens for lens in lenses if str(getattr(lens, "id", "")) == active_lens_id),
+        (lens for lens in lenses if str(getattr(lens, "id", "")) == honest_id),
         lenses[0],
     )
     primary_field = str(getattr(active_lens, "primary", "") or "")

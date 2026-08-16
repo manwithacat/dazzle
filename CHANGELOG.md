@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+- **Cohort-strip leftover lens catalog (cycle 2184)** —
+  `?lens=ghost` / `zzz` invented the first declared lens even when
+  `default_lens` was a later sibling (highlight + cells silently
+  became Attainment while rest was Attendance). Valid declared ids
+  ride; leftover junk restores rest. New invent class (oral #68);
+  not leftover temporal echo (oral #67).
+
 ## [0.112.0] - 2026-08-16
 
 ### Agent Guidance

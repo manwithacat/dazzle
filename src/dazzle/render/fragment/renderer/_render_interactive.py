@@ -74,6 +74,30 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
+def leftover_honest_catalog_id(
+    requested: str,
+    known: list[str] | tuple[str, ...],
+    rest: str = "",
+) -> str:
+    """Valid catalog id rides. Absent or leftover junk restores rest.
+
+    ``?lens=grade`` rides when grade is declared. ``?lens=zzz`` /
+    empty / whitespace must not invent the first declared id when a
+    default exists — that was the cycle 2184 invent (ghost lens
+    highlighted Attainment while ``default_lens`` was Attendance).
+    Rest is ``default_lens`` when declared, else the first known id.
+    """
+    ids = [str(item) for item in known if str(item)]
+    known_set = set(ids)
+    req = str(requested or "").strip()
+    if req in known_set:
+        return req
+    rest_id = str(rest or "").strip()
+    if rest_id in known_set:
+        return rest_id
+    return ids[0] if ids else ""
+
+
 def leftover_honest_temporal_query(
     include_closed: str = "",
     as_of: str = "",

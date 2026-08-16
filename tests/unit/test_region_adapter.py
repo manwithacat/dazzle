@@ -2462,8 +2462,10 @@ def test_cohort_strip_active_lens_from_ctx_wins_over_default() -> None:
 
 
 def test_cohort_strip_unknown_active_lens_falls_back_to_first() -> None:
-    """A stale URL param like `?lens=ghost` should not crash; the
-    adapter coerces to the first declared lens."""
+    """Leftover-honest rest when default_lens is unset: junk
+    ``?lens=ghost`` restores the first declared lens (rest), it
+    does not crash. When default_lens is set, rest is that
+    default — see test_cohort_strip_lens_catalog_leftover."""
     adapter = WorkspaceRegionAdapter()
     region = _cohort_region()  # default unset
     surface = adapter.build(

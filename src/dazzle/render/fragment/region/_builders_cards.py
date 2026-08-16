@@ -47,6 +47,7 @@ from dazzle.render.fragment.region._shared import (
     _render_typed_value,
     _wrap_surface,
 )
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 from dazzle.render.presentation import infer_role, present
 
 
@@ -467,15 +468,17 @@ class _BuildersCardsMixin:
                 ),
             )
 
-        # Resolve active lens: explicit ctx → config default → first lens.
+        # Leftover-honest catalog (cycle 2184). Valid ?lens= rides.
+        # Absent or leftover junk (ghost / zzz) restores rest
+        # (default_lens, else first) — do not invent the first
+        # declared id when a default exists.
         default_lens_id = str(getattr(cfg, "default_lens", "") or "") if cfg is not None else ""
-        first_lens_id = str(getattr(config_lenses[0], "id", "") or "")
-        active_lens_id = str(ctx.get("cohort_active_lens") or default_lens_id or first_lens_id)
-        # If the requested lens isn't in the config, fall back to the
-        # first declared lens — defensive against stale URL params.
-        known_lens_ids = {str(getattr(lens, "id", "") or "") for lens in config_lenses}
-        if active_lens_id not in known_lens_ids:
-            active_lens_id = first_lens_id
+        known_lens_ids = [str(getattr(lens, "id", "") or "") for lens in config_lenses]
+        active_lens_id = leftover_honest_catalog_id(
+            str(ctx.get("cohort_active_lens") or ""),
+            known_lens_ids,
+            default_lens_id,
+        )
 
         lens_tabs: list[CohortStripLensTab] = []
         for lens in config_lenses:

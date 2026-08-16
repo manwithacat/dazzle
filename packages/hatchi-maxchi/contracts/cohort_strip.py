@@ -8,8 +8,10 @@ must echo leftover-honest ``include_closed`` / ``as_of``. Bare
 current on a lens change. Leftover junk (``zzz``, ``2abc``,
 ``maybe``, ``not-a-date``) must not invent. Valid ``true`` /
 YYYY-MM-DD still ride. Rest-state gallery is unchanged (oral #33).
-Not leftover list include_closed / related-tab as_of / DETAIL as_of
-onto the edit form.
+
+Leftover-honest lens catalog (cycle 2184): valid ``?lens=<id>``
+rides. Leftover junk (``ghost``, ``zzz``) must not invent the
+first declared lens when ``default_lens`` is a later sibling.
 """
 
 from __future__ import annotations

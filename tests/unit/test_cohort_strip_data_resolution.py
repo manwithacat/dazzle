@@ -159,13 +159,13 @@ _TWO_LENSES = [
             "92",
             id="active-lens-field",
         ),
-        # Unknown active lens → first declared lens (score) wins.
+        # Unknown active lens, no default → rest is first (score).
         pytest.param(
             [{"id": "p1", "score": 50, "att_pct": 90}],
             _TWO_LENSES,
             "ghost-lens",
             "50",
-            id="unknown-lens-falls-back-to-first-declared",
+            id="unknown-lens-restores-first-when-default-unset",
         ),
         # Row missing the lens's primary field → handled gracefully as "".
         pytest.param(

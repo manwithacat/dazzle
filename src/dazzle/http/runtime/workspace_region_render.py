@@ -54,6 +54,7 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 
 logger = logging.getLogger(__name__)
 
@@ -720,6 +721,18 @@ async def _build_card_adapter_ctx(
 # ─────────────────────────── dashboard family ──────────────────────────
 
 
+def _leftover_honest_lens_id(request: Any, cohort_cfg: Any) -> str:
+    """Valid ``?lens=`` rides; leftover junk restores default else first."""
+    known = [
+        str(getattr(lens, "id", "") or "") for lens in (getattr(cohort_cfg, "lenses", None) or [])
+    ]
+    return leftover_honest_catalog_id(
+        request.query_params.get("lens") or "",
+        known,
+        str(getattr(cohort_cfg, "default_lens", "") or ""),
+    )
+
+
 async def _build_dashboard_adapter_ctx(
     display_upper: str,
     env: RenderEnv,
@@ -745,11 +758,7 @@ async def _build_dashboard_adapter_ctx(
         adapter_ctx["as_of"] = env.request.query_params.get("as_of", "")
         cohort_cfg = getattr(ir_region, "cohort_strip_config", None)
         if cohort_cfg is not None:
-            active_lens_id = (
-                env.request.query_params.get("lens")
-                or getattr(cohort_cfg, "default_lens", "")
-                or (getattr(cohort_cfg.lenses[0], "id", "") if cohort_cfg.lenses else "")
-            )
+            active_lens_id = _leftover_honest_lens_id(env.request, cohort_cfg)
             adapter_ctx["cohort_active_lens"] = active_lens_id
             adapter_ctx["cohort_cells"] = _build_cohort_cells(
                 items=inputs.items,
