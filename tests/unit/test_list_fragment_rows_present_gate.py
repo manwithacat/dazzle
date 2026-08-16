@@ -85,7 +85,7 @@ def test_list_surface_renders_a_hydrated_row(app, surface, entity, enums) -> Non
     inline_editable = [
         str(c.get("key", ""))
         for c in cols
-        if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime")
+        if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime", "number")
         and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
         and not str(c.get("key", "")).endswith("_id")
         and (str(c.get("type", "")) != "badge" or c.get("filter_options"))
@@ -161,3 +161,45 @@ def test_datetime_column_humanises_and_is_inline_editable() -> None:
     assert 'data-dz-grid-edit="assigned_at"' in html
     # title may still be text; assigned_at must not be
     assert 'data-dz-grid-edit="assigned_at" data-dz-edit-kind="text"' not in html
+
+
+def test_number_column_is_inline_editable_kind_number() -> None:
+    """Number cols map to kind=number so leftover cannot invent (cycle 2155).
+
+    ``build_surface_columns`` keeps type=number; C2.3 marks the field
+    inline-editable; the cell editor uses kind=number (native + companion).
+    Money stays non-editable (2121 standalone leftover class).
+    """
+    cols = [
+        {"key": "title", "type": "text", "label": "Title"},
+        {"key": "qty", "type": "number", "label": "Qty"},
+        {"key": "amount", "type": "money", "label": "Amount"},
+    ]
+    inline_editable = [
+        str(c.get("key", ""))
+        for c in cols
+        if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime", "number")
+        and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
+        and not str(c.get("key", "")).endswith("_id")
+    ]
+    assert "qty" in inline_editable
+    assert "amount" not in inline_editable
+    row = {
+        "id": str(uuid.uuid4()),
+        "title": "Task",
+        "qty": 12,
+        "amount": 1500,
+    }
+    table = {
+        "columns": cols,
+        "entity_name": "Task",
+        "api_endpoint": "/tasks",
+        "table_id": "t-task_list",
+        "detail_url_template": "/app/task/{id}",
+        "inline_editable": inline_editable,
+    }
+    html = render_data_table_rows(build_data_table(table, [row]))
+    assert 'data-dz-edit-kind="number"' in html
+    assert 'data-dz-grid-edit="qty"' in html
+    assert 'data-dz-grid-edit="qty" data-dz-edit-kind="text"' not in html
+    assert 'data-dz-grid-edit="amount"' not in html

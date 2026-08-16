@@ -241,6 +241,11 @@ Doctrine source of truth remains
     datetime `2026-07-16T01:30zzz` stay visible + fail
     validity; Enter/Tab do not PUT; datetime columns map to
     kind=time not date; rest-state gallery unchanged, 2153).
+    Grid leftover number junk must not invent a value
+    (kind=number Field group; leftover `zzz` / `12abc` /
+    `1e2` stay visible + fail validity; Enter/Tab do not PUT;
+    number columns map to kind=number not text; money stays
+    non-editable (2121); rest-state gallery unchanged, 2155).
     **`form=""` is invalid HTML** (Nu: empty ID) — leftover exclusion
     uses `form="hm-detached-q"` plus a document-level singleton form
     (2140). Do not re-ship empty `form` to dodge native submit.

@@ -2656,6 +2656,75 @@ def test_grid_time_leftover_iso_does_not_invent_commit(page) -> None:  # type: i
     assert page.query_selector(host) is None, "Escape still cancels"
 
 
+def test_grid_number_leftover_does_not_invent_commit(page) -> None:  # type: ignore[no-untyped-def]
+    """Grid-edit leftover number junk must not invent a commit (cycle 2155).
+
+    Same honesty class as standalone number leftover (2149) and grid
+    date leftover ISO (2150). Inject a kind=number span so rest-state
+    gallery stays unchanged (oral #33).
+    """
+    goto_part(page, "grid")
+    _hydrate_grid(page)
+    injected = page.eval_on_selector(
+        "[data-grid-body] [data-row-id]",
+        """row => {
+          const td = document.createElement('td');
+          td.className = 'tr-cell';
+          td.setAttribute('data-col', 'qty');
+          td.innerHTML = '<span class="tr-cell-display" data-grid-edit="qty" '
+            + 'data-edit-kind="number" data-edit-value="12" '
+            + 'data-edit-label="Qty">12</span>';
+          row.appendChild(td);
+          return true;
+        }""",
+    )
+    assert injected is True
+    span = page.query_selector('[data-grid-body] [data-grid-edit="qty"]')
+    assert span is not None, "injected number cell must carry the edit seam span"
+
+    span.dblclick()
+    page.wait_for_timeout(80)
+    host = "[data-grid-editor]"
+    out = f"{host} [data-number-value]"
+    native = f'{host} input[type="number"]'
+    assert page.query_selector(out) is not None, "number editor must emit a companion"
+    assert page.input_value(native) == "12"
+    assert page.input_value(out) == "12"
+
+    page.fill(out, "zzz")
+    assert page.input_value(native) == "12", "named leftover must not invent a number"
+    assert page.eval_on_selector(out, "el => el.checkValidity()") is False
+    assert page.eval_on_selector(out, "el => el.validity.customError") is True
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None, "leftover must not PUT / close"
+    assert page.input_value(native) == "12"
+    assert page.input_value(out) == "zzz", "Enter must not revert leftover junk"
+
+    page.fill(out, "12abc")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "12", "leftover suffix is not a silent 12"
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None
+    assert page.input_value(out) == "12abc"
+
+    page.fill(out, "1e2")
+    page.wait_for_timeout(50)
+    assert page.input_value(native) == "12", "scientific leftover is not a silent 100"
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(200)
+    assert page.query_selector(host) is not None
+    assert page.input_value(out) == "1e2"
+
+    page.fill(out, "15")
+    page.wait_for_timeout(80)
+    assert page.input_value(native) == "15", "valid number must write the native"
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.query_selector(host) is None, "Escape still cancels"
+
+
 def test_grid_touch_resize_and_edit_accommodations(_engine_browser) -> None:  # type: ignore[no-untyped-def]
     """Touch (coarse pointer) accommodations for the grid extensions,
     chromium-only (WebKit has no mobile/pointer:coarse emulation):

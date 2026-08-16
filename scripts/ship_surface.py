@@ -86,6 +86,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2153: grid-edit leftover time ISO must not invent a clock
     "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_time_iso_does_not_invent",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_datetime_column_humanises_and_is_inline_editable",
+    # cycle 2155: grid-edit leftover number junk must not invent a value
+    "tests/unit/test_form_widget_showcase_phase3.py::test_grid_edit_controller_leftover_number_does_not_invent",
+    "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
+    "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page
     "tests/unit/test_form_widget_showcase_phase3.py::test_pdf_controller_leftover_page_does_not_invent",
     # cycle 2152: PDF leftover zoom junk must not invent a scale

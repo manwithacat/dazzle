@@ -885,6 +885,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "kind=time cells open a Field time group (native type=time / "
                     "datetime-local + ISO companion) — leftover ISO must not invent "
                     "a PUT of the previous clock (datetime columns map here, not date)",
+                    "kind=number cells open a Field number group (native type=number + "
+                    "decimal companion) — leftover junk must not invent a PUT of the "
+                    "previous number (number columns map here, not text)",
                     "kind=select cells open a bare native <select> editor — NOT the "
                     "combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)",
                     "row identity: a row's id IS the idiomorph morph key and encodes "
@@ -901,6 +904,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "date — Enter/Tab/change refuse while the companion is invalid",
                     "leftover clock ISO (zzz / 14:30zzz / 2026-07-16T01:30zzz) must not "
                     "PUT the previous time — datetime leftover must not invent a date",
+                    "leftover number junk (zzz / 12abc / 1e2) must not PUT the previous "
+                    "number — parseFloat leftover must not invent a value",
                     "do not mount data-dz-combobox inside a grid cell expecting "
                     "grid-edit to drive it — that is a future composition, not current seam",
                 ),

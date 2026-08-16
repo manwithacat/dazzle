@@ -7,6 +7,16 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Grid leftover number invented a value (cycle 2155)** —
+  leftover typed junk (`zzz`, `12abc`, `1e2`) no longer PUTs the
+  previous number from a grid cell. kind=number opens a Field number
+  group (native `type=number` is the committed value; decimal
+  companion has no name). Number columns map to kind=number instead
+  of kind=text so leftover cannot invent via `parseFloat`. Money
+  columns stay non-editable (standalone leftover class already
+  saturated, 2121). Rest-state gallery unchanged. Same honesty
+  class as standalone number leftover (2149) and grid date leftover
+  ISO (2150).
 - **Grid leftover time invented a clock (cycle 2153)** —
   leftover typed ISO (`zzz`, `14:30zzz`, `2026-07-16T01:30zzz`)
   no longer PUTs the previous clock from a grid cell. kind=time

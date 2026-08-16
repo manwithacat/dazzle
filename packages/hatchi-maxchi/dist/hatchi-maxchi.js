@@ -3237,7 +3237,7 @@
  *             body — the entity's STANDARD gated update route (permit +
  *             scope pre-read + destination-scope + schema validation).
  *   - cell:   `[data-grid-edit="<col>"]` (the display span) with
- *             `data-edit-kind` (text|date|time|bool|select),
+ *             `data-edit-kind` (text|date|time|number|bool|select),
  *             `data-edit-value` (the raw value), `data-edit-label`
  *             (a11y), and for selects `data-edit-options`
  *             (JSON [[value,label],…]).
@@ -3262,7 +3262,18 @@
  *             from the native (time.js). Datetime columns map here
  *             (not kind=date) so leftover ISO cannot invent a date.
  *             Gallery rest-state is unchanged (oral #33).
- *   - keys:   Enter commits (text/date/time), Escape cancels, Tab / Shift-Tab
+ *   - number: kind=number opens a Field number group (native
+ *             `type=number` + decimal companion). Leftover honesty
+ *             (cycle 2155): leftover junk (`12abc`, `zzz`, `1e2`)
+ *             must not invent a commit of the previous number.
+ *             Native number is the committed value; leftover stays
+ *             visible, fails custom validity, and Enter/Tab do not
+ *             PUT. Empty companion on blur restores from the native
+ *             (number.js). Number columns map here (not kind=text)
+ *             so leftover cannot invent via parseFloat. Money columns
+ *             stay non-editable (2121 standalone leftover class).
+ *             Gallery rest-state is unchanged (oral #33).
+ *   - keys:   Enter commits (text/date/time/number), Escape cancels, Tab / Shift-Tab
  *             commits then advances to the next/previous editable cell
  *             (wrapping to the adjacent row); bool/select commit on change.
  *   - state:  `is-saving` / `is-error` classes on the row (the same classes
@@ -3355,6 +3366,31 @@
       tIso.setAttribute("spellcheck", "false");
       el.appendChild(tNative);
       el.appendChild(tIso);
+    } else if (edit.kind === "number") {
+      // Native number is the committed value; companion is leftover-honest
+      // (cycle 2155). Compose Field number so number.js owns parse/validity.
+      el = document.createElement("span");
+      el.className = "inline-edit-number";
+      el.setAttribute("data-number-group", "");
+      var nNative = document.createElement("input");
+      nNative.type = "number";
+      nNative.step = "any";
+      nNative.className = "inline-edit-input inline-edit-number-native";
+      nNative.value = edit.value;
+      nNative.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
+      var nOut = document.createElement("input");
+      nOut.type = "text";
+      nOut.className = "inline-edit-input inline-edit-number-out";
+      nOut.setAttribute("data-number-value", "");
+      nOut.setAttribute("inputmode", "decimal");
+      nOut.value = edit.out != null ? edit.out : edit.value;
+      nOut.setAttribute(
+        "aria-label",
+        "Edit " + (edit.label || edit.colKey) + " value",
+      );
+      nOut.setAttribute("spellcheck", "false");
+      el.appendChild(nNative);
+      el.appendChild(nOut);
     } else {
       el = document.createElement("input");
       el.type = "text";
@@ -3362,7 +3398,11 @@
       el.value = edit.value;
     }
     el.setAttribute("data-grid-editor", "");
-    if (edit.kind !== "date" && edit.kind !== "time") {
+    if (
+      edit.kind !== "date" &&
+      edit.kind !== "time" &&
+      edit.kind !== "number"
+    ) {
       el.setAttribute("aria-label", "Edit " + (edit.label || edit.colKey));
     }
     return el;
@@ -3382,7 +3422,8 @@
     var iso =
       editor.querySelector &&
       (editor.querySelector("[data-date-iso]") ||
-        editor.querySelector("[data-time-iso]"));
+        editor.querySelector("[data-time-iso]") ||
+        editor.querySelector("[data-number-value]"));
     if (iso) {
       iso.focus();
       if (iso.select) iso.select();
@@ -3422,6 +3463,11 @@
         (editor.querySelector('input[type="datetime-local"]') ||
           editor.querySelector('input[type="time"]'));
       return tNative ? tNative.value : "";
+    }
+    if (kind === "number") {
+      var nNative =
+        editor.querySelector && editor.querySelector('input[type="number"]');
+      return nNative ? nNative.value : "";
     }
     return editor.value;
   }
@@ -3499,10 +3545,33 @@
     return false;
   }
 
+  // Leftover junk must not invent a number commit (cycle 2155).
+  // parseFloat("12abc") === 12 — leftover suffix is not a silent 12.
+  // Native spinner changes are the source of truth — never block those.
+  // Empty companion is not leftover (blur restores from the native).
+  function numberLeftoverBlocksCommit(root, target) {
+    var edit = root && root._dzEdit;
+    if (!edit || edit.kind !== "number") return false;
+    var editor = root.querySelector("[data-grid-editor]");
+    if (!editor) return false;
+    var native = editor.querySelector('input[type="number"]');
+    var out = editor.querySelector("[data-number-value]");
+    if (target && native && (target === native || native.contains(target))) {
+      return false;
+    }
+    if (!out) return false;
+    var raw = String(out.value == null ? "" : out.value).trim();
+    if (!raw) return false;
+    if (out.validity && out.validity.customError) return true;
+    if (!/^-?(?:\d+|\d*\.\d+)$/.test(raw)) return true;
+    return false;
+  }
+
   function leftoverBlocksCommit(root, target) {
     return (
       dateLeftoverBlocksCommit(root, target) ||
-      timeLeftoverBlocksCommit(root, target)
+      timeLeftoverBlocksCommit(root, target) ||
+      numberLeftoverBlocksCommit(root, target)
     );
   }
 
@@ -3713,6 +3782,10 @@
           (editor.querySelector("[data-date-iso]") ||
             editor.querySelector("[data-time-iso]"));
         if (iso) edit.iso = iso.value;
+        var out =
+          editor.querySelector &&
+          editor.querySelector("[data-number-value]");
+        if (out) edit.out = out.value;
       }
     }
   }

@@ -248,6 +248,7 @@ Correct response for none (raw fetch / no HTML swap).
 - inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display span (kind/value/label/options) — contract in contracts/grid_edit.py
 - kind=date cells open a Field date group (native type=date + ISO companion) — leftover ISO must not invent a PUT of the previous date
 - kind=time cells open a Field time group (native type=time / datetime-local + ISO companion) — leftover ISO must not invent a PUT of the previous clock (datetime columns map here, not date)
+- kind=number cells open a Field number group (native type=number + decimal companion) — leftover junk must not invent a PUT of the previous number (number columns map here, not text)
 - kind=select cells open a bare native <select> editor — NOT the combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)
 - row identity: a row's id IS the idiomorph morph key and encodes data-dz-row-id (the bulk payload anchor)
 
@@ -269,6 +270,7 @@ Correct response for none (raw fetch / no HTML swap).
 - never patch committed values client-side — commit fires dz-grid:refresh so the server re-renders badges/dates
 - leftover ISO junk (zzz / 2025-06-20zzz) must not PUT the previous date — Enter/Tab/change refuse while the companion is invalid
 - leftover clock ISO (zzz / 14:30zzz / 2026-07-16T01:30zzz) must not PUT the previous time — datetime leftover must not invent a date
+- leftover number junk (zzz / 12abc / 1e2) must not PUT the previous number — parseFloat leftover must not invent a value
 - do not mount data-dz-combobox inside a grid cell expecting grid-edit to drive it — that is a future composition, not current seam
 
 ### Keyboard / AT
@@ -322,7 +324,7 @@ __all__ = ["DOM_CONTRACT"]
 
 | Node | Attr | Constraint |
 |---|---|---|
-| `[data-dz-grid-edit]` | `data-dz-edit-kind` | one of ['text', 'date', 'time', 'bool', 'select'] |
+| `[data-dz-grid-edit]` | `data-dz-edit-kind` | one of ['text', 'date', 'time', 'number', 'bool', 'select'] |
 | `[data-dz-grid-edit]` | `data-dz-edit-value` | present (any value) |
 | `[data-dz-grid-edit]` | `data-dz-edit-label` | present (any value) |
 | `[data-dz-grid-edit]` | `data-dz-edit-options` | JSON [[value, label], …]; required when {'data-dz-edit-kind': 'select'} |
@@ -332,7 +334,7 @@ __all__ = ["DOM_CONTRACT"]
 | Field | Type | Required |
 |---|---|---|
 | `col` | `string` | yes |
-| `kind` | `string ∈ ['text', 'date', 'time', 'bool', 'select']` | yes |
+| `kind` | `string ∈ ['text', 'date', 'time', 'number', 'bool', 'select']` | yes |
 | `value` | `string` | yes |
 | `label` | `string` | yes |
 | `options` | `array | null` | no |

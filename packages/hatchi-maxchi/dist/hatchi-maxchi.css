@@ -7072,6 +7072,32 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
 }
 
+/* Number leftover honesty (cycle 2155): native number + decimal companion.
+ * Rest-state gallery (display spans) is unchanged — editor-only chrome. */
+.inline-edit-number {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+.inline-edit-number-native {
+  width: auto;
+  min-width: 8ch;
+  flex: 0 0 auto;
+}
+
+.inline-edit-number-out {
+  flex: 1 1 8ch;
+  min-width: 6ch;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+}
+
+.inline-edit-number-out:invalid {
+  border-color: var(--colour-danger, var(--colour-destructive, #dc2626));
+}
+
 /* NB the select-column <col> class (table-col-select, in the grid's
  * colgroup) is SEMANTIC_ONLY: a structural marker with no rule — the table
  * stays layout:auto, so the col carries no width. */

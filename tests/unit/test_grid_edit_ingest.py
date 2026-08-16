@@ -45,3 +45,9 @@ def test_time_kind_is_a_first_class_seam() -> None:
     attrs = edit_span_attrs(GridEditCell(col="due_at", kind="time", value="14:30", label="Due at"))
     assert 'data-dz-edit-kind="time"' in attrs
     assert "data-dz-edit-options" not in attrs
+
+
+def test_number_kind_is_a_first_class_seam() -> None:
+    attrs = edit_span_attrs(GridEditCell(col="qty", kind="number", value="12", label="Qty"))
+    assert 'data-dz-edit-kind="number"' in attrs
+    assert "data-dz-edit-options" not in attrs
