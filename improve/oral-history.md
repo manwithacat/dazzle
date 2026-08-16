@@ -386,6 +386,17 @@ Doctrine source of truth remains
     exists. Not leftover-scalar refuse. Not leftover page. Not
     Goal B coat.
 
+48. **List leftover sort/filter/q invents an empty or unfiltered
+    collection.** Cycle 2164: ``?sort=2abc`` / ``zzz`` / ``?dir=zzz``
+    / ``filter[zzz]`` used to raise in the list fetch;
+    ``_handle_table`` invented rows=[] + ``empty_kind=loading``.
+    ``?q=`` (dz-grid search / REST #596 alias) was dropped, so a
+    deep-link search invented the unfiltered list. Identifier parse
+    (not isdigit leftover page, oral #46). Empty / invalid / unknown
+    restores default; known fields still sort/filter; ``q`` is
+    search. Do not clone leftover page. Not leftover-scalar refuse.
+    Not host-scan. Not Goal B coat.
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

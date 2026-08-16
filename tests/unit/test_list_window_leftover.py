@@ -66,7 +66,7 @@ def test_parse_list_window_leftover_does_not_invent(
 def test_handle_table_uses_leftover_honest_window() -> None:
     """``_handle_table`` must not raw-int leftover page into the fetch."""
     src = _PAGE_ROUTES.read_text(encoding="utf-8")
-    assert 'page=_parse_list_window(api_params.get("page"), default=1)' in src
+    assert 'page=_parse_list_window(_qparams.get("page"), default=1)' in src
     assert "page_size=_parse_list_window(" in src
     assert 'page=int(api_params.get("page"' not in src
     assert 'page_size=int(api_params.get("page_size"' not in src

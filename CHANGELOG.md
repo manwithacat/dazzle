@@ -12,6 +12,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **List leftover sort/filter/q invented a fetch (cycle 2164)** —
+  leftover URL `?sort=2abc` / `?sort=zzz` / `?dir=zzz` /
+  `?filter[zzz]=1` no longer raise into `_handle_table`'s bare
+  `except Exception` (empty table / loading theater). Leftover
+  `?q=` (dz-grid search / REST alias) is no longer dropped
+  (unfiltered collection theater). Empty / invalid / unknown
+  restores the server default; known fields still sort/filter;
+  `q` is search. New invent class: leftover query invents an
+  empty or unfiltered collection, not leftover page (2162).
 - **List leftover page invented an empty window (cycle 2162)** —
   leftover URL `?page=2abc` / `?page_size=2abc` / `?page=zzz` no
   longer `int()`-raises into `_handle_table`'s bare `except

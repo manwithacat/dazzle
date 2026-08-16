@@ -100,6 +100,123 @@ def _parse_list_window(
     return num
 
 
+# Leftover-honest list query (cycle 2164). Identifier path, not isdigit
+# (2162 leftover page). ``dz-grid`` writes ``q`` / ``sort`` / ``dir`` /
+# ``filter[key]`` into the URL; leftover junk used to invent an empty
+# collection (unknown column → ``_handle_table`` bare except) or an
+# unfiltered collection (``q`` dropped).
+_LIST_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_LIST_FILTER_OPS = frozenset(
+    {
+        "eq",
+        "ne",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "contains",
+        "icontains",
+        "startswith",
+        "istartswith",
+        "endswith",
+        "iendswith",
+        "in",
+        "not_in",
+        "isnull",
+        "between",
+        "in_subquery",
+    }
+)
+
+
+def _list_known_fields(req_table: Any) -> frozenset[str]:
+    """Column keys + default sort + search fields + ``id``."""
+    keys: set[str] = {"id"}
+    for col in getattr(req_table, "columns", None) or ():
+        key = str(getattr(col, "key", "") or "")
+        if key:
+            keys.add(key)
+    extra = getattr(req_table, "default_sort_field", "") or ""
+    if extra:
+        keys.add(str(extra))
+    for search_field in getattr(req_table, "search_fields", None) or ():
+        text = str(search_field or "")
+        if text:
+            keys.add(text)
+    return frozenset(keys)
+
+
+def _list_ident_path(field: str) -> bool:
+    parts = field.split("__")
+    return bool(parts) and all(bool(p) and _LIST_IDENT.fullmatch(p) is not None for p in parts)
+
+
+def _list_filter_field_known(field: str, allowed: frozenset[str]) -> bool:
+    if field in allowed:
+        return True
+    parts = field.split("__")
+    if len(parts) > 1 and parts[-1].lower() in _LIST_FILTER_OPS:
+        return "__".join(parts[:-1]) in allowed
+    return False
+
+
+def _parse_list_sort(raw: Any, *, default: str | None, allowed: frozenset[str]) -> str | None:
+    """Parse leftover-honest list ``sort``.
+
+    Leftover junk (``2abc``, ``zzz``, ``1e2``) must not invent a sort.
+    Unknown column / invalid ident used to raise in the list fetch;
+    ``_handle_table`` then invented rows=[] + ``empty_kind=loading``.
+    Empty / invalid / unknown restores *default*. Known fields still sort.
+    Leading ``-`` is stripped (``dir`` owns direction). Cycle 2164.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return default or None
+    field = text[1:] if text.startswith("-") else text
+    if not _list_ident_path(field) or field not in allowed:
+        return default or None
+    return field
+
+
+def _parse_list_dir(raw: Any, *, default: str = "asc") -> str:
+    """Parse leftover-honest list ``dir``. Only ``asc`` / ``desc``."""
+    text = str(raw if raw is not None else "").strip().lower()
+    if text in ("asc", "desc"):
+        return text
+    return default if default in ("asc", "desc") else "asc"
+
+
+def _parse_list_search(*raws: Any) -> str | None:
+    """``search`` or leftover ``q`` alias (dz-grid + REST #596).
+
+    Empty / whitespace is absent (same honesty as dz-grid ``searchTerm``).
+    A present query is honest search — do not invent the unfiltered list.
+    """
+    for raw in raws:
+        text = str(raw if raw is not None else "").strip()
+        if text:
+            return text
+    return None
+
+
+def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[str, str]:
+    """Parse leftover-honest ``filter[key]``. Invalid / unknown keys dropped."""
+    out: dict[str, str] = {}
+    items = getattr(query_params, "items", None)
+    if items is None:
+        return out
+    for key, val in items():
+        if not val:
+            continue
+        name = str(key)
+        if not (name.startswith("filter[") and name.endswith("]")):
+            continue
+        field = name[7:-1]
+        if _list_ident_path(field) and _list_filter_field_known(field, allowed):
+            out[field] = str(val)
+    return out
+
+
 def _collect_request_params(request: Any) -> dict[str, str]:
     """#1129: merge ``request.path_params`` + ``request.query_params``
     into a flat ``{name: str}`` dict for ``CustomRenderCtx.params``.
@@ -1768,20 +1885,26 @@ async def _handle_table(prc: _PageRequestContext) -> None:
                 if not evaluate_condition(_col.visible_condition, {}, _role_ctx):
                     _col.hidden = True
 
-    # Forward all DataTable query params to backend API
-    api_params: dict[str, str] = {}
-    for key in ("page", "page_size", "sort", "dir", "search"):
-        _qval = prc.request.query_params.get(key)
-        if _qval:
-            api_params[key] = _qval
-    for key, val in prc.request.query_params.items():
-        if key.startswith("filter[") and val:
-            api_params[key] = val
-    api_params.setdefault("page", "1")
+    # Leftover-honest list query (cycle 2164). dz-grid writes q/sort/dir;
+    # leftover sort/filter used to invent empty (exception theater);
+    # leftover q used to invent the unfiltered collection.
+    _qparams = prc.request.query_params
+    _allowed = _list_known_fields(req_table)
+    _list_sort = _parse_list_sort(
+        _qparams.get("sort"),
+        default=req_table.default_sort_field or None,
+        allowed=_allowed,
+    )
+    _list_dir = _parse_list_dir(
+        _qparams.get("dir"),
+        default=req_table.default_sort_dir or "asc",
+    )
+    _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
+    _list_filters = _parse_list_filters(_qparams, allowed=_allowed)
 
     # search_first: skip initial fetch until user provides search/filter
-    _has_search = bool(api_params.get("search"))
-    _has_filter = any(k.startswith("filter[") for k in api_params)
+    _has_search = bool(_list_search)
+    _has_filter = bool(_list_filters)
     _skip_fetch = req_table.search_first and not _has_search and not _has_filter
 
     # Track fetch outcome for typed empty-state selection (#807):
@@ -1801,19 +1924,16 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     else:
         # IN-PROCESS list read (#1422) — no self-fetch. Same scope+permit the REST
         # list route applies (gated_list), via the shared in-process lister.
-        _t_filters = {
-            k[7:-1]: v for k, v in api_params.items() if k.startswith("filter[") and k.endswith("]")
-        }
         try:
             data = await _list_entity_in_process(
                 prc,
                 req_table.entity_name,
-                page=_parse_list_window(api_params.get("page"), default=1),
-                page_size=_parse_list_window(api_params.get("page_size"), default=20, hi=100),
-                sort=api_params.get("sort"),
-                direction=api_params.get("dir", "asc"),
-                search=api_params.get("search"),
-                filters=_t_filters or None,
+                page=_parse_list_window(_qparams.get("page"), default=1),
+                page_size=_parse_list_window(_qparams.get("page_size"), default=20, hi=100),
+                sort=_list_sort,
+                direction=_list_dir,
+                search=_list_search,
+                filters=_list_filters or None,
             )
             items = data.get("items", [])
             if items and isinstance(items[0], dict):
@@ -1829,14 +1949,10 @@ async def _handle_table(prc: _PageRequestContext) -> None:
             req_table.total = 0
             _fetch_errored = True
 
-    # Update table context with current sort/filter state from request
-    req_table.sort_field = prc.request.query_params.get("sort", req_table.default_sort_field)
-    req_table.sort_dir = prc.request.query_params.get("dir", req_table.default_sort_dir)
-    req_table.filter_values = {
-        k[7:-1]: v
-        for k, v in prc.request.query_params.items()
-        if k.startswith("filter[") and k.endswith("]") and v
-    }
+    # Update table context with leftover-honest sort/filter (not raw URL junk)
+    req_table.sort_field = _list_sort or req_table.default_sort_field
+    req_table.sort_dir = _list_dir
+    req_table.filter_values = _list_filters
 
     # Typed empty-state kind selection (#807). The template uses this
     # to pick the right copy + affordance. Only runs when the list is

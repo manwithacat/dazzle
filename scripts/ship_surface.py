@@ -92,6 +92,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_widget_showcase_phase3.py::test_grid_controller_leftover_page_does_not_invent",
     # cycle 2162: list leftover page / page_size must not invent an empty window
     "tests/unit/test_list_window_leftover.py",
+    # cycle 2164: list leftover sort / filter / q must not invent a fetch
+    "tests/unit/test_list_query_leftover.py",
     "tests/unit/test_list_fragment_rows_present_gate.py::test_number_column_is_inline_editable_kind_number",
     "tests/unit/test_grid_edit_ingest.py::test_number_kind_is_a_first_class_seam",
     # cycle 2151: PDF leftover page junk must not invent a page
