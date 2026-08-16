@@ -420,6 +420,39 @@ def test_grid_clamps_column_count_to_valid_range() -> None:
     assert "x" in _render(fragment)
 
 
+def test_grid_person_ref_emits_card_meta_avatar() -> None:
+    """display: grid person refs use present(person, card_meta) Avatar."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "title": "Storefront refresh",
+                "owner": {
+                    "id": "u1",
+                    "name": "Ada Owner",
+                    "email": "ada@demo.dazzle.local",
+                },
+            }
+        ],
+        "display_key": "title",
+        "columns": [
+            {"key": "title", "label": "Title", "type": "text"},
+            {
+                "key": "owner",
+                "label": "Owner",
+                "type": "ref",
+                "ref_entity": "User",
+            },
+        ],
+    }
+    html = _render(adapter.build(_FakeRegion("cards", display="grid"), ctx))
+    assert "Storefront refresh" in html
+    assert "dz-avatar" in html
+    assert "Ada Owner" in html
+    assert "{'id':" not in html
+    assert "UUID(" not in html
+
+
 # ───────────────── Metrics ─────────────────────────
 
 
@@ -581,6 +614,34 @@ def test_metrics_sub_one_float_rounds_to_2dp_no_leak() -> None:
     html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
     assert "0.89" in html
     assert "0.8850441412520064" not in html
+
+
+def test_metrics_person_value_refused_not_invented() -> None:
+    """Person dict on a KPI tile is refused — no str(dict) / name prose."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "metrics": [
+            {"label": "Open", "value": 12},
+            {
+                "label": "Assignee",
+                "key": "assigned_to",
+                "type": "ref",
+                "ref_entity": "User",
+                "value": {
+                    "id": "u1",
+                    "name": "Support Agent",
+                    "email": "agent@demo.dazzle.local",
+                },
+            },
+        ]
+    }
+    html = _render(adapter.build(_FakeRegion("k", display="metrics"), ctx))
+    assert "Open" in html
+    assert ">12<" in html
+    assert "Support Agent" not in html
+    assert "Assignee" not in html
+    assert "{'id':" not in html
+    assert "dz-avatar" not in html
 
 
 # ───────────────── Bar chart ───────────────────────

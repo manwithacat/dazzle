@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from dazzle.core.ir import AggregateRef, DerivedMetricExpr
+from dazzle.render.filters import _metric_number_filter
 from dazzle.render.fragment import (
     Accordion,
     AccordionItem,
@@ -50,6 +51,77 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
 )
+from dazzle.render.presentation import present
+from dazzle.render.user_chip import looks_like_person_ref
+
+
+def _metrics_tile_display_value(metric: dict[str, Any]) -> str | None:
+    """Format a KPI value, or None when person×metrics_tile is refused.
+
+    Numeric/bool/None stay on ``_metric_number_filter``. A person-shaped
+    dict (or leftover name on a person-keyed metric) must not invent
+    ``str(dict)`` / name prose on a tile (oral #44).
+    """
+    value = metric.get("value")
+    if isinstance(value, (int, float, bool)) or value is None:
+        return _metric_number_filter(value)
+    col = {
+        "key": str(metric.get("key") or ""),
+        "type": str(metric.get("type") or ""),
+        "ref_entity": str(metric.get("ref_entity") or ""),
+    }
+    probe = value if isinstance(value, dict) else None
+    if probe is None:
+        return _metric_number_filter(value)
+    if not looks_like_person_ref(probe, col):
+        return _metric_number_filter(value)
+    pr = present("person", "metrics_tile", probe, col)
+    if pr.density == "refuse" or pr.suppress_label:
+        return None
+    return _metric_number_filter(value)
+
+
+def _metric_tile_from_dict(metric: dict[str, Any]) -> MetricTile | None:
+    """One MetricTile, or None when label/value is refused."""
+    label = str(metric.get("label") or metric.get("name") or "")
+    if not label:
+        return None
+    value_str = _metrics_tile_display_value(metric)
+    if value_str is None:
+        return None
+    tone_raw = str(metric.get("tone") or "")
+    tone: Literal["", "positive", "warning", "destructive", "accent", "neutral"] = (
+        tone_raw  # type: ignore[assignment]
+        if tone_raw in ("", "positive", "warning", "destructive", "accent", "neutral")
+        else ""
+    )
+    direction_raw = str(metric.get("delta_direction") or "")
+    direction: Literal["", "up", "down", "flat"] = (
+        direction_raw  # type: ignore[assignment]
+        if direction_raw in ("", "up", "down", "flat")
+        else ""
+    )
+    sentiment_raw = str(metric.get("delta_sentiment") or "")
+    sentiment: Literal["", "positive_up", "positive_down"] = (
+        sentiment_raw  # type: ignore[assignment]
+        if sentiment_raw in ("", "positive_up", "positive_down")
+        else ""
+    )
+    try:
+        delta_pct = float(metric.get("delta_pct") or 0)
+    except (TypeError, ValueError):
+        delta_pct = 0.0
+    return MetricTile(
+        label=label,
+        value=value_str,
+        tone=tone,
+        delta_direction=direction,
+        delta_sentiment=sentiment,
+        delta_value=str(metric.get("delta") or ""),
+        delta_pct=delta_pct,
+        delta_period_label=str(metric.get("delta_period_label") or ""),
+    )
+
 
 _CAROUSEL_MEDIA_KEYS = ("preview_url", "logo_url", "photo_url", "image_url", "src")
 _MAP_LABEL_KEYS = (
@@ -514,9 +586,9 @@ class _BuildersMetricsMixin:
         delta block (delta_pct, delta_period_label, delta_sentiment,
         per-tile tone) is preserved on the typed-Fragment path.
 
-        Values are passed through `_metric_number_filter` (K/M-suffix
-        formatting) before reaching the primitive — same string the
-        Jinja path produces.
+        Values are passed through `_metrics_tile_display_value`
+        (number filter, or refuse person-shaped dicts) before reaching
+        the primitive — same string the Jinja path produces for counts.
 
         ctx shape:
             metrics: list of dicts with keys:
@@ -531,8 +603,6 @@ class _BuildersMetricsMixin:
             (legacy) aggregates: dict[name → resolved value], used as
                 fallback when metrics list isn't supplied
         """
-        from dazzle.render.filters import _metric_number_filter
-
         title = _region_title(region)
         metrics_list: list[dict[str, Any]] = ctx.get("metrics", []) or []
         if not metrics_list:
@@ -565,46 +635,9 @@ class _BuildersMetricsMixin:
         for m in metrics_list:
             if not isinstance(m, dict):
                 continue
-            label = str(m.get("label") or m.get("name") or "")
-            if not label:
-                continue
-            value_str = _metric_number_filter(m.get("value"))
-
-            tone_raw = str(m.get("tone") or "")
-            tone: Literal["", "positive", "warning", "destructive", "accent", "neutral"] = (
-                tone_raw  # type: ignore[assignment]
-                if tone_raw in ("", "positive", "warning", "destructive", "accent", "neutral")
-                else ""
-            )
-            direction_raw = str(m.get("delta_direction") or "")
-            direction: Literal["", "up", "down", "flat"] = (
-                direction_raw  # type: ignore[assignment]
-                if direction_raw in ("", "up", "down", "flat")
-                else ""
-            )
-            sentiment_raw = str(m.get("delta_sentiment") or "")
-            sentiment: Literal["", "positive_up", "positive_down"] = (
-                sentiment_raw  # type: ignore[assignment]
-                if sentiment_raw in ("", "positive_up", "positive_down")
-                else ""
-            )
-            try:
-                delta_pct = float(m.get("delta_pct") or 0)
-            except (TypeError, ValueError):
-                delta_pct = 0.0
-
-            tiles.append(
-                MetricTile(
-                    label=label,
-                    value=value_str,
-                    tone=tone,
-                    delta_direction=direction,
-                    delta_sentiment=sentiment,
-                    delta_value=str(m.get("delta") or ""),
-                    delta_pct=delta_pct,
-                    delta_period_label=str(m.get("delta_period_label") or ""),
-                )
-            )
+            tile = _metric_tile_from_dict(m)
+            if tile is not None:
+                tiles.append(tile)
 
         if not tiles:
             body = EmptyState(title="No metrics", description="No metric tiles produced.")

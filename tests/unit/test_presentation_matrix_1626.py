@@ -69,6 +69,29 @@ def test_present_person_timeline_meta_is_avatar_name() -> None:
     assert "Alex Agent" in r.html
 
 
+def test_present_person_card_meta_is_avatar_name() -> None:
+    assert PRESENTATION_MATRIX[("person", "card_meta")] == "avatar_name"
+    col = {"key": "owner", "label": "Owner", "ref_entity": "User", "type": "ref"}
+    value = {"id": "u1", "name": "Ada Owner", "email": "ada@demo.dazzle.local"}
+    r = present("person", "card_meta", value, col)
+    assert r.is_html
+    assert r.density == "avatar_name"
+    assert "dz-avatar" in r.html
+    assert "Ada Owner" in r.html
+
+
+def test_present_person_metrics_tile_refuses() -> None:
+    assert PRESENTATION_MATRIX[("person", "metrics_tile")] == "refuse"
+    col = {"key": "assigned_to", "label": "Assigned To", "ref_entity": "User", "type": "ref"}
+    value = {"id": "u1", "name": "Support Agent", "email": "agent@demo.dazzle.local"}
+    r = present("person", "metrics_tile", value, col)
+    assert r.density == "refuse"
+    assert r.suppress_label
+    assert r.html == ""
+    assert "Support Agent" not in r.html
+    assert "dz-avatar" not in r.html
+
+
 def test_infer_role_person_from_field_key() -> None:
     assert infer_role("x", {"key": "assigned_to", "type": "ref", "ref_entity": "User"}) == "person"
 
@@ -84,6 +107,12 @@ def test_cognition_snapshot_honest_about_audit_scope() -> None:
     assert isinstance(c["hosts_not_yet_audited"], list)
     assert "timeline_meta" in c["hosts_wired_to_seam"]
     assert "timeline_meta" in c["hosts_audited_by_scanner"]
+    assert "card_meta" in c["hosts_wired_to_seam"]
+    assert "card_meta" in c["hosts_audited_by_scanner"]
+    assert "metrics_tile" in c["hosts_wired_to_seam"]
+    assert "metrics_tile" in c["hosts_audited_by_scanner"]
+    assert "card_meta" not in c["hosts_matrix_only_or_partial_wire"]
+    assert "metrics_tile" not in c["hosts_matrix_only_or_partial_wire"]
 
 
 def test_present_money_and_swatch_not_stub_plain_only() -> None:

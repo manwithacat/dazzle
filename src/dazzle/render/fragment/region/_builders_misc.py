@@ -401,8 +401,9 @@ class _BuildersMiscMixin:
                 else:
                     label = str(col.get("label") or key)
                 # GRID renders badges with default size (md, no border)
-                # per legacy macro call (no kwargs).
-                fields.append((label, _render_typed_value(item, col)))
+                # per legacy macro call (no kwargs). Person refs use
+                # present(person, card_meta) — not list_cell mislabel.
+                fields.append((label, _render_typed_value(item, col, host="card_meta")))
             drill = ""
             if link_idx < len(row_links) and row_links[link_idx]:
                 drill = str(row_links[link_idx])

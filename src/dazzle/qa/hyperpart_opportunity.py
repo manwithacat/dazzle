@@ -42,6 +42,8 @@ __all__ = [
     "scan_appspec",
     "scan_person_ref_opportunities",
     "scan_person_timeline_meta_opportunities",
+    "scan_person_card_meta_opportunities",
+    "scan_person_metrics_tile_opportunities",
     "scan_queue_opportunities",
 ]
 
@@ -272,9 +274,11 @@ def scan_person_queue_meta_opportunities(appspec: Any) -> list[HyperpartOpportun
 
 
 _TIMELINE_DISPLAYS = frozenset({"activity_feed", "timeline"})
+_CARD_META_DISPLAYS = frozenset({"grid"})
+_METRICS_TILE_DISPLAYS = frozenset({"metrics", "summary"})
 
 
-def _timeline_person_opportunity(
+def _person_host_opportunity(
     *,
     wname: str,
     rname: str,
@@ -282,6 +286,10 @@ def _timeline_person_opportunity(
     ent_name: str,
     fn: str,
     fspec: Any,
+    host: str,
+    kind: str,
+    notes: str,
+    description: str,
 ) -> HyperpartOpportunity | None:
     ft = getattr(fspec, "type", None)
     if _field_type_kind(ft) not in _REF_KINDS:
@@ -291,36 +299,37 @@ def _timeline_person_opportunity(
         return None
     return HyperpartOpportunity(
         hyperpart="avatar",
-        kind="person_ref_timeline_meta",
+        kind=kind,
         entity=ent_name,
         field=fn,
         surface=wname,
         location=f"workspace:{wname}.region:{rname}.field:{fn}",
         status="emit_covered",
         severity="low",
-        description=(
-            f"{ent_name}.{fn} on {display} {wname}/{rname} — "
-            f"presentation matrix emits Avatar (timeline_meta), not actor prose."
-        ),
+        description=description,
         ownership="framework",
-        notes="present(person, timeline_meta) → avatar_name",
-        hosts="timeline_meta",
+        notes=notes,
+        hosts=host,
     )
 
 
-def scan_person_timeline_meta_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
-    """Person refs on ``display: activity_feed`` / ``timeline`` — timeline_meta host.
-
-    Status is ``emit_covered`` when framework ``present(person, timeline_meta)``
-    is live (Avatar chip). Scalar leftover actors stay escaped text.
-    """
+def _scan_person_host_opportunities(
+    appspec: Any,
+    *,
+    displays: frozenset[str],
+    host: str,
+    kind: str,
+    notes: str,
+    description_fn: Callable[[str, str, str, str, str], str],
+) -> list[HyperpartOpportunity]:
+    """Person refs on workspace regions whose display is in *displays*."""
     out: list[HyperpartOpportunity] = []
     entity_by_name = _entity_by_name(appspec)
     for ws in list(getattr(appspec, "workspaces", None) or []):
         wname = str(getattr(ws, "name", "") or "")
         for region in list(getattr(ws, "regions", None) or []):
             display = _region_display(region)
-            if display not in _TIMELINE_DISPLAYS:
+            if display not in displays:
                 continue
             rname = str(getattr(region, "name", "") or "")
             ent_name = str(getattr(region, "source", None) or getattr(region, "entity", "") or "")
@@ -329,17 +338,79 @@ def scan_person_timeline_meta_opportunities(appspec: Any) -> list[HyperpartOppor
                 continue
             field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
             for fn, fspec in field_map.items():
-                row = _timeline_person_opportunity(
+                row = _person_host_opportunity(
                     wname=wname,
                     rname=rname,
                     display=display,
                     ent_name=ent_name,
                     fn=fn,
                     fspec=fspec,
+                    host=host,
+                    kind=kind,
+                    notes=notes,
+                    description=description_fn(ent_name, fn, display, wname, rname),
                 )
                 if row is not None:
                     out.append(row)
     return out
+
+
+def scan_person_timeline_meta_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: activity_feed`` / ``timeline`` — timeline_meta host.
+
+    Status is ``emit_covered`` when framework ``present(person, timeline_meta)``
+    is live (Avatar chip). Scalar leftover actors stay escaped text.
+    """
+    return _scan_person_host_opportunities(
+        appspec,
+        displays=_TIMELINE_DISPLAYS,
+        host="timeline_meta",
+        kind="person_ref_timeline_meta",
+        notes="present(person, timeline_meta) → avatar_name",
+        description_fn=lambda ent, fn, display, wname, rname: (
+            f"{ent}.{fn} on {display} {wname}/{rname} — "
+            f"presentation matrix emits Avatar (timeline_meta), not actor prose."
+        ),
+    )
+
+
+def scan_person_card_meta_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: grid`` cards — card_meta host.
+
+    Status is ``emit_covered`` when framework ``present(person, card_meta)``
+    is live (Avatar chip).
+    """
+    return _scan_person_host_opportunities(
+        appspec,
+        displays=_CARD_META_DISPLAYS,
+        host="card_meta",
+        kind="person_ref_card_meta",
+        notes="present(person, card_meta) → avatar_name",
+        description_fn=lambda ent, fn, display, wname, rname: (
+            f"{ent}.{fn} on {display} {wname}/{rname} — "
+            f"presentation matrix emits Avatar (card_meta), not person-as-text."
+        ),
+    )
+
+
+def scan_person_metrics_tile_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
+    """Person refs on ``display: metrics`` / ``summary`` — metrics_tile host.
+
+    Status is ``emit_covered`` because the matrix **refuses** person on a
+    KPI tile (no name/dict prose invent).
+    """
+    return _scan_person_host_opportunities(
+        appspec,
+        displays=_METRICS_TILE_DISPLAYS,
+        host="metrics_tile",
+        kind="person_ref_metrics_tile",
+        notes="present(person, metrics_tile) → refuse",
+        description_fn=lambda ent, fn, display, wname, rname: (
+            f"{ent}.{fn} on {display} {wname}/{rname} — "
+            f"presentation matrix refuses person on metrics_tile "
+            f"(no KPI name/dict prose)."
+        ),
+    )
 
 
 def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
@@ -347,6 +418,8 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     rows = scan_person_ref_opportunities(appspec)
     rows.extend(scan_person_queue_meta_opportunities(appspec))
     rows.extend(scan_person_timeline_meta_opportunities(appspec))
+    rows.extend(scan_person_card_meta_opportunities(appspec))
+    rows.extend(scan_person_metrics_tile_opportunities(appspec))
     rows.extend(scan_queue_opportunities(appspec))
     rows.extend(scan_scenario_opportunities(appspec))
     return rows
@@ -354,7 +427,8 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
 
 _GUIDANCE = {
     "avatar": (
-        "Role person → Avatar via presentation matrix (list/detail + queue_meta + timeline_meta). "
+        "Role person → Avatar via presentation matrix "
+        "(list/detail + queue_meta + timeline_meta + card_meta; metrics_tile refuses). "
         "Doctrine: docs/reference/hyperpart-presentation.md. "
         "Statuses: emit_covered (all listed hosts), emit_partial (some hosts), "
         "never treat list-only chip as full green while queue_meta stringifies."

@@ -348,6 +348,16 @@ Doctrine source of truth remains
     plain `actor`; rest-state unchanged). card_meta / metrics_tile
     remain matrix-only.
 
+44. **card_meta / metrics_tile present() wire closes the last
+    matrix-only hosts.** Cycle 2160: `display: grid` fields call
+    `present(person, card_meta)` (Avatar, not list_cell mislabel);
+    KPI tiles refuse person-shaped dicts instead of inventing
+    `str(dict)` / name prose. Scanner walks both hosts. After this,
+    `hosts_matrix_only_or_partial_wire` is empty — do **not** clone
+    another present() host wire. Next framework-ux mutation is a
+    new invent class found in-cycle or hm-convergence
+    hyperpart_coherence / gallery_probes (policy rotation).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |
