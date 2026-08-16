@@ -185,14 +185,12 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_cohort_strip_lens_still_drops_temporal() -> None:
-    """Sibling invent class (seed next): cohort-strip lens
-    ``hx-get="{endpoint}?lens="`` — leftover-honest include_closed /
-    as_of do not ride a lens change (invents open-only / current)."""
+def test_cohort_strip_lens_now_echoes_temporal() -> None:
+    """Cycle 2182 closed the 2181 seed: cohort-strip lens leftover-honest
+    include_closed / as_of now ride a lens change."""
     src = _COHORT_EMIT.read_text(encoding="utf-8")
     emit = src.split("def _emit_cohort_strip_region")[1].split("def ", 1)[0]
-    assert "?lens=" in emit
-    assert "include_closed" not in emit
-    assert "as_of" not in emit
-    assert "leftover_honest" not in emit
-    assert "_with_leftover_honest_temporal" not in emit
+    assert "_with_leftover_honest_temporal" in emit
+    assert "include_closed" in emit
+    assert "as_of" in emit
+    assert "cycle 2182" in emit

@@ -64,7 +64,7 @@ class RegionContext(TypedDict, total=False):
     date_range: bool
     date_from: Any
     date_to: Any
-    # Leftover-honest temporal query (list / kanban overflow)
+    # Leftover-honest temporal query (list / kanban overflow / cohort-strip lens)
     include_closed: str
     as_of: str
 

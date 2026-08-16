@@ -43,6 +43,9 @@ from dazzle.render.fragment.primitives import (
     EntityCardRegion,
     TaskInboxRegion,
 )
+from dazzle.render.fragment.renderer._render_interactive import (
+    _with_leftover_honest_temporal,
+)
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
@@ -250,10 +253,22 @@ class _RenderDashboardMixin:
             if lens.is_active:
                 cls += " is-active"
             active_attr = ' aria-pressed="true"' if lens.is_active else ' aria-pressed="false"'
+            # Leftover-honest temporal (cycle 2182). Bare
+            # hx-get="{endpoint}?lens=" used to drop include_closed /
+            # as_of and invent open-only / current after a lens change.
+            # Leftover junk must not invent. Valid true / YYYY-MM-DD
+            # ride; leftover junk (zzz / 2abc / maybe / not-a-date)
+            # omits.
+            lens_href = _with_leftover_honest_temporal(
+                f"{endpoint_str}?lens={ctx.escape_attr(lens.id)}",
+                getattr(c, "include_closed", ""),
+                getattr(c, "as_of", ""),
+                escape_attr=ctx.escape_attr,
+            )
             lens_buttons.append(
                 f'<button type="button" role="tab" class="{cls}"{active_attr} '
                 f'data-lens-id="{ctx.escape_attr(lens.id)}" '
-                f'hx-get="{endpoint_str}?lens={ctx.escape_attr(lens.id)}" '
+                f'hx-get="{lens_href}" '
                 f'hx-target="#region-{region_name_attr}-body" '
                 f'hx-swap="innerHTML">'
                 f"{ctx.escape(lens.label)}"

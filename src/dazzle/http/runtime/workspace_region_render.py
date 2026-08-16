@@ -739,6 +739,10 @@ async def _build_dashboard_adapter_ctx(
     adapter_ctx = dict(base_ctx)
 
     if display_upper == "COHORT_STRIP":
+        # Leftover-honest temporal (cycle 2182) so lens toggle
+        # echoes include_closed / as_of already on the region URL.
+        adapter_ctx["include_closed"] = env.request.query_params.get("include_closed", "")
+        adapter_ctx["as_of"] = env.request.query_params.get("as_of", "")
         cohort_cfg = getattr(ir_region, "cohort_strip_config", None)
         if cohort_cfg is not None:
             active_lens_id = (

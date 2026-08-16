@@ -2393,13 +2393,20 @@ class CohortStripRegion:
 
     `region_name` is the region's stable id used in the swap target
     (`#region-{name}-body`). `endpoint` is the region data URL.
-    `cells` is the resolved row of members for the active lens."""
+    `cells` is the resolved row of members for the active lens.
+
+    Leftover-honest ``include_closed`` / ``as_of`` (cycle 2182) ride
+    lens-toggle ``hx-get``. Dropping them invented open-only /
+    current on a lens change. Leftover junk must not be stored here
+    — the emitter also leftover-parses before appending."""
 
     region_name: str
     endpoint: object  # URL — typed object to keep the union simple
     lenses: tuple[CohortStripLensTab, ...]
     cells: tuple[CohortStripCell, ...]
     empty_message: str = "No members in this view."
+    include_closed: str = ""
+    as_of: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

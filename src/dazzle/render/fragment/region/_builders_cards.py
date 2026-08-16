@@ -522,6 +522,12 @@ class _BuildersCardsMixin:
 
         endpoint_str = str(ctx.get("cohort_endpoint") or ctx.get("region_url") or "")
         empty_msg = getattr(region, "empty_message", None) or "No members in this view."
+        # Leftover-honest temporal (cycle 2182). Extract before lens
+        # chrome so a lens change shares the raw pair with list /
+        # FilterBar / DateRangePicker / kanban Load all. Valid true /
+        # YYYY-MM-DD ride; leftover junk omits (open-only / current).
+        include_closed = str(ctx.get("include_closed") or "")
+        as_of = str(ctx.get("as_of") or "")
 
         body: Fragment = CohortStripRegion(
             region_name=region_name,
@@ -529,6 +535,8 @@ class _BuildersCardsMixin:
             lenses=tuple(lens_tabs),
             cells=tuple(cells),
             empty_message=str(empty_msg),
+            include_closed=include_closed,
+            as_of=as_of,
         )
         return _wrap_surface(title, "dashboard", body)
 

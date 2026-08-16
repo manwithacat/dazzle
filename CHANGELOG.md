@@ -12,6 +12,15 @@
   / `support_tier = l1` for staff-only inspectors.
 
 ### Fixed
+- **Cohort-strip lens hx-get dropped `include_closed` / `as_of` (cycle 2182)** —
+  `_emit_cohort_strip_region` wrote `hx-get="{endpoint}?lens="` only,
+  so a lens change invented the open-only / current collection after
+  leftover-honest temporal had reached kanban Load all / DateRangePicker
+  / FilterBar / search / sentinel / pagination / CSV / sort-header.
+  Valid `true` / YYYY-MM-DD now ride a lens change; leftover junk
+  (`zzz`, `2abc`, `maybe`, `not-a-date`) still omits. Workspace
+  cohort-strip adapter now threads leftover-honest temporal onto the
+  primitive. Rest-state gallery unchanged.
 - **Kanban overflow Load all hx-get dropped `include_closed` / `as_of` (cycle 2181)** —
   `_emit_kanban_region` wrote `hx-get="{endpoint}?page_size={total}"`
   only, so expand invented the open-only / current collection after

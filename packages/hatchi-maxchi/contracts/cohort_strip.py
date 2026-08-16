@@ -1,6 +1,15 @@
 """HYPERPART: cohort-strip — lens toggle + horizontal member cells.
 
 Dual-lock unit is the region root. Lens bar and cells are host-owned.
+
+Leftover honesty (cycle 2182): lens-toggle ``hx-get`` (host-owned)
+must echo leftover-honest ``include_closed`` / ``as_of``. Bare
+``hx-get="{endpoint}?lens="`` dropped them and invented open-only /
+current on a lens change. Leftover junk (``zzz``, ``2abc``,
+``maybe``, ``not-a-date``) must not invent. Valid ``true`` /
+YYYY-MM-DD still ride. Rest-state gallery is unchanged (oral #33).
+Not leftover list include_closed / related-tab as_of / DETAIL as_of
+onto the edit form.
 """
 
 from __future__ import annotations

@@ -89,7 +89,8 @@ def leftover_honest_temporal_query(
     scroll sentinel; cycle 2178 list search chrome; cycle 2179
     FilterBar ``_emit_filter_bar``; cycle 2180 DateRangePicker
     ``_emit_date_range_picker``; cycle 2181 kanban overflow Load all
-    ``_emit_kanban_region``. Returns ``&amp;``-joined pairs
+    ``_emit_kanban_region``; cycle 2182 cohort-strip lens
+    ``_emit_cohort_strip_region``. Returns ``&amp;``-joined pairs
     with no leading sep.
     """
     parts: list[str] = []
