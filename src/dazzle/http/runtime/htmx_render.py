@@ -40,6 +40,7 @@ from dazzle.http.runtime.route_support import (
 )
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
 from dazzle.render.fragment.ingest import render_pagination
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,13 @@ logger = logging.getLogger(__name__)
 def _build_table_url_params(table: dict[str, Any], page: int, *, with_search: bool = True) -> str:
     """Construct the query string used by `_render_table_*` (URL parts only,
     no leading `?`). Mirrors the legacy Jinja template's per-attr concat
-    so the output is byte-equivalent."""
+    so the output is byte-equivalent.
+
+    Leftover-honest temporal (cycle 2177): ``page=&page_size=`` +
+    sort/filter/search used to drop ``include_closed`` / ``as_of`` so
+    infinite-scroll load-more invented open-only / current. Valid
+    ``true`` / YYYY-MM-DD ride; leftover junk must not invent.
+    """
     import html as _html_mod
 
     parts = [f"page={page}", f"page_size={table.get('page_size', 50)}"]
@@ -60,6 +67,16 @@ def _build_table_url_params(table: dict[str, Any], page: int, *, with_search: bo
         k_attr = _html_mod.escape(str(k), quote=True)
         v_attr = _html_mod.escape(str(v), quote=True)
         parts.append(f"filter[{k_attr}]={v_attr}")
+    # Leftover-honest include_closed / as_of (cycle 2177). Must not invent
+    # open-only / current after revealed. Leftover junk (zzz / 2abc /
+    # maybe / not-a-date) omits.
+    temporal = leftover_honest_temporal_query(
+        str(table.get("include_closed") or ""),
+        str(table.get("as_of") or ""),
+        escape_attr=lambda s: _html_mod.escape(str(s), quote=True),
+    )
+    if temporal:
+        parts.append(temporal)
     return "&amp;".join(parts)
 
 

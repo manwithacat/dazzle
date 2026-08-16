@@ -881,6 +881,11 @@ async def _list_handler_body(
                 "page": page,
                 "page_size": page_size,
                 "total": total,
+                # Leftover-honest temporal (cycle 2177). Raw query values
+                # ride the infinite-scroll sentinel; junk omits so
+                # load-more does not invent open-only / current.
+                "include_closed": request.query_params.get("include_closed", "") or "",
+                "as_of": request.query_params.get("as_of", "") or (_as_of_raw or ""),
                 "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
             }
 

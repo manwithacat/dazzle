@@ -532,6 +532,23 @@ Doctrine source of truth remains
     include_closed / as_of (invents open-only / current on
     load-more).
 
+60. **Infinite-scroll sentinel hx-get drops include_closed / as_of
+    (invents open-only / current on load-more).** Cycle 2177:
+    ``_build_table_url_params`` wrote ``page=&page_size=`` +
+    sort/filter/search only. Leftover-honest ``true`` /
+    YYYY-MM-DD now ride the sentinel; leftover junk still
+    omits. Rest-state gallery unchanged (oral #33). Do **not**
+    clone leftover list include_closed / related-tab as_of /
+    DETAIL as_of onto the edit form. Not leftover pagination /
+    CSV / sort-header echo (oral #56/#58/#59). Not leftover
+    list as_of / sort / page. Not leftover-scalar refuse. Not
+    Goal B coat. After wiring leftover-honest temporal on a
+    list/grid control, scan sibling emitters — next: list
+    search chrome ``hx-get="{ep}"`` +
+    ``hx-include="closest .filter-bar"`` still omits
+    include_closed / as_of (invents open-only / current on
+    find).
+
 ## What not to re-learn
 
 | Anti-pattern | Instead |

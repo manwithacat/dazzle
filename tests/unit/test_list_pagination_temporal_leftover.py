@@ -135,11 +135,12 @@ def test_edit_form_still_does_not_time_travel_or_include_closed() -> None:
     assert "include_closed" not in edit
 
 
-def test_sentinel_url_params_still_drop_temporal() -> None:
-    """Sibling invent class (seed next): infinite-scroll sentinel
-    ``_build_table_url_params`` still omits include_closed / as_of."""
+def test_sentinel_url_params_now_echo_temporal() -> None:
+    """Closed 2177: infinite-scroll sentinel leftover-honest echo.
+    Sibling invent class moved to test_list_sentinel_temporal_leftover."""
     src = _HTMX.read_text(encoding="utf-8")
     assert "def _build_table_url_params" in src
     builder = src.split("def _build_table_url_params")[1].split("def ")[0]
-    assert "include_closed" not in builder
-    assert "as_of" not in builder
+    assert "include_closed" in builder
+    assert "as_of" in builder
+    assert "leftover_honest_temporal_query" in builder
