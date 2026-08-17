@@ -28,8 +28,38 @@ from dazzle.render.fragment import (
     Submit,
     Text,
 )
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
 
 ChallengeMode = Literal["totp", "email_otp", "recovery"]
+_CHALLENGE_MODES: frozenset[str] = frozenset({"totp", "email_otp", "recovery"})
+
+
+def leftover_honest_2fa_mode(raw: Any) -> ChallengeMode | None:
+    """Valid declared 2FA challenge modes ride. Leftover junk restores None.
+
+    Leftover ``?mode=zzz`` / ``?method=zzz`` used to invent ``totp`` via
+    ``if chosen_mode not in (...): chosen_mode = "totp"``. Valid tokens
+    (``totp`` / ``email_otp`` / ``recovery``) ride. Absent / blank is the
+    honest first-visit default (``totp``). Rest is stay-put (None).
+    Distinct from leftover join-policy (oral #91) and leftover catalog
+    picker (oral #69). Live every auth app's ``/2fa/challenge`` (simple_task
+    login). Cycle 2215.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return "totp"
+    honest = leftover_honest_catalog_id(
+        text,
+        leftover_honest_catalog_option_values(_CHALLENGE_MODES),
+        "",
+        allow_empty_rest=True,
+    )
+    if honest in _CHALLENGE_MODES:
+        return honest  # type: ignore[return-value]
+    return None
 
 
 def _mode_copy(mode: ChallengeMode) -> tuple[str, str, str, str, int]:

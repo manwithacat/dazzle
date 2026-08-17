@@ -143,6 +143,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Helper: `leftover_honest_join_policy`. Leftover stays put
   (400, no write). Do **not** walk another join-policy
   coerce site.
+- **2FA leftover mode** (`?mode=zzz` invents `totp`) closed
+  cycle 2215 (oral #92). Helper: `leftover_honest_2fa_mode`.
+  Leftover stays put (400, no invented totp). Do **not** walk
+  another 2FA challenge/verify leftover mode.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **2FA leftover mode invented totp (cycle 2215)** —
+  leftover `?mode=zzz` / `?method=zzz` on `GET /2fa/challenge`
+  coerced to `totp` and rendered the authenticator form. Valid
+  declared modes ride; absent/blank still defaults totp (first
+  visit); leftover stays put (400, no invented totp). Verify
+  POST leftover method stays put (400, no echo). Oral #92.
+  Live simple_task `/2fa/challenge`.
 - **Consent leftover tokens invented granted (cycle 2210)** —
   leftover `analytics=zzz` / `maybe` / the string `"false"`
   still hit `bool(nonempty)` on `POST /_dazzle/consent` and

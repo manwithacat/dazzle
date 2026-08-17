@@ -914,6 +914,16 @@ dialect formed — and where it started to Goodhart itself — is
     from leftover persona roles (oral #89). Live
     domain_join_co join-policy form. Standing refusals apply.
 
+92. **2FA leftover mode invents totp.** Cycle 2215: leftover
+    ``?mode=zzz`` / ``?method=zzz`` on ``/2fa/challenge`` coerced
+    via ``if chosen_mode not in (...): chosen_mode = "totp"`` and
+    rendered the authenticator form. Valid declared modes ride
+    via ``leftover_honest_2fa_mode``. Absent / blank still
+    defaults totp (first visit). Leftover stays put (400, no
+    invented totp). Verify POST leftover method stays put (400,
+    no echo). Live simple_task auth ``/2fa/challenge``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -949,6 +959,7 @@ the end of every new oral *is* expensive — point here instead.
 | Membership leftover roles | Walk another invite / members-roles leftover persona after leftover_honest_persona_roles exists | #89 |
 | Consent leftover tokens | Walk another consent coerce site after leftover_honest_consent_bool exists | #90 |
 | Join-policy leftover tokens | Walk another join-policy coerce site after leftover_honest_join_policy exists | #91 |
+| 2FA leftover mode | Walk another 2FA challenge/verify leftover mode after leftover_honest_2fa_mode exists | #92 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -990,6 +1001,7 @@ how the handbook was learned.
 | One invite / members leftover role site after leftover_honest_persona_roles exists | Call leftover_honest_persona_roles on remaining membership role POSTs in one ship, then STOP (oral #89) |
 | One leftover consent coerce site after leftover_honest_consent_bool exists | Call leftover_honest_consent_choices on remaining consent writes in one ship, then STOP (oral #90) |
 | One leftover join-policy coerce site after leftover_honest_join_policy exists | Call leftover_honest_join_policy on remaining join-policy writes in one ship, then STOP (oral #91) |
+| One leftover 2FA mode site after leftover_honest_2fa_mode exists | Call leftover_honest_2fa_mode on remaining challenge GET + verify POST in one ship, then STOP (oral #92) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

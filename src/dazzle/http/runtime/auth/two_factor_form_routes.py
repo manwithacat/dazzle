@@ -35,6 +35,7 @@ from dazzle.http.runtime.auth.org_activation import (
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
 )
+from dazzle.http.runtime.auth.two_factor_views import leftover_honest_2fa_mode
 
 _logger = logging.getLogger(__name__)
 
@@ -66,6 +67,15 @@ def create_two_factor_form_routes(
         from dazzle.http.runtime.totp import verify_totp
 
         auth_store = request.app.state.auth_store
+        honest = leftover_honest_2fa_mode(method)
+        if honest is None:
+            # Leftover method=zzz used to echo into GET and invent totp.
+            return Response(
+                status_code=400,
+                content="Unknown 2FA method",
+                media_type="text/plain",
+            )
+        method = honest
         # URL-encode the form-supplied values so a crafted token can't
         # break out of the query string. Path is hardcoded same-origin.
         challenge_back = (

@@ -28,6 +28,7 @@ from dazzle.http.runtime.auth.two_factor_views import (
     build_2fa_challenge_view,
     build_2fa_settings_view,
     build_2fa_setup_view,
+    leftover_honest_2fa_mode,
 )
 from dazzle.page.runtime.css_loader import get_bundled_css
 from dazzle.page.runtime.site_context import build_site_page_context
@@ -1329,7 +1330,7 @@ def create_auth_page_routes(
         )
         return HTMLResponse(content=FragmentRenderer().render(page))
 
-    @router.get("/2fa/challenge", response_class=HTMLResponse, include_in_schema=False)
+    @router.get("/2fa/challenge", include_in_schema=False)
     async def two_factor_challenge_page(
         request: Request,
         session: str = "",
@@ -1338,7 +1339,7 @@ def create_auth_page_routes(
         sent: str = "",
         error: str = "",
         sitespec: dict[str, Any] = sitespec_data,
-    ) -> str:
+    ) -> Response:
         """Serve the mid-login 2FA challenge page.
 
         Phase 1.D.1 (v0.67.35): typed-Fragment is the only path —
@@ -1355,23 +1356,25 @@ def create_auth_page_routes(
         css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
         # `mode` is the canonical query name; accept legacy `method=`
-        # too so links from older bookmarks still work.
-        chosen_mode = mode or method or "totp"
-        if chosen_mode not in ("totp", "email_otp", "recovery"):
-            chosen_mode = "totp"
+        # too so links from older bookmarks still work. Leftover
+        # ``?mode=zzz`` used to invent totp — stay put (400).
+        honest = leftover_honest_2fa_mode(mode or method)
+        if honest is None:
+            return HTMLResponse("Unknown 2FA method", status_code=400)
+        chosen_mode = honest
         error_message = ""
         if error == "invalid_code":
             error_message = "That code didn't match. Try again."
         page = build_2fa_challenge_view(
             product_name=product_name,
             session_token=session,
-            mode=chosen_mode,  # type: ignore[arg-type]
+            mode=chosen_mode,
             email_otp_enabled=True,
             code_sent=bool(sent),
             error_message=error_message,
             css_links=css_links,
             js_scripts=js_scripts,
         )
-        return FragmentRenderer().render(page)
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     return router
