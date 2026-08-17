@@ -134,33 +134,60 @@ def _render_user(
     return out
 
 
-def _coerce_active(value: Any) -> bool | None:
-    """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
-    ``None`` if the value isn't a recognizable active flag."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str) and value.strip().lower() in ("true", "false"):
-        return value.strip().lower() == "true"
+# PATCH with no ``active`` op — distinct from leftover ``active`` (None).
+_SCIM_ACTIVE_ABSENT = object()
+
+
+def leftover_honest_scim_active(raw: Any) -> bool | None:
+    """Valid SCIM ``active`` tokens ride. Leftover junk restores None.
+
+    Leftover ``active: "zzz"`` / ``ghost`` on POST/PUT ``/scim/v2/Users``
+    missed the bool / ``true``/``false`` coerce and invented inactive
+    via ``bool(None)``. Leftover PATCH invented a 200 no-op. Valid
+    bools and Entra string ``true``/``false`` ride. Absent key is the
+    caller's default (create=True). Rest is stay-put (None → 400
+    ``invalidValue``). RFC 7644 §3.3. Distinct from leftover consent
+    bool (oral #90) and leftover GET ``?filter=`` (oral #99). Live
+    SCIM Users. Cycle 2228.
+    """
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str) and raw.strip().lower() in ("true", "false"):
+        return raw.strip().lower() == "true"
     return None
 
 
-def _active_from_patch(body: dict[str, Any]) -> bool | None:
+def leftover_honest_scim_body_active(body: dict[str, Any]) -> bool | None:
+    """POST/PUT ``active``. Missing key defaults True. Leftover restores None."""
+    if "active" not in body:
+        return True
+    return leftover_honest_scim_active(body.get("active"))
+
+
+def _coerce_active(value: Any) -> bool | None:
+    """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
+    ``None`` if the value isn't a recognizable active flag."""
+    return leftover_honest_scim_active(value)
+
+
+def _active_from_patch(body: dict[str, Any]) -> Any:
     """Extract the target ``active`` value from a SCIM PatchOp body, tolerating both
-    ``{"path":"active","value":false}`` and ``{"value":{"active":false}}`` (Entra)."""
+    ``{"path":"active","value":false}`` and ``{"value":{"active":false}}`` (Entra).
+
+    Returns ``_SCIM_ACTIVE_ABSENT`` when no ``active`` op is present
+    (supported subset — return current). Leftover ``active`` is
+    ``None`` (stay-put 400). Valid tokens are ``bool``.
+    """
     for op in body.get("Operations", []) or []:
         if str(op.get("op", "")).lower() not in ("replace", "add"):
             continue
         path = str(op.get("path", "")).lower()
         value = op.get("value")
         if path == "active":
-            coerced = _coerce_active(value)
-            if coerced is not None:
-                return coerced
-        elif isinstance(value, dict) and "active" in value:
-            coerced = _coerce_active(value["active"])
-            if coerced is not None:
-                return coerced
-    return None
+            return leftover_honest_scim_active(value)
+        if isinstance(value, dict) and "active" in value:
+            return leftover_honest_scim_active(value["active"])
+    return _SCIM_ACTIVE_ABSENT
 
 
 def _groups_from_body(body: dict[str, Any]) -> list[str]:
@@ -295,14 +322,18 @@ def create_scim_routes() -> APIRouter:
             return err
         assert body is not None
         email = (body.get("userName") or body.get("emails", [{}])[0].get("value") or "").strip()
-        active = body.get("active", True)
-        active = _coerce_active(active) if not isinstance(active, bool) else active
+        # Leftover ``active: "zzz"`` used to invent inactive via
+        # ``bool(None)``. JSONResponse (not Response(content=)) —
+        # oral #93. RFC 7644 invalidValue.
+        active = leftover_honest_scim_body_active(body)
+        if active is None:
+            return _error(400, "invalid active", scim_type="invalidValue")
         try:
             result = provision_scim_user(
                 store,
                 conn,
                 email=email,
-                active=bool(active),
+                active=active,
                 groups=_groups_from_body(body),
                 external_id=body.get("externalId"),
             )
@@ -363,14 +394,15 @@ def create_scim_routes() -> APIRouter:
             return err
         assert body is not None
         email = _email_for(store, membership.identity_id)  # identity is fixed by the id
-        active = body.get("active", True)
-        active = _coerce_active(active) if not isinstance(active, bool) else active
+        active = leftover_honest_scim_body_active(body)
+        if active is None:
+            return _error(400, "invalid active", scim_type="invalidValue")
         try:
             provision_scim_user(
                 store,
                 conn,
                 email=email,
-                active=bool(active),
+                active=active,
                 groups=_groups_from_body(body),
                 external_id=body.get("externalId"),
             )
@@ -391,9 +423,12 @@ def create_scim_routes() -> APIRouter:
             return err
         assert body is not None
         active = _active_from_patch(body)
-        if active is None:
+        if active is _SCIM_ACTIVE_ABSENT:
             # Nothing we act on (only `active` is supported) — return current state.
             return JSONResponse(_render_user(request, store, membership), media_type=_SCIM_MEDIA)
+        if active is None:
+            # Leftover ``active`` invented a 200 no-op. Stay put.
+            return _error(400, "invalid active", scim_type="invalidValue")
         try:
             set_scim_user_active(store, conn, identity_id=membership.identity_id, active=active)
         except ScimError as exc:

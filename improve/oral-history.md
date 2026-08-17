@@ -994,6 +994,18 @@ dialect formed — and where it started to Goodhart itself — is
     REST ``filter[key]`` VALUES (oral #85). Live SCIM Groups +
     Users. Standing refusals apply.
 
+100. **SCIM leftover active invents inactive / a 200 no-op.** Cycle
+    2228: leftover ``active: "zzz"`` / ``ghost`` on POST/PUT
+    ``/scim/v2/Users`` missed the bool / ``true``/``false`` coerce
+    and invented inactive via ``bool(None)``. Leftover PATCH
+    invented a 200 no-op (current state, no write). Valid bools
+    and Entra string ``true``/``false`` ride via
+    ``leftover_honest_scim_active``. Absent key still defaults
+    active (first visit). Leftover stays put (400
+    ``invalidValue``). RFC 7644 §3.3. Distinct from leftover
+    GET ``?filter=`` (oral #99) and leftover consent bool
+    (oral #90). Live SCIM Users. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1037,6 +1049,7 @@ the end of every new oral *is* expensive — point here instead.
 | Connections leftover new | Walk another ``?new=`` form-opener site after leftover_honest_connection_new exists | #97 |
 | Auth leftover urlsafe token | Walk another ``?token=`` / ``?session=`` echo site after leftover_honest_auth_token exists | #98 |
 | SCIM leftover filter | Walk another SCIM ``?filter=`` list site after leftover_honest_scim_eq_value exists | #99 |
+| SCIM leftover active | Walk another SCIM ``active`` body site after leftover_honest_scim_active exists | #100 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1086,6 +1099,7 @@ how the handbook was learned.
 | One leftover auth ``?next=`` site after leftover_honest_auth_next exists | Call leftover_honest_auth_next on remaining login/signup/select-org GETs in one ship, then STOP (oral #96) |
 | One leftover connections ``?new=`` site after leftover_honest_connection_new exists | Call leftover_honest_connection_new on remaining connection form-openers in one ship, then STOP (oral #97) |
 | One leftover auth ``?token=`` / ``?session=`` site after leftover_honest_auth_token exists | Call leftover_honest_auth_token on remaining urlsafe token echo sites in one ship, then STOP (oral #98) |
+| One leftover SCIM ``active`` body site after leftover_honest_scim_active exists | Call leftover_honest_scim_active on remaining SCIM User writes in one ship, then STOP (oral #100) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

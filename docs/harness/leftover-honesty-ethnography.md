@@ -231,6 +231,12 @@ string `"false"`) hit `bool(nonempty)` and invented granted. Valid
 bools and true/false tokens ride; leftover stays put. Helper:
 `leftover_honest_consent_bool`. Oral #90 — one ship, then stop.
 
+**SCIM leftover active.** POST/PUT `active: "zzz"` missed the
+bool / `true`/`false` coerce and invented inactive via
+`bool(None)`. Leftover PATCH invented a 200 no-op. Valid bools
+and Entra strings ride; leftover stays put (400). Helper:
+`leftover_honest_scim_active`. Oral #100 — one ship, then stop.
+
 ---
 
 ## Ritual

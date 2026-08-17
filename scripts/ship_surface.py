@@ -190,6 +190,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_token_leftover.py",
     # cycle 2227: leftover SCIM ?filter= must not invent the unfiltered list
     "tests/unit/test_scim_filter_leftover.py",
+    # cycle 2228: leftover SCIM active must not invent inactive / a 200 no-op
+    "tests/unit/test_scim_active_leftover.py",
     # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",

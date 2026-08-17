@@ -174,6 +174,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_scim_eq_value`. Leftover stays put (400
   `invalidFilter`). Do **not** walk another SCIM `?filter=`
   list site.
+- **SCIM leftover active** (`active: "zzz"` invents inactive
+  via `bool(None)`; leftover PATCH invents a 200 no-op)
+  closed cycle 2228 (oral #100). Helper:
+  `leftover_honest_scim_active`. Leftover stays put (400
+  `invalidValue`). Do **not** walk another SCIM `active`
+  body site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
