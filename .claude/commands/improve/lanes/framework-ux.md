@@ -147,6 +147,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   cycle 2215 (oral #92). Helper: `leftover_honest_2fa_mode`.
   Leftover stays put (400, no invented totp). Do **not** walk
   another 2FA challenge/verify leftover mode.
+- **Auth leftover error** (`?error=zzz` invents a clean page)
+  closed cycle 2221 (oral #95). Helper:
+  `leftover_honest_auth_error`. Leftover stays put (400, no
+  invented clean form). Do **not** walk another `?error=`
+  banner site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

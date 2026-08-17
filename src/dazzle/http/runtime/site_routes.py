@@ -18,11 +18,20 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core.ir import AnalyticsSpec
 from dazzle.http.runtime.auth.auth_views import (
+    CHALLENGE_ERROR_MESSAGES,
+    CHALLENGE_ERROR_TOKENS,
+    LOGIN_ERROR_MESSAGES,
+    LOGIN_ERROR_TOKENS,
+    RESET_ERROR_MESSAGES,
+    RESET_ERROR_TOKENS,
+    SIGNUP_ERROR_MESSAGES,
+    SIGNUP_ERROR_TOKENS,
     build_forgot_password_sent_view,
     build_forgot_password_view,
     build_login_sent_view,
     build_reset_password_done_view,
     build_reset_password_view,
+    leftover_honest_auth_error,
 )
 from dazzle.http.runtime.auth.two_factor_views import (
     build_2fa_challenge_view,
@@ -1096,7 +1105,7 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
         next: str = "/",
         error: str = "",
-    ) -> str:
+    ) -> Response:
         """Serve the login page.
 
         Phase 1.E (v0.67.33): typed-Fragment is the only path —
@@ -1114,25 +1123,13 @@ def create_auth_page_routes(
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
         password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
         sso_providers = tuple(getattr(app_state, "sso_providers", ()) or ())
-        error_message = ""
-        if error == "invalid_magic_link":
-            error_message = "That sign-in link is invalid or expired. Request a new one below."
-        elif error == "invalid_credentials":
-            error_message = "That email and password didn't match. Try again."
-        elif error == "sso_failed":
-            error_message = "We couldn't complete the sign-in. Please try again."
-        elif error == "sso_no_email":
-            error_message = (
-                "That SSO provider didn't share an email address with us — "
-                "try a different sign-in method."
-            )
-        elif error == "sso_email_unverified":
-            error_message = (
-                "Your SSO email address isn't verified with the provider yet. "
-                "Verify it and try again."
-            )
-        elif error == "sso_provider_unknown":
-            error_message = "That SSO provider isn't configured on this deployment."
+        # Leftover ``?error=zzz`` used to invent a clean sign-in (no banner).
+        # Valid declared tokens ride; absent/blank is first visit.
+        # HTMLResponse (not Response(content=…)) — oral #93.
+        honest_error = leftover_honest_auth_error(error, LOGIN_ERROR_TOKENS)
+        if honest_error is None:
+            return HTMLResponse("Unknown login error", status_code=400)
+        error_message = LOGIN_ERROR_MESSAGES.get(honest_error, "")
         builder = build_login_password_view if password_mode else build_login_magic_link_view
         page = builder(
             page_title="Sign in",
@@ -1143,7 +1140,7 @@ def create_auth_page_routes(
             css_links=css_links,
             js_scripts=js_scripts,
         )
-        return FragmentRenderer().render(page)
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.get("/login/sent", response_class=HTMLResponse, include_in_schema=False)
     async def login_sent_page(
@@ -1172,7 +1169,7 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
         next: str = "/",
         error: str = "",
-    ) -> str:
+    ) -> Response:
         """Serve the signup page.
 
         Phase 1.E (v0.67.33): typed-Fragment is the only path —
@@ -1188,15 +1185,10 @@ def create_auth_page_routes(
         css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
         password_mode = bool(getattr(app_state, "auth_password_mode_enabled", False))
-        error_message = ""
-        if error == "mismatch":
-            error_message = "The two password fields didn't match. Try again."
-        elif error == "already_registered":
-            error_message = "An account with that email already exists. Try signing in instead."
-        elif error == "create_failed":
-            error_message = "We couldn't create that account. Please try again."
-        elif error == "invalid_email":
-            error_message = "That email address doesn't look right."
+        honest_error = leftover_honest_auth_error(error, SIGNUP_ERROR_TOKENS)
+        if honest_error is None:
+            return HTMLResponse("Unknown signup error", status_code=400)
+        error_message = SIGNUP_ERROR_MESSAGES.get(honest_error, "")
         builder = build_signup_password_view if password_mode else build_signup_magic_link_view
         page = builder(
             page_title="Create your account",
@@ -1206,7 +1198,7 @@ def create_auth_page_routes(
             css_links=css_links,
             js_scripts=js_scripts,
         )
-        return FragmentRenderer().render(page)
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
     async def forgot_password_page(
@@ -1247,16 +1239,15 @@ def create_auth_page_routes(
         sitespec: dict[str, Any] = sitespec_data,
         token: str = "",
         error: str = "",
-    ) -> str:
+    ) -> Response:
         """Serve the reset-password page (Phase 1.E: typed-only)."""
 
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
-        error_message = ""
-        if error == "mismatch":
-            error_message = "The two password fields didn't match. Try again."
-        elif error == "invalid":
-            error_message = "That reset link is invalid or expired. Request a new one."
+        honest_error = leftover_honest_auth_error(error, RESET_ERROR_TOKENS)
+        if honest_error is None:
+            return HTMLResponse("Unknown reset error", status_code=400)
+        error_message = RESET_ERROR_MESSAGES.get(honest_error, "")
         page = build_reset_password_view(
             product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
             token=token,
@@ -1264,7 +1255,7 @@ def create_auth_page_routes(
             css_links=css_links,
             js_scripts=js_scripts,
         )
-        return FragmentRenderer().render(page)
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.get("/reset-password/done", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_done_page(
@@ -1369,9 +1360,10 @@ def create_auth_page_routes(
         honest_sent = leftover_honest_2fa_sent(sent)
         if honest_sent is None:
             return HTMLResponse("Unknown 2FA sent flag", status_code=400)
-        error_message = ""
-        if error == "invalid_code":
-            error_message = "That code didn't match. Try again."
+        honest_error = leftover_honest_auth_error(error, CHALLENGE_ERROR_TOKENS)
+        if honest_error is None:
+            return HTMLResponse("Unknown 2FA error", status_code=400)
+        error_message = CHALLENGE_ERROR_MESSAGES.get(honest_error, "")
         page = build_2fa_challenge_view(
             product_name=product_name,
             session_token=session,

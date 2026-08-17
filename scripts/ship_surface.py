@@ -180,6 +180,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_2fa_mode_leftover.py",
     # cycle 2218: leftover 2FA ?sent=zzz must not invent code-sent theater
     "tests/unit/test_2fa_sent_leftover.py",
+    # cycle 2221: leftover auth ?error=zzz must not invent a clean page
+    "tests/unit/test_auth_error_leftover.py",
     # cycle 2216: leftover-honest form 400 used Response(content=) — #1551
     # byte-route proof red ×3 Pythons. GET already used HTMLResponse.
     "tests/unit/test_byte_route_proof.py",

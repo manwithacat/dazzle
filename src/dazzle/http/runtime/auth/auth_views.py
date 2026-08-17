@@ -33,6 +33,99 @@ from dazzle.render.fragment import (
     Submit,
     Text,
 )
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
+
+LOGIN_ERROR_TOKENS: frozenset[str] = frozenset(
+    {
+        "invalid_magic_link",
+        "invalid_credentials",
+        "sso_failed",
+        "sso_no_email",
+        "sso_email_unverified",
+        "sso_provider_unknown",
+        "sso_no_connection",
+        "sso_unavailable",
+        "sso_domain_not_verified",
+        "sso_unverified_fallback",
+        "sso_no_membership",
+    }
+)
+SIGNUP_ERROR_TOKENS: frozenset[str] = frozenset(
+    {
+        "mismatch",
+        "already_registered",
+        "create_failed",
+        "invalid_email",
+    }
+)
+RESET_ERROR_TOKENS: frozenset[str] = frozenset({"mismatch", "invalid"})
+CHALLENGE_ERROR_TOKENS: frozenset[str] = frozenset({"invalid_code"})
+SELECT_ORG_ERROR_TOKENS: frozenset[str] = frozenset({"invalid_org"})
+
+LOGIN_ERROR_MESSAGES: dict[str, str] = {
+    "invalid_magic_link": ("That sign-in link is invalid or expired. Request a new one below."),
+    "invalid_credentials": "That email and password didn't match. Try again.",
+    "sso_failed": "We couldn't complete the sign-in. Please try again.",
+    "sso_no_email": (
+        "That SSO provider didn't share an email address with us — try a different sign-in method."
+    ),
+    "sso_email_unverified": (
+        "Your SSO email address isn't verified with the provider yet. Verify it and try again."
+    ),
+    "sso_provider_unknown": "That SSO provider isn't configured on this deployment.",
+    "sso_no_connection": "No SSO connection is available for that organization.",
+    "sso_unavailable": "SSO isn't available right now. Please try again.",
+    "sso_domain_not_verified": ("That email domain isn't verified for this organization."),
+    "sso_unverified_fallback": (
+        "We couldn't verify your email with that sign-in method. "
+        "Try again or use a different method."
+    ),
+    "sso_no_membership": (
+        "You don't have a membership in that organization. Ask an admin to invite you."
+    ),
+}
+SIGNUP_ERROR_MESSAGES: dict[str, str] = {
+    "mismatch": "The two password fields didn't match. Try again.",
+    "already_registered": ("An account with that email already exists. Try signing in instead."),
+    "create_failed": "We couldn't create that account. Please try again.",
+    "invalid_email": "That email address doesn't look right.",
+}
+RESET_ERROR_MESSAGES: dict[str, str] = {
+    "mismatch": "The two password fields didn't match. Try again.",
+    "invalid": "That reset link is invalid or expired. Request a new one.",
+}
+CHALLENGE_ERROR_MESSAGES: dict[str, str] = {
+    "invalid_code": "That code didn't match. Try again.",
+}
+SELECT_ORG_ERROR_MESSAGES: dict[str, str] = {
+    "invalid_org": "That organization isn't available. Choose another.",
+}
+
+
+def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
+    """Valid declared ``?error=`` tokens ride. Leftover junk restores None.
+
+    Leftover ``?error=zzz`` used to invent a clean page (no banner)
+    via omit-as-absent. Enterprise/SAML already emit
+    ``sso_no_connection`` / ``sso_unavailable`` /
+    ``sso_domain_not_verified`` / ``sso_unverified_fallback`` /
+    ``sso_no_membership`` — those vanished the same way. Valid
+    declared tokens ride. Absent / blank is the honest first-visit
+    default (``""``). Rest is stay-put (None). Distinct from leftover
+    2FA sent (oral #94) and leftover 2FA mode (oral #92). Live
+    simple_task ``/login``. Cycle 2221.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return ""
+    known = leftover_honest_catalog_option_values(declared)
+    honest = leftover_honest_catalog_id(text, known, "", allow_empty_rest=True)
+    if honest and honest in set(known):
+        return honest
+    return None
 
 
 def build_login_magic_link_view(

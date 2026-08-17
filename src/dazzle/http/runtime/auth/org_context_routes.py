@@ -14,8 +14,13 @@ the ``dazzle_csrf`` cookie; the RLS GUC re-binds on the next request via 1a's
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from dazzle.http.runtime.auth.auth_views import (
+    SELECT_ORG_ERROR_MESSAGES,
+    SELECT_ORG_ERROR_TOKENS,
+    leftover_honest_auth_error,
+)
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.redirect_safety import is_safe_redirect_path
@@ -65,10 +70,17 @@ def create_org_context_routes() -> APIRouter:
     router = APIRouter(tags=["auth"])
 
     @router.get("/auth/select-org", response_class=HTMLResponse, include_in_schema=False)
-    async def select_org_page(request: Request, next: Annotated[str, Query()] = "/app") -> str:
+    async def select_org_page(
+        request: Request,
+        next: Annotated[str, Query()] = "/app",
+        error: Annotated[str, Query()] = "",
+    ) -> Response:
         from dazzle.http.runtime.auth.org_context_views import build_select_org_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
+        honest_error = leftover_honest_auth_error(error, SELECT_ORG_ERROR_TOKENS)
+        if honest_error is None:
+            return HTMLResponse("Unknown org error", status_code=400)
         auth_store = request.app.state.auth_store
         session_id = read_session_id(request)
         ctx = auth_store.validate_session(session_id) if session_id else None
@@ -83,8 +95,9 @@ def create_org_context_routes() -> APIRouter:
             product_name=_product_name(request),
             memberships=memberships,
             next_url=next if is_safe_redirect_path(next) else "/app",
+            error_message=SELECT_ORG_ERROR_MESSAGES.get(honest_error, ""),
         )
-        return FragmentRenderer().render(page)
+        return HTMLResponse(content=FragmentRenderer().render(page))
 
     @router.post("/auth/select-org", include_in_schema=False)
     async def select_org_submit(

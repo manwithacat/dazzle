@@ -36,6 +36,7 @@ def build_select_org_view(
     product_name: str,
     memberships: tuple[Any, ...],
     next_url: str = "/app",
+    error_message: str = "",
     css_links: tuple[str, ...] = ("/static/dist/dazzle.min.css",),
     js_scripts: tuple[str, ...] = ("/static/dist/dazzle.min.js",),
 ) -> Page:
@@ -48,6 +49,8 @@ def build_select_org_view(
         Link(label=product_name, href=URL("/")),
         Heading(body="Choose an organization", level=1),
     ]
+    if error_message:
+        body_children.append(Text(body=error_message, tone="danger"))
     if memberships:
         options = tuple((m.id, _membership_label(m)) for m in memberships)
         body_children.append(

@@ -136,15 +136,15 @@ module: site_routes
   GET | /forgot-password/sent
     handler: forgot_password_sent_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /login
-    handler: login_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '') -> str
+    handler: login_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '') -> Response
   GET | /login/sent
     handler: login_sent_page(request: Request, sitespec: dict[str, Any] = sitespec_data, email: str = '') -> str
   GET | /reset-password
-    handler: reset_password_page(request: Request, sitespec: dict[str, Any] = sitespec_data, token: str = '', error: str = '') -> str
+    handler: reset_password_page(request: Request, sitespec: dict[str, Any] = sitespec_data, token: str = '', error: str = '') -> Response
   GET | /reset-password/done
     handler: reset_password_done_page(request: Request, sitespec: dict[str, Any] = sitespec_data) -> str
   GET | /signup
-    handler: signup_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '') -> str
+    handler: signup_page(request: Request, sitespec: dict[str, Any] = sitespec_data, next: str = '/', error: str = '') -> Response
   GET | /site.js
     handler: serve_site_js() -> Response
   GET | /styles/dazzle.css

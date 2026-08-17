@@ -1,6 +1,15 @@
 ## [Unreleased]
 
 ### Fixed
+- **Auth leftover `?error=` invented a clean page (cycle 2221)** —
+  leftover `?error=zzz` on `/login` / `/signup` / `/reset-password`
+  / `/2fa/challenge` / `/auth/select-org` omitted as absent and
+  invented a clean form (no banner). Enterprise/SAML already emit
+  `sso_no_connection` / `sso_unavailable` / `sso_domain_not_verified`
+  / `sso_unverified_fallback` / `sso_no_membership` — those vanished
+  the same way. Valid declared tokens ride; leftover stays put
+  (400, no invented clean page). Oral #95. Live simple_task
+  `/login`.
 - **2FA leftover sent invented code-sent theater (cycle 2218)** —
   leftover `?sent=zzz` / `false` / `0` on `GET /2fa/challenge`
   coerced via `bool(sent)` and rendered "Code sent — check your
