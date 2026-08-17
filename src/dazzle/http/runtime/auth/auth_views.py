@@ -19,6 +19,7 @@ removed in Phase 4.C of the Jinja2 retirement plan.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from dazzle.render.fragment import (
@@ -125,6 +126,28 @@ def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
     honest = leftover_honest_catalog_id(text, known, "", allow_empty_rest=True)
     if honest and honest in set(known):
         return honest
+    return None
+
+
+# secrets.token_urlsafe(32) — session ids, reset tokens, invitation tokens.
+_AUTH_URLSAFE_TOKEN = re.compile(r"\A[A-Za-z0-9_-]{32,256}\Z")
+
+
+def leftover_honest_auth_token(raw: Any) -> str | None:
+    """Valid urlsafe auth tokens ride. Leftover junk restores None.
+
+    Leftover ``?token=zzz`` / ``?session=zzz`` used to invent a reset /
+    2FA form (token echo theater). ``secrets.token_urlsafe(32)`` tokens
+    ride. Absent / blank is the honest first-visit default (``""``).
+    Rest is stay-put (None). Distinct from leftover auth error
+    (oral #95) and leftover 2FA mode (oral #92). Live simple_task
+    ``/reset-password`` + ``/2fa/challenge``. Cycle 2224.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return ""
+    if _AUTH_URLSAFE_TOKEN.fullmatch(text):
+        return text
     return None
 
 

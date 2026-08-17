@@ -83,8 +83,11 @@ def _challenge_client() -> TestClient:
     return TestClient(app)
 
 
+_SID = "A" * 43
+
+
 def test_leftover_sent_does_not_invent_code_sent_theater() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=email_otp&sent=zzz")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=email_otp&sent=zzz")
     assert resp.status_code == 400
     assert "Unknown 2FA sent flag" in resp.text
     assert "Code sent — check your email." not in resp.text
@@ -92,20 +95,20 @@ def test_leftover_sent_does_not_invent_code_sent_theater() -> None:
 
 
 def test_leftover_sent_false_does_not_invent_code_sent() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=email_otp&sent=false")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=email_otp&sent=false")
     assert resp.status_code == 400
     assert "Code sent — check your email." not in resp.text
 
 
 def test_absent_sent_still_shows_send_code() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=email_otp")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=email_otp")
     assert resp.status_code == 200
     assert "Send code to email" in resp.text
     assert "Code sent — check your email." not in resp.text
 
 
 def test_valid_sent_one_still_renders_code_sent() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=email_otp&sent=1")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=email_otp&sent=1")
     assert resp.status_code == 200
     assert "Code sent — check your email." in resp.text
     assert "Send code to email" not in resp.text

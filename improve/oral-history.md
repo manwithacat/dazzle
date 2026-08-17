@@ -973,6 +973,16 @@ dialect formed — and where it started to Goodhart itself — is
     first-visit. Leftover stays put (400). Live simple_task
     ``/auth/connections``. Standing refusals apply.
 
+98. **Auth leftover urlsafe token invents form theater.** Cycle 2224:
+    leftover ``?token=zzz`` / ``ghost`` on ``/reset-password`` echoed
+    into the reset form and invented a valid-looking reset. Leftover
+    ``?session=zzz`` on ``/2fa/challenge`` invented the same theater
+    (session ids are also ``secrets.token_urlsafe(32)``). Valid
+    urlsafe tokens ride via ``leftover_honest_auth_token``. Absent /
+    blank still first-visit. Leftover stays put (400). Live
+    simple_task ``/reset-password`` + ``/2fa/challenge``. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1014,6 +1024,7 @@ the end of every new oral *is* expensive — point here instead.
 | Auth leftover error | Walk another ``?error=`` banner site after leftover_honest_auth_error exists | #95 |
 | Auth leftover next | Walk another ``?next=`` landing site after leftover_honest_auth_next exists | #96 |
 | Connections leftover new | Walk another ``?new=`` form-opener site after leftover_honest_connection_new exists | #97 |
+| Auth leftover urlsafe token | Walk another ``?token=`` / ``?session=`` echo site after leftover_honest_auth_token exists | #98 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1061,6 +1072,7 @@ how the handbook was learned.
 | One leftover auth ``?error=`` site after leftover_honest_auth_error exists | Call leftover_honest_auth_error on remaining login/signup/reset/challenge/select-org GETs in one ship, then STOP (oral #95) |
 | One leftover auth ``?next=`` site after leftover_honest_auth_next exists | Call leftover_honest_auth_next on remaining login/signup/select-org GETs in one ship, then STOP (oral #96) |
 | One leftover connections ``?new=`` site after leftover_honest_connection_new exists | Call leftover_honest_connection_new on remaining connection form-openers in one ship, then STOP (oral #97) |
+| One leftover auth ``?token=`` / ``?session=`` site after leftover_honest_auth_token exists | Call leftover_honest_auth_token on remaining urlsafe token echo sites in one ship, then STOP (oral #98) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

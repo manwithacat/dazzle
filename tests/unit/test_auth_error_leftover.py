@@ -155,13 +155,13 @@ def test_valid_reset_error_rides() -> None:
 
 
 def test_leftover_2fa_error_stays_put() -> None:
-    resp = _site_client().get("/2fa/challenge?session=sid&mode=totp&error=zzz")
+    resp = _site_client().get(f"/2fa/challenge?session={'A' * 43}&mode=totp&error=zzz")
     assert resp.status_code == 400
     assert "Unknown 2FA error" in resp.text
 
 
 def test_valid_2fa_error_rides() -> None:
-    resp = _site_client().get("/2fa/challenge?session=sid&mode=totp&error=invalid_code")
+    resp = _site_client().get(f"/2fa/challenge?session={'A' * 43}&mode=totp&error=invalid_code")
     assert resp.status_code == 200
     assert "That code didn't match. Try again." in resp.text
 

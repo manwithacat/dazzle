@@ -84,27 +84,30 @@ def _challenge_client() -> TestClient:
     return TestClient(app)
 
 
+_SID = "A" * 43
+
+
 def test_leftover_mode_does_not_invent_totp_page() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=zzz")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=zzz")
     assert resp.status_code == 400
     assert "Unknown 2FA method" in resp.text
     assert "Authenticator code" not in resp.text
 
 
 def test_leftover_legacy_method_does_not_invent_totp_page() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&method=ghost")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&method=ghost")
     assert resp.status_code == 400
     assert "Authenticator code" not in resp.text
 
 
 def test_absent_mode_still_defaults_totp() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}")
     assert resp.status_code == 200
     assert "Authenticator code" in resp.text
 
 
 def test_valid_mode_still_renders() -> None:
-    resp = _challenge_client().get("/2fa/challenge?session=sid&mode=email_otp")
+    resp = _challenge_client().get(f"/2fa/challenge?session={_SID}&mode=email_otp")
     assert resp.status_code == 200
     assert "Enter the code we sent to your email." in resp.text
 

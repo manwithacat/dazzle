@@ -186,6 +186,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_next_leftover.py",
     # cycle 2223: leftover connections ?new=zzz must not invent a clean list
     "tests/unit/test_connection_new_leftover.py",
+    # cycle 2224: leftover auth ?token= / ?session= must not invent form theater
+    "tests/unit/test_auth_token_leftover.py",
     # cycle 2216: leftover-honest form 400 used Response(content=) — #1551
     # byte-route proof red ×3 Pythons. GET already used HTMLResponse.
     "tests/unit/test_byte_route_proof.py",

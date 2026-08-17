@@ -32,6 +32,7 @@ from dazzle.http.runtime.auth.auth_views import (
     build_reset_password_done_view,
     build_reset_password_view,
     leftover_honest_auth_error,
+    leftover_honest_auth_token,
 )
 from dazzle.http.runtime.auth.redirect_safety import leftover_honest_auth_next
 from dazzle.http.runtime.auth.two_factor_views import (
@@ -1257,10 +1258,17 @@ def create_auth_page_routes(
         honest_error = leftover_honest_auth_error(error, RESET_ERROR_TOKENS)
         if honest_error is None:
             return HTMLResponse("Unknown reset error", status_code=400)
+        # Leftover ``?token=zzz`` used to invent the reset form
+        # (token echo theater). Valid urlsafe tokens ride;
+        # absent/blank is first visit. HTMLResponse (not
+        # Response(content=…)) — oral #93.
+        honest_token = leftover_honest_auth_token(token)
+        if honest_token is None:
+            return HTMLResponse("Unknown reset token", status_code=400)
         error_message = RESET_ERROR_MESSAGES.get(honest_error, "")
         page = build_reset_password_view(
             product_name=sitespec.get("brand", {}).get("product_name", "Dazzle"),
-            token=token,
+            token=honest_token,
             error_message=error_message,
             css_links=css_links,
             js_scripts=js_scripts,
@@ -1357,6 +1365,11 @@ def create_auth_page_routes(
         app_state = request.app.state
         css_links, js_scripts = _typed_chrome_assets(app_state)
         product_name = sitespec.get("brand", {}).get("product_name", "Dazzle")
+        # Leftover ``?session=zzz`` used to invent the challenge form
+        # (token echo theater). Same helper as reset ``?token=``.
+        honest_session = leftover_honest_auth_token(session)
+        if honest_session is None:
+            return HTMLResponse("Unknown 2FA session", status_code=400)
         # `mode` is the canonical query name; accept legacy `method=`
         # too so links from older bookmarks still work. Leftover
         # ``?mode=zzz`` used to invent totp — stay put (400).
@@ -1376,7 +1389,7 @@ def create_auth_page_routes(
         error_message = CHALLENGE_ERROR_MESSAGES.get(honest_error, "")
         page = build_2fa_challenge_view(
             product_name=product_name,
-            session_token=session,
+            session_token=honest_session,
             mode=chosen_mode,
             email_otp_enabled=True,
             code_sent=honest_sent,

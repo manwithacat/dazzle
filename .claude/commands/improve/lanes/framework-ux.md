@@ -164,6 +164,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_auth_error`). Leftover stays put (400, no
   invented chooser / form). Do **not** walk another `?new=`
   form-opener site.
+- **Auth leftover urlsafe token** (`?token=zzz` / `?session=zzz`
+  invents reset / 2FA form theater) closed cycle 2224 (oral #98).
+  Helper: `leftover_honest_auth_token`. Leftover stays put
+  (400, no invented form). Do **not** walk another urlsafe
+  token echo site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
