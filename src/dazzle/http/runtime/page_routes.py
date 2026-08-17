@@ -373,13 +373,17 @@ def leftover_honest_list_filters(
     (length ≥3 lowercase) and ride. Known file keys with leftover
     values (``filter[file]=zzz``) restore unfiltered (cycle 2202)
     — they must not invent empty via fail-closed file match.
+    Known json keys with leftover values
+    (``filter[preferences]=zzz``) restore unfiltered (cycle 2203)
+    — they must not invent empty via fail-closed json match.
     Valid declared options /
     UUIDs / ISO dates / bool tokens / integer and decimal
-    tokens / emails / http(s) URLs / slugs / file path-URL-ids ride.
+    tokens / emails / http(s) URLs / slugs / file path-URL-ids
+    / JSON ride.
     leftover_honest_entity_id already exists (oral #71).
     leftover_honest_iso_date already exists (oral #70).
-    Oral #82 closed leftover slug VALUES; do not walk another
-    GET list slug filter value site.
+    Oral #83 closed leftover file VALUES; do not walk another
+    GET list file filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -409,8 +413,11 @@ def leftover_honest_list_filters(
     out = _omit_leftover_filter_values(
         out, entity_slug_filter_fields(entity_spec), leftover_honest_filter_slug
     )
-    return _omit_leftover_filter_values(
+    out = _omit_leftover_filter_values(
         out, entity_file_filter_fields(entity_spec), leftover_honest_filter_file
+    )
+    return _omit_leftover_filter_values(
+        out, entity_json_filter_fields(entity_spec), leftover_honest_filter_json
     )
 
 
@@ -860,6 +867,34 @@ def leftover_honest_filter_file(raw: Any) -> str:
     if _FILE_NAME_RE.fullmatch(text) or _FILE_PATH_RE.fullmatch(text):
         return text
     return ""
+
+
+_JSON_FILTER_KINDS = frozenset({"json", "jsonb"})
+
+
+def entity_json_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """JSON filter keys (``preferences`` / bag fields)."""
+    return _entity_filter_fields_of_kinds(entity_spec, _JSON_FILTER_KINDS)
+
+
+def leftover_honest_filter_json(raw: Any) -> str:
+    """Valid JSON rides. Leftover junk restores "".
+
+    Distinct from leftover file VALUE (oral #83). Filter leftover
+    on json keys must omit so leftover ``?filter[preferences]=zzz``
+    does not invent empty via fail-closed json match. Valid JSON
+    objects / arrays / scalars ride (``json.loads``). Cycle 2203.
+    """
+    if isinstance(raw, bool) or not isinstance(raw, str):
+        return ""
+    text = raw.strip()
+    if not text:
+        return ""
+    try:
+        json.loads(text)
+    except (ValueError, TypeError):
+        return ""
+    return text
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2610,6 +2645,11 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         _list_filters,
         entity_file_filter_fields(getattr(_svc, "entity_spec", None)),
         leftover_honest_filter_file,
+    )
+    _list_filters = _omit_leftover_filter_values(
+        _list_filters,
+        entity_json_filter_fields(getattr(_svc, "entity_spec", None)),
+        leftover_honest_filter_json,
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

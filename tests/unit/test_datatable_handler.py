@@ -562,6 +562,46 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"file": "report.pdf"}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_json_value_does_not_invent(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(name="preferences", type=SimpleNamespace(kind="json")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[preferences]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_json_value_rides(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="preferences", type=SimpleNamespace(kind="json")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[preferences]": '{"theme":"dark"}'})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"preferences": '{"theme":"dark"}'}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

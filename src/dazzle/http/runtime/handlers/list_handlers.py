@@ -592,7 +592,8 @@ async def _list_handler_body(
     # + leftover-honest email VALUES (cycle 2199)
     # + leftover-honest url VALUES (cycle 2200)
     # + leftover-honest slug VALUES (cycle 2201)
-    # + leftover-honest file VALUES (cycle 2202).
+    # + leftover-honest file VALUES (cycle 2202)
+    # + leftover-honest json VALUES (cycle 2203).
     # Raw ``filter[zzz]`` invented empty via unknown column;
     # leftover ``filter[status]=zzz`` invented empty via fail-closed
     # enum match; leftover ``filter[id]=zzz`` invented empty via
@@ -606,12 +607,14 @@ async def _list_handler_body(
     # / ``filter[slug]=ZZZ`` invented empty via fail-closed slug
     # match (``zzz`` / ``ghost`` are valid slugs and ride);
     # leftover ``filter[file]=zzz`` invented empty via fail-closed
-    # file match. Valid keys / declared options / UUIDs / ISO
-    # dates / bool tokens / integer and decimal tokens / emails /
-    # http(s) URLs / slugs / file path-URL-ids ride; leftover
-    # restores unfiltered (omit).
+    # file match; leftover ``filter[preferences]=zzz`` invented
+    # empty via fail-closed json match. Valid keys / declared
+    # options / UUIDs / ISO dates / bool tokens / integer and
+    # decimal tokens / emails / http(s) URLs / slugs /
+    # file path-URL-ids / JSON ride; leftover restores
+    # unfiltered (omit).
     # leftover_honest_iso_date already exists (oral #70).
-    # Oral #82 — do not walk another GET list slug VALUE.
+    # Oral #83 — do not walk another GET list file VALUE.
     _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
     filters: dict[str, Any] = leftover_honest_list_filters(
         request.query_params,

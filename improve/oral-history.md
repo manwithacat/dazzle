@@ -837,6 +837,15 @@ dialect formed — and where it started to Goodhart itself — is
     Bulk echo stays fail-closed (mutation). Standing refusals
     apply.
 
+84. **Leftover REST filter json VALUE invents empty.** Cycle 2203:
+    leftover-honest file VALUES already existed (oral #83) but
+    ``?filter[preferences]=zzz`` (known key, leftover JSON VALUE)
+    still landed in REST ``filters`` and invented empty via
+    fail-closed json match. Valid JSON rides via
+    ``leftover_honest_filter_json`` (``json.loads``). One-ship
+    close of remaining GET list json filter VALUES. Bulk echo
+    stays fail-closed (mutation). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -864,6 +873,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter url VALUE | Walk another GET list url filter value site after leftover-honest url values exist | #81 |
 | REST leftover filter slug VALUE | Walk another GET list slug filter value site after leftover-honest slug values exist | #82 |
 | REST leftover filter file VALUE | Walk another GET list file filter value site after leftover-honest file values exist | #83 |
+| REST leftover filter json VALUE | Walk another GET list json filter value site after leftover-honest json values exist | #84 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -897,6 +907,7 @@ how the handbook was learned.
 | One GET list filter[preview_url] VALUE after leftover-honest url values exist | Call `leftover_honest_filter_url` / `entity_url_filter_fields` on remaining GET list endpoints, then STOP (oral #81) |
 | One GET list filter[slug] VALUE after leftover-honest slug values exist | Call `leftover_honest_filter_slug` / `entity_slug_filter_fields` on remaining GET list endpoints, then STOP (oral #82) |
 | One GET list filter[file] VALUE after leftover-honest file values exist | Call `leftover_honest_filter_file` / `entity_file_filter_fields` on remaining GET list endpoints, then STOP (oral #83) |
+| One GET list filter[preferences] VALUE after leftover-honest json values exist | Call `leftover_honest_filter_json` / `entity_json_filter_fields` on remaining GET list endpoints, then STOP (oral #84) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
