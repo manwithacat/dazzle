@@ -43,9 +43,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   "must ride hx-get" sibling. If a new chrome control is added,
   call the helper in that control's ship.
 - **Catalog leftover** (unknown picker id invents first sibling)
-  opened cycle 2184 (oral #68). Helper:
-  `leftover_honest_catalog_id`. Next sibling is tab / view /
-  filter-enum leftover — not another temporal ``hx-get``.
+  is saturated — oral #69. Helper: `leftover_honest_catalog_id`.
+- **Date-window leftover** (`date_from` / `date_to` invents empty)
+  opened cycle 2186 (oral #70). Helper:
+  `leftover_honest_iso_date`. Do **not** walk another bound site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

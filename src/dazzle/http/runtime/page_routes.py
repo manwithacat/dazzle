@@ -68,6 +68,7 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_catalog_option_values,
+    leftover_honest_iso_date,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 
@@ -211,18 +212,11 @@ def _parse_list_as_of(raw: Any) -> str | None:
     ``_list_entity_in_process`` then invented items=[] via
     ``except InvalidTemporalParam: return _empty``. Empty / invalid
     restores *no as_of* (current collection). Valid YYYY-MM-DD still
-    time-travels. Cycle 2165.
+    time-travels. Cycle 2165. Window leftover ``date_from`` /
+    ``date_to`` share ``leftover_honest_iso_date`` (cycle 2186).
     """
-    from datetime import date as _date
-
-    text = str(raw if raw is not None else "").strip()
-    if not text:
-        return None
-    try:
-        _date.fromisoformat(text)
-    except (ValueError, TypeError):
-        return None
-    return text
+    text = leftover_honest_iso_date(raw)
+    return text or None
 
 
 def _parse_list_include_closed(raw: Any) -> bool:

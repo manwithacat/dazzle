@@ -42,6 +42,7 @@ from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
 from dazzle.render.display_names import _inject_display_names
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_iso_date
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,33 @@ def _apply_leftover_honest_temporal(
         out["__as_of"] = _date.fromisoformat(as_of_raw)
     if include_closed:
         out[f"{temporal.end_field}__isnull"] = False
+    return out
+
+
+def _apply_leftover_honest_date_window(
+    request: Any, date_field: str, filters: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Fold leftover-honest ``date_from`` / ``date_to`` into list filters.
+
+    Leftover junk (``zzz``, ``2abc``, ``not-a-date``) used to ride
+    ``{date_field}__gte`` / ``__lte`` and invent an empty collection
+    (cycle 2186). Valid YYYY-MM-DD still windows. Rest is unbounded
+    (omit). Distinct from leftover ``as_of`` (oral #49).
+    """
+    if not date_field:
+        return filters
+    qparams = getattr(request, "query_params", None)
+    if qparams is None:
+        return filters
+    date_from = leftover_honest_iso_date(qparams.get("date_from"))
+    date_to = leftover_honest_iso_date(qparams.get("date_to"))
+    if not date_from and not date_to:
+        return filters
+    out = dict(filters) if filters else {}
+    if date_from:
+        out[f"{date_field}__gte"] = date_from
+    if date_to:
+        out[f"{date_field}__lte"] = date_to
     return out
 
 
@@ -204,17 +232,7 @@ async def fetch_region_items(
         filters = _apply_leftover_honest_temporal(request, repo, filters)
 
         date_field = ctx.ctx_region.date_field if hasattr(ctx.ctx_region, "date_field") else ""
-        if date_field:
-            date_from = request.query_params.get("date_from")
-            date_to = request.query_params.get("date_to")
-            if date_from:
-                if filters is None:
-                    filters = {}
-                filters[f"{date_field}__gte"] = date_from
-            if date_to:
-                if filters is None:
-                    filters = {}
-                filters[f"{date_field}__lte"] = date_to
+        filters = _apply_leftover_honest_date_window(request, date_field, filters)
 
         # Step 4: entity-level scope predicates (#574).
         scope_only_filters, scope_denied = _apply_workspace_scope_filters(

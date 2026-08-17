@@ -146,8 +146,8 @@ def render(d: DateRange) -> str:
     if qs:
         endpoint = f"{endpoint}&amp;{qs}" if "?" in endpoint else f"{endpoint}?{qs}"
     target = html.escape(d.target or f"#region-{d.region_name}", quote=True)
-    date_from = html.escape(d.date_from, quote=True)
-    date_to = html.escape(d.date_to, quote=True)
+    date_from = html.escape(_leftover_honest_iso_date(d.date_from), quote=True)
+    date_to = html.escape(_leftover_honest_iso_date(d.date_to), quote=True)
     return (
         f'<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
         f"{_bound(rname, 'from', 'date_from', date_from, endpoint, target, 'From')}"

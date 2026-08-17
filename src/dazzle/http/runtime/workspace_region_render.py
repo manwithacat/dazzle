@@ -54,7 +54,10 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
-from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_iso_date,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -539,8 +542,12 @@ def _build_list_adapter_ctx(
         _apply_list_search_chrome(adapter_ctx, ctx, env.request)
         adapter_ctx["date_range"] = getattr(ctx_region, "date_range", False)
         adapter_ctx["date_field"] = getattr(ctx_region, "date_field", "")
-        adapter_ctx["date_from"] = env.request.query_params.get("date_from", "")
-        adapter_ctx["date_to"] = env.request.query_params.get("date_to", "")
+        adapter_ctx["date_from"] = leftover_honest_iso_date(
+            env.request.query_params.get("date_from", "")
+        )
+        adapter_ctx["date_to"] = leftover_honest_iso_date(
+            env.request.query_params.get("date_to", "")
+        )
         adapter_ctx["csv_export"] = getattr(ctx_region, "csv_export", False)
         # Leftover-honest temporal (cycle 2174) so CSV endpoint echoes
         # include_closed / as_of already on the region URL.

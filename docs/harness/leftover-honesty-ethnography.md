@@ -188,6 +188,12 @@ call site. An oral already said *scan sibling emitters in the
 same dig*. The loop wrote that sentence and then ignored it
 until a later close (oral #67) made the class one ship.
 
+**Date window (query).** `date_from` / `date_to` are a field
+range, not a point-in-time snapshot. Leftover junk forwarded
+as `{date_field}__gte` invented an empty collection while the
+picker looked unbounded. Helper: `leftover_honest_iso_date`
+(oral #70). Do not walk another bound site.
+
 Person-as-text was a brief fourth clan: do not mint an avatar
 chip from the bare string `Ada`. It closed when every host that
 needed `present()` was wired. It did not spawn a sibling walk.

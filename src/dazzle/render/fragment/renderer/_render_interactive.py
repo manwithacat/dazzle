@@ -74,6 +74,28 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
+def leftover_honest_iso_date(raw: Any) -> str:
+    """Valid YYYY-MM-DD rides. Leftover junk / empty restores "".
+
+    Window leftover (``?date_from=zzz`` / ``?date_to=not-a-date``) must
+    not invent a bound or an empty collection via ``{date_field}__gte``
+    / ``__lte``. Rest is unbounded (omit). Distinct from ``as_of``
+    (point-in-time snapshot, oral #49) and from DateRangePicker
+    companion parse-invent (oral #42). Live in support_tickets
+    ``open_queue`` ``date_field: created_at``. Cycle 2186.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return ""
+    from datetime import date as _date
+
+    try:
+        _date.fromisoformat(text)
+    except (ValueError, TypeError):
+        return ""
+    return text
+
+
 def leftover_honest_catalog_id(
     requested: str,
     known: list[str] | tuple[str, ...],
@@ -837,8 +859,8 @@ class _RenderInteractiveMixin:
             DateRangeSeam(
                 region_name=rname,
                 endpoint=endpoint,
-                date_from=d.date_from,
-                date_to=d.date_to,
+                date_from=leftover_honest_iso_date(d.date_from),
+                date_to=leftover_honest_iso_date(d.date_to),
                 target="closest [data-dz-region]",
                 include_closed=getattr(d, "include_closed", ""),
                 as_of=getattr(d, "as_of", ""),

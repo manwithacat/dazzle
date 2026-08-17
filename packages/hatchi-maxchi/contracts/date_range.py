@@ -19,8 +19,11 @@ dropped them and invented open-only / current after a bound
 change. Leftover junk (``zzz``, ``2abc``, ``maybe``,
 ``not-a-date``) must not invent. Valid ``true`` / YYYY-MM-DD
 still ride hx-get. Rest-state gallery is unchanged (oral #33).
-Not leftover list include_closed / related-tab as_of / DETAIL
-as_of onto the edit form.
+
+Leftover honesty (cycle 2186): leftover ``date_from`` / ``date_to``
+must not invent a bound. Valid YYYY-MM-DD rides; junk restores
+empty (unbounded). Distinct from companion parse-invent (2139)
+and leftover ``as_of``.
 """
 
 from __future__ import annotations
@@ -73,6 +76,20 @@ EXEMPLARS: list[DateRange] = [
     ),
     DateRange(region_name="empty", endpoint="/app/region"),
 ]
+
+
+def _leftover_honest_iso_date(raw: str) -> str:
+    """Valid YYYY-MM-DD rides; leftover junk restores empty (cycle 2186)."""
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    from datetime import date as _date
+
+    try:
+        _date.fromisoformat(text)
+    except (ValueError, TypeError):
+        return ""
+    return text
 
 
 def _leftover_honest_temporal(include_closed: str, as_of: str) -> str:
@@ -129,8 +146,8 @@ def render(d: DateRange) -> str:
     if qs:
         endpoint = f"{endpoint}&amp;{qs}" if "?" in endpoint else f"{endpoint}?{qs}"
     target = html.escape(d.target or f"#region-{d.region_name}", quote=True)
-    date_from = html.escape(d.date_from, quote=True)
-    date_to = html.escape(d.date_to, quote=True)
+    date_from = html.escape(_leftover_honest_iso_date(d.date_from), quote=True)
+    date_to = html.escape(_leftover_honest_iso_date(d.date_to), quote=True)
     return (
         f'<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
         f"{_bound(rname, 'from', 'date_from', date_from, endpoint, target, 'From')}"

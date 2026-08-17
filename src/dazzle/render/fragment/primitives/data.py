@@ -1480,8 +1480,10 @@ class DateRangePicker:
     (`data-dz-date-iso`, no name) wired to HTMX with
     `hx-include="closest .date-range-bar"` so both values ride along
     on every change. Leftover ISO junk must not invent a bound
-    (cycle 2139). `date_from` and `date_to` are pre-formatted
-    iso-date strings (`YYYY-MM-DD`); empty string = no date set.
+    (cycle 2139). URL leftover ``date_from`` / ``date_to`` must
+    not invent a window (cycle 2186). `date_from` and `date_to`
+    are pre-formatted iso-date strings (`YYYY-MM-DD`); empty
+    string = no date set.
 
     Leftover-honest ``include_closed`` / ``as_of`` (cycle 2180) ride
     each bound ``hx-get``. Dropping them invented open-only / current

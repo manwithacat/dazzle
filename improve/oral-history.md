@@ -688,6 +688,16 @@ dialect formed — and where it started to Goodhart itself — is
     leftover ``?lens=`` uses the same helper. Standing
     refusals apply.
 
+70. **Leftover date window invents an empty collection.** Cycle
+    2186: ``?date_from=zzz`` / ``?date_to=not-a-date`` rode
+    ``{date_field}__gte`` / ``__lte`` (live support_tickets
+    ``open_queue`` ``created_at``) and invented zero rows.
+    Valid YYYY-MM-DD still windows via
+    ``leftover_honest_iso_date``. Rest is unbounded (omit).
+    Distinct from leftover ``as_of`` (oral #49) and from
+    DateRangePicker companion parse-invent (oral #42).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -701,6 +711,7 @@ the end of every new oral *is* expensive — point here instead.
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
 | Temporal echo | Walk the next list/grid `hx-get` for `include_closed` / `as_of` after the helper exists | #67 |
 | Catalog leftover | Walk the next tab / view / filter-enum / lens site after `leftover_honest_catalog_id` exists | #69 |
+| Date-window leftover | Walk the next `date_from` / `date_to` site after `leftover_honest_iso_date` exists | #70 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -720,6 +731,7 @@ how the handbook was learned.
 | Invent residual forever | Accept residual=0; inject Goal B context |
 | One `hx-get` sibling per cycle after the helper exists | Call `leftover_honest_temporal_query` on remaining emitters in one ship, then STOP (oral #67) |
 | One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
+| One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
