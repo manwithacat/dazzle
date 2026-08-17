@@ -589,7 +589,8 @@ async def _list_handler_body(
     # (cycle 2195) + leftover-honest date VALUES (cycle 2196)
     # + leftover-honest bool VALUES (cycle 2197)
     # + leftover-honest int VALUES (cycle 2198)
-    # + leftover-honest email VALUES (cycle 2199).
+    # + leftover-honest email VALUES (cycle 2199)
+    # + leftover-honest url VALUES (cycle 2200).
     # Raw ``filter[zzz]`` invented empty via unknown column;
     # leftover ``filter[status]=zzz`` invented empty via fail-closed
     # enum match; leftover ``filter[id]=zzz`` invented empty via
@@ -598,11 +599,13 @@ async def _list_handler_body(
     # ``filter[is_active]=zzz`` invented empty / inactive-only;
     # leftover ``filter[amount]=zzz`` invented empty / zero-amount;
     # leftover ``filter[email]=zzz`` invented empty via fail-closed
-    # email match. Valid keys / declared options / UUIDs / ISO dates
-    # / bool tokens / integer and decimal tokens / emails ride;
-    # leftover restores unfiltered (omit). leftover_honest_iso_date
-    # already exists (oral #70). Oral #79 — do not walk another
-    # GET list numeric VALUE.
+    # email match; leftover ``filter[preview_url]=zzz`` invented
+    # empty via fail-closed url match. Valid keys / declared
+    # options / UUIDs / ISO dates / bool tokens / integer and
+    # decimal tokens / emails / http(s) URLs ride; leftover
+    # restores unfiltered (omit). leftover_honest_iso_date
+    # already exists (oral #70). Oral #80 — do not walk another
+    # GET list email VALUE.
     _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
     filters: dict[str, Any] = leftover_honest_list_filters(
         request.query_params,

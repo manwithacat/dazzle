@@ -362,12 +362,15 @@ def leftover_honest_list_filters(
     or the zero-amount slice via coerce-to-0. Known email keys
     with leftover values (``filter[email]=zzz``) restore
     unfiltered (cycle 2199) — they must not invent empty via
-    fail-closed email match. Valid declared options / UUIDs /
-    ISO dates / bool tokens / integer and decimal tokens /
-    emails ride. leftover_honest_entity_id already exists
+    fail-closed email match. Known url keys with leftover
+    values (``filter[preview_url]=zzz``) restore unfiltered
+    (cycle 2200) — they must not invent empty via fail-closed
+    url match. Valid declared options / UUIDs / ISO dates /
+    bool tokens / integer and decimal tokens / emails / http(s)
+    URLs ride. leftover_honest_entity_id already exists
     (oral #71). leftover_honest_iso_date already exists (oral #70).
-    Oral #79 closed leftover int VALUES; do not walk another
-    GET list numeric filter value site.
+    Oral #80 closed leftover email VALUES; do not walk another
+    GET list email filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -392,7 +395,8 @@ def leftover_honest_list_filters(
     out = _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
     out = _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
     out = _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
-    return _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
+    out = _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
+    return _parse_list_filter_url_values(out, entity_url_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -730,6 +734,52 @@ def _parse_list_filter_email_values(
     ``_parse_list_filter_int_values``).
     """
     return _omit_leftover_filter_values(filters, email_fields, leftover_honest_filter_email)
+
+
+_URL_FILTER_KINDS = frozenset({"url", "uri"})
+
+
+def entity_url_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """URL filter keys (``preview_url`` / media fields)."""
+    return _entity_filter_fields_of_kinds(entity_spec, _URL_FILTER_KINDS)
+
+
+def leftover_honest_filter_url(raw: Any) -> str:
+    """Valid http(s) URLs ride. Leftover junk restores "".
+
+    Distinct from leftover email VALUE (oral #80). Filter leftover
+    on url keys must omit so leftover ``?filter[preview_url]=zzz``
+    does not invent empty via fail-closed url match. Cycle 2200.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text or "://" not in text:
+        return ""
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(text)
+    except ValueError:
+        return ""
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    return text
+
+
+def _parse_list_filter_url_values(
+    filters: dict[str, str],
+    url_fields: frozenset[str],
+) -> dict[str, str]:
+    """Leftover-honest url filter VALUES (cycle 2200).
+
+    Valid http(s) URLs ride. Leftover junk (``zzz``, ``ghost``,
+    ``not-a-url``) must not invent empty via fail-closed url
+    match. Empty rest is unfiltered (omit). Distinct from leftover
+    email VALUE (oral #80). Reuses
+    ``_omit_leftover_filter_values`` (not a clone of
+    ``_parse_list_filter_email_values``).
+    """
+    return _omit_leftover_filter_values(filters, url_fields, leftover_honest_filter_url)
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2453,21 +2503,24 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _parse_list_filter_email_values(
-        _parse_list_filter_int_values(
-            _parse_list_filter_bool_values(
-                _parse_list_filter_entity_id_values(
-                    _parse_list_filter_enum_values(
-                        _parse_list_filters(_qparams, allowed=_allowed),
-                        _list_filter_enum_options(req_table),
+    _list_filters = _parse_list_filter_url_values(
+        _parse_list_filter_email_values(
+            _parse_list_filter_int_values(
+                _parse_list_filter_bool_values(
+                    _parse_list_filter_entity_id_values(
+                        _parse_list_filter_enum_values(
+                            _parse_list_filters(_qparams, allowed=_allowed),
+                            _list_filter_enum_options(req_table),
+                        ),
+                        entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
                     ),
-                    entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+                    entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
                 ),
-                entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
+                entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
             ),
-            entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
+            entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
         ),
-        entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
+        entity_url_filter_fields(getattr(_svc, "entity_spec", None)),
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
