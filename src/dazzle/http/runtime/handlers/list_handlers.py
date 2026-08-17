@@ -585,13 +585,14 @@ async def _list_handler_body(
     # NOT include the temporal repository keys below). `_gated_filters` is what
     # gated_list merges over scope: the field filters PLUS any temporal keys.
     # Leftover-honest filter keys (cycle 2193) + leftover-honest enum
-    # VALUES (cycle 2194). Raw ``filter[zzz]`` invented empty via
-    # unknown column; leftover ``filter[status]=zzz`` (known key)
-    # invented empty via fail-closed enum match. Valid keys / declared
-    # options ride; leftover restores unfiltered (omit). Page
-    # leftover-honest enum values already exist
-    # (``_parse_list_filter_enum_values`` / oral #69). Oral #74 —
-    # do not walk another ``filter[key]`` parse.
+    # VALUES (cycle 2194) + leftover-honest entity-id VALUES
+    # (cycle 2195). Raw ``filter[zzz]`` invented empty via unknown
+    # column; leftover ``filter[status]=zzz`` invented empty via
+    # fail-closed enum match; leftover ``filter[id]=zzz`` invented
+    # empty via fail-closed UUID match. Valid keys / declared options
+    # / UUIDs ride; leftover restores unfiltered (omit).
+    # leftover_honest_entity_id already exists (oral #71). Oral #75 —
+    # do not walk another GET list filter-enum VALUE.
     _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
     filters: dict[str, Any] = leftover_honest_list_filters(
         request.query_params,

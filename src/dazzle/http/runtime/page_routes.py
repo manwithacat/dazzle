@@ -68,6 +68,7 @@ from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_catalog_option_values,
+    leftover_honest_entity_id,
     leftover_honest_iso_date,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
@@ -342,16 +343,17 @@ def leftover_honest_list_filters(
     entity_spec: Any = None,
     enum_options: dict[str, tuple[str, ...]] | None = None,
 ) -> dict[str, str]:
-    """Leftover-honest REST ``filter[key]`` + leftover-honest enum VALUES.
+    """Leftover-honest REST ``filter[key]`` + leftover-honest VALUES.
 
     Empty / invalid / unknown keys (``filter[zzz]``) are dropped
-    (cycle 2193). Known keys with leftover values
-    (``filter[status]=zzz``) restore unfiltered for that key —
-    they must not invent empty via fail-closed enum match
-    (cycle 2194). Valid declared options ride. Page leftover-honest
-    enum values already exist (``_parse_list_filter_enum_values`` /
-    oral #69). Oral #74 closed leftover keys; do not walk another
-    ``filter[key]`` parse.
+    (cycle 2193). Known keys with leftover enum values
+    (``filter[status]=zzz``) restore unfiltered for that key
+    (cycle 2194). Known entity-id keys with leftover UUID values
+    (``filter[id]=zzz``) restore unfiltered (cycle 2195) — they
+    must not invent empty via fail-closed UUID match.
+    Valid declared options / UUIDs ride. leftover_honest_entity_id
+    already exists (oral #71). Oral #75 closed leftover filter-enum
+    VALUES; do not walk another GET list filter-enum value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -371,7 +373,8 @@ def leftover_honest_list_filters(
                 ):
                     out[name] = str(value)
     options = enum_options if enum_options is not None else entity_enum_filter_options(entity_spec)
-    return _parse_list_filter_enum_values(out, options)
+    out = _parse_list_filter_enum_values(out, options)
+    return _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -415,6 +418,45 @@ def _parse_list_filter_enum_values(
             out[key] = val
             continue
         honest = leftover_honest_catalog_id(val, known, "", allow_empty_rest=True)
+        if honest:
+            out[key] = honest
+    return out
+
+
+_ENTITY_ID_FILTER_KINDS = frozenset({"uuid", "ref", "belongs_to"})
+
+
+def entity_id_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """Entity-id / UUID / REF filter keys (``id`` always)."""
+    keys: set[str] = {"id"}
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if not name:
+            continue
+        kind = getattr(getattr(spec_field, "type", None), "kind", None)
+        kind_s = str(getattr(kind, "value", kind) or "").lower()
+        if kind_s in _ENTITY_ID_FILTER_KINDS:
+            keys.add(name)
+    return frozenset(keys)
+
+
+def _parse_list_filter_entity_id_values(
+    filters: dict[str, str],
+    id_fields: frozenset[str],
+) -> dict[str, str]:
+    """Leftover-honest entity-id filter VALUES (cycle 2195).
+
+    Valid UUIDs ride. Leftover junk (``zzz``, ``ghost``, ``not-a-uuid``)
+    must not invent empty via fail-closed UUID match. Empty rest is
+    unfiltered (omit). Distinct from leftover filter-enum VALUE
+    (oral #75). leftover_honest_entity_id already exists (oral #71).
+    """
+    out: dict[str, str] = {}
+    for key, val in filters.items():
+        if key not in id_fields:
+            out[key] = val
+            continue
+        honest = leftover_honest_entity_id(val)
         if honest:
             out[key] = honest
     return out
@@ -2140,11 +2182,14 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         default=req_table.default_sort_dir or "asc",
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
-    _list_filters = _parse_list_filter_enum_values(
-        _parse_list_filters(_qparams, allowed=_allowed),
-        _list_filter_enum_options(req_table),
-    )
     _svc = prc.deps.entity_services.get(req_table.entity_name)
+    _list_filters = _parse_list_filter_entity_id_values(
+        _parse_list_filter_enum_values(
+            _parse_list_filters(_qparams, allowed=_allowed),
+            _list_filter_enum_options(req_table),
+        ),
+        entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+    )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
     _list_as_of = _parse_list_as_of(_qparams.get(_as_of_param))

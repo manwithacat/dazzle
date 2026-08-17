@@ -247,6 +247,39 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"status": "resolved"}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_id_value_does_not_invent(self) -> None:
+        service = _make_service()
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[id]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_id_value_rides(self) -> None:
+        service = _make_service()
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        rid = "12345678-1234-5678-1234-567812345678"
+        request = _make_request(query_params={"filter[id]": rid})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"id": rid}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

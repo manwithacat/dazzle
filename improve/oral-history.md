@@ -752,6 +752,17 @@ dialect formed — and where it started to Goodhart itself — is
     close of remaining GET list filter-enum VALUES. Bulk echo
     stays fail-closed (mutation). Standing refusals apply.
 
+76. **Leftover REST filter[id] VALUE invents empty.** Cycle 2195:
+    leftover-honest filter-enum VALUES already existed
+    (oral #75) but ``?filter[id]=zzz`` (known key, leftover
+    UUID VALUE) still landed in REST ``filters`` and invented
+    empty via fail-closed UUID match. leftover_honest_entity_id
+    already exists (oral #71). Valid UUIDs ride; leftover
+    restores unfiltered (omit). One-ship close of remaining
+    GET list entity-id filter VALUES (``id`` / UUID / REF).
+    Bulk echo stays fail-closed (mutation). Standing refusals
+    apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -771,6 +782,7 @@ the end of every new oral *is* expensive — point here instead.
 | Workspace/REST leftover sort | Walk another FastAPI `?sort=` site after `leftover_honest_sort` exists | #73 |
 | REST leftover filter[key] | Walk another GET list `filter[key]` parse after `leftover_honest_list_filters` exists | #74 |
 | REST leftover filter VALUE | Walk another GET list filter-enum value site after leftover-honest values exist | #75 |
+| REST leftover filter[id] VALUE | Walk another GET list entity-id filter value site after leftover-honest id values exist | #76 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -796,6 +808,7 @@ how the handbook was learned.
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |
 | One GET list `filter[key]` parse after leftover-honest filters exist | Call `leftover_honest_list_filters` on remaining GET list endpoints, then STOP (oral #74) |
 | One GET list filter-enum VALUE after leftover-honest values exist | Call `_parse_list_filter_enum_values` / `entity_enum_filter_options` on remaining GET list endpoints, then STOP (oral #75) |
+| One GET list filter[id] VALUE after leftover-honest entity-id values exist | Call `leftover_honest_entity_id` / `entity_id_filter_fields` on remaining GET list endpoints, then STOP (oral #76) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
