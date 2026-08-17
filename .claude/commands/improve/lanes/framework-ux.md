@@ -107,6 +107,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `entity_slug_filter_fields` (reuses `validate_slug`).
   `zzz` / `ghost` are valid slugs and ride. Do **not** walk
   another GET list slug filter value site.
+- **REST leftover filter file VALUE** (`?filter[file]=zzz`
+  invents empty) closed cycle 2202 (oral #83). Helper:
+  `leftover_honest_filter_file` / `entity_file_filter_fields`
+  (reuses `leftover_honest_entity_id` +
+  `leftover_honest_filter_url`). Do **not** walk another GET
+  list file filter value site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

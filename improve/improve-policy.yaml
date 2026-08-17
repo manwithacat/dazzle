@@ -126,10 +126,10 @@ campaigns:
           Leftover parse-invent (oral #42), leftover temporal echo (oral #67),
           leftover catalog / date-window / entity-id / filter-enum fetch /
           workspace-REST sort / REST filter[key] / typed filter VALUES
-          (oral #69–#82) are saturated through slug. Do not walk another
-          GET list slug VALUE. Next is leftover REST filter FILE VALUE
-          (`filter[file]=zzz`) or a new invent class in a live app, or
-          presentation MCP STALE (1554).
+          (oral #69–#83) are saturated through file. Do not walk another
+          GET list file VALUE. Next is leftover REST filter JSON VALUE
+          (`filter[preferences]=zzz`, live simple_task) or a new invent
+          class in a live app, or presentation MCP STALE (1554).
           See improve/leftover-honesty-ethnography.md.
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence

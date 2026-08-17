@@ -522,6 +522,46 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"slug": "acme"}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_file_value_does_not_invent(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(name="file", type=SimpleNamespace(kind="file")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[file]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_file_value_rides(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="file", type=SimpleNamespace(kind="file")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[file]": "report.pdf"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"file": "report.pdf"}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

@@ -370,13 +370,16 @@ def leftover_honest_list_filters(
     (``filter[slug]=ab``, ``filter[slug]=ZZZ``) restore
     unfiltered (cycle 2201) — they must not invent empty via
     fail-closed slug match. ``zzz`` / ``ghost`` are valid slugs
-    (length ≥3 lowercase) and ride. Valid declared options /
+    (length ≥3 lowercase) and ride. Known file keys with leftover
+    values (``filter[file]=zzz``) restore unfiltered (cycle 2202)
+    — they must not invent empty via fail-closed file match.
+    Valid declared options /
     UUIDs / ISO dates / bool tokens / integer and decimal
-    tokens / emails / http(s) URLs / slugs ride.
+    tokens / emails / http(s) URLs / slugs / file path-URL-ids ride.
     leftover_honest_entity_id already exists (oral #71).
     leftover_honest_iso_date already exists (oral #70).
-    Oral #81 closed leftover url VALUES; do not walk another
-    GET list url filter value site.
+    Oral #82 closed leftover slug VALUES; do not walk another
+    GET list slug filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -403,8 +406,11 @@ def leftover_honest_list_filters(
     out = _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
     out = _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
     out = _parse_list_filter_url_values(out, entity_url_filter_fields(entity_spec))
-    return _omit_leftover_filter_values(
+    out = _omit_leftover_filter_values(
         out, entity_slug_filter_fields(entity_spec), leftover_honest_filter_slug
+    )
+    return _omit_leftover_filter_values(
+        out, entity_file_filter_fields(entity_spec), leftover_honest_filter_file
     )
 
 
@@ -818,6 +824,42 @@ def leftover_honest_filter_slug(raw: Any) -> str:
         return validate_slug(text)
     except ValueError:
         return ""
+
+
+_FILE_FILTER_KINDS = frozenset({"file"})
+_FILE_NAME_RE = re.compile(r"^[\w.\-]{1,100}\.[A-Za-z0-9]{1,10}$")
+_FILE_PATH_RE = re.compile(r"^(?:[\w.\-]+/){1,16}[\w.\-]+$")
+
+
+def entity_file_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """File filter keys (``file`` / upload fields)."""
+    return _entity_filter_fields_of_kinds(entity_spec, _FILE_FILTER_KINDS)
+
+
+def leftover_honest_filter_file(raw: Any) -> str:
+    """Valid file path/URL/identifier rides. Leftover junk restores "".
+
+    FILE stores path/URL/identifier (FieldTypeKind.FILE). Reuses
+    leftover_honest_entity_id (UUID ids) and leftover_honest_filter_url
+    (http(s) URLs). Filenames with an extension and storage keys
+    ride. Leftover junk (``zzz``, ``ghost``) must not invent empty
+    via fail-closed file match. Distinct from leftover slug VALUE
+    (oral #82). Cycle 2202.
+    """
+    if isinstance(raw, bool):
+        return ""
+    text = str(raw if raw is not None else "").strip()
+    if not text or ".." in text:
+        return ""
+    honest_id = leftover_honest_entity_id(text)
+    if honest_id:
+        return honest_id
+    honest_url = leftover_honest_filter_url(text)
+    if honest_url:
+        return honest_url
+    if _FILE_NAME_RE.fullmatch(text) or _FILE_PATH_RE.fullmatch(text):
+        return text
+    return ""
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2563,6 +2605,11 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         ),
         entity_slug_filter_fields(getattr(_svc, "entity_spec", None)),
         leftover_honest_filter_slug,
+    )
+    _list_filters = _omit_leftover_filter_values(
+        _list_filters,
+        entity_file_filter_fields(getattr(_svc, "entity_spec", None)),
+        leftover_honest_filter_file,
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
