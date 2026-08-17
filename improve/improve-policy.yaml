@@ -132,9 +132,10 @@ campaigns:
           Do not walk another GET list typed VALUE, bulk leftover filter
           kind, experience `?event=` site, onboarding complete/dismiss,
           invite / members-roles leftover persona, consent / join-policy
-          coerce, 2FA mode/sent, `?error=` banner, or `?next=` landing.
-          Next is a new invent class in a live app or presentation MCP
-          STALE (1554). See improve/leftover-honesty-ethnography.md.
+          coerce, 2FA mode/sent, `?error=` banner, `?next=` landing, or
+          connections `?new=` form-opener. Next is a new invent class
+          in a live app or presentation MCP STALE (1554). See
+          improve/leftover-honesty-ethnography.md.
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence
         strategy: hyperpart_coherence

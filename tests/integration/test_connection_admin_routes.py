@@ -315,6 +315,13 @@ def test_no_new_param_shows_links_not_a_form() -> None:
     assert "Create OIDC connection" not in r.text  # no form until ?new=oidc
 
 
+def test_leftover_new_stays_put() -> None:
+    r = _client(_Store()).get("/auth/connections?new=zzz")
+    assert r.status_code == 400
+    assert "Unknown connection type" in r.text
+    assert "Create OIDC connection" not in r.text
+
+
 def test_create_oidc_persists_secret_and_redirects() -> None:
     store = _Store()
     r = _client(store).post(

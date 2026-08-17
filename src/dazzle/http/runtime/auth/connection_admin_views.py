@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
+from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_error
 from dazzle.http.runtime.auth.org_settings import OrgSettings
 from dazzle.render.fragment import (
     URL,
@@ -158,6 +159,21 @@ _CREATE_FORMS = {
     "saml": ("Create SAML connection", _SAML_FIELDS),
     "domain": ("Verify a domain (no SSO)", ()),
 }
+CONNECTION_NEW_TOKENS: tuple[str, ...] = tuple(_CREATE_FORMS)
+
+
+def leftover_honest_connection_new(raw: Any) -> str | None:
+    """Valid declared ``?new=`` types ride. Leftover junk restores None.
+
+    Leftover ``?new=zzz`` used to invent the default connections page
+    (no new-form) via omit-as-absent. Valid ``oidc`` / ``scim`` /
+    ``saml`` / ``domain`` ride. Absent / blank is the honest
+    first-visit default (``""``). Rest is stay-put (None). Reuses
+    leftover_honest_auth_error (declared-token stay-put). Distinct
+    from leftover catalog picker (oral #69) and leftover 2FA sent
+    (oral #94). Live simple_task ``/auth/connections``. Cycle 2223.
+    """
+    return leftover_honest_auth_error(raw, CONNECTION_NEW_TOKENS)
 
 
 def _create_area(new_form: str, secret_key_ok: bool) -> list[Any]:

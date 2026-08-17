@@ -24,6 +24,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from dazzle.http.runtime.auth.connection_admin_views import leftover_honest_connection_new
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 
 
@@ -218,7 +219,7 @@ def create_connection_admin_routes() -> APIRouter:
             product_name=_product_name(request),
             org_name=org.name if org is not None else org_id,
             connections=connections,
-            new_form=new_form if new_form in ("oidc", "scim", "saml", "domain") else "",
+            new_form=new_form,
             secret_key_ok=flags[0],
             scim_bearer_once=scim_bearer_once,
             base_url=str(request.base_url).rstrip("/"),
@@ -227,12 +228,19 @@ def create_connection_admin_routes() -> APIRouter:
         return HTMLResponse(FragmentRenderer().render(page))
 
     @router.get("/auth/connections", response_class=HTMLResponse, include_in_schema=False)
-    async def connections_page(request: Request, new: Annotated[str, Query()] = "") -> HTMLResponse:
+    async def connections_page(request: Request, new: Annotated[str, Query()] = "") -> Response:
         gated = _gate(request)
         if gated is None:
             return HTMLResponse("Forbidden", status_code=403)
         store, _ctx, org_id = gated
-        return _render_page(request, store, org_id, new_form=new)
+        # Leftover ``?new=zzz`` used to invent the default connections
+        # list (form omit-as-absent). Valid declared types ride;
+        # absent/blank is first visit. HTMLResponse (not
+        # Response(content=…)) — oral #93.
+        honest = leftover_honest_connection_new(new)
+        if honest is None:
+            return HTMLResponse("Unknown connection type", status_code=400)
+        return _render_page(request, store, org_id, new_form=honest)
 
     @router.post("/auth/connections/create", include_in_schema=False)
     async def create_connection_action(

@@ -964,6 +964,15 @@ dialect formed — and where it started to Goodhart itself — is
     (security). Live simple_task ``/login``. Standing refusals
     apply.
 
+97. **Connections leftover new invents a clean list.** Cycle 2223:
+    leftover ``?new=zzz`` / ``ghost`` on ``/auth/connections``
+    omitted as absent and invented the default connections page
+    (chooser links, no create form). Valid ``oidc`` / ``scim`` /
+    ``saml`` / ``domain`` ride via ``leftover_honest_connection_new``
+    (reuses ``leftover_honest_auth_error``). Absent / blank still
+    first-visit. Leftover stays put (400). Live simple_task
+    ``/auth/connections``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1004,6 +1013,7 @@ the end of every new oral *is* expensive — point here instead.
 | 2FA leftover sent | Walk another 2FA ``?sent=`` theater site after leftover_honest_2fa_sent exists | #94 |
 | Auth leftover error | Walk another ``?error=`` banner site after leftover_honest_auth_error exists | #95 |
 | Auth leftover next | Walk another ``?next=`` landing site after leftover_honest_auth_next exists | #96 |
+| Connections leftover new | Walk another ``?new=`` form-opener site after leftover_honest_connection_new exists | #97 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1050,6 +1060,7 @@ how the handbook was learned.
 | One leftover 2FA ``?sent=`` site after leftover_honest_2fa_sent exists | Call leftover_honest_2fa_sent on remaining challenge GET in one ship, then STOP (oral #94) |
 | One leftover auth ``?error=`` site after leftover_honest_auth_error exists | Call leftover_honest_auth_error on remaining login/signup/reset/challenge/select-org GETs in one ship, then STOP (oral #95) |
 | One leftover auth ``?next=`` site after leftover_honest_auth_next exists | Call leftover_honest_auth_next on remaining login/signup/select-org GETs in one ship, then STOP (oral #96) |
+| One leftover connections ``?new=`` site after leftover_honest_connection_new exists | Call leftover_honest_connection_new on remaining connection form-openers in one ship, then STOP (oral #97) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
