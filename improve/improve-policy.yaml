@@ -123,9 +123,12 @@ campaigns:
         strategy: framework-ux
         note: >-
           Ship UX/fragment/runtime improvements; fix harness-class friction at root.
-          Leftover parse-invent (oral #42) and leftover temporal echo (oral #67)
-          are saturated — do not walk another hx-get sibling. Next is a new
-          invent class found in a live app, or presentation MCP STALE (1554).
+          Leftover parse-invent (oral #42), leftover temporal echo (oral #67),
+          leftover catalog / date-window / entity-id / filter-enum fetch /
+          workspace-REST sort / REST filter[key] (oral #69–#74) are saturated.
+          Do not walk another GET list filter[key] parse. Next is leftover
+          REST filter VALUE (`filter[status]=zzz`) or a new invent class in
+          a live app, or presentation MCP STALE (1554).
           See improve/leftover-honesty-ethnography.md.
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence

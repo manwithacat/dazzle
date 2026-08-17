@@ -182,6 +182,24 @@ class TestListHandlerFilter:
         # Empty filter values should not be included
         assert call_kwargs["filters"] is None
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_does_not_invent(self) -> None:
+        service = _make_service()
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(
+            query_params={"filter[zzz]": "Ada", "filter[ghost]": "1", "filter[status]": "open"}
+        )
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"status": "open"}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

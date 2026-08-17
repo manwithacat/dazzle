@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **REST leftover `?filter[zzz]=` invented empty (cycle 2193)** —
+  page leftover-honest `filter[key]` already existed (oral #48)
+  but REST `list_handlers` still copied raw `filter[zzz]` into
+  `gated_list`. Leftover keys invented empty via fail-closed
+  unknown column. Valid entity / DSL filter fields ride;
+  leftover restores unfiltered (omit). Oral #74.
 - **Workspace leftover `?sort=` invented empty (cycle 2191)** —
   list leftover-honest sort already existed (oral #48) but
   `workspace_region_fetch` and REST `list_handlers` still applied

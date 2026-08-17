@@ -331,6 +331,41 @@ def _parse_list_filters(query_params: Any, *, allowed: frozenset[str]) -> dict[s
     return out
 
 
+_LIST_FILTER_RESERVED = frozenset({"page", "page_size", "sort", "dir", "search", "q", "format"})
+
+
+def leftover_honest_list_filters(
+    query_params: Any,
+    *,
+    allowed: frozenset[str],
+    filter_fields: list[str] | None = None,
+) -> dict[str, str]:
+    """Leftover-honest REST ``filter[key]`` + bare ``?field=`` (cycle 2193).
+
+    Empty / invalid / unknown keys are dropped. Known fields still
+    filter. REST ``list_handlers`` used to copy raw ``filter[zzz]``
+    into ``gated_list`` and invent empty via fail-closed unknown
+    column. Page leftover-honest ``filter[key]`` already exists
+    (``_parse_list_filters`` / oral #48).
+    """
+    out = _parse_list_filters(query_params, allowed=allowed)
+    if not filter_fields:
+        return out
+    items = getattr(query_params, "items", None)
+    if items is None:
+        return out
+    declared = {str(name) for name in filter_fields if name}
+    for key, value in items():
+        if not value:
+            continue
+        name = str(key)
+        if name in _LIST_FILTER_RESERVED or name in out:
+            continue
+        if name in declared and _list_ident_path(name) and _list_filter_field_known(name, allowed):
+            out[name] = str(value)
+    return out
+
+
 def _list_filter_enum_options(req_table: Any) -> dict[str, tuple[str, ...]]:
     """Declared enum/select option catalogs keyed by column."""
     out: dict[str, tuple[str, ...]] = {}

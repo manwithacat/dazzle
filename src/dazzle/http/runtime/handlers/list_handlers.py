@@ -40,7 +40,11 @@ from dazzle.http.runtime.htmx_render import (
     _render_table_pagination,
     _render_table_sentinel,
 )
-from dazzle.http.runtime.page_routes import entity_known_sort_fields, leftover_honest_sort
+from dazzle.http.runtime.page_routes import (
+    entity_known_sort_fields,
+    leftover_honest_list_filters,
+    leftover_honest_sort,
+)
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
@@ -580,14 +584,17 @@ async def _list_handler_body(
     # kept distinct because the HTMX table renders it as `filter_values` (it must
     # NOT include the temporal repository keys below). `_gated_filters` is what
     # gated_list merges over scope: the field filters PLUS any temporal keys.
-    filters: dict[str, Any] = {}
-    _reserved_params = {"page", "page_size", "sort", "dir", "search", "q", "format"}
-    for key, value in request.query_params.items():
-        if key.startswith("filter[") and key.endswith("]") and value:
-            filters[key[7:-1]] = value
-        elif filter_fields and key in filter_fields and key not in _reserved_params and value:
-            # Accept bare ?field=value when field is in the DSL-declared filter list (#596)
-            filters[key] = value
+    # Leftover-honest filter keys (cycle 2193). Raw ``filter[zzz]`` used
+    # to reach gated_list / repo.list and invent empty via fail-closed
+    # unknown column. Valid entity / DSL filter fields ride; leftover
+    # keys restore unfiltered (omit). Page leftover-honest filter
+    # already exists (``_parse_list_filters`` / oral #48).
+    _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
+    filters: dict[str, Any] = leftover_honest_list_filters(
+        request.query_params,
+        allowed=entity_known_sort_fields(getattr(service, "entity_spec", None), _filter_extra),
+        filter_fields=filter_fields,
+    )
 
     # #1223 Phase 3a.iv — read the temporal `?as_of=` / `?include_closed=` RAW
     # values here (HTTP concern), but parse + validate them INSIDE gated_list,

@@ -729,6 +729,18 @@ dialect formed — and where it started to Goodhart itself — is
     unsorted default. One-ship close of remaining FastAPI sort
     sites. Standing refusals apply.
 
+74. **Leftover REST filter[key] invents empty.** Cycle 2193:
+    page leftover-honest ``filter[key]`` already existed
+    (``_parse_list_filters`` / oral #48) but REST
+    ``list_handlers`` still copied raw ``filter[zzz]`` into
+    ``gated_list``. Leftover ``?filter[zzz]=`` / ``ghost``
+    invented empty via fail-closed unknown column. Valid entity
+    / DSL filter fields ride via ``leftover_honest_list_filters``.
+    Leftover restores unfiltered (omit). One-ship close of
+    remaining GET list ``filter[key]`` parse. Graph already
+    requires ``field in filter_fields``. Bulk echo stays
+    fail-closed (mutation). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -746,6 +758,7 @@ the end of every new oral *is* expensive — point here instead.
 | Entity-id leftover | Walk the next `context_id` / `?id=` site after `leftover_honest_entity_id` exists | #71 |
 | Filter-enum fetch leftover | Walk another `filter_<enum>` fetch site after leftover-honest apply exists | #72 |
 | Workspace/REST leftover sort | Walk another FastAPI `?sort=` site after `leftover_honest_sort` exists | #73 |
+| REST leftover filter[key] | Walk another GET list `filter[key]` parse after `leftover_honest_list_filters` exists | #74 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -769,6 +782,7 @@ how the handbook was learned.
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |
+| One GET list `filter[key]` parse after leftover-honest filters exist | Call `leftover_honest_list_filters` on remaining GET list endpoints, then STOP (oral #74) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
