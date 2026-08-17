@@ -34,6 +34,10 @@ from dazzle.http.runtime.auth.password_reset_routes import (  # noqa: E402
 )
 from dazzle.http.runtime.site_routes import create_auth_page_routes  # noqa: E402
 
+# leftover_honest_auth_token: secrets.token_urlsafe(32) is 43 urlsafe chars.
+# Short leftovers (`abc123`, `abc`) stay-put 400 — do not invent a form.
+_VALID_RESET_TOKEN = "A" * 43
+
 _MIN_SITESPEC = {
     "version": 1,
     "brand": {
@@ -223,18 +227,18 @@ def test_post_forgot_password_logs_reset_link_for_dev_pickup(caplog) -> None:
 
 def test_get_reset_password_chrome_on_renders_typed_view_with_token() -> None:
     client, _ = _build_app(chrome=True)
-    resp = client.get("/reset-password?token=abc123")
+    resp = client.get(f"/reset-password?token={_VALID_RESET_TOKEN}")
     assert resp.status_code == 200
     body = resp.text
     assert "/auth/reset-password/submit" in body
     # Token threaded into hidden field.
-    assert 'value="abc123"' in body
+    assert f'value="{_VALID_RESET_TOKEN}"' in body
     assert body.count('type="password"') == 2
 
 
 def test_get_reset_password_renders_mismatch_error() -> None:
     client, _ = _build_app(chrome=True)
-    resp = client.get("/reset-password?token=abc&error=mismatch")
+    resp = client.get(f"/reset-password?token={_VALID_RESET_TOKEN}&error=mismatch")
     assert resp.status_code == 200
     assert "didn" in resp.text and "match" in resp.text
 

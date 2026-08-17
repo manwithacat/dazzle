@@ -17,6 +17,10 @@ from dazzle.http.runtime.site_routes import create_auth_page_routes
 
 SITESPEC: dict[str, Any] = {"brand": {"product_name": "TestApp"}}
 
+# leftover_honest_auth_token: secrets.token_urlsafe(32) is 43 urlsafe chars.
+# Short leftovers (`xyz-789`, `mid-login`) stay-put 400 — do not invent a form.
+_VALID_SESSION = "A" * 43
+
 
 class TestTwoFactorPageContextBuilder:
     """The site-context builder must understand the three new page types."""
@@ -86,9 +90,9 @@ class TestTwoFactorRoutesWithoutAuth:
         assert "2FA Settings" in resp.text
 
     def test_challenge_route_returns_200(self) -> None:
-        resp = self._client().get("/2fa/challenge?session=xyz-789")
+        resp = self._client().get(f"/2fa/challenge?session={_VALID_SESSION}")
         assert resp.status_code == 200
-        assert "xyz-789" in resp.text
+        assert _VALID_SESSION in resp.text
         assert "Verify" in resp.text
 
     def test_challenge_route_without_session_still_renders(self) -> None:
@@ -136,9 +140,9 @@ class TestTwoFactorAuthGuards:
 
     def test_challenge_is_public_even_with_auth_wired(self) -> None:
         """The mid-login challenge must remain reachable pre-authentication."""
-        resp = self._client(authenticated=False).get("/2fa/challenge?session=mid-login")
+        resp = self._client(authenticated=False).get(f"/2fa/challenge?session={_VALID_SESSION}")
         assert resp.status_code == 200
-        assert "mid-login" in resp.text
+        assert _VALID_SESSION in resp.text
 
     def test_setup_redirects_when_auth_callable_raises(self) -> None:
         """A broken auth callable must fail closed (redirect, not render)."""

@@ -188,6 +188,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_connection_new_leftover.py",
     # cycle 2224: leftover auth ?token= / ?session= must not invent form theater
     "tests/unit/test_auth_token_leftover.py",
+    # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
+    "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
+    "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",
+    "tests/unit/test_2fa_page_routes.py::TestTwoFactorRoutesWithoutAuth::test_challenge_route_returns_200",
+    "tests/unit/test_2fa_page_routes.py::TestTwoFactorAuthGuards::test_challenge_is_public_even_with_auth_wired",
     # cycle 2216: leftover-honest form 400 used Response(content=) — #1551
     # byte-route proof red ×3 Pythons. GET already used HTMLResponse.
     "tests/unit/test_byte_route_proof.py",
