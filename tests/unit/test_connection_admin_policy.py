@@ -150,17 +150,18 @@ def test_policy_update_persists_off_with_restrict() -> None:
     assert saved["restrict_membership_to_verified_domains"] is True
 
 
-def test_policy_unknown_value_coerces_to_admin_approval() -> None:
-    """An unknown policy value is coerced to admin_approval (OrgSettings.from_dict behaviour)."""
+def test_policy_unknown_value_stays_put() -> None:
+    """Leftover policy token stays put — must not invent admin_approval."""
     store = _Store()
+    store._org_settings["org-1"] = {"domain_join_policy": "auto_join"}
     r = _client(store).post(
         "/auth/connections/policy",
         data={"domain_join_policy": "BOGUS"},
         follow_redirects=False,
     )
-    assert r.status_code in (204, 303)
-    _, saved = store.policy_calls[0]
-    assert saved["domain_join_policy"] == "admin_approval"
+    assert r.status_code == 400
+    assert store.policy_calls == []
+    assert store._org_settings["org-1"]["domain_join_policy"] == "auto_join"
 
 
 def test_policy_update_is_org_fenced() -> None:

@@ -138,6 +138,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   via `bool(nonempty)`) closed cycle 2210 (oral #90). Helper:
   `leftover_honest_consent_bool`. Leftover stays put (400, no
   cookie). Do **not** walk another consent coerce site.
+- **Join-policy leftover tokens** (`domain_join_policy=zzz`
+  invents `admin_approval`) closed cycle 2212 (oral #91).
+  Helper: `leftover_honest_join_policy`. Leftover stays put
+  (400, no write). Do **not** walk another join-policy
+  coerce site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
