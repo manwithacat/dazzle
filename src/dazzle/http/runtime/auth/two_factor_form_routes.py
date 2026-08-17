@@ -22,7 +22,7 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
@@ -70,11 +70,9 @@ def create_two_factor_form_routes(
         honest = leftover_honest_2fa_mode(method)
         if honest is None:
             # Leftover method=zzz used to echo into GET and invent totp.
-            return Response(
-                status_code=400,
-                content="Unknown 2FA method",
-                media_type="text/plain",
-            )
+            # HTMLResponse (not Response(content=…)) — #1551 byte-route
+            # proof treats Response(content=) as a serve_bytes bypass.
+            return HTMLResponse("Unknown 2FA method", status_code=400)
         method = honest
         # URL-encode the form-supplied values so a crafted token can't
         # break out of the query string. Path is hardcoded same-origin.

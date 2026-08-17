@@ -132,6 +132,8 @@ def test_helper_source_pins_2fa_mode_leftover() -> None:
     form = _FORM.read_text()
     assert "leftover_honest_2fa_mode" in form
     assert "Unknown 2FA method" in form
+    assert "HTMLResponse" in form
+    assert "Response(\n                status_code=400,\n                content=" not in form
 
 
 def test_live_simple_task_declares_auth_login() -> None:

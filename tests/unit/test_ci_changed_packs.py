@@ -64,6 +64,7 @@ def test_http_paths_select_ratchets() -> None:
     joined = " ".join(http.pytest)
     assert "test_clone_ratchet" in joined
     assert "test_deferred_imports_ratchet" in joined
+    assert "test_byte_route_proof" in joined
 
 
 def test_unrelated_docs_alone_selects_nothing_mapped() -> None:
