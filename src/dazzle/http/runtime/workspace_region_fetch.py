@@ -42,7 +42,10 @@ from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
 from dazzle.render.display_names import _inject_display_names
-from dazzle.render.fragment.renderer._render_interactive import leftover_honest_iso_date
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_entity_id,
+    leftover_honest_iso_date,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +143,28 @@ def _apply_leftover_honest_date_window(
     return out
 
 
+def _apply_leftover_honest_item_id(
+    request: Any, filters: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Fold leftover-honest ``?id=`` into DETAIL filters.
+
+    dual_pane master-detail hx-get ``?id=<pk>`` into the DETAIL pane.
+    Leftover junk (``zzz``, ``ghost``, ``not-a-uuid``) used to invent
+    an empty DETAIL via ``filters['id']`` (cycle 2189). Valid UUID
+    still selects. Rest is unbound (omit). Oral #71 one-ship close.
+    Live in contact_manager ``contacts`` ``contact_detail``.
+    """
+    qparams = getattr(request, "query_params", None)
+    if qparams is None:
+        return filters
+    item_id = leftover_honest_entity_id(qparams.get("id"))
+    if not item_id:
+        return filters
+    out = dict(filters) if filters else {}
+    out["id"] = item_id
+    return out
+
+
 async def fetch_region_items(
     request: Any,
     ctx: WorkspaceRegionContext,
@@ -219,11 +244,8 @@ async def fetch_region_items(
 
         # dual_pane master-detail: DETAIL region fragment for one selected row.
         # List rows hx-get ``?id=<pk>`` into ``.dz-master-detail__detail``.
-        item_id = request.query_params.get("id")
-        if item_id:
-            if filters is None:
-                filters = {}
-            filters["id"] = item_id
+        # Leftover junk must not invent empty DETAIL (oral #71 close).
+        filters = _apply_leftover_honest_item_id(request, filters)
 
         # Leftover-honest include_closed / as_of (cycle 2174). Bare CSV
         # downloads used to drop these so the file invented open-only /

@@ -78,9 +78,11 @@ def leftover_honest_entity_id(raw: Any) -> str:
     """Valid entity UUID rides. Leftover junk / empty restores "".
 
     ``?context_id=zzz`` used to invent ``current_context`` and empty
-    collections (live support_tickets ``agent_console``). Rest is
-    unbound (omit). Distinct from leftover catalog id (oral #69) and
-    leftover date window (oral #70). Cycle 2187.
+    collections (live support_tickets ``agent_console``). ``?id=zzz``
+    used to invent empty DETAIL via ``filters['id']`` (live
+    contact_manager ``contact_detail``; cycle 2189 one-ship close).
+    Rest is unbound (omit). Distinct from leftover catalog id
+    (oral #69) and leftover date window (oral #70). Cycle 2187.
     """
     text = str(raw if raw is not None else "").strip()
     if not text:

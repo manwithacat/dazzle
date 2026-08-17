@@ -47,10 +47,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
 - **Date-window leftover** (`date_from` / `date_to` invents empty)
   opened cycle 2186 (oral #70). Helper:
   `leftover_honest_iso_date`. Do **not** walk another bound site.
-- **Entity-id leftover** (`?context_id=zzz` invents
-  `current_context`) opened cycle 2187 (oral #71). Helper:
+- **Entity-id leftover** (`?context_id=` / `?id=` invent empty)
+  closed cycle 2189 (oral #71 one-ship close). Helper:
   `leftover_honest_entity_id`. Do **not** walk another entity-id
-  query param (`?id=` included).
+  query param.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

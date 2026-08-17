@@ -703,9 +703,11 @@ dialect formed — and where it started to Goodhart itself — is
     ``filter_context["current_context"]`` (workspace_region_prelude)
     and invented an empty / wrong slice. Valid UUID still scopes
     via ``leftover_honest_entity_id``. Rest is unbound (omit).
-    Live in support_tickets ``agent_console``. Distinct from leftover
-    catalog id (oral #69) and leftover date window (oral #70).
-    Standing refusals apply.
+    Live in support_tickets ``agent_console``. Cycle 2189 closed
+    remaining ``?id=`` in ``workspace_region_fetch`` (empty DETAIL
+    via ``filters['id']``; live contact_manager ``contact_detail``).
+    Distinct from leftover catalog id (oral #69) and leftover date
+    window (oral #70). Standing refusals apply.
 
 ## Standing refusals (apprentice handbook)
 

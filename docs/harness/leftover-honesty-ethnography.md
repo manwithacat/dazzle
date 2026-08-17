@@ -197,9 +197,11 @@ picker looked unbounded. Helper: `leftover_honest_iso_date`
 **Entity id (query).** `context_id` is a workspace context-selector
 PK, not a catalog sibling and not a date bound. Leftover junk
 forwarded as `current_context` invented an empty / wrong slice
-while the selector looked unbound. Helper:
-`leftover_honest_entity_id` (oral #71). Do not walk another
-entity-id query param.
+while the selector looked unbound. Remaining `?id=` in
+`workspace_region_fetch` invented empty DETAIL via
+`filters['id']` (cycle 2189). Helper:
+`leftover_honest_entity_id` (oral #71 one-ship close). Do not
+walk another entity-id query param.
 
 Person-as-text was a brief fifth clan: do not mint an avatar
 chip from the bare string `Ada`. It closed when every host that
