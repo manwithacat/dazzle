@@ -22,6 +22,11 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.member_admin import (
+    declared_persona_ids,
+    leftover_honest_persona_roles,
+    leftover_persona_roles_stay_put,
+)
 
 
 def _product_name(request: Request) -> str:
@@ -137,7 +142,10 @@ def create_member_admin_routes() -> APIRouter:
         store, ctx, org_id = gated
         if _resolve_target(store, org_id, membership_id) is None:
             return HTMLResponse("Not found", status_code=404)
-        new_roles = [r.strip() for r in roles.split(",") if r.strip()]
+        declared = declared_persona_ids(getattr(request.app.state, "appspec", None))
+        if leftover_persona_roles_stay_put(roles, declared):
+            return HTMLResponse("Unknown roles", status_code=400)
+        new_roles = list(leftover_honest_persona_roles(roles, declared))
         if would_orphan_org(
             _roster_rows(store, org_id),
             membership_id,

@@ -17,6 +17,11 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.member_admin import (
+    declared_persona_ids,
+    leftover_honest_persona_roles,
+    leftover_persona_roles_stay_put,
+)
 
 
 def _product_name(request: Request) -> str:
@@ -66,8 +71,11 @@ def create_invitation_routes() -> APIRouter:
         if not email.strip():
             return HTMLResponse("Email required", status_code=400)
 
+        declared = declared_persona_ids(getattr(request.app.state, "appspec", None))
+        if leftover_persona_roles_stay_put(roles, declared):
+            return HTMLResponse("Unknown roles", status_code=400)
         org_id = ctx.active_membership.tenant_id
-        role_list = [r.strip() for r in roles.split(",") if r.strip()]
+        role_list = list(leftover_honest_persona_roles(roles, declared))
         token = create_invitation(
             store, org_id=org_id, email=email, roles=role_list, invited_by=str(ctx.user.id)
         )

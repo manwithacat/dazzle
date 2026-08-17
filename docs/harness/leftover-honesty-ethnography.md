@@ -220,6 +220,12 @@ cleared, redirect home. Valid declared events ride; leftover
 stays put. Helper: `leftover_honest_experience_event`. Oral #87
 — one ship, then stop.
 
+**Membership leftover roles.** Org-admin `roles=zzz` on invite or
+`/auth/members/roles` persisted an invented persona grant. Valid
+declared names ride; leftover omitted; all leftover stays put.
+Helper: `leftover_honest_persona_roles`. Oral #89 — one ship,
+then stop.
+
 ---
 
 ## Ritual

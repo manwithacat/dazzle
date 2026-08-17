@@ -886,6 +886,14 @@ dialect formed — and where it started to Goodhart itself — is
     Live simple_task ``workspace_setup`` ``welcome_empty``.
     Standing refusals apply.
 
+89. **Membership leftover roles invent undeclared personas.** Cycle
+    2209: leftover ``roles=zzz`` on ``POST /auth/members/roles``
+    and invite persisted invented persona grants. Valid declared
+    names ride via ``leftover_honest_persona_roles``. Leftover
+    omitted; all leftover stays put (400, no write). No catalog
+    is pass-through. Live domain_join_co ``admin`` / ``member``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -918,6 +926,7 @@ the end of every new oral *is* expensive — point here instead.
 | Bulk leftover filter VALUE | Walk another bulk leftover filter kind after leftover_honest_list_filters on echo | #86 |
 | Experience leftover event | Walk another experience ``?event=`` site after leftover_honest_experience_event exists | #87 |
 | Onboarding leftover guide/step | Walk another onboarding complete/dismiss site after leftover_honest_onboarding_step exists | #88 |
+| Membership leftover roles | Walk another invite / members-roles leftover persona after leftover_honest_persona_roles exists | #89 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -956,6 +965,7 @@ how the handbook was learned.
 | One bulk leftover filter VALUE kind per cycle after leftover_honest_list_filters on echo | STOP; leftover VALUES omit (view parity); unknown keys stay 422 (oral #86) |
 | One experience leftover event site after leftover_honest_experience_event exists | Call leftover_honest_experience_event on remaining experience POSTs in one ship, then STOP (oral #87) |
 | One onboarding leftover guide/step site after leftover_honest_onboarding_step exists | Call leftover_honest_onboarding_step on remaining complete/dismiss POSTs in one ship, then STOP (oral #88) |
+| One invite / members leftover role site after leftover_honest_persona_roles exists | Call leftover_honest_persona_roles on remaining membership role POSTs in one ship, then STOP (oral #89) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

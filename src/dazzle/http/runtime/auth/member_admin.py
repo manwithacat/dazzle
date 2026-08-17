@@ -9,6 +9,72 @@ could manage it.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
+
+from dazzle.core.ir.identity import spec_display_id
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
+
+
+def _role_tokens(raw: Any) -> tuple[str, ...]:
+    """Split a comma-separated or sequence role payload into tokens."""
+    if raw is None:
+        return ()
+    if isinstance(raw, str):
+        parts: list[Any] = raw.split(",")
+    elif isinstance(raw, (list, tuple)):
+        parts = list(raw)
+    else:
+        parts = [raw]
+    out: list[str] = []
+    for part in parts:
+        text = str(part or "").strip()
+        if text:
+            out.append(text)
+    return tuple(out)
+
+
+def declared_persona_ids(appspec: Any) -> tuple[str, ...]:
+    """Declared persona ids from AppSpec (empty when no catalog)."""
+    out: list[str] = []
+    for persona in getattr(appspec, "personas", None) or ():
+        pid = spec_display_id(persona, None, prefer="id") or ""
+        if pid and pid not in out:
+            out.append(pid)
+    return tuple(out)
+
+
+def leftover_honest_persona_roles(raw: Any, declared: Any) -> tuple[str, ...]:
+    """Valid declared persona names ride. Leftover junk is omitted.
+
+    Leftover ``roles=zzz`` used to persist invented personas on
+    ``POST /auth/members/roles`` and invite. Valid declared names
+    ride; leftover omitted. All leftover restores () so the
+    caller stays put (no write). No declared catalog (test
+    rigs) is pass-through. Live domain_join_co ``admin`` /
+    ``member``. Cycle 2209.
+    """
+    tokens = _role_tokens(raw)
+    known = leftover_honest_catalog_option_values(declared)
+    if not known:
+        return tokens
+    out: list[str] = []
+    for tok in tokens:
+        honest = leftover_honest_catalog_id(tok, known, "", allow_empty_rest=True)
+        if honest and honest not in out:
+            out.append(honest)
+    return tuple(out)
+
+
+def leftover_persona_roles_stay_put(raw: Any, declared: Any) -> bool:
+    """True when leftover junk would invent an empty grant (stay put)."""
+    tokens = _role_tokens(raw)
+    known = leftover_honest_catalog_option_values(declared)
+    if not tokens or not known:
+        return False
+    return leftover_honest_persona_roles(raw, declared) == ()
 
 
 def active_admins(

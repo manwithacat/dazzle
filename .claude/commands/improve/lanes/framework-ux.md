@@ -129,6 +129,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Helper: `leftover_honest_onboarding_step`. Leftover stays put
   (404, no write). Do **not** walk another onboarding
   complete/dismiss site.
+- **Membership leftover roles** (`roles=zzz` invents undeclared
+  persona grants) closed cycle 2209 (oral #89). Helper:
+  `leftover_honest_persona_roles`. Leftover omitted; all leftover
+  stays put (400, no write). Do **not** walk another invite /
+  members-roles leftover persona.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
