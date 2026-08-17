@@ -815,6 +815,17 @@ dialect formed — and where it started to Goodhart itself — is
     GET list url filter VALUES. Bulk echo stays fail-closed
     (mutation). Standing refusals apply.
 
+82. **Leftover REST filter slug VALUE invents empty.** Cycle 2201:
+    leftover-honest url VALUES already existed (oral #81) but
+    leftover SLUG VALUES (``?filter[slug]=ab``,
+    ``?filter[slug]=ZZZ``) still landed in REST ``filters`` and
+    invented empty via fail-closed slug match. Valid slugs ride
+    via ``leftover_honest_filter_slug`` (reuses
+    ``validate_slug``). ``zzz`` / ``ghost`` are valid slugs
+    (length ≥3 lowercase) and ride. One-ship close of remaining
+    GET list slug filter VALUES. Bulk echo stays fail-closed
+    (mutation). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -840,6 +851,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter int VALUE | Walk another GET list numeric filter value site after leftover-honest int values exist | #79 |
 | REST leftover filter email VALUE | Walk another GET list email filter value site after leftover-honest email values exist | #80 |
 | REST leftover filter url VALUE | Walk another GET list url filter value site after leftover-honest url values exist | #81 |
+| REST leftover filter slug VALUE | Walk another GET list slug filter value site after leftover-honest slug values exist | #82 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -871,6 +883,7 @@ how the handbook was learned.
 | One GET list filter[amount] VALUE after leftover-honest int values exist | Call `leftover_honest_filter_int` / `entity_int_filter_fields` on remaining GET list endpoints, then STOP (oral #79) |
 | One GET list filter[email] VALUE after leftover-honest email values exist | Call `leftover_honest_filter_email` / `entity_email_filter_fields` on remaining GET list endpoints, then STOP (oral #80) |
 | One GET list filter[preview_url] VALUE after leftover-honest url values exist | Call `leftover_honest_filter_url` / `entity_url_filter_fields` on remaining GET list endpoints, then STOP (oral #81) |
+| One GET list filter[slug] VALUE after leftover-honest slug values exist | Call `leftover_honest_filter_slug` / `entity_slug_filter_fields` on remaining GET list endpoints, then STOP (oral #82) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

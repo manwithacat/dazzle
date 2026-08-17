@@ -35,6 +35,7 @@ from dazzle.core.strings import to_api_plural
 # `as` form keeps mypy explicit re-export after the dispatch_ctx extract.
 from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
+from dazzle.http.runtime.slug_validator import validate_slug
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
     USAGE_KIND_FIELD,
@@ -365,12 +366,17 @@ def leftover_honest_list_filters(
     fail-closed email match. Known url keys with leftover
     values (``filter[preview_url]=zzz``) restore unfiltered
     (cycle 2200) — they must not invent empty via fail-closed
-    url match. Valid declared options / UUIDs / ISO dates /
-    bool tokens / integer and decimal tokens / emails / http(s)
-    URLs ride. leftover_honest_entity_id already exists
-    (oral #71). leftover_honest_iso_date already exists (oral #70).
-    Oral #80 closed leftover email VALUES; do not walk another
-    GET list email filter value site.
+    url match. Known slug keys with leftover values
+    (``filter[slug]=ab``, ``filter[slug]=ZZZ``) restore
+    unfiltered (cycle 2201) — they must not invent empty via
+    fail-closed slug match. ``zzz`` / ``ghost`` are valid slugs
+    (length ≥3 lowercase) and ride. Valid declared options /
+    UUIDs / ISO dates / bool tokens / integer and decimal
+    tokens / emails / http(s) URLs / slugs ride.
+    leftover_honest_entity_id already exists (oral #71).
+    leftover_honest_iso_date already exists (oral #70).
+    Oral #81 closed leftover url VALUES; do not walk another
+    GET list url filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -396,7 +402,10 @@ def leftover_honest_list_filters(
     out = _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
     out = _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
     out = _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
-    return _parse_list_filter_url_values(out, entity_url_filter_fields(entity_spec))
+    out = _parse_list_filter_url_values(out, entity_url_filter_fields(entity_spec))
+    return _omit_leftover_filter_values(
+        out, entity_slug_filter_fields(entity_spec), leftover_honest_filter_slug
+    )
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -780,6 +789,35 @@ def _parse_list_filter_url_values(
     ``_parse_list_filter_email_values``).
     """
     return _omit_leftover_filter_values(filters, url_fields, leftover_honest_filter_url)
+
+
+_SLUG_FILTER_KINDS = frozenset({"slug"})
+
+
+def entity_slug_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """Slug filter keys (``slug`` / tenant-host fields)."""
+    return _entity_filter_fields_of_kinds(entity_spec, _SLUG_FILTER_KINDS)
+
+
+def leftover_honest_filter_slug(raw: Any) -> str:
+    """Valid slugs ride. Leftover junk restores "".
+
+    Reuses ``validate_slug`` (#1288). Distinct from leftover url
+    VALUE (oral #81). Filter leftover on slug keys must omit so
+    leftover ``?filter[slug]=ab`` / ``?filter[slug]=ZZZ`` does
+    not invent empty via fail-closed slug match. ``zzz`` /
+    ``ghost`` are valid slugs (length ≥3 lowercase) and ride.
+    Cycle 2201.
+    """
+    if isinstance(raw, bool):
+        return ""
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return ""
+    try:
+        return validate_slug(text)
+    except ValueError:
+        return ""
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2503,24 +2541,28 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _parse_list_filter_url_values(
-        _parse_list_filter_email_values(
-            _parse_list_filter_int_values(
-                _parse_list_filter_bool_values(
-                    _parse_list_filter_entity_id_values(
-                        _parse_list_filter_enum_values(
-                            _parse_list_filters(_qparams, allowed=_allowed),
-                            _list_filter_enum_options(req_table),
+    _list_filters = _omit_leftover_filter_values(
+        _parse_list_filter_url_values(
+            _parse_list_filter_email_values(
+                _parse_list_filter_int_values(
+                    _parse_list_filter_bool_values(
+                        _parse_list_filter_entity_id_values(
+                            _parse_list_filter_enum_values(
+                                _parse_list_filters(_qparams, allowed=_allowed),
+                                _list_filter_enum_options(req_table),
+                            ),
+                            entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
                         ),
-                        entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+                        entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
                     ),
-                    entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
+                    entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
                 ),
-                entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
+                entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
             ),
-            entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
+            entity_url_filter_fields(getattr(_svc, "entity_spec", None)),
         ),
-        entity_url_filter_fields(getattr(_svc, "entity_spec", None)),
+        entity_slug_filter_fields(getattr(_svc, "entity_spec", None)),
+        leftover_honest_filter_slug,
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

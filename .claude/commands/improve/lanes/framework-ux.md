@@ -91,6 +91,22 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `entity_int_filter_fields`. Do **not** walk another GET
   list numeric filter value site. Bulk echo stays fail-closed
   (mutation).
+- **REST leftover filter email VALUE** (`?filter[email]=zzz`
+  invents empty) closed cycle 2199 (oral #80). Helper:
+  `leftover_honest_filter_email` /
+  `entity_email_filter_fields`. Do **not** walk another GET
+  list email filter value site.
+- **REST leftover filter url VALUE** (`?filter[preview_url]=zzz`
+  invents empty) closed cycle 2200 (oral #81). Helper:
+  `leftover_honest_filter_url` /
+  `entity_url_filter_fields`. Do **not** walk another GET
+  list url filter value site.
+- **REST leftover filter slug VALUE** (`?filter[slug]=ab` /
+  `?filter[slug]=ZZZ` invent empty) closed cycle 2201
+  (oral #82). Helper: `leftover_honest_filter_slug` /
+  `entity_slug_filter_fields` (reuses `validate_slug`).
+  `zzz` / `ghost` are valid slugs and ride. Do **not** walk
+  another GET list slug filter value site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
