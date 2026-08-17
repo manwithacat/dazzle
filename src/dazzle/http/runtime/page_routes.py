@@ -356,11 +356,15 @@ def leftover_honest_list_filters(
     via fail-closed date match. Known bool keys with leftover
     values (``filter[is_active]=zzz``) restore unfiltered
     (cycle 2197) — they must not invent empty or the inactive-only
-    slice. Valid declared options / UUIDs / ISO dates / bool
-    tokens ride. leftover_honest_entity_id already exists
+    slice. Known int / decimal keys with leftover values
+    (``filter[amount]=zzz``) restore unfiltered (cycle 2198)
+    — they must not invent empty via fail-closed numeric match
+    or the zero-amount slice via coerce-to-0. Valid declared
+    options / UUIDs / ISO dates / bool tokens / integer and
+    decimal tokens ride. leftover_honest_entity_id already exists
     (oral #71). leftover_honest_iso_date already exists (oral #70).
-    Oral #77 closed leftover date VALUES; do not walk another
-    GET list date / datetime filter value site.
+    Oral #78 closed leftover bool VALUES; do not walk another
+    GET list bool filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -383,7 +387,8 @@ def leftover_honest_list_filters(
     out = _parse_list_filter_enum_values(out, options)
     out = _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
     out = _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
-    return _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
+    out = _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
+    return _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -599,6 +604,87 @@ def _parse_list_filter_bool_values(
     (oral #77). leftover include_closed already exists (cycle 2168).
     """
     return _omit_leftover_filter_values(filters, bool_fields, leftover_honest_filter_bool)
+
+
+_INT_FILTER_KINDS = frozenset({"int", "integer"})
+_DECIMAL_FILTER_KINDS = frozenset({"decimal", "float", "number", "money"})
+_INT_FILTER_RE = re.compile(r"^-?[0-9]+$")
+_DECIMAL_FILTER_RE = re.compile(r"^-?[0-9]+(?:\.[0-9]+)?$")
+
+
+def entity_int_filter_fields(entity_spec: Any) -> dict[str, str]:
+    """Int / decimal filter keys mapped to ``int`` or ``decimal``."""
+    keys: dict[str, str] = {}
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if not name:
+            continue
+        kind = getattr(getattr(spec_field, "type", None), "kind", None)
+        kind_s = str(getattr(kind, "value", kind) or "").lower()
+        if kind_s in _INT_FILTER_KINDS:
+            keys[name] = "int"
+        elif kind_s in _DECIMAL_FILTER_KINDS:
+            keys[name] = "decimal"
+    return keys
+
+
+def leftover_honest_filter_int(raw: Any) -> str:
+    """Valid integer tokens ride. Leftover junk restores "".
+
+    Distinct from leftover bool ``1`` / ``0`` (oral #78) — those
+    are bool-field tokens. Filter leftover on int keys must omit
+    so leftover ``?filter[amount]=zzz`` does not invent empty
+    or the zero-amount slice via coerce-to-0. Cycle 2198.
+    """
+    if isinstance(raw, bool):
+        return ""
+    if isinstance(raw, int):
+        return str(raw)
+    text = str(raw if raw is not None else "").strip()
+    if not text or not _INT_FILTER_RE.fullmatch(text):
+        return ""
+    return text
+
+
+def leftover_honest_filter_decimal(raw: Any) -> str:
+    """Valid decimal / float tokens ride. Leftover junk restores "".
+
+    Integers ride (``42`` is a valid decimal VALUE). Leftover
+    junk (``zzz``, ``ghost``, ``1e3``) must not invent empty.
+    Distinct from leftover int VALUE (same cycle — one-ship
+    close of remaining GET list numeric filter VALUES).
+    """
+    if isinstance(raw, bool):
+        return ""
+    if isinstance(raw, int):
+        return str(raw)
+    if isinstance(raw, float):
+        if raw != raw or raw in (float("inf"), float("-inf")):
+            return ""
+        return str(raw)
+    text = str(raw if raw is not None else "").strip()
+    if not text or not _DECIMAL_FILTER_RE.fullmatch(text):
+        return ""
+    return text
+
+
+def _parse_list_filter_int_values(
+    filters: dict[str, str],
+    numeric_fields: dict[str, str],
+) -> dict[str, str]:
+    """Leftover-honest int / decimal filter VALUES (cycle 2198).
+
+    Valid integer / decimal tokens ride. Leftover junk (``zzz``,
+    ``ghost``, ``1e3``) must not invent empty via fail-closed
+    numeric match or the zero-amount slice via coerce-to-0.
+    Empty rest is unfiltered (omit). Distinct from leftover
+    bool VALUE (oral #78). Reuses ``_omit_leftover_filter_values``
+    (not a clone of ``_parse_list_filter_date_values``).
+    """
+    int_keys = frozenset(name for name, kind in numeric_fields.items() if kind == "int")
+    dec_keys = frozenset(name for name, kind in numeric_fields.items() if kind != "int")
+    out = _omit_leftover_filter_values(filters, int_keys, leftover_honest_filter_int)
+    return _omit_leftover_filter_values(out, dec_keys, leftover_honest_filter_decimal)
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2322,15 +2408,18 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _parse_list_filter_bool_values(
-        _parse_list_filter_entity_id_values(
-            _parse_list_filter_enum_values(
-                _parse_list_filters(_qparams, allowed=_allowed),
-                _list_filter_enum_options(req_table),
+    _list_filters = _parse_list_filter_int_values(
+        _parse_list_filter_bool_values(
+            _parse_list_filter_entity_id_values(
+                _parse_list_filter_enum_values(
+                    _parse_list_filters(_qparams, allowed=_allowed),
+                    _list_filter_enum_options(req_table),
+                ),
+                entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
             ),
-            entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+            entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
         ),
-        entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
+        entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"
