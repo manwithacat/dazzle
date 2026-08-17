@@ -124,6 +124,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   completion) closed cycle 2207 (oral #87). Helper:
   `leftover_honest_experience_event`. Leftover stays put.
   Do **not** walk another experience `?event=` site.
+- **Onboarding leftover guide/step** (`/api/onboarding/zzz/ghost`
+  invents completed/dismissed rows) closed cycle 2208 (oral #88).
+  Helper: `leftover_honest_onboarding_step`. Leftover stays put
+  (404, no write). Do **not** walk another onboarding
+  complete/dismiss site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

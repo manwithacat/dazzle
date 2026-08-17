@@ -11,11 +11,24 @@ from fastapi.testclient import TestClient
 from dazzle.http.runtime.onboarding.routes import create_onboarding_routes
 
 
+def _catalog() -> SimpleNamespace:
+    return SimpleNamespace(
+        guides=[
+            SimpleNamespace(
+                name="workspace_setup",
+                steps=[SimpleNamespace(name="welcome")],
+                step_order=["welcome"],
+            )
+        ]
+    )
+
+
 def _app(repo: MagicMock | None, *, user_id: str | None = "u1") -> FastAPI:
     """Wire a FastAPI app with the repository + current_user state the
     routes need. ``user_id=None`` simulates an anonymous request."""
     app = FastAPI()
     app.state.onboarding_state = repo
+    app.state.appspec = _catalog()
     app.include_router(create_onboarding_routes())
 
     @app.middleware("http")
