@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **Consent leftover tokens invented granted (cycle 2210)** —
+  leftover `analytics=zzz` / `maybe` / the string `"false"`
+  still hit `bool(nonempty)` on `POST /_dazzle/consent` and
+  invented granted. Valid bools and true/false tokens ride;
+  leftover stays put (400, no cookie). Oral #90. Live
+  simple_task consent banner.
 - **Bulk leftover `filter[status]=zzz` invented empty mutation (cycle 2206)** —
   leftover-honest GET list filter VALUES already existed (oral #85)
   but all-matching bulk echo still landed leftover VALUES in

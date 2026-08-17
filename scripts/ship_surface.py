@@ -172,6 +172,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_onboarding_step_leftover.py",
     # cycle 2209: leftover membership/invite roles must not invent personas
     "tests/unit/test_persona_role_leftover.py",
+    # cycle 2210: leftover consent tokens must not invent granted
+    "tests/unit/test_consent_bool_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

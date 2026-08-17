@@ -44,6 +44,55 @@ from dazzle.compliance.analytics.consent_banner import render_consent_banner
 
 logger = logging.getLogger(__name__)
 
+_CONSENT_TRUE = frozenset({"true", "1", "yes", "on", "granted"})
+_CONSENT_FALSE = frozenset({"false", "0", "no", "off", "denied"})
+_CONSENT_CHOICE_KEYS = ("analytics", "advertising", "personalization")
+
+
+def leftover_honest_consent_bool(raw: Any) -> bool | None:
+    """Valid consent tokens ride. Leftover junk restores None (stay put).
+
+    Leftover ``analytics=zzz`` / ``"maybe"`` used to invent granted
+    via ``bool(nonempty)``. The string ``"false"`` also invented
+    grant. Valid bools and true/false tokens ride. Missing / empty
+    is the caller's default (deny). Live simple_task consent
+    banner. Cycle 2210.
+    """
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, int) and raw in (0, 1):
+        return bool(raw)
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return False
+    token = text.lower()
+    if token in _CONSENT_TRUE:
+        return True
+    if token in _CONSENT_FALSE:
+        return False
+    return None
+
+
+def leftover_consent_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover junk would invent a granted/denied write."""
+    for key in _CONSENT_CHOICE_KEYS:
+        if key not in body:
+            continue
+        if leftover_honest_consent_bool(body[key]) is None:
+            return True
+    return False
+
+
+def leftover_honest_consent_choices(body: dict[str, Any]) -> dict[str, bool] | None:
+    """Valid tokens ride. Any leftover restores None so the caller stays put."""
+    if leftover_consent_stay_put(body):
+        return None
+    out: dict[str, bool] = {}
+    for key in _CONSENT_CHOICE_KEYS:
+        honest = leftover_honest_consent_bool(body.get(key))
+        out[key] = False if honest is None else honest
+    return out
+
 
 def create_consent_routes(
     *,
@@ -81,11 +130,16 @@ def create_consent_routes(
         if not isinstance(body, dict):
             return JSONResponse({"error": "expected object"}, status_code=400)
 
-        # Coerce to explicit booleans; missing keys default False.
-        analytics = bool(body.get("analytics", False))
-        advertising = bool(body.get("advertising", False))
-        personalization = bool(body.get("personalization", False))
-        # Functional is always granted; any falsy input is overridden.
+        choices = leftover_honest_consent_choices(body)
+        if choices is None:
+            # Leftover analytics=zzz / "maybe" used to invent granted
+            # via bool(nonempty). Stay put — do not write the cookie.
+            return JSONResponse({"error": "invalid consent choice"}, status_code=400)
+
+        analytics = choices["analytics"]
+        advertising = choices["advertising"]
+        personalization = choices["personalization"]
+        # Functional is always granted; any leftover input is ignored.
         functional = True
 
         decided = build_decided_state(

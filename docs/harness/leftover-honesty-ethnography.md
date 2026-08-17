@@ -226,6 +226,11 @@ declared names ride; leftover omitted; all leftover stays put.
 Helper: `leftover_honest_persona_roles`. Oral #89 — one ship,
 then stop.
 
+**Consent leftover tokens.** Banner POST `analytics=zzz` (or the
+string `"false"`) hit `bool(nonempty)` and invented granted. Valid
+bools and true/false tokens ride; leftover stays put. Helper:
+`leftover_honest_consent_bool`. Oral #90 — one ship, then stop.
+
 ---
 
 ## Ritual
@@ -326,6 +331,8 @@ closes):
 - leftover bulk filter VALUE closed (oral #86)
 - leftover experience event closed cycle 2207 (oral #87) —
   do not walk another experience `?event=` site
+- leftover consent tokens closed cycle 2210 (oral #90) —
+  do not walk another consent coerce site
 - Goal B coat stays off
 
 If a week of commit subjects are again `… leftover

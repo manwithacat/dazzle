@@ -134,6 +134,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_persona_roles`. Leftover omitted; all leftover
   stays put (400, no write). Do **not** walk another invite /
   members-roles leftover persona.
+- **Consent leftover tokens** (`analytics=zzz` invents granted
+  via `bool(nonempty)`) closed cycle 2210 (oral #90). Helper:
+  `leftover_honest_consent_bool`. Leftover stays put (400, no
+  cookie). Do **not** walk another consent coerce site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
