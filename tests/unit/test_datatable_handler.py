@@ -322,6 +322,46 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"created_at": "2026-07-01T09:00:00"}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_bool_value_does_not_invent(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(name="is_active", type=SimpleNamespace(kind="bool")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[is_active]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_bool_value_rides(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="is_active", type=SimpleNamespace(kind="bool")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[is_active]": "true"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"is_active": "true"}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

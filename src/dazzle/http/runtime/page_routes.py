@@ -353,11 +353,14 @@ def leftover_honest_list_filters(
     must not invent empty via fail-closed UUID match. Known date /
     datetime keys with leftover values (``filter[created_at]=zzz``)
     restore unfiltered (cycle 2196) — they must not invent empty
-    via fail-closed date match. Valid declared options / UUIDs /
-    ISO dates ride. leftover_honest_entity_id already exists
+    via fail-closed date match. Known bool keys with leftover
+    values (``filter[is_active]=zzz``) restore unfiltered
+    (cycle 2197) — they must not invent empty or the inactive-only
+    slice. Valid declared options / UUIDs / ISO dates / bool
+    tokens ride. leftover_honest_entity_id already exists
     (oral #71). leftover_honest_iso_date already exists (oral #70).
-    Oral #76 closed leftover entity-id VALUES; do not walk another
-    GET list entity-id filter value site.
+    Oral #77 closed leftover date VALUES; do not walk another
+    GET list date / datetime filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -379,7 +382,8 @@ def leftover_honest_list_filters(
     options = enum_options if enum_options is not None else entity_enum_filter_options(entity_spec)
     out = _parse_list_filter_enum_values(out, options)
     out = _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
-    return _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
+    out = _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
+    return _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -445,6 +449,23 @@ def entity_id_filter_fields(entity_spec: Any) -> frozenset[str]:
     return frozenset(keys)
 
 
+def _omit_leftover_filter_values(
+    filters: dict[str, str],
+    fields: frozenset[str],
+    honest: Callable[[Any], str],
+) -> dict[str, str]:
+    """Drop leftover VALUES on known keys; ride honest tokens."""
+    out: dict[str, str] = {}
+    for key, val in filters.items():
+        if key not in fields:
+            out[key] = val
+            continue
+        kept = honest(val)
+        if kept:
+            out[key] = kept
+    return out
+
+
 def _parse_list_filter_entity_id_values(
     filters: dict[str, str],
     id_fields: frozenset[str],
@@ -456,15 +477,7 @@ def _parse_list_filter_entity_id_values(
     unfiltered (omit). Distinct from leftover filter-enum VALUE
     (oral #75). leftover_honest_entity_id already exists (oral #71).
     """
-    out: dict[str, str] = {}
-    for key, val in filters.items():
-        if key not in id_fields:
-            out[key] = val
-            continue
-        honest = leftover_honest_entity_id(val)
-        if honest:
-            out[key] = honest
-    return out
+    return _omit_leftover_filter_values(filters, id_fields, leftover_honest_entity_id)
 
 
 _DATE_FILTER_KINDS = frozenset({"date", "datetime"})
@@ -533,6 +546,59 @@ def _parse_list_filter_date_values(
         if honest:
             out[key] = honest
     return out
+
+
+_BOOL_FILTER_KINDS = frozenset({"bool", "boolean"})
+_BOOL_FILTER_TRUE = frozenset({"true", "1", "yes", "on"})
+_BOOL_FILTER_FALSE = frozenset({"false", "0", "no", "off"})
+
+
+def entity_bool_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """Bool filter keys (``is_active`` / switch fields)."""
+    keys: set[str] = set()
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if not name:
+            continue
+        kind = getattr(getattr(spec_field, "type", None), "kind", None)
+        kind_s = str(getattr(kind, "value", kind) or "").lower()
+        if kind_s in _BOOL_FILTER_KINDS:
+            keys.add(name)
+    return frozenset(keys)
+
+
+def leftover_honest_filter_bool(raw: Any) -> str:
+    """Valid true/false tokens ride. Leftover junk restores "".
+
+    Distinct from leftover include_closed (cycle 2168) which
+    restores *False* default. Filter leftover must omit so
+    leftover ``?filter[is_active]=zzz`` does not invent empty
+    or the inactive-only slice. Cycle 2197.
+    """
+    if isinstance(raw, bool):
+        return "true" if raw else "false"
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return ""
+    token = text.lower()
+    if token in _BOOL_FILTER_TRUE or token in _BOOL_FILTER_FALSE:
+        return text
+    return ""
+
+
+def _parse_list_filter_bool_values(
+    filters: dict[str, str],
+    bool_fields: frozenset[str],
+) -> dict[str, str]:
+    """Leftover-honest bool filter VALUES (cycle 2197).
+
+    Valid true/false tokens ride. Leftover junk (``zzz``, ``ghost``,
+    ``maybe``) must not invent empty via fail-closed bool match or
+    the inactive-only slice via coerce-to-False. Empty rest is
+    unfiltered (omit). Distinct from leftover date VALUE
+    (oral #77). leftover include_closed already exists (cycle 2168).
+    """
+    return _omit_leftover_filter_values(filters, bool_fields, leftover_honest_filter_bool)
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2256,12 +2322,15 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _parse_list_filter_entity_id_values(
-        _parse_list_filter_enum_values(
-            _parse_list_filters(_qparams, allowed=_allowed),
-            _list_filter_enum_options(req_table),
+    _list_filters = _parse_list_filter_bool_values(
+        _parse_list_filter_entity_id_values(
+            _parse_list_filter_enum_values(
+                _parse_list_filters(_qparams, allowed=_allowed),
+                _list_filter_enum_options(req_table),
+            ),
+            entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
         ),
-        entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+        entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

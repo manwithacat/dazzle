@@ -586,16 +586,18 @@ async def _list_handler_body(
     # gated_list merges over scope: the field filters PLUS any temporal keys.
     # Leftover-honest filter keys (cycle 2193) + leftover-honest enum
     # VALUES (cycle 2194) + leftover-honest entity-id VALUES
-    # (cycle 2195) + leftover-honest date VALUES (cycle 2196).
+    # (cycle 2195) + leftover-honest date VALUES (cycle 2196)
+    # + leftover-honest bool VALUES (cycle 2197).
     # Raw ``filter[zzz]`` invented empty via unknown column;
     # leftover ``filter[status]=zzz`` invented empty via fail-closed
     # enum match; leftover ``filter[id]=zzz`` invented empty via
     # fail-closed UUID match; leftover ``filter[created_at]=zzz``
-    # invented empty via fail-closed date match. Valid keys /
-    # declared options / UUIDs / ISO dates ride; leftover restores
-    # unfiltered (omit). leftover_honest_iso_date already exists
-    # (oral #70). Oral #76 — do not walk another GET list entity-id
-    # VALUE.
+    # invented empty via fail-closed date match; leftover
+    # ``filter[is_active]=zzz`` invented empty / inactive-only.
+    # Valid keys / declared options / UUIDs / ISO dates / bool
+    # tokens ride; leftover restores unfiltered (omit).
+    # leftover_honest_iso_date already exists (oral #70). Oral #77
+    # — do not walk another GET list date VALUE.
     _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
     filters: dict[str, Any] = leftover_honest_list_filters(
         request.query_params,
