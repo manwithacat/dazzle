@@ -214,6 +214,12 @@ an empty mutation while the leftover-honest list view omitted
 `leftover_honest_list_filters`; unknown echo keys still 422
 (do not widen a delete). Oral #86 — one ship, then stop.
 
+**Experience leftover event.** Guided-flow POST `?event=zzz` on a
+step that still has `on` transitions invented *finished* — cookie
+cleared, redirect home. Valid declared events ride; leftover
+stays put. Helper: `leftover_honest_experience_event`. Oral #87
+— one ship, then stop.
+
 ---
 
 ## Ritual
@@ -310,6 +316,10 @@ closes):
 - leftover temporal echo is saturated (oral #67)
 - leftover catalog id (lens + tab / filter-enum) closed cycle
   2185 (oral #69) — do not walk another catalog sibling
+- leftover GET list typed VALUES closed (oral #85)
+- leftover bulk filter VALUE closed (oral #86)
+- leftover experience event closed cycle 2207 (oral #87) —
+  do not walk another experience `?event=` site
 - Goal B coat stays off
 
 If a week of commit subjects are again `… leftover

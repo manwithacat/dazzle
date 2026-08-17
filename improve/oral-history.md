@@ -867,6 +867,16 @@ dialect formed — and where it started to Goodhart itself — is
     widen). Live support_tickets ``Ticket.status`` + grid
     all-matching. Standing refusals apply.
 
+87. **Experience leftover event invents terminal completion.** Cycle
+    2207: leftover ``?event=zzz`` on a step that still has
+    transitions missed every ``on`` and invented terminal
+    completion (clear cookie, redirect home). Valid declared
+    events ride via ``leftover_honest_experience_event``
+    (catalog stay-put rest). Leftover stays put. Missing event
+    still defaults to ``success``. True terminal (no
+    transitions) still completes. Live ops_dashboard
+    ``incident_response`` ``on success``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -897,6 +907,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter json VALUE | Walk another GET list json filter value site after leftover-honest json values exist | #84 |
 | REST leftover typed filter VALUES | Walk the next GET list field kind after leftover_honest_list_filters + kind walkers exist | #85 |
 | Bulk leftover filter VALUE | Walk another bulk leftover filter kind after leftover_honest_list_filters on echo | #86 |
+| Experience leftover event | Walk another experience ``?event=`` site after leftover_honest_experience_event exists | #87 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -933,6 +944,7 @@ how the handbook was learned.
 | One GET list filter[preferences] VALUE after leftover-honest json values exist | Call `leftover_honest_filter_json` / `entity_json_filter_fields` on remaining GET list endpoints, then STOP (oral #84) |
 | One GET list leftover typed VALUE kind per cycle after leftover_honest_list_filters exists | STOP; enum→json closed (oral #75–#84). New invent class or presentation STALE (oral #85) |
 | One bulk leftover filter VALUE kind per cycle after leftover_honest_list_filters on echo | STOP; leftover VALUES omit (view parity); unknown keys stay 422 (oral #86) |
+| One experience leftover event site after leftover_honest_experience_event exists | Call leftover_honest_experience_event on remaining experience POSTs in one ship, then STOP (oral #87) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

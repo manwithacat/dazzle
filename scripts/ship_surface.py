@@ -166,6 +166,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_rest_list_filter_json_leftover.py",
     # cycle 2206: leftover bulk echo filter VALUE must not invent empty mutation
     "tests/unit/test_bulk_filter_value_echo_leftover.py",
+    # cycle 2207: leftover experience ?event=zzz must not invent terminal
+    "tests/unit/test_experience_event_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

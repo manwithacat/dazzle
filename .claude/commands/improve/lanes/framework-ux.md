@@ -120,6 +120,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   (oral #86). Helper: `leftover_honest_list_filters` on the
   echo. Unknown keys stay 422. Do **not** walk another bulk
   leftover filter kind.
+- **Experience leftover event** (`?event=zzz` invents terminal
+  completion) closed cycle 2207 (oral #87). Helper:
+  `leftover_honest_experience_event`. Leftover stays put.
+  Do **not** walk another experience `?event=` site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

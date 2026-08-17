@@ -20,10 +20,15 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
 from dazzle.core.strings import entity_slug
+from dazzle.http.runtime.htmx import HtmxDetails
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.page.utils.expression_eval import evaluate_simple_condition
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.fragment.errors import FragmentError
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_id,
+    leftover_honest_catalog_option_values,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +82,30 @@ def _get_user_email(deps: _ExperienceDeps, request: Any) -> str:
     auth_ctx = _inject_auth(deps, request)
     email: str = auth_ctx.get("user_email", "")
     return email
+
+
+def leftover_honest_experience_event(raw: Any, declared: Any) -> str:
+    """Valid declared transition event rides. Leftover junk restores "".
+
+    Leftover ``?event=zzz`` used to invent terminal completion
+    (clear cookie, redirect home) on a step that still has
+    transitions. Rest is stay-put (empty). Valid events ride.
+    Missing event is the caller's default (``success``).
+    Live ops_dashboard ``incident_response`` ``on success``.
+    Cycle 2207.
+    """
+    known = leftover_honest_catalog_option_values(declared)
+    return leftover_honest_catalog_id(raw, known, "", allow_empty_rest=True)
+
+
+def _experience_stay_response(
+    deps: _ExperienceDeps, request: Request, name: str, step: str
+) -> Response:
+    """Stay on the current step — leftover event must not invent terminal."""
+    stay = f"{deps.app_prefix}/experiences/{name}/{step}"
+    if HtmxDetails.from_request(request).is_htmx:
+        return HTMLResponse(content="", headers={"HX-Redirect": stay})  # nosemgrep
+    return RedirectResponse(url=stay, status_code=302)
 
 
 def _load_state(
@@ -486,8 +515,23 @@ async def _experience_step_post(
     if not state:
         state = create_initial_state(experience.start_step)
 
-    # Determine event from query param
-    event = request.query_params.get("event", "success")
+    # Leftover-honest event (cycle 2207). Raw ``?event=zzz`` used to
+    # miss every transition and invent terminal completion (clear
+    # cookie, redirect home) on a step that still has transitions.
+    # Valid declared events ride; leftover stays put. Missing event
+    # still defaults to ``success``. True terminal (no transitions)
+    # still completes.
+    declared_events = [tr.event for tr in step_spec.transitions if tr.event]
+    raw_event = request.query_params.get("event")
+    if declared_events:
+        if raw_event is None or not str(raw_event).strip():
+            event = "success"
+        else:
+            event = leftover_honest_experience_event(raw_event, declared_events)
+            if not event:
+                return _experience_stay_response(deps, request, name, step)
+    else:
+        event = raw_event if raw_event is not None else "success"
 
     # For form steps, create the entity IN-PROCESS via the registered create
     # invoker. Only act when there's actually a matching transition (not terminal

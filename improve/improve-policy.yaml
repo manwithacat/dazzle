@@ -126,11 +126,11 @@ campaigns:
           Leftover parse-invent (oral #42), leftover temporal echo (oral #67),
           leftover catalog / date-window / entity-id / filter-enum fetch /
           workspace-REST sort / REST filter[key] / typed filter VALUES
-          (oral #69–#84) are saturated through json. Do not walk another
-          GET list json VALUE. Next is leftover REST filter timezone
-          VALUE (`filter[timezone]=zzz`) if a live app declares
-          timezone (fixtures/pra only today) or a new invent class
-          in a live app, or presentation MCP STALE (1554).
+          (oral #69–#85), leftover bulk filter VALUE (oral #86), leftover
+          experience event (oral #87) are saturated. Do not walk another
+          GET list typed VALUE, bulk leftover filter kind, or experience
+          `?event=` site. Next is a new invent class in a live app or
+          presentation MCP STALE (1554).
           See improve/leftover-honesty-ethnography.md.
       - force_args: "hm-convergence hyperpart_coherence"
         lane: hm-convergence
