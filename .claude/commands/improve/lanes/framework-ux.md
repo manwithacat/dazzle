@@ -152,6 +152,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_auth_error`. Leftover stays put (400, no
   invented clean form). Do **not** walk another `?error=`
   banner site.
+- **Auth leftover next** (`?next=zzz` invents the default
+  landing) closed cycle 2222 (oral #96). Helper:
+  `leftover_honest_auth_next`. Leftover stays put (400, no
+  invented clean form / landing). POST leftover next stays
+  fail-closed to `/app`. Do **not** walk another `?next=`
+  landing site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

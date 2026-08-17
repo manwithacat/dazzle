@@ -954,6 +954,16 @@ dialect formed — and where it started to Goodhart itself — is
     stays put (400). Live simple_task ``/login``. Standing
     refusals apply.
 
+96. **Auth leftover next invents the default landing.** Cycle 2222:
+    leftover ``?next=zzz`` / ``https://evil.com`` on ``/login``
+    (and signup / select-org) omitted as absent and invented
+    the default landing (form omit, then ``/app`` after login).
+    Valid same-origin paths ride via ``leftover_honest_auth_next``.
+    Absent / blank / ``/`` still first-visit. Leftover stays put
+    (400). POST leftover next stays fail-closed to ``/app``
+    (security). Live simple_task ``/login``. Standing refusals
+    apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -993,6 +1003,7 @@ the end of every new oral *is* expensive — point here instead.
 | Leftover-honest *routes* 400 | Use `Response(content=)` for leftover stay-put 400s (use HTMLResponse/JSONResponse) | #93 |
 | 2FA leftover sent | Walk another 2FA ``?sent=`` theater site after leftover_honest_2fa_sent exists | #94 |
 | Auth leftover error | Walk another ``?error=`` banner site after leftover_honest_auth_error exists | #95 |
+| Auth leftover next | Walk another ``?next=`` landing site after leftover_honest_auth_next exists | #96 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1038,6 +1049,7 @@ how the handbook was learned.
 | Leftover stay-put 400 in `*routes*.py` via `Response(content=)` | Use HTMLResponse/JSONResponse; `test_byte_route_proof` is ship-surface (oral #93) |
 | One leftover 2FA ``?sent=`` site after leftover_honest_2fa_sent exists | Call leftover_honest_2fa_sent on remaining challenge GET in one ship, then STOP (oral #94) |
 | One leftover auth ``?error=`` site after leftover_honest_auth_error exists | Call leftover_honest_auth_error on remaining login/signup/reset/challenge/select-org GETs in one ship, then STOP (oral #95) |
+| One leftover auth ``?next=`` site after leftover_honest_auth_next exists | Call leftover_honest_auth_next on remaining login/signup/select-org GETs in one ship, then STOP (oral #96) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

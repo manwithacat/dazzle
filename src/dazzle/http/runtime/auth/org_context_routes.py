@@ -23,7 +23,10 @@ from dazzle.http.runtime.auth.auth_views import (
 )
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.crypto import cookie_secure
-from dazzle.http.runtime.auth.redirect_safety import is_safe_redirect_path
+from dazzle.http.runtime.auth.redirect_safety import (
+    is_safe_redirect_path,
+    leftover_honest_auth_next,
+)
 
 
 def _product_name(request: Request) -> str:
@@ -81,6 +84,11 @@ def create_org_context_routes() -> APIRouter:
         honest_error = leftover_honest_auth_error(error, SELECT_ORG_ERROR_TOKENS)
         if honest_error is None:
             return HTMLResponse("Unknown org error", status_code=400)
+        # Leftover ``?next=zzz`` used to invent ``/app``. Valid
+        # same-origin paths ride; absent/blank is first visit.
+        honest_next = leftover_honest_auth_next(next)
+        if honest_next is None:
+            return HTMLResponse("Unknown org next", status_code=400)
         auth_store = request.app.state.auth_store
         session_id = read_session_id(request)
         ctx = auth_store.validate_session(session_id) if session_id else None
@@ -94,7 +102,7 @@ def create_org_context_routes() -> APIRouter:
         page = build_select_org_view(
             product_name=_product_name(request),
             memberships=memberships,
-            next_url=next if is_safe_redirect_path(next) else "/app",
+            next_url=honest_next or "/app",
             error_message=SELECT_ORG_ERROR_MESSAGES.get(honest_error, ""),
         )
         return HTMLResponse(content=FragmentRenderer().render(page))

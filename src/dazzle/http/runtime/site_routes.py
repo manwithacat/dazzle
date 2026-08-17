@@ -33,6 +33,7 @@ from dazzle.http.runtime.auth.auth_views import (
     build_reset_password_view,
     leftover_honest_auth_error,
 )
+from dazzle.http.runtime.auth.redirect_safety import leftover_honest_auth_next
 from dazzle.http.runtime.auth.two_factor_views import (
     build_2fa_challenge_view,
     build_2fa_settings_view,
@@ -1129,12 +1130,18 @@ def create_auth_page_routes(
         honest_error = leftover_honest_auth_error(error, LOGIN_ERROR_TOKENS)
         if honest_error is None:
             return HTMLResponse("Unknown login error", status_code=400)
+        # Leftover ``?next=zzz`` used to invent the default landing
+        # (form omit-as-absent, then /app after login). Valid same-origin
+        # paths ride; absent/blank/``/`` is first visit.
+        honest_next = leftover_honest_auth_next(next)
+        if honest_next is None:
+            return HTMLResponse("Unknown login next", status_code=400)
         error_message = LOGIN_ERROR_MESSAGES.get(honest_error, "")
         builder = build_login_password_view if password_mode else build_login_magic_link_view
         page = builder(
             page_title="Sign in",
             product_name=product_name,
-            next_url=next,
+            next_url=honest_next or "/",
             error_message=error_message,
             sso_providers=sso_providers,
             css_links=css_links,
@@ -1188,12 +1195,15 @@ def create_auth_page_routes(
         honest_error = leftover_honest_auth_error(error, SIGNUP_ERROR_TOKENS)
         if honest_error is None:
             return HTMLResponse("Unknown signup error", status_code=400)
+        honest_next = leftover_honest_auth_next(next)
+        if honest_next is None:
+            return HTMLResponse("Unknown signup next", status_code=400)
         error_message = SIGNUP_ERROR_MESSAGES.get(honest_error, "")
         builder = build_signup_password_view if password_mode else build_signup_magic_link_view
         page = builder(
             page_title="Create your account",
             product_name=product_name,
-            next_url=next,
+            next_url=honest_next or "/",
             error_message=error_message,
             css_links=css_links,
             js_scripts=js_scripts,
