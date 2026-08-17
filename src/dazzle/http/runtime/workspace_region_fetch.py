@@ -37,6 +37,8 @@ from typing import Any
 from dazzle.http.runtime.page_routes import (
     _parse_list_as_of,
     _parse_list_include_closed,
+    entity_known_sort_fields,
+    leftover_honest_sort,
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_computes import (
@@ -248,7 +250,15 @@ async def fetch_region_items(
             except Exception:
                 logger.warning("Failed to evaluate condition filter", exc_info=True)
 
-        # Step 2: sort list — user param > IR > surface default (#362).
+        # Step 2: leftover-honest sort / dir, then user > IR > surface (#362).
+        # Raw FastAPI ``?sort=zzz`` used to reach repo.list and invent
+        # empty via fail-closed (oral #73). Valid entity fields ride;
+        # leftover restores IR / surface default (sort is None).
+        sort, sort_dir = leftover_honest_sort(
+            sort,
+            sort_dir,
+            allowed=entity_known_sort_fields(ctx.entity_spec, getattr(ctx, "search_fields", None)),
+        )
         sort_list: list[str] | None = None
         if sort:
             sort_list = [f"-{sort}" if sort_dir == "desc" else sort]

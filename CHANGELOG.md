@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **Workspace leftover `?sort=` invented empty (cycle 2191)** —
+  list leftover-honest sort already existed (oral #48) but
+  `workspace_region_fetch` and REST `list_handlers` still applied
+  raw FastAPI `sort`. Leftover `?sort=zzz` / `ghost` reached
+  `repo.list` and invented empty via fail-closed SQL/identifier.
+  Valid entity fields ride; leftover restores IR / surface /
+  unsorted default. Oral #73.
 - **Workspace leftover `filter_<enum>` invented empty (cycle 2190)** —
   picker restore All already existed (oral #69) but
   `workspace_region_fetch` still applied raw

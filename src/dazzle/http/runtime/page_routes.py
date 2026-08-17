@@ -191,6 +191,41 @@ def _parse_list_dir(raw: Any, *, default: str = "asc") -> str:
     return default if default in ("asc", "desc") else "asc"
 
 
+def leftover_honest_sort(
+    raw_sort: Any,
+    raw_dir: Any,
+    *,
+    allowed: frozenset[str],
+    default_sort: str | None = None,
+    default_dir: str = "asc",
+) -> tuple[str | None, str]:
+    """Leftover-honest ``sort`` + ``dir`` pair (cycle 2191).
+
+    Empty / invalid / unknown restores *default_sort* (None → IR /
+    surface / DB default). Known fields still sort. Workspace fetch
+    and REST list used to pass raw FastAPI ``sort`` into ``repo.list``
+    and invent empty via fail-closed SQL/identifier.
+    """
+    return (
+        _parse_list_sort(raw_sort, default=default_sort, allowed=allowed),
+        _parse_list_dir(raw_dir, default=default_dir),
+    )
+
+
+def entity_known_sort_fields(entity_spec: Any, extra: Any = None) -> frozenset[str]:
+    """Entity field names + ``id`` + optional extra keys (columns, search)."""
+    keys: set[str] = {"id"}
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if name:
+            keys.add(name)
+    for item in extra or ():
+        text = str(item or "")
+        if text:
+            keys.add(text)
+    return frozenset(keys)
+
+
 def _parse_list_search(*raws: Any) -> str | None:
     """``search`` or leftover ``q`` alias (dz-grid + REST #596).
 

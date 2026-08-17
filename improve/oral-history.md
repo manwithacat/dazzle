@@ -719,6 +719,16 @@ dialect formed — and where it started to Goodhart itself — is
     Live support_tickets ``Ticket.status``. Distinct from walking
     another picker-catalog sibling (oral #69). Standing refusals apply.
 
+73. **Leftover workspace/REST sort invents empty.** Cycle 2191:
+    list leftover-honest sort already existed (``_parse_list_sort``
+    / oral #48) but ``workspace_region_fetch`` and REST
+    ``list_handlers`` still applied raw FastAPI ``sort``. Leftover
+    ``?sort=zzz`` / ``ghost`` reached ``repo.list`` and invented
+    empty via fail-closed SQL/identifier. Valid entity fields ride
+    via ``leftover_honest_sort``. Leftover restores IR / surface /
+    unsorted default. One-ship close of remaining FastAPI sort
+    sites. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -735,6 +745,7 @@ the end of every new oral *is* expensive — point here instead.
 | Date-window leftover | Walk the next `date_from` / `date_to` site after `leftover_honest_iso_date` exists | #70 |
 | Entity-id leftover | Walk the next `context_id` / `?id=` site after `leftover_honest_entity_id` exists | #71 |
 | Filter-enum fetch leftover | Walk another `filter_<enum>` fetch site after leftover-honest apply exists | #72 |
+| Workspace/REST leftover sort | Walk another FastAPI `?sort=` site after `leftover_honest_sort` exists | #73 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -757,6 +768,7 @@ how the handbook was learned.
 | One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
+| One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

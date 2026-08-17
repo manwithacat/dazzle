@@ -40,6 +40,7 @@ from dazzle.http.runtime.htmx_render import (
     _render_table_pagination,
     _render_table_sentinel,
 )
+from dazzle.http.runtime.page_routes import entity_known_sort_fields, leftover_honest_sort
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
 # 2026-06-20). Was lazily imported from route_generator to dodge an import cycle;
@@ -606,7 +607,15 @@ async def _list_handler_body(
         else False
     )
 
-    # Build sort list for repository
+    # Leftover-honest sort / dir (cycle 2191). Raw FastAPI ``?sort=zzz``
+    # used to reach gated_list / repo.list and invent empty via
+    # fail-closed. Valid entity fields ride; leftover restores unsorted.
+    _sort_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
+    sort, dir = leftover_honest_sort(
+        sort,
+        dir,
+        allowed=entity_known_sort_fields(getattr(service, "entity_spec", None), _sort_extra),
+    )
     sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
 
     # Delegate enforcement + data to the transport-agnostic core (#1422).

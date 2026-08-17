@@ -55,6 +55,9 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   closed cycle 2190 (oral #72). Fetch now reuses picker honesty
   (`compute_filter_columns_and_active`). Do **not** walk another
   `filter_<enum>` fetch site.
+- **Workspace/REST leftover sort** (`?sort=zzz` invents empty)
+  closed cycle 2191 (oral #73). Helper: `leftover_honest_sort` /
+  `_parse_list_sort`. Do **not** walk another FastAPI sort site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
