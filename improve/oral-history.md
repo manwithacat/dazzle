@@ -797,6 +797,15 @@ dialect formed — and where it started to Goodhart itself — is
     float / money). Bulk echo stays fail-closed (mutation).
     Standing refusals apply.
 
+80. **Leftover REST filter email VALUE invents empty.** Cycle 2199:
+    leftover-honest int VALUES already existed (oral #79) but
+    ``?filter[email]=zzz`` (known key, leftover EMAIL VALUE)
+    still landed in REST ``filters`` and invented empty via
+    fail-closed email match. Valid emails ride via
+    ``leftover_honest_filter_email``. One-ship close of remaining
+    GET list email filter VALUES. Bulk echo stays fail-closed
+    (mutation). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -820,6 +829,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter date VALUE | Walk another GET list date / datetime filter value site after leftover-honest date values exist | #77 |
 | REST leftover filter bool VALUE | Walk another GET list bool filter value site after leftover-honest bool values exist | #78 |
 | REST leftover filter int VALUE | Walk another GET list numeric filter value site after leftover-honest int values exist | #79 |
+| REST leftover filter email VALUE | Walk another GET list email filter value site after leftover-honest email values exist | #80 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -849,6 +859,7 @@ how the handbook was learned.
 | One GET list filter date VALUE after leftover-honest date values exist | Call `leftover_honest_iso_date` / `entity_date_filter_fields` on remaining GET list endpoints, then STOP (oral #77) |
 | One GET list filter bool VALUE after leftover-honest bool values exist | Call `leftover_honest_filter_bool` / `entity_bool_filter_fields` on remaining GET list endpoints, then STOP (oral #78) |
 | One GET list filter[amount] VALUE after leftover-honest int values exist | Call `leftover_honest_filter_int` / `entity_int_filter_fields` on remaining GET list endpoints, then STOP (oral #79) |
+| One GET list filter[email] VALUE after leftover-honest email values exist | Call `leftover_honest_filter_email` / `entity_email_filter_fields` on remaining GET list endpoints, then STOP (oral #80) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

@@ -359,12 +359,15 @@ def leftover_honest_list_filters(
     slice. Known int / decimal keys with leftover values
     (``filter[amount]=zzz``) restore unfiltered (cycle 2198)
     — they must not invent empty via fail-closed numeric match
-    or the zero-amount slice via coerce-to-0. Valid declared
-    options / UUIDs / ISO dates / bool tokens / integer and
-    decimal tokens ride. leftover_honest_entity_id already exists
+    or the zero-amount slice via coerce-to-0. Known email keys
+    with leftover values (``filter[email]=zzz``) restore
+    unfiltered (cycle 2199) — they must not invent empty via
+    fail-closed email match. Valid declared options / UUIDs /
+    ISO dates / bool tokens / integer and decimal tokens /
+    emails ride. leftover_honest_entity_id already exists
     (oral #71). leftover_honest_iso_date already exists (oral #70).
-    Oral #78 closed leftover bool VALUES; do not walk another
-    GET list bool filter value site.
+    Oral #79 closed leftover int VALUES; do not walk another
+    GET list numeric filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -388,7 +391,8 @@ def leftover_honest_list_filters(
     out = _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
     out = _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
     out = _parse_list_filter_bool_values(out, entity_bool_filter_fields(entity_spec))
-    return _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
+    out = _parse_list_filter_int_values(out, entity_int_filter_fields(entity_spec))
+    return _parse_list_filter_email_values(out, entity_email_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -440,18 +444,30 @@ def _parse_list_filter_enum_values(
 _ENTITY_ID_FILTER_KINDS = frozenset({"uuid", "ref", "belongs_to"})
 
 
-def entity_id_filter_fields(entity_spec: Any) -> frozenset[str]:
-    """Entity-id / UUID / REF filter keys (``id`` always)."""
-    keys: set[str] = {"id"}
+def _entity_filter_fields_of_kinds(
+    entity_spec: Any,
+    kinds: frozenset[str],
+    *,
+    always: frozenset[str] = frozenset(),
+) -> frozenset[str]:
+    """Field names whose type kind is in ``kinds`` (plus ``always``)."""
+    keys: set[str] = set(always)
     for spec_field in getattr(entity_spec, "fields", None) or ():
         name = str(getattr(spec_field, "name", "") or "")
         if not name:
             continue
         kind = getattr(getattr(spec_field, "type", None), "kind", None)
         kind_s = str(getattr(kind, "value", kind) or "").lower()
-        if kind_s in _ENTITY_ID_FILTER_KINDS:
+        if kind_s in kinds:
             keys.add(name)
     return frozenset(keys)
+
+
+def entity_id_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """Entity-id / UUID / REF filter keys (``id`` always)."""
+    return _entity_filter_fields_of_kinds(
+        entity_spec, _ENTITY_ID_FILTER_KINDS, always=frozenset({"id"})
+    )
 
 
 def _omit_leftover_filter_values(
@@ -560,16 +576,7 @@ _BOOL_FILTER_FALSE = frozenset({"false", "0", "no", "off"})
 
 def entity_bool_filter_fields(entity_spec: Any) -> frozenset[str]:
     """Bool filter keys (``is_active`` / switch fields)."""
-    keys: set[str] = set()
-    for spec_field in getattr(entity_spec, "fields", None) or ():
-        name = str(getattr(spec_field, "name", "") or "")
-        if not name:
-            continue
-        kind = getattr(getattr(spec_field, "type", None), "kind", None)
-        kind_s = str(getattr(kind, "value", kind) or "").lower()
-        if kind_s in _BOOL_FILTER_KINDS:
-            keys.add(name)
-    return frozenset(keys)
+    return _entity_filter_fields_of_kinds(entity_spec, _BOOL_FILTER_KINDS)
 
 
 def leftover_honest_filter_bool(raw: Any) -> str:
@@ -685,6 +692,44 @@ def _parse_list_filter_int_values(
     dec_keys = frozenset(name for name, kind in numeric_fields.items() if kind != "int")
     out = _omit_leftover_filter_values(filters, int_keys, leftover_honest_filter_int)
     return _omit_leftover_filter_values(out, dec_keys, leftover_honest_filter_decimal)
+
+
+_EMAIL_FILTER_KINDS = frozenset({"email"})
+_EMAIL_FILTER_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def entity_email_filter_fields(entity_spec: Any) -> frozenset[str]:
+    """Email filter keys (``email`` / contact fields)."""
+    return _entity_filter_fields_of_kinds(entity_spec, _EMAIL_FILTER_KINDS)
+
+
+def leftover_honest_filter_email(raw: Any) -> str:
+    """Valid emails ride. Leftover junk restores "".
+
+    Distinct from leftover int VALUE (oral #79). Filter leftover
+    on email keys must omit so leftover ``?filter[email]=zzz``
+    does not invent empty via fail-closed email match. Cycle 2199.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text or not _EMAIL_FILTER_RE.fullmatch(text):
+        return ""
+    return text
+
+
+def _parse_list_filter_email_values(
+    filters: dict[str, str],
+    email_fields: frozenset[str],
+) -> dict[str, str]:
+    """Leftover-honest email filter VALUES (cycle 2199).
+
+    Valid emails ride. Leftover junk (``zzz``, ``ghost``,
+    ``not-an-email``) must not invent empty via fail-closed
+    email match. Empty rest is unfiltered (omit). Distinct
+    from leftover int VALUE (oral #79). Reuses
+    ``_omit_leftover_filter_values`` (not a clone of
+    ``_parse_list_filter_int_values``).
+    """
+    return _omit_leftover_filter_values(filters, email_fields, leftover_honest_filter_email)
 
 
 def _collect_request_params(request: Any) -> dict[str, str]:
@@ -2408,18 +2453,21 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     )
     _list_search = _parse_list_search(_qparams.get("search"), _qparams.get("q"))
     _svc = prc.deps.entity_services.get(req_table.entity_name)
-    _list_filters = _parse_list_filter_int_values(
-        _parse_list_filter_bool_values(
-            _parse_list_filter_entity_id_values(
-                _parse_list_filter_enum_values(
-                    _parse_list_filters(_qparams, allowed=_allowed),
-                    _list_filter_enum_options(req_table),
+    _list_filters = _parse_list_filter_email_values(
+        _parse_list_filter_int_values(
+            _parse_list_filter_bool_values(
+                _parse_list_filter_entity_id_values(
+                    _parse_list_filter_enum_values(
+                        _parse_list_filters(_qparams, allowed=_allowed),
+                        _list_filter_enum_options(req_table),
+                    ),
+                    entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
                 ),
-                entity_id_filter_fields(getattr(_svc, "entity_spec", None)),
+                entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
             ),
-            entity_bool_filter_fields(getattr(_svc, "entity_spec", None)),
+            entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
         ),
-        entity_int_filter_fields(getattr(_svc, "entity_spec", None)),
+        entity_email_filter_fields(getattr(_svc, "entity_spec", None)),
     )
     _temporal = getattr(getattr(_svc, "entity_spec", None), "temporal", None)
     _as_of_param = getattr(_temporal, "as_of_param", None) or "as_of"

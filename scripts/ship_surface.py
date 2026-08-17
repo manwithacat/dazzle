@@ -154,6 +154,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_rest_list_filter_bool_leftover.py",
     # cycle 2198: leftover REST ?filter[amount]=zzz (known key, leftover INT VALUE)
     "tests/unit/test_rest_list_filter_int_leftover.py",
+    # cycle 2199: leftover REST ?filter[email]=zzz (known key, leftover EMAIL VALUE)
+    "tests/unit/test_rest_list_filter_email_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",
