@@ -28,12 +28,66 @@ _logger = logging.getLogger(__name__)
 _MEMBER_VALUE_FILTER = _re.compile(r'members\[\s*value\s+eq\s+"([^"]+)"\s*\]', _re.IGNORECASE)
 
 
-def _member_ids(value: Any) -> list[Any]:
-    """Member ids from a SCIM ``members`` value — lenient: a non-list, or non-dict /
-    value-less members, are skipped rather than crashing (hostile/malformed PATCH)."""
-    if not isinstance(value, list):
+def leftover_honest_scim_member_ids(raw: Any) -> list[str] | None:
+    """Valid SCIM ``members`` lists ride. Leftover junk restores None.
+
+    Leftover ``members: "zzz"`` / ``ghost`` / ``[{}]`` used to skip via
+    ``_member_ids`` and invent replace-with-empty (wipe every member)
+    on PATCH/PUT, or invent a no-op add. Valid
+    ``[{"value": "<membership-id>"}]`` ride. Empty list is honest empty
+    (first visit / remove-all). Rest is stay-put (None → 400
+    ``invalidValue``). RFC 7644 §3.5.2. Distinct from leftover SCIM
+    ``active`` (oral #100) and leftover ``?filter=`` (oral #99). Live
+    SCIM Groups. Cycle 2229.
+    """
+    if not isinstance(raw, list):
+        return None
+    out: list[str] = []
+    for member in raw:
+        if not isinstance(member, dict) or "value" not in member:
+            return None
+        value = member.get("value")
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        out.append(text)
+    return out
+
+
+def leftover_honest_scim_body_members(body: dict[str, Any]) -> list[str] | None:
+    """POST/PUT ``members``. Missing key defaults empty. Leftover restores None."""
+    if "members" not in body:
         return []
-    return [m["value"] for m in value if isinstance(m, dict) and "value" in m]
+    return leftover_honest_scim_member_ids(body.get("members"))
+
+
+def leftover_scim_members_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``members`` would invent a wipe or no-op."""
+    operations = body.get("Operations")
+    if not isinstance(operations, list):
+        return False
+    for op in operations:
+        if not isinstance(op, dict):
+            continue
+        kind = str(op.get("op", "")).lower()
+        if kind not in ("add", "replace"):
+            continue
+        path = op.get("path")
+        value = op.get("value")
+        if path == "members":
+            if leftover_honest_scim_member_ids(value) is None:
+                return True
+        elif path is None and isinstance(value, dict) and "members" in value:
+            if leftover_honest_scim_member_ids(value.get("members")) is None:
+                return True
+    return False
+
+
+def _member_ids(value: Any) -> list[str]:
+    """Member ids from a SCIM ``members`` value — leftover is empty, not a crash."""
+    return leftover_honest_scim_member_ids(value) or []
 
 
 def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
@@ -56,7 +110,9 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
         path = op.get("path")
         value = op.get("value")
         if kind == "add" and path == "members":
-            ops.append(("add_members", _member_ids(value)))
+            ids = leftover_honest_scim_member_ids(value)
+            if ids is not None:
+                ops.append(("add_members", ids))
         elif kind == "remove" and isinstance(path, str):
             m = _MEMBER_VALUE_FILTER.fullmatch(path.strip())
             if m:
@@ -64,15 +120,19 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
             elif path == "members":
                 ops.append(("replace_members", []))  # remove all
         elif kind == "replace" and path == "members":
-            ops.append(("replace_members", _member_ids(value)))
+            ids = leftover_honest_scim_member_ids(value)
+            if ids is not None:
+                ops.append(("replace_members", ids))
         elif kind in ("add", "replace") and path == "displayName":
             ops.append(("rename", str(value)))
         elif kind in ("add", "replace") and path is None and isinstance(value, dict):
             if "displayName" in value:
                 ops.append(("rename", str(value["displayName"])))
             if "members" in value:
-                ops.append(("replace_members", _member_ids(value["members"])))
-        # else: unknown op — skip
+                ids = leftover_honest_scim_member_ids(value["members"])
+                if ids is not None:
+                    ops.append(("replace_members", ids))
+        # else: unknown op — skip (leftover members stay put at the route)
     return ops
 
 

@@ -1006,6 +1006,18 @@ dialect formed — and where it started to Goodhart itself — is
     GET ``?filter=`` (oral #99) and leftover consent bool
     (oral #90). Live SCIM Users. Standing refusals apply.
 
+101. **SCIM leftover members invent a wipe / empty group.** Cycle
+    2229: leftover ``members: "zzz"`` / ``ghost`` / ``[{}]`` on
+    POST/PUT/PATCH ``/scim/v2/Groups`` missed the members-list
+    shape and invented replace-with-empty (wipe every member)
+    or an empty create. Valid ``[{"value": "<id>"}]`` ride via
+    ``leftover_honest_scim_member_ids``. Absent key still
+    creates empty (first visit). Honest empty list still
+    clears. Leftover stays put (400 ``invalidValue``). RFC
+    7644 §3.5.2. Distinct from leftover ``active`` (oral #100)
+    and leftover GET ``?filter=`` (oral #99). Live SCIM Groups.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1050,6 +1062,7 @@ the end of every new oral *is* expensive — point here instead.
 | Auth leftover urlsafe token | Walk another ``?token=`` / ``?session=`` echo site after leftover_honest_auth_token exists | #98 |
 | SCIM leftover filter | Walk another SCIM ``?filter=`` list site after leftover_honest_scim_eq_value exists | #99 |
 | SCIM leftover active | Walk another SCIM ``active`` body site after leftover_honest_scim_active exists | #100 |
+| SCIM leftover members | Walk another SCIM ``members`` body site after leftover_honest_scim_member_ids exists | #101 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1073,6 +1086,7 @@ how the handbook was learned.
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |
+| One SCIM ``members`` body site after leftover-honest members exist | Call `leftover_honest_scim_member_ids` on remaining Groups emitters, then STOP (oral #101) |
 | One GET list `filter[key]` parse after leftover-honest filters exist | Call `leftover_honest_list_filters` on remaining GET list endpoints, then STOP (oral #74) |
 | One GET list filter-enum VALUE after leftover-honest values exist | Call `_parse_list_filter_enum_values` / `entity_enum_filter_options` on remaining GET list endpoints, then STOP (oral #75) |
 | One GET list filter[id] VALUE after leftover-honest entity-id values exist | Call `leftover_honest_entity_id` / `entity_id_filter_fields` on remaining GET list endpoints, then STOP (oral #76) |

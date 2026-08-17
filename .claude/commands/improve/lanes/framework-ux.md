@@ -180,6 +180,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_scim_active`. Leftover stays put (400
   `invalidValue`). Do **not** walk another SCIM `active`
   body site.
+- **SCIM leftover members** (`members: "zzz"` invents a wipe /
+  empty group) closed cycle 2229 (oral #101). Helper:
+  `leftover_honest_scim_member_ids`. Leftover stays put (400
+  `invalidValue`). Do **not** walk another SCIM `members`
+  body site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
