@@ -207,6 +207,13 @@ Person-as-text was a brief fifth clan: do not mint an avatar
 chip from the bare string `Ada`. It closed when every host that
 needed `present()` was wired. It did not spawn a sibling walk.
 
+**Bulk leftover (mutation).** All-matching bulk re-runs the
+echoed query. Leftover `filter[status]=zzz` applied raw invented
+an empty mutation while the leftover-honest list view omitted
+(the clerk saw unfiltered). The helper is the same
+`leftover_honest_list_filters`; unknown echo keys still 422
+(do not widen a delete). Oral #86 — one ship, then stop.
+
 ---
 
 ## Ritual

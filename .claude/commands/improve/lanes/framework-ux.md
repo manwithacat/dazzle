@@ -113,6 +113,13 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   (reuses `leftover_honest_entity_id` +
   `leftover_honest_filter_url`). Do **not** walk another GET
   list file filter value site.
+- **GET list leftover typed filter VALUES** closed cycle 2203
+  (oral #85). Do **not** walk another GET list field kind.
+- **Bulk leftover filter VALUE** (`filter[status]=zzz` on
+  all-matching echo invents empty mutation) closed cycle 2206
+  (oral #86). Helper: `leftover_honest_list_filters` on the
+  echo. Unknown keys stay 422. Do **not** walk another bulk
+  leftover filter kind.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

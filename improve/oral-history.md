@@ -856,6 +856,17 @@ dialect formed — and where it started to Goodhart itself — is
     found in a live app or presentation MCP STALE (1554). Standing
     refusals apply.
 
+86. **Bulk leftover filter VALUE invents empty mutation.** Cycle
+    2206: leftover-honest GET list filter VALUES already existed
+    (oral #85) but all-matching bulk echo still landed leftover
+    ``filter[status]=zzz`` in ``gated_list`` and invented empty
+    (delete-nothing) while the leftover-honest list view omitted
+    (user saw unfiltered). Valid declared tokens ride via
+    ``leftover_honest_list_filters``. Leftover omits (view
+    parity). Unknown echo keys still 422 fail-closed (do not
+    widen). Live support_tickets ``Ticket.status`` + grid
+    all-matching. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -885,6 +896,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter file VALUE | Walk another GET list file filter value site after leftover-honest file values exist | #83 |
 | REST leftover filter json VALUE | Walk another GET list json filter value site after leftover-honest json values exist | #84 |
 | REST leftover typed filter VALUES | Walk the next GET list field kind after leftover_honest_list_filters + kind walkers exist | #85 |
+| Bulk leftover filter VALUE | Walk another bulk leftover filter kind after leftover_honest_list_filters on echo | #86 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -920,6 +932,7 @@ how the handbook was learned.
 | One GET list filter[file] VALUE after leftover-honest file values exist | Call `leftover_honest_filter_file` / `entity_file_filter_fields` on remaining GET list endpoints, then STOP (oral #83) |
 | One GET list filter[preferences] VALUE after leftover-honest json values exist | Call `leftover_honest_filter_json` / `entity_json_filter_fields` on remaining GET list endpoints, then STOP (oral #84) |
 | One GET list leftover typed VALUE kind per cycle after leftover_honest_list_filters exists | STOP; enum→json closed (oral #75–#84). New invent class or presentation STALE (oral #85) |
+| One bulk leftover filter VALUE kind per cycle after leftover_honest_list_filters on echo | STOP; leftover VALUES omit (view parity); unknown keys stay 422 (oral #86) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

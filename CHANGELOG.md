@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **Bulk leftover `filter[status]=zzz` invented empty mutation (cycle 2206)** —
+  leftover-honest GET list filter VALUES already existed (oral #85)
+  but all-matching bulk echo still landed leftover VALUES in
+  `gated_list`. Leftover invented a delete-nothing while the list
+  view omitted (user saw unfiltered). Valid declared tokens ride;
+  leftover omits (view parity). Unknown echo keys still 422.
+  Oral #86.
 - **REST leftover `?filter[zzz]=` invented empty (cycle 2193)** —
   page leftover-honest `filter[key]` already existed (oral #48)
   but REST `list_handlers` still copied raw `filter[zzz]` into

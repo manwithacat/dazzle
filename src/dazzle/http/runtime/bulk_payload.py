@@ -23,6 +23,10 @@ Fail-closed rules (the C0b contract):
   parity with what the view showed);
 - leftover-honest ``as_of`` / ``include_closed`` are consumed (cycle 2169),
   not 422'd or dropped — leftover junk restores current / open-only;
+- leftover-honest filter VALUES (cycle 2206) reuse
+  ``leftover_honest_list_filters`` — leftover ``filter[status]=zzz``
+  omits (view parity) instead of inventing an empty mutation; valid
+  tokens ride; unknown echo keys still 422 (do not widen);
 - a matched set larger than ``cap`` is REJECTED ("narrow the query") rather
   than silently truncated.
 """
@@ -34,6 +38,8 @@ from dazzle.http.runtime.access.gated import gated_list
 from dazzle.http.runtime.page_routes import (
     _parse_list_as_of,
     _parse_list_include_closed,
+    entity_known_sort_fields,
+    leftover_honest_list_filters,
 )
 
 # The four bulk-payload keys (never part of the query echo).
@@ -109,6 +115,7 @@ def _echo_to_query(
     *,
     search_fields: list[str] | None,
     filter_fields: list[str] | None,
+    entity_spec: Any = None,
 ) -> tuple[str | None, dict[str, Any] | None]:
     """Translate the query echo into (search, user_filters) — or refuse.
 
@@ -116,6 +123,9 @@ def _echo_to_query(
     ``filter[field]`` always applies; bare keys only when DSL-declared) so the
     matched set is EXACTLY what the list view showed. Anything narrowing we
     can't reproduce → :class:`BulkQueryError` (fail closed, never wider).
+    Leftover VALUES on known keys omit via leftover_honest_list_filters
+    (cycle 2206) — leftover ``filter[status]=zzz`` must not invent empty
+    while the leftover-honest list view omitted (user saw unfiltered).
     """
     # Same precedence as the list route (#596: `effective_search = search or
     # q`) — the matched set must be exactly what the view showed, even for a
@@ -140,7 +150,36 @@ def _echo_to_query(
                 f"the bulk query echoes {key!r}, which this entity's list cannot "
                 "consume — refusing to apply the action wider than the view"
             )
-    return search, (user_filters or None)
+    return search, _echo_leftover_honest_filters(
+        user_filters,
+        search_fields=search_fields,
+        filter_fields=filter_fields,
+        entity_spec=entity_spec,
+    )
+
+
+def _echo_leftover_honest_filters(
+    user_filters: dict[str, Any],
+    *,
+    search_fields: list[str] | None,
+    filter_fields: list[str] | None,
+    entity_spec: Any,
+) -> dict[str, Any] | None:
+    """Omit leftover VALUES on known echo keys (cycle 2206). View parity.
+
+    Unknown keys already 422'd in ``_echo_to_query``. Leftover
+    ``filter[status]=zzz`` must not invent empty; valid tokens ride.
+    """
+    if not user_filters:
+        return None
+    extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
+    honest = leftover_honest_list_filters(
+        {f"filter[{key}]": val for key, val in user_filters.items()},
+        allowed=frozenset(user_filters) | entity_known_sort_fields(entity_spec, extra),
+        filter_fields=filter_fields,
+        entity_spec=entity_spec,
+    )
+    return honest or None
 
 
 def _echo_temporal(echo: dict[str, str]) -> tuple[str | None, bool]:
@@ -178,7 +217,10 @@ async def resolve_all_matching_ids(
     above ``cap``.
     """
     search, user_filters = _echo_to_query(
-        echo, search_fields=search_fields, filter_fields=filter_fields
+        echo,
+        search_fields=search_fields,
+        filter_fields=filter_fields,
+        entity_spec=getattr(service, "entity_spec", None),
     )
     as_of_raw, include_closed = _echo_temporal(echo)
     ids: list[str] = []
