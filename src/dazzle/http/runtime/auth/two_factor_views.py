@@ -62,6 +62,31 @@ def leftover_honest_2fa_mode(raw: Any) -> ChallengeMode | None:
     return None
 
 
+def leftover_honest_2fa_sent(raw: Any) -> bool | None:
+    """Valid ``sent=1`` rides. Leftover junk restores None.
+
+    Leftover ``?sent=zzz`` / ``false`` / ``0`` used to invent
+    ``code_sent=True`` via ``bool(sent)`` — "Code sent — check your
+    email." theater and hid the send-code button. The only emitter is
+    ``sent=1``. Absent / blank is the honest first-visit default
+    (False). Rest is stay-put (None). Distinct from leftover 2FA mode
+    (oral #92) and leftover consent bool (oral #90). Live simple_task
+    ``/2fa/challenge``. Cycle 2218.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return False
+    honest = leftover_honest_catalog_id(
+        text,
+        leftover_honest_catalog_option_values(("1",)),
+        "",
+        allow_empty_rest=True,
+    )
+    if honest == "1":
+        return True
+    return None
+
+
 def _mode_copy(mode: ChallengeMode) -> tuple[str, str, str, str, int]:
     """Return (subtitle, label, placeholder, pattern_input_kind, maxlen) for ``mode``.
 

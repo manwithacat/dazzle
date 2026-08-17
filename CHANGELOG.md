@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **2FA leftover sent invented code-sent theater (cycle 2218)** —
+  leftover `?sent=zzz` / `false` / `0` on `GET /2fa/challenge`
+  coerced via `bool(sent)` and rendered "Code sent — check your
+  email." while hiding the send-code button. Valid `sent=1`
+  rides; absent/blank still defaults not-sent (first visit);
+  leftover stays put (400, no invented theater). Oral #94.
+  Live simple_task `/2fa/challenge`.
 - **2FA leftover mode invented totp (cycle 2215)** —
   leftover `?mode=zzz` / `?method=zzz` on `GET /2fa/challenge`
   coerced to `totp` and rendered the authenticator form. Valid

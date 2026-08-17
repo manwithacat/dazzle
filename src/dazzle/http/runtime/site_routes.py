@@ -29,6 +29,7 @@ from dazzle.http.runtime.auth.two_factor_views import (
     build_2fa_settings_view,
     build_2fa_setup_view,
     leftover_honest_2fa_mode,
+    leftover_honest_2fa_sent,
 )
 from dazzle.page.runtime.css_loader import get_bundled_css
 from dazzle.page.runtime.site_context import build_site_page_context
@@ -1362,6 +1363,12 @@ def create_auth_page_routes(
         if honest is None:
             return HTMLResponse("Unknown 2FA method", status_code=400)
         chosen_mode = honest
+        # Leftover ``?sent=zzz`` used to invent code-sent theater via
+        # ``bool(sent)``. Valid ``sent=1`` rides; absent/blank is first
+        # visit (False). HTMLResponse (not Response(content=…)) — oral #93.
+        honest_sent = leftover_honest_2fa_sent(sent)
+        if honest_sent is None:
+            return HTMLResponse("Unknown 2FA sent flag", status_code=400)
         error_message = ""
         if error == "invalid_code":
             error_message = "That code didn't match. Try again."
@@ -1370,7 +1377,7 @@ def create_auth_page_routes(
             session_token=session,
             mode=chosen_mode,
             email_otp_enabled=True,
-            code_sent=bool(sent),
+            code_sent=honest_sent,
             error_message=error_message,
             css_links=css_links,
             js_scripts=js_scripts,
