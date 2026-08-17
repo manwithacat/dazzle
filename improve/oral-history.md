@@ -709,6 +709,16 @@ dialect formed — and where it started to Goodhart itself — is
     Distinct from leftover catalog id (oral #69) and leftover date
     window (oral #70). Standing refusals apply.
 
+72. **Leftover filter-enum query invents empty.** Cycle 2190:
+    picker restore All already existed (oral #69 /
+    ``compute_filter_columns_and_active``) but
+    ``workspace_region_fetch`` still applied raw
+    ``filters[field]=param_val``. Leftover ``?filter_status=zzz``
+    invented empty while the picker showed All. Valid declared
+    options ride via the same honesty helper. Rest is All (omit).
+    Live support_tickets ``Ticket.status``. Distinct from walking
+    another picker-catalog sibling (oral #69). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -724,6 +734,7 @@ the end of every new oral *is* expensive — point here instead.
 | Catalog leftover | Walk the next tab / view / filter-enum / lens site after `leftover_honest_catalog_id` exists | #69 |
 | Date-window leftover | Walk the next `date_from` / `date_to` site after `leftover_honest_iso_date` exists | #70 |
 | Entity-id leftover | Walk the next `context_id` / `?id=` site after `leftover_honest_entity_id` exists | #71 |
+| Filter-enum fetch leftover | Walk another `filter_<enum>` fetch site after leftover-honest apply exists | #72 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -745,6 +756,7 @@ how the handbook was learned.
 | One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
 | One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
+| One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

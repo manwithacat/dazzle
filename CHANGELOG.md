@@ -1,6 +1,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **Workspace leftover `filter_<enum>` invented empty (cycle 2190)** —
+  picker restore All already existed (oral #69) but
+  `workspace_region_fetch` still applied raw
+  `filters[field]=param_val`. Leftover `?filter_status=zzz` /
+  `ghost` invented an empty collection while the picker showed
+  All. Valid declared options ride; leftover junk omits (All).
+  Oral #72. Live support_tickets `Ticket.status`.
 - **Cohort-strip leftover lens catalog (cycle 2184)** —
   `?lens=ghost` / `zzz` invented the first declared lens even when
   `default_lens` was a later sibling (highlight + cells silently

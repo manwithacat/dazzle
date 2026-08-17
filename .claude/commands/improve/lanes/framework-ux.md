@@ -51,6 +51,10 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   closed cycle 2189 (oral #71 one-ship close). Helper:
   `leftover_honest_entity_id`. Do **not** walk another entity-id
   query param.
+- **Filter-enum fetch leftover** (`?filter_<enum>=junk` invents empty)
+  closed cycle 2190 (oral #72). Fetch now reuses picker honesty
+  (`compute_filter_columns_and_active`). Do **not** walk another
+  `filter_<enum>` fetch site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -39,6 +39,9 @@ from dazzle.http.runtime.page_routes import (
     _parse_list_include_closed,
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
+from dazzle.http.runtime.workspace_region_computes import (
+    compute_filter_columns_and_active,
+)
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
 from dazzle.render.display_names import _inject_display_names
@@ -143,6 +146,31 @@ def _apply_leftover_honest_date_window(
     return out
 
 
+def _apply_leftover_honest_filter_enums(
+    request: Any,
+    filters: dict[str, Any] | None,
+    columns: list[dict[str, Any]] | None,
+) -> dict[str, Any] | None:
+    """Fold leftover-honest ``filter_<enum>=`` into list filters.
+
+    Picker restore All already exists (oral #69 /
+    ``compute_filter_columns_and_active``). Fetch still applied raw
+    ``filters[field]=param_val``, so leftover junk (``zzz``, ``ghost``)
+    invented an empty collection while the picker showed All (cycle
+    2190). Valid declared options ride. Rest is All (omit). Live
+    FilterBar / support_tickets ``Ticket.status``.
+    """
+    qparams = getattr(request, "query_params", None)
+    if qparams is None:
+        return filters
+    _, active = compute_filter_columns_and_active(list(columns or []), qparams)
+    if not active:
+        return filters
+    out = dict(filters) if filters else {}
+    out.update(active)
+    return out
+
+
 def _apply_leftover_honest_item_id(
     request: Any, filters: dict[str, Any] | None
 ) -> dict[str, Any] | None:
@@ -234,13 +262,9 @@ async def fetch_region_items(
                     for s in ctx.surface_default_sort
                 ]
 
-        # Step 3: query-param filters + date-range filters (#566).
-        for param_key, param_val in request.query_params.items():
-            if param_key.startswith("filter_") and param_val:
-                field_name = param_key[7:]
-                if filters is None:
-                    filters = {}
-                filters[field_name] = param_val
+        # Step 3: leftover-honest query-param filters + date-range (#566).
+        # Leftover ``filter_<enum>=junk`` must not invent empty (oral #72).
+        filters = _apply_leftover_honest_filter_enums(request, filters, ctx.precomputed_columns)
 
         # dual_pane master-detail: DETAIL region fragment for one selected row.
         # List rows hx-get ``?id=<pk>`` into ``.dz-master-detail__detail``.
