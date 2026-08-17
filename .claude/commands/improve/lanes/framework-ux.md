@@ -169,6 +169,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Helper: `leftover_honest_auth_token`. Leftover stays put
   (400, no invented form). Do **not** walk another urlsafe
   token echo site.
+- **SCIM leftover filter** (`?filter=zzz` invents the unfiltered
+  Groups/Users list) closed cycle 2227 (oral #99). Helper:
+  `leftover_honest_scim_eq_value`. Leftover stays put (400
+  `invalidFilter`). Do **not** walk another SCIM `?filter=`
+  list site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

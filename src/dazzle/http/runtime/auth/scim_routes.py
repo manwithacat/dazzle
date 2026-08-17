@@ -46,8 +46,38 @@ _USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
 _LIST_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:ListResponse"
 _ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error"
 
-# `userName eq "x@y.test"` — the only filter SCIM provisioning actually uses.
-_FILTER_RE = re.compile(r'userName\s+eq\s+"([^"]+)"', re.IGNORECASE)
+# Okta/Entra provisioning sends ``attr eq "value"`` (Users: userName; Groups:
+# displayName). Full-string match — a leftover prefix/suffix is not a filter.
+_SCIM_EQ_FILTER = re.compile(
+    r'\A(?P<attr>userName|displayName)\s+eq\s+"(?P<value>[^"]+)"\Z',
+    re.IGNORECASE,
+)
+
+
+def leftover_honest_scim_eq_value(raw: Any, *, attr: str) -> str | None:
+    """Valid SCIM ``attr eq "value"`` filters ride. Leftover junk restores None.
+
+    Leftover ``?filter=zzz`` / ``ghost`` / unquoted / wrong-attr on
+    ``/scim/v2/Users`` and ``/scim/v2/Groups`` used to miss the
+    displayName/userName-eq regex and invent the unfiltered list.
+    Valid quoted ``eq`` for ``attr`` rides (the quoted value).
+    Absent / blank is the honest first-visit default (``""`` —
+    list all). Rest is stay-put (None → 400 ``invalidFilter``).
+    RFC 7644 §3.4.2.2. Distinct from leftover REST ``filter[key]``
+    (oral #74 / #85). Live SCIM Groups + Users. Cycle 2227.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text:
+        return ""
+    match = _SCIM_EQ_FILTER.fullmatch(text)
+    if match is None:
+        return None
+    if match.group("attr").lower() != attr.lower():
+        return None
+    value = match.group("value").strip()
+    if not value:
+        return None
+    return value
 
 
 def _error(status: int, detail: str, *, scim_type: str | None = None) -> JSONResponse:
@@ -297,10 +327,15 @@ def create_scim_routes() -> APIRouter:
     async def list_users(request: Request, filter: Annotated[str, Query()] = "") -> JSONResponse:
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
+        # Leftover ``?filter=zzz`` used to miss userName-eq and invent
+        # the unfiltered Users list. JSONResponse (not Response(content=))
+        # — oral #93. RFC 7644 invalidFilter.
+        honest = leftover_honest_scim_eq_value(filter, attr="userName")
+        if honest is None:
+            return _error(400, "invalid filter", scim_type="invalidFilter")
         memberships = store.get_memberships_for_tenant(conn.tenant_id)
-        match = _FILTER_RE.search(filter) if filter else None
-        if match:
-            wanted = match.group(1).strip().lower()
+        if honest:
+            wanted = honest.lower()
             memberships = [
                 m for m in memberships if _email_for(store, m.identity_id).lower() == wanted
             ]
@@ -441,10 +476,15 @@ def create_scim_routes() -> APIRouter:
 
         conn = _require_scim_connection(request)
         store = request.app.state.auth_store
-        flt = request.query_params.get("filter", "")
-        match = re.search(r'displayName\s+eq\s+"([^"]+)"', flt)
-        name = match.group(1) if match else None
-        groups = sp.list_groups(store, conn, display_name=name)
+        # Leftover ``?filter=zzz`` used to miss displayName-eq and invent
+        # the unfiltered Groups list. JSONResponse (not Response(content=))
+        # — oral #93. RFC 7644 invalidFilter.
+        honest = leftover_honest_scim_eq_value(
+            request.query_params.get("filter", ""), attr="displayName"
+        )
+        if honest is None:
+            return _error(400, "invalid filter", scim_type="invalidFilter")
+        groups = sp.list_groups(store, conn, display_name=honest or None)
         base = str(request.base_url).rstrip("/")
         resources = [_group_to_scim(g, store.get_group_member_ids(g.id), base) for g in groups]
         return {

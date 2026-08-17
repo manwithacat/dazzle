@@ -380,6 +380,15 @@ def test_filter_no_match_is_empty_list(store) -> None:
     assert r.json()["totalResults"] == 0
 
 
+def test_leftover_users_filter_is_invalid_filter(store) -> None:
+    # Leftover ``?filter=zzz`` used to invent the unfiltered Users list.
+    c = _client(store)
+    c.post("/scim/v2/Users", json={"userName": "jane@acme.test"}, headers=_auth("tok1"))
+    r = c.get("/scim/v2/Users?filter=zzz", headers=_auth("tok1"))
+    assert r.status_code == 400
+    assert r.json().get("scimType") == "invalidFilter"
+
+
 # ---- patch (active toggle) ----
 
 
@@ -492,6 +501,9 @@ def test_group_create_get_list() -> None:
     assert client.get(f"/scim/v2/Groups/{gid}", headers=_auth("tok1")).status_code == 200
     lr = client.get('/scim/v2/Groups?filter=displayName eq "Eng"', headers=_auth("tok1"))
     assert lr.json()["totalResults"] == 1
+    leftover = client.get("/scim/v2/Groups?filter=zzz", headers=_auth("tok1"))
+    assert leftover.status_code == 400
+    assert leftover.json().get("scimType") == "invalidFilter"
 
 
 def test_group_create_captures_and_echoes_external_id() -> None:

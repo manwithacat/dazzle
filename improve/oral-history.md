@@ -983,6 +983,17 @@ dialect formed — and where it started to Goodhart itself — is
     simple_task ``/reset-password`` + ``/2fa/challenge``. Standing
     refusals apply.
 
+99. **SCIM leftover filter invents the unfiltered catalog.** Cycle
+    2227: leftover ``?filter=zzz`` / ``ghost`` on
+    ``/scim/v2/Groups`` missed the ``displayName eq "…"`` regex
+    and invented the unfiltered Groups list (Users
+    ``userName eq`` the same). Valid quoted ``eq`` rides via
+    ``leftover_honest_scim_eq_value``. Absent / blank still
+    lists all (first visit). Leftover stays put (400
+    ``invalidFilter``). RFC 7644 §3.4.2.2. Distinct from leftover
+    REST ``filter[key]`` VALUES (oral #85). Live SCIM Groups +
+    Users. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1025,6 +1036,7 @@ the end of every new oral *is* expensive — point here instead.
 | Auth leftover next | Walk another ``?next=`` landing site after leftover_honest_auth_next exists | #96 |
 | Connections leftover new | Walk another ``?new=`` form-opener site after leftover_honest_connection_new exists | #97 |
 | Auth leftover urlsafe token | Walk another ``?token=`` / ``?session=`` echo site after leftover_honest_auth_token exists | #98 |
+| SCIM leftover filter | Walk another SCIM ``?filter=`` list site after leftover_honest_scim_eq_value exists | #99 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1057,6 +1069,7 @@ how the handbook was learned.
 | One GET list filter[email] VALUE after leftover-honest email values exist | Call `leftover_honest_filter_email` / `entity_email_filter_fields` on remaining GET list endpoints, then STOP (oral #80) |
 | One GET list filter[preview_url] VALUE after leftover-honest url values exist | Call `leftover_honest_filter_url` / `entity_url_filter_fields` on remaining GET list endpoints, then STOP (oral #81) |
 | One GET list filter[slug] VALUE after leftover-honest slug values exist | Call `leftover_honest_filter_slug` / `entity_slug_filter_fields` on remaining GET list endpoints, then STOP (oral #82) |
+| One SCIM `?filter=` leftover after leftover_honest_scim_eq_value exists | Call `leftover_honest_scim_eq_value` on remaining SCIM list endpoints, then STOP (oral #99) |
 | One GET list filter[file] VALUE after leftover-honest file values exist | Call `leftover_honest_filter_file` / `entity_file_filter_fields` on remaining GET list endpoints, then STOP (oral #83) |
 | One GET list filter[preferences] VALUE after leftover-honest json values exist | Call `leftover_honest_filter_json` / `entity_json_filter_fields` on remaining GET list endpoints, then STOP (oral #84) |
 | One GET list leftover typed VALUE kind per cycle after leftover_honest_list_filters exists | STOP; enum→json closed (oral #75–#84). New invent class or presentation STALE (oral #85) |
