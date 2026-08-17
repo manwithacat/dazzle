@@ -763,6 +763,16 @@ dialect formed — and where it started to Goodhart itself — is
     Bulk echo stays fail-closed (mutation). Standing refusals
     apply.
 
+77. **Leftover REST filter date VALUE invents empty.** Cycle 2196:
+    leftover-honest entity-id VALUES already existed (oral #76)
+    but ``?filter[created_at]=zzz`` (known key, leftover DATE
+    VALUE) still landed in REST ``filters`` and invented empty
+    via fail-closed date match. leftover_honest_iso_date already
+    exists (oral #70). Valid ISO dates / datetimes ride; leftover
+    restores unfiltered (omit). One-ship close of remaining GET
+    list date / datetime filter VALUES. Bulk echo stays
+    fail-closed (mutation). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -783,6 +793,7 @@ the end of every new oral *is* expensive — point here instead.
 | REST leftover filter[key] | Walk another GET list `filter[key]` parse after `leftover_honest_list_filters` exists | #74 |
 | REST leftover filter VALUE | Walk another GET list filter-enum value site after leftover-honest values exist | #75 |
 | REST leftover filter[id] VALUE | Walk another GET list entity-id filter value site after leftover-honest id values exist | #76 |
+| REST leftover filter date VALUE | Walk another GET list date / datetime filter value site after leftover-honest date values exist | #77 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -809,6 +820,7 @@ how the handbook was learned.
 | One GET list `filter[key]` parse after leftover-honest filters exist | Call `leftover_honest_list_filters` on remaining GET list endpoints, then STOP (oral #74) |
 | One GET list filter-enum VALUE after leftover-honest values exist | Call `_parse_list_filter_enum_values` / `entity_enum_filter_options` on remaining GET list endpoints, then STOP (oral #75) |
 | One GET list filter[id] VALUE after leftover-honest entity-id values exist | Call `leftover_honest_entity_id` / `entity_id_filter_fields` on remaining GET list endpoints, then STOP (oral #76) |
+| One GET list filter date VALUE after leftover-honest date values exist | Call `leftover_honest_iso_date` / `entity_date_filter_fields` on remaining GET list endpoints, then STOP (oral #77) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

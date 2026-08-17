@@ -280,6 +280,48 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"id": rid}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_date_value_does_not_invent(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(name="created_at", type=SimpleNamespace(kind="datetime")),
+            SimpleNamespace(name="due_date", type=SimpleNamespace(kind="date")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[created_at]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_date_value_rides(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="created_at", type=SimpleNamespace(kind="datetime")),
+            SimpleNamespace(name="due_date", type=SimpleNamespace(kind="date")),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[created_at]": "2026-07-01T09:00:00"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"created_at": "2026-07-01T09:00:00"}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

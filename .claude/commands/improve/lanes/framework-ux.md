@@ -74,6 +74,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_entity_id` / `entity_id_filter_fields`.
   Do **not** walk another GET list entity-id filter value
   site. Bulk echo stays fail-closed (mutation).
+- **REST leftover filter date VALUE** (`?filter[created_at]=zzz`
+  invents empty) closed cycle 2196 (oral #77). Helper:
+  `leftover_honest_iso_date` / `entity_date_filter_fields`.
+  Do **not** walk another GET list date / datetime filter
+  value site. Bulk echo stays fail-closed (mutation).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -148,6 +148,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_rest_list_filter_value_leftover.py",
     # cycle 2195: leftover REST ?filter[id]=zzz (known key, leftover UUID VALUE)
     "tests/unit/test_rest_list_filter_id_leftover.py",
+    # cycle 2196: leftover REST ?filter[created_at]=zzz (known key, leftover DATE VALUE)
+    "tests/unit/test_rest_list_filter_date_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

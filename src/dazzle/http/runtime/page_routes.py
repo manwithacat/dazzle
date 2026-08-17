@@ -350,10 +350,14 @@ def leftover_honest_list_filters(
     (``filter[status]=zzz``) restore unfiltered for that key
     (cycle 2194). Known entity-id keys with leftover UUID values
     (``filter[id]=zzz``) restore unfiltered (cycle 2195) — they
-    must not invent empty via fail-closed UUID match.
-    Valid declared options / UUIDs ride. leftover_honest_entity_id
-    already exists (oral #71). Oral #75 closed leftover filter-enum
-    VALUES; do not walk another GET list filter-enum value site.
+    must not invent empty via fail-closed UUID match. Known date /
+    datetime keys with leftover values (``filter[created_at]=zzz``)
+    restore unfiltered (cycle 2196) — they must not invent empty
+    via fail-closed date match. Valid declared options / UUIDs /
+    ISO dates ride. leftover_honest_entity_id already exists
+    (oral #71). leftover_honest_iso_date already exists (oral #70).
+    Oral #76 closed leftover entity-id VALUES; do not walk another
+    GET list entity-id filter value site.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
     if filter_fields:
@@ -374,7 +378,8 @@ def leftover_honest_list_filters(
                     out[name] = str(value)
     options = enum_options if enum_options is not None else entity_enum_filter_options(entity_spec)
     out = _parse_list_filter_enum_values(out, options)
-    return _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
+    out = _parse_list_filter_entity_id_values(out, entity_id_filter_fields(entity_spec))
+    return _parse_list_filter_date_values(out, entity_date_filter_fields(entity_spec))
 
 
 def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
@@ -457,6 +462,74 @@ def _parse_list_filter_entity_id_values(
             out[key] = val
             continue
         honest = leftover_honest_entity_id(val)
+        if honest:
+            out[key] = honest
+    return out
+
+
+_DATE_FILTER_KINDS = frozenset({"date", "datetime"})
+
+
+def entity_date_filter_fields(entity_spec: Any) -> dict[str, str]:
+    """Date / datetime filter keys mapped to ``date`` or ``datetime``."""
+    keys: dict[str, str] = {}
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        if not name:
+            continue
+        kind = getattr(getattr(spec_field, "type", None), "kind", None)
+        kind_s = str(getattr(kind, "value", kind) or "").lower()
+        if kind_s in _DATE_FILTER_KINDS:
+            keys[name] = kind_s
+    return keys
+
+
+def leftover_honest_filter_datetime(raw: Any) -> str:
+    """Valid YYYY-MM-DD or ISO datetime rides. Leftover junk restores "".
+
+    Date-only reuses leftover_honest_iso_date (oral #70). Datetime
+    ISO (``2026-07-01T09:00:00``) is a valid created_at VALUE and
+    must ride. Distinct from date-window leftover (oral #70) and
+    leftover entity-id VALUE (oral #76). Cycle 2196.
+    """
+    honest = leftover_honest_iso_date(raw)
+    if honest:
+        return honest
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return ""
+    from datetime import datetime as _dt
+
+    try:
+        _dt.fromisoformat(text.replace("Z", "+00:00") if text.endswith("Z") else text)
+    except (ValueError, TypeError):
+        return ""
+    return text
+
+
+def _parse_list_filter_date_values(
+    filters: dict[str, str],
+    date_fields: dict[str, str],
+) -> dict[str, str]:
+    """Leftover-honest date / datetime filter VALUES (cycle 2196).
+
+    Valid ISO dates ride. Leftover junk (``zzz``, ``ghost``,
+    ``not-a-date``) must not invent empty via fail-closed date
+    match. Empty rest is unfiltered (omit). Distinct from leftover
+    filter[id] VALUE (oral #76). leftover_honest_iso_date already
+    exists (oral #70).
+    """
+    out: dict[str, str] = {}
+    for key, val in filters.items():
+        kind = date_fields.get(key)
+        if not kind:
+            out[key] = val
+            continue
+        honest = (
+            leftover_honest_iso_date(val)
+            if kind == "date"
+            else leftover_honest_filter_datetime(val)
+        )
         if honest:
             out[key] = honest
     return out
