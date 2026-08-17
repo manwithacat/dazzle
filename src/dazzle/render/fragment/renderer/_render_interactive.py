@@ -74,6 +74,26 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
+def leftover_honest_entity_id(raw: Any) -> str:
+    """Valid entity UUID rides. Leftover junk / empty restores "".
+
+    ``?context_id=zzz`` used to invent ``current_context`` and empty
+    collections (live support_tickets ``agent_console``). Rest is
+    unbound (omit). Distinct from leftover catalog id (oral #69) and
+    leftover date window (oral #70). Cycle 2187.
+    """
+    text = str(raw if raw is not None else "").strip()
+    if not text:
+        return ""
+    from uuid import UUID as _UUID
+
+    try:
+        _UUID(text)
+    except (ValueError, TypeError, AttributeError):
+        return ""
+    return text
+
+
 def leftover_honest_iso_date(raw: Any) -> str:
     """Valid YYYY-MM-DD rides. Leftover junk / empty restores "".
 

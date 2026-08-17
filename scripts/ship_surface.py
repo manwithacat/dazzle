@@ -130,6 +130,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_catalog_sibling_leftover.py",
     # cycle 2186: leftover date_from / date_to must not invent empty window
     "tests/unit/test_date_window_leftover.py",
+    # cycle 2187: leftover ?context_id= must not invent current_context
+    "tests/unit/test_context_id_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

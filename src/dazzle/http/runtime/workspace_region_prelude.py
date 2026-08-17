@@ -28,6 +28,7 @@ from dazzle.http.runtime.tenant_isolation import (
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_user import _resolve_workspace_user
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_entity_id
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +150,7 @@ async def resolve_request_user_context(
     from dazzle.http.runtime.tenant_render_context import inject_current_tenant
 
     inject_current_tenant(filter_context, request)
-    context_id = request.query_params.get("context_id")
-    if context_id:
-        filter_context["current_context"] = context_id
+    apply_leftover_honest_context_id(request.query_params, filter_context)
 
     # Step 5: pre-fetch active grants for `has_grant()` condition
     # evaluation (v0.42.0). Best-effort — grant tables may not
@@ -192,3 +191,20 @@ async def resolve_request_user_context(
         auth_ctx_for_filters=auth_ctx_for_filters,
         filter_context=filter_context,
     )
+
+
+def apply_leftover_honest_context_id(
+    query_params: Any,
+    filter_context: dict[str, Any],
+) -> None:
+    """Fold leftover-honest ``context_id`` into ``filter_context``.
+
+    Leftover junk (``zzz``, ``ghost``, ``not-a-uuid``) used to invent
+    ``current_context`` and empty collections (cycle 2187). Valid UUID
+    still scopes. Rest is unbound (omit). Live in support_tickets
+    ``agent_console``.
+    """
+    raw = query_params.get("context_id") if query_params is not None else None
+    context_id = leftover_honest_entity_id(raw)
+    if context_id:
+        filter_context["current_context"] = context_id

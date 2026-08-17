@@ -698,6 +698,15 @@ dialect formed — and where it started to Goodhart itself — is
     DateRangePicker companion parse-invent (oral #42).
     Standing refusals apply.
 
+71. **Leftover context_id invents current_context.** Cycle 2187:
+    ``?context_id=zzz`` landed in
+    ``filter_context["current_context"]`` (workspace_region_prelude)
+    and invented an empty / wrong slice. Valid UUID still scopes
+    via ``leftover_honest_entity_id``. Rest is unbound (omit).
+    Live in support_tickets ``agent_console``. Distinct from leftover
+    catalog id (oral #69) and leftover date window (oral #70).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -712,6 +721,7 @@ the end of every new oral *is* expensive — point here instead.
 | Temporal echo | Walk the next list/grid `hx-get` for `include_closed` / `as_of` after the helper exists | #67 |
 | Catalog leftover | Walk the next tab / view / filter-enum / lens site after `leftover_honest_catalog_id` exists | #69 |
 | Date-window leftover | Walk the next `date_from` / `date_to` site after `leftover_honest_iso_date` exists | #70 |
+| Entity-id leftover | Walk the next `context_id` / `?id=` site after `leftover_honest_entity_id` exists | #71 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -732,6 +742,7 @@ how the handbook was learned.
 | One `hx-get` sibling per cycle after the helper exists | Call `leftover_honest_temporal_query` on remaining emitters in one ship, then STOP (oral #67) |
 | One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
 | One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
+| One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

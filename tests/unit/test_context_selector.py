@@ -219,24 +219,27 @@ class TestRegionContextIdPropagation:
         from unittest.mock import MagicMock
 
         request = MagicMock()
-        request.query_params = {"context_id": "sch-42"}
+        request.query_params = {"context_id": "550e8400-e29b-41d4-a716-446655440000"}
 
-        # Simulate the filter context building logic
+        from dazzle.http.runtime.workspace_region_prelude import (
+            apply_leftover_honest_context_id,
+        )
+
         _filter_context: dict[str, Any] = {}
-        _context_id = request.query_params.get("context_id")
-        if _context_id:
-            _filter_context["current_context"] = _context_id
+        apply_leftover_honest_context_id(request.query_params, _filter_context)
 
-        assert _filter_context == {"current_context": "sch-42"}
+        assert _filter_context == {"current_context": "550e8400-e29b-41d4-a716-446655440000"}
 
     def test_no_context_id_no_filter(self) -> None:
         request = MagicMock()
         request.query_params = {}
 
+        from dazzle.http.runtime.workspace_region_prelude import (
+            apply_leftover_honest_context_id,
+        )
+
         _filter_context: dict[str, Any] = {}
-        _context_id = request.query_params.get("context_id")
-        if _context_id:
-            _filter_context["current_context"] = _context_id
+        apply_leftover_honest_context_id(request.query_params, _filter_context)
 
         assert _filter_context == {}
 

@@ -194,7 +194,14 @@ as `{date_field}__gte` invented an empty collection while the
 picker looked unbounded. Helper: `leftover_honest_iso_date`
 (oral #70). Do not walk another bound site.
 
-Person-as-text was a brief fourth clan: do not mint an avatar
+**Entity id (query).** `context_id` is a workspace context-selector
+PK, not a catalog sibling and not a date bound. Leftover junk
+forwarded as `current_context` invented an empty / wrong slice
+while the selector looked unbound. Helper:
+`leftover_honest_entity_id` (oral #71). Do not walk another
+entity-id query param.
+
+Person-as-text was a brief fifth clan: do not mint an avatar
 chip from the bare string `Ada`. It closed when every host that
 needed `present()` was wired. It did not spawn a sibling walk.
 
