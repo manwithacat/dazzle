@@ -138,6 +138,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_filter_enum_fetch_leftover.py",
     # cycle 2191: leftover workspace/REST ?sort= must not invent empty via fail-closed
     "tests/unit/test_region_sort_leftover.py",
+    # cycle 2192: REST list leftover-honest sort must still ride known fields
+    # (2191 pack missed TestListHandlerSort mocks without entity_spec)
+    "tests/unit/test_datatable_handler.py::TestListHandlerSort",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

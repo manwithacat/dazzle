@@ -1,5 +1,6 @@
 """Tests for DataTable sort/filter/search query parameter handling."""
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -38,6 +39,18 @@ def _make_service(items: list[dict[str, Any]] | None = None) -> AsyncMock:
             "page": 1,
             "page_size": 20,
         }
+    )
+    # Leftover-honest REST sort (cycle 2191) reads entity_spec.fields.
+    # AsyncMock would invent a spec without names and drop known sorts.
+    svc.entity_spec = SimpleNamespace(
+        fields=[
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(name="name"),
+            SimpleNamespace(name="status"),
+            SimpleNamespace(name="priority"),
+        ],
+        temporal=None,
     )
     return svc
 
@@ -107,6 +120,22 @@ class TestListHandlerSort:
 
         request = _make_request()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["sort"] is None
+
+    @pytest.mark.asyncio
+    async def test_handler_leftover_sort_does_not_invent(self) -> None:
+        service = _make_service()
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request()
+        await handler(request=request, page=1, page_size=20, sort="zzz", dir="desc", search=None)
 
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["sort"] is None
