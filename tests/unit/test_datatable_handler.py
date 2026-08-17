@@ -200,6 +200,53 @@ class TestListHandlerFilter:
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["filters"] == {"status": "open"}
 
+    @pytest.mark.asyncio
+    async def test_handler_leftover_filter_value_does_not_invent(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(name="id"),
+            SimpleNamespace(name="title"),
+            SimpleNamespace(
+                name="status",
+                type=SimpleNamespace(enum_values=["open", "in_progress", "resolved", "closed"]),
+            ),
+            SimpleNamespace(name="priority"),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[status]": "zzz", "filter[title]": "Ada"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"title": "Ada"}
+
+    @pytest.mark.asyncio
+    async def test_handler_valid_filter_enum_value_rides(self) -> None:
+        service = _make_service()
+        service.entity_spec.fields = [
+            SimpleNamespace(
+                name="status",
+                type=SimpleNamespace(enum_values=["open", "in_progress", "resolved", "closed"]),
+            ),
+        ]
+        handler = create_list_handler(
+            RouteSpec(
+                handler=HandlerConfig(),
+                service=service,
+            ),
+        )
+
+        request = _make_request(query_params={"filter[status]": "resolved"})
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        call_kwargs = service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"status": "resolved"}
+
 
 class TestListHandlerSearch:
     """Verify search query param is forwarded to the service."""

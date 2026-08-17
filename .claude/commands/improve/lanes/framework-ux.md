@@ -63,6 +63,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_list_filters` / `_parse_list_filters`. Do
   **not** walk another GET list `filter[key]` parse. Bulk echo
   stays fail-closed (mutation).
+- **REST leftover filter VALUE** (`?filter[status]=zzz` invents
+  empty) closed cycle 2194 (oral #75). Helper:
+  `_parse_list_filter_enum_values` /
+  `entity_enum_filter_options`. Do **not** walk another GET
+  list filter-enum value site. Bulk echo stays fail-closed
+  (mutation).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

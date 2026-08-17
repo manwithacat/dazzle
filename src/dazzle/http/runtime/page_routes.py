@@ -339,30 +339,51 @@ def leftover_honest_list_filters(
     *,
     allowed: frozenset[str],
     filter_fields: list[str] | None = None,
+    entity_spec: Any = None,
+    enum_options: dict[str, tuple[str, ...]] | None = None,
 ) -> dict[str, str]:
-    """Leftover-honest REST ``filter[key]`` + bare ``?field=`` (cycle 2193).
+    """Leftover-honest REST ``filter[key]`` + leftover-honest enum VALUES.
 
-    Empty / invalid / unknown keys are dropped. Known fields still
-    filter. REST ``list_handlers`` used to copy raw ``filter[zzz]``
-    into ``gated_list`` and invent empty via fail-closed unknown
-    column. Page leftover-honest ``filter[key]`` already exists
-    (``_parse_list_filters`` / oral #48).
+    Empty / invalid / unknown keys (``filter[zzz]``) are dropped
+    (cycle 2193). Known keys with leftover values
+    (``filter[status]=zzz``) restore unfiltered for that key —
+    they must not invent empty via fail-closed enum match
+    (cycle 2194). Valid declared options ride. Page leftover-honest
+    enum values already exist (``_parse_list_filter_enum_values`` /
+    oral #69). Oral #74 closed leftover keys; do not walk another
+    ``filter[key]`` parse.
     """
     out = _parse_list_filters(query_params, allowed=allowed)
-    if not filter_fields:
-        return out
-    items = getattr(query_params, "items", None)
-    if items is None:
-        return out
-    declared = {str(name) for name in filter_fields if name}
-    for key, value in items():
-        if not value:
-            continue
-        name = str(key)
-        if name in _LIST_FILTER_RESERVED or name in out:
-            continue
-        if name in declared and _list_ident_path(name) and _list_filter_field_known(name, allowed):
-            out[name] = str(value)
+    if filter_fields:
+        items = getattr(query_params, "items", None)
+        if items is not None:
+            declared = {str(name) for name in filter_fields if name}
+            for key, value in items():
+                if not value:
+                    continue
+                name = str(key)
+                if name in _LIST_FILTER_RESERVED or name in out:
+                    continue
+                if (
+                    name in declared
+                    and _list_ident_path(name)
+                    and _list_filter_field_known(name, allowed)
+                ):
+                    out[name] = str(value)
+    options = enum_options if enum_options is not None else entity_enum_filter_options(entity_spec)
+    return _parse_list_filter_enum_values(out, options)
+
+
+def entity_enum_filter_options(entity_spec: Any) -> dict[str, tuple[str, ...]]:
+    """Declared enum catalogs keyed by entity field name."""
+    out: dict[str, tuple[str, ...]] = {}
+    for spec_field in getattr(entity_spec, "fields", None) or ():
+        name = str(getattr(spec_field, "name", "") or "")
+        opts = leftover_honest_catalog_option_values(
+            getattr(getattr(spec_field, "type", None), "enum_values", None)
+        )
+        if name and opts:
+            out[name] = opts
     return out
 
 

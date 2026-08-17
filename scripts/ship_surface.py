@@ -144,6 +144,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2193: leftover REST ?filter[zzz]= must not invent empty via fail-closed
     "tests/unit/test_rest_list_filter_leftover.py",
     "tests/unit/test_datatable_handler.py::TestListHandlerFilter",
+    # cycle 2194: leftover REST ?filter[status]=zzz (known key, leftover VALUE)
+    "tests/unit/test_rest_list_filter_value_leftover.py",
     # cycle 2183: dashboard-card + master-detail leftover temporal (class close)
     "tests/unit/test_dashboard_card_temporal_leftover.py",
     "tests/unit/test_dual_pane_master_detail.py::test_master_detail_list_echoes_leftover_honest_temporal",

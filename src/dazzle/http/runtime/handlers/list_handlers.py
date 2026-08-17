@@ -584,16 +584,20 @@ async def _list_handler_body(
     # kept distinct because the HTMX table renders it as `filter_values` (it must
     # NOT include the temporal repository keys below). `_gated_filters` is what
     # gated_list merges over scope: the field filters PLUS any temporal keys.
-    # Leftover-honest filter keys (cycle 2193). Raw ``filter[zzz]`` used
-    # to reach gated_list / repo.list and invent empty via fail-closed
-    # unknown column. Valid entity / DSL filter fields ride; leftover
-    # keys restore unfiltered (omit). Page leftover-honest filter
-    # already exists (``_parse_list_filters`` / oral #48).
+    # Leftover-honest filter keys (cycle 2193) + leftover-honest enum
+    # VALUES (cycle 2194). Raw ``filter[zzz]`` invented empty via
+    # unknown column; leftover ``filter[status]=zzz`` (known key)
+    # invented empty via fail-closed enum match. Valid keys / declared
+    # options ride; leftover restores unfiltered (omit). Page
+    # leftover-honest enum values already exist
+    # (``_parse_list_filter_enum_values`` / oral #69). Oral #74 —
+    # do not walk another ``filter[key]`` parse.
     _filter_extra = [str(s) for s in (*(search_fields or ()), *(filter_fields or ())) if s]
     filters: dict[str, Any] = leftover_honest_list_filters(
         request.query_params,
         allowed=entity_known_sort_fields(getattr(service, "entity_spec", None), _filter_extra),
         filter_fields=filter_fields,
+        entity_spec=getattr(service, "entity_spec", None),
     )
 
     # #1223 Phase 3a.iv — read the temporal `?as_of=` / `?include_closed=` RAW
