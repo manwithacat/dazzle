@@ -21,8 +21,9 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
+from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.mailer import get_mailer
 
 _logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def create_password_reset_routes() -> APIRouter:
     async def submit_forgot_password(
         request: Request,
         email: Annotated[str, Form()] = "",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Issue a password-reset token for the supplied email.
 
         Account-enumeration safe: ALWAYS redirects to
@@ -54,7 +55,10 @@ def create_password_reset_routes() -> APIRouter:
         """
         auth_store = request.app.state.auth_store
         mailer = get_mailer(request.app.state)
-        normalized_email = email.strip().lower()
+        # Leftover ``email=zzz`` used to invent /forgot-password/sent.
+        normalized_email = leftover_auth_email_or_400(email)
+        if not isinstance(normalized_email, str):
+            return normalized_email
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
             if user is not None and getattr(user, "is_active", True):

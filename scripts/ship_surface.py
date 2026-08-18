@@ -200,6 +200,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scim_operations_leftover.py",
     # cycle 2232: leftover SCIM displayName must not invent a group / str() rename
     "tests/unit/test_scim_displayname_leftover.py",
+    # cycle 2233: leftover auth email must not invent sent theater / persist / default IdP
+    "tests/unit/test_auth_email_leftover.py",
     # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",

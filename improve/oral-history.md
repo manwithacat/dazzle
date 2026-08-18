@@ -1055,6 +1055,21 @@ dialect formed — and where it started to Goodhart itself — is
     ``Operations`` (oral #103) and leftover ``members``
     (oral #101). Live SCIM Groups. Standing refusals apply.
 
+105. **Auth leftover email invents sent theater / persist / default
+    IdP.** Cycle 2233: leftover ``email=zzz`` / ``ghost`` /
+    ``zzz@ghost`` on magic-link login/signup invented
+    ``/login/sent`` (unknown omit). The same leftover on
+    forgot-password invented ``/forgot-password/sent``; on
+    invite invented a persist; on password login/signup
+    invented ``invalid_credentials`` / ``invalid_email``; on
+    enterprise/SAML ``?email=`` invented the host-pinned
+    default IdP (no ``@`` treated as absent). Valid mailboxes
+    ride via ``leftover_honest_auth_email``. Absent / blank
+    still first-visit. Leftover stays put (400). Distinct
+    from leftover GET list email VALUE (oral #80) and leftover
+    SCIM userName (oral #102). Live simple_task
+    ``/auth/login/magic-link``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1103,6 +1118,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover userName / emails | Walk another SCIM ``userName`` / ``emails`` body site after leftover_honest_scim_username exists | #102 |
 | SCIM leftover Operations | Walk another SCIM PATCH ``Operations`` site after leftover_honest_scim_operations exists | #103 |
 | SCIM leftover displayName | Walk another SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | #104 |
+| Auth leftover email | Walk another identity-email site after leftover_honest_auth_email exists | #105 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from fastapi.responses import HTMLResponse
+
 from dazzle.render.fragment import (
     URL,
     EmptyState,
@@ -131,6 +133,48 @@ def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
 
 # secrets.token_urlsafe(32) — session ids, reset tokens, invitation tokens.
 _AUTH_URLSAFE_TOKEN = re.compile(r"\A[A-Za-z0-9_-]{32,256}\Z")
+# Mailbox shape for leftover-honest identity email (same as SCIM / filter).
+_AUTH_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def leftover_honest_auth_email(raw: Any) -> str | None:
+    """Valid mailbox emails ride. Leftover junk restores None.
+
+    Leftover ``email=zzz`` / ``ghost`` / ``zzz@ghost`` on magic-link
+    login/signup used to invent ``/login/sent`` theater (nonempty
+    leftover omitted as unknown). The same leftover on
+    forgot-password invented ``/forgot-password/sent``. Leftover
+    on invite invented a persist. Leftover ``?email=zzz`` on
+    enterprise/SAML login invented the host-pinned default IdP
+    (no ``@`` treated as absent). Valid mailboxes ride
+    (lowercased). Absent / blank is the honest first-visit
+    default (``""``). Rest is stay-put (None → 400). Distinct
+    from leftover GET list email VALUE (oral #80) and leftover
+    SCIM userName (oral #102). Live simple_task
+    ``/auth/login/magic-link``. Cycle 2233.
+    """
+    if raw is None:
+        return ""
+    if type(raw) is not str:
+        return None
+    text = raw.strip()
+    if not text:
+        return ""
+    if not _AUTH_EMAIL.fullmatch(text):
+        return None
+    return text.lower()
+
+
+def leftover_auth_email_or_400(raw: Any) -> str | HTMLResponse:
+    """Stay-put 400 when leftover email would invent. Valid / absent ride.
+
+    HTMLResponse (not Response(content=)) — oral #93. Callers return the
+    response as-is when it is not a str.
+    """
+    honest = leftover_honest_auth_email(raw)
+    if honest is None:
+        return HTMLResponse("Invalid email", status_code=400)
+    return honest
 
 
 def leftover_honest_auth_token(raw: Any) -> str | None:

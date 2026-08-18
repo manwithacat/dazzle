@@ -16,6 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.member_admin import (
     declared_persona_ids,
@@ -68,7 +69,11 @@ def create_invitation_routes() -> APIRouter:
             return HTMLResponse(
                 "Forbidden — you cannot manage members of this organization", status_code=403
             )
-        if not email.strip():
+        # Leftover ``email=zzz`` used to invent an invitation persist.
+        honest_email = leftover_auth_email_or_400(email)
+        if not isinstance(honest_email, str):
+            return honest_email
+        if not honest_email:
             return HTMLResponse("Email required", status_code=400)
 
         declared = declared_persona_ids(getattr(request.app.state, "appspec", None))
@@ -77,19 +82,19 @@ def create_invitation_routes() -> APIRouter:
         org_id = ctx.active_membership.tenant_id
         role_list = list(leftover_honest_persona_roles(roles, declared))
         token = create_invitation(
-            store, org_id=org_id, email=email, roles=role_list, invited_by=str(ctx.user.id)
+            store, org_id=org_id, email=honest_email, roles=role_list, invited_by=str(ctx.user.id)
         )
         org = store.get_organization(org_id)
         org_name = org.name if org is not None else org_id
         accept_url = f"{str(request.base_url).rstrip('/')}/auth/accept-invite/{token}"
         get_invitation_mailer(request.app.state).send_invitation(
-            to_email=email.strip().lower(), accept_url=accept_url, org_name=org_name
+            to_email=honest_email, accept_url=accept_url, org_name=org_name
         )
         return HTMLResponse(
             FragmentRenderer().render(
                 build_invite_result_view(
                     product_name=_product_name(request),
-                    message=f"Invitation sent to {email.strip().lower()}.",
+                    message=f"Invitation sent to {honest_email}.",
                 )
             )
         )

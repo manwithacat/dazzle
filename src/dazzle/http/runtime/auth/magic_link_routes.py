@@ -17,6 +17,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
+from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.magic_link import (
@@ -167,7 +168,7 @@ def create_magic_link_routes() -> APIRouter:
         request: Request,
         email: Annotated[str, Form()] = "",
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Issue a magic-link login token for the supplied email.
 
         Phase 1.A (v0.67.29) of the Jinja2 retirement plan:
@@ -196,7 +197,10 @@ def create_magic_link_routes() -> APIRouter:
         """
         auth_store = request.app.state.auth_store
         mailer = get_mailer(request.app.state)
-        normalized_email = email.strip().lower()
+        # Leftover ``email=zzz`` used to invent /login/sent theater.
+        normalized_email = leftover_auth_email_or_400(email)
+        if not isinstance(normalized_email, str):
+            return normalized_email
         if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
             if user is not None:
@@ -230,7 +234,7 @@ def create_magic_link_routes() -> APIRouter:
         email: Annotated[str, Form()] = "",
         name: Annotated[str, Form()] = "",
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Issue a magic-link for signup (#1037 Phase 1.B, v0.67.30).
 
         Behaviour:
@@ -255,10 +259,14 @@ def create_magic_link_routes() -> APIRouter:
         """
         auth_store = request.app.state.auth_store
         mailer = get_mailer(request.app.state)
-        normalized_email = email.strip().lower()
+        # Leftover ``email=zzz`` used to invent /login/sent theater
+        # (malformed omitted as unknown).
+        normalized_email = leftover_auth_email_or_400(email)
+        if not isinstance(normalized_email, str):
+            return normalized_email
         normalized_name = name.strip()
 
-        if normalized_email and "@" in normalized_email:
+        if normalized_email:
             user = auth_store.get_user_by_email(normalized_email)
             if user is None:
                 # Create passwordless user. Random password fills

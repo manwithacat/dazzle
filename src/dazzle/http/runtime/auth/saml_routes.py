@@ -21,6 +21,7 @@ from typing import Annotated, Any, Protocol, cast
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
+from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
 from dazzle.http.runtime.auth.cookie_name import names_to_clear
 from dazzle.http.runtime.auth.enterprise_login import (
@@ -76,10 +77,17 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         connection: Annotated[str, Query()] = "",
         email: Annotated[str, Query()] = "",
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Resolve the org's SAML connection and redirect to its IdP."""
         store = request.app.state.auth_store
-        conn = _resolve_saml_connection(store, request, connection_id=connection, email=email)
+        # Leftover ``?email=zzz`` used to invent the host-pinned IdP
+        # (no ``@`` treated as absent).
+        honest_email = leftover_auth_email_or_400(email)
+        if not isinstance(honest_email, str):
+            return honest_email
+        conn = _resolve_saml_connection(
+            store, request, connection_id=connection, email=honest_email
+        )
         if conn is None or conn.type != "saml" or conn.status != "active":
             return RedirectResponse(url="/login?error=sso_no_connection", status_code=303)
         try:

@@ -19,6 +19,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
+from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
@@ -104,7 +105,10 @@ def create_password_login_routes() -> APIRouter:
         view (Phase 1.D, future ship) consumes the pending session.
         """
         auth_store = request.app.state.auth_store
-        normalized_email = email.strip().lower()
+        # Leftover ``email=zzz`` used to invent invalid_credentials.
+        normalized_email = leftover_auth_email_or_400(email)
+        if not isinstance(normalized_email, str):
+            return normalized_email
         user = auth_store.authenticate(normalized_email, password) if password else None
         if user is None:
             target = "/login?error=invalid_credentials"
@@ -198,10 +202,13 @@ def create_password_login_routes() -> APIRouter:
             return RedirectResponse(url="/signup?error=mismatch", status_code=303)
 
         auth_store = request.app.state.auth_store
-        normalized_email = email.strip().lower()
+        # Leftover ``email=zzz`` used to invent /signup?error=invalid_email.
+        normalized_email = leftover_auth_email_or_400(email)
+        if not isinstance(normalized_email, str):
+            return normalized_email
         normalized_name = name.strip() or None
 
-        if not normalized_email or "@" not in normalized_email:
+        if not normalized_email:
             return RedirectResponse(url="/signup?error=invalid_email", status_code=303)
 
         existing = auth_store.get_user_by_email(normalized_email)
