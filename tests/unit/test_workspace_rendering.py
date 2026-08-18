@@ -9,7 +9,7 @@ Covers:
 - Cross-entity action URL resolution
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -262,18 +262,18 @@ class TestTimeagoFilter:
     def test_seconds_ago(self) -> None:
         from dazzle.render.filters import _timeago_filter
 
-        dt = datetime.now() - timedelta(seconds=30)
+        dt = datetime.now(UTC) - timedelta(seconds=30)
         result = _timeago_filter(dt)
         assert "seconds ago" in result
 
     @pytest.mark.parametrize(
         ("input_factory", "expected"),
         [
-            (lambda: datetime.now() - timedelta(hours=3), "3 hours ago"),
-            (lambda: datetime.now() - timedelta(days=5), "5 days ago"),
+            (lambda: datetime.now(UTC) - timedelta(hours=3), "3 hours ago"),
+            (lambda: datetime.now(UTC) - timedelta(days=5), "5 days ago"),
             (lambda: "not-a-date", "not-a-date"),
             (lambda: None, ""),
-            (lambda: (datetime.now() - timedelta(minutes=10)).isoformat(), "10 minutes ago"),
+            (lambda: (datetime.now(UTC) - timedelta(minutes=10)).isoformat(), "10 minutes ago"),
         ],
         ids=[
             "test_hours_ago",
@@ -312,12 +312,24 @@ class TestTimeagoFilter:
         from dazzle.render.filters import _timeago_filter
 
         # Pad the delta so integer-second flooring cannot drop a bucket.
-        hours = _timeago_filter(datetime.now() + timedelta(hours=3, minutes=5))
-        minutes = _timeago_filter(datetime.now() + timedelta(minutes=10, seconds=5))
+        hours = _timeago_filter(datetime.now(UTC) + timedelta(hours=3, minutes=5))
+        minutes = _timeago_filter(datetime.now(UTC) + timedelta(minutes=10, seconds=5))
         assert hours == "in 3 hours"
         assert minutes == "in 10 minutes"
         assert "just now" not in hours
         assert "just now" not in minutes
+
+    def test_naive_utc_does_not_invent_elapsed_vs_wall_now(self) -> None:
+        """Naive datetimes are UTC storage — wall ``datetime.now()`` must
+        not invent elapsed time by the TZ offset (oral #124)."""
+        from dazzle.render.filters import _timeago_filter
+
+        aware = datetime.now(UTC) - timedelta(minutes=30, seconds=5)
+        naive = aware.replace(tzinfo=None)
+        zulu = aware.strftime("%Y-%m-%dT%H:%M:%SZ")
+        assert _timeago_filter(aware) == "30 minutes ago"
+        assert _timeago_filter(naive) == "30 minutes ago"
+        assert _timeago_filter(zulu) == "30 minutes ago"
 
     def test_leftover_stays_put(self) -> None:
         from dazzle.render.filters import _timeago_filter

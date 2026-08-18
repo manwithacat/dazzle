@@ -1309,6 +1309,16 @@ dialect formed — and where it started to Goodhart itself — is
     Not leftover-token stay-put (oral #121). Not CSV money/dict
     (oral #122). Standing refusals apply.
 
+124. **Timeago naive-UTC invents elapsed wall time.** Queue /
+    card / activity ``created_at`` (datetime) ran ``_timeago_filter``,
+    which compared naive storage to ``datetime.now()`` (machine wall).
+    Storage convention is naive = UTC (#1597). On a BST host a comment
+    posted 30 minutes ago invented ``1 hour ago`` (offset folded into
+    age). Cycle 2255: datetimes compare UTC-to-UTC; leftover stays
+    put; calendar dates stay on oral #123. Live support_tickets
+    ``display: activity_feed`` + simple_task conversation
+    ``created_at``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1376,6 +1386,7 @@ the end of every new oral *is* expensive — point here instead.
 | Leftover-token cadence | Walk another leftover string stay-put as the default mutation after a leftover-honest self-audit window (≥10 leftover ships) | #121 |
 | CSV money / dict invent | Walk another leftover-token stay-put instead of clerk-facing CSV money / ``str(dict)`` | #122 |
 | Timeago future-as-just-now | Walk another leftover-token stay-put or CSV money clone instead of due-date timeago invent | #123 |
+| Timeago naive-UTC vs wall-now | Walk another leftover-token stay-put, CSV money clone, or calendar just-now instead of UTC elapsed invent | #124 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

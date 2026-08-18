@@ -10,7 +10,7 @@ cycle (issue #1090 / parent #1086).
 from __future__ import annotations
 
 import re as _re
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from markupsafe import Markup
@@ -336,12 +336,21 @@ def _elapsed_label(seconds: int, *, future: bool) -> str:
     return f"in {count} {noun}" if future else f"{count} {noun} ago"
 
 
+def _as_utc(dt: datetime) -> datetime:
+    """Treat naive datetimes as UTC storage (#1597 / oral #124)."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
 def _timeago_filter(value: Any) -> str:
     """Relative label for queue/card/timeline dates.
 
     Calendar dates (``date`` / ``YYYY-MM-DD``) use tenant-today relative
     labels so a future due date cannot invent ``just now`` (oral #123).
-    Future datetimes use ``in N units``. Leftover junk stays put.
+    Datetimes compare UTC-to-UTC so naive storage cannot invent elapsed
+    time against wall ``datetime.now()`` (oral #124). Future instants
+    use ``in N units``. Leftover junk stays put.
     """
     if value is None or value == "":
         return ""
@@ -360,10 +369,7 @@ def _timeago_filter(value: Any) -> str:
         return str(value)
     if dt is None:
         return str(value)
-    now = datetime.now()
-    if dt.tzinfo is not None:
-        dt = dt.astimezone().replace(tzinfo=None)
-    seconds = int((now - dt).total_seconds())
+    seconds = int((datetime.now(UTC) - _as_utc(dt)).total_seconds())
     if seconds < 0:
         return _elapsed_label(-seconds, future=True)
     return _elapsed_label(seconds, future=False)

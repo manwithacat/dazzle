@@ -119,6 +119,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_due_today_is_today",
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_datetime_does_not_invent_just_now",
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_leftover_stays_put",
+    # cycle 2255: timeago naive UTC must not invent elapsed vs wall now (oral #124)
+    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_naive_utc_does_not_invent_elapsed_vs_wall_now",
     # cycle 2175: list-region _emit_pagination hx-get drops include_closed / as_of
     "tests/unit/test_list_pagination_temporal_leftover.py",
     # cycle 2177: infinite-scroll sentinel _build_table_url_params drops include_closed / as_of
