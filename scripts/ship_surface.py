@@ -114,6 +114,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_csv_export.py::test_csv_money_minor_does_not_invent_raw_pence",
     "tests/unit/test_csv_export.py::test_csv_leftover_money_stays_put",
     "tests/unit/test_csv_export.py::test_csv_dict_ref_does_not_invent_repr",
+    # cycle 2254: timeago future due dates must not invent just now (oral #123)
+    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_date_does_not_invent_just_now",
+    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_due_today_is_today",
+    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_datetime_does_not_invent_just_now",
+    "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_leftover_stays_put",
     # cycle 2175: list-region _emit_pagination hx-get drops include_closed / as_of
     "tests/unit/test_list_pagination_temporal_leftover.py",
     # cycle 2177: infinite-scroll sentinel _build_table_url_params drops include_closed / as_of

@@ -1297,6 +1297,18 @@ dialect formed — and where it started to Goodhart itself — is
     invoice_ops money lists. Do **not** walk another leftover
     string stay-put. Standing refusals apply.
 
+123. **Timeago invents just now for a future due date.** Queue /
+    card / kanban ``type=date`` columns ran ``_timeago_filter``,
+    which compared calendar midnight to ``datetime.now()`` and
+    mapped any future delta to ``just now``. Live simple_task
+    ``Task.due_date`` (and project_tracker due dates) therefore
+    invented present-tense for tomorrow / next week. Cycle 2254:
+    calendar dates use tenant-today relative labels (``today`` /
+    ``tomorrow`` / ``yesterday`` / ``in N days``); future
+    datetimes use ``in N units``; leftover ``zzz`` stays put.
+    Not leftover-token stay-put (oral #121). Not CSV money/dict
+    (oral #122). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1363,6 +1375,7 @@ the end of every new oral *is* expensive — point here instead.
 | File leftover entity | Walk another leftover file ``?entity=`` persist after leftover_honest_file_entity exists | #120 |
 | Leftover-token cadence | Walk another leftover string stay-put as the default mutation after a leftover-honest self-audit window (≥10 leftover ships) | #121 |
 | CSV money / dict invent | Walk another leftover-token stay-put instead of clerk-facing CSV money / ``str(dict)`` | #122 |
+| Timeago future-as-just-now | Walk another leftover-token stay-put or CSV money clone instead of due-date timeago invent | #123 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

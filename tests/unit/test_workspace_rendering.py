@@ -288,6 +288,44 @@ class TestTimeagoFilter:
 
         assert _timeago_filter(input_factory()) == expected
 
+    def test_future_date_does_not_invent_just_now(self) -> None:
+        """Calendar due dates must not invent 'just now' (oral #123)."""
+        from dazzle.i18n.display_locale import calendar_today
+        from dazzle.render.filters import _timeago_filter
+
+        tomorrow = calendar_today() + timedelta(days=1)
+        later = calendar_today() + timedelta(days=5)
+        assert _timeago_filter(tomorrow) == "tomorrow"
+        assert _timeago_filter(later) == "in 5 days"
+        assert _timeago_filter(tomorrow.isoformat()) == "tomorrow"
+
+    def test_due_today_is_today(self) -> None:
+        from dazzle.i18n.display_locale import calendar_today
+        from dazzle.render.filters import _timeago_filter
+
+        today = calendar_today()
+        yesterday = today - timedelta(days=1)
+        assert _timeago_filter(today) == "today"
+        assert _timeago_filter(yesterday) == "yesterday"
+
+    def test_future_datetime_does_not_invent_just_now(self) -> None:
+        from dazzle.render.filters import _timeago_filter
+
+        # Pad the delta so integer-second flooring cannot drop a bucket.
+        hours = _timeago_filter(datetime.now() + timedelta(hours=3, minutes=5))
+        minutes = _timeago_filter(datetime.now() + timedelta(minutes=10, seconds=5))
+        assert hours == "in 3 hours"
+        assert minutes == "in 10 minutes"
+        assert "just now" not in hours
+        assert "just now" not in minutes
+
+    def test_leftover_stays_put(self) -> None:
+        from dazzle.render.filters import _timeago_filter
+
+        assert _timeago_filter("zzz") == "zzz"
+        assert _timeago_filter("ghost") == "ghost"
+        assert _timeago_filter("12abc") == "12abc"
+
 
 # ===========================================================================
 # TestAttentionHighlighting

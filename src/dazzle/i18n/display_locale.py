@@ -149,6 +149,28 @@ def calendar_today() -> date:
     return get_display_locale().today()
 
 
+def relative_day_label(value: date | datetime, profile: DisplayLocaleProfile | None = None) -> str:
+    """Clerk-facing calendar relative: today / tomorrow / yesterday / in N days.
+
+    Shared by ``format: relative`` and queue/card timeago so a future due
+    date cannot invent ``just now`` (oral #123). Pure dates do not TZ-shift;
+    datetimes use tenant-today.
+    """
+    prof = profile if profile is not None else get_display_locale()
+    if isinstance(value, datetime):
+        day = prof.to_display_datetime(value).date()
+    else:
+        day = value
+    delta = (day - prof.today()).days
+    if delta == 0:
+        return "today"
+    if delta == 1:
+        return "tomorrow"
+    if delta == -1:
+        return "yesterday"
+    return f"{-delta} days ago" if delta < 0 else f"in {delta} days"
+
+
 def as_calendar_date(value: Any) -> date | None:
     """Coerce a value to a calendar date for day-delta expressions.
 

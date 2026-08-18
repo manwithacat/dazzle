@@ -17,7 +17,7 @@ from markupsafe import Markup
 
 from dazzle.core.ir.money import get_currency_scale
 from dazzle.core.ir.tones import field_enum_semantic_map, normalize_tone
-from dazzle.i18n.display_locale import get_display_locale
+from dazzle.i18n.display_locale import get_display_locale, relative_day_label
 
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
@@ -295,45 +295,78 @@ def _bool_icon_filter(value: Any) -> Markup:
     return Markup('<span style="color: var(--colour-text-muted); opacity: 0.5">&#10005;</span>')
 
 
+def _calendar_date(value: Any) -> date | None:
+    """Return a calendar date when *value* is date-only (not a datetime)."""
+    if isinstance(value, datetime):
+        return None
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if len(raw) == 10 and raw[4] == "-" and raw[7] == "-":
+            try:
+                return date.fromisoformat(raw)
+            except ValueError:
+                return None
+    return None
+
+
+def _elapsed_units(seconds: int) -> tuple[int, str]:
+    """Bucket a positive elapsed-second count into (count, unit)."""
+    if seconds < 60:
+        return seconds, "second"
+    minutes = seconds // 60
+    if minutes < 60:
+        return minutes, "minute"
+    hours = minutes // 60
+    if hours < 24:
+        return hours, "hour"
+    days = hours // 24
+    if days < 30:
+        return days, "day"
+    months = days // 30
+    if months < 12:
+        return months, "month"
+    return days // 365, "year"
+
+
+def _elapsed_label(seconds: int, *, future: bool) -> str:
+    count, unit = _elapsed_units(seconds)
+    noun = unit if count == 1 else f"{unit}s"
+    return f"in {count} {noun}" if future else f"{count} {noun} ago"
+
+
 def _timeago_filter(value: Any) -> str:
-    """Format a datetime as relative time (e.g. '2 hours ago')."""
-    if value is None:
+    """Relative label for queue/card/timeline dates.
+
+    Calendar dates (``date`` / ``YYYY-MM-DD``) use tenant-today relative
+    labels so a future due date cannot invent ``just now`` (oral #123).
+    Future datetimes use ``in N units``. Leftover junk stays put.
+    """
+    if value is None or value == "":
         return ""
-    now = datetime.now()
+    cal = _calendar_date(value)
+    if cal is not None:
+        return relative_day_label(cal)
     dt: datetime | None = None
     if isinstance(value, datetime):
         dt = value
-    elif isinstance(value, date):
-        dt = datetime(value.year, value.month, value.day)
     elif isinstance(value, str):
         try:
-            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
         except ValueError:
             return str(value)
+    else:
+        return str(value)
     if dt is None:
         return str(value)
+    now = datetime.now()
     if dt.tzinfo is not None:
         dt = dt.astimezone().replace(tzinfo=None)
-    diff = now - dt
-    seconds = int(diff.total_seconds())
+    seconds = int((now - dt).total_seconds())
     if seconds < 0:
-        return "just now"
-    if seconds < 60:
-        return f"{seconds} seconds ago" if seconds != 1 else "1 second ago"
-    minutes = seconds // 60
-    if minutes < 60:
-        return f"{minutes} minutes ago" if minutes != 1 else "1 minute ago"
-    hours = minutes // 60
-    if hours < 24:
-        return f"{hours} hours ago" if hours != 1 else "1 hour ago"
-    days = hours // 24
-    if days < 30:
-        return f"{days} days ago" if days != 1 else "1 day ago"
-    months = days // 30
-    if months < 12:
-        return f"{months} months ago" if months != 1 else "1 month ago"
-    years = days // 365
-    return f"{years} years ago" if years != 1 else "1 year ago"
+        return _elapsed_label(-seconds, future=True)
+    return _elapsed_label(seconds, future=False)
 
 
 def _slugify_filter(value: Any) -> str:

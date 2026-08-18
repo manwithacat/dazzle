@@ -295,6 +295,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Helper: `_csv_cell` + `format_cell`. Leftover currency junk
   stays put. Do **not** walk another leftover-token stay-put
   as the default mutation (oral #121).
+- **Timeago future-as-just-now** (queue/card/kanban `type=date`
+  invents `just now` for tomorrow) closed cycle 2254 (oral
+  #123). Helper: `_timeago_filter` + format_cell `_relative`.
+  Do **not** walk another leftover-token stay-put or CSV
+  money/dict clone (oral #121/#122).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

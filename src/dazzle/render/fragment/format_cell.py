@@ -23,7 +23,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from dazzle.i18n.display_locale import DisplayLocaleProfile, get_display_locale
+from dazzle.i18n.display_locale import DisplayLocaleProfile, get_display_locale, relative_day_label
 
 # v1 currency symbols; unknown codes fall back to a "<amount> <CODE>" suffix.
 _CURRENCY_SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
@@ -221,20 +221,7 @@ def _relative(value: Any, profile: DisplayLocaleProfile | None = None) -> str:
     dtv = _coerce_dt(value)
     if dtv is None:
         return str(value)
-    # Calendar dates: no TZ. Datetimes: convert to tenant TZ before taking date.
-    prof = _profile(profile)
-    if isinstance(dtv, datetime):
-        d = prof.to_display_datetime(dtv).date()
-    else:
-        d = dtv
-    delta = (d - prof.today()).days
-    if delta == 0:
-        return "today"
-    if delta == 1:
-        return "tomorrow"
-    if delta == -1:
-        return "yesterday"
-    return f"{-delta} days ago" if delta < 0 else f"in {delta} days"
+    return relative_day_label(dtv, profile=_profile(profile))
 
 
 def _dp(arg: str | None) -> int:
