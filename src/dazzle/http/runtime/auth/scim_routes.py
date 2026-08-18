@@ -50,8 +50,16 @@ _logger = logging.getLogger(__name__)
 
 _SCIM_MEDIA = "application/scim+json"
 _USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User"
+_GROUP_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Group"
+_PATCH_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
 _LIST_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:ListResponse"
 _ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error"
+
+# Leftover ``schemas: "zzz"`` / ``["ghost"]`` must not invent a provision.
+# Linear URN shape — no overlapping quantifiers (oral #106).
+_SCIM_SCHEMA_URN = re.compile(
+    r"\Aurn:ietf:params:scim:(?:schemas|api:messages):[A-Za-z0-9:._-]{3,200}\Z"
+)
 
 # Okta/Entra provisioning sends ``attr eq "value"`` (Users: userName; Groups:
 # displayName). Full-string match — a leftover prefix/suffix is not a filter.
@@ -273,6 +281,45 @@ def leftover_scim_operations_stay_put(body: dict[str, Any]) -> bool:
     return leftover_honest_scim_body_operations(body) is None
 
 
+def leftover_honest_scim_schemas(raw: Any, *, required: str) -> list[str] | None:
+    """Valid SCIM ``schemas`` lists that include ``required`` ride. Leftover restores None.
+
+    Leftover ``schemas: "zzz"`` / ``ghost`` / ``["zzz"]`` / dict / int on
+    POST/PUT ``/scim/v2/Users`` and ``/scim/v2/Groups`` used to miss the
+    schema-URN list and invent a provision (the field was ignored). The
+    same leftover on PATCH invented a 200 no-op or a write. Valid lists
+    that include ``required`` ride. Absent / empty is the honest
+    first-visit default (``[]`` — omit, current writers still work).
+    Rest is stay-put (None → 400 ``invalidSyntax``). RFC 7644 §3.3.
+    Distinct from leftover ``Operations`` (oral #103) and leftover
+    ``externalId`` (oral #111). Live SCIM Users + Groups. Cycle 2244.
+    """
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        return None
+    if not raw:
+        return []
+    out: list[str] = []
+    for item in raw:
+        if type(item) is not str:
+            return None
+        text = item.strip()
+        if not text or _SCIM_SCHEMA_URN.fullmatch(text) is None:
+            return None
+        out.append(text)
+    if required not in out:
+        return None
+    return out
+
+
+def leftover_honest_scim_body_schemas(body: dict[str, Any], *, required: str) -> list[str] | None:
+    """POST/PUT/PATCH ``schemas``. Missing key defaults ``[]``. Leftover restores None."""
+    if "schemas" not in body:
+        return []
+    return leftover_honest_scim_schemas(body.get("schemas"), required=required)
+
+
 def _coerce_active(value: Any) -> bool | None:
     """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
     ``None`` if the value isn't a recognizable active flag."""
@@ -435,6 +482,11 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover ``schemas: "zzz"`` / ``["ghost"]`` used to invent a
+        # provision (ignored envelope). JSONResponse — oral #93.
+        # RFC 7644 invalidSyntax.
+        if leftover_honest_scim_body_schemas(body, required=_USER_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         # Leftover ``userName: "zzz"`` / ``emails: "zzz"`` used to crash
         # (``.strip()`` / ``"zzz"[0].get``) or invent a provision
         # attempt with leftover as the mailbox. JSONResponse — oral #93.
@@ -518,6 +570,9 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover PUT ``schemas`` invented a replace. Stay put.
+        if leftover_honest_scim_body_schemas(body, required=_USER_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         email = _email_for(store, membership.identity_id)  # identity is fixed by the id
         active = leftover_honest_scim_body_active(body)
         if active is None:
@@ -551,6 +606,10 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover PATCH ``schemas: "zzz"`` invented a 200 no-op / write.
+        # JSONResponse — oral #93. RFC 7644 invalidSyntax.
+        if leftover_honest_scim_body_schemas(body, required=_PATCH_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         # Leftover ``Operations: "zzz"`` invented a 500 (``str.get``).
         # JSONResponse (not Response(content=)) — oral #93.
         # RFC 7644 invalidSyntax.
@@ -590,7 +649,7 @@ def create_scim_routes() -> APIRouter:
 
     def _group_to_scim(group: Any, member_ids: list[str], base: str) -> dict[str, Any]:
         resource = {
-            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+            "schemas": [_GROUP_SCHEMA],
             "id": group.id,
             "displayName": group.display_name,
             "members": [
@@ -616,6 +675,9 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover ``schemas: "zzz"`` invented a group persist. Stay put.
+        if leftover_honest_scim_body_schemas(body, required=_GROUP_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         # Leftover ``members: "zzz"`` invented an empty group. Valid
         # ``[{"value": id}]`` ride; absent still creates empty.
         # JSONResponse (not Response(content=)) — oral #93.
@@ -693,6 +755,9 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover PUT ``schemas`` invented a replace. Stay put.
+        if leftover_honest_scim_body_schemas(body, required=_GROUP_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         # PUT is a full replace — displayName is a required Group attribute, so a
         # missing/empty one is a 400 (matches create), not a silent no-op rename.
         # Leftover type invented a rename persist. JSONResponse — oral #93.
@@ -731,6 +796,9 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover PATCH ``schemas: "zzz"`` invented a 200 no-op / write.
+        if leftover_honest_scim_body_schemas(body, required=_PATCH_SCHEMA) is None:
+            return _error(400, "invalid schemas", scim_type="invalidSyntax")
         # Leftover ``Operations: "zzz"`` invented a 200 no-op
         # (parse_group_patch treated non-list as empty). Stay put.
         # JSONResponse — oral #93. RFC 7644 invalidSyntax.

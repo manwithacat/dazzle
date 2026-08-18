@@ -1184,6 +1184,18 @@ dialect formed — and where it started to Goodhart itself — is
     and leftover ``?connection=`` (oral #110). Live simple_task
     ``/auth/sso/{provider}/callback``. Standing refusals apply.
 
+114. **SCIM leftover schemas invents a provision.** Cycle 2244:
+    leftover ``schemas: "zzz"`` / ``ghost`` / ``["zzz"]`` / dict /
+    int on POST/PUT ``/scim/v2/Users`` and ``/scim/v2/Groups``
+    ignored the envelope and invented a provision. The same leftover
+    on PATCH invented a 200 no-op or a write. Valid lists that
+    include the resource / PatchOp URN ride via
+    ``leftover_honest_scim_schemas``. Absent / empty still omit.
+    Leftover stays put (400 ``invalidSyntax``). RFC 7644 §3.3.
+    Distinct from leftover ``Operations`` (oral #103) and leftover
+    ``externalId`` (oral #111). Live SCIM Users + Groups.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1241,6 +1253,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover externalId | Walk another SCIM ``externalId`` body site after leftover_honest_scim_external_id exists | #111 |
 | SSO leftover provider | Walk another ``/auth/sso/{provider}`` leftover slug after leftover_honest_sso_provider exists | #112 |
 | OAuth leftover code | Walk another leftover ``?code=`` / ``?state=`` callback site after leftover_honest_oauth_code exists | #113 |
+| SCIM leftover schemas | Walk another SCIM ``schemas`` envelope site after leftover_honest_scim_schemas exists | #114 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1301,6 +1314,7 @@ how the handbook was learned.
 | One leftover SSO ``?connection=`` site after leftover_honest_connection_id exists | Call leftover_honest_connection_id on remaining enterprise/SAML login + metadata sites in one ship, then STOP (oral #110) |
 | One leftover ``/auth/sso/{provider}`` slug after leftover_honest_sso_provider exists | Call leftover_honest_sso_provider on remaining initiate + callback sites in one ship, then STOP (oral #112) |
 | One leftover OAuth ``?code=`` / ``?state=`` site after leftover_honest_oauth_code exists | Call leftover_honest_oauth_code on remaining SSO + enterprise callbacks in one ship, then STOP (oral #113) |
+| One leftover SCIM ``schemas`` envelope site after leftover_honest_scim_schemas exists | Call leftover_honest_scim_schemas on remaining Users/Groups writers in one ship, then STOP (oral #114) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

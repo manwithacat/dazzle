@@ -251,6 +251,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Leftover stays put (400).
   Do **not** walk another leftover `?code=` / `?state=`
   callback site.
+- **SCIM leftover schemas** (`schemas: "zzz"` invents a
+  provision; leftover PATCH invents a 200 no-op / write)
+  closed cycle 2244 (oral #114). Helper:
+  `leftover_honest_scim_schemas`. Leftover stays put (400
+  `invalidSyntax`). Do **not** walk another SCIM `schemas`
+  envelope site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

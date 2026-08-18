@@ -218,6 +218,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_sso_provider_leftover.py",
     # cycle 2243: leftover OAuth code/state must not invent sso_failed
     "tests/unit/test_oauth_code_leftover.py",
+    # cycle 2244: leftover SCIM schemas must not invent a provision
+    "tests/unit/test_scim_schemas_leftover.py",
     "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",
