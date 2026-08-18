@@ -216,6 +216,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scim_external_id_leftover.py",
     # cycle 2242: leftover SSO provider slug must not invent sso_provider_unknown
     "tests/unit/test_sso_provider_leftover.py",
+    # cycle 2243: leftover OAuth code/state must not invent sso_failed
+    "tests/unit/test_oauth_code_leftover.py",
+    "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_when_no_providers_configured_redirects_with_error",

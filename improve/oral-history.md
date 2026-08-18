@@ -1167,6 +1167,23 @@ dialect formed — and where it started to Goodhart itself — is
     Live login ``/auth/sso/{provider}`` (sso_views Continue-with).
     Standing refusals apply.
 
+113. **OAuth leftover code invents sso_failed theater.** Cycle
+    2243: leftover ``?code=zzz`` / ``ghost`` on GET
+    ``/auth/sso/{provider}/callback`` missed the opaque IdP
+    shape and invented ``303 /login?error=sso_failed``
+    (authlib exchange miss). The same leftover on GET
+    ``/auth/enterprise/callback`` invented the same theater.
+    Leftover ``?state=zzz`` did too. Valid opaque IdP codes
+    (urlsafe + ``/+=.``, length 16–512, including Google
+    ``4/0A…``) ride via ``leftover_honest_oauth_code``.
+    Absent / blank still first-visit (stray / cancel still
+    ``sso_failed``). Well-formed codes that fail exchange
+    still bounce ``sso_failed``. Leftover stays put (400).
+    Distinct from leftover consume token (oral #109), leftover
+    2FA code (oral #108), leftover SSO provider (oral #112),
+    and leftover ``?connection=`` (oral #110). Live simple_task
+    ``/auth/sso/{provider}/callback``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1223,6 +1240,7 @@ the end of every new oral *is* expensive — point here instead.
 | SSO leftover connection | Walk another enterprise/SAML leftover ``?connection=`` site after leftover_honest_connection_id exists | #110 |
 | SCIM leftover externalId | Walk another SCIM ``externalId`` body site after leftover_honest_scim_external_id exists | #111 |
 | SSO leftover provider | Walk another ``/auth/sso/{provider}`` leftover slug after leftover_honest_sso_provider exists | #112 |
+| OAuth leftover code | Walk another leftover ``?code=`` / ``?state=`` callback site after leftover_honest_oauth_code exists | #113 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1282,6 +1300,7 @@ how the handbook was learned.
 | One leftover consume token site after leftover_honest_auth_token is on consume | Call leftover_honest_auth_token on remaining magic / reset / verify / invite consume sites in one ship, then STOP (oral #109) |
 | One leftover SSO ``?connection=`` site after leftover_honest_connection_id exists | Call leftover_honest_connection_id on remaining enterprise/SAML login + metadata sites in one ship, then STOP (oral #110) |
 | One leftover ``/auth/sso/{provider}`` slug after leftover_honest_sso_provider exists | Call leftover_honest_sso_provider on remaining initiate + callback sites in one ship, then STOP (oral #112) |
+| One leftover OAuth ``?code=`` / ``?state=`` site after leftover_honest_oauth_code exists | Call leftover_honest_oauth_code on remaining SSO + enterprise callbacks in one ship, then STOP (oral #113) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

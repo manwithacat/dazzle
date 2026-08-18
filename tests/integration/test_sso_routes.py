@@ -20,6 +20,9 @@ pytest.importorskip("dazzle.http.runtime.auth.sso_routes")
 from dazzle.http.runtime.auth.sso_config import SsoProviderConfig  # noqa: E402
 from dazzle.http.runtime.auth.sso_routes import create_sso_routes  # noqa: E402
 
+# leftover-honest OAuth code (oral #113) — secrets.token_urlsafe(32) shape.
+_CODE = "A" * 32
+
 
 def _google() -> SsoProviderConfig:
     return SsoProviderConfig(
@@ -174,7 +177,7 @@ def test_initiate_stashes_safe_next_in_session() -> None:
 def test_callback_existing_email_creates_session_and_redirects_app() -> None:
     fake = _FakeOAuthClient(userinfo={"email": "alice@example.com", "email_verified": True})
     client, store = _build_app(google_client=fake, known_email="alice@example.com")
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/app"
     # No new user — existing one was matched.
@@ -190,7 +193,7 @@ def test_callback_unknown_email_provisions_new_user() -> None:
         userinfo={"email": "bob@example.com", "email_verified": True, "name": "Bob"}
     )
     client, store = _build_app(google_client=fake)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/app"
     # New passwordless user created with the OAuth-verified email + name.
@@ -201,7 +204,7 @@ def test_callback_unknown_email_provisions_new_user() -> None:
 def test_callback_token_exchange_failure_redirects_with_error() -> None:
     fake = _FakeOAuthClient(token_raises=RuntimeError("provider unreachable"))
     client, store = _build_app(google_client=fake)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/login?error=sso_failed"
     assert store.created_users == []
@@ -213,7 +216,7 @@ def test_callback_missing_email_in_userinfo_rejects() -> None:
     a friendly redirect rather than crashing the request."""
     fake = _FakeOAuthClient(userinfo={"name": "no-email"})
     client, store = _build_app(google_client=fake)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/login?error=sso_no_email"
     assert store.created_users == []
@@ -224,7 +227,7 @@ def test_callback_unverified_email_refuses_signin() -> None:
     explicitly says it's verified."""
     fake = _FakeOAuthClient(userinfo={"email": "alice@example.com", "email_verified": False})
     client, store = _build_app(google_client=fake)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/login?error=sso_email_unverified"
     assert store.created_users == []
@@ -241,10 +244,23 @@ def test_callback_unknown_provider_stays_put() -> None:
     assert "sso_provider_unknown" not in (resp.headers.get("location") or "")
 
 
+def test_callback_leftover_code_stays_put() -> None:
+    """Leftover ``?code=zzz`` stays put (oral #113) — no invented
+    ``sso_failed`` theater."""
+    fake = _FakeOAuthClient(token_raises=RuntimeError("should not exchange leftover"))
+    client, store = _build_app(google_client=fake)
+    resp = client.get("/auth/sso/google/callback?code=zzz")
+    assert resp.status_code == 400
+    assert "Unknown authorization code" in resp.text
+    assert "sso_failed" not in (resp.headers.get("location") or "")
+    assert fake.authorize_access_token_calls == 0
+    assert store.created_sessions == []
+
+
 def test_callback_normalises_email_to_lowercase() -> None:
     fake = _FakeOAuthClient(userinfo={"email": "  ALICE@EXAMPLE.COM  ", "email_verified": True})
     client, store = _build_app(google_client=fake, known_email="alice@example.com")
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     # Existing user matched via lowercase comparison.
     assert store.created_users == []
@@ -258,7 +274,7 @@ def test_callback_with_session_stashed_next_threads_through() -> None:
     client, _ = _build_app(google_client=fake, known_email="alice@example.com")
     # Initiate request — TestClient persists the session cookie.
     client.get("/auth/sso/google?next=/app/dashboard", follow_redirects=False)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/app/dashboard"
 
@@ -269,7 +285,7 @@ def test_callback_unsafe_session_stashed_next_falls_back() -> None:
     fake = _FakeOAuthClient(userinfo={"email": "alice@example.com", "email_verified": True})
     client, _ = _build_app(google_client=fake, known_email="alice@example.com")
     client.get("/auth/sso/google?next=//evil.example/x", follow_redirects=False)
-    resp = client.get("/auth/sso/google/callback?code=fake-code")
+    resp = client.get("/auth/sso/google/callback?code=" + _CODE)
     assert resp.status_code == 303
     # The unsafe value was rejected at the initiate stash AND/OR the
     # callback validation — either way we land on /app.

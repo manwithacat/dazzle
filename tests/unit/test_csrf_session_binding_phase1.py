@@ -443,7 +443,7 @@ class TestCsrfCookieAtSiblingSites:
         app.include_router(create_sso_routes())
         client = TestClient(app, follow_redirects=False)
 
-        response = client.get("/auth/sso/google/callback?code=fake-code")
+        response = client.get("/auth/sso/google/callback?code=" + ("A" * 32))
 
         assert response.status_code == 303
         header = _csrf_set_cookie(response)

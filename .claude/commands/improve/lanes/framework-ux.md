@@ -245,6 +245,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   (oral #112). Helper: `leftover_honest_sso_provider`.
   Leftover stays put (400).
   Do **not** walk another leftover `/auth/sso/{provider}` slug.
+- **OAuth leftover code** (`?code=zzz` / `?state=zzz` invents
+  `303 /login?error=sso_failed`) closed cycle 2243
+  (oral #113). Helper: `leftover_honest_oauth_code`.
+  Leftover stays put (400).
+  Do **not** walk another leftover `?code=` / `?state=`
+  callback site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

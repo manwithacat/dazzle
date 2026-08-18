@@ -30,6 +30,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
+from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
 from dazzle.http.runtime.auth.leftover_sso_provider import leftover_honest_sso_provider
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
@@ -158,6 +159,14 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         config = get_provider(request.app.state, honest)
         if config is None:
             return RedirectResponse(url="/login?error=sso_provider_unknown", status_code=303)
+        # Leftover ``?code=zzz`` / ``?state=zzz`` used to invent sso_failed.
+        # Stay-put inlined (clone ratchet vs leftover_auth_email_or_400).
+        honest_code = leftover_honest_oauth_code(request.query_params.get("code"))
+        if honest_code is None:
+            return HTMLResponse("Unknown authorization code", status_code=400)
+        honest_state = leftover_honest_oauth_code(request.query_params.get("state"))
+        if honest_state is None:
+            return HTMLResponse("Unknown OAuth state", status_code=400)
 
         client = _get_or_create_oauth_client(request.app.state, config)
         try:

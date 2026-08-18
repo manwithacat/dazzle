@@ -22,7 +22,7 @@ import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
 from dazzle.http.runtime.auth.enterprise_login import (
@@ -30,6 +30,7 @@ from dazzle.http.runtime.auth.enterprise_login import (
     provision_enterprise_login,
 )
 from dazzle.http.runtime.auth.leftover_connection_id import leftover_honest_sso_login_query
+from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
 from dazzle.http.runtime.auth.org_activation import host_tenant_id_from_request
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
@@ -109,8 +110,16 @@ def create_enterprise_sso_routes(*, cookie_name: str = "dazzle_session") -> APIR
         return RedirectResponse(url=url, status_code=303)
 
     @router.get("/auth/enterprise/callback")
-    async def enterprise_callback(request: Request) -> RedirectResponse:
+    async def enterprise_callback(request: Request) -> Response:
         """Validate the IdP response, JIT-join the membership, sign in."""
+        # Leftover ``?code=zzz`` / ``?state=zzz`` used to invent sso_failed.
+        # Stay-put inlined (clone ratchet vs leftover_auth_email_or_400).
+        honest_code = leftover_honest_oauth_code(request.query_params.get("code"))
+        if honest_code is None:
+            return HTMLResponse("Unknown authorization code", status_code=400)
+        honest_state = leftover_honest_oauth_code(request.query_params.get("state"))
+        if honest_state is None:
+            return HTMLResponse("Unknown OAuth state", status_code=400)
         store = request.app.state.auth_store
         conn_id = request.session.pop(_SESSION_CONN_KEY, "") if hasattr(request, "session") else ""
         if not conn_id:
