@@ -17,7 +17,25 @@ from typing import Any
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_error
+
 logger = logging.getLogger(__name__)
+
+
+def leftover_honest_search_entity(raw: Any, declared: Any) -> str | None:
+    """Valid declared searchable entity names ride. Leftover stays put (None).
+
+    Leftover ``?entity=zzz`` / ``ghost`` / ``MysteryEntity`` on
+    GET ``/_dazzle/search`` used to miss the searchable catalog and
+    invent the unfiltered fleet (``test_unknown_entity_param_stays_put``).
+    Valid declared entity names ride. Absent / blank is first-visit
+    (``""`` — all entities). Rest is stay-put (None → 400). Distinct
+    from leftover catalog picker (oral #69) and leftover search-box
+    ``q`` (gallery). Live ``hx-get="/_dazzle/search"``
+    (``docs/reference/frontend.md``) + contact_manager
+    ``patterns: searchable``. Cycle 2247.
+    """
+    return leftover_honest_auth_error(raw, declared)
 
 
 def create_search_routes(
@@ -57,7 +75,11 @@ def create_search_routes(
         stable across requests. Per-entity failures are logged and skipped
         rather than failing the whole request.
         """
-        targets = {entity: searchable[entity]} if entity and entity in searchable else searchable
+        honest_entity = leftover_honest_search_entity(entity, searchable)
+        if honest_entity is None:
+            # Leftover ``?entity=zzz`` invented the fleet. Stay put.
+            return JSONResponse(content={"error": "invalid entity"}, status_code=400)
+        targets = {honest_entity: searchable[honest_entity]} if honest_entity else searchable
 
         results: list[dict[str, Any]] = []
         for entity_name, fields in targets.items():

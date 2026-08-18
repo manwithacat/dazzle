@@ -1222,6 +1222,19 @@ dialect formed — and where it started to Goodhart itself — is
     ``groups`` (oral #115). Live SCIM Users + Groups.
     Standing refusals apply.
 
+117. **Search leftover entity invents the unfiltered fleet.** Cycle
+    2247: leftover ``?entity=zzz`` / ``ghost`` /
+    ``MysteryEntity`` on GET ``/_dazzle/search`` missed the
+    searchable catalog and invented the fleet (the existing
+    ``test_unknown_entity_param_falls_back_to_all`` pin). Valid
+    declared searchable names ride via
+    ``leftover_honest_search_entity`` (reuses
+    ``leftover_honest_auth_error``). Absent / blank still
+    first-visit (all entities). Leftover stays put (400).
+    Distinct from leftover catalog picker (oral #69) and leftover
+    search-box ``q``. Live ``hx-get="/_dazzle/search"`` +
+    contact_manager ``patterns: searchable``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1282,6 +1295,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover schemas | Walk another SCIM ``schemas`` envelope site after leftover_honest_scim_schemas exists | #114 |
 | SCIM leftover User.groups | Walk another SCIM User ``groups`` body site after leftover_honest_scim_groups exists | #115 |
 | SCIM leftover PatchOp op | Walk another SCIM PATCH leftover ``op`` site after leftover_honest_scim_patch_op exists | #116 |
+| Search leftover entity | Walk another leftover ``?entity=`` fleet-restrict after leftover_honest_search_entity exists | #117 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

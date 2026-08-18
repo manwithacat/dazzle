@@ -257,6 +257,22 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_scim_schemas`. Leftover stays put (400
   `invalidSyntax`). Do **not** walk another SCIM `schemas`
   envelope site.
+- **SCIM leftover User.groups** (`groups: "zzz"` invents a
+  500 / provision; leftover PATCH invents a 200 no-op)
+  closed cycle 2245 (oral #115). Helper:
+  `leftover_honest_scim_groups`. Leftover stays put (400
+  `invalidValue`). Do **not** walk another SCIM User
+  `groups` body site.
+- **SCIM leftover PatchOp op** (`op: "zzz"` invents a 200
+  no-op) closed cycle 2246 (oral #116). Helper:
+  `leftover_honest_scim_patch_op`. Leftover stays put (400
+  `invalidSyntax`). Do **not** walk another SCIM PATCH
+  leftover `op` site.
+- **Search leftover entity** (`?entity=zzz` invents the
+  unfiltered fleet) closed cycle 2247 (oral #117). Helper:
+  `leftover_honest_search_entity` (reuses
+  `leftover_honest_auth_error`). Leftover stays put (400).
+  Do **not** walk another leftover `?entity=` fleet-restrict.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

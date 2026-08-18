@@ -121,7 +121,7 @@ class TestCrossEntitySearchHandler:
         body = json.loads(response.content)
         assert [r["entity"] for r in body["results"]] == ["Work"]
 
-    def test_unknown_entity_param_falls_back_to_all(self) -> None:
+    def test_unknown_entity_param_stays_put(self) -> None:
         from dazzle.http.runtime.search_routes import create_search_routes
 
         router = create_search_routes(
@@ -132,8 +132,9 @@ class TestCrossEntitySearchHandler:
 
         client = _mount(router)
         response = client.get("/_dazzle/search", params={"q": "hello", "entity": "MysteryEntity"})
+        assert response.status_code == 400
         body = json.loads(response.content)
-        assert [r["entity"] for r in body["results"]] == ["Work"]
+        assert body == {"error": "invalid entity"}
 
     def test_repo_failure_does_not_break_other_entities(self) -> None:
         from dazzle.http.runtime.search_routes import create_search_routes
