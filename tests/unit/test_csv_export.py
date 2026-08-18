@@ -107,3 +107,51 @@ def test_csv_label_falls_back_to_key():
     body = _get_body(resp)
     rows = _parse_csv(body)
     assert rows[0] == ["amount"]
+
+
+def test_csv_money_minor_does_not_invent_raw_pence():
+    """Currency columns store minor units — str(1200) invents pence as pounds (oral #122)."""
+    columns = [
+        {
+            "key": "total_minor",
+            "label": "Total",
+            "type": "currency",
+            "currency_code": "GBP",
+        }
+    ]
+    resp = _render_csv_response([{"total_minor": 1200}], columns, "invoices")
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["£12.00"]
+
+
+def test_csv_leftover_money_stays_put():
+    """Leftover currency junk must not invent £0.00 / a silent 12 (oral #122)."""
+    columns = [
+        {
+            "key": "total_minor",
+            "label": "Total",
+            "type": "currency",
+            "currency_code": "GBP",
+        }
+    ]
+    resp = _render_csv_response(
+        [{"total_minor": "zzz"}, {"total_minor": "12abc"}],
+        columns,
+        "invoices",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["zzz"]
+    assert rows[2] == ["12abc"]
+
+
+def test_csv_dict_ref_does_not_invent_repr():
+    """Unresolved FK dicts must not invent str(dict) chrome (oral #122)."""
+    columns = [{"key": "assignee", "label": "Assignee", "type": "ref"}]
+    resp = _render_csv_response(
+        [{"assignee": {"id": "u1", "name": "Ada"}}],
+        columns,
+        "tasks",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["Ada"]
+    assert "{" not in rows[1][0]

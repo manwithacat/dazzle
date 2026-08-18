@@ -290,6 +290,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_auth_error`). Leftover stays put (400, no
   write). Do **not** walk another leftover file `?entity=`
   persist site.
+- **CSV money / dict invent** (`?format=csv` ships `1200` pence
+  as pounds / `str(dict)` chrome) closed cycle 2253 (oral #122).
+  Helper: `_csv_cell` + `format_cell`. Leftover currency junk
+  stays put. Do **not** walk another leftover-token stay-put
+  as the default mutation (oral #121).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

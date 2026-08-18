@@ -1286,6 +1286,17 @@ dialect formed — and where it started to Goodhart itself — is
     different failure mode — not the next SCIM/auth/search
     string stay-put. Standing refusals apply.
 
+122. **CSV money invents clerk-facing pence.** List ``?format=csv``
+    used ``str(item[key])`` so ``total_minor=1200`` shipped as
+    ``1200`` (pence-as-pounds) and unresolved FK dicts shipped as
+    ``str(dict)``. That is presentation invent on the download
+    host — not leftover-token stay-put (oral #121). Cycle 2253:
+    ``_csv_cell`` formats currency via ``format_cell`` (same
+    minor-units path as the grid); leftover ``zzz`` / ``12abc``
+    stays put; dict refs use ``_resolve_display_name``. Live
+    invoice_ops money lists. Do **not** walk another leftover
+    string stay-put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1351,6 +1362,7 @@ the end of every new oral *is* expensive — point here instead.
 | Connection leftover group_map | Walk another leftover ``group_map`` persist after leftover_honest_group_map exists | #119 |
 | File leftover entity | Walk another leftover file ``?entity=`` persist after leftover_honest_file_entity exists | #120 |
 | Leftover-token cadence | Walk another leftover string stay-put as the default mutation after a leftover-honest self-audit window (≥10 leftover ships) | #121 |
+| CSV money / dict invent | Walk another leftover-token stay-put instead of clerk-facing CSV money / ``str(dict)`` | #122 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
