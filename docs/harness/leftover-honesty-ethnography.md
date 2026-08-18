@@ -237,6 +237,13 @@ bool / `true`/`false` coerce and invented inactive via
 and Entra strings ride; leftover stays put (400). Helper:
 `leftover_honest_scim_active`. Oral #100 — one ship, then stop.
 
+**SCIM leftover userName / emails.** POST `userName: "zzz"` /
+`emails: "zzz"` missed the mailbox shape and invented a 500
+(`.strip()` / `"zzz"[0].get` / `IndexError`) or a provision
+attempt with leftover as the mailbox. Valid emails ride;
+leftover stays put (400). Helper:
+`leftover_honest_scim_username`. Oral #102 — one ship, then stop.
+
 ---
 
 ## Ritual

@@ -1018,6 +1018,19 @@ dialect formed — and where it started to Goodhart itself — is
     and leftover GET ``?filter=`` (oral #99). Live SCIM Groups.
     Standing refusals apply.
 
+102. **SCIM leftover userName / emails invent a 500 / provision.**
+    Cycle 2230: leftover ``userName: "zzz"`` / ``ghost`` / list /
+    dict on POST ``/scim/v2/Users`` missed the mailbox shape and
+    invented a crash (``.strip()``) or a provision attempt with
+    leftover as the mailbox (``domain_not_verified`` theater).
+    Leftover ``emails: "zzz"`` / ``[]`` / ``[{}]`` invented
+    ``"zzz"[0].get`` / ``IndexError`` 500s. Valid emails ride
+    via ``leftover_honest_scim_username``. Absent / blank still
+    ``no_email``. Leftover stays put (400 ``invalidValue``).
+    RFC 7644 §4.1.1. Distinct from leftover ``members``
+    (oral #101) and leftover ``active`` (oral #100). Live
+    SCIM Users. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1063,6 +1076,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover filter | Walk another SCIM ``?filter=`` list site after leftover_honest_scim_eq_value exists | #99 |
 | SCIM leftover active | Walk another SCIM ``active`` body site after leftover_honest_scim_active exists | #100 |
 | SCIM leftover members | Walk another SCIM ``members`` body site after leftover_honest_scim_member_ids exists | #101 |
+| SCIM leftover userName / emails | Walk another SCIM ``userName`` / ``emails`` body site after leftover_honest_scim_username exists | #102 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1114,6 +1128,7 @@ how the handbook was learned.
 | One leftover connections ``?new=`` site after leftover_honest_connection_new exists | Call leftover_honest_connection_new on remaining connection form-openers in one ship, then STOP (oral #97) |
 | One leftover auth ``?token=`` / ``?session=`` site after leftover_honest_auth_token exists | Call leftover_honest_auth_token on remaining urlsafe token echo sites in one ship, then STOP (oral #98) |
 | One leftover SCIM ``active`` body site after leftover_honest_scim_active exists | Call leftover_honest_scim_active on remaining SCIM User writes in one ship, then STOP (oral #100) |
+| One leftover SCIM ``userName`` / ``emails`` body site after leftover_honest_scim_username exists | Call leftover_honest_scim_username on remaining User writes in one ship, then STOP (oral #102) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

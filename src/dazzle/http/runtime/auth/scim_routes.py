@@ -55,6 +55,11 @@ _SCIM_EQ_FILTER = re.compile(
     re.IGNORECASE,
 )
 
+# SCIM User.userName is the mailbox here (membership email). Same shape as
+# leftover_honest_filter_email — kept local so auth routes do not import
+# page_routes.
+_SCIM_USERNAME_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 def leftover_honest_scim_eq_value(raw: Any, *, attr: str) -> str | None:
     """Valid SCIM ``attr eq "value"`` filters ride. Leftover junk restores None.
@@ -80,6 +85,66 @@ def leftover_honest_scim_eq_value(raw: Any, *, attr: str) -> str | None:
     if not value:
         return None
     return value
+
+
+def leftover_honest_scim_username(raw: Any) -> str | None:
+    """Valid SCIM ``userName`` emails ride. Leftover junk restores None.
+
+    Leftover ``userName: "zzz"`` / ``ghost`` / list / dict on POST
+    ``/scim/v2/Users`` used to miss the mailbox shape and either crash
+    on ``.strip()`` (non-string) or invent a provision attempt with
+    leftover as the mailbox (``domain_not_verified`` theater). Valid
+    emails ride. Absent / blank is the honest first-visit default
+    (``""`` → ``no_email``). Rest is stay-put (None → 400
+    ``invalidValue``). RFC 7644 §4.1.1. Distinct from leftover
+    ``active`` (oral #100) and leftover ``members`` (oral #101).
+    Live SCIM Users. Cycle 2230.
+    """
+    if raw is None:
+        return ""
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    if not text:
+        return ""
+    if not _SCIM_USERNAME_RE.fullmatch(text):
+        return None
+    return text
+
+
+def leftover_honest_scim_emails(raw: Any) -> str | None:
+    """Valid SCIM ``emails[0].value`` ride. Leftover junk restores None.
+
+    Leftover ``emails: "zzz"`` / ``[{}]`` used to crash
+    (``"zzz"[0].get`` / ``IndexError`` on ``[]``) or invent empty.
+    Valid ``[{"value": "ada@acme.test"}]`` ride. Empty list is
+    absent (``""``). Rest is stay-put (None).
+    """
+    if raw is None:
+        return ""
+    if not isinstance(raw, list):
+        return None
+    if not raw:
+        return ""
+    first = raw[0]
+    if not isinstance(first, dict) or "value" not in first:
+        return None
+    return leftover_honest_scim_username(first.get("value"))
+
+
+def leftover_honest_scim_body_username(body: dict[str, Any]) -> str | None:
+    """POST ``userName`` / ``emails[0].value``. Missing key defaults ``""``.
+
+    Leftover restores None. Blank ``userName`` still falls through to
+    ``emails`` (the historic ``or``-chain).
+    """
+    if "userName" in body:
+        honest = leftover_honest_scim_username(body.get("userName"))
+        if honest is None or honest:
+            return honest
+    if "emails" in body:
+        return leftover_honest_scim_emails(body.get("emails"))
+    return ""
 
 
 def _error(status: int, detail: str, *, scim_type: str | None = None) -> JSONResponse:
@@ -323,7 +388,12 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
-        email = (body.get("userName") or body.get("emails", [{}])[0].get("value") or "").strip()
+        # Leftover ``userName: "zzz"`` / ``emails: "zzz"`` used to crash
+        # (``.strip()`` / ``"zzz"[0].get``) or invent a provision
+        # attempt with leftover as the mailbox. JSONResponse — oral #93.
+        email = leftover_honest_scim_body_username(body)
+        if email is None:
+            return _error(400, "invalid userName", scim_type="invalidValue")
         # Leftover ``active: "zzz"`` used to invent inactive via
         # ``bool(None)``. JSONResponse (not Response(content=)) —
         # oral #93. RFC 7644 invalidValue.
