@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
+from dazzle.http.runtime.auth.leftover_2fa_code import leftover_honest_2fa_code
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     _login_redirect_for_outcome,
@@ -74,6 +75,14 @@ def create_two_factor_form_routes(
             # proof treats Response(content=) as a serve_bytes bypass.
             return HTMLResponse("Unknown 2FA method", status_code=400)
         method = honest
+        # Leftover ``code=zzz`` used to invent invalid_code theater.
+        # Inline stay-put (not leftover_membership_or_400 clone).
+        honest_code = leftover_honest_2fa_code(code)
+        if honest_code is None:
+            return HTMLResponse("Unknown 2FA code", status_code=400)
+        if not honest_code:
+            return HTMLResponse("Code required", status_code=400)
+        code = honest_code
         # URL-encode the form-supplied values so a crafted token can't
         # break out of the query string. Path is hardcoded same-origin.
         challenge_back = (
@@ -81,7 +90,7 @@ def create_two_factor_form_routes(
             f"&method={quote(method, safe='')}"
         )
 
-        if not session_token or not code:
+        if not session_token:
             return RedirectResponse(url=f"{challenge_back}&error=invalid_code", status_code=303)
 
         auth_context = auth_store.validate_session(session_token)

@@ -1093,6 +1093,19 @@ dialect formed — and where it started to Goodhart itself — is
     and leftover entity-id query (oral #71). Live simple_task
     ``/auth/select-org``. Standing refusals apply.
 
+108. **2FA leftover code invents invalid_code theater.** Cycle
+    2238: leftover ``code=zzz`` / ``ghost`` / ``12abc`` on POST
+    ``/auth/2fa/verify/submit`` missed the TOTP / OTP / recovery
+    shape and invented ``303 /2fa/challenge?error=invalid_code``.
+    The same leftover on JSON ``/auth/2fa/verify`` invented
+    ``401 Invalid 2FA code``. Digit codes (6–8) and recovery
+    ``XXXX-XXXX`` ride via ``leftover_honest_2fa_code``. Absent /
+    blank still first-visit (400 required). Well-formed codes
+    that fail verify still bounce ``invalid_code``. Leftover
+    stays put (400). Distinct from leftover 2FA mode (oral #92)
+    and leftover 2FA sent (oral #94). Live simple_task
+    ``/2fa/challenge``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1144,6 +1157,7 @@ the end of every new oral *is* expensive — point here instead.
 | Auth leftover email | Walk another identity-email site after leftover_honest_auth_email exists | #105 |
 | Leftover mailbox ReDoS | Clone ``[^@\\s]+@[^@\\s]+\\.[^@\\s]+`` on user input | #106 |
 | Org leftover membership | Walk another select/switch-org leftover membership_id after leftover_honest_membership_id exists | #107 |
+| 2FA leftover code | Walk another 2FA verify/setup leftover code after leftover_honest_2fa_code exists | #108 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

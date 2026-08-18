@@ -215,6 +215,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_membership_or_400`. Leftover stays put (400).
   Do **not** walk another select/switch-org leftover
   membership_id site.
+- **2FA leftover code** (`code=zzz` invents
+  `303 /2fa/challenge?error=invalid_code`) closed cycle 2238
+  (oral #108). Helper: `leftover_honest_2fa_code` /
+  `leftover_2fa_code_or_400`. Leftover stays put (400).
+  Do **not** walk another 2FA verify/setup leftover code.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

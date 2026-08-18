@@ -14,6 +14,7 @@ from dazzle.core.ir.security import TwoFactorConfig
 from .cookie_name import read_session_id, select_write_name
 from .crypto import cookie_secure
 from .events import emit_user_logged_in
+from .leftover_2fa_code import leftover_honest_2fa_code
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
 from .store import AuthStore
 
@@ -35,6 +36,16 @@ class _TwoFaDeps:
 # =============================================================================
 # Helpers
 # =============================================================================
+
+
+def _require_2fa_code(raw: str) -> str:
+    """Ride a valid 2FA code or raise stay-put 400 (oral #108)."""
+    honest = leftover_honest_2fa_code(raw)
+    if honest is None:
+        raise HTTPException(status_code=400, detail="Unknown 2FA code")
+    if not honest:
+        raise HTTPException(status_code=400, detail="Code required")
+    return honest
 
 
 def _get_otp_store(deps: _TwoFaDeps) -> Any:
@@ -116,7 +127,7 @@ async def _verify_totp_setup(
     if not secret:
         raise HTTPException(status_code=400, detail="TOTP setup not started")
 
-    if not verify_totp(secret, data.code):
+    if not verify_totp(secret, _require_2fa_code(data.code)):
         raise HTTPException(status_code=400, detail="Invalid TOTP code")
 
     # Enable TOTP
@@ -199,6 +210,7 @@ async def _verify_2fa(
         raise HTTPException(status_code=401, detail="Invalid session token")
 
     user = auth_context.user
+    honest_code = _require_2fa_code(data.code)
     verified = False
 
     if data.method == "totp":
@@ -206,17 +218,17 @@ async def _verify_2fa(
 
         secret = deps.auth_store.get_totp_secret(user.id)
         if secret:
-            verified = verify_totp(secret, data.code)
+            verified = verify_totp(secret, honest_code)
 
     elif data.method == "email_otp":
         otp_store = _get_otp_store(deps)
         if otp_store:
-            verified = otp_store.verify_otp(user.id, data.code, method="email_otp")
+            verified = otp_store.verify_otp(user.id, honest_code, method="email_otp")
 
     elif data.method == "recovery":
         recovery_store = _get_recovery_store(deps)
         if recovery_store:
-            verified = recovery_store.verify_code(user.id, data.code)
+            verified = recovery_store.verify_code(user.id, honest_code)
 
     if not verified:
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
