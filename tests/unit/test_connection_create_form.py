@@ -11,7 +11,7 @@ from dazzle.http.runtime.auth.connection_create_form import (
     plan_scim,
 )
 
-# ---- group-map parsing (lenient free-text field) ----
+# ---- group-map parsing (leftover-honest — oral #119) ----
 
 
 def test_parse_group_map_basic():
@@ -22,9 +22,11 @@ def test_parse_group_map_newline_separated():
     assert parse_group_map("eng=engineer\nops=operator") == {"eng": "engineer", "ops": "operator"}
 
 
-def test_parse_group_map_skips_malformed_and_blank():
-    # lenient: a stray token / blank / half-pair is skipped, not a hard error
-    assert parse_group_map("eng=engineer, garbage, =role, group=, ,") == {"eng": "engineer"}
+def test_parse_group_map_leftover_stays_put():
+    with pytest.raises(CreateFormError, match="Unknown group map"):
+        parse_group_map("eng=engineer, garbage, =role, group=, ,")
+    with pytest.raises(CreateFormError, match="Unknown group map"):
+        parse_group_map("zzz")
 
 
 def test_parse_group_map_empty():

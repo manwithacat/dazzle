@@ -1249,6 +1249,19 @@ dialect formed — and where it started to Goodhart itself — is
     ``source=companies_house_lookup.search_companies``. Standing
     refusals apply.
 
+119. **Connection leftover group_map invents a persist.** Cycle
+    2249: leftover ``group_map=zzz`` / ``ghost`` / ``garbage``
+    / mixed half-pairs on POST ``/auth/connections/create``
+    skipped malformed tokens and invented a connection (empty
+    or partial mapping). Leftover ``eng=zzz`` invented an
+    undeclared persona mapping when a catalog exists. Valid
+    ``group=persona`` pairs ride via
+    ``leftover_honest_group_map``. Absent / blank still
+    first-visit (empty mapping). Leftover stays put (400, no
+    write). Distinct from leftover ``?new=`` form-opener
+    (oral #97) and leftover membership roles (oral #89). Live
+    simple_task ``/auth/connections``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1311,6 +1324,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover PatchOp op | Walk another SCIM PATCH leftover ``op`` site after leftover_honest_scim_patch_op exists | #116 |
 | Search leftover entity | Walk another leftover ``?entity=`` fleet-restrict after leftover_honest_search_entity exists | #117 |
 | Fragment leftover source | Walk another leftover ``?source=`` empty-result theater after leftover_honest_fragment_source exists | #118 |
+| Connection leftover group_map | Walk another leftover ``group_map`` persist after leftover_honest_group_map exists | #119 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

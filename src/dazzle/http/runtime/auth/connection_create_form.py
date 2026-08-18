@@ -10,6 +10,7 @@ existing ``saml_metadata`` / ``store.create_connection`` seams.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 CONNECTION_TYPES = ("oidc", "scim", "saml", "domain")
 
@@ -33,22 +34,78 @@ class CreateFormError(ValueError):
     """A user-correctable problem with the submitted form (→ HTTP 400, never a 500)."""
 
 
-def parse_group_map(text: str) -> dict[str, str]:
+def _declared_personas(declared: Any) -> set[str] | None:
+    """Persona catalog, or None when leftover-shaped."""
+    if declared is None:
+        return set()
+    if isinstance(declared, (str, bytes)):
+        return None
+    return {str(item).strip() for item in declared if str(item or "").strip()}
+
+
+def _group_map_pair(piece: str) -> tuple[str, str] | None:
+    """One ``group=persona`` pair, or None when leftover-shaped."""
+    if "=" not in piece:
+        return None
+    group, role = piece.split("=", 1)
+    group, role = group.strip(), role.strip()
+    if not group or not role:
+        return None
+    return group, role
+
+
+def leftover_honest_group_map(raw: Any, declared: Any = None) -> dict[str, str] | None:
+    """Valid ``group=persona`` pairs ride. Leftover stays put (None).
+
+    Leftover ``group_map=zzz`` / ``garbage`` / ``eng=zzz`` on
+    ``POST /auth/connections/create`` used to skip malformed pairs
+    (or persist leftover personas) and invent a connection. Valid
+    pairs ride. Absent / blank is first-visit (``{}``). Rest is
+    stay-put (None → 400, no write). Distinct from leftover
+    ``?new=`` form-opener (oral #97) and leftover membership
+    roles (oral #89). Live simple_task ``/auth/connections``.
+    Cycle 2249.
+    """
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return {}
+    if not isinstance(raw, str):
+        return None
+    known = _declared_personas(declared)
+    if known is None:
+        return None
+    mapping: dict[str, str] = {}
+    for pair in raw.replace("\n", ",").split(","):
+        piece = pair.strip()
+        if not piece:
+            continue
+        parsed = _group_map_pair(piece)
+        if parsed is None:
+            return None
+        group, role = parsed
+        if known and role not in known:
+            return None
+        mapping[group] = role
+    return mapping
+
+
+def leftover_group_map_stay_put(raw: Any, declared: Any = None) -> bool:
+    """True when leftover group_map would invent a persist (stay put)."""
+    return leftover_honest_group_map(raw, declared) is None
+
+
+def parse_group_map(text: str, declared: Any = None) -> dict[str, str]:
     """Parse a web ``"eng=engineer, ops=operator"`` text field → ``{"eng": "engineer", ...}``.
 
-    Lenient by design (this is a free-text convenience field, not a structured input): blank and
-    malformed pairs are skipped rather than rejecting the whole submission. Comma- or
-    newline-separated. Mirrors the CLI ``_parse_group_map`` intent without raising on a stray comma.
+    Valid pairs ride. Leftover junk (malformed tokens, leftover
+    personas when ``declared`` is set) stays put — raises
+    ``CreateFormError`` so the create route does not invent a
+    connection. Blank / absent is first-visit empty. Comma- or
+    newline-separated. Cycle 2249 (oral #119).
     """
-    mapping: dict[str, str] = {}
-    for pair in text.replace("\n", ",").split(","):
-        if "=" not in pair:
-            continue
-        group, role = pair.split("=", 1)
-        group, role = group.strip(), role.strip()
-        if group and role:
-            mapping[group] = role
-    return mapping
+    honest = leftover_honest_group_map(text, declared)
+    if honest is None:
+        raise CreateFormError("Unknown group map")
+    return honest
 
 
 def _require(value: str, field_label: str) -> str:

@@ -25,7 +25,9 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.connection_admin_views import leftover_honest_connection_new
+from dazzle.http.runtime.auth.connection_create_form import leftover_honest_group_map
 from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.member_admin import declared_persona_ids
 
 
 def _product_name(request: Request) -> str:
@@ -270,6 +272,14 @@ def create_connection_admin_routes() -> APIRouter:
             return HTMLResponse("Unknown connection type", status_code=400)
 
         form = await request.form()
+        # Leftover ``group_map=zzz`` invented a persist (skip leftover
+        # pairs). Valid pairs ride; leftover stays put. HTMLResponse
+        # (not Response(content=…)) — oral #93. Domain create has no
+        # group_map field.
+        if type != "domain":
+            declared = declared_persona_ids(getattr(request.app.state, "appspec", None))
+            if leftover_honest_group_map(str(form.get("group_map", "")), declared) is None:
+                return HTMLResponse("Unknown group map", status_code=400)
         secret_key_ok = environment_flags()[0]
         bearer = ""
         try:
