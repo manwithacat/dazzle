@@ -222,6 +222,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scim_schemas_leftover.py",
     # cycle 2245: leftover SCIM User.groups must not invent a 500 / provision
     "tests/unit/test_scim_groups_leftover.py",
+    # cycle 2246: leftover SCIM PatchOp op must not invent a 200 no-op
+    "tests/unit/test_scim_patch_op_leftover.py",
     "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",

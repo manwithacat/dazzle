@@ -282,6 +282,43 @@ def leftover_scim_operations_stay_put(body: dict[str, Any]) -> bool:
     return leftover_honest_scim_body_operations(body) is None
 
 
+# RFC 7644 §3.5.2 PatchOp verbs. Case-insensitive on the wire.
+_SCIM_PATCH_OPS = frozenset({"add", "remove", "replace"})
+
+
+def leftover_honest_scim_patch_op(raw: Any) -> str | None:
+    """Valid SCIM PatchOp verbs ride. Leftover junk restores None.
+
+    Leftover ``op: "zzz"`` / ``ghost`` / int on PATCH
+    ``/scim/v2/Users/{id}`` and ``/scim/v2/Groups/{id}`` used to
+    skip the op and invent a 200 no-op (current resource). Valid
+    ``add`` / ``remove`` / ``replace`` ride (RFC 7644 §3.5.2
+    case-insensitive). Absent / blank is leftover (``op`` is
+    required on an operation). Rest is stay-put (None → 400
+    ``invalidSyntax``). Distinct from leftover ``Operations``
+    list shape (oral #103) and leftover path values (groups /
+    members / displayName / externalId / active / schemas).
+    Live SCIM Users + Groups. Cycle 2246.
+    """
+    if type(raw) is not str:
+        return None
+    text = raw.strip().lower()
+    if text in _SCIM_PATCH_OPS:
+        return text
+    return None
+
+
+def leftover_scim_patch_op_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``op`` would invent a 200 no-op."""
+    ops = leftover_honest_scim_body_operations(body)
+    if not ops:
+        return False
+    for op in ops:
+        if leftover_honest_scim_patch_op(op.get("op")) is None:
+            return True
+    return False
+
+
 def leftover_honest_scim_schemas(raw: Any, *, required: str) -> list[str] | None:
     """Valid SCIM ``schemas`` lists that include ``required`` ride. Leftover restores None.
 
@@ -675,6 +712,11 @@ def create_scim_routes() -> APIRouter:
         # RFC 7644 invalidSyntax.
         if leftover_scim_operations_stay_put(body):
             return _error(400, "invalid Operations", scim_type="invalidSyntax")
+        # Leftover ``op: "zzz"`` invented a 200 no-op (unknown verb
+        # skipped). Stay put. JSONResponse — oral #93.
+        # RFC 7644 invalidSyntax.
+        if leftover_scim_patch_op_stay_put(body):
+            return _error(400, "invalid op", scim_type="invalidSyntax")
         # Leftover PATCH ``externalId`` invented a 200 no-op (unknown
         # op skipped). Stay put. JSONResponse — oral #93.
         if leftover_scim_external_id_stay_put(body):
@@ -868,6 +910,10 @@ def create_scim_routes() -> APIRouter:
         # JSONResponse — oral #93. RFC 7644 invalidSyntax.
         if leftover_scim_operations_stay_put(body):
             return _error(400, "invalid Operations", scim_type="invalidSyntax")
+        # Leftover ``op: "zzz"`` invented a 200 no-op (unknown verb
+        # skipped). Stay put. JSONResponse — oral #93.
+        if leftover_scim_patch_op_stay_put(body):
+            return _error(400, "invalid op", scim_type="invalidSyntax")
         # Leftover PATCH ``members: "zzz"`` invented replace-with-empty
         # (wipe). Stay put. JSONResponse — oral #93.
         if leftover_scim_members_stay_put(body):

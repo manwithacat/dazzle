@@ -258,6 +258,13 @@ invented a 200 no-op. Valid opaque strings ride (including
 `leftover_honest_scim_external_id`. Oral #111 — one ship, then
 stop.
 
+**SCIM leftover PatchOp op.** PATCH `op: "zzz"` / missing verb
+skipped the operation and invented a 200 no-op (current
+resource) on Users and Groups. Valid `add` / `remove` /
+`replace` ride; leftover stays put (400). Helper:
+`leftover_honest_scim_patch_op`. Oral #116 — one ship, then
+stop.
+
 ---
 
 ## Ritual
