@@ -36,6 +36,25 @@ def _cmp(field: str, op: ComparisonOperator, literal) -> ConditionExpr:
     )
 
 
+def test_today_lt_binds_tenant_calendar() -> None:
+    """Aggregate ``due_date < today`` must not raise / drop the where."""
+    from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+    from dazzle.i18n.display_locale import calendar_today
+
+    expr = ConditionExpr(
+        comparison=Comparison(
+            field="due_date",
+            operator=ComparisonOperator.LESS_THAN,
+            value=ConditionValue(date_expr=DateLiteral(kind=DateLiteralKind.TODAY)),
+        )
+    )
+    pred = condition_expr_to_scope_predicate(expr)
+    assert isinstance(pred, ColumnCheck)
+    assert pred.field == "due_date"
+    assert pred.op == CompOp.LT
+    assert pred.value.literal == calendar_today().isoformat()
+
+
 def test_none_is_tautology() -> None:
     assert isinstance(condition_expr_to_scope_predicate(None), Tautology)
 

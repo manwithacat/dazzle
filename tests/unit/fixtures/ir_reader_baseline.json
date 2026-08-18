@@ -5,7 +5,6 @@
   "approvals.ApprovalOutcomeSpec.target_status",
   "approvals.ApprovalSpec.auto_approve",
   "appspec.AppSpec.hless_mode",
-  "conditions.ConditionValue.date_expr",
   "domain.BulkConfig.export_enabled",
   "domain.BulkConfig.formats",
   "domain.BulkConfig.import_enabled",

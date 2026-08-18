@@ -11,10 +11,12 @@ dazzle.http.runtime.condition_evaluator re-exports evaluate_condition from
 here so both packages share one implementation.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from dazzle.core.comparison import eval_comparison_op as _eval_comparison_op
+from dazzle.core.date_expr_eval import evaluate_date_expr
+from dazzle.i18n.display_locale import as_calendar_date
 
 # =============================================================================
 # Condition Expression Evaluator
@@ -184,9 +186,18 @@ def _evaluate_comparison(
 
     # Resolve the comparison value (handle "current_user" etc.)
     resolved_value = _resolve_value(value, context)
+    if isinstance(resolved_value, date):
+        # Attention ``due_date < today`` must compare calendar days, not
+        # date vs leftover dict / ISO string (TypeError invented on-time).
+        record_value = _as_compare_date(record_value)
 
     # Perform comparison
     return _eval_comparison_op(operator, record_value, resolved_value)
+
+
+def _as_compare_date(value: Any) -> date | None:
+    """Coerce a record field to a calendar date for ``today`` comparisons."""
+    return as_calendar_date(value)
 
 
 def _resolve_dotted_field(entity: dict[str, Any], field_path: str) -> Any:
@@ -216,6 +227,8 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
         Resolved value
     """
     if isinstance(value, dict):
+        if value.get("date_expr") is not None:
+            return evaluate_date_expr(value["date_expr"])
         # Handle IR ConditionValue format: {"literal": <value>, "values": null}
         if "literal" in value:
             literal_val = value.get("literal")

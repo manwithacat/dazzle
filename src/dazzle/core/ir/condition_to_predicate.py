@@ -18,6 +18,8 @@ SQL-compilation path for the aggregate fetchers.
 
 from __future__ import annotations
 
+from dazzle.core.date_expr_eval import date_expr_filter_value
+
 from .conditions import ConditionExpr, LogicalOperator
 from .predicates import (
     BoolComposite,
@@ -115,13 +117,17 @@ def condition_expr_to_scope_predicate(expr: ConditionExpr | None) -> ScopePredic
         )
 
     if val.is_date_expr:
-        # Date arithmetic on aggregate where-clauses wasn't supported
-        # by the regex grammar either; defer to a future slice when
-        # consumers need it.
-        raise ValueError(
-            f"date expressions in aggregate where-clauses are not yet "
-            f"supported by the typed runtime path; field {field_name!r}"
-        )
+        # Resolve today/now at compile time (per-request in
+        # ``_build_aggregate_filters``). Swallowing this as ValueError
+        # dropped the whole where and invented the whole-book KPI
+        # (invoice_ops past_due count).
+        resolved = date_expr_filter_value(val.date_expr)
+        if resolved is None:
+            raise ValueError(
+                f"date expressions with a field-ref base are not supported "
+                f"in aggregate where-clauses; field {field_name!r}"
+            )
+        return ColumnCheck(field=field_name, op=op, value=ValueRef(literal=resolved))
 
     if val.literal is None:
         return ColumnCheck(field=field_name, op=op, value=ValueRef(literal_null=True))

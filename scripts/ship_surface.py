@@ -121,6 +121,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_leftover_stays_put",
     # cycle 2255: timeago naive UTC must not invent elapsed vs wall now (oral #124)
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_naive_utc_does_not_invent_elapsed_vs_wall_now",
+    # cycle 2256: workspace today must not invent unbounded / whole-book / on-time (oral #125)
+    "tests/unit/test_date_expr_eval.py::test_today_is_tenant_calendar",
+    "tests/unit/test_cedar_row_filters.py::TestExtractConditionFiltersIR::test_ir_today_lt_does_not_invent_unbounded",
+    "tests/unit/test_condition_to_predicate.py::test_today_lt_binds_tenant_calendar",
+    "tests/unit/test_workspace_rendering.py::TestAttentionHighlighting::test_today_overdue_does_not_invent_on_time",
     # cycle 2175: list-region _emit_pagination hx-get drops include_closed / as_of
     "tests/unit/test_list_pagination_temporal_leftover.py",
     # cycle 2177: infinite-scroll sentinel _build_table_url_params drops include_closed / as_of

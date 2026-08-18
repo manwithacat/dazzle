@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from dazzle.i18n.display_locale import calendar_today
+
 if TYPE_CHECKING:
     from dazzle.http.specs.entity import StateMachineSpec, StateTransitionSpec
 
@@ -230,11 +232,12 @@ def _eval_binary(node: dict[str, Any], data: dict[str, Any]) -> Any:
     left = _normalize_value(left)
     right = _normalize_value(right)
 
-    # Date + timedelta arithmetic
+    # Date + timedelta arithmetic — tenant today, not machine-local
+    # ``date.today()`` (same invent as workspace ``today``).
     if isinstance(left, date) and isinstance(right, timedelta):
-        right = date.today() + right
+        right = calendar_today() + right
     elif isinstance(left, timedelta) and isinstance(right, date):
-        left = date.today() + left
+        left = calendar_today() + left
 
     try:
         if op == "==":
@@ -284,7 +287,7 @@ def _eval_func(node: dict[str, Any], data: dict[str, Any]) -> Any:
     args = [_eval_node(a, data) for a in node.get("args", [])]
 
     if name == "today":
-        return date.today()
+        return calendar_today()
     if name == "len" and args:
         try:
             return len(args[0])

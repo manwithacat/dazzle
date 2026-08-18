@@ -15,7 +15,7 @@ import logging
 import os
 import time
 import uuid as uuid_mod
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import StepKind
@@ -25,6 +25,7 @@ from dazzle.core.process.adapter import (
     ProcessTask,
     TaskStatus,
 )
+from dazzle.i18n.display_locale import calendar_today
 
 if TYPE_CHECKING:
     from dazzle.core.process.process_state import ProcessStateStore
@@ -644,16 +645,13 @@ def _execute_query_step(
             continue
         if isinstance(value, str):
             if value == "today":
-                value = date.today().isoformat()
+                value = calendar_today().isoformat()
             elif value == "now":
                 value = datetime.now(UTC).isoformat()
         elif isinstance(value, list):
+            tenant_today = calendar_today().isoformat()
             value = [
-                date.today().isoformat()
-                if v == "today"
-                else datetime.now(UTC).isoformat()
-                if v == "now"
-                else v
+                tenant_today if v == "today" else datetime.now(UTC).isoformat() if v == "now" else v
                 for v in value
             ]
         resolved[key] = value

@@ -404,6 +404,28 @@ class TestAttentionHighlighting:
         assert result["level"] == "critical"
         assert result["message"] == "High priority"
 
+    def test_today_overdue_does_not_invent_on_time(self) -> None:
+        """Attention ``due_date < today`` must fire for a past due date."""
+        from dazzle.core.ir.conditions import Comparison, ConditionExpr, ConditionValue
+        from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+        from dazzle.core.ir.ux import AttentionSignal, SignalLevel
+        from dazzle.i18n.display_locale import calendar_today
+
+        cond = ConditionExpr(
+            comparison=Comparison(
+                field="due_date",
+                operator="<",
+                value=ConditionValue(date_expr=DateLiteral(kind=DateLiteralKind.TODAY)),
+            )
+        )
+        sig = AttentionSignal(level=SignalLevel.WARNING, condition=cond, message="Overdue task")
+        yesterday = calendar_today() - timedelta(days=1)
+        tomorrow = calendar_today() + timedelta(days=1)
+        past = self._evaluate_attention([sig], {"due_date": yesterday, "status": "todo"})
+        assert past is not None
+        assert past["message"] == "Overdue task"
+        assert self._evaluate_attention([sig], {"due_date": tomorrow}) is None
+
 
 # ===========================================================================
 # TestRefColumnHiding

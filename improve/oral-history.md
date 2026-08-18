@@ -1319,6 +1319,19 @@ dialect formed — and where it started to Goodhart itself — is
     ``display: activity_feed`` + simple_task conversation
     ``created_at``. Standing refusals apply.
 
+125. **Workspace ``today`` invents the unbounded collection.** List
+    ``filter: due_date < today``, attention ``when: due_date < today``,
+    and aggregate ``count(... where due_date < today)`` dropped
+    ``date_expr`` (SQL extract skipped; attention compared to a dict
+    / None; aggregate translation raised and swallowed the whole
+    where). Live invoice_ops past-due desks and KPIs therefore
+    invented the whole book; simple_task overdue badges invented
+    on-time. Cycle 2256: ``evaluate_date_expr`` binds tenant
+    ``calendar_today()`` (#1597 C) on those three hosts. Leftover
+    / field-ref bases stay unresolved. Not leftover-token stay-put
+    (oral #121). Not CSV money (oral #122). Not timeago (oral
+    #123 / #124). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1387,6 +1400,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV money / dict invent | Walk another leftover-token stay-put instead of clerk-facing CSV money / ``str(dict)`` | #122 |
 | Timeago future-as-just-now | Walk another leftover-token stay-put or CSV money clone instead of due-date timeago invent | #123 |
 | Timeago naive-UTC vs wall-now | Walk another leftover-token stay-put, CSV money clone, or calendar just-now instead of UTC elapsed invent | #124 |
+| Workspace today unbound | Walk another leftover-token stay-put, CSV money clone, or timeago instead of ``due_date < today`` drop | #125 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1454,6 +1468,7 @@ how the handbook was learned.
 | One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
 | One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121) |
+| One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

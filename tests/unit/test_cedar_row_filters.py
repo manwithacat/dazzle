@@ -414,6 +414,31 @@ class TestExtractConditionFiltersIR:
         _extract_condition_filters(cond, "user-abc", filters, None)
         assert filters == {"student": "user-abc", "active": True}
 
+    def test_ir_today_lt_does_not_invent_unbounded(self) -> None:
+        """``due_date < today`` must bind tenant today (oral #125).
+
+        Dropping date_expr invented the unbounded past-due queue.
+        """
+        from dazzle.core.ir.conditions import (
+            Comparison,
+            ComparisonOperator,
+            ConditionExpr,
+            ConditionValue,
+        )
+        from dazzle.core.ir.dates import DateLiteral, DateLiteralKind
+        from dazzle.i18n.display_locale import calendar_today
+
+        cond = ConditionExpr(
+            comparison=Comparison(
+                field="due_date",
+                operator=ComparisonOperator.LESS_THAN,
+                value=ConditionValue(date_expr=DateLiteral(kind=DateLiteralKind.TODAY)),
+            )
+        )
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"due_date__lt": calendar_today().isoformat()}
+
     def test_ir_or_not_pushed(self) -> None:
         """Mixed-field IR OR is fail-closed (#1630), not a silent no-op."""
         cond = self._make_ir_or(

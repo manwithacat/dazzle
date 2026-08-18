@@ -300,6 +300,13 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   #123). Helper: `_timeago_filter` + format_cell `_relative`.
   Do **not** walk another leftover-token stay-put or CSV
   money/dict clone (oral #121/#122).
+- **Timeago naive-UTC elapsed** (datetime vs wall ``now()`` invents
+  extra age) closed cycle 2255 (oral #124).
+- **Workspace today unbound** (`due_date < today` dropped — past-due
+  queues / KPIs / attention invent unbounded / whole-book / on-time)
+  closed cycle 2256 (oral #125). Helper: `evaluate_date_expr`. Do
+  **not** walk another leftover-token stay-put, CSV money clone, or
+  timeago (oral #121–#124).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

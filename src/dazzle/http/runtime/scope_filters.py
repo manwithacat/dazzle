@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 
+from dazzle.core.date_expr_eval import date_expr_filter_value
 from dazzle.http.runtime.auth import AuthContext, effective_roles_of
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -517,9 +518,14 @@ def _extract_condition_filters(
         op = getattr(comp, "operator", None)
         op_val = getattr(op, "value", None) or (str(op) if op else "=")
 
-        # Resolve the raw value from ConditionValue or plain string
+        # Resolve the raw value from ConditionValue or plain string.
+        # ``due_date < today`` is a date_expr — dropping it invents the
+        # unbounded collection (invoice_ops past_due / simple_task overdue).
         raw_value: Any = None
-        if cond_value is not None and hasattr(cond_value, "literal"):
+        date_expr = getattr(cond_value, "date_expr", None) if cond_value is not None else None
+        if date_expr is not None:
+            raw_value = date_expr_filter_value(date_expr)
+        elif cond_value is not None and hasattr(cond_value, "literal"):
             raw_value = getattr(cond_value, "literal", cond_value)
         elif isinstance(cond_value, str):
             raw_value = cond_value
