@@ -35,6 +35,7 @@ from dazzle.core.strings import to_api_plural
 # `as` form keeps mypy explicit re-export after the dispatch_ctx extract.
 from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
+from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
 from dazzle.http.runtime.slug_validator import validate_slug
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
@@ -721,7 +722,6 @@ def _parse_list_filter_int_values(
 
 
 _EMAIL_FILTER_KINDS = frozenset({"email"})
-_EMAIL_FILTER_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def entity_email_filter_fields(entity_spec: Any) -> frozenset[str]:
@@ -737,7 +737,7 @@ def leftover_honest_filter_email(raw: Any) -> str:
     does not invent empty via fail-closed email match. Cycle 2199.
     """
     text = str(raw if raw is not None else "").strip()
-    if not text or not _EMAIL_FILTER_RE.fullmatch(text):
+    if not text or not is_mailbox_shape(text):
         return ""
     return text
 

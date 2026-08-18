@@ -287,6 +287,8 @@ def test_helper_source_pins_scim_username_leftover() -> None:
     assert "def leftover_honest_scim_username" in src
     assert "def leftover_honest_scim_emails" in src
     assert "def leftover_honest_scim_body_username" in src
+    assert "is_mailbox_shape" in src
+    assert r"^[^@\s]+@[^@\s]+\.[^@\s]+$" not in src
     assert 'scim_type="invalidValue"' in src
     assert "JSONResponse" in src
     assert "leftover_honest_scim_body_username" in src

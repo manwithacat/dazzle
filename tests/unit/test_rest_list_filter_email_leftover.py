@@ -154,6 +154,8 @@ def test_helper_source_pins_list_filter_email_leftover() -> None:
     assert "_parse_list_filter_email_values" in src
     assert "filter[email]=zzz" in src
     assert "leftover_honest_filter_email" in src
+    assert "is_mailbox_shape" in src
+    assert r"^[^@\s]+@[^@\s]+\.[^@\s]+$" not in src
 
 
 def test_list_handler_source_pins_filter_email_leftover() -> None:

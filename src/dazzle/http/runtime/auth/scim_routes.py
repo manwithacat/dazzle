@@ -42,6 +42,7 @@ from dazzle.http.runtime.auth.scim_provisioning import (
     provision_scim_user,
     set_scim_user_active,
 )
+from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
 
 _logger = logging.getLogger(__name__)
 
@@ -57,10 +58,10 @@ _SCIM_EQ_FILTER = re.compile(
     re.IGNORECASE,
 )
 
-# SCIM User.userName is the mailbox here (membership email). Same shape as
-# leftover_honest_filter_email — kept local so auth routes do not import
-# page_routes.
-_SCIM_USERNAME_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# SCIM User.userName is the mailbox here (membership email). Same
+# leftover-honest shape as leftover_honest_filter_email /
+# leftover_honest_auth_email — linear helper, not the overlapping
+# ``[^@\s]+@[^@\s]+\.[^@\s]+`` regex (CodeQL #227).
 
 
 def leftover_honest_scim_eq_value(raw: Any, *, attr: str) -> str | None:
@@ -109,7 +110,7 @@ def leftover_honest_scim_username(raw: Any) -> str | None:
     text = raw.strip()
     if not text:
         return ""
-    if not _SCIM_USERNAME_RE.fullmatch(text):
+    if not is_mailbox_shape(text):
         return None
     return text
 

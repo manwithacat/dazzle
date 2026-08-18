@@ -24,6 +24,7 @@ from typing import Any
 
 from fastapi.responses import HTMLResponse
 
+from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
 from dazzle.render.fragment import (
     URL,
     EmptyState,
@@ -133,8 +134,6 @@ def leftover_honest_auth_error(raw: Any, declared: Any) -> str | None:
 
 # secrets.token_urlsafe(32) — session ids, reset tokens, invitation tokens.
 _AUTH_URLSAFE_TOKEN = re.compile(r"\A[A-Za-z0-9_-]{32,256}\Z")
-# Mailbox shape for leftover-honest identity email (same as SCIM / filter).
-_AUTH_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def leftover_honest_auth_email(raw: Any) -> str | None:
@@ -160,7 +159,7 @@ def leftover_honest_auth_email(raw: Any) -> str | None:
     text = raw.strip()
     if not text:
         return ""
-    if not _AUTH_EMAIL.fullmatch(text):
+    if not is_mailbox_shape(text):
         return None
     return text.lower()
 

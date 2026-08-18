@@ -106,6 +106,13 @@ _LIVE = Path(__file__).resolve().parents[2] / "examples" / "simple_task" / "dazz
         ("ghost", None),
         ("zzz@ghost", None),
         ("not-an-email", None),
+        ("ada@mail.acme.test", "ada@mail.acme.test"),
+        ("ada+ops@acme.test", "ada+ops@acme.test"),
+        ("a@b..c", None),
+        ("a@.c", None),
+        ("a@b.c.", None),
+        ("!@!." + ("!." * 40), None),
+        ("a@" + ("x" * 260) + ".t", None),
         (["ada@acme.test"], None),
         ({"email": "ada@acme.test"}, None),
         (1, None),
@@ -121,6 +128,13 @@ _LIVE = Path(__file__).resolve().parents[2] / "examples" / "simple_task" / "dazz
         "leftover-ghost",
         "leftover-no-tld",
         "leftover-prose",
+        "nested-domain",
+        "plus-local",
+        "empty-label",
+        "leading-dot-label",
+        "trailing-dot",
+        "redos-payload",
+        "overlong",
         "leftover-list",
         "leftover-dict",
         "leftover-int",
@@ -333,10 +347,25 @@ def test_leftover_saml_email_does_not_invent_idp() -> None:
     _PROVIDERS.pop(("saml", "native"), None)
 
 
+def test_codeql_redos_payload_stays_put_linear() -> None:
+    """CodeQL py/polynomial-redos #227 — ``!@!.`` + ``!.`` * n must not hang."""
+    import time
+
+    from dazzle.http.runtime.mailbox_shape import is_mailbox_shape
+
+    payload = "!@!." + ("!." * 20_000)
+    start = time.perf_counter()
+    assert leftover_honest_auth_email(payload) is None
+    assert is_mailbox_shape(payload) is False
+    assert time.perf_counter() - start < 0.25
+
+
 def test_helper_source_pins_auth_email_leftover() -> None:
     views = _VIEWS.read_text()
     assert "def leftover_honest_auth_email" in views
     assert "def leftover_auth_email_or_400" in views
+    assert "is_mailbox_shape" in views
+    assert r"^[^@\s]+@[^@\s]+\.[^@\s]+$" not in views
     assert 'HTMLResponse("Invalid email", status_code=400)' in views
     magic = _MAGIC.read_text()
     assert "leftover_auth_email_or_400" in magic

@@ -1070,6 +1070,15 @@ dialect formed — and where it started to Goodhart itself — is
     SCIM userName (oral #102). Live simple_task
     ``/auth/login/magic-link``. Standing refusals apply.
 
+106. **Leftover-honest mailbox regex is ReDoS.** Cycle 2235:
+    CodeQL ``py/polynomial-redos`` #227 on
+    ``^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$`` in
+    ``leftover_honest_auth_email`` (user-provided email). The
+    last-dot split is quadratic on ``!@!.`` + ``!.`` * n. Linear
+    ``is_mailbox_shape`` (no regex) is the sink. The same clone
+    lived in SCIM ``userName`` and list ``filter[email]`` —
+    share the helper. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1119,6 +1128,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover Operations | Walk another SCIM PATCH ``Operations`` site after leftover_honest_scim_operations exists | #103 |
 | SCIM leftover displayName | Walk another SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | #104 |
 | Auth leftover email | Walk another identity-email site after leftover_honest_auth_email exists | #105 |
+| Leftover mailbox ReDoS | Clone ``[^@\\s]+@[^@\\s]+\\.[^@\\s]+`` on user input | #106 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
