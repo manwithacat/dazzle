@@ -23,6 +23,10 @@ from typing import Literal
 
 ProviderName = Literal["google", "microsoft"]
 
+# Declared leftover-honest catalog (cycle 2242 / oral #112). Leftover
+# ``/auth/sso/zzz`` stays put; only these slugs ride.
+SSO_PROVIDER_TOKENS: tuple[str, ...] = ("google", "microsoft")
+
 
 _PROVIDER_DEFAULTS: dict[ProviderName, dict[str, str]] = {
     "google": {

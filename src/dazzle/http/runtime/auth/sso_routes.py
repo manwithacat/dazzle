@@ -25,11 +25,12 @@ import secrets
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
+from dazzle.http.runtime.auth.leftover_sso_provider import leftover_honest_sso_provider
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
     _login_redirect_for_outcome,
@@ -120,9 +121,15 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         provider: str,
         request: Request,
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Redirect the user to the OAuth provider's authorize URL."""
-        config = get_provider(request.app.state, provider)
+        # Leftover ``/auth/sso/zzz`` used to invent sso_provider_unknown.
+        # Stay-put inlined (clone ratchet vs leftover_auth_email_or_400).
+        # HTMLResponse (not Response(content=)) — oral #93.
+        honest = leftover_honest_sso_provider(provider)
+        if honest is None:
+            return HTMLResponse("Unknown SSO provider", status_code=400)
+        config = get_provider(request.app.state, honest)
         if config is None:
             return RedirectResponse(url="/login?error=sso_provider_unknown", status_code=303)
         client = _get_or_create_oauth_client(request.app.state, config)
@@ -133,7 +140,7 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             request.session["sso_next"] = next
         else:
             request.session.pop("sso_next", None)
-        callback_url = _build_callback_url(request, provider)
+        callback_url = _build_callback_url(request, honest)
         result: RedirectResponse = await client.authorize_redirect(request, callback_url)
         return result
 
@@ -143,7 +150,12 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         request: Request,
     ) -> Response:
         """Exchange the code, fetch userinfo, sign the user in."""
-        config = get_provider(request.app.state, provider)
+        # Leftover ``/auth/sso/bogus/callback`` invented sso_provider_unknown.
+        # Stay-put inlined (clone ratchet vs leftover_auth_email_or_400).
+        honest = leftover_honest_sso_provider(provider)
+        if honest is None:
+            return HTMLResponse("Unknown SSO provider", status_code=400)
+        config = get_provider(request.app.state, honest)
         if config is None:
             return RedirectResponse(url="/login?error=sso_provider_unknown", status_code=303)
 

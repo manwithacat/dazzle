@@ -138,11 +138,14 @@ def test_initiate_redirects_to_provider_authorize_url() -> None:
     assert callback_url.endswith("/auth/sso/google/callback")
 
 
-def test_initiate_unknown_provider_redirects_with_error() -> None:
+def test_initiate_unknown_provider_stays_put() -> None:
+    """Leftover ``zzz``-shaped slugs stay put (oral #112) — they must
+    not invent ``sso_provider_unknown`` theater."""
     client, _ = _build_app()
     resp = client.get("/auth/sso/unknown-provider")
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/login?error=sso_provider_unknown"
+    assert resp.status_code == 400
+    assert "Unknown SSO provider" in resp.text
+    assert "sso_provider_unknown" not in (resp.headers.get("location") or "")
 
 
 def test_initiate_when_no_providers_configured_redirects_with_error() -> None:
@@ -228,11 +231,14 @@ def test_callback_unverified_email_refuses_signin() -> None:
     assert store.created_sessions == []
 
 
-def test_callback_unknown_provider_redirects_with_error() -> None:
+def test_callback_unknown_provider_stays_put() -> None:
+    """Leftover callback slug stays put (oral #112) — no invented
+    ``sso_provider_unknown`` theater."""
     client, _ = _build_app()
     resp = client.get("/auth/sso/bogus/callback?code=x")
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/login?error=sso_provider_unknown"
+    assert resp.status_code == 400
+    assert "Unknown SSO provider" in resp.text
+    assert "sso_provider_unknown" not in (resp.headers.get("location") or "")
 
 
 def test_callback_normalises_email_to_lowercase() -> None:

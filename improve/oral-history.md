@@ -1152,6 +1152,21 @@ dialect formed — and where it started to Goodhart itself — is
     #104) and leftover userName (oral #102). Live SCIM Users +
     Groups. Standing refusals apply.
 
+112. **SSO leftover provider invents sso_provider_unknown theater.**
+    Cycle 2242: leftover ``/auth/sso/zzz`` / ``ghost`` /
+    ``unknown-provider`` missed the declared ``google`` /
+    ``microsoft`` catalog and invented
+    ``303 /login?error=sso_provider_unknown`` (catalog miss).
+    The same leftover on GET callback invented the same theater.
+    Valid declared slugs ride via ``leftover_honest_sso_provider``
+    (reuses leftover_honest_auth_error). Absent / blank still
+    first-visit. Well-formed slugs that are not configured still
+    bounce ``sso_provider_unknown``. Leftover stays put (400).
+    Distinct from leftover ``?connection=`` (oral #110), leftover
+    ``?new=`` (oral #97), and leftover catalog picker (oral #69).
+    Live login ``/auth/sso/{provider}`` (sso_views Continue-with).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1207,6 +1222,7 @@ the end of every new oral *is* expensive — point here instead.
 | Auth leftover consume token | Walk another magic / reset / verify / invite consume site after leftover_honest_auth_token is on consume | #109 |
 | SSO leftover connection | Walk another enterprise/SAML leftover ``?connection=`` site after leftover_honest_connection_id exists | #110 |
 | SCIM leftover externalId | Walk another SCIM ``externalId`` body site after leftover_honest_scim_external_id exists | #111 |
+| SSO leftover provider | Walk another ``/auth/sso/{provider}`` leftover slug after leftover_honest_sso_provider exists | #112 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1265,6 +1281,7 @@ how the handbook was learned.
 | One leftover membership_id site after leftover_honest_membership_id exists | Call leftover_honest_membership_id on remaining org switch POSTs in one ship, then STOP (oral #107) |
 | One leftover consume token site after leftover_honest_auth_token is on consume | Call leftover_honest_auth_token on remaining magic / reset / verify / invite consume sites in one ship, then STOP (oral #109) |
 | One leftover SSO ``?connection=`` site after leftover_honest_connection_id exists | Call leftover_honest_connection_id on remaining enterprise/SAML login + metadata sites in one ship, then STOP (oral #110) |
+| One leftover ``/auth/sso/{provider}`` slug after leftover_honest_sso_provider exists | Call leftover_honest_sso_provider on remaining initiate + callback sites in one ship, then STOP (oral #112) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

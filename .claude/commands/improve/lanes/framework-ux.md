@@ -234,6 +234,17 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   Helper: `leftover_honest_connection_id`. Leftover stays put (400).
   Do **not** walk another enterprise/SAML leftover
   `?connection=` site.
+- **SCIM leftover externalId** (`externalId: ["zzz"]` invents a
+  500 / persist; leftover PATCH invents a 200 no-op) closed
+  cycle 2241 (oral #111). Helper:
+  `leftover_honest_scim_external_id`. Leftover stays put (400
+  `invalidValue`). Do **not** walk another SCIM `externalId`
+  body site.
+- **SSO leftover provider** (`/auth/sso/zzz` invents
+  `303 /login?error=sso_provider_unknown`) closed cycle 2242
+  (oral #112). Helper: `leftover_honest_sso_provider`.
+  Leftover stays put (400).
+  Do **not** walk another leftover `/auth/sso/{provider}` slug.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
