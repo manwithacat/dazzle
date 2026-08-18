@@ -204,6 +204,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_email_leftover.py",
     # cycle 2235: leftover mailbox regex was py/polynomial-redos #227
     "tests/unit/test_mailbox_shape.py",
+    # cycle 2237: leftover org membership_id must not invent invalid_org theater
+    "tests/unit/test_membership_id_leftover.py",
     # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",

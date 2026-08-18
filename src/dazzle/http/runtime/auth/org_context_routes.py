@@ -20,6 +20,7 @@ from dazzle.http.runtime.auth.auth_views import (
     SELECT_ORG_ERROR_MESSAGES,
     SELECT_ORG_ERROR_TOKENS,
     leftover_honest_auth_error,
+    leftover_honest_auth_token,
 )
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.crypto import cookie_secure
@@ -27,6 +28,48 @@ from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path,
     leftover_honest_auth_next,
 )
+
+
+def leftover_honest_membership_id(raw: Any) -> str | None:
+    """Valid membership token_urlsafe ids ride. Leftover stays put (None).
+
+    Leftover ``membership_id=zzz`` / ``ghost`` on POST
+    ``/auth/select-org`` and ``/auth/switch-org`` used to invent
+    ``303 /auth/select-org?error=invalid_org`` picker theater
+    (store reject → error redirect). ``secrets.token_urlsafe(24)``
+    ids ride via leftover_honest_auth_token. Absent / blank is
+    first-visit (``""``). Well-formed ids that fail ownership still
+    bounce ``invalid_org``. Distinct from leftover auth token echo
+    (oral #98) and leftover entity-id query (oral #71). Live
+    simple_task ``/auth/select-org``. Cycle 2237.
+    """
+    return leftover_honest_auth_token(raw)
+
+
+async def _submit_membership(
+    request: Request, membership_id: str, next: str
+) -> HTMLResponse | RedirectResponse:
+    """Leftover ``membership_id=zzz`` used to invent invalid_org theater."""
+    honest = leftover_membership_or_400(membership_id)
+    if not isinstance(honest, str):
+        return honest
+    target = next if next and next != "/" and is_safe_redirect_path(next) else "/app"
+    return await _activate_and_redirect(request, honest, target)
+
+
+def leftover_membership_or_400(raw: Any) -> str | HTMLResponse:
+    """Ride a valid membership id or return a stay-put 400.
+
+    Leftover stays put (``Unknown membership``). Absent / blank is
+    first-visit (``Membership required``). Callers return the
+    HTMLResponse as-is when it is not a str.
+    """
+    honest = leftover_honest_membership_id(raw)
+    if honest is None:
+        return HTMLResponse("Unknown membership", status_code=400)
+    if not honest:
+        return HTMLResponse("Membership required", status_code=400)
+    return honest
 
 
 def _product_name(request: Request) -> str:
@@ -107,23 +150,21 @@ def create_org_context_routes() -> APIRouter:
         )
         return HTMLResponse(content=FragmentRenderer().render(page))
 
-    @router.post("/auth/select-org", include_in_schema=False)
+    @router.post("/auth/select-org", include_in_schema=False, response_model=None)
     async def select_org_submit(
         request: Request,
         membership_id: Annotated[str, Form()] = "",
         next: Annotated[str, Query()] = "/app",
-    ) -> RedirectResponse:
-        target = next if next and next != "/" and is_safe_redirect_path(next) else "/app"
-        return await _activate_and_redirect(request, membership_id, target)
+    ) -> HTMLResponse | RedirectResponse:
+        return await _submit_membership(request, membership_id, next)
 
-    @router.post("/auth/switch-org", include_in_schema=False)
+    @router.post("/auth/switch-org", include_in_schema=False, response_model=None)
     async def switch_org_submit(
         request: Request,
         membership_id: Annotated[str, Form()] = "",
         next: Annotated[str, Query()] = "/app",
-    ) -> RedirectResponse:
-        target = next if next and next != "/" and is_safe_redirect_path(next) else "/app"
-        return await _activate_and_redirect(request, membership_id, target)
+    ) -> HTMLResponse | RedirectResponse:
+        return await _submit_membership(request, membership_id, next)
 
     @router.get("/auth/no-orgs", response_class=HTMLResponse, include_in_schema=False)
     async def no_orgs_page(request: Request) -> str:

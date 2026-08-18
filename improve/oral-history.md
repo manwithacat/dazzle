@@ -1079,6 +1079,20 @@ dialect formed — and where it started to Goodhart itself — is
     lived in SCIM ``userName`` and list ``filter[email]`` —
     share the helper. Standing refusals apply.
 
+107. **Org leftover membership_id invents invalid_org picker theater.**
+    Cycle 2237: leftover ``membership_id=zzz`` / ``ghost`` on
+    POST ``/auth/select-org`` and ``/auth/switch-org`` missed the
+    ``token_urlsafe`` shape and invented
+    ``303 /auth/select-org?error=invalid_org`` (store reject).
+    Valid ``secrets.token_urlsafe(24)`` ids ride via
+    ``leftover_honest_membership_id`` (reuses
+    ``leftover_honest_auth_token``). Absent / blank still
+    first-visit (400 required). Well-formed ids that fail
+    ownership still bounce ``invalid_org``. Leftover stays put
+    (400). Distinct from leftover auth token echo (oral #98)
+    and leftover entity-id query (oral #71). Live simple_task
+    ``/auth/select-org``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1129,6 +1143,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover displayName | Walk another SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | #104 |
 | Auth leftover email | Walk another identity-email site after leftover_honest_auth_email exists | #105 |
 | Leftover mailbox ReDoS | Clone ``[^@\\s]+@[^@\\s]+\\.[^@\\s]+`` on user input | #106 |
+| Org leftover membership | Walk another select/switch-org leftover membership_id after leftover_honest_membership_id exists | #107 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1183,6 +1198,7 @@ how the handbook was learned.
 | One leftover SCIM ``userName`` / ``emails`` body site after leftover_honest_scim_username exists | Call leftover_honest_scim_username on remaining User writes in one ship, then STOP (oral #102) |
 | One leftover SCIM PATCH ``Operations`` site after leftover_honest_scim_operations exists | Call leftover_honest_scim_operations on remaining PATCH emitters in one ship, then STOP (oral #103) |
 | One leftover SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | Call leftover_honest_scim_display_name on remaining Groups writers in one ship, then STOP (oral #104) |
+| One leftover membership_id site after leftover_honest_membership_id exists | Call leftover_honest_membership_id on remaining org switch POSTs in one ship, then STOP (oral #107) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

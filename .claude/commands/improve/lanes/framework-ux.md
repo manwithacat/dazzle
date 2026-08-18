@@ -209,6 +209,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_auth_email` / `leftover_auth_email_or_400`.
   Leftover stays put (400). Do **not** walk another identity-
   email site.
+- **Org leftover membership_id** (`membership_id=zzz` invents
+  `303 /auth/select-org?error=invalid_org`) closed cycle 2237
+  (oral #107). Helper: `leftover_honest_membership_id` /
+  `leftover_membership_or_400`. Leftover stays put (400).
+  Do **not** walk another select/switch-org leftover
+  membership_id site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
