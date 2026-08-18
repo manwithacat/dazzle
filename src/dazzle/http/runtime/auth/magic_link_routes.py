@@ -15,9 +15,12 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
+from dazzle.http.runtime.auth.auth_views import (
+    leftover_auth_email_or_400,
+    leftover_honest_auth_token,
+)
 from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.magic_link import (
@@ -106,6 +109,15 @@ def create_magic_link_routes() -> APIRouter:
         with a netloc (//evil.com protocol-relative), and anything that
         doesn't begin with "/". Unsafe values fall back to "/".
         """
+        # Leftover ``/auth/magic/zzz`` used to invent invalid_magic_link
+        # theater. Valid token_urlsafe(32) tokens ride. HTMLResponse
+        # (not Response(content=…)) — oral #93.
+        honest = leftover_honest_auth_token(token)
+        if honest is None:
+            return HTMLResponse("Unknown magic link", status_code=400)
+        if not honest:
+            return HTMLResponse("Magic link required", status_code=400)
+        token = honest
         auth_store = request.app.state.auth_store
         user_id = validate_magic_link(auth_store, token)
         if user_id is None:

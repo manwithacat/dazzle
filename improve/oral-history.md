@@ -1106,6 +1106,21 @@ dialect formed — and where it started to Goodhart itself — is
     and leftover 2FA sent (oral #94). Live simple_task
     ``/2fa/challenge``. Standing refusals apply.
 
+109. **Auth leftover consume token invents invalid theater.** Cycle
+    2239: leftover ``/auth/magic/zzz`` / ``ghost`` missed the
+    ``token_urlsafe`` shape and invented
+    ``303 /auth/login?error=invalid_magic_link``. The same leftover
+    on POST ``/auth/reset-password/submit`` invented
+    ``?error=invalid`` (and leftover+mismatch echoed junk into the
+    URL). Leftover ``?token=zzz`` on ``/auth/verify-email`` invented
+    ``verified=error``. Leftover accept-invite invented the
+    invalid-or-used page. Valid urlsafe tokens ride via
+    ``leftover_honest_auth_token``. Absent / blank still first-visit.
+    Well-formed tokens that fail validate still bounce invalid.
+    Leftover stays put (400). Distinct from leftover auth token
+    echo (oral #98) and leftover membership_id (oral #107). Live
+    simple_task ``/auth/magic``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1158,6 +1173,7 @@ the end of every new oral *is* expensive — point here instead.
 | Leftover mailbox ReDoS | Clone ``[^@\\s]+@[^@\\s]+\\.[^@\\s]+`` on user input | #106 |
 | Org leftover membership | Walk another select/switch-org leftover membership_id after leftover_honest_membership_id exists | #107 |
 | 2FA leftover code | Walk another 2FA verify/setup leftover code after leftover_honest_2fa_code exists | #108 |
+| Auth leftover consume token | Walk another magic / reset / verify / invite consume site after leftover_honest_auth_token is on consume | #109 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1213,6 +1229,7 @@ how the handbook was learned.
 | One leftover SCIM PATCH ``Operations`` site after leftover_honest_scim_operations exists | Call leftover_honest_scim_operations on remaining PATCH emitters in one ship, then STOP (oral #103) |
 | One leftover SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | Call leftover_honest_scim_display_name on remaining Groups writers in one ship, then STOP (oral #104) |
 | One leftover membership_id site after leftover_honest_membership_id exists | Call leftover_honest_membership_id on remaining org switch POSTs in one ship, then STOP (oral #107) |
+| One leftover consume token site after leftover_honest_auth_token is on consume | Call leftover_honest_auth_token on remaining magic / reset / verify / invite consume sites in one ship, then STOP (oral #109) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

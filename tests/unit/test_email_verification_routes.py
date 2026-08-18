@@ -17,6 +17,10 @@ from dazzle.http.runtime.auth.email_verification_routes import (
     create_email_verification_routes,
 )
 
+# leftover_honest_auth_token: secrets.token_urlsafe(32) is 43 urlsafe chars.
+_VALID_TOKEN = "A" * 43
+_BAD_TOKEN = "B" * 43
+
 
 @pytest.fixture
 def mock_auth_store() -> MagicMock:
@@ -66,7 +70,7 @@ class TestVerifyEmailConsumer:
             "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value="user-123",
         ):
-            resp = client.get("/auth/verify-email?token=valid", follow_redirects=False)
+            resp = client.get(f"/auth/verify-email?token={_VALID_TOKEN}", follow_redirects=False)
         assert resp.status_code == 303
         assert "verified=ok" in resp.headers["location"]
 
@@ -75,7 +79,7 @@ class TestVerifyEmailConsumer:
             "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
             return_value=None,
         ):
-            resp = client.get("/auth/verify-email?token=bad_or_expired", follow_redirects=False)
+            resp = client.get(f"/auth/verify-email?token={_BAD_TOKEN}", follow_redirects=False)
         assert resp.status_code == 303
         location = resp.headers["location"]
         assert "/auth/login" in location
@@ -98,7 +102,8 @@ class TestVerifyEmailConsumer:
             return_value="user-123",
         ):
             resp = client.get(
-                "/auth/verify-email?token=valid&next=/dashboard", follow_redirects=False
+                f"/auth/verify-email?token={_VALID_TOKEN}&next=/dashboard",
+                follow_redirects=False,
             )
         assert resp.status_code == 303
         assert resp.headers["location"] == "/dashboard?verified=ok"
@@ -114,7 +119,7 @@ class TestVerifyEmailConsumer:
             return_value="user-123",
         ):
             resp = client.get(
-                "/auth/verify-email?token=valid&next=//evil.com",
+                f"/auth/verify-email?token={_VALID_TOKEN}&next=//evil.com",
                 follow_redirects=False,
             )
         assert resp.status_code == 303

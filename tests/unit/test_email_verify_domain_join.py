@@ -112,7 +112,7 @@ def _verify(client: TestClient) -> Any:
         "dazzle.http.runtime.auth.email_verification_routes.validate_email_verification_token",
         return_value=_USER_ID,
     ):
-        return client.get("/auth/verify-email?token=valid")
+        return client.get("/auth/verify-email?token=" + ("A" * 43))
 
 
 def test_auto_join_creates_membership_and_redirects_ok() -> None:

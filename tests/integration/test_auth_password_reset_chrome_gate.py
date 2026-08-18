@@ -263,11 +263,11 @@ def test_get_reset_password_chrome_off_now_also_renders_typed_view() -> None:
 
 
 def test_post_reset_password_success_updates_password_and_redirects() -> None:
-    client, store = _build_app(chrome=True, valid_token="good-token")
+    client, store = _build_app(chrome=True, valid_token=_VALID_RESET_TOKEN)
     resp = client.post(
         "/auth/reset-password/submit",
         data={
-            "token": "good-token",
+            "token": _VALID_RESET_TOKEN,
             "new_password": "newpass123",
             "confirm_password": "newpass123",
         },
@@ -275,34 +275,36 @@ def test_post_reset_password_success_updates_password_and_redirects() -> None:
     assert resp.status_code == 303
     assert resp.headers["location"] == "/reset-password/done"
     assert store.updated_passwords == [("user-123", "newpass123")]
-    assert store.consumed_tokens == ["good-token"]
+    assert store.consumed_tokens == [_VALID_RESET_TOKEN]
     assert store.deleted_sessions == ["user-123"]
 
 
 def test_post_reset_password_mismatched_redirects_back_with_error() -> None:
     """Server-side mismatch check — the typed form has no JS, so the
     server is the source of truth for password-field equality."""
-    client, store = _build_app(chrome=True, valid_token="good-token")
+    client, store = _build_app(chrome=True, valid_token=_VALID_RESET_TOKEN)
     resp = client.post(
         "/auth/reset-password/submit",
         data={
-            "token": "good-token",
+            "token": _VALID_RESET_TOKEN,
             "new_password": "newpass123",
             "confirm_password": "different",
         },
     )
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/reset-password?token=good-token&error=mismatch"
+    assert resp.headers["location"] == (
+        f"/reset-password?token={_VALID_RESET_TOKEN}&error=mismatch"
+    )
     assert store.updated_passwords == []
     assert store.consumed_tokens == []
 
 
 def test_post_reset_password_invalid_token_redirects_with_error() -> None:
-    client, store = _build_app(chrome=True, valid_token="good-token")
+    client, store = _build_app(chrome=True, valid_token=_VALID_RESET_TOKEN)
     resp = client.post(
         "/auth/reset-password/submit",
         data={
-            "token": "bad-token",
+            "token": "B" * 43,
             "new_password": "newpass123",
             "confirm_password": "newpass123",
         },
@@ -317,11 +319,11 @@ def test_post_reset_password_empty_password_redirects_with_mismatch() -> None:
     """Empty new_password falls into the mismatch branch (both
     sides empty satisfies `==`, but the explicit emptiness check
     rejects it). Defends against a JS-disabled accidental submit."""
-    client, store = _build_app(chrome=True, valid_token="good-token")
+    client, store = _build_app(chrome=True, valid_token=_VALID_RESET_TOKEN)
     resp = client.post(
         "/auth/reset-password/submit",
         data={
-            "token": "good-token",
+            "token": _VALID_RESET_TOKEN,
             "new_password": "",
             "confirm_password": "",
         },

@@ -21,9 +21,12 @@ from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
+from dazzle.http.runtime.auth.auth_views import (
+    leftover_auth_email_or_400,
+    leftover_honest_auth_token,
+)
 from dazzle.http.runtime.auth.mailer import get_mailer
 
 _logger = logging.getLogger(__name__)
@@ -79,7 +82,7 @@ def create_password_reset_routes() -> APIRouter:
         token: Annotated[str, Form()] = "",
         new_password: Annotated[str, Form()] = "",
         confirm_password: Annotated[str, Form()] = "",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Consume a reset token and update the user's password.
 
         Validates that ``new_password`` matches ``confirm_password``
@@ -89,13 +92,17 @@ def create_password_reset_routes() -> APIRouter:
         On success, the token is consumed, existing sessions are
         cleared, and the user lands on `/reset-password/done`.
         """
+        # Leftover ``token=zzz`` used to invent ``?error=invalid``
+        # theater (and leftover+mismatch echoed junk into the URL).
+        # Valid token_urlsafe(32) tokens ride. HTMLResponse — oral #93.
+        honest = leftover_honest_auth_token(token)
+        if honest is None:
+            return HTMLResponse("Unknown reset token", status_code=400)
+        if not honest:
+            return HTMLResponse("Reset token required", status_code=400)
+        token = honest
         if not new_password or new_password != confirm_password:
-            target = "/reset-password?error=mismatch"
-            if token:
-                # URL-encode the token so a crafted value can't break out
-                # of the query string. The path itself is hardcoded
-                # same-origin, so this stays an internal redirect.
-                target = f"/reset-password?token={quote(token, safe='')}&error=mismatch"
+            target = f"/reset-password?token={quote(token, safe='')}&error=mismatch"
             return RedirectResponse(url=target, status_code=303)
 
         auth_store = request.app.state.auth_store

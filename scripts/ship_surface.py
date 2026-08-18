@@ -208,6 +208,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_membership_id_leftover.py",
     # cycle 2238: leftover 2FA code must not invent invalid_code theater
     "tests/unit/test_2fa_code_leftover.py",
+    # cycle 2239: leftover consume token must not invent invalid theater
+    "tests/unit/test_auth_consume_token_leftover.py",
     # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",

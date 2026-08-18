@@ -16,7 +16,10 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
+from dazzle.http.runtime.auth.auth_views import (
+    leftover_auth_email_or_400,
+    leftover_honest_auth_token,
+)
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.member_admin import (
     declared_persona_ids,
@@ -29,16 +32,6 @@ def _product_name(request: Request) -> str:
     sitespec = getattr(request.app.state, "sitespec", None) or {}
     brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
     return str(brand.get("product_name", "Dazzle"))
-
-
-def _is_wellformed_token(token: str) -> bool:
-    """A real invitation token is ``secrets.token_urlsafe`` → ``[A-Za-z0-9_-]``.
-
-    Reject anything else BEFORE it reaches the DB lookup / a ``URL(...)`` (a token
-    with a ``:`` would otherwise raise in the Fragment URL scheme check → 500). A
-    malformed token is treated as a not-found invitation (fail-closed).
-    """
-    return bool(token) and len(token) <= 256 and all(c.isalnum() or c in "-_" for c in token)
 
 
 def create_invitation_routes() -> APIRouter:
@@ -99,8 +92,13 @@ def create_invitation_routes() -> APIRouter:
             )
         )
 
-    @router.get("/auth/accept-invite/{token}", response_class=HTMLResponse, include_in_schema=False)
-    async def accept_page(request: Request, token: str) -> str:
+    @router.get(
+        "/auth/accept-invite/{token}",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+        response_model=None,
+    )
+    async def accept_page(request: Request, token: str) -> HTMLResponse:
         from dazzle.http.runtime.auth.invitation_views import (
             build_accept_invite_view,
             build_invite_result_view,
@@ -109,20 +107,24 @@ def create_invitation_routes() -> APIRouter:
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         store = request.app.state.auth_store
-        # Malformed / not-found / used → a token-free invalid page (never embed an
+        # Leftover ``zzz`` used to invent the invalid-or-used page.
+        # Inline stay-put (not leftover_membership_or_400 clone).
+        honest = leftover_honest_auth_token(token)
+        if honest is None:
+            return HTMLResponse("Unknown invitation", status_code=400)
+        if not honest:
+            return HTMLResponse("Invitation required", status_code=400)
+        token = honest
+        # Not-found / used → a token-free invalid page (never embed an
         # untrusted token into a URL — a `:` would 500 the Fragment URL builder).
-        if not _is_wellformed_token(token):
-            return FragmentRenderer().render(
-                build_invite_result_view(
-                    product_name=_product_name(request), message="This invitation link is invalid."
-                )
-            )
         inv = get_invitation(store, token)
         if inv is None or inv.accepted_at is not None:
-            return FragmentRenderer().render(
-                build_invite_result_view(
-                    product_name=_product_name(request),
-                    message="This invitation is invalid or has already been used.",
+            return HTMLResponse(
+                FragmentRenderer().render(
+                    build_invite_result_view(
+                        product_name=_product_name(request),
+                        message="This invitation is invalid or has already been used.",
+                    )
                 )
             )
         session_id = read_session_id(request)
@@ -131,13 +133,15 @@ def create_invitation_routes() -> APIRouter:
             ctx.user.email if ctx is not None and ctx.is_authenticated and ctx.user else None
         )
         org = store.get_organization(inv.org_id)
-        return FragmentRenderer().render(
-            build_accept_invite_view(
-                product_name=_product_name(request),
-                org_name=org.name if org is not None else inv.org_id,
-                roles=inv.roles,
-                token=token,
-                signed_in_email=signed_in_email,
+        return HTMLResponse(
+            FragmentRenderer().render(
+                build_accept_invite_view(
+                    product_name=_product_name(request),
+                    org_name=org.name if org is not None else inv.org_id,
+                    roles=inv.roles,
+                    token=token,
+                    signed_in_email=signed_in_email,
+                )
             )
         )
 
@@ -149,8 +153,12 @@ def create_invitation_routes() -> APIRouter:
         from dazzle.http.runtime.auth.invitations import InvitationError, accept_invitation
 
         store = request.app.state.auth_store
-        if not _is_wellformed_token(token):
-            return HTMLResponse("Cannot accept invitation: invalid token", status_code=400)
+        honest = leftover_honest_auth_token(token)
+        if honest is None:
+            return HTMLResponse("Unknown invitation", status_code=400)
+        if not honest:
+            return HTMLResponse("Invitation required", status_code=400)
+        token = honest
         session_id = read_session_id(request)
         ctx = store.validate_session(session_id) if session_id else None
         if ctx is None or not ctx.is_authenticated or ctx.user is None:

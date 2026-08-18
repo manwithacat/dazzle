@@ -22,8 +22,9 @@ import time
 from typing import Annotated
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_token
 from dazzle.http.runtime.auth.email_verification import (
     DEFAULT_TOKEN_TTL_HOURS,
     create_email_verification_token,
@@ -78,7 +79,7 @@ def create_email_verification_routes(
         request: Request,
         token: Annotated[str, Query()] = "",
         next: Annotated[str, Query()] = "/",
-    ) -> RedirectResponse:
+    ) -> Response:
         """Validate ``token`` and flip ``email_verified=true``.
 
         Redirects to ``?next=…`` (when same-origin) or ``/`` on success
@@ -87,11 +88,18 @@ def create_email_verification_routes(
         lets the consuming page surface a banner without needing a
         Flash-message machinery.
         """
-        if not token:
+        # Leftover ``?token=zzz`` used to invent verified=error theater.
+        # Valid token_urlsafe(32) tokens ride. Absent still first-visit
+        # (missing_token). HTMLResponse — oral #93.
+        honest = leftover_honest_auth_token(token)
+        if honest is None:
+            return HTMLResponse("Unknown verification token", status_code=400)
+        if not honest:
             return RedirectResponse(
                 url="/auth/login?verified=error&reason=missing_token",
                 status_code=303,
             )
+        token = honest
 
         auth_store = request.app.state.auth_store
         user_id = validate_email_verification_token(auth_store, token)

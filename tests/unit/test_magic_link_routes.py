@@ -12,6 +12,10 @@ from dazzle.http.runtime.auth.magic_link_routes import (
     create_magic_link_routes,
 )
 
+# leftover_honest_auth_token: secrets.token_urlsafe(32) is 43 urlsafe chars.
+_VALID_TOKEN = "A" * 43
+_BAD_TOKEN = "B" * 43
+
 
 @pytest.fixture
 def mock_auth_store():
@@ -51,7 +55,7 @@ class TestMagicLinkConsumer:
             "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="user-123",
         ):
-            resp = client.get("/auth/magic/valid_token", follow_redirects=False)
+            resp = client.get(f"/auth/magic/{_VALID_TOKEN}", follow_redirects=False)
 
         assert resp.status_code == 303
         assert resp.headers["location"] == "/"
@@ -64,7 +68,7 @@ class TestMagicLinkConsumer:
             "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value=None,
         ):
-            resp = client.get("/auth/magic/bad_token", follow_redirects=False)
+            resp = client.get(f"/auth/magic/{_BAD_TOKEN}", follow_redirects=False)
 
         assert resp.status_code == 303
         assert "error=invalid_magic_link" in resp.headers["location"]
@@ -77,7 +81,7 @@ class TestMagicLinkConsumer:
             "dazzle.http.runtime.auth.magic_link_routes.validate_magic_link",
             return_value="ghost-user",
         ):
-            resp = client.get("/auth/magic/valid_token", follow_redirects=False)
+            resp = client.get(f"/auth/magic/{_VALID_TOKEN}", follow_redirects=False)
 
         assert resp.status_code == 303
         assert "error=invalid_magic_link" in resp.headers["location"]
@@ -90,7 +94,7 @@ class TestMagicLinkConsumer:
             return_value="user-123",
         ):
             resp = client.get(
-                "/auth/magic/valid_token?next=/dashboard",
+                f"/auth/magic/{_VALID_TOKEN}?next=/dashboard",
                 follow_redirects=False,
             )
 
@@ -105,7 +109,7 @@ class TestMagicLinkConsumer:
             return_value="user-123",
         ):
             resp = client.get(
-                "/auth/magic/valid_token?next=https://evil.com",
+                f"/auth/magic/{_VALID_TOKEN}?next=https://evil.com",
                 follow_redirects=False,
             )
 
@@ -120,7 +124,7 @@ class TestMagicLinkConsumer:
             return_value="user-123",
         ):
             resp = client.get(
-                "/auth/magic/valid_token?next=//evil.com/stealcookies",
+                f"/auth/magic/{_VALID_TOKEN}?next=//evil.com/stealcookies",
                 follow_redirects=False,
             )
 
@@ -240,7 +244,7 @@ class TestMagicLinkBackslashBypass:
             return_value="user-123",
         ):
             resp = client.get(
-                f"/auth/magic/valid_token?next={attack}",
+                f"/auth/magic/{_VALID_TOKEN}?next={attack}",
                 follow_redirects=False,
             )
 

@@ -38,7 +38,7 @@ def mock_auth_store_with_real_token_flow():
         return None
 
     def create_magic_link(store_arg, *, user_id, ttl_seconds=300, created_by="cli"):
-        token = f"token-{len(tokens)}"
+        token = ("A" * 42) + str(len(tokens))
         tokens[token] = user_id
         return token
 
@@ -123,7 +123,8 @@ class TestQAModeEndToEnd:
             )
             assert resp.status_code == 200
             url = resp.json()["url"]
-            assert url.startswith("/auth/magic/token-")
+            assert url.startswith("/auth/magic/")
+            assert len(url.split("/auth/magic/", 1)[1]) >= 32
 
             # 3. Consume the magic link
             resp = client.get(url, follow_redirects=False)
@@ -175,7 +176,7 @@ class TestQAModeEndToEnd:
         ):
             # No QA env flags set — consumer should still work
             resp = client.get(
-                "/auth/magic/some_production_token",
+                "/auth/magic/" + ("A" * 43),
                 follow_redirects=False,
             )
             assert resp.status_code == 303

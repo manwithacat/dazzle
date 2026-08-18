@@ -383,7 +383,7 @@ class TestCsrfCookieAtSiblingSites:
         original_validate = mlr.validate_magic_link
         mlr.validate_magic_link = MagicMock(return_value=user.id)
         try:
-            response = client.get("/auth/magic/sometoken")
+            response = client.get("/auth/magic/" + ("A" * 43))
         finally:
             mlr.validate_magic_link = original_validate
 

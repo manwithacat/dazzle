@@ -443,7 +443,7 @@ class TestMagicLinkRegenerate:
             mock_store.create_session.return_value = new_session
 
             client.cookies.set("dazzle_session", "planted-session-A")
-            response = client.get("/auth/magic/sometoken")
+            response = client.get("/auth/magic/" + ("A" * 43))
         finally:
             mlr.validate_magic_link = original_validate
 
@@ -463,7 +463,7 @@ class TestMagicLinkRegenerate:
             mock_store.get_user_by_id.return_value = user
             mock_store.create_session.return_value = new_session
 
-            response = client.get("/auth/magic/sometoken")
+            response = client.get("/auth/magic/" + ("A" * 43))
         finally:
             mlr.validate_magic_link = original_validate
 

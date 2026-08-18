@@ -220,6 +220,14 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   (oral #108). Helper: `leftover_honest_2fa_code` /
   `leftover_2fa_code_or_400`. Leftover stays put (400).
   Do **not** walk another 2FA verify/setup leftover code.
+- **Auth leftover consume token** (`/auth/magic/zzz` invents
+  `303 /auth/login?error=invalid_magic_link`; leftover reset
+  invents `?error=invalid`; leftover verify-email invents
+  `verified=error`; leftover accept-invite invents the
+  invalid-or-used page) closed cycle 2239 (oral #109). Helper:
+  `leftover_honest_auth_token`. Leftover stays put (400).
+  Do **not** walk another magic / reset / verify / invite
+  consume site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
