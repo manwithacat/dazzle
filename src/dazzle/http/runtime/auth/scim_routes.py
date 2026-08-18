@@ -38,6 +38,7 @@ from dazzle.http.runtime.auth.scim_provisioning import (
     leftover_honest_scim_body_display_name,
     leftover_honest_scim_body_external_id,
     leftover_honest_scim_body_members,
+    leftover_honest_scim_display_name,
     leftover_scim_display_name_stay_put,
     leftover_scim_external_id_stay_put,
     leftover_scim_members_stay_put,
@@ -320,6 +321,55 @@ def leftover_honest_scim_body_schemas(body: dict[str, Any], *, required: str) ->
     return leftover_honest_scim_schemas(body.get("schemas"), required=required)
 
 
+def leftover_honest_scim_groups(raw: Any) -> list[str] | None:
+    """Valid SCIM User.groups lists ride. Leftover junk restores None.
+
+    Leftover ``groups: "zzz"`` / ``ghost`` / dict / int on POST/PUT
+    ``/scim/v2/Users`` used to iterate a non-list and invent a 500
+    (``int`` / ``True``) or invent empty (string chars skipped) then
+    provision. Leftover PATCH ``path: groups`` invented a 200 no-op
+    (unknown op skipped). Valid ``[{"value": "Eng"}]`` /
+    ``[{"display": "Eng"}]`` ride. Absent / empty is the honest
+    first-visit default (``[]`` — informational omit; RFC 7644
+    §4.1.2 is server-managed). Rest is stay-put (None → 400
+    ``invalidValue``). Distinct from leftover ``members`` (oral #101)
+    and leftover ``schemas`` (oral #114). Live SCIM Users. Cycle 2245.
+    """
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        return None
+    if not raw:
+        return []
+    out: list[str] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            return None
+        name = item.get("display")
+        if name is None:
+            name = item.get("value")
+        honest = leftover_honest_scim_display_name(name)
+        if honest is None or not honest:
+            return None
+        out.append(honest)
+    return out
+
+
+def leftover_scim_groups_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``groups`` would invent a 200 no-op."""
+    ops = leftover_honest_scim_body_operations(body)
+    if not ops:
+        return False
+    for op in ops:
+        path = str(op.get("path") or "").lower()
+        value = op.get("value")
+        if path == "groups":
+            return leftover_honest_scim_groups(value) is None
+        if not path and isinstance(value, dict) and "groups" in value:
+            return leftover_honest_scim_groups(value.get("groups")) is None
+    return False
+
+
 def _coerce_active(value: Any) -> bool | None:
     """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
     ``None`` if the value isn't a recognizable active flag."""
@@ -351,15 +401,15 @@ def _active_from_patch(body: dict[str, Any]) -> Any:
     return _SCIM_ACTIVE_ABSENT
 
 
-def _groups_from_body(body: dict[str, Any]) -> list[str]:
-    """Display names from a SCIM ``groups`` array (best-effort; usually empty — group
-    membership is normally pushed via the Groups endpoint, deferred)."""
-    out: list[str] = []
-    for g in body.get("groups", []) or []:
-        name = g.get("display") or g.get("value") if isinstance(g, dict) else None
-        if name:
-            out.append(str(name))
-    return out
+def _groups_from_body(body: dict[str, Any]) -> list[str] | None:
+    """Display names from a SCIM ``groups`` array. Leftover restores None.
+
+    Group membership is normally pushed via the Groups endpoint
+    (User.groups is informational). Missing key defaults ``[]``.
+    """
+    if "groups" not in body:
+        return []
+    return leftover_honest_scim_groups(body.get("groups"))
 
 
 def _require_scim_connection(request: Request) -> Any:
@@ -505,13 +555,19 @@ def create_scim_routes() -> APIRouter:
         honest_eid = leftover_honest_scim_body_external_id(body)
         if honest_eid is None:
             return _error(400, "invalid externalId", scim_type="invalidValue")
+        # Leftover ``groups: "zzz"`` / int invented a 500 or an
+        # omit-as-absent provision. JSONResponse — oral #93.
+        # RFC 7644 invalidValue.
+        honest_groups = _groups_from_body(body)
+        if honest_groups is None:
+            return _error(400, "invalid groups", scim_type="invalidValue")
         try:
             result = provision_scim_user(
                 store,
                 conn,
                 email=email,
                 active=active,
-                groups=_groups_from_body(body),
+                groups=honest_groups,
                 external_id=honest_eid or None,
             )
         except ScimError as exc:
@@ -581,13 +637,17 @@ def create_scim_routes() -> APIRouter:
         honest_eid = leftover_honest_scim_body_external_id(body)
         if honest_eid is None:
             return _error(400, "invalid externalId", scim_type="invalidValue")
+        # Leftover ``groups`` invented a 500 / omit-as-absent replace.
+        honest_groups = _groups_from_body(body)
+        if honest_groups is None:
+            return _error(400, "invalid groups", scim_type="invalidValue")
         try:
             provision_scim_user(
                 store,
                 conn,
                 email=email,
                 active=active,
-                groups=_groups_from_body(body),
+                groups=honest_groups,
                 external_id=honest_eid or None,
             )
         except ScimError as exc:
@@ -619,6 +679,10 @@ def create_scim_routes() -> APIRouter:
         # op skipped). Stay put. JSONResponse — oral #93.
         if leftover_scim_external_id_stay_put(body):
             return _error(400, "invalid externalId", scim_type="invalidValue")
+        # Leftover PATCH ``groups`` invented a 200 no-op (unknown op
+        # skipped). Stay put. JSONResponse — oral #93.
+        if leftover_scim_groups_stay_put(body):
+            return _error(400, "invalid groups", scim_type="invalidValue")
         active = _active_from_patch(body)
         if active is _SCIM_ACTIVE_ABSENT:
             # Nothing we act on (only `active` is supported) — return current state.
