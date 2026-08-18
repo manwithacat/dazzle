@@ -85,6 +85,61 @@ def leftover_scim_members_stay_put(body: dict[str, Any]) -> bool:
     return False
 
 
+def leftover_honest_scim_display_name(raw: Any) -> str | None:
+    """Valid SCIM ``displayName`` strings ride. Leftover junk restores None.
+
+    Leftover ``displayName: ["zzz"]`` / dict / int / True on POST/PUT
+    ``/scim/v2/Groups`` used to miss the string shape and invent a
+    group persist. Leftover PATCH ``value`` used to invent a rename
+    via ``str()`` (``None`` → ``"None"``, leftover dict → repr).
+    Valid non-empty strings ride (``zzz`` / ``ghost`` are legal
+    names). Absent / blank is the honest required-missing default
+    (``""`` → 400 required). Rest is stay-put (None → 400
+    ``invalidValue``). RFC 7644 §4.2. Distinct from leftover
+    ``members`` (oral #101) and leftover ``Operations`` (oral #103).
+    Live SCIM Groups. Cycle 2232.
+    """
+    if raw is None:
+        return ""
+    if type(raw) is not str:
+        return None
+    text = raw.strip()
+    if not text:
+        return ""
+    return text
+
+
+def leftover_honest_scim_body_display_name(body: dict[str, Any]) -> str | None:
+    """POST/PUT ``displayName``. Missing key defaults ``""``. Leftover restores None."""
+    if "displayName" not in body:
+        return ""
+    return leftover_honest_scim_display_name(body.get("displayName"))
+
+
+def leftover_scim_display_name_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``displayName`` would invent a ``str()`` rename."""
+    operations = body.get("Operations")
+    if not isinstance(operations, list):
+        return False
+    for op in operations:
+        if not isinstance(op, dict):
+            continue
+        kind = str(op.get("op", "")).lower()
+        if kind not in ("add", "replace"):
+            continue
+        path = op.get("path")
+        value = op.get("value")
+        if path == "displayName":
+            honest = leftover_honest_scim_display_name(value)
+            if honest is None or not honest:
+                return True
+        elif path is None and isinstance(value, dict) and "displayName" in value:
+            honest = leftover_honest_scim_display_name(value.get("displayName"))
+            if honest is None or not honest:
+                return True
+    return False
+
+
 def _member_ids(value: Any) -> list[str]:
     """Member ids from a SCIM ``members`` value — leftover is empty, not a crash."""
     return leftover_honest_scim_member_ids(value) or []
@@ -124,10 +179,14 @@ def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
             if ids is not None:
                 ops.append(("replace_members", ids))
         elif kind in ("add", "replace") and path == "displayName":
-            ops.append(("rename", str(value)))
+            honest = leftover_honest_scim_display_name(value)
+            if honest:
+                ops.append(("rename", honest))
         elif kind in ("add", "replace") and path is None and isinstance(value, dict):
             if "displayName" in value:
-                ops.append(("rename", str(value["displayName"])))
+                honest = leftover_honest_scim_display_name(value["displayName"])
+                if honest:
+                    ops.append(("rename", honest))
             if "members" in value:
                 ids = leftover_honest_scim_member_ids(value["members"])
                 if ids is not None:

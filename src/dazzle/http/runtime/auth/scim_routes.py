@@ -35,7 +35,9 @@ from dazzle.http.runtime.auth import scim_discovery
 from dazzle.http.runtime.auth.scim_provisioning import (
     ScimError,
     deprovision_scim_user,
+    leftover_honest_scim_body_display_name,
     leftover_honest_scim_body_members,
+    leftover_scim_display_name_stay_put,
     leftover_scim_members_stay_put,
     provision_scim_user,
     set_scim_user_active,
@@ -603,11 +605,16 @@ def create_scim_routes() -> APIRouter:
         member_ids = leftover_honest_scim_body_members(body)
         if member_ids is None:
             return _error(400, "invalid members", scim_type="invalidValue")
+        # Leftover ``displayName: ["zzz"]`` / dict / int invented a
+        # group persist. JSONResponse — oral #93. RFC 7644 invalidValue.
+        display_name = leftover_honest_scim_body_display_name(body)
+        if display_name is None:
+            return _error(400, "invalid displayName", scim_type="invalidValue")
         try:
             group = sp.create_group(
                 store,
                 conn,
-                body.get("displayName", ""),
+                display_name,
                 member_ids,
                 external_id=body.get("externalId"),  # the Entra group objectId GUID
             )
@@ -666,7 +673,11 @@ def create_scim_routes() -> APIRouter:
         assert body is not None
         # PUT is a full replace — displayName is a required Group attribute, so a
         # missing/empty one is a 400 (matches create), not a silent no-op rename.
-        if not body.get("displayName"):
+        # Leftover type invented a rename persist. JSONResponse — oral #93.
+        display_name = leftover_honest_scim_body_display_name(body)
+        if display_name is None:
+            return _error(400, "invalid displayName", scim_type="invalidValue")
+        if not display_name:
             return _error(400, "displayName is required", scim_type="invalidValue")
         # Leftover ``members`` invented a wipe. Validate before rename.
         # JSONResponse — oral #93. RFC 7644 invalidValue.
@@ -674,7 +685,7 @@ def create_scim_routes() -> APIRouter:
         if member_ids is None:
             return _error(400, "invalid members", scim_type="invalidValue")
         try:
-            sp.rename_group(store, conn, group_id, body["displayName"])
+            sp.rename_group(store, conn, group_id, display_name)
             if "externalId" in body:  # #1342: keep the IdP's stable group id fresh on replace
                 store.update_scim_group_external_id(group_id, conn.id, body.get("externalId"))
             sp.set_group_members(store, conn, group_id, member_ids)
@@ -703,6 +714,10 @@ def create_scim_routes() -> APIRouter:
         # (wipe). Stay put. JSONResponse — oral #93.
         if leftover_scim_members_stay_put(body):
             return _error(400, "invalid members", scim_type="invalidValue")
+        # Leftover PATCH ``displayName`` invented a rename via ``str()``.
+        # Stay put. JSONResponse — oral #93. RFC 7644 invalidValue.
+        if leftover_scim_display_name_stay_put(body):
+            return _error(400, "invalid displayName", scim_type="invalidValue")
         try:
             sp.get_group(store, conn, group_id)  # 404 if absent / wrong org
             for kind, arg in sp.parse_group_patch(body):
