@@ -11,9 +11,10 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 import dazzle.http.runtime.rate_limit as _rl
+from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_error
 
 from .file_storage import FileService, FileValidationError
 
@@ -87,11 +88,43 @@ class _FileDeps:
     max_upload_size: int
     field_size_overrides: dict[tuple[str, str], int] = field(default_factory=dict)
     on_upload_callbacks: list[UploadCallback] = field(default_factory=list)
+    declared_entities: tuple[str, ...] | None = None
 
 
 # =============================================================================
 # Helpers
 # =============================================================================
+
+
+def leftover_honest_file_entity(raw: Any, declared: Any = None) -> str | None:
+    """Valid declared entity names ride. Leftover stays put (None).
+
+    Leftover ``?entity=zzz`` / ``ghost`` / ``MysteryEntity`` on
+    POST ``/files/upload`` used to miss the entity catalog and
+    invent a file-metadata persist (leftover as ``entity_name``).
+    The same leftover on GET ``/files/entity/{entity}/...``
+    invented an empty list. Valid declared entity names ride.
+    Absent / blank is first-visit (``""`` — unassociated).
+    No catalog (test rig / no appspec) rides a non-empty string
+    (historic upload association). Rest is stay-put (None → 400,
+    no write). Reuses ``leftover_honest_auth_error`` when a
+    catalog is present. Distinct from leftover search entity
+    (oral #117) and leftover catalog picker (oral #69). Live
+    project_tracker ``entity Attachment`` ``file: file``.
+    Cycle 2250.
+    """
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return ""
+    if declared is None:
+        if type(raw) is not str:
+            return None
+        return raw.strip()
+    return leftover_honest_auth_error(raw, declared)
+
+
+def leftover_file_entity_stay_put(raw: Any, declared: Any = None) -> bool:
+    """True when leftover entity would invent a persist / empty list."""
+    return leftover_honest_file_entity(raw, declared) is None
 
 
 def _effective_max_size(deps: _FileDeps, entity: str | None, field_name: str | None) -> int:
@@ -300,6 +333,7 @@ def create_file_routes(
     on_upload_callbacks: list[UploadCallback] | None = None,
     optional_auth_dep: Any = None,
     require_auth_by_default: bool = False,
+    declared_entities: tuple[str, ...] | None = None,
 ) -> None:
     """Add file upload routes to FastAPI app.
 
@@ -328,10 +362,11 @@ def create_file_routes(
         max_upload_size=max_upload_size,
         field_size_overrides=field_size_overrides or {},
         on_upload_callbacks=list(on_upload_callbacks) if on_upload_callbacks else [],
+        declared_entities=declared_entities,
     )
 
     # Upload — needs wrapper to wire up FastAPI's File/Query params
-    @app.post(f"{prefix}/upload")  # nosemgrep
+    @app.post(f"{prefix}/upload", response_model=None)  # nosemgrep
     @_rl.limits.limiter.limit(_rl.limits.upload_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def upload_file(
         request: Request,
@@ -340,15 +375,21 @@ def create_file_routes(
         entity_id: str | None = Query(None, description="Associated entity ID"),
         field: str | None = Query(None, description="Field name"),
         auth_context: Any = Depends(auth_dep),  # noqa: B008
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | JSONResponse:
         _require_posture(deps, auth_context)
+        # Leftover ``?entity=zzz`` invented a file-metadata persist.
+        # Valid declared names ride; leftover stays put. JSONResponse
+        # (not Response(content=…)) — oral #93.
+        if leftover_file_entity_stay_put(entity, deps.declared_entities):
+            return JSONResponse(content={"error": "invalid entity"}, status_code=400)
+        honest_entity = leftover_honest_file_entity(entity, deps.declared_entities) or None
         # Source uploaded_by from the session, never from client input (#1551).
         uid = getattr(getattr(auth_context, "user", None), "id", None)
         return await _upload_file(
             deps,
             request,
             file,
-            entity,
+            honest_entity,
             entity_id,
             field,
             uploaded_by=str(uid) if uid is not None else None,
@@ -367,15 +408,19 @@ def create_file_routes(
         return await _delete_file(deps, file_id)
 
     # Entity-scoped routes — needs wrapper for Query param
-    @app.get(f"{prefix}/entity/{{entity}}/{{entity_id}}")  # nosemgrep
+    @app.get(f"{prefix}/entity/{{entity}}/{{entity_id}}", response_model=None)  # nosemgrep
     async def get_entity_files(
         entity: str,
         entity_id: str,
         field: str | None = Query(None),
         auth_context: Any = Depends(auth_dep),  # noqa: B008
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | JSONResponse:
         _require_posture(deps, auth_context)
-        return await _get_entity_files(deps, entity, entity_id, field)
+        # Leftover ``{entity}=zzz`` invented an empty list.
+        if leftover_file_entity_stay_put(entity, deps.declared_entities):
+            return JSONResponse(content={"error": "invalid entity"}, status_code=400)
+        honest_entity = leftover_honest_file_entity(entity, deps.declared_entities) or entity
+        return await _get_entity_files(deps, honest_entity, entity_id, field)
 
 
 def create_static_file_routes(

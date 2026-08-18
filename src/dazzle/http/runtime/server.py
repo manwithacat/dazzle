@@ -2324,6 +2324,11 @@ class DazzleBackendApp:
 
             _upload_callbacks.append(_on_file_uploaded)
 
+            _declared_entities = (
+                tuple(ent.name for ent in self._appspec.domain.entities)
+                if self._appspec is not None
+                else None
+            )
             create_file_routes(
                 self._app,
                 file_service,
@@ -2332,6 +2337,7 @@ class DazzleBackendApp:
                 on_upload_callbacks=_upload_callbacks,
                 optional_auth_dep=optional_auth_dep,
                 require_auth_by_default=_files_auth_posture,
+                declared_entities=_declared_entities,
             )
             create_static_file_routes(
                 self._app,

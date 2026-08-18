@@ -230,6 +230,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_fragment_source_leftover.py",
     # cycle 2249: leftover connection group_map must not invent a persist
     "tests/unit/test_group_map_leftover.py",
+    # cycle 2250: leftover file ?entity= must not invent a persist
+    "tests/unit/test_file_entity_leftover.py",
     "tests/unit/test_connection_create_form.py",
     "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",

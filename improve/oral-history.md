@@ -1262,6 +1262,20 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #97) and leftover membership roles (oral #89). Live
     simple_task ``/auth/connections``. Standing refusals apply.
 
+120. **File leftover entity invents a persist.** Cycle 2250:
+    leftover ``?entity=zzz`` / ``ghost`` / ``MysteryEntity`` on
+    POST ``/files/upload`` missed the entity catalog and invented
+    a file-metadata persist (leftover as ``entity_name``). The
+    same leftover on GET ``/files/entity/{entity}/...`` invented
+    an empty list. Valid declared entity names ride via
+    ``leftover_honest_file_entity`` (reuses
+    ``leftover_honest_auth_error``). Absent / blank still
+    first-visit (unassociated). Leftover stays put (400, no
+    write). Distinct from leftover search ``?entity=``
+    fleet-restrict (oral #117) and leftover catalog picker
+    (oral #69). Live project_tracker ``entity Attachment``
+    ``file: file``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1325,6 +1339,7 @@ the end of every new oral *is* expensive — point here instead.
 | Search leftover entity | Walk another leftover ``?entity=`` fleet-restrict after leftover_honest_search_entity exists | #117 |
 | Fragment leftover source | Walk another leftover ``?source=`` empty-result theater after leftover_honest_fragment_source exists | #118 |
 | Connection leftover group_map | Walk another leftover ``group_map`` persist after leftover_honest_group_map exists | #119 |
+| File leftover entity | Walk another leftover file ``?entity=`` persist after leftover_honest_file_entity exists | #120 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1390,6 +1405,7 @@ how the handbook was learned.
 | One leftover SCIM PATCH ``op`` site after leftover_honest_scim_patch_op exists | Call leftover_honest_scim_patch_op on remaining PATCH emitters in one ship, then STOP (oral #116) |
 | One leftover search ``?entity=`` site after leftover_honest_search_entity exists | Call leftover_honest_search_entity on remaining search restrict sites in one ship, then STOP (oral #117) |
 | One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
+| One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
