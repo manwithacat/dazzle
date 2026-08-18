@@ -25,10 +25,14 @@ from dazzle.http.runtime.auth.connections import (
 )
 from dazzle.http.runtime.auth.saml_routes import create_saml_routes
 
+# secrets.token_urlsafe(24) is 32 urlsafe chars (leftover_honest_connection_id).
+CONN_ID = "A" * 32
+UNKNOWN_CONN = "B" * 32
+
 
 def _conn(**over) -> ConnectionRecord:
     base = {
-        "id": "conn-1",
+        "id": CONN_ID,
         "tenant_id": "org-1",
         "type": "saml",
         "provider": "native",
@@ -196,15 +200,15 @@ def _asserted(email: str) -> AssertedIdentity:
 def test_login_redirects_to_idp(saml_provider) -> None:
     saml_provider(_FakeProvider())
     store = _Store(connections=[_conn()])
-    r = _client(store).get("/auth/saml/login?connection=conn-1", follow_redirects=False)
+    r = _client(store).get(f"/auth/saml/login?connection={CONN_ID}", follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "https://idp.example/sso?conn=conn-1"
+    assert r.headers["location"] == f"https://idp.example/sso?conn={CONN_ID}"
 
 
 def test_login_unknown_connection_errors(saml_provider) -> None:
     saml_provider(_FakeProvider())
     r = _client(_Store(connections=[])).get(
-        "/auth/saml/login?connection=missing", follow_redirects=False
+        f"/auth/saml/login?connection={UNKNOWN_CONN}", follow_redirects=False
     )
     assert r.headers["location"] == "/login?error=sso_no_connection"
 
@@ -225,7 +229,7 @@ def test_acs_success_mints_session_and_cookies(saml_provider) -> None:
     saml_provider(_FakeProvider(asserted=_asserted("jane@acme.test")))
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/saml/login?connection=conn-1", follow_redirects=False)  # stash conn id
+    client.get(f"/auth/saml/login?connection={CONN_ID}", follow_redirects=False)  # stash conn id
     r = client.post("/auth/saml/acs", data={"SAMLResponse": "x"}, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/app"
     assert store.created_sessions
@@ -246,7 +250,7 @@ def test_acs_join_refused_maps_reason(saml_provider) -> None:
     saml_provider(_FakeProvider(asserted=_asserted("eve@evil.test")))  # outside verified domain
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/saml/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/saml/login?connection={CONN_ID}", follow_redirects=False)
     r = client.post("/auth/saml/acs", data={"SAMLResponse": "x"}, follow_redirects=False)
     assert r.headers["location"] == "/login?error=sso_domain_not_verified"
     assert not store.created_sessions
@@ -256,7 +260,7 @@ def test_acs_invalid_response_fails(saml_provider) -> None:
     saml_provider(_FakeProvider(callback_error=ConnectionError("bad signature")))
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/saml/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/saml/login?connection={CONN_ID}", follow_redirects=False)
     r = client.post("/auth/saml/acs", data={"SAMLResponse": "x"}, follow_redirects=False)
     assert r.headers["location"] == "/login?error=sso_failed"
     assert not store.created_sessions
@@ -266,7 +270,7 @@ def test_acs_session_fixation_deletes_pre_auth_sid(saml_provider) -> None:
     saml_provider(_FakeProvider(asserted=_asserted("jane@acme.test")))
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/saml/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/saml/login?connection={CONN_ID}", follow_redirects=False)
     client.cookies.set("dazzle_session", "attacker-planted-sid")
     r = client.post("/auth/saml/acs", data={"SAMLResponse": "x"}, follow_redirects=False)
     assert r.status_code == 303
@@ -313,7 +317,7 @@ def test_metadata_connection_param_advertises_signing_cert() -> None:
 
     key, cert = generate_sp_keypair("https://app.test/auth/saml/acs")
     conn = _conn(
-        id="c-sign",
+        id=CONN_ID,
         config={
             "idp_entity_id": "https://idp/e",
             "idp_sso_url": "https://idp/sso",
@@ -324,7 +328,7 @@ def test_metadata_connection_param_advertises_signing_cert() -> None:
         secrets={"sp_private_key": key},
     )
     resp = _client(_Store(connections=[conn]), base_url="https://app.test").get(
-        "/auth/saml/metadata?connection=c-sign"
+        f"/auth/saml/metadata?connection={CONN_ID}"
     )
     assert resp.status_code == 200 and 'use="signing"' in resp.text
     assert "PRIVATE KEY" not in resp.text  # never the private key
@@ -332,7 +336,9 @@ def test_metadata_connection_param_advertises_signing_cert() -> None:
 
 def test_metadata_unknown_connection_falls_back_to_app_level() -> None:
     pytest.importorskip("onelogin")
-    resp = _client(_Store(), base_url="https://app.test").get("/auth/saml/metadata?connection=nope")
+    resp = _client(_Store(), base_url="https://app.test").get(
+        f"/auth/saml/metadata?connection={UNKNOWN_CONN}"
+    )
     assert resp.status_code == 200 and 'use="signing"' not in resp.text
 
 
@@ -350,7 +356,7 @@ def _seed_user_in_two_orgs(store: _Store) -> _User:
 def test_sls_kills_only_the_connections_org_sessions(saml_provider) -> None:
     from dazzle.http.runtime.auth.saml_provider import SamlLogout
 
-    store = _Store(connections=[_conn()])  # conn-1 is in org-1
+    store = _Store(connections=[_conn()])  # CONN_ID is in org-1
     _seed_user_in_two_orgs(store)
     saml_provider(
         _FakeProvider(
@@ -358,7 +364,7 @@ def test_sls_kills_only_the_connections_org_sessions(saml_provider) -> None:
         )
     )
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=abc", follow_redirects=False
     )
     assert r.status_code == 303
     # Org-scoped: only the org-1 membership's sessions are killed, NOT the foreign org-2 one.
@@ -370,7 +376,7 @@ def test_sls_validation_error_kills_nothing(saml_provider) -> None:
     _seed_user_in_two_orgs(store)
     saml_provider(_FakeProvider(logout_error=ConnectionError("forged logout request")))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=forged", follow_redirects=False
     )
     assert r.status_code == 400
     assert store.killed_memberships == []  # fail-closed: a bad signature touches nothing
@@ -383,7 +389,7 @@ def test_sls_no_redirect_returns_200(saml_provider) -> None:
     _seed_user_in_two_orgs(store)
     saml_provider(_FakeProvider(logout=SamlLogout(name_id="jane@acme.test", redirect_url=None)))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=abc", follow_redirects=False
     )
     assert r.status_code == 200
     assert store.killed_memberships == ["mem-org1"]
@@ -402,7 +408,7 @@ def test_sls_unknown_email_kills_nothing(saml_provider) -> None:
     store = _Store(connections=[_conn()])  # no users seeded
     saml_provider(_FakeProvider(logout=SamlLogout(name_id="ghost@acme.test", redirect_url=None)))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=abc", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=abc", follow_redirects=False
     )
     assert r.status_code == 200  # idempotent no-op, no enumeration signal
     assert store.killed_memberships == []
@@ -425,7 +431,7 @@ def test_sls_oversized_saml_request_is_rejected_before_processing(saml_provider)
     saml_provider(_SpyProvider())
     huge = "A" * 20000  # > _MAX_SAML_REQUEST_B64 (16384)
     r = _client(store).get(
-        f"/auth/saml/sls?connection=conn-1&SAMLRequest={huge}", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest={huge}", follow_redirects=False
     )
     assert r.status_code == 400
     assert called == []  # never reached the provider / decompress
@@ -443,7 +449,7 @@ def test_sls_logout_response_completes_without_kill(saml_provider) -> None:
     # A LogoutResponse carries no NameID → no kill; just land logged-out.
     saml_provider(_FakeProvider(logout=SamlLogout(name_id=None, redirect_url=None)))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLResponse=abc", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLResponse=abc", follow_redirects=False
     )
     assert r.status_code == 200
     assert store.killed_memberships == []
@@ -454,7 +460,7 @@ def test_sls_logout_response_error_does_not_400_the_returning_user(saml_provider
     store = _Store(connections=[_conn()])
     saml_provider(_FakeProvider(logout_error=ConnectionError("bad logout response")))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLResponse=abc", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLResponse=abc", follow_redirects=False
     )
     assert r.status_code == 200  # lenient on a returning LogoutResponse
     assert store.killed_memberships == []
@@ -466,7 +472,7 @@ def test_sls_forged_logout_request_still_400s(saml_provider) -> None:
     _seed_user_in_two_orgs(store)
     saml_provider(_FakeProvider(logout_error=ConnectionError("forged request")))
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=forged", follow_redirects=False
     )
     assert r.status_code == 400
     assert store.killed_memberships == []
@@ -477,7 +483,7 @@ def test_sls_oversized_logout_response_is_rejected(saml_provider) -> None:
     saml_provider(_FakeProvider())
     huge = "A" * 20000
     r = _client(store).get(
-        f"/auth/saml/sls?connection=conn-1&SAMLResponse={huge}", follow_redirects=False
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLResponse={huge}", follow_redirects=False
     )
     assert r.status_code == 400
 
@@ -544,7 +550,7 @@ def test_sls_real_signed_logout_request_kills_org_sessions(saml_provider) -> Non
         name_id="jane@acme.test", sp_sls_url="https://app.test/auth/saml/sls"
     )
     r = client.get(
-        "/auth/saml/sls", params={"connection": "conn-1", **params}, follow_redirects=False
+        "/auth/saml/sls", params={"connection": CONN_ID, **params}, follow_redirects=False
     )
     assert r.status_code in (200, 303)
     assert store.killed_memberships == ["mem-org1"]  # only the connection's org
@@ -564,7 +570,7 @@ def test_sls_real_signed_logout_response_completes_no_kill(saml_provider) -> Non
         in_response_to="_req123", sp_sls_url="https://app.test/auth/saml/sls"
     )
     r = client.get(
-        "/auth/saml/sls", params={"connection": "conn-1", **params}, follow_redirects=False
+        "/auth/saml/sls", params={"connection": CONN_ID, **params}, follow_redirects=False
     )
     assert r.status_code in (200, 303)
     assert store.killed_memberships == []  # a response performs no kill
@@ -577,7 +583,7 @@ def test_sls_both_request_and_response_is_rejected(saml_provider) -> None:
     _seed_user_in_two_orgs(store)
     saml_provider(_FakeProvider())  # must never be reached
     r = _client(store).get(
-        "/auth/saml/sls?connection=conn-1&SAMLRequest=forged&SAMLResponse=x",
+        f"/auth/saml/sls?connection={CONN_ID}&SAMLRequest=forged&SAMLResponse=x",
         follow_redirects=False,
     )
     assert r.status_code == 400

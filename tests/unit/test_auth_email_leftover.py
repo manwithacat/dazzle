@@ -375,9 +375,9 @@ def test_helper_source_pins_auth_email_leftover() -> None:
     invite = _INVITE.read_text()
     assert "leftover_auth_email_or_400" in invite
     ent = _ENT.read_text()
-    assert "leftover_auth_email_or_400" in ent
+    assert "leftover_honest_sso_login_query" in ent
     saml = _SAML.read_text()
-    assert "leftover_auth_email_or_400" in saml
+    assert "leftover_honest_sso_login_query" in saml
     pw = _PW.read_text()
     assert "leftover_auth_email_or_400" in pw
 

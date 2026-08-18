@@ -23,10 +23,14 @@ from dazzle.http.runtime.auth.connections import (
 )
 from dazzle.http.runtime.auth.enterprise_routes import create_enterprise_sso_routes
 
+# secrets.token_urlsafe(24) is 32 urlsafe chars (leftover_honest_connection_id).
+CONN_ID = "A" * 32
+UNKNOWN_CONN = "B" * 32
+
 
 def _conn(**over) -> ConnectionRecord:
     base = {
-        "id": "conn-1",
+        "id": CONN_ID,
         "tenant_id": "org-1",
         "type": "oidc",
         "provider": "native",
@@ -173,22 +177,22 @@ def test_login_redirects_to_idp_and_stashes_connection(fake_provider) -> None:
     fake_provider(_FakeProvider())
     store = _Store(connections=[_conn()])
     client = _client(store)
-    r = client.get("/auth/enterprise/login?connection=conn-1", follow_redirects=False)
+    r = client.get(f"/auth/enterprise/login?connection={CONN_ID}", follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "https://idp.example/authorize?conn=conn-1"
+    assert r.headers["location"] == f"https://idp.example/authorize?conn={CONN_ID}"
 
 
 def test_login_unknown_connection_errors(fake_provider) -> None:
     fake_provider(_FakeProvider())
     client = _client(_Store(connections=[]))
-    r = client.get("/auth/enterprise/login?connection=missing", follow_redirects=False)
+    r = client.get(f"/auth/enterprise/login?connection={UNKNOWN_CONN}", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/login?error=sso_no_connection"
 
 
 def test_login_inactive_connection_rejected(fake_provider) -> None:
     fake_provider(_FakeProvider())
     store = _Store(connections=[_conn(status="disabled")])
-    r = _client(store).get("/auth/enterprise/login?connection=conn-1", follow_redirects=False)
+    r = _client(store).get(f"/auth/enterprise/login?connection={CONN_ID}", follow_redirects=False)
     assert r.headers["location"] == "/login?error=sso_no_connection"
 
 
@@ -209,7 +213,7 @@ def test_callback_success_mints_session_and_cookies(fake_provider) -> None:
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
     # login first to stash the connection id in the session cookie
-    client.get("/auth/enterprise/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/enterprise/login?connection={CONN_ID}", follow_redirects=False)
     r = client.get("/auth/enterprise/callback", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/app"
     assert store.created_sessions  # a session was minted
@@ -231,7 +235,7 @@ def test_callback_join_refused_maps_reason(fake_provider) -> None:
     fake_provider(_FakeProvider(asserted=AssertedIdentity(email="eve@evil.test")))
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/enterprise/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/enterprise/login?connection={CONN_ID}", follow_redirects=False)
     r = client.get("/auth/enterprise/callback", follow_redirects=False)
     assert r.headers["location"] == "/login?error=sso_domain_not_verified"
     assert not store.created_sessions  # no session for a refused join
@@ -241,7 +245,7 @@ def test_callback_session_fixation_deletes_pre_auth_sid(fake_provider) -> None:
     fake_provider(_FakeProvider(asserted=AssertedIdentity(email="jane@acme.test")))
     store = _Store(connections=[_conn(verified_domains=["acme.test"])])
     client = _client(store)
-    client.get("/auth/enterprise/login?connection=conn-1", follow_redirects=False)
+    client.get(f"/auth/enterprise/login?connection={CONN_ID}", follow_redirects=False)
     # Present a pre-auth session cookie; it must be invalidated on success.
     client.cookies.set("dazzle_session", "attacker-planted-sid")
     r = client.get("/auth/enterprise/callback", follow_redirects=False)

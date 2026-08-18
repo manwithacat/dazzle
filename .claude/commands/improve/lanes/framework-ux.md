@@ -228,6 +228,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_auth_token`. Leftover stays put (400).
   Do **not** walk another magic / reset / verify / invite
   consume site.
+- **SSO leftover connection id** (`?connection=zzz` invents
+  `303 /login?error=sso_no_connection`; leftover metadata
+  invents app-level XML) closed cycle 2240 (oral #110).
+  Helper: `leftover_honest_connection_id`. Leftover stays put (400).
+  Do **not** walk another enterprise/SAML leftover
+  `?connection=` site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

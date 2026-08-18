@@ -24,12 +24,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
-from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
 from dazzle.http.runtime.auth.enterprise_login import (
     EnterpriseLoginError,
     provision_enterprise_login,
 )
+from dazzle.http.runtime.auth.leftover_connection_id import leftover_honest_sso_login_query
 from dazzle.http.runtime.auth.org_activation import host_tenant_id_from_request
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path as _is_safe_redirect_path,
@@ -76,12 +76,13 @@ def create_enterprise_sso_routes(*, cookie_name: str = "dazzle_session") -> APIR
     ) -> Response:
         """Resolve the org's connection and redirect to its IdP."""
         store = request.app.state.auth_store
-        # Leftover ``?email=zzz`` used to invent the host-pinned IdP
-        # (no ``@`` treated as absent).
-        honest_email = leftover_auth_email_or_400(email)
-        if not isinstance(honest_email, str):
-            return honest_email
-        conn = _resolve_connection(store, request, connection_id=connection, email=honest_email)
+        # Leftover ``?email=zzz`` used to invent the host-pinned IdP.
+        # Leftover ``?connection=zzz`` used to invent sso_no_connection.
+        honest = leftover_honest_sso_login_query(email, connection)
+        if not isinstance(honest, tuple):
+            return honest
+        honest_email, honest_conn = honest
+        conn = _resolve_connection(store, request, connection_id=honest_conn, email=honest_email)
         if conn is None or conn.type != "oidc" or conn.status != "active":
             return RedirectResponse(url="/login?error=sso_no_connection", status_code=303)
         try:

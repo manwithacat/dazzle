@@ -1121,6 +1121,24 @@ dialect formed — and where it started to Goodhart itself — is
     echo (oral #98) and leftover membership_id (oral #107). Live
     simple_task ``/auth/magic``. Standing refusals apply.
 
+110. **SSO leftover connection id invents sso_no_connection theater.**
+    Cycle 2240: leftover ``?connection=zzz`` / ``ghost`` on GET
+    ``/auth/enterprise/login`` and ``/auth/saml/login`` missed the
+    ``token_urlsafe`` shape and invented
+    ``303 /login?error=sso_no_connection``. The same leftover on
+    GET ``/auth/saml/metadata`` invented app-level metadata.
+    Valid ``secrets.token_urlsafe(24)`` ids ride via
+    ``leftover_honest_connection_id`` (reuses
+    ``leftover_honest_auth_token``; stay-put 400 inlined). Absent / blank still
+    first-visit (email-domain / host-pin / app-level metadata).
+    Well-formed ids that miss the store still bounce
+    ``sso_no_connection`` (login) or fall back to app-level
+    metadata. Leftover stays put (400). Distinct from leftover
+    ``?new=`` catalog (oral #97), leftover consume token
+    (oral #109), leftover membership_id (oral #107), and leftover
+    entity-id (oral #71). Live doctor runbook
+    ``/auth/enterprise/login?connection=``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1174,6 +1192,7 @@ the end of every new oral *is* expensive — point here instead.
 | Org leftover membership | Walk another select/switch-org leftover membership_id after leftover_honest_membership_id exists | #107 |
 | 2FA leftover code | Walk another 2FA verify/setup leftover code after leftover_honest_2fa_code exists | #108 |
 | Auth leftover consume token | Walk another magic / reset / verify / invite consume site after leftover_honest_auth_token is on consume | #109 |
+| SSO leftover connection | Walk another enterprise/SAML leftover ``?connection=`` site after leftover_honest_connection_id exists | #110 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1230,6 +1249,7 @@ how the handbook was learned.
 | One leftover SCIM ``displayName`` body site after leftover_honest_scim_display_name exists | Call leftover_honest_scim_display_name on remaining Groups writers in one ship, then STOP (oral #104) |
 | One leftover membership_id site after leftover_honest_membership_id exists | Call leftover_honest_membership_id on remaining org switch POSTs in one ship, then STOP (oral #107) |
 | One leftover consume token site after leftover_honest_auth_token is on consume | Call leftover_honest_auth_token on remaining magic / reset / verify / invite consume sites in one ship, then STOP (oral #109) |
+| One leftover SSO ``?connection=`` site after leftover_honest_connection_id exists | Call leftover_honest_connection_id on remaining enterprise/SAML login + metadata sites in one ship, then STOP (oral #110) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

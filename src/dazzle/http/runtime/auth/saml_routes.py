@@ -19,14 +19,17 @@ import logging
 from typing import Annotated, Any, Protocol, cast
 
 from fastapi import APIRouter, Query, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
-from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
 from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
 from dazzle.http.runtime.auth.cookie_name import names_to_clear
 from dazzle.http.runtime.auth.enterprise_login import (
     EnterpriseLoginError,
     provision_enterprise_login,
+)
+from dazzle.http.runtime.auth.leftover_connection_id import (
+    leftover_honest_connection_id,
+    leftover_honest_sso_login_query,
 )
 from dazzle.http.runtime.auth.org_activation import host_tenant_id_from_request
 from dazzle.http.runtime.auth.redirect_safety import (
@@ -80,13 +83,14 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
     ) -> Response:
         """Resolve the org's SAML connection and redirect to its IdP."""
         store = request.app.state.auth_store
-        # Leftover ``?email=zzz`` used to invent the host-pinned IdP
-        # (no ``@`` treated as absent).
-        honest_email = leftover_auth_email_or_400(email)
-        if not isinstance(honest_email, str):
-            return honest_email
+        # Leftover ``?email=zzz`` used to invent the host-pinned IdP.
+        # Leftover ``?connection=zzz`` used to invent sso_no_connection.
+        honest = leftover_honest_sso_login_query(email, connection)
+        if not isinstance(honest, tuple):
+            return honest
+        honest_email, honest_conn = honest
         conn = _resolve_saml_connection(
-            store, request, connection_id=connection, email=honest_email
+            store, request, connection_id=honest_conn, email=honest_email
         )
         if conn is None or conn.type != "saml" or conn.status != "active":
             return RedirectResponse(url="/login?error=sso_no_connection", status_code=303)
@@ -164,9 +168,13 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         """
         from dazzle.http.runtime.auth.saml_provider import NativeSAMLProvider
 
+        # Leftover ``?connection=zzz`` used to invent app-level metadata.
+        honest_conn = leftover_honest_connection_id(connection)
+        if honest_conn is None:
+            return HTMLResponse("Unknown connection", status_code=400)
         conn = None
-        if connection:
-            conn = request.app.state.auth_store.get_connection(connection)
+        if honest_conn:
+            conn = request.app.state.auth_store.get_connection(honest_conn)
         try:
             xml = NativeSAMLProvider().sp_metadata(request, conn)
         except Exception as exc:  # noqa: BLE001 — never 500-leak a stack trace
