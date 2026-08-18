@@ -1276,6 +1276,16 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #69). Live project_tracker ``entity Attachment``
     ``file: file``. Standing refusals apply.
 
+121. **Leftover-token stay-put is not the only invent class.**
+    Self-audit 2251 window 2237–2250 shipped 14 leftover-honest
+    token fields (membership_id → file ``?entity=``). Each
+    claim CLEAN (helpers + ship-surface packs + leftover pins
+    PASS). The *shape* is the honesty Goodhart
+    (``docs/harness/leftover-honesty-ethnography.md``). After
+    a leftover-honest cadence audit, the next mutation is a
+    different failure mode — not the next SCIM/auth/search
+    string stay-put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1340,6 +1350,7 @@ the end of every new oral *is* expensive — point here instead.
 | Fragment leftover source | Walk another leftover ``?source=`` empty-result theater after leftover_honest_fragment_source exists | #118 |
 | Connection leftover group_map | Walk another leftover ``group_map`` persist after leftover_honest_group_map exists | #119 |
 | File leftover entity | Walk another leftover file ``?entity=`` persist after leftover_honest_file_entity exists | #120 |
+| Leftover-token cadence | Walk another leftover string stay-put as the default mutation after a leftover-honest self-audit window (≥10 leftover ships) | #121 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1406,6 +1417,7 @@ how the handbook was learned.
 | One leftover search ``?entity=`` site after leftover_honest_search_entity exists | Call leftover_honest_search_entity on remaining search restrict sites in one ship, then STOP (oral #117) |
 | One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
 | One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
+| One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |
