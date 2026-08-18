@@ -188,9 +188,11 @@ def create_password_login_routes() -> APIRouter:
     ) -> Response:
         """Create a password-mode user and sign them in.
 
-        Failure paths (all redirect to `/signup` with an error query):
-          - ``mismatch``: ``password != confirm_password`` (server-side
-            check; the typed form has no JS).
+        Failure paths:
+          - leftover / malformed email stays put (400) — do not invent
+            ``invalid_email`` theater (oral #105).
+          - ``mismatch``: ``password != confirm_password`` (303).
+          - blank email: ``/signup?error=invalid_email`` (honest first-visit).
           - ``already_registered``: ``get_user_by_email`` returned a row.
           - ``create_failed``: ``create_user`` raised — usually a
             unique-constraint race we lost to a concurrent signup.

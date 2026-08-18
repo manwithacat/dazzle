@@ -193,17 +193,17 @@ def test_post_signup_existing_email_treats_as_login() -> None:
     assert to_email == "existing@example.com"
 
 
-def test_post_signup_malformed_email_redirects_no_user_no_mail() -> None:
-    """Account-enumeration guard parity: same redirect, no user
-    created, no mailer call."""
+def test_post_signup_malformed_email_stays_put_no_user_no_mail() -> None:
+    """Leftover prose must not invent ``/login/sent`` theater
+    (cycle 2233 / oral #105). No user created, no mailer call."""
     mailer = _StubMailer()
     client, store, _ = _build_app(chrome=True, mailer=mailer)
     resp = client.post(
         "/auth/signup/magic-link",
         data={"email": "not-an-email", "name": "Whatever"},
     )
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/login/sent"
+    assert resp.status_code == 400
+    assert "Invalid email" in resp.text
     assert store.created_users == []
     assert mailer.calls == []
 

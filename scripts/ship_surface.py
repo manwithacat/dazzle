@@ -202,6 +202,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scim_displayname_leftover.py",
     # cycle 2233: leftover auth email must not invent sent theater / persist / default IdP
     "tests/unit/test_auth_email_leftover.py",
+    # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
+    "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
+    "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",
+    "tests/integration/test_auth_signup_magic_link_chrome_gate.py::test_post_signup_malformed_email_stays_put_no_user_no_mail",
+    "tests/integration/test_auth_signup_magic_link_chrome_gate.py::test_post_signup_empty_email_redirects_no_user_no_mail",
     # cycle 2225: 2224 pack missed sibling GETs that still used leftover tokens
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_chrome_on_renders_typed_view_with_token",
     "tests/integration/test_auth_password_reset_chrome_gate.py::test_get_reset_password_renders_mismatch_error",

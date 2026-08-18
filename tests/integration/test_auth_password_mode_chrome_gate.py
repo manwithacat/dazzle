@@ -424,12 +424,30 @@ def test_post_signup_password_create_failure_redirects_with_error() -> None:
     assert store.created_sessions == []
 
 
-def test_post_signup_password_invalid_email_redirects_with_error() -> None:
+def test_post_signup_password_leftover_email_stays_put() -> None:
+    """Leftover prose (``not-an-email``) must not invent
+    ``/signup?error=invalid_email`` theater (cycle 2233 / oral #105)."""
     client, store = _build_app(chrome=True, password_mode=True)
     resp = client.post(
         "/auth/signup/password",
         data={
             "email": "not-an-email",
+            "password": "hunter2",
+            "confirm_password": "hunter2",
+        },
+    )
+    assert resp.status_code == 400
+    assert "Invalid email" in resp.text
+    assert store.created_users == []
+
+
+def test_post_signup_password_blank_email_redirects_with_error() -> None:
+    """Absent / blank email is still first-visit invalid_email (303)."""
+    client, store = _build_app(chrome=True, password_mode=True)
+    resp = client.post(
+        "/auth/signup/password",
+        data={
+            "email": "",
             "password": "hunter2",
             "confirm_password": "hunter2",
         },

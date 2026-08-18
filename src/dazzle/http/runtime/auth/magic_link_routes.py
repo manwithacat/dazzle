@@ -247,8 +247,10 @@ def create_magic_link_routes() -> APIRouter:
            a passwordless user record (random unguessable hash —
            the user can opt into a password later via account
            settings) and issue a magic link.
-        4. Empty / malformed email: log + redirect to /login/sent
-           anyway (account-enumeration guard parity with login).
+        4. Empty email: log + redirect to /login/sent (honest
+           first-visit / account-enumeration guard parity).
+           Leftover / malformed email stays put (400) — do not
+           invent sent theater (oral #105).
 
         SECURITY: same rate-limit considerations as the login
         endpoint apply. The create-or-login branch means a
