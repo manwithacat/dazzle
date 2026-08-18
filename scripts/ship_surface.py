@@ -212,6 +212,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_consume_token_leftover.py",
     # cycle 2240: leftover SSO connection id must not invent sso_no_connection
     "tests/unit/test_connection_id_leftover.py",
+    # cycle 2241: leftover SCIM externalId must not invent a 500 / persist
+    "tests/unit/test_scim_external_id_leftover.py",
     # cycle 2234: 2233 pack missed chrome-gate 303 vs leftover 400 (×3 Pythons)
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_leftover_email_stays_put",
     "tests/integration/test_auth_password_mode_chrome_gate.py::test_post_signup_password_blank_email_redirects_with_error",

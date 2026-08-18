@@ -36,8 +36,10 @@ from dazzle.http.runtime.auth.scim_provisioning import (
     ScimError,
     deprovision_scim_user,
     leftover_honest_scim_body_display_name,
+    leftover_honest_scim_body_external_id,
     leftover_honest_scim_body_members,
     leftover_scim_display_name_stay_put,
+    leftover_scim_external_id_stay_put,
     leftover_scim_members_stay_put,
     provision_scim_user,
     set_scim_user_active,
@@ -445,6 +447,12 @@ def create_scim_routes() -> APIRouter:
         active = leftover_honest_scim_body_active(body)
         if active is None:
             return _error(400, "invalid active", scim_type="invalidValue")
+        # Leftover ``externalId: ["zzz"]`` / dict / int invented a 500
+        # via ``.strip()`` or persisted leftover as the IdP id.
+        # JSONResponse — oral #93. RFC 7644 invalidValue.
+        honest_eid = leftover_honest_scim_body_external_id(body)
+        if honest_eid is None:
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         try:
             result = provision_scim_user(
                 store,
@@ -452,7 +460,7 @@ def create_scim_routes() -> APIRouter:
                 email=email,
                 active=active,
                 groups=_groups_from_body(body),
-                external_id=body.get("externalId"),
+                external_id=honest_eid or None,
             )
         except ScimError as exc:
             status = 400 if exc.reason in ("no_email", "domain_not_verified") else 409
@@ -514,6 +522,10 @@ def create_scim_routes() -> APIRouter:
         active = leftover_honest_scim_body_active(body)
         if active is None:
             return _error(400, "invalid active", scim_type="invalidValue")
+        # Leftover ``externalId`` invented a 500 / persist. Stay put.
+        honest_eid = leftover_honest_scim_body_external_id(body)
+        if honest_eid is None:
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         try:
             provision_scim_user(
                 store,
@@ -521,7 +533,7 @@ def create_scim_routes() -> APIRouter:
                 email=email,
                 active=active,
                 groups=_groups_from_body(body),
-                external_id=body.get("externalId"),
+                external_id=honest_eid or None,
             )
         except ScimError as exc:
             return _error(400, str(exc), scim_type="invalidValue")
@@ -544,6 +556,10 @@ def create_scim_routes() -> APIRouter:
         # RFC 7644 invalidSyntax.
         if leftover_scim_operations_stay_put(body):
             return _error(400, "invalid Operations", scim_type="invalidSyntax")
+        # Leftover PATCH ``externalId`` invented a 200 no-op (unknown
+        # op skipped). Stay put. JSONResponse — oral #93.
+        if leftover_scim_external_id_stay_put(body):
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         active = _active_from_patch(body)
         if active is _SCIM_ACTIVE_ABSENT:
             # Nothing we act on (only `active` is supported) — return current state.
@@ -611,13 +627,18 @@ def create_scim_routes() -> APIRouter:
         display_name = leftover_honest_scim_body_display_name(body)
         if display_name is None:
             return _error(400, "invalid displayName", scim_type="invalidValue")
+        # Leftover ``externalId: ["zzz"]`` invented a persist / 500.
+        # JSONResponse — oral #93. RFC 7644 invalidValue.
+        honest_eid = leftover_honest_scim_body_external_id(body)
+        if honest_eid is None:
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         try:
             group = sp.create_group(
                 store,
                 conn,
                 display_name,
                 member_ids,
-                external_id=body.get("externalId"),  # the Entra group objectId GUID
+                external_id=honest_eid or None,
             )
         except sp.SCIMGroupError as e:
             return _error(e.status, str(e))
@@ -685,10 +706,14 @@ def create_scim_routes() -> APIRouter:
         member_ids = leftover_honest_scim_body_members(body)
         if member_ids is None:
             return _error(400, "invalid members", scim_type="invalidValue")
+        # Leftover PUT ``externalId`` invented a persist. Stay put.
+        honest_eid = leftover_honest_scim_body_external_id(body)
+        if honest_eid is None:
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         try:
             sp.rename_group(store, conn, group_id, display_name)
             if "externalId" in body:  # #1342: keep the IdP's stable group id fresh on replace
-                store.update_scim_group_external_id(group_id, conn.id, body.get("externalId"))
+                store.update_scim_group_external_id(group_id, conn.id, honest_eid or None)
             sp.set_group_members(store, conn, group_id, member_ids)
             group = sp.get_group(store, conn, group_id)
         except sp.SCIMGroupError as e:
@@ -719,6 +744,9 @@ def create_scim_routes() -> APIRouter:
         # Stay put. JSONResponse — oral #93. RFC 7644 invalidValue.
         if leftover_scim_display_name_stay_put(body):
             return _error(400, "invalid displayName", scim_type="invalidValue")
+        # Leftover PATCH ``externalId`` invented a 200 no-op. Stay put.
+        if leftover_scim_external_id_stay_put(body):
+            return _error(400, "invalid externalId", scim_type="invalidValue")
         try:
             sp.get_group(store, conn, group_id)  # 404 if absent / wrong org
             for kind, arg in sp.parse_group_patch(body):

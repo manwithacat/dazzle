@@ -250,6 +250,14 @@ no-op on Groups. Valid PatchOp lists ride; leftover stays put
 (400). Helper: `leftover_honest_scim_operations`. Oral #103 —
 one ship, then stop.
 
+**SCIM leftover externalId.** POST/PUT `externalId: ["zzz"]` /
+dict / int invented a 500 (`.strip()` on a non-string) or
+persisted leftover as the IdP's stable id. Leftover PATCH
+invented a 200 no-op. Valid opaque strings ride (including
+`zzz`); leftover stays put (400). Helper:
+`leftover_honest_scim_external_id`. Oral #111 — one ship, then
+stop.
+
 ---
 
 ## Ritual

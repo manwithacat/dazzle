@@ -1139,6 +1139,19 @@ dialect formed — and where it started to Goodhart itself — is
     entity-id (oral #71). Live doctor runbook
     ``/auth/enterprise/login?connection=``. Standing refusals apply.
 
+111. **SCIM leftover externalId invents a 500 / persist.** Cycle
+    2241: leftover ``externalId: ["zzz"]`` / dict / int / True on
+    POST/PUT ``/scim/v2/Users`` and ``/scim/v2/Groups`` missed the
+    string shape and invented a 500 via ``.strip()`` (provision)
+    or persisted leftover as the IdP's stable id. Leftover PATCH
+    invented a 200 no-op (unknown op skipped). Valid non-empty
+    strings ride via ``leftover_honest_scim_external_id`` (reuses
+    ``leftover_honest_scim_display_name``; ``zzz`` / Entra GUIDs
+    are legal opaque ids). Absent / blank still omit. Leftover
+    stays put (400). Distinct from leftover displayName (oral
+    #104) and leftover userName (oral #102). Live SCIM Users +
+    Groups. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1193,6 +1206,7 @@ the end of every new oral *is* expensive — point here instead.
 | 2FA leftover code | Walk another 2FA verify/setup leftover code after leftover_honest_2fa_code exists | #108 |
 | Auth leftover consume token | Walk another magic / reset / verify / invite consume site after leftover_honest_auth_token is on consume | #109 |
 | SSO leftover connection | Walk another enterprise/SAML leftover ``?connection=`` site after leftover_honest_connection_id exists | #110 |
+| SCIM leftover externalId | Walk another SCIM ``externalId`` body site after leftover_honest_scim_external_id exists | #111 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1217,6 +1231,7 @@ how the handbook was learned.
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |
 | One SCIM ``members`` body site after leftover-honest members exist | Call `leftover_honest_scim_member_ids` on remaining Groups emitters, then STOP (oral #101) |
+| One SCIM ``externalId`` body site after leftover-honest externalId exists | Call `leftover_honest_scim_external_id` on remaining Users/Groups emitters, then STOP (oral #111) |
 | One GET list `filter[key]` parse after leftover-honest filters exist | Call `leftover_honest_list_filters` on remaining GET list endpoints, then STOP (oral #74) |
 | One GET list filter-enum VALUE after leftover-honest values exist | Call `_parse_list_filter_enum_values` / `entity_enum_filter_options` on remaining GET list endpoints, then STOP (oral #75) |
 | One GET list filter[id] VALUE after leftover-honest entity-id values exist | Call `leftover_honest_entity_id` / `entity_id_filter_fields` on remaining GET list endpoints, then STOP (oral #76) |

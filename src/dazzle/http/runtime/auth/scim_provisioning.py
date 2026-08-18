@@ -116,8 +116,8 @@ def leftover_honest_scim_body_display_name(body: dict[str, Any]) -> str | None:
     return leftover_honest_scim_display_name(body.get("displayName"))
 
 
-def leftover_scim_display_name_stay_put(body: dict[str, Any]) -> bool:
-    """True when leftover PATCH ``displayName`` would invent a ``str()`` rename."""
+def leftover_scim_string_attr_stay_put(body: dict[str, Any], attr: str) -> bool:
+    """True when leftover PATCH string attr would invent a ``str()`` write / 200 no-op."""
     operations = body.get("Operations")
     if not isinstance(operations, list):
         return False
@@ -129,15 +129,49 @@ def leftover_scim_display_name_stay_put(body: dict[str, Any]) -> bool:
             continue
         path = op.get("path")
         value = op.get("value")
-        if path == "displayName":
+        if path == attr:
             honest = leftover_honest_scim_display_name(value)
             if honest is None or not honest:
                 return True
-        elif path is None and isinstance(value, dict) and "displayName" in value:
-            honest = leftover_honest_scim_display_name(value.get("displayName"))
+        elif path is None and isinstance(value, dict) and attr in value:
+            honest = leftover_honest_scim_display_name(value.get(attr))
             if honest is None or not honest:
                 return True
     return False
+
+
+def leftover_scim_display_name_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``displayName`` would invent a ``str()`` rename."""
+    return leftover_scim_string_attr_stay_put(body, "displayName")
+
+
+def leftover_honest_scim_external_id(raw: Any) -> str | None:
+    """Valid SCIM ``externalId`` strings ride. Leftover junk restores None.
+
+    Leftover ``externalId: ["zzz"]`` / dict / int / True on POST/PUT
+    ``/scim/v2/Users`` and ``/scim/v2/Groups`` used to miss the string
+    shape and invent a 500 via ``.strip()`` (provision) or persist
+    leftover as the IdP's stable id. Leftover PATCH invented a 200
+    no-op (unknown op skipped). Valid non-empty strings ride (``zzz``
+    / Entra GUIDs are legal opaque ids). Absent / blank is the honest
+    optional omit (``""``). Rest is stay-put (None → 400
+    ``invalidValue``). RFC 7644 §3.3. Distinct from leftover
+    ``displayName`` (oral #104) and leftover ``userName`` (oral #102).
+    Live SCIM Users + Groups. Cycle 2241.
+    """
+    return leftover_honest_scim_display_name(raw)
+
+
+def leftover_honest_scim_body_external_id(body: dict[str, Any]) -> str | None:
+    """POST/PUT ``externalId``. Missing key defaults ``""``. Leftover restores None."""
+    if "externalId" not in body:
+        return ""
+    return leftover_honest_scim_external_id(body.get("externalId"))
+
+
+def leftover_scim_external_id_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``externalId`` would invent a 200 no-op."""
+    return leftover_scim_string_attr_stay_put(body, "externalId")
 
 
 def _member_ids(value: Any) -> list[str]:
@@ -292,6 +326,10 @@ def create_group(
 ) -> Any:
     if not display_name:
         raise SCIMGroupError("invalid_value", "displayName is required", 400)
+    honest_eid = leftover_honest_scim_external_id(external_id)
+    if honest_eid is None:
+        raise SCIMGroupError("invalid_value", "invalid externalId", 400)
+    external_id = honest_eid or None
     for mid in member_ids:
         _require_member_in_org(store, connection, mid)
     if store.list_scim_groups(connection.id, display_name=display_name):
@@ -453,7 +491,10 @@ def provision_scim_user(
     active flag, backfills a newly-seen externalId, and never duplicates.
     """
     email = (email or "").strip().lower()
-    external_id = (external_id or "").strip() or None
+    honest_eid = leftover_honest_scim_external_id(external_id)
+    if honest_eid is None:
+        raise ScimError("invalid_value", "invalid externalId")
+    external_id = honest_eid or None
     if not email:
         raise ScimError("no_email", "the SCIM payload carried no email/userName")
     _require_verified_domain(connection, email)
