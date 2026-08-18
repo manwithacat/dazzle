@@ -244,6 +244,12 @@ attempt with leftover as the mailbox. Valid emails ride;
 leftover stays put (400). Helper:
 `leftover_honest_scim_username`. Oral #102 — one ship, then stop.
 
+**SCIM leftover Operations.** PATCH `Operations: "zzz"` iterated
+a non-list and invented a 500 (`str.get`) on Users, or a 200
+no-op on Groups. Valid PatchOp lists ride; leftover stays put
+(400). Helper: `leftover_honest_scim_operations`. Oral #103 —
+one ship, then stop.
+
 ---
 
 ## Ritual

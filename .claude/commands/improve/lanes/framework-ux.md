@@ -191,6 +191,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_scim_username`. Leftover stays put (400
   `invalidValue`). Do **not** walk another SCIM `userName`
   / `emails` body site.
+- **SCIM leftover Operations** (`Operations: "zzz"` invents a
+  500 crash on Users PATCH / a 200 no-op on Groups PATCH)
+  closed cycle 2231 (oral #103). Helper:
+  `leftover_honest_scim_operations`. Leftover stays put (400
+  `invalidSyntax`). Do **not** walk another SCIM PATCH
+  `Operations` site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

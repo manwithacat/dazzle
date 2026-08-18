@@ -231,6 +231,43 @@ def leftover_honest_scim_body_active(body: dict[str, Any]) -> bool | None:
     return leftover_honest_scim_active(body.get("active"))
 
 
+def leftover_honest_scim_operations(raw: Any) -> list[dict[str, Any]] | None:
+    """Valid SCIM PatchOp ``Operations`` lists ride. Leftover junk restores None.
+
+    Leftover ``Operations: "zzz"`` / ``ghost`` / dict / int on PATCH
+    ``/scim/v2/Users/{id}`` used to iterate a non-list and crash
+    (``str.get`` → 500). The same leftover on Groups PATCH invented
+    a 200 no-op (``parse_group_patch`` treated non-list as empty).
+    Valid ``[{"op": "replace", ...}]`` ride. Absent / empty list is
+    the honest first-visit default (``[]`` — no-op). Rest is
+    stay-put (None → 400 ``invalidSyntax``). RFC 7644 §3.5.2.
+    Distinct from leftover ``members`` (oral #101) and leftover
+    ``active`` (oral #100). Live SCIM Users + Groups. Cycle 2231.
+    """
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        return None
+    out: list[dict[str, Any]] = []
+    for op in raw:
+        if not isinstance(op, dict):
+            return None
+        out.append(op)
+    return out
+
+
+def leftover_honest_scim_body_operations(body: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """PATCH ``Operations``. Missing key defaults empty. Leftover restores None."""
+    if "Operations" not in body:
+        return []
+    return leftover_honest_scim_operations(body.get("Operations"))
+
+
+def leftover_scim_operations_stay_put(body: dict[str, Any]) -> bool:
+    """True when leftover PATCH ``Operations`` would invent a 500 or a 200 no-op."""
+    return leftover_honest_scim_body_operations(body) is None
+
+
 def _coerce_active(value: Any) -> bool | None:
     """SCIM clients send ``active`` as a bool or (Entra) a string. Returns the bool, or
     ``None`` if the value isn't a recognizable active flag."""
@@ -245,7 +282,12 @@ def _active_from_patch(body: dict[str, Any]) -> Any:
     (supported subset — return current). Leftover ``active`` is
     ``None`` (stay-put 400). Valid tokens are ``bool``.
     """
-    for op in body.get("Operations", []) or []:
+    ops = leftover_honest_scim_body_operations(body)
+    if ops is None:
+        # Leftover Operations invented a 500 via op.get on a string.
+        # Route stay-puts first; this is defense in depth.
+        return None
+    for op in ops:
         if str(op.get("op", "")).lower() not in ("replace", "add"):
             continue
         path = str(op.get("path", "")).lower()
@@ -494,6 +536,11 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover ``Operations: "zzz"`` invented a 500 (``str.get``).
+        # JSONResponse (not Response(content=)) — oral #93.
+        # RFC 7644 invalidSyntax.
+        if leftover_scim_operations_stay_put(body):
+            return _error(400, "invalid Operations", scim_type="invalidSyntax")
         active = _active_from_patch(body)
         if active is _SCIM_ACTIVE_ABSENT:
             # Nothing we act on (only `active` is supported) — return current state.
@@ -647,6 +694,11 @@ def create_scim_routes() -> APIRouter:
         if err is not None:
             return err
         assert body is not None
+        # Leftover ``Operations: "zzz"`` invented a 200 no-op
+        # (parse_group_patch treated non-list as empty). Stay put.
+        # JSONResponse — oral #93. RFC 7644 invalidSyntax.
+        if leftover_scim_operations_stay_put(body):
+            return _error(400, "invalid Operations", scim_type="invalidSyntax")
         # Leftover PATCH ``members: "zzz"`` invented replace-with-empty
         # (wipe). Stay put. JSONResponse — oral #93.
         if leftover_scim_members_stay_put(body):
