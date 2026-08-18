@@ -5,17 +5,36 @@ API sources and return rendered HTML fragments.
 """
 
 import logging
-from html import escape as html_escape
 from typing import Any
 
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import HTMLResponse
 from starlette.responses import Response
 
 from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
+from dazzle.http.runtime.auth.auth_views import leftover_honest_auth_error
 from dazzle.render.fragment.ingest import SearchResultRow, render_search_result_list
 
 logger = logging.getLogger(__name__)
+
+
+def leftover_honest_fragment_source(raw: Any, declared: Any) -> str | None:
+    """Valid declared fragment source names ride. Leftover stays put (None).
+
+    Leftover ``?source=zzz`` / ``ghost`` on GET
+    ``/_dazzle/fragments/search`` and ``/select`` used to miss the
+    source registry and invent a 200 empty-result theater
+    (``Unknown source`` in ``dz-search-result-empty``). Valid
+    declared source names ride. Source is required — absent /
+    blank is stay-put (None → 400). Rest is stay-put (None).
+    Reuses ``leftover_honest_auth_error``. Distinct from leftover
+    search entity (oral #117) and leftover catalog picker (oral
+    #69). Live fieldtest_hub
+    ``source=companies_house_lookup.search_companies``. Cycle 2248.
+    """
+    honest = leftover_honest_auth_error(raw, declared)
+    return honest or None
 
 
 def _html(content: str) -> Response:
@@ -87,6 +106,14 @@ def create_fragment_router(
         min_chars: int = Query(3, description="Minimum characters before search"),
     ) -> Any:
         """Search an external API source and return rendered result items."""
+        # Leftover ``?source=zzz`` invented 200 empty-result theater.
+        # Valid declared names ride; leftover stays put. HTMLResponse
+        # (not Response(content=…)) — oral #93.
+        honest_source = leftover_honest_fragment_source(source, sources)
+        if honest_source is None:
+            return HTMLResponse("Unknown source", status_code=400)
+        source = honest_source
+
         if len(q) < min_chars:
             # min_chars is validated as int by FastAPI; explicit int() for static analysis
             return _html(
@@ -94,11 +121,7 @@ def create_fragment_router(
                 f"Type at least {int(min_chars)} characters to search...</div>"
             )
 
-        source_config = sources.get(source)
-        if not source_config:
-            return _html(
-                f'<div class="dz-search-result-empty" style="color: var(--colour-danger)">Unknown source: {html_escape(source)}</div>'
-            )
+        source_config = sources[source]
 
         try:
             import httpx
@@ -197,11 +220,13 @@ def create_fragment_router(
         id: str = Query(..., description="Selected item ID"),
     ) -> Any:
         """Fetch a full record and return OOB swap fragments for autofill fields."""
-        source_config = sources.get(source)
-        if not source_config:
-            return _html(
-                f'<div class="dz-search-result-empty" style="color: var(--colour-danger)">Unknown source: {html_escape(source)}</div>'
-            )
+        # Leftover ``?source=zzz`` invented 200 empty-result theater.
+        # HTMLResponse (not Response(content=…)) — oral #93.
+        honest_source = leftover_honest_fragment_source(source, sources)
+        if honest_source is None:
+            return HTMLResponse("Unknown source", status_code=400)
+        source = honest_source
+        source_config = sources[source]
 
         try:
             import httpx

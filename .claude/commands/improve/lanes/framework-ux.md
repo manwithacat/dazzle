@@ -273,6 +273,12 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   `leftover_honest_search_entity` (reuses
   `leftover_honest_auth_error`). Leftover stays put (400).
   Do **not** walk another leftover `?entity=` fleet-restrict.
+- **Fragment leftover source** (`?source=zzz` invents 200
+  empty-result theater) closed cycle 2248 (oral #118). Helper:
+  `leftover_honest_fragment_source` (reuses
+  `leftover_honest_auth_error`). Leftover stays put (400).
+  Do **not** walk another leftover `?source=` empty-result
+  theater site.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

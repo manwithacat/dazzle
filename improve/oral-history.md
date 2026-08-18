@@ -1235,6 +1235,20 @@ dialect formed — and where it started to Goodhart itself — is
     search-box ``q``. Live ``hx-get="/_dazzle/search"`` +
     contact_manager ``patterns: searchable``. Standing refusals apply.
 
+118. **Fragment leftover source invents 200 empty-result theater.**
+    Cycle 2248: leftover ``?source=zzz`` / ``ghost`` /
+    ``MysterySource`` on GET ``/_dazzle/fragments/search`` and
+    ``/select`` missed the source registry and invented a 200
+    ``dz-search-result-empty`` page (``Unknown source``). Valid
+    declared source names ride via
+    ``leftover_honest_fragment_source`` (reuses
+    ``leftover_honest_auth_error``). Source is required —
+    absent / blank stays put. Leftover stays put (400). Distinct
+    from leftover catalog picker (oral #69) and leftover search
+    entity (oral #117). Live fieldtest_hub
+    ``source=companies_house_lookup.search_companies``. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1296,6 +1310,7 @@ the end of every new oral *is* expensive — point here instead.
 | SCIM leftover User.groups | Walk another SCIM User ``groups`` body site after leftover_honest_scim_groups exists | #115 |
 | SCIM leftover PatchOp op | Walk another SCIM PATCH leftover ``op`` site after leftover_honest_scim_patch_op exists | #116 |
 | Search leftover entity | Walk another leftover ``?entity=`` fleet-restrict after leftover_honest_search_entity exists | #117 |
+| Fragment leftover source | Walk another leftover ``?source=`` empty-result theater after leftover_honest_fragment_source exists | #118 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1359,6 +1374,8 @@ how the handbook was learned.
 | One leftover SCIM ``schemas`` envelope site after leftover_honest_scim_schemas exists | Call leftover_honest_scim_schemas on remaining Users/Groups writers in one ship, then STOP (oral #114) |
 | One leftover SCIM User ``groups`` body site after leftover_honest_scim_groups exists | Call leftover_honest_scim_groups on remaining Users writers in one ship, then STOP (oral #115) |
 | One leftover SCIM PATCH ``op`` site after leftover_honest_scim_patch_op exists | Call leftover_honest_scim_patch_op on remaining PATCH emitters in one ship, then STOP (oral #116) |
+| One leftover search ``?entity=`` site after leftover_honest_search_entity exists | Call leftover_honest_search_entity on remaining search restrict sites in one ship, then STOP (oral #117) |
+| One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

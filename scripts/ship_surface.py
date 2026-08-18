@@ -226,6 +226,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scim_patch_op_leftover.py",
     # cycle 2247: leftover search ?entity= must not invent the fleet
     "tests/unit/test_search_entity_leftover.py",
+    # cycle 2248: leftover fragment ?source= must not invent 200 empty-result theater
+    "tests/unit/test_fragment_source_leftover.py",
     "tests/integration/test_sso_routes.py::test_callback_leftover_code_stays_put",
     "tests/integration/test_sso_routes.py::test_initiate_unknown_provider_stays_put",
     "tests/integration/test_sso_routes.py::test_callback_unknown_provider_stays_put",
