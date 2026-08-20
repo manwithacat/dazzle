@@ -43,6 +43,7 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_example_product_maturity.py",
     "tests/unit/test_demo_fleet_bar.py",
     "tests/unit/test_improve_example_probes.py",
+    "tests/unit/test_improve_commit_contract.py",
     "tests/unit/test_nav_platform_isolation_1626.py",
     "tests/unit/test_human_create_cta_label.py",
     "tests/unit/test_dashboard_card_remove_gating.py",
@@ -114,6 +115,11 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_csv_export.py::test_csv_money_minor_does_not_invent_raw_pence",
     "tests/unit/test_csv_export.py::test_csv_leftover_money_stays_put",
     "tests/unit/test_csv_export.py::test_csv_dict_ref_does_not_invent_repr",
+    # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
+    "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",
+    "tests/unit/test_csv_export.py::test_csv_calendar_date_uses_profile_not_iso",
+    "tests/unit/test_csv_export.py::test_csv_leftover_datetime_stays_put",
+    "tests/unit/test_csv_export.py::test_csv_bool_uses_yes_no",
     # cycle 2254: timeago future due dates must not invent just now (oral #123)
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_future_date_does_not_invent_just_now",
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_due_today_is_today",

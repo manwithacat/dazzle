@@ -106,6 +106,13 @@ Add hover documentation for entity fields
 Closes #123
 ```
 
+**Autonomous `/improve` cycles** use a stricter contract (oral #127) so
+`git log` stays clerk-readable and leftover-token clones cannot hide as
+progress. Subject names the *user-visible lie*, not `leftover-honest <param>`.
+Body has labeled `Before:` / `After:` / `Live:` lines. Harness-only ships
+say `harness_only`. Machine: `python scripts/improve_commit_contract.py`
+(also `make push-gate`). See `.claude/commands/improve.md` Step 3.
+
 ### Releases & versioning
 
 **Human-initiated development** — a defined change a person asked for — is

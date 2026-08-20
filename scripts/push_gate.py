@@ -13,6 +13,9 @@ Closes the 24h CI process gaps that docs alone could not:
 4. **HM visual plane** — when HaTchi-MaXchi gallery/CSS/controller paths are
    in the diff, require gen-surface clean and print the sibling-CI checklist;
    optional hard wait on standalone green.
+5. **Improve commit contract** — ``improve: cycle N`` HEAD must name a
+   clerk-visible lie, carry Before/After/Live, and must not resume
+   leftover-token stay-put past cadence (oral #127).
 
 Usage::
 
@@ -34,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -330,6 +334,41 @@ def cmd_status() -> int:
     return 0
 
 
+def improve_commit_contract_rc() -> int:
+    """Validate HEAD when it is an improve-cycle commit. No-op otherwise.
+
+    Tests monkeypatch this to ``lambda: 0``. Skip with
+    ``IMPROVE_SKIP_COMMIT_CONTRACT=1`` only for operator emergencies.
+    """
+    if os.environ.get("IMPROVE_SKIP_COMMIT_CONTRACT", "").strip() in ("1", "true", "yes"):
+        print("push_gate: IMPROVE_SKIP_COMMIT_CONTRACT set — skipping oral #127")
+        return 0
+    script = REPO / "scripts" / "improve_commit_contract.py"
+    spec = importlib.util.spec_from_file_location("improve_commit_contract", script)
+    if spec is None or spec.loader is None:
+        return _block(
+            "Could not load scripts/improve_commit_contract.py",
+            remediation="  # file missing from the tree — restore it",
+        )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["improve_commit_contract"] = mod  # dataclass on 3.14
+    spec.loader.exec_module(mod)
+    result = mod.check_head(REPO)
+    if result.ok:
+        return 0
+    detail = "\n".join(f"  - {e}" for e in result.errors)
+    return _block(
+        "Improve commit contract failed (oral #127).\n" + detail,
+        remediation="""  Rewrite the HEAD message (git commit --amend) to:
+    improve: cycle N {lane} — {clerk-visible lie}
+    Before: …
+    After: …
+    Live: …
+  Leftover-token cadence: python scripts/improve_commit_contract.py --status
+  Pre-commit check: python scripts/improve_commit_contract.py --message-file MSG --paths-from-index""",
+    )
+
+
 def _block(msg: str, *, remediation: str) -> int:
     print(
         f"""
@@ -399,6 +438,11 @@ def cmd_check(
             f"Stamp tier={stamped_tier!r} is below required min-tier={min_tier!r}.",
             remediation=f"  make ci-fast   # records tier 0\n  # or: python scripts/push_gate.py record --tier {min_tier}",
         )
+
+    # --- 1b. Improve commit contract (oral #127) ---
+    contract_rc = improve_commit_contract_rc()
+    if contract_rc != 0:
+        return contract_rc
 
     # --- 2. Throttle ---
     if not skip_throttle and not repair:

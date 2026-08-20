@@ -129,6 +129,14 @@ See the concordance doc for Tier 2.
 - Stage only the relevant changed files by name (never `git add -A` or `git add .`).
 - Do NOT stage files that look like secrets (.env, credentials, tokens).
 - Write a concise commit message that explains *why* the change was made, following the conventional commit style used in recent history (`git log --oneline -10`).
+- **Improve-cycle ships** (`improve: cycle N` / `fix: cycle N`) must follow the oral #127 contract in `.claude/commands/improve.md` Step 3: clerk-visible subject, `Before:` / `After:` / `Live:` body, `harness_only` when the diff is not product. Validate before commit:
+
+  ```bash
+  python scripts/improve_commit_contract.py --message-file /tmp/improve-msg --paths-from-index
+  python scripts/improve_commit_contract.py --status
+  ```
+
+  Non-zero → rewrite; do not commit. `make push-gate` re-checks HEAD.
 - End the commit message with your harness's agent-attribution trailer, if it defines one (a `Co-Authored-By:` line naming the agent — match the signature style visible in recent commits; harnesses that supply their own trailer automatically need nothing extra).
 - Use a HEREDOC to pass the message to `git commit -m`.
 

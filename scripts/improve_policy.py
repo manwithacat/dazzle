@@ -781,6 +781,26 @@ def _attach_interesting_portfolio(
             ).strip()
 
 
+def leftover_token_status_line() -> str:
+    """Leftover-honest token cadence (oral #121/#127). Best-effort; never raises."""
+    script = REPO / "scripts" / "improve_commit_contract.py"
+    if not script.is_file():
+        return ""
+    try:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("improve_commit_contract", script)
+        if spec is None or spec.loader is None:
+            return ""
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["improve_commit_contract"] = mod  # dataclass on 3.14
+        spec.loader.exec_module(mod)
+        cad = mod.cadence_of(mod.git_recent_subjects())
+        return mod.format_status(cad)
+    except Exception:  # noqa: BLE001 — status is advisory
+        return ""
+
+
 def format_status(policy: dict[str, Any] | None = None) -> str:
     policy = policy or load_policy()
     d = pick(policy)
@@ -813,6 +833,9 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         )
     if d.get("harness_only"):
         lines.append("harness_only=1")
+    leftover = leftover_token_status_line()
+    if leftover:
+        lines.append(leftover)
     # Portfolio lines when Goal B is in play or residual green (best-effort).
     if d.get("strategy") == "interesting_product" or (
         d.get("product_residual_total") is not None

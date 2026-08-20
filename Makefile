@@ -65,7 +65,7 @@ help:
 	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
 	@echo "  ship-surface     Tier 0.5: bandit + recurrent SPEC/IR/viewport pack (badge-red classes)"
 	@echo "  gen-surface-check  Catalogue + CONTRACT_SURFACE freshness (no write; part of ship-surface)"
-	@echo "  push-gate        Allow/deny git push (stamp + throttle + CI wait + HM plane)"
+	@echo "  push-gate        Allow/deny git push (stamp + throttle + CI wait + HM plane + improve commit contract)"
 	@echo "  ci-changed       Path-aware packs for git diff (fast mid-edit loop)"
 	@echo "  ci-fast          Tier 0: preflight + ship-surface + ruff + mypy + gate + mkdocs"
 	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"

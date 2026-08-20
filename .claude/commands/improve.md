@@ -298,6 +298,11 @@ Rules the driver **must** honor under `posture=aggressive` / `require_mutation=1
 4. **Still yield** to red CI / CodeQL / REGRESSION / inbox. Does **not** bypass
    `densify_allowed=0` (WI clone desks stay banned — aggression is depth and
    real ships, not sprawl).
+5. **Leftover-token cadence (oral #121/#127).** `python scripts/improve_policy.py --status`
+   prints `leftover_token_streak=C/2 since_audit=S/3`. If `blocked=1` or
+   `next_must_not=leftover-token`, do **not** ship leftover-honest token stay-put
+   this cycle — pick a different invent class (or `harness_only` / capability-sweep).
+   The push gate will refuse a leftover-token clone even if this sentence is ignored.
 
 ```bash
 python scripts/improve_policy.py --activate aggressive-change
@@ -328,6 +333,7 @@ Selection priority:
 1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`. **Grok preferred:** `/workflow improve-self-audit` (or `{"apply":true}` to write AUD/REGRESSION rows in-workflow).
 3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive inventory and reconcile `.claude/commands/improve/capability-map.md` **table only**: flag `UNOWNED`, recompute STALE-effective (lag ≥20), report **COGNITION vs HYGIENE** digs. Overwrite “Last sweep” one-liners (≤5); do **not** re-grow the map with ship narratives. Forceable via `/improve capability-sweep`. **Grok preferred:** `/workflow improve-capability-sweep`.
+3a. **Leftover-token cadence (oral #121/#127):** if `python scripts/improve_commit_contract.py --status` prints `blocked=1`, the product mutation this cycle is **not** leftover-honest token stay-put. That score is the honesty Goodhart — keep the object (do not silently invent state), drop the proxy (one leftover pin file per cycle). Repair lanes (`cimonitor` / `codeql`) are exempt.
 3b. **Semgrep hygiene cadence**: if ≥20 cycles since the last log entry mentioning `semgrep hygiene` / `lane: … semgrep` (or none exists), **and** 0c–0c3 did not claim the cycle, prefer a short HYGIENE dig via `improve/strategies/semgrep_hygiene.md` before pure STALE re-stamps — especially when `dazzle sentinel scan` is STALE. Forceable via `/improve semgrep`. Does **not** preempt REGRESSION / CI / CodeQL / inbox / self-audit / capability-sweep.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
 5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
@@ -462,9 +468,45 @@ If the lane requires sub-strategy dispatch, the lane reads from
    `Standing refusals apply.` Do **not** reprint the ancestor *not leftover
    page / not Goal B coat / …* litany (that list is the apprentice handbook,
    not a chorus). Field note: `improve/leftover-honesty-ethnography.md`.
-7. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
+7. **Commit** if the lane modified tracked files (the lane's playbook reports this).
    **Do not `/bump`. Do not tag.** Improve commits are untagged on `main`
    (README position 11; CONTRIBUTING releases). A human cuts a named release.
+
+   **Commit contract (oral #127) — clerk-visible lie, not the HTTP param.**
+   Subject ≤110 chars. Harness-only ships (self-audit, capability-sweep, or a
+   diff that does not touch `src/` / `examples/` / `packages/`) **must** include
+   `harness_only` in the subject so `git log` does not look like product motion.
+
+   ```
+   improve: cycle N {lane} — CSV money export was raw pence, not £12.00
+
+   Before: list ?format=csv dumped total_minor=1200 as 1200 (pence as pounds).
+   After:  _csv_cell formats currency via format_cell; leftover junk stays put.
+   Live:   invoice_ops money lists
+   Not:    leftover-token stay-put (oral #121)
+   ```
+
+   Harness-only:
+
+   ```
+   improve: cycle N self-audit harness_only — leftover-token cadence (oral #121)
+
+   Before: 14 leftover-honest token ships claimed CLEAN.
+   After:  audit window CLEAN; next mutation is a different invent class.
+   Live:   n/a
+   ```
+
+   Do **not** start the summary with `leftover-honest`. Do **not** mash the body
+   into the subject. Do **not** ship an empty body. Validate **before** `git commit`:
+
+   ```bash
+   python scripts/improve_commit_contract.py --message-file /tmp/improve-msg --paths-from-index
+   python scripts/improve_commit_contract.py --status   # leftover_token_streak=… blocked=…
+   ```
+
+   Non-zero → rewrite the message. `make push-gate` re-checks HEAD (oral #127).
+   If `--status` says `blocked=1` / `next_must_not=leftover-token`, this cycle's
+   product mutation **must not** be leftover-honest token stay-put.
 8. **Push (only if this cycle ships code to origin)** — mandatory gate, never ad-hoc:
    ```bash
    make preflight-surface

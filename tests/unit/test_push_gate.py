@@ -103,6 +103,7 @@ def test_check_allows_valid_stamp(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(mod, "main_commits_in_window", lambda _w: [])
     monkeypatch.setattr(mod, "probe_main_ci", lambda: {"status": "green"})
     monkeypatch.setattr(mod, "changed_paths_vs_main", lambda: ["docs/x.md"])
+    monkeypatch.setattr(mod, "improve_commit_contract_rc", lambda: 0)
     mod.write_stamp(tier="0")
     rc = mod.cmd_check(skip_throttle=False, skip_ci_wait=False, min_tier="0")
     assert rc == 0
@@ -119,6 +120,7 @@ def test_check_blocks_in_progress_ci(tmp_path: Path, monkeypatch: pytest.MonkeyP
         lambda: {"status": "in_progress", "id": 1, "sha": "abc", "title": "x", "url": "u"},
     )
     monkeypatch.setattr(mod, "changed_paths_vs_main", lambda: [])
+    monkeypatch.setattr(mod, "improve_commit_contract_rc", lambda: 0)
     mod.write_stamp(tier="0")
     assert mod.cmd_check() == 1
     assert mod.cmd_check(repair=True) == 0
@@ -133,6 +135,18 @@ def test_check_blocks_throttle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(mod, "main_commits_in_window", lambda _w: floods)
     monkeypatch.setattr(mod, "probe_main_ci", lambda: {"status": "green"})
     monkeypatch.setattr(mod, "changed_paths_vs_main", lambda: [])
+    monkeypatch.setattr(mod, "improve_commit_contract_rc", lambda: 0)
     mod.write_stamp(tier="0")
     assert mod.cmd_check() == 1
     assert mod.cmd_check(repair=True) == 0
+
+
+def test_check_blocks_improve_commit_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mod = _load()
+    stamp_path = tmp_path / "push_gate_stamp.json"
+    monkeypatch.setattr(mod, "STAMP_PATH", stamp_path)
+    monkeypatch.setattr(mod, "improve_commit_contract_rc", lambda: 1)
+    mod.write_stamp(tier="0")
+    assert mod.cmd_check(skip_throttle=True, skip_ci_wait=True) == 1

@@ -113,6 +113,7 @@ Use mid-edit for a fast loop; does **not** replace Tier 0 for ship.
 | Throttle | ≥4 commits on `origin/main` in the last hour, or &lt;8m since newest main commit |
 | CI tip | Latest main `ci.yml` is still `in_progress` / `queued` |
 | HM plane | Diff touches gallery CSS/JS/baselines and gen-surface is dirty; optional `--require-hm-green` |
+| Improve commit | HEAD is `improve: cycle N` and fails oral #127 (`scripts/improve_commit_contract.py`: clerk-visible subject, Before/After/Live, leftover-token cadence) |
 
 Stamp is **written automatically** at the end of `ci_local.sh` tier0 / tier1.
 Manual:

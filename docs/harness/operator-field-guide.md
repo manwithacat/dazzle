@@ -60,6 +60,7 @@ when you want the next dig soon). Log a one-liner in `dev_docs/improve-log.md`.
 #   uv run python scripts/interesting_product_portfolio.py --status
 #   uv run python scripts/goal_b_coat.py --status
 # Oral history: improve/oral-history.md · ethnography: docs/harness/leftover-honesty-ethnography.md
+# Commit contract / leftover-token cadence: python scripts/improve_commit_contract.py --status
 # Peer packs: improve/peer_packs/
 /improve framework-ux
 /improve cimonitor                    # snapshot; repair only if red

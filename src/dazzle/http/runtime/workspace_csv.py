@@ -8,10 +8,15 @@ items + pre-computed column metadata in, returns a streaming
 Cycle 2253 (oral #122): CSV must not invent clerk-facing money from
 raw minor units, or ``str(dict)`` for unresolved refs. Leftover
 currency junk stays put. Distinct from leftover-token stay-put.
+
+Cycle 2257 (oral #126): CSV must not invent naive-UTC datetime as
+wall time, or ISO calendar dates when the grid uses the tenant
+profile. Leftover date junk stays put.
 """
 
 import csv
 import io
+from datetime import date, datetime
 from typing import Any
 
 from starlette.responses import StreamingResponse
@@ -27,7 +32,8 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
     Money columns store minor units in ``<name>_minor`` — ``str(1200)``
     invents pence as pounds. Dict refs without ``_display`` must not
     invent ``str(dict)``. Leftover currency junk stays put (format_cell
-    refuses ``int("zzz")``).
+    refuses ``int("zzz")``). Naive UTC datetimes must not dump as wall
+    ISO (oral #126) — ``format_cell`` applies the tenant profile.
     """
     key = column["key"]
     display = item.get(f"{key}_display")
@@ -45,6 +51,14 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
             "currency",
             currency_code=str(column.get("currency_code") or "GBP"),
         )
+    if kind in ("date", "datetime"):
+        return format_cell(raw, kind)
+    if isinstance(raw, datetime):
+        return format_cell(raw, "datetime")
+    if isinstance(raw, date):
+        return format_cell(raw, "date")
+    if isinstance(raw, bool):
+        return format_cell(raw, "bool")
     return str(raw)
 
 

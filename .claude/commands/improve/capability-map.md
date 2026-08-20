@@ -54,7 +54,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 2051 | STALE |
 | **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 2051 | STALE |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list + **presentation residual**) | COGNITION | MCP | **example-apps** + framework-ux | 2184 | STALE |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 2256 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 2257 | USED |
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 2184 | STALE |
 | **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 2184 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 2253 | USED |

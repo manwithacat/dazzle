@@ -155,3 +155,58 @@ def test_csv_dict_ref_does_not_invent_repr():
     rows = _parse_csv(_get_body(resp))
     assert rows[1] == ["Ada"]
     assert "{" not in rows[1][0]
+
+
+def test_csv_naive_utc_datetime_does_not_invent_wall_iso():
+    """Naive UTC storage must not dump as wall ``YYYY-MM-DD HH:MM:SS`` (oral #126)."""
+    from datetime import datetime
+
+    from dazzle.render.fragment.format_cell import format_cell
+
+    stored = datetime(2026, 8, 18, 14, 30, 0)
+    columns = [{"key": "created_at", "label": "Created", "type": "datetime"}]
+    resp = _render_csv_response([{"created_at": stored}], columns, "tickets")
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == [format_cell(stored, "datetime")]
+    assert rows[1][0] != "2026-08-18 14:30:00"
+
+
+def test_csv_calendar_date_uses_profile_not_iso():
+    """Calendar due dates must not dump ISO when the grid uses the profile (oral #126)."""
+    from datetime import date
+
+    from dazzle.render.fragment.format_cell import format_cell
+
+    due = date(2026, 8, 19)
+    columns = [{"key": "due_date", "label": "Due", "type": "date"}]
+    resp = _render_csv_response([{"due_date": due}], columns, "tasks")
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == [format_cell(due, "date")]
+    assert rows[1][0] != "2026-08-19"
+
+
+def test_csv_leftover_datetime_stays_put():
+    """Leftover date junk must not invent a clock / calendar day (oral #126)."""
+    columns = [{"key": "created_at", "label": "Created", "type": "datetime"}]
+    resp = _render_csv_response(
+        [{"created_at": "zzz"}, {"created_at": "2026-06-01zzz"}],
+        columns,
+        "tickets",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["zzz"]
+    assert rows[2] == ["2026-06-01zzz"]
+
+
+def test_csv_bool_uses_yes_no():
+    """Bool columns match the grid Yes/No path; leftover stays put (oral #126)."""
+    columns = [{"key": "is_active", "label": "Active", "type": "bool"}]
+    resp = _render_csv_response(
+        [{"is_active": True}, {"is_active": False}, {"is_active": "zzz"}],
+        columns,
+        "users",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["Yes"]
+    assert rows[2] == ["No"]
+    assert rows[3] == ["zzz"]

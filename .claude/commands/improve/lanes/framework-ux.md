@@ -36,6 +36,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
 
 ## Leftover-honesty classes (do not walk siblings)
 
+**Commit contract (oral #127):** leftover-honest *token stay-put* is cadence-capped
+(`python scripts/improve_commit_contract.py --status`). Subject names the
+clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
+`After:` / `Live:`. Do not resume the 2237–2250 param walk.
+
 - **Parse-invent** (widget companions) is saturated — oral #42.
 - **Temporal echo** (`include_closed` / `as_of` on list/grid `hx-get`)
   is saturated — oral #67. Helper:
@@ -307,6 +312,11 @@ Rows in `## Lane: framework-ux` section with status ∈ {`REGRESSION`, `PENDING`
   closed cycle 2256 (oral #125). Helper: `evaluate_date_expr`. Do
   **not** walk another leftover-token stay-put, CSV money clone, or
   timeago (oral #121–#124).
+- **CSV datetime naive-UTC** (`?format=csv` dumps `2026-08-18 14:30:00`
+  as wall time) closed cycle 2257 (oral #126). Helper: `_csv_cell` +
+  `format_cell` date/datetime. Leftover junk stays put. Do **not**
+  walk another leftover-token stay-put, CSV money clone, timeago, or
+  workspace-today (oral #121–#125).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

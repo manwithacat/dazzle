@@ -432,7 +432,8 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
   | Recurrent badge-red pack | `make ship-surface` | Always in Tier 0 (`ci-fast` runs it after preflight) — bandit + SPEC/IR/viewport pack |
   | Path-aware mid-edit | `make ci-changed` | After touching examples DSL, shell/viewport, KB, or `src/` — not a full ship substitute |
   | Default ship gate | `make ci-fast` | Every `/ship` (preflight + ship-surface + ruff + mypy + gate + docs); writes push stamp |
-  | Push allow/deny | `make push-gate` | **Before every `git push`** — stamp match + ≤4 commits/h + CI not in_progress + HM plane |
+  | Push allow/deny | `make push-gate` | **Before every `git push`** — stamp match + ≤4 commits/h + CI not in_progress + HM plane + improve commit contract (oral #127) |
+  | Improve commit contract | `python scripts/improve_commit_contract.py --message-file MSG --paths-from-index` | Every `/improve` cycle before `git commit`; leftover-token cadence via `--status` |
   | Release / version bump | `make ci-core` | Before tags / when operator wants GitHub-core concordance |
   | HM visual ship / tag | `push_gate check --require-hm-green` | Sibling hatchi-maxchi CI must be green for gallery CSS/JS baselines |
   | Badge red | `/cimonitor` | Fix **and** promote the failure class into ship-surface/preflight if Tier 0 would have missed it |

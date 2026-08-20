@@ -339,11 +339,20 @@ app, and did not put time-travel on the edit form. The object
 stayed inside one honesty family. The cost is operator
 unreadability and a tick tax per sibling instead of one ship.
 
+The leftover-token walk (auth/SCIM/search string stay-put, one
+field per cycle) was the same move with a new name. Oral #121
+named it; oral #127 put a **machine stop** on it
+(`scripts/improve_commit_contract.py`, wired through `push_gate`):
+at most two consecutive leftover-honest product ships, at most
+three since the last self-audit, and a commit subject that names
+the clerk-visible lie instead of `leftover-honest <param>`.
+
 That trade is acceptable for keeping the human out of the pick
 *only if* a class can still be closed without a human. Oral #67
 is that close for temporal echo. The standing-refusals table is
 the apprentice handbook so the next class does not reprint
-thirty ancestors.
+thirty ancestors. The commit-contract script is how the leftover
+clan closes without waiting for the next ethnography.
 
 ---
 
@@ -367,8 +376,11 @@ closes):
   do not walk another experience `?event=` site
 - leftover consent tokens closed cycle 2210 (oral #90) —
   do not walk another consent coerce site
+- leftover-token stay-put is cadence-capped (oral #121 / #127) —
+  `python scripts/improve_commit_contract.py --status`
 - Goal B coat stays off
 
-If a week of commit subjects are again `… leftover
-include_closed/as_of must ride hx-get`, the stop failed. Say so
+If a week of commit subjects are again `… leftover-honest <param>`,
+or `improve_commit_contract.py --status` prints `blocked=1` while
+the tip still ships leftover-honest, the stop failed. Say so
 once, in oral. Do not take the pick back.

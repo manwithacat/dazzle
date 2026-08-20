@@ -1332,6 +1332,28 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #121). Not CSV money (oral #122). Not timeago (oral
     #123 / #124). Standing refusals apply.
 
+126. **CSV datetime invents naive UTC as wall time.** List
+    ``?format=csv`` used ``str(item[key])`` so ``created_at`` dumped
+    ``2026-08-18 14:30:00`` (naive UTC storage) as if it were tenant
+    wall time. Live support_tickets / simple_task ``created_at``
+    downloads therefore invented 14:30 when the clerk's London grid
+    showed ``18 Aug 2026 15:30``. Calendar dates dumped ISO instead of
+    the profile label. Cycle 2257: ``_csv_cell`` formats date /
+    datetime via ``format_cell`` (same path as the grid); leftover
+    ``zzz`` stays put; bools ride Yes/No. Standing refusals apply.
+
+127. **Improve commit messages name the clerk-visible lie; leftover-token
+    cadence is a machine stop.** Cycle 2255 shipped an empty body; 2233
+    mashed the body into the subject; 2237–2250 named ``leftover-honest
+    <param>`` so ``git log`` was a dialect index (oral #121 named the
+    Goodhart, then the loop still needed a gate). Contract: subject
+    ≤110 chars, clerk-visible lie first (not ``leftover-honest``),
+    body has ``Before:`` / ``After:`` / ``Live:``, harness-only diffs
+    say ``harness_only``. Cadence: at most 2 consecutive leftover-honest
+    product ships and at most 3 since the last self-audit. Machine:
+    ``scripts/improve_commit_contract.py`` (pre-commit + ``push_gate``).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1401,6 +1423,8 @@ the end of every new oral *is* expensive — point here instead.
 | Timeago future-as-just-now | Walk another leftover-token stay-put or CSV money clone instead of due-date timeago invent | #123 |
 | Timeago naive-UTC vs wall-now | Walk another leftover-token stay-put, CSV money clone, or calendar just-now instead of UTC elapsed invent | #124 |
 | Workspace today unbound | Walk another leftover-token stay-put, CSV money clone, or timeago instead of ``due_date < today`` drop | #125 |
+| CSV datetime naive-UTC | Walk another leftover-token stay-put, CSV money clone, timeago, or workspace-today instead of clerk-facing CSV datetime TZ | #126 |
+| Leftover-token cadence / unreadability | Empty body, subject overflow, ``leftover-honest <param>`` subject, or another leftover-token stay-put past 2 consecutive / 3 since last self-audit | #127 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1467,8 +1491,10 @@ how the handbook was learned.
 | One leftover search ``?entity=`` site after leftover_honest_search_entity exists | Call leftover_honest_search_entity on remaining search restrict sites in one ship, then STOP (oral #117) |
 | One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
 | One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
-| One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121) |
+| One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
+| One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |
+| Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
 | Metric tile proliferation | Real work rows / regions |

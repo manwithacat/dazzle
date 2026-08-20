@@ -166,6 +166,7 @@ dual-open attribute thrash alone.
 | **Goal A / harness_only** | Infrastructure or discovery work; do not claim product bake-off lift |
 | **Goal B / interesting_product** | Closed depth id + hero recapture; buyer-visible surface |
 | **require_mutation** | Prefer a real ship or an actionable PENDING seed over residual-clear thrash |
+| **Leftover-token cadence** | Cap leftover-honest param walks (2 consecutive / 3 since last self-audit) so honesty is not scored as pin-file count |
 | **densify_allowed** | Whether warehouse/index densify is in budget this cycle |
 | **open_hop_streak** | Consecutive open-hop style digs; caps force Goal B when residual is 0 |
 
@@ -246,6 +247,7 @@ The human review surface after a multi-hour run is primarily **git history**
 | **Tip CI** | Latest main-branch CI run for the current HEAD |
 | **ship-surface** | Local gate pack promoted from classes of CI failure (close-the-loop) |
 | **harness_only** | Work that improves the loop/infra, not claimed as product depth |
+| **Commit contract** | Subject names the clerk-visible lie; body has Before/After/Live; leftover-token cadence is machine-capped (`improve_commit_contract.py`) |
 | **Workflow panel** | Parallel multi-agent job; driver still applies results |
 
 ---

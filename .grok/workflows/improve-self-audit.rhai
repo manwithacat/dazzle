@@ -175,7 +175,11 @@ for c in commits {
     p += "3. Transition justification: DONE/VERIFIED without lane QA steps?\n";
     p += "4. Scope honesty: undeclared drive-by files?\n";
     p += "5. Dig contracts: if lane example-apps story_walk or agent_acceptance_panel, require contract: lines\n";
-    p += "   and/or python scripts/improve_dig_receipt.py check — DISCREPANCY if PASS claimed without evidence.\n\n";
+    p += "   and/or python scripts/improve_dig_receipt.py check — DISCREPANCY if PASS claimed without evidence.\n";
+    p += "6. Commit contract (oral #127): after that oral, subject names a clerk-visible lie (not leftover-honest <param>),\n";
+    p += "   body has Before:/After:/Live:, harness-only diffs say harness_only. Empty body / subject overflow = bookkeeping.\n";
+    p += "   Grandfather commits before oral #127. python scripts/improve_commit_contract.py --status — leftover-token\n";
+    p += "   blocked=1 in this window is a systemic pattern, not CLEAN product.\n\n";
     p += "Verdict CLEAN only with concrete inspection. DISCREPANCY needs reproducible evidence (command + output).\n";
     p += "Set discrepancy_kind: shipped_broken | bookkeeping | dig_contract | undeclared_scope | none.\n";
     p += "suggested_action: none | REGRESSION | short AUD row text. affected_lane if known.\n";

@@ -86,6 +86,17 @@ Its brief is to **refute**, not summarise:
    (AUD), not the existence of a refusal list.
 6. **No bump/tag**: improve commits must not have cut a `v*` tag or
    run `/bump`. Those are human-initiated release moves.
+7. **Commit contract (oral #127)**: for sampled commits **after** this oral
+   landed, the subject names a clerk-visible lie (not `leftover-honest <param>`),
+   the body has `Before:` / `After:` / `Live:`, and harness-only diffs say
+   `harness_only`. Empty body or subject overflow is a DISCREPANCY
+   (`bookkeeping`). Run `python scripts/improve_commit_contract.py --head`
+   on HEAD; for historical SHAs, `git show -s --format=%B <sha>` against
+   the same rules (grandfather commits before oral #127 — do not AUD them
+   for missing labels).
+8. **Leftover-token Goodhart**: if the window is another leftover-honest
+   token walk past cadence (`--status` `blocked=1`), that is a systemic
+   pattern — AUD the *lane*, do not treat each pin file as CLEAN product.
 
 Verdict per commit: `CLEAN` | `DISCREPANCY` (with evidence: file:line, failing
 command output, missing test).
