@@ -1,6 +1,22 @@
 ## [Unreleased]
 
+### Changed
+- **`PostgresBackend(..., *, isolation="none")`** — keyword-only tenant
+  isolation from `TenantConfig`. `"schema"` fail-closes an unbound
+  `connection()` lease (#1651). Default `"none"` keeps existing
+  single-schema apps unchanged.
+
 ### Fixed
+- **Schema isolation lease wrote entity SQL into `public` (#1651)** —
+  `PostgresBackend.connection()` used default `search_path=public` when
+  no tenant context var was bound, so host services / jobs dual-wrote
+  entity rows (CyFuture `public."Contact"`). Under
+  `[tenant] isolation = "schema"` an unbound lease now raises
+  `TenantContextError`; `connection(platform=True)` is the public
+  framework path (auth, Alembic, registry); jobs bind with
+  `bound_tenant_schema(...)`. The backend is constructed with
+  `isolation` from `TenantConfig`. Oral #128.
+
 - **Auth leftover `?error=` invented a clean page (cycle 2221)** —
   leftover `?error=zzz` on `/login` / `/signup` / `/reset-password`
   / `/2fa/challenge` / `/auth/select-org` omitted as absent and

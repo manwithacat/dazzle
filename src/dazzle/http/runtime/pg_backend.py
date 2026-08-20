@@ -19,6 +19,7 @@ from dazzle.core.ir.params import ParamRef
 from dazzle.http.runtime.predicate_compiler import _USER_GUC_PREFIX
 from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC, USER_GUC_PREFIX
+from dazzle.http.runtime.tenant_isolation import TenantContextError
 from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,21 @@ def _set_search_path(conn: Any, schema: str) -> None:
     # psycopg.sql.SQL.format() is safe SQL composition, not string interpolation
     stmt = pgsql.SQL("SET search_path TO {schema}, public").format(schema=pgsql.Identifier(schema))
     conn.execute(stmt)  # nosemgrep
+
+
+def _apply_search_path(conn: Any, lease: str | None) -> None:
+    """Apply :func:`resolve_schema_lease` output to a live connection (#1651).
+
+    ``"public"`` is a platform lease (framework tables only) — SET public
+    without a tenant schema in front. Any other name is a tenant schema
+    (``tenant_X, public``). ``None`` leaves the session default.
+    """
+    if not lease:
+        return
+    if lease == "public":
+        conn.execute(pgsql.SQL("SET search_path TO public"))  # nosemgrep
+        return
+    _set_search_path(conn, lease)
 
 
 def _set_tenant_context(conn: Any, tenant_id: str | None) -> None:
@@ -359,7 +375,13 @@ class PostgresBackend:
     the pool instead of opening a fresh TCP connection per call.
     """
 
-    def __init__(self, database_url: str, search_path: str | None = None):
+    def __init__(
+        self,
+        database_url: str,
+        search_path: str | None = None,
+        *,
+        isolation: str = "none",
+    ):
         """
         Initialize the PostgreSQL backend.
 
@@ -367,9 +389,13 @@ class PostgresBackend:
             database_url: PostgreSQL connection URL
                           (e.g. postgresql://user:pass@host:5432/dbname)
             search_path: Optional schema search path (e.g. 'tenant_abc')
+            isolation: Tenant isolation mode from ``TenantConfig``
+                       (``"none"`` | ``"schema"``). ``"schema"`` fail-closes
+                       :meth:`connection` when no tenant is bound (#1651).
         """
         self.database_url = database_url
         self.search_path = search_path
+        self.isolation = isolation
         self._connection: Any = None
         self._pool: Any = None
 
@@ -424,7 +450,7 @@ class PostgresBackend:
         return add_psycopg_driver(normalise_postgres_scheme(self.database_url))
 
     @contextmanager
-    def connection(self) -> Iterator[Any]:
+    def connection(self, *, platform: bool = False) -> Iterator[Any]:
         """
         Get a database connection context manager.
 
@@ -438,15 +464,30 @@ class PostgresBackend:
 
         If a tenant schema is set via context var (by TenantMiddleware),
         it takes precedence over the instance's search_path.
+
+        Under ``isolation="schema"`` a lease with no bound tenant raises
+        :class:`~dazzle.http.runtime.tenant_isolation.TenantContextError`
+        instead of silently using ``public`` (#1651). Pass
+        ``platform=True`` for auth / Alembic / ``public.tenants`` /
+        framework tables. Jobs outside a request bind with
+        :func:`~dazzle.http.runtime.tenant_isolation.bound_tenant_schema`.
         """
         from dazzle.http.runtime.tenant_isolation import (
             get_current_host_tenant_id,
             get_current_rls_user_attrs,
             get_current_tenant_id,
             get_current_tenant_schema,
+            resolve_schema_lease,
         )
 
-        effective_search_path = get_current_tenant_schema() or self.search_path
+        # Resolve (and fail-closed) *before* opening a TCP/pool lease so a
+        # missing tenant never touches public (#1651).
+        lease = resolve_schema_lease(
+            isolation=self.isolation,
+            platform=platform,
+            tenant_schema=get_current_tenant_schema(),
+            instance_search_path=self.search_path,
+        )
         # RLS tenancy Phase B — bind dazzle.tenant_id for the shared_schema fence.
         # None (unauthenticated / non-tenant) leaves the GUC unset → fence denies.
         tenant_id = get_current_tenant_id()
@@ -459,8 +500,7 @@ class PostgresBackend:
 
         if self._pool is not None:
             with self._pool.connection() as conn:
-                if effective_search_path:
-                    _set_search_path(conn, effective_search_path)
+                _apply_search_path(conn, lease)
                 _set_tenant_context(conn, tenant_id)
                 _set_host_tenant_context(conn, host_tenant_id)
                 _set_rls_user_attrs(conn, rls_user_attrs)
@@ -476,8 +516,7 @@ class PostgresBackend:
 
         conn = _connect_with_guidance(self.database_url, row_factory=dict_row)
         try:
-            if effective_search_path:
-                _set_search_path(conn, effective_search_path)
+            _apply_search_path(conn, lease)
             _set_tenant_context(conn, tenant_id)
             _set_host_tenant_context(conn, host_tenant_id)
             _set_rls_user_attrs(conn, rls_user_attrs)
@@ -489,7 +528,7 @@ class PostgresBackend:
         finally:
             conn.close()
 
-    def get_persistent_connection(self) -> Any:
+    def get_persistent_connection(self, *, platform: bool = False) -> Any:
         """
         Get a persistent connection for the application lifecycle.
 
@@ -499,13 +538,23 @@ class PostgresBackend:
         — unlike :meth:`connection`. Using it against an RLS-fenced table will
         fail-closed (no rows / rejected writes) because the GUC is unset. Prefer
         :meth:`connection` for any tenant-scoped access (see #1331).
+
+        Under ``isolation="schema"`` this refuses a lease unless
+        ``platform=True`` — a long-lived connection cannot follow the
+        per-request tenant context var and must not silently sit on
+        ``public`` for entity SQL (#1651).
         """
+        if self.isolation == "schema" and not platform:
+            raise TenantContextError(
+                "get_persistent_connection() is not tenant-safe under "
+                'isolation="schema"; use connection() with a bound tenant, '
+                "or platform=True for public framework tables (#1651)."
+            )
         from psycopg.rows import dict_row
 
         if self._connection is None or self._connection.closed:
             raw = _connect_with_guidance(self.database_url, row_factory=dict_row)
-            if self.search_path:
-                _set_search_path(raw, self.search_path)
+            _apply_search_path(raw, "public" if platform else self.search_path)
             self._connection = PgConnectionWrapper(raw)
         return self._connection
 

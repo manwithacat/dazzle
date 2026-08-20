@@ -1060,7 +1060,10 @@ class DazzleBackendApp:
 
         from dazzle.http.runtime.pg_backend import PostgresBackend
 
-        self._db_manager = PostgresBackend(self._database_url)
+        isolation = "none"
+        if self._tenant_config is not None:
+            isolation = self._tenant_config.isolation or "none"
+        self._db_manager = PostgresBackend(self._database_url, isolation=isolation)
         may_create_schema = self._should_create_schema_on_startup()
 
         if may_create_schema:
@@ -1126,7 +1129,7 @@ class DazzleBackendApp:
         if may_create_schema:
             from dazzle.http.runtime.framework_schema import ensure_framework_schema
 
-            with self._db_manager.connection() as _fw_conn:
+            with self._db_manager.connection(platform=True) as _fw_conn:
                 ensure_framework_schema(_fw_conn)
         else:
             verify_dazzle_params_table(self._db_manager)
@@ -2194,7 +2197,7 @@ class DazzleBackendApp:
             ):
                 from dazzle.http.runtime.atomic_flow_executor import ensure_atomic_audit_table
 
-                with self._db_manager.connection() as _audit_conn:
+                with self._db_manager.connection(platform=True) as _audit_conn:
                     ensure_atomic_audit_table(_audit_conn)
 
             # #1319 / ADR-0032 Slice B — wire the transition→atomic invoke context

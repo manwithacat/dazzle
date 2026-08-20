@@ -109,7 +109,7 @@ async def _health_check(deps: _DebugDeps) -> SystemHealth:
     """
     db_status = "ok"
     try:
-        with deps.db_manager.connection() as conn:
+        with deps.db_manager.connection(platform=True) as conn:
             conn.execute("SELECT 1")
     except Exception as e:
         logger.warning("Health check database error: %s", e)
@@ -140,7 +140,7 @@ async def _readiness_probe(deps: _DebugDeps) -> ReadinessResponse:
     Checks database connectivity before returning ready.
     """
     try:
-        with deps.db_manager.connection() as conn:
+        with deps.db_manager.connection(platform=True) as conn:
             conn.execute("SELECT 1")
         return ReadinessResponse(ready=True, database="ok")
     except Exception as e:
@@ -288,7 +288,7 @@ async def _list_tables(deps: _DebugDeps) -> dict[str, Any]:
     """
     tables: list[dict[str, Any]] = []
 
-    with deps.db_manager.connection() as conn:
+    with deps.db_manager.connection(platform=True) as conn:
         # Get all tables from PostgreSQL catalog
         cursor = conn.execute(
             "SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"

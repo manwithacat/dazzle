@@ -29,6 +29,9 @@ request without re-walking the predicate trees; it is read-only after startup
 (derived config, not mutable runtime state — distinct from an ADR-0005 singleton).
 """
 
+import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar, Token
 
 _current_tenant_schema: ContextVar[str | None] = ContextVar("_current_tenant_schema", default=None)
@@ -145,3 +148,72 @@ def register_rls_user_attr_names(names: set[str]) -> None:
 def get_rls_user_attr_names() -> frozenset[str]:
     """Return the app-wide set of scope-referenced ``current_user`` attr names."""
     return _rls_user_attr_names
+
+
+class TenantContextError(RuntimeError):
+    """No tenant is bound on a schema-isolation lease (#1651).
+
+    Raised by :func:`resolve_schema_lease` / ``PostgresBackend.connection()``
+    when ``isolation = "schema"`` and the caller neither set the tenant
+    context var nor passed ``platform=True``. The previous behaviour
+    silently used ``search_path=public`` and dual-wrote entity rows.
+    """
+
+
+_SCHEMA_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+@contextmanager
+def bound_tenant_schema(schema_name: str) -> Iterator[None]:
+    """Bind ``schema_name`` for the duration of a non-request job (#1651).
+
+    Use this when a host service / scheduler step is not inside
+    ``TenantMiddleware`` but still needs a tenant-scoped
+    ``PostgresBackend.connection()``::
+
+        with bound_tenant_schema("tenant_demo"):
+            with db.connection() as conn:
+                ...
+
+    Invalid identifiers raise :class:`TenantContextError` rather than
+    interpolating a leftover name into ``SET search_path``.
+    """
+    if not schema_name or not _SCHEMA_NAME.fullmatch(schema_name):
+        raise TenantContextError(f"bound_tenant_schema: invalid schema name {schema_name!r}")
+    token = set_current_tenant_schema(schema_name)
+    try:
+        yield
+    finally:
+        _current_tenant_schema.reset(token)
+
+
+def resolve_schema_lease(
+    *,
+    isolation: str,
+    platform: bool,
+    tenant_schema: str | None,
+    instance_search_path: str | None,
+) -> str | None:
+    """Decide which schema a pooled lease should ``SET search_path`` to.
+
+    Returns:
+      * ``"public"`` — explicit platform lease (auth, Alembic, registry)
+      * a tenant schema name — tenant-scoped entity SQL
+      * ``None`` — do not SET (``isolation="none"``, no path configured)
+
+    Raises :class:`TenantContextError` when ``isolation == "schema"``,
+    the call is not ``platform=True``, and neither the context var nor
+    the instance ``search_path`` is set. That is the CyFuture dual-write
+    foot-gun (#1651): a host service with no bound tenant must error,
+    not insert into ``public."Contact"``.
+    """
+    if platform:
+        return "public"
+    bound = tenant_schema or instance_search_path
+    if isolation == "schema" and not bound:
+        raise TenantContextError(
+            "PostgresBackend.connection() requires a bound tenant under "
+            'isolation="schema"; use bound_tenant_schema(...) or '
+            "connection(platform=True) for public framework tables (#1651)."
+        )
+    return bound

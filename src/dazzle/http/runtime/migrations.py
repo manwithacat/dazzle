@@ -126,7 +126,7 @@ DatabaseBackend = Any  # PostgresBackend
 
 def ensure_dazzle_params_table(db_manager: DatabaseBackend) -> None:
     """Create the _dazzle_params framework table if it doesn't exist."""
-    with db_manager.connection() as conn:
+    with db_manager.connection(platform=True) as conn:
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS _dazzle_params (
@@ -143,7 +143,7 @@ def ensure_dazzle_params_table(db_manager: DatabaseBackend) -> None:
 
 def verify_dazzle_params_table(db_manager: DatabaseBackend) -> None:
     """Verify the _dazzle_params framework table exists."""
-    with db_manager.connection() as conn:
+    with db_manager.connection(platform=True) as conn:
         cursor = conn.cursor()
         cursor.execute(
             """

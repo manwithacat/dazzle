@@ -1354,6 +1354,18 @@ dialect formed — and where it started to Goodhart itself — is
     ``scripts/improve_commit_contract.py`` (pre-commit + ``push_gate``).
     Standing refusals apply.
 
+128. **Schema isolation lease invents ``public`` entity SQL.** Cycle
+    2258 / #1651: ``PostgresBackend.connection()`` treated a missing
+    tenant context var as ``search_path=public``, so a host service
+    with no bound tenant dual-wrote ``public."Contact"`` (CyFuture).
+    The backend is now constructed with ``isolation`` from
+    ``TenantConfig``. Under ``isolation="schema"`` an unbound lease
+    raises ``TenantContextError``; ``connection(platform=True)`` is
+    the public framework path; jobs bind with
+    ``bound_tenant_schema``. ``get_persistent_connection()`` refuses
+    the same class of bug. Not leftover-token stay-put (oral #121).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1425,6 +1437,7 @@ the end of every new oral *is* expensive — point here instead.
 | Workspace today unbound | Walk another leftover-token stay-put, CSV money clone, or timeago instead of ``due_date < today`` drop | #125 |
 | CSV datetime naive-UTC | Walk another leftover-token stay-put, CSV money clone, timeago, or workspace-today instead of clerk-facing CSV datetime TZ | #126 |
 | Leftover-token cadence / unreadability | Empty body, subject overflow, ``leftover-honest <param>`` subject, or another leftover-token stay-put past 2 consecutive / 3 since last self-audit | #127 |
+| Schema isolation public lease | Silently use ``search_path=public`` for entity SQL when no tenant is bound; skip ``platform=True`` / ``bound_tenant_schema`` | #128 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
