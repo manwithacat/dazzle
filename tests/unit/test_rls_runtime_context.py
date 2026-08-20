@@ -92,6 +92,9 @@ def test_apply_rls_failure_propagates_out_of_setup_database() -> None:
     app._entities = []
     app._appspec = MagicMock()
     app._appspec.surfaces = []
+    # Instance attr (set in __init__) — spec= MagicMock will not invent it.
+    # Cycle 2258 reads isolation from here before constructing PostgresBackend.
+    app._tenant_config = None
     # _apply_rls_policies blows up (e.g. permissions / DDL error).
     app._apply_rls_policies.side_effect = RuntimeError("fence DDL failed")
     app._should_create_schema_on_startup.return_value = True
