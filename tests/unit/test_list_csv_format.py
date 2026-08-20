@@ -107,3 +107,73 @@ def test_entity_list_csv_format_currency_does_not_invent_bare_amount() -> None:
     rows = _parse_csv(_get_body(resp))
     assert rows[1] == ["£1,250.00"]
     assert rows[1][0] != "1250.00"
+
+
+_CONTACT_LABEL_DSL = """
+module m
+app a "A"
+
+entity Contact "Contact":
+  id: uuid pk
+  photo_url: url
+  is_favorite: bool=false
+  company: str(80)
+
+surface contacts "Contacts":
+  uses entity Contact
+  mode: list
+  section main:
+    field photo_url "Photo"
+    field is_favorite "Favorite"
+    field company
+"""
+
+
+def _contact_label_surface():
+    from pathlib import Path
+
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    *_, fragment = parse_dsl(_CONTACT_LABEL_DSL, Path("test.dsl"))
+    entity = next(e for e in fragment.entities if e.name == "Contact")
+    surface = next(s for s in fragment.surfaces if s.name == "contacts")
+    return entity, surface
+
+
+def test_surface_columns_use_author_label_not_schema_title() -> None:
+    """Grid labels must ride CSV headers — not Photo Url / Is Favorite (oral #132)."""
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    entity, surface = _contact_label_surface()
+    cols = {c["key"]: c for c in build_surface_columns(entity, surface)}
+    assert cols["photo_url"]["label"] == "Photo"
+    assert cols["photo_url"]["label"] != "Photo Url"
+    assert cols["is_favorite"]["label"] == "Favorite"
+    assert cols["is_favorite"]["label"] != "Is Favorite"
+
+
+def test_surface_columns_empty_label_stays_put_as_schema_title() -> None:
+    """Leftover empty author labels must not invent a guessed clerk title (oral #132)."""
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    entity, surface = _contact_label_surface()
+    cols = {c["key"]: c for c in build_surface_columns(entity, surface)}
+    assert cols["company"]["label"] == "Company"
+
+
+def test_entity_list_csv_headers_use_surface_labels() -> None:
+    """``GET /contacts?format=csv`` must match the grid THEAD, not schema titles."""
+    from dazzle.http.runtime.workspace_columns import build_surface_columns
+
+    entity, surface = _contact_label_surface()
+    columns = build_surface_columns(entity, surface)
+    resp = render_entity_list_csv(
+        [{"photo_url": "https://example.test/a.png", "is_favorite": True, "company": "Acme"}],
+        columns,
+        "Contact",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[0] == ["Photo", "Favorite", "Company"]
+    assert "Photo Url" not in rows[0]
+    assert "Is Favorite" not in rows[0]
+    assert rows[1][1] == "Yes"

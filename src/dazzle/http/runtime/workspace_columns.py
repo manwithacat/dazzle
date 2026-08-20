@@ -30,6 +30,19 @@ from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.filters import status_tone_map
 
 
+def _column_label(field_name: str, surface_label: str | None = None) -> str:
+    """Clerk-facing column title (oral #132).
+
+    Surface ``field photo_url "Photo"`` must win over schema
+    ``Photo Url``. Empty leftover labels stay put as the title-cased
+    field name — do not invent a guessed clerk title.
+    """
+    text = (surface_label or "").strip()
+    if text:
+        return text
+    return str(field_name or "").replace("_", " ").title()
+
+
 def _ref_detail_route(ref_entity: Any) -> str:
     """UI VIEW hub template for a ref/belongs_to column (``/app/<slug>/{id}``).
 
@@ -172,6 +185,8 @@ def build_surface_columns(
     field_visible_conditions: dict[str, dict[str, Any] | None] = {}
     # #1470 Phase 2: per-field explicit format: override (None when unannotated).
     field_formats: dict[str, Any] = {}
+    # oral #132: author ``field photo_url "Photo"`` must win over schema titles.
+    field_labels: dict[str, str | None] = {}
     # #1626 R5 / P0-8: surface ``widget=color`` → list/queue type ``color`` (swatch).
     field_widgets: dict[str, str] = {}
     for section in surface_spec.sections:
@@ -186,6 +201,7 @@ def build_surface_columns(
                     _el_vis.model_dump() if _el_vis else _section_vis_cond
                 )
                 field_formats[fn] = getattr(element, "format", None)
+                field_labels[fn] = getattr(element, "label", None)
                 opts = getattr(element, "options", None) or {}
                 if isinstance(opts, dict) and opts.get("widget"):
                     field_widgets[fn] = str(opts["widget"])
@@ -215,7 +231,7 @@ def build_surface_columns(
             # opportunity scan need the target entity, not just ref_route.
             ref_col: dict[str, Any] = {
                 "key": rel_name,
-                "label": rel_name.replace("_", " ").title(),
+                "label": _column_label(rel_name, field_labels.get(fn)),
                 "type": "ref",
                 "sortable": False,
                 "ref_route": ref_route,
@@ -239,7 +255,7 @@ def build_surface_columns(
         col_key = f"{f.name}_minor" if kind_val == "money" else f.name
         col: dict[str, Any] = {
             "key": col_key,
-            "label": f.name.replace("_", " ").title(),
+            "label": _column_label(f.name, field_labels.get(fn)),
             "type": col_type,
             "sortable": True,
         }
@@ -290,7 +306,7 @@ def _ref_entity_column(f: Any, ft: Any) -> dict[str, Any]:
     ref_route = _ref_detail_route(ref_entity)
     return {
         "key": rel_name,
-        "label": rel_name.replace("_", " ").title(),
+        "label": _column_label(rel_name),
         "type": "ref",
         "sortable": False,
         "ref_route": ref_route,
@@ -342,7 +358,7 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
     col_key = f"{f.name}_minor" if kind_val == "money" else f.name
     col: dict[str, Any] = {
         "key": col_key,
-        "label": f.name.replace("_", " ").title(),
+        "label": _column_label(f.name),
         "type": col_type,
         "sortable": True,
     }
