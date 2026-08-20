@@ -16,6 +16,10 @@ profile. Leftover date junk stays put.
 Cycle 2260 (oral #129): entity-list ``?format=csv`` must not be
 treated as an invalid graph dialect. Graph ``cytoscape`` / ``d3`` /
 ``raw`` stay graph; leftover junk stays 400.
+
+Cycle 2261 (oral #130): badge / enum cells must not dump snake_case
+tokens when the grid title-cases them (``in_progress`` vs
+``In Progress``). Leftover junk stays put.
 """
 
 import csv
@@ -29,6 +33,31 @@ from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.fragment.format_cell import format_cell
 
 
+def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
+    """Format a non-dict CSV value by column type (oral #122 / #126 / #130)."""
+    kind = str(column.get("type") or "")
+    if kind == "currency":
+        return format_cell(
+            raw,
+            "currency",
+            currency_code=str(column.get("currency_code") or "GBP"),
+        )
+    if kind in ("date", "datetime"):
+        return format_cell(raw, kind)
+    if kind == "badge":
+        options = column.get("filter_options")
+        if options is not None and str(raw) not in {str(o) for o in options}:
+            return str(raw)
+        return format_cell(raw, "badge")
+    if isinstance(raw, datetime):
+        return format_cell(raw, "datetime")
+    if isinstance(raw, date):
+        return format_cell(raw, "date")
+    if isinstance(raw, bool):
+        return format_cell(raw, "bool")
+    return str(raw)
+
+
 def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
     """Clerk-facing CSV cell — same honesty as the list grid.
 
@@ -38,6 +67,8 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
     invent ``str(dict)``. Leftover currency junk stays put (format_cell
     refuses ``int("zzz")``). Naive UTC datetimes must not dump as wall
     ISO (oral #126) — ``format_cell`` applies the tenant profile.
+    Badge / enum tokens must not dump snake_case when the grid
+    title-cases them (oral #130).
     """
     key = column["key"]
     display = item.get(f"{key}_display")
@@ -48,22 +79,7 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
         return ""
     if isinstance(raw, dict):
         return _resolve_display_name(raw)
-    kind = str(column.get("type") or "")
-    if kind == "currency":
-        return format_cell(
-            raw,
-            "currency",
-            currency_code=str(column.get("currency_code") or "GBP"),
-        )
-    if kind in ("date", "datetime"):
-        return format_cell(raw, kind)
-    if isinstance(raw, datetime):
-        return format_cell(raw, "datetime")
-    if isinstance(raw, date):
-        return format_cell(raw, "date")
-    if isinstance(raw, bool):
-        return format_cell(raw, "bool")
-    return str(raw)
+    return _csv_typed_cell(raw, column)
 
 
 def _render_csv_response(

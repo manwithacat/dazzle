@@ -210,3 +210,47 @@ def test_csv_bool_uses_yes_no():
     assert rows[1] == ["Yes"]
     assert rows[2] == ["No"]
     assert rows[3] == ["zzz"]
+
+
+def test_csv_badge_does_not_invent_raw_token():
+    """Enum / SM status CSV must match the grid title-case, not snake_case (oral #130)."""
+    from dazzle.render.fragment.format_cell import format_cell
+
+    columns = [
+        {
+            "key": "status",
+            "label": "Status",
+            "type": "badge",
+            "filter_options": ["open", "in_progress", "resolved"],
+        }
+    ]
+    resp = _render_csv_response(
+        [{"status": "in_progress"}, {"status": "open"}],
+        columns,
+        "tickets",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == [format_cell("in_progress", "badge")]
+    assert rows[1][0] == "In Progress"
+    assert rows[2] == ["Open"]
+    assert rows[1][0] != "in_progress"
+
+
+def test_csv_leftover_badge_stays_put():
+    """Leftover badge junk must not invent a title-cased enum (oral #130)."""
+    columns = [
+        {
+            "key": "status",
+            "label": "Status",
+            "type": "badge",
+            "filter_options": ["open", "in_progress", "resolved"],
+        }
+    ]
+    resp = _render_csv_response(
+        [{"status": "zzz"}, {"status": "ghost_state"}],
+        columns,
+        "tickets",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["zzz"]
+    assert rows[2] == ["ghost_state"]

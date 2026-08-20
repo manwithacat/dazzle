@@ -1374,6 +1374,17 @@ dialect formed — and where it started to Goodhart itself — is
     ``cytoscape`` / ``d3`` stay graph. Live simple_task ``/tasks``.
     Standing refusals apply.
 
+130. **CSV badge invents snake_case tokens.** List ``?format=csv``
+    used ``str(item[key])`` so ``status=in_progress`` / ``sla_state=
+    on_track`` / ``support_tier=l3`` dumped the storage token while
+    the grid title-cased via ``format_cell(..., "badge")``. Live
+    support_tickets ``GET /tickets?format=csv`` therefore invented
+    a different language than the clerk's list. Cycle 2261:
+    ``_csv_cell`` formats badge via ``format_cell``; leftover junk
+    stays put. Not leftover-token stay-put (oral #121). Not CSV
+    money / datetime / graph-format (oral #122 / #126 / #129).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1447,6 +1458,7 @@ the end of every new oral *is* expensive — point here instead.
 | Leftover-token cadence / unreadability | Empty body, subject overflow, ``leftover-honest <param>`` subject, or another leftover-token stay-put past 2 consecutive / 3 since last self-audit | #127 |
 | Schema isolation public lease | Silently use ``search_path=public`` for entity SQL when no tenant is bound; skip ``platform=True`` / ``bound_tenant_schema`` | #128 |
 | Graph ``?format=`` stealing clerk CSV | Treat entity-list ``?format=csv`` as invalid graph dialect; clone leftover-token stay-put instead of letting CSV ride | #129 |
+| CSV badge snake_case | Dump ``in_progress`` / ``on_track`` instead of the grid's ``In Progress``; clone leftover-token stay-put or CSV money/datetime/graph-format | #130 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1516,6 +1528,7 @@ how the handbook was learned.
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |
+| One CSV badge host after _csv_cell uses format_cell | Call format_cell on remaining CSV badge/enum cells in one ship, then STOP (oral #130) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

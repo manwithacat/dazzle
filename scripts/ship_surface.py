@@ -122,6 +122,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2260: entity-list ?format=csv must not invent graph dialect (oral #129)
     "tests/unit/test_list_csv_format.py::test_list_export_kind_csv_is_not_graph",
     "tests/unit/test_list_csv_format.py::test_list_export_kind_leftover_stays_put",
+    # cycle 2261: CSV badge must not invent snake_case tokens (oral #130)
+    "tests/unit/test_csv_export.py::test_csv_badge_does_not_invent_raw_token",
+    "tests/unit/test_csv_export.py::test_csv_leftover_badge_stays_put",
+    "tests/unit/test_list_csv_format.py::test_entity_list_csv_badge_does_not_invent_snake_case",
     "tests/unit/test_list_csv_format.py::test_entity_list_csv_datetime_does_not_invent_wall_iso",
     # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
     "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",

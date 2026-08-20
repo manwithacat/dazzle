@@ -65,3 +65,28 @@ def test_entity_list_csv_fk_dict_does_not_invent_repr() -> None:
     rows = _parse_csv(_get_body(resp))
     assert rows[1] == ["Carol Member"]
     assert "{" not in rows[1][0]
+
+
+def test_entity_list_csv_badge_does_not_invent_snake_case() -> None:
+    """Clerk CSV must title-case badge tokens the way the grid does (oral #130)."""
+    columns = [
+        {
+            "key": "status",
+            "label": "Status",
+            "type": "badge",
+            "filter_options": ["open", "in_progress"],
+        },
+        {
+            "key": "sla_state",
+            "label": "Sla State",
+            "type": "badge",
+            "filter_options": ["on_track", "at_risk", "breached"],
+        },
+    ]
+    resp = render_entity_list_csv(
+        [{"status": "in_progress", "sla_state": "on_track"}],
+        columns,
+        "Ticket",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["In Progress", "On Track"]
