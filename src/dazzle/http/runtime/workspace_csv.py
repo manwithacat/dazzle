@@ -12,6 +12,10 @@ currency junk stays put. Distinct from leftover-token stay-put.
 Cycle 2257 (oral #126): CSV must not invent naive-UTC datetime as
 wall time, or ISO calendar dates when the grid uses the tenant
 profile. Leftover date junk stays put.
+
+Cycle 2260 (oral #129): entity-list ``?format=csv`` must not be
+treated as an invalid graph dialect. Graph ``cytoscape`` / ``d3`` /
+``raw`` stay graph; leftover junk stays 400.
 """
 
 import csv
@@ -83,3 +87,61 @@ def _render_csv_response(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+_GRAPH_LIST_FORMATS = frozenset({"cytoscape", "d3"})
+_SKIP_LIST_CSV_KEYS = frozenset({"id", "__display__"})
+
+
+def list_export_kind(raw: Any) -> str:
+    """Classify ``?format=`` on an entity list.
+
+    ``csv`` is clerk export (oral #129). ``cytoscape`` / ``d3`` are graph
+    (#619). Missing / ``raw`` is JSON/HTML. Anything else is leftover —
+    stay put (400), do not invent CSV or a graph.
+    """
+    text = "" if raw is None else str(raw).strip()
+    if not text or text == "raw":
+        return "json"
+    if text == "csv":
+        return "csv"
+    if text in _GRAPH_LIST_FORMATS:
+        return "graph"
+    return "leftover"
+
+
+def _items_as_dicts(items: list[Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in items:
+        if hasattr(item, "model_dump"):
+            rows.append(item.model_dump(mode="json"))
+        elif isinstance(item, dict):
+            rows.append(dict(item))
+    return rows
+
+
+def _columns_for_list_csv(
+    columns: list[dict[str, Any]] | None,
+    items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if columns:
+        return [c for c in columns if isinstance(c, dict) and c.get("key")]
+    if not items:
+        return []
+    return [
+        {"key": k, "label": str(k).replace("_", " ").title()}
+        for k in items[0]
+        if k not in _SKIP_LIST_CSV_KEYS
+    ]
+
+
+def render_entity_list_csv(
+    items: list[Any],
+    columns: list[dict[str, Any]] | None,
+    entity_name: str,
+) -> StreamingResponse:
+    """Clerk CSV for ``GET /{entities}?format=csv`` (oral #129)."""
+    rows = _items_as_dicts(items)
+    cols = _columns_for_list_csv(columns, rows)
+    slug = (entity_name or "export").replace(" ", "_")
+    return _render_csv_response(rows, cols, slug)

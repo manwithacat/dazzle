@@ -55,6 +55,7 @@ from dazzle.http.runtime.route_support import (
     _wants_html,
 )
 from dazzle.http.runtime.usage_signal import USAGE_KIND_FIELD, read_usage_counts_for_request
+from dazzle.http.runtime.workspace_csv import list_export_kind, render_entity_list_csv
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy_by_usage
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
@@ -736,16 +737,24 @@ async def _list_handler_body(
             materialised.append(row)
         result["items"] = materialised
 
-    # Graph format serialization (#619 Phase 2)
+    # Graph format serialization (#619 Phase 2). Cycle 2260 / oral #129:
+    # clerk CSV must ride; leftover format junk stays 400 (no graph invent).
     format_param = request.query_params.get("format")
-    if format_param and format_param != "raw":
+    export_kind = list_export_kind(format_param)
+    if export_kind == "csv":
+        items = result.get("items", []) if isinstance(result, dict) else []
+        columns = getattr(request.state, "htmx_columns", None)
+        return render_entity_list_csv(items, columns, entity_name)
+    if export_kind == "leftover":
         from starlette.responses import JSONResponse
 
-        if format_param not in ("cytoscape", "d3"):
-            return JSONResponse(
-                {"detail": "Invalid format. Supported: cytoscape, d3, raw"},
-                status_code=400,
-            )
+        return JSONResponse(
+            {"detail": "Invalid format. Supported: csv, cytoscape, d3, raw"},
+            status_code=400,
+        )
+    if export_kind == "graph":
+        from starlette.responses import JSONResponse
+
         if graph_spec is None:
             return JSONResponse(
                 {"detail": f"Entity '{entity_name}' does not declare graph_edge:"},

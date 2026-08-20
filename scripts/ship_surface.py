@@ -119,6 +119,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_tenant_connection.py::TestSchemaIsolationFailClosed",
     # cycle 2259: _setup_database isolation read must not break C-1 RLS-halt mock
     "tests/unit/test_rls_runtime_context.py::test_apply_rls_failure_propagates_out_of_setup_database",
+    # cycle 2260: entity-list ?format=csv must not invent graph dialect (oral #129)
+    "tests/unit/test_list_csv_format.py::test_list_export_kind_csv_is_not_graph",
+    "tests/unit/test_list_csv_format.py::test_list_export_kind_leftover_stays_put",
+    "tests/unit/test_list_csv_format.py::test_entity_list_csv_datetime_does_not_invent_wall_iso",
     # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
     "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",
     "tests/unit/test_csv_export.py::test_csv_calendar_date_uses_profile_not_iso",

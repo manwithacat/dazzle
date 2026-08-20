@@ -1366,6 +1366,14 @@ dialect formed — and where it started to Goodhart itself — is
     the same class of bug. Not leftover-token stay-put (oral #121).
     Standing refusals apply.
 
+129. **Graph ``?format=`` invents that a list is a graph.** Entity-list
+    ``GET /tasks?format=csv`` (``dz.downloadCsv`` appends ``format=csv``
+    to the grid hx-get) returned 400 ``Supported: cytoscape, d3, raw``
+    even when Task had no ``graph_edge``. Cycle 2260: ``csv`` rides
+    ``format_cell`` (oral #122 / #126); leftover format junk stays 400;
+    ``cytoscape`` / ``d3`` stay graph. Live simple_task ``/tasks``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1438,6 +1446,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV datetime naive-UTC | Walk another leftover-token stay-put, CSV money clone, timeago, or workspace-today instead of clerk-facing CSV datetime TZ | #126 |
 | Leftover-token cadence / unreadability | Empty body, subject overflow, ``leftover-honest <param>`` subject, or another leftover-token stay-put past 2 consecutive / 3 since last self-audit | #127 |
 | Schema isolation public lease | Silently use ``search_path=public`` for entity SQL when no tenant is bound; skip ``platform=True`` / ``bound_tenant_schema`` | #128 |
+| Graph ``?format=`` stealing clerk CSV | Treat entity-list ``?format=csv`` as invalid graph dialect; clone leftover-token stay-put instead of letting CSV ride | #129 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
