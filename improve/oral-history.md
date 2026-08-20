@@ -1385,6 +1385,17 @@ dialect formed — and where it started to Goodhart itself — is
     money / datetime / graph-format (oral #122 / #126 / #129).
     Standing refusals apply.
 
+131. **CSV ``format: currency`` invents bare major units.** List
+    ``?format=csv`` used ``str(item[key])`` so a decimal
+    ``amount=1250.00`` dumped ``1250.00`` while the grid showed
+    ``£1,250.00`` via DSL ``format: currency:GBP``. Live
+    invoice_ops ``invoice_list`` / ``GET /invoices?format=csv``.
+    Cycle 2262: ``_csv_cell`` honors ``format_kind`` the same way
+    list rows do; leftover ``zzz`` stays put. Distinct from
+    money-minor ``type=currency`` (oral #122). Do **not** walk
+    remaining ``format:`` kinds as sibling ships. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1459,6 +1470,7 @@ the end of every new oral *is* expensive — point here instead.
 | Schema isolation public lease | Silently use ``search_path=public`` for entity SQL when no tenant is bound; skip ``platform=True`` / ``bound_tenant_schema`` | #128 |
 | Graph ``?format=`` stealing clerk CSV | Treat entity-list ``?format=csv`` as invalid graph dialect; clone leftover-token stay-put instead of letting CSV ride | #129 |
 | CSV badge snake_case | Dump ``in_progress`` / ``on_track`` instead of the grid's ``In Progress``; clone leftover-token stay-put or CSV money/datetime/graph-format | #130 |
+| CSV format: currency major | Dump ``1250.00`` instead of the grid's ``£1,250.00``; clone leftover-token stay-put or CSV money-minor / datetime / badge | #131 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1529,6 +1541,7 @@ how the handbook was learned.
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |
 | One CSV badge host after _csv_cell uses format_cell | Call format_cell on remaining CSV badge/enum cells in one ship, then STOP (oral #130) |
+| One CSV ``format:`` host after _csv_cell honors format_kind | Honor format_kind on remaining CSV emitters in one ship, then STOP (oral #131) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

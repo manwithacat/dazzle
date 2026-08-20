@@ -90,3 +90,20 @@ def test_entity_list_csv_badge_does_not_invent_snake_case() -> None:
     )
     rows = _parse_csv(_get_body(resp))
     assert rows[1] == ["In Progress", "On Track"]
+
+
+def test_entity_list_csv_format_currency_does_not_invent_bare_amount() -> None:
+    """DSL ``format: currency:GBP`` on decimal must match the grid £ (oral #131)."""
+    columns = [
+        {
+            "key": "amount",
+            "label": "Amount",
+            "type": "text",
+            "format_kind": "currency",
+            "format_arg": "GBP",
+        }
+    ]
+    resp = render_entity_list_csv([{"amount": "1250.00"}], columns, "Invoice")
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["£1,250.00"]
+    assert rows[1][0] != "1250.00"

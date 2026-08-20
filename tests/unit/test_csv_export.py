@@ -236,6 +236,59 @@ def test_csv_badge_does_not_invent_raw_token():
     assert rows[1][0] != "in_progress"
 
 
+def test_csv_format_currency_major_does_not_invent_bare_amount():
+    """DSL ``format: currency:GBP`` on decimal must match the grid £ (oral #131)."""
+    from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+
+    columns = [
+        {
+            "key": "amount",
+            "label": "Amount",
+            "type": "text",
+            "format_kind": "currency",
+            "format_arg": "GBP",
+        }
+    ]
+    resp = _render_csv_response([{"amount": "1250.00"}, {"amount": 48.5}], columns, "invoices")
+    rows = _parse_csv(_get_body(resp))
+    expected_1250 = format_cell(
+        "1250.00",
+        "text",
+        override=ResolvedFormat("currency", "GBP"),
+    )
+    expected_48 = format_cell(
+        48.5,
+        "text",
+        override=ResolvedFormat("currency", "GBP"),
+    )
+    assert rows[1] == [expected_1250]
+    assert rows[1][0] == "£1,250.00"
+    assert rows[1][0] != "1250.00"
+    assert rows[2] == [expected_48]
+    assert rows[2][0] == "£48.50"
+
+
+def test_csv_leftover_format_currency_stays_put():
+    """Leftover decimal junk must not invent £0.00 via format: currency (oral #131)."""
+    columns = [
+        {
+            "key": "amount",
+            "label": "Amount",
+            "type": "text",
+            "format_kind": "currency",
+            "format_arg": "GBP",
+        }
+    ]
+    resp = _render_csv_response(
+        [{"amount": "zzz"}, {"amount": "12abc"}],
+        columns,
+        "invoices",
+    )
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["zzz"]
+    assert rows[2] == ["12abc"]
+
+
 def test_csv_leftover_badge_stays_put():
     """Leftover badge junk must not invent a title-cased enum (oral #130)."""
     columns = [

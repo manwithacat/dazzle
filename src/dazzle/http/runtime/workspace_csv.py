@@ -20,21 +20,50 @@ treated as an invalid graph dialect. Graph ``cytoscape`` / ``d3`` /
 Cycle 2261 (oral #130): badge / enum cells must not dump snake_case
 tokens when the grid title-cases them (``in_progress`` vs
 ``In Progress``). Leftover junk stays put.
+
+Cycle 2262 (oral #131): DSL ``format: currency:GBP`` on a decimal
+amount must not dump bare major units when the grid shows ``£1,250.00``.
+CSV uses the same ``format_kind`` override as the list row. Leftover
+junk stays put. Distinct from money-minor ``type=currency`` (oral #122).
 """
 
 import csv
 import io
 from datetime import date, datetime
+from decimal import InvalidOperation
 from typing import Any
 
 from starlette.responses import StreamingResponse
 
 from dazzle.render.display_names import _resolve_display_name
-from dazzle.render.fragment.format_cell import format_cell
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+
+
+def _csv_format_override(raw: Any, column: dict[str, Any]) -> str | None:
+    """DSL ``format:`` on a CSV cell — same override the grid uses (oral #131).
+
+    Returns None when the column has no format_kind so typed inference runs.
+    Leftover junk stays put (format_cell refuse, or exception → str(raw)).
+    """
+    format_kind = str(column.get("format_kind") or "")
+    if not format_kind:
+        return None
+    try:
+        return format_cell(
+            raw,
+            str(column.get("type") or "text"),
+            currency_code=str(column.get("currency_code") or ""),
+            override=ResolvedFormat(format_kind, column.get("format_arg") or None),
+        )
+    except (TypeError, ValueError, InvalidOperation):
+        return str(raw)
 
 
 def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
-    """Format a non-dict CSV value by column type (oral #122 / #126 / #130)."""
+    """Format a non-dict CSV value by column type (oral #122 / #126 / #130 / #131)."""
+    override = _csv_format_override(raw, column)
+    if override is not None:
+        return override
     kind = str(column.get("type") or "")
     if kind == "currency":
         return format_cell(
@@ -68,7 +97,9 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
     refuses ``int("zzz")``). Naive UTC datetimes must not dump as wall
     ISO (oral #126) — ``format_cell`` applies the tenant profile.
     Badge / enum tokens must not dump snake_case when the grid
-    title-cases them (oral #130).
+    title-cases them (oral #130). DSL ``format:`` on decimal amounts
+    must not dump bare major units when the grid shows currency
+    (oral #131).
     """
     key = column["key"]
     display = item.get(f"{key}_display")

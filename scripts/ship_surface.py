@@ -127,6 +127,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_csv_export.py::test_csv_leftover_badge_stays_put",
     "tests/unit/test_list_csv_format.py::test_entity_list_csv_badge_does_not_invent_snake_case",
     "tests/unit/test_list_csv_format.py::test_entity_list_csv_datetime_does_not_invent_wall_iso",
+    # cycle 2262: CSV format: currency on decimal must not invent bare major units (oral #131)
+    "tests/unit/test_csv_export.py::test_csv_format_currency_major_does_not_invent_bare_amount",
+    "tests/unit/test_csv_export.py::test_csv_leftover_format_currency_stays_put",
+    "tests/unit/test_list_csv_format.py::test_entity_list_csv_format_currency_does_not_invent_bare_amount",
     # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
     "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",
     "tests/unit/test_csv_export.py::test_csv_calendar_date_uses_profile_not_iso",
