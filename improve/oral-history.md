@@ -1420,6 +1420,15 @@ dialect formed — and where it started to Goodhart itself — is
     #121). Not a CSV ``format_cell`` clone (oral #122–#132).
     Standing refusals apply.
 
+134. **PDF viewer chrome on non-PDF files.** Cycle 2265:
+    ``display: pdf_viewer`` on a plain ``file`` field always
+    mounted PDF.js and labelled ``Download PDF``, so
+    project_tracker ``.md`` / ``.xlsx`` / ``.docx`` attachments
+    opened as a PDF stage. Storage-bound PDF surfaces stay PDF.
+    Plain files use the clerk-facing ``filename`` suffix: ``.pdf``
+    keeps the viewer; anything else (including leftover ``zzz``)
+    is a download. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1497,6 +1506,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV format: currency major | Dump ``1250.00`` instead of the grid's ``£1,250.00``; clone leftover-token stay-put or CSV money-minor / datetime / badge | #131 |
 | CSV header schema title | Dump ``Photo Url`` / ``Is Favorite`` instead of the grid's ``Photo`` / ``Favorite``; clone leftover-token stay-put or CSV cell format_cell walks | #132 |
 | Walk host-prefixed session cookie | Parse only ``dazzle_session=`` on tenant_host login; clone leftover-token stay-put or CSV format_cell walks | #133 |
+| PDF chrome on non-PDF files | Mount PDF.js / ``Download PDF`` on a plain ``.md`` / ``.xlsx`` file; clone leftover-token stay-put or CSV format_cell walks | #134 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1570,6 +1580,7 @@ how the handbook was learned.
 | One CSV ``format:`` host after _csv_cell honors format_kind | Honor format_kind on remaining CSV emitters in one ship, then STOP (oral #131) |
 | One CSV/surface header host after build_surface_columns uses element.label | Honor author labels on remaining CSV/column emitters in one ship, then STOP (oral #132) |
 | One walk/login Set-Cookie extractor after session_token_from_login_response exists | Call the helper on remaining login extractors, then STOP (oral #133) |
+| One pdf_viewer non-PDF suffix after looks_like_pdf exists | Call looks_like_pdf on remaining plain-file viewers, then STOP (oral #134) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

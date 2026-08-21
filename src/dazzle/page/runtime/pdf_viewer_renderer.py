@@ -44,6 +44,73 @@ _CLOSE_SVG = (
 )
 
 
+def _basename_hint(hint: Any) -> str:
+    text = "" if hint is None else str(hint).strip()
+    text = text.split("?", 1)[0].split("#", 1)[0]
+    if not text:
+        return ""
+    return text.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+
+
+def looks_like_pdf(hint: Any) -> bool:
+    """True only when the clerk-facing name's last suffix is ``pdf``.
+
+    Leftover junk (``zzz``, ``file.pdf.exe``, empty) stays not-PDF —
+    do not invent PDF.js chrome (oral #134).
+    """
+    name = _basename_hint(hint)
+    if "." not in name:
+        return False
+    return name.rsplit(".", 1)[-1].lower() == "pdf"
+
+
+def clerk_file_hint(item: dict[str, Any], file_field: str) -> str:
+    """Clerk-facing file name: ``filename`` / ``name``, else the file path."""
+    for key in ("filename", "name", file_field):
+        raw = item.get(key)
+        if raw is None or raw == "":
+            continue
+        text = str(raw).strip()
+        if text:
+            return text
+    return ""
+
+
+def _render_file_download_component(
+    *,
+    src: str,
+    back_url: str,
+    title: str,
+    filename: str,
+) -> str:
+    """Plain-file download chrome — not PDF.js, not 'Download PDF'."""
+    title_or_default = title or "Document"
+    name = _basename_hint(filename) or "file"
+    label = f"Download {name}"
+    root_attrs = [
+        'class="dz-file-download"',
+        'data-dz-widget="file-download"',
+        f'data-dz-back-url="{_esc(back_url, quote=True)}"',
+    ]
+    header = (
+        '<header class="dz-file-download-header">'
+        f'<a href="{_esc(back_url, quote=True)}" '
+        'class="dz-file-download-back" aria-label="Back">'
+        f'{_BACK_SVG}<span class="dz-file-download-back-label">Back</span></a>'
+        f'<h1 class="dz-file-download-title">{_esc(title_or_default)}</h1>'
+        "</header>"
+    )
+    body = (
+        '<div class="dz-file-download-body">'
+        f'<p class="dz-file-download-name">{_esc(name)}</p>'
+        f'<a href="{_esc(src, quote=True)}" class="dz-button" '
+        'data-dz-variant="primary" '
+        f'download="{_esc(name, quote=True)}">{_esc(label)}</a>'
+        "</div>"
+    )
+    return f"<div {' '.join(root_attrs)}>{header}{body}</div>"
+
+
 def render_pdf_viewer_component(
     *,
     src: str,
@@ -303,4 +370,16 @@ def render_pdf_viewer(
         )
     back_url = detail.back_url if detail else "/"
     title = detail.title if detail else "Document"
+    # Storage-bound surfaces are PDF-only (#942). Plain ``file`` fields
+    # (project_tracker attachments) mix .md / .xlsx / .pdf — PDF.js
+    # chrome + "Download PDF" on a markdown file is clerk-lying
+    # (oral #134). Leftover names stay download, not PDF invent.
+    hint = clerk_file_hint(item, pdf_viewer.file_field)
+    if pdf_viewer.storage_name is None and not looks_like_pdf(hint):
+        return _render_file_download_component(
+            src=src,
+            back_url=back_url,
+            title=title,
+            filename=hint,
+        )
     return render_pdf_viewer_component(src=src, back_url=back_url, title=title)

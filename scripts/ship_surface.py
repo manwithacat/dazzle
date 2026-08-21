@@ -138,6 +138,11 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2264: walk login must read __Host-/__Secure- session cookies (#1652, oral #133)
     "tests/unit/test_session_manager.py::TestSessionTokenFromLoginResponse",
     "tests/unit/test_session_manager.py::TestSessionManagerAsync::test_create_session_login_reads_host_session_cookie",
+    # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
+    "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
+    "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",
+    "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_leftover_filename_does_not_invent_pdf_chrome",
+    "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_document_route_empty_src_without_file_value",
     # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
     "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",
     "tests/unit/test_csv_export.py::test_csv_calendar_date_uses_profile_not_iso",

@@ -295,8 +295,8 @@ class TestTypedRenderer:
         assert 'data-dz-widget="pdf-viewer"' in html
 
     def test_document_route_empty_src_without_file_value(self) -> None:
-        """Null-safety parity with storage mode: a record whose file
-        field is empty renders the chrome with an empty src."""
+        """Plain file field with leftover name 'empty' is not a PDF —
+        download chrome, empty href, no PDF.js invent (oral #134)."""
         from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer
         from dazzle.render.context import (
             DetailContext,
@@ -313,7 +313,84 @@ class TestTypedRenderer:
         )
         pdf_viewer = PdfViewerContext(storage_name=None, file_field="file")
         html = render_pdf_viewer(detail, pdf_viewer)
-        assert 'src=""' in html
+        assert 'data-dz-widget="file-download"' in html
+        assert "Download empty" in html
+        assert "data-dz-pdf" not in html
+        assert "Download PDF" not in html
+
+    def test_plain_markdown_does_not_invent_pdf_chrome(self) -> None:
+        from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer
+        from dazzle.render.context import (
+            DetailContext,
+            FieldContext,
+            PdfViewerContext,
+        )
+
+        detail = DetailContext(
+            entity_name="Attachment",
+            title="Attachment",
+            fields=[FieldContext(name="filename", label="Filename")],
+            item={
+                "id": "u1",
+                "filename": "design-tokens-css-diff-2026-07.md",
+                "file": "/files/demo/design-tokens-css-diff-2026-07.md",
+            },
+            back_url="/app/attachment",
+        )
+        pdf_viewer = PdfViewerContext(storage_name=None, file_field="file")
+        html = render_pdf_viewer(detail, pdf_viewer)
+        assert 'data-dz-widget="file-download"' in html
+        assert "Download design-tokens-css-diff-2026-07.md" in html
+        assert "data-dz-pdf" not in html
+        assert "Download PDF" not in html
+        assert 'href="/_dazzle/documents/Attachment/u1/file/file"' in html
+
+    def test_plain_pdf_filename_keeps_pdf_chrome(self) -> None:
+        from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer
+        from dazzle.render.context import (
+            DetailContext,
+            FieldContext,
+            PdfViewerContext,
+        )
+
+        detail = DetailContext(
+            entity_name="Attachment",
+            title="Q3 report",
+            fields=[FieldContext(name="filename", label="Filename")],
+            item={"id": "u1", "filename": "q3.PDF", "file": "/files/abc/q3.PDF"},
+            back_url="/app/attachment",
+        )
+        pdf_viewer = PdfViewerContext(storage_name=None, file_field="file")
+        html = render_pdf_viewer(detail, pdf_viewer)
+        assert 'data-dz-widget="pdf-viewer"' in html
+        assert "data-dz-pdf-src" in html
+        assert "Download PDF" in html
+        assert 'data-dz-widget="file-download"' not in html
+
+    def test_leftover_filename_does_not_invent_pdf_chrome(self) -> None:
+        from dazzle.page.runtime.pdf_viewer_renderer import looks_like_pdf, render_pdf_viewer
+        from dazzle.render.context import (
+            DetailContext,
+            FieldContext,
+            PdfViewerContext,
+        )
+
+        assert looks_like_pdf("zzz") is False
+        assert looks_like_pdf("file.pdf.exe") is False
+        assert looks_like_pdf("report.PDF") is True
+        detail = DetailContext(
+            entity_name="Attachment",
+            title="Attachment",
+            fields=[FieldContext(name="filename", label="Filename")],
+            item={"id": "u1", "filename": "zzz", "file": "/files/demo/zzz"},
+            back_url="/app/attachment",
+        )
+        pdf_viewer = PdfViewerContext(storage_name=None, file_field="file")
+        html = render_pdf_viewer(detail, pdf_viewer)
+        assert 'data-dz-widget="file-download"' in html
+        assert "Download zzz" in html
+        assert "Download PDF" not in html
+        assert "data-dz-pdf" not in html
 
 
 # ---------------------------------------------------------------------------
