@@ -320,7 +320,9 @@ def _render_cell_display(
     if col_type in ("percentage", "percent_points"):
         if value is None:
             return "—"
-        return _html_mod.escape(clerk_percent_points_display(value, col.get("key")), quote=False)
+        return _html_mod.escape(
+            clerk_percent_points_display(value, col.get("key"), typed=True), quote=False
+        )
     if col_type == "bytes":
         return _html_mod.escape(format_cell(value, "bytes"), quote=False)
     if col_type == "file":

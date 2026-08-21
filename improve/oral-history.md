@@ -1626,7 +1626,10 @@ dialect formed — and where it started to Goodhart itself — is
     ``clerk_percent_points_display`` appends ``%`` and drops trailing
     zeros; leftover ``zzz`` stays put. Does not multiply by 100
     (that is ``format: percent`` fractions). Live ops_dashboard
-    ``system_list`` / critical-systems queue. Standing refusals apply.
+    ``system_list`` / critical-systems queue. Cycle 2289: name-gate
+    must not strip ``%`` from already-typed ``percentage`` columns
+    (``pct`` → ``42`` red the #1505 row fixtures). Pass ``typed=True``.
+    Standing refusals apply.
 
 ## Standing refusals (apprentice handbook)
 
@@ -1725,7 +1728,7 @@ the end of every new oral *is* expensive — point here instead.
 | Insight measure token | Dump ``count`` / unpluralized ``system`` as insight English after clerk_insight_*_noun exists; clone leftover-token stay-put, identity-dump titles, or heatmap 1-d | #152 |
 | Comparison whole-count 12.00 | Dump ranked integer counts as ``12.00`` after ``_fmt_num`` exists; clone leftover-token stay-put, insight citation labels, or identity-dump titles | #153 |
 | Measure unit suffix dropped | Dump ``340`` on ``*_ms`` histogram/box-plot/bullet/profile stats after ``clerk_measure_display`` exists; clone leftover-token stay-put, 12.00 counts, or identity-dump titles | #154 |
-| Percent-points rate dumped unitless | Dump ``2.40`` on ``*_rate`` / ``*_usage`` list/queue cells after ``clerk_percent_points_display`` exists; clone leftover-token stay-put, remaining ``*_ms`` sites, or 12.00 counts | #155 |
+| Percent-points rate dumped unitless | Dump ``2.40`` on ``*_rate`` / ``*_usage`` list/queue cells, or strip ``%`` from typed ``percentage`` columns, after ``clerk_percent_points_display`` exists; clone leftover-token stay-put, remaining ``*_ms`` sites, or 12.00 counts | #155 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1817,7 +1820,7 @@ how the handbook was learned.
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
 | One ``*_ms`` / unitless measure site after clerk_measure_display exists | Call clerk_measure_display / clerk_measure_suffix on remaining measure fields, then STOP (oral #154). Do not restyle count 12.00 or identity-dump titles as siblings |
-| One 0–100 ``*_rate`` / ``*_usage`` cell after clerk_percent_points_display exists | Call clerk_percent_points_display on remaining list/queue rate cells, then STOP (oral #155). Do not restyle remaining ``*_ms`` charts, 12.00 counts, or identity-dump titles |
+| One 0–100 ``*_rate`` / ``*_usage`` cell after clerk_percent_points_display exists | Call clerk_percent_points_display(..., typed=True) on remaining typed percentage / rate cells, then STOP (oral #155). Do not restyle remaining ``*_ms`` charts, 12.00 counts, or identity-dump titles |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

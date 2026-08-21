@@ -155,7 +155,9 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
 def _format_queue_meta_numeric(raw: Any, col_type: str, key: str) -> str | None:
     """Number / 0–100 rate queue meta, or None when not numeric."""
     if col_type in ("percentage", "percent_points") or clerk_percent_points_field(key):
-        return clerk_percent_points_display(raw, key)
+        return clerk_percent_points_display(
+            raw, key, typed=col_type in ("percentage", "percent_points")
+        )
     if col_type not in ("number", "decimal", "float", "int"):
         return None
     try:

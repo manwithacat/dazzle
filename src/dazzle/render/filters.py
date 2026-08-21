@@ -501,11 +501,12 @@ def clerk_percent_points_field(field_key: Any) -> bool:
     return any(lower.endswith(suffix) for suffix in _PERCENT_POINTS_SUFFIXES)
 
 
-def clerk_percent_points_display(value: Any, field_key: Any = "") -> str:
+def clerk_percent_points_display(value: Any, field_key: Any = "", *, typed: bool = False) -> str:
     """Clerk-facing 0–100 rate: ``2.4%`` not unitless ``2.40`` (oral #155).
 
     Does not multiply by 100 (these are already percent points). Leftover
-    junk stays put. Unknown / leftover field names stay unitless.
+    junk stays put. Unknown / leftover field names stay unitless unless
+    ``typed=True`` (column type is already ``percentage``).
     """
     if value is None:
         return ""
@@ -520,7 +521,7 @@ def clerk_percent_points_display(value: Any, field_key: Any = "") -> str:
     except (TypeError, ValueError):
         return str(value)
     shown = f"{number:.2f}".rstrip("0").rstrip(".")
-    if field_key and not clerk_percent_points_field(field_key):
+    if not typed and field_key and not clerk_percent_points_field(field_key):
         return shown
     return f"{shown}%"
 

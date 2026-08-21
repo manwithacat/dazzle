@@ -273,7 +273,7 @@ def _render_typed_value(
         return RawHTML(_html_escape(format_cell(value, "bytes")))
 
     if col_type in ("percentage", "percent_points"):
-        return RawHTML(_html_escape(clerk_percent_points_display(value, key)))
+        return RawHTML(_html_escape(clerk_percent_points_display(value, key, typed=True)))
 
     if col_type == "color":
         # #1626 R5 / P0-8 — swatch on brand desk queues/cards (not raw hex).

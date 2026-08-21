@@ -70,6 +70,17 @@ def test_list_row_percent_points_cell() -> None:
     assert unitless != "2.4%"
 
 
+def test_typed_percentage_column_keeps_percent_suffix() -> None:
+    """#1505 characterization: type=percentage must keep % even when the
+    key is not ``*_rate`` / ``*_usage`` (cycle 2288 dropped ``pct`` → ``42``)."""
+    html = _render_cell_display({"key": "pct", "type": "percentage"}, 42)
+    assert html == "42%"
+    leftover = _render_cell_display({"key": "pct", "type": "percentage"}, "zzz")
+    assert leftover == "zzz"
+    untyped = clerk_percent_points_display(42, "pct")
+    assert untyped == "42"
+
+
 def test_queue_meta_percent_points() -> None:
     shown = _format_queue_meta_value(
         Decimal("2.40"), {"key": "error_rate", "type": "percentage", "label": "Error Rate"}
