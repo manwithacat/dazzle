@@ -135,6 +135,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_list_csv_format.py::test_surface_columns_use_author_label_not_schema_title",
     "tests/unit/test_list_csv_format.py::test_surface_columns_empty_label_stays_put_as_schema_title",
     "tests/unit/test_list_csv_format.py::test_entity_list_csv_headers_use_surface_labels",
+    # cycle 2264: walk login must read __Host-/__Secure- session cookies (#1652, oral #133)
+    "tests/unit/test_session_manager.py::TestSessionTokenFromLoginResponse",
+    "tests/unit/test_session_manager.py::TestSessionManagerAsync::test_create_session_login_reads_host_session_cookie",
     # cycle 2257: CSV datetime naive-UTC must not invent wall ISO (oral #126)
     "tests/unit/test_csv_export.py::test_csv_naive_utc_datetime_does_not_invent_wall_iso",
     "tests/unit/test_csv_export.py::test_csv_calendar_date_uses_profile_not_iso",

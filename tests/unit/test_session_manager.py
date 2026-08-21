@@ -10,7 +10,77 @@ from dazzle.testing.session_manager import (
     PersonaSession,
     SessionManager,
     SessionManifest,
+    session_token_from_login_response,
 )
+
+
+def _login_resp(set_cookies: list[str], *, jar: dict[str, str] | None = None) -> MagicMock:
+    resp = MagicMock()
+    resp.headers = MagicMock()
+    resp.headers.get_list = MagicMock(return_value=list(set_cookies))
+    resp.cookies = jar
+    return resp
+
+
+class TestSessionTokenFromLoginResponse:
+    def test_legacy_dazzle_session(self) -> None:
+        resp = _login_resp(["dazzle_session=tok_legacy; Path=/; HttpOnly"])
+        assert session_token_from_login_response(resp) == "tok_legacy"
+
+    def test_host_cookie(self) -> None:
+        resp = _login_resp(["__Host-ops_dashboard_session=tok_host; Path=/; Secure"])
+        assert session_token_from_login_response(resp) == "tok_host"
+
+    def test_apex_cookie(self) -> None:
+        resp = _login_resp(["__Secure-ops_dashboard_admin=tok_apex; Path=/; Secure"])
+        assert session_token_from_login_response(resp) == "tok_apex"
+
+    def test_prefers_host_over_legacy(self) -> None:
+        resp = _login_resp(
+            [
+                "dazzle_session=tok_legacy; Path=/",
+                "__Host-app_session=tok_host; Path=/; Secure",
+            ]
+        )
+        assert session_token_from_login_response(resp) == "tok_host"
+
+    def test_prefers_host_over_apex(self) -> None:
+        resp = _login_resp(
+            [
+                "__Secure-app_admin=tok_apex; Path=/; Secure",
+                "__Host-app_session=tok_host; Path=/; Secure",
+            ]
+        )
+        assert session_token_from_login_response(resp) == "tok_host"
+
+    def test_empty_host_falls_back_to_legacy(self) -> None:
+        resp = _login_resp(
+            [
+                "__Host-app_session=; Path=/; Secure",
+                "dazzle_session=tok_legacy; Path=/",
+            ]
+        )
+        assert session_token_from_login_response(resp) == "tok_legacy"
+
+    def test_leftover_cookie_names_stay_put(self) -> None:
+        resp = _login_resp(
+            [
+                "dazzle_session_backup=tok_junk; Path=/",
+                "__Host-app=tok_host_short; Path=/",
+                "__Secure-app=tok_apex_short; Path=/",
+                "session=tok_generic; Path=/",
+            ]
+        )
+        assert session_token_from_login_response(resp) == ""
+
+    def test_quoted_value(self) -> None:
+        resp = _login_resp(['__Host-app_session="tok_quoted"; Path=/; Secure'])
+        assert session_token_from_login_response(resp) == "tok_quoted"
+
+    def test_jar_fallback_when_headers_miss_prefix(self) -> None:
+        resp = _login_resp([], jar={"__Host-app_session": "tok_jar"})
+        assert session_token_from_login_response(resp) == "tok_jar"
+
 
 # =============================================================================
 # PersonaSession model tests
@@ -260,6 +330,34 @@ class TestSessionManagerAsync:
         session = await manager.create_session("admin", client=mock_client)
         assert session.persona_id == "admin"
         assert session.session_token == "tok_login"
+
+    @pytest.mark.asyncio()
+    async def test_create_session_login_reads_host_session_cookie(self, tmp_project: Path) -> None:
+        """tenant_host apps issue __Host-*_session, not dazzle_session (#1652)."""
+        manager = SessionManager(tmp_project, base_url="http://localhost:8000")
+
+        test_response = MagicMock()
+        test_response.status_code = 404
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.headers = MagicMock()
+        login_response.headers.get_list = MagicMock(
+            return_value=[
+                "__Host-cyfuture_session=tok_host; Path=/; HttpOnly; Secure",
+            ]
+        )
+        login_response.cookies = None
+        login_response.json.return_value = {
+            "user": {"id": "uuid-admin", "email": "admin@test.local", "roles": ["admin"]},
+            "message": "Login successful",
+        }
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=[test_response, login_response])
+
+        session = await manager.create_session("admin", client=mock_client)
+        assert session.session_token == "tok_host"
 
     @pytest.mark.asyncio()
     async def test_create_session_both_fail(self, tmp_project: Path) -> None:

@@ -1408,6 +1408,18 @@ dialect formed — and where it started to Goodhart itself — is
     **not** walk remaining header emitters as sibling ships.
     Standing refusals apply.
 
+133. **Walk login ignores host-prefixed session cookies.** Cycle
+    2264: ``SessionManager._authenticate_via_login`` only parsed
+    ``dazzle_session=`` from ``Set-Cookie``. Apps with
+    ``tenant_host:`` issue ``__Host-<app>_session`` (and
+    ``__Secure-<app>_admin`` on apex); login was 200, stored
+    token was empty, walks 403'd (#1652). Extractor now prefers
+    host, then apex, then legacy; leftover cookie names stay
+    put. Stored token still rides as ``dazzle_session`` for
+    ``read_session_id``. Not leftover-token stay-put (oral
+    #121). Not a CSV ``format_cell`` clone (oral #122–#132).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1484,6 +1496,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV badge snake_case | Dump ``in_progress`` / ``on_track`` instead of the grid's ``In Progress``; clone leftover-token stay-put or CSV money/datetime/graph-format | #130 |
 | CSV format: currency major | Dump ``1250.00`` instead of the grid's ``£1,250.00``; clone leftover-token stay-put or CSV money-minor / datetime / badge | #131 |
 | CSV header schema title | Dump ``Photo Url`` / ``Is Favorite`` instead of the grid's ``Photo`` / ``Favorite``; clone leftover-token stay-put or CSV cell format_cell walks | #132 |
+| Walk host-prefixed session cookie | Parse only ``dazzle_session=`` on tenant_host login; clone leftover-token stay-put or CSV format_cell walks | #133 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1556,6 +1569,7 @@ how the handbook was learned.
 | One CSV badge host after _csv_cell uses format_cell | Call format_cell on remaining CSV badge/enum cells in one ship, then STOP (oral #130) |
 | One CSV ``format:`` host after _csv_cell honors format_kind | Honor format_kind on remaining CSV emitters in one ship, then STOP (oral #131) |
 | One CSV/surface header host after build_surface_columns uses element.label | Honor author labels on remaining CSV/column emitters in one ship, then STOP (oral #132) |
+| One walk/login Set-Cookie extractor after session_token_from_login_response exists | Call the helper on remaining login extractors, then STOP (oral #133) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

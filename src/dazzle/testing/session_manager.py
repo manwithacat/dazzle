@@ -29,6 +29,104 @@ from dazzle.core.manifest import resolve_api_url
 
 logger = logging.getLogger(__name__)
 
+_LEGACY_SESSION_COOKIE = "dazzle_session"
+
+
+def _session_cookie_rank(name: str) -> int | None:
+    """Rank recognised login session cookies (lower wins).
+
+    ``tenant_host:`` apps issue ``__Host-<app>_session`` / ``__Secure-<app>_admin``
+    (#1652). Legacy apps keep ``dazzle_session``. Leftover names stay put.
+    """
+    if name.startswith("__Host-") and name.endswith("_session"):
+        return 0
+    if name.startswith("__Secure-") and name.endswith("_admin"):
+        return 1
+    if name == _LEGACY_SESSION_COOKIE:
+        return 2
+    return None
+
+
+def _set_cookie_headers(resp: Any) -> list[str]:
+    headers = getattr(resp, "headers", None)
+    if headers is None:
+        return []
+    getter = getattr(headers, "get_list", None)
+    if callable(getter):
+        try:
+            found = getter("set-cookie") or getter("Set-Cookie") or []
+        except (TypeError, ValueError, AttributeError):
+            logger.debug("ignored exception in session_manager.py:set-cookie", exc_info=True)
+            found = []
+        if isinstance(found, (list, tuple)):
+            return [str(h) for h in found]
+    raw = None
+    if hasattr(headers, "get"):
+        raw = headers.get("set-cookie") or headers.get("Set-Cookie")
+    if raw is None:
+        return []
+    if isinstance(raw, (list, tuple)):
+        return [str(h) for h in raw]
+    return [str(raw)]
+
+
+def _first_cookie_pair(header: str) -> tuple[str, str]:
+    first = header.split(";", 1)[0]
+    name, sep, value = first.partition("=")
+    if not sep:
+        return "", ""
+    return name.strip(), value.strip()
+
+
+def _jar_pairs(resp: Any) -> list[tuple[str, str]]:
+    """Cookie-jar pairs from an httpx response. MagicMocks stay put."""
+    cookies = getattr(resp, "cookies", None)
+    if cookies is None:
+        return []
+    if isinstance(cookies, dict):
+        return [(str(k), str(v)) for k, v in cookies.items()]
+    if type(cookies).__name__ != "Cookies":
+        return []
+    items = getattr(cookies, "items", None)
+    if not callable(items):
+        return []
+    try:
+        return [(str(k), str(v)) for k, v in items()]
+    except (TypeError, ValueError, AttributeError):
+        logger.debug("ignored exception in session_manager.py:jar", exc_info=True)
+        return []
+
+
+def session_token_from_login_response(resp: Any) -> str:
+    """Extract the walk/session token from a login ``Set-Cookie`` (#1652).
+
+    Prefers host-bound ``__Host-*_session``, then apex ``__Secure-*_admin``,
+    then legacy ``dazzle_session``. Empty values and leftover cookie names
+    stay put. The stored token is still applied as ``dazzle_session`` —
+    runtime ``read_session_id`` accepts that fallback.
+    """
+    found: dict[int, str] = {}
+
+    def consider(name: str, value: str) -> None:
+        rank = _session_cookie_rank(name)
+        if rank is None:
+            return
+        token = value.strip().strip('"')
+        if not token:
+            return
+        found.setdefault(rank, token)
+
+    for header in _set_cookie_headers(resp):
+        name, value = _first_cookie_pair(header)
+        consider(name, value)
+    for name, value in _jar_pairs(resp):
+        consider(name, value)
+    for rank in (0, 1, 2):
+        token = found.get(rank)
+        if token:
+            return token
+    return ""
+
 
 # =============================================================================
 # Models
@@ -472,12 +570,8 @@ class SessionManager:
                 json={"email": email, "password": password},
             )
             if resp.status_code == 200:
-                # Extract session token from Set-Cookie header
-                session_token = ""  # nosec B105
-                for cookie_header in resp.headers.get_list("set-cookie"):
-                    if "dazzle_session=" in cookie_header:
-                        session_token = cookie_header.split("dazzle_session=")[1].split(";")[0]
-                        break
+                # Host-prefixed tenant cookies as well as dazzle_session (#1652).
+                session_token = session_token_from_login_response(resp)
 
                 data = resp.json()
                 user_data = data.get("user", {})
