@@ -337,6 +337,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   (oral #142). Helper: `conversation_time_label`. Leftover
   ``zzz`` stays put. Do **not** walk remaining clock-slice
   siblings.
+- **Timeline datetime rail skipped** (``logged_at`` typed
+  ``datetime`` hid when) closed cycle 2275 (oral #143).
+  Helper: `_timeline_when_col_key`. Leftover ``zzz`` stays
+  put. Do **not** walk remaining date-vs-datetime rail
+  siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

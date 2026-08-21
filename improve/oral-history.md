@@ -1498,6 +1498,17 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #135–#141). Live hr_records person hub Discussion.
     Standing refusals apply.
 
+143. **Timeline hid datetime when.** Cycle 2275: workspace
+    ``display: timeline`` matched only ``type==date`` for the
+    when-rail, so production ``logged_at`` / ``created_at``
+    (typed ``datetime``) never became ``date_label``. Fieldtest
+    tester_activity walked with no when. ``_timeline_when_col_key``
+    takes the first date or datetime. ``_timeago_filter`` still
+    formats; leftover ``zzz`` stays put. Not leftover-token
+    stay-put (oral #121). Not conversation clock slices
+    (oral #142). Not duration-as-title (oral #137). Live
+    fieldtest_hub tester_activity. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1584,6 +1595,7 @@ the end of every new oral *is* expensive — point here instead.
 | Related queue sequence-as-title | Title payment/related queues as ``1`` / ``attempt_number``; clone leftover-token stay-put, file_list uploader, or kanban enum titles | #140 |
 | Related salary reason-as-title | Title compensation as ``annual_review`` after DSL ``amount`` misses ``amount_minor``; clone leftover-token stay-put, queue money titles, or sequence titles | #141 |
 | Conversation clock month-fragment | Title related/workspace discussion as ``Jul 2`` from a friendly datetime; clone leftover-token stay-put or related title-walks | #142 |
+| Timeline datetime rail skipped | Hide when on ``display: timeline`` because ``logged_at`` is ``datetime`` not ``date``; clone leftover-token stay-put, conversation clock slices, or duration titles | #143 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1665,6 +1677,7 @@ how the handbook was learned.
 | One related file_list uploader title after related_file_name_and_meta exists | Call related_file_name_and_meta on remaining file rows, then STOP (oral #139) |
 | One related/workspace queue sequence title after related_queue_title_and_meta exists | Call related_queue_title_and_meta / skip sequence keys on remaining attempt/count primaries, then STOP (oral #140) |
 | One related/workspace conversation clock slice after conversation_time_label exists | Call conversation_time_label on remaining discussion trails, then STOP (oral #142) |
+| One timeline date-only rail after _timeline_when_col_key exists | Call _timeline_when_col_key on remaining chronological rails, then STOP (oral #143) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

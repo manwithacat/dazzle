@@ -162,6 +162,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_related_queue_money_title.py",
     # cycle 2274: related/workspace conversation must not title ``Jul 2`` (oral #142)
     "tests/unit/test_conversation_clock_title.py",
+    # cycle 2275: timeline must rail datetime when, not hide logged_at (oral #143)
+    "tests/unit/test_timeline_datetime_rail.py",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

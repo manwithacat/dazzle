@@ -166,6 +166,26 @@ def _conversation_orientation(item: dict[str, Any]) -> str:
     return "in"
 
 
+_TIMELINE_WHEN_TYPES = frozenset({"date", "datetime"})
+
+
+def _timeline_when_col_key(columns: Any) -> str:
+    """First date or datetime column is the timeline when-rail.
+
+    Production columns type ``logged_at`` / ``created_at`` as
+    ``datetime``. The rail used to match only ``type==date``, so
+    fieldtest tester_activity hid when (oral #143). Leftover junk
+    stays put via ``_timeago_filter``.
+    """
+    for col in columns or []:
+        if not isinstance(col, dict):
+            continue
+        key = str(col.get("key") or "")
+        if key and str(col.get("type") or "") in _TIMELINE_WHEN_TYPES:
+            return key
+    return ""
+
+
 def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
     """Return (time_label, time_datetime) from common timestamp fields.
 
@@ -341,12 +361,8 @@ class _BuildersTimelineMixin:
         except (TypeError, ValueError):
             total = 0
 
-        # Identify the date column (first column with type=="date").
-        date_col_key = ""
-        for col in columns:
-            if isinstance(col, dict) and col.get("type") == "date":
-                date_col_key = str(col.get("key") or "")
-                break
+        # Identify the when column (first date or datetime — oral #143).
+        date_col_key = _timeline_when_col_key(columns)
 
         # #1303: resolve hub drills once (index-aligned with dict items).
         dict_items = [i for i in items if isinstance(i, dict)]
@@ -376,7 +392,7 @@ class _BuildersTimelineMixin:
                 if not isinstance(col, dict):
                     continue
                 key = str(col.get("key") or "")
-                if not key or key == display_key or col.get("type") == "date":
+                if not key or key == display_key or key == date_col_key:
                     continue
                 label = str(col.get("label") or key)
                 # TIMELINE renders badges with `size='sm'` per legacy macro call.
