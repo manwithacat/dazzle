@@ -342,6 +342,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
             <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/div&gt;&quot;</span>
         <span class="code__tok--op">)</span>
 
+    <span class="code__tok--name">suffix</span> <span class="code__tok--op">=</span> <span class="code__tok--name">b</span><span class="code__tok--op">.</span><span class="code__tok--name">unit_suffix</span>
     <span class="code__tok--name">rows_html</span><span class="code__tok--op">:</span> <span class="code__tok--builtin">list</span><span class="code__tok--op">[</span><span class="code__tok--builtin">str</span><span class="code__tok--op">]</span> <span class="code__tok--op">=</span> <span class="code__tok--op">[]</span>
     <span class="code__tok--kw">for</span> <span class="code__tok--name">row</span> <span class="code__tok--kw">in</span> <span class="code__tok--name">b</span><span class="code__tok--op">.</span><span class="code__tok--name">rows</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">actual_pct</span> <span class="code__tok--op">=</span> <span class="code__tok--name">round</span><span class="code__tok--op">(</span><span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">actual</span> <span class="code__tok--op">/</span> <span class="code__tok--name">b</span><span class="code__tok--op">.</span><span class="code__tok--name">max_value</span> <span class="code__tok--op">*</span> <span class="code__tok--num">100</span><span class="code__tok--op">,</span> <span class="code__tok--num">2</span><span class="code__tok--op">)</span>
@@ -355,11 +356,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;style=&quot;left: {band_left}%; width: {band_width}%; &#x27;</span>
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;background: {colour};&quot; &#x27;</span>
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;title=&quot;{html.escape(band.label, quote=True)}: &#x27;</span>
-                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_jinja_num(band.from_value)}–{_jinja_num(band.to_value)}&quot;&gt;&lt;/span&gt;&#x27;</span>
+                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_measure_num(band.from_value, suffix)}–{_measure_num(band.to_value, suffix)}&quot;&gt;&lt;/span&gt;&#x27;</span>
             <span class="code__tok--op">)</span>
 
         <span class="code__tok--name">actual_rounded</span> <span class="code__tok--op">=</span> <span class="code__tok--name">round</span><span class="code__tok--op">(</span><span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">actual</span><span class="code__tok--op">,</span> <span class="code__tok--num">1</span><span class="code__tok--op">)</span>
-        <span class="code__tok--name">value_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">_jinja_num</span><span class="code__tok--op">(</span><span class="code__tok--name">actual_rounded</span><span class="code__tok--op">)</span>
+        <span class="code__tok--name">value_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">_measure_num</span><span class="code__tok--op">(</span><span class="code__tok--name">actual_rounded</span><span class="code__tok--op">,</span> <span class="code__tok--name">suffix</span><span class="code__tok--op">)</span>
         <span class="code__tok--name">target_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
         <span class="code__tok--kw">if</span> <span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">target</span> <span class="code__tok--kw">is</span> <span class="code__tok--kw">not</span> <span class="code__tok--kw">None</span><span class="code__tok--op">:</span>
             <span class="code__tok--name">target_pct</span> <span class="code__tok--op">=</span> <span class="code__tok--name">round</span><span class="code__tok--op">(</span><span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">target</span> <span class="code__tok--op">/</span> <span class="code__tok--name">b</span><span class="code__tok--op">.</span><span class="code__tok--name">max_value</span> <span class="code__tok--op">*</span> <span class="code__tok--num">100</span><span class="code__tok--op">,</span> <span class="code__tok--num">2</span><span class="code__tok--op">)</span>
@@ -367,10 +368,10 @@ body { background: var(--colour-bg); color: var(--colour-text);
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-bullet-target&quot; &#x27;</span>
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;style=&quot;left: {target_pct}%;&quot; &#x27;</span>
                 <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;title=&quot;{html.escape(row.label, quote=True)} target: &#x27;</span>
-                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_jinja_num(row.target)}&quot;&gt;&lt;/span&gt;&#x27;</span>
+                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_measure_num(row.target, suffix)}&quot;&gt;&lt;/span&gt;&#x27;</span>
             <span class="code__tok--op">)</span>
             <span class="code__tok--name">target_rounded</span> <span class="code__tok--op">=</span> <span class="code__tok--name">round</span><span class="code__tok--op">(</span><span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">target</span><span class="code__tok--op">,</span> <span class="code__tok--num">1</span><span class="code__tok--op">)</span>
-            <span class="code__tok--name">value_html</span> <span class="code__tok--op">+=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&quot; / {_jinja_num(target_rounded)}&quot;</span>
+            <span class="code__tok--name">value_html</span> <span class="code__tok--op">+=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&quot; / {_measure_num(target_rounded, suffix)}&quot;</span>
 
         <span class="code__tok--name">rows_html</span><span class="code__tok--op">.</span><span class="code__tok--name">append</span><span class="code__tok--op">(</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-bullet-row&quot;&gt;&#x27;</span>
@@ -380,7 +381,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
             <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-bullet-actual&quot; &#x27;</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;style=&quot;width: {actual_pct}%;&quot; &#x27;</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;title=&quot;{html.escape(row.label, quote=True)} actual: &#x27;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_jinja_num(row.actual)}&quot;&gt;&lt;/span&gt;&#x27;</span>
+            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;{_measure_num(row.actual, suffix)}&quot;&gt;&lt;/span&gt;&#x27;</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{target_html}&quot;</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/div&gt;&quot;</span>
             <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-bullet-value&quot;&gt;{value_html}&lt;/span&gt;&#x27;</span>
@@ -391,7 +392,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-bullet-region&quot; data-dz-bullet&gt;&#x27;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-bullet-rows&quot;&gt;{&quot;&quot;.join(rows_html)}&lt;/div&gt;&#x27;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-bullet-summary&quot;&gt;&#x27;</span>
-        <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}&quot;</span>
+        <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{len(b.rows)} rows · scale 0–{_measure_num(round(b.max_value, 1), suffix)}&quot;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/p&gt;&quot;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/div&gt;&quot;</span>
     <span class="code__tok--op">)</span>

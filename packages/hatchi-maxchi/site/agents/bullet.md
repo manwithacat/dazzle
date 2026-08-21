@@ -97,6 +97,7 @@ def render(b: Bullet) -> str:
             f"</div>"
         )
 
+    suffix = b.unit_suffix
     rows_html: list[str] = []
     for row in b.rows:
         actual_pct = round(row.actual / b.max_value * 100, 2)
@@ -110,11 +111,11 @@ def render(b: Bullet) -> str:
                 f'style="left: {band_left}%; width: {band_width}%; '
                 f'background: {colour};" '
                 f'title="{html.escape(band.label, quote=True)}: '
-                f'{_jinja_num(band.from_value)}–{_jinja_num(band.to_value)}"></span>'
+                f'{_measure_num(band.from_value, suffix)}–{_measure_num(band.to_value, suffix)}"></span>'
             )
 
         actual_rounded = round(row.actual, 1)
-        value_html = _jinja_num(actual_rounded)
+        value_html = _measure_num(actual_rounded, suffix)
         target_html = ""
         if row.target is not None:
             target_pct = round(row.target / b.max_value * 100, 2)
@@ -122,10 +123,10 @@ def render(b: Bullet) -> str:
                 f'<span class="dz-bullet-target" '
                 f'style="left: {target_pct}%;" '
                 f'title="{html.escape(row.label, quote=True)} target: '
-                f'{_jinja_num(row.target)}"></span>'
+                f'{_measure_num(row.target, suffix)}"></span>'
             )
             target_rounded = round(row.target, 1)
-            value_html += f" / {_jinja_num(target_rounded)}"
+            value_html += f" / {_measure_num(target_rounded, suffix)}"
 
         rows_html.append(
             f'<div class="dz-bullet-row">'
@@ -135,7 +136,7 @@ def render(b: Bullet) -> str:
             f'<span class="dz-bullet-actual" '
             f'style="width: {actual_pct}%;" '
             f'title="{html.escape(row.label, quote=True)} actual: '
-            f'{_jinja_num(row.actual)}"></span>'
+            f'{_measure_num(row.actual, suffix)}"></span>'
             f"{target_html}"
             f"</div>"
             f'<span class="dz-bullet-value">{value_html}</span>'
@@ -146,7 +147,7 @@ def render(b: Bullet) -> str:
         f'<div class="dz-bullet-region" data-dz-bullet>'
         f'<div class="dz-bullet-rows">{"".join(rows_html)}</div>'
         f'<p class="dz-bullet-summary">'
-        f"{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}"
+        f"{len(b.rows)} rows · scale 0–{_measure_num(round(b.max_value, 1), suffix)}"
         f"</p>"
         f"</div>"
     )

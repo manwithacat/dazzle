@@ -470,7 +470,7 @@ def clerk_measure_display(value: Any, field_key: Any = "") -> str:
         if text.lower() in _LEFTOVER_STAGE_TOKENS:
             return value
     try:
-        number = float(value)  # type: ignore[arg-type]
+        number = float(value)
     except (TypeError, ValueError):
         return str(value)
     rounded = round(number, 1)
