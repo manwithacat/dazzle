@@ -25,7 +25,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from dazzle.render.cell_chrome import related_card_media_and_text, related_file_name_and_meta
+from dazzle.render.cell_chrome import (
+    related_card_media_and_text,
+    related_file_name_and_meta,
+    related_queue_title_and_meta,
+)
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
@@ -713,15 +717,13 @@ class _RenderTablesMixin:
         headers = list(t.headers or ())
         for i, row in enumerate(t.rows):
             drill = t.row_drill[i] if t.row_drill else ""
-            title = row[0] if row else ""
-            meta_vals = row[1:] if len(row) > 1 else ()
-            meta_headers = headers[1 : 1 + len(meta_vals)]
+            # Sequence chrome (attempt number) is not identity (oral #140).
+            title, meta_pairs = related_queue_title_and_meta(row, headers)
             # Cycle 1498: label meta with column headers when present so
             # hub queues read like workspace queues ("Status: open"), not
             # anonymous bare values.
             meta_parts: list[str] = []
-            for j, val in enumerate(meta_vals):
-                label = meta_headers[j] if j < len(meta_headers) else ""
+            for label, val in meta_pairs:
                 text = f"{ctx.escape(label)}: {ctx.escape(val)}" if label else ctx.escape(val)
                 meta_parts.append(f'<span class="dz-queue-row-meta">{text}</span>')
             # #1626 R1 — mid-dot join so OCR/humans never glue adjacent chips.

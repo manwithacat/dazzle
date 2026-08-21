@@ -1470,6 +1470,14 @@ dialect formed — and where it started to Goodhart itself — is
     ``bytes`` humanises 18432 → ``18 KB``. Leftover ``zzz``
     filenames stay put. Standing refusals apply.
 
+140. **Related queue titled the attempt number.** Cycle 2272:
+    invoice hub ``display: queue`` on PaymentAttempt took the
+    first column, so settlement cards titled ``1`` and hid
+    ``card_declined``. Sequence/count keys are ordinal chrome;
+    ``failure_reason`` is the walk. Workspace queues skip
+    ``attempt_number`` the same way. Leftover ``zzz`` reasons
+    stay put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1553,6 +1561,7 @@ the end of every new oral *is* expensive — point here instead.
 | Timeline duration-as-title | Title a session/queue as raw ``duration_minutes`` / temperature; clone leftover-token stay-put or queue money titles | #137 |
 | Kanban enum-as-title | Title a board as ``debugging`` after repr_fields sheds notes; clone leftover-token stay-put or duration titles | #138 |
 | Related file_list uploader-as-title | Title files as the uploader FK; clone leftover-token stay-put, status_card preview URL, or kanban enum titles | #139 |
+| Related queue sequence-as-title | Title payment/related queues as ``1`` / ``attempt_number``; clone leftover-token stay-put, file_list uploader, or kanban enum titles | #140 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1632,6 +1641,7 @@ how the handbook was learned.
 | One duration/temperature title after _is_measurement_title_key exists | Skip remaining measurement primaries, then STOP (oral #137) |
 | One kanban/queue enum title after _entity_text_identity_key exists | Call _entity_text_identity_key / format_primary_display on remaining badge primaries, then STOP (oral #138) |
 | One related file_list uploader title after related_file_name_and_meta exists | Call related_file_name_and_meta on remaining file rows, then STOP (oral #139) |
+| One related/workspace queue sequence title after related_queue_title_and_meta exists | Call related_queue_title_and_meta / skip sequence keys on remaining attempt/count primaries, then STOP (oral #140) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

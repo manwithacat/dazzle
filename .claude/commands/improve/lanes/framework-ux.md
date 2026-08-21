@@ -322,6 +322,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Helper: `related_file_name_and_meta` / `format_byte_size`. Leftover
   ``zzz`` filenames stay put. Do **not** walk remaining file_list
   identity siblings.
+- **Related queue sequence-as-title** (first column ``attempt_number``
+  titled ``1``, hid ``card_declined``) closed cycle 2272 (oral #140).
+  Helper: `related_queue_title_and_meta` / `is_sequence_title_key`.
+  Leftover ``zzz`` reasons stay put. Do **not** walk remaining
+  attempt/count/quantity title siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

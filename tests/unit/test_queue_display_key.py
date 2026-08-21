@@ -73,6 +73,23 @@ def test_pick_display_key_skips_duration_prefers_notes() -> None:
     assert _pick_display_key(columns, preferred="duration_minutes") == "duration_minutes"
 
 
+def test_pick_display_key_skips_attempt_prefers_failure_reason() -> None:
+    """Attempt numbers are sequence chrome, not identity (oral #140)."""
+    from dazzle.render.cell_chrome import is_sequence_title_key
+
+    columns = [
+        {"key": "invoice", "type": "ref"},
+        {"key": "attempt_number", "type": "text"},
+        {"key": "status", "type": "badge"},
+        {"key": "failure_reason", "type": "text"},
+        {"key": "created_at", "type": "datetime"},
+    ]
+    assert is_sequence_title_key("attempt_number")
+    assert not is_sequence_title_key("failure_reason")
+    assert _pick_display_key(columns) == "failure_reason"
+    assert _pick_display_key(columns, preferred="failure_reason") == "failure_reason"
+
+
 def test_pick_display_key_does_not_fallback_to_badge() -> None:
     """Fitness repr that sheds notes must not title the enum token (oral #138)."""
     columns = [

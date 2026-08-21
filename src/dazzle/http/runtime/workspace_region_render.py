@@ -54,6 +54,7 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 )
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
+from dazzle.render.cell_chrome import is_sequence_title_key
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_iso_date,
@@ -247,6 +248,9 @@ _TYPED_REGION_DISPLAYS: frozenset[str] = (
 # ``effective_from`` after money expansion dropped ``amount`` (oral #136).
 # Durations / temperatures are measurement chrome — TestSession timelines
 # titled ``45`` (minutes) instead of the walk notes (oral #137).
+# Sequence / attempt numbers are ordinal chrome — payment queues titled
+# ``1`` instead of the failure reason (oral #140).
+
 _NON_TITLE_COL_TYPES = frozenset({"badge", "ref", "image", "color", "bool", "date", "datetime"})
 
 _MEASUREMENT_TITLE_KEYS = frozenset(
@@ -295,7 +299,8 @@ def _pick_display_key(
     1. ``preferred`` (typically the entity's ``display_field``) when set —
        even if that field is not among the projected columns, so queue
        cards still label by subject/title rather than raw ``id``.
-    2. First non-badge / non-ref / non-media / non-measurement column.
+    2. First non-badge / non-ref / non-media / non-measurement /
+       non-sequence column.
     3. Empty — do not fall back to a badge/enum token (``debugging``) when
        fitness.repr_fields / column economy shed the notes (oral #138).
     """
@@ -307,6 +312,7 @@ def _pick_display_key(
             for c in columns
             if c.get("type") not in _NON_TITLE_COL_TYPES
             and not _is_measurement_title_key(str(c.get("key") or ""))
+            and not is_sequence_title_key(str(c.get("key") or ""))
         ),
         "",
     )
@@ -323,6 +329,9 @@ _TEXT_IDENTITY_KEYS = (
     "description",
     "summary",
     "label",
+    "failure_reason",
+    "reason",
+    "message",
 )
 _TEXT_KIND_TOKENS = frozenset({"text", "str", "string", "varchar"})
 

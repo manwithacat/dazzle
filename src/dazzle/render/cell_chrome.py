@@ -312,3 +312,101 @@ def related_file_name_and_meta(
     pairs = _related_file_pairs(cells, headers)
     name = _pick_related_file_name(pairs)
     return name, _related_file_metas(pairs, name, limit=limit)
+
+
+_SEQUENCE_TITLE_KEYS = frozenset(
+    {
+        "attempt",
+        "attempt_number",
+        "quantity",
+        "qty",
+        "count",
+        "version",
+        "sequence",
+        "seq",
+        "index",
+        "rank",
+        "position",
+        "ordinal",
+        "line_number",
+        "sort_order",
+    }
+)
+_QUEUE_IDENTITY_HEADERS = frozenset(
+    {
+        "failure reason",
+        "reason",
+        "description",
+        "title",
+        "name",
+        "headline",
+        "notes",
+        "body",
+        "comment",
+        "content",
+        "summary",
+        "label",
+        "message",
+        "subject",
+    }
+)
+
+
+def is_sequence_title_key(key: str) -> bool:
+    """True when ``key`` is sequence/count chrome, not row identity (oral #140)."""
+    k = (key or "").strip().lower().replace(" ", "_")
+    if not k:
+        return False
+    if k in _SEQUENCE_TITLE_KEYS:
+        return True
+    return k.endswith(("_count", "_qty", "_rank", "_index"))
+
+
+def _is_status_header(header: str) -> bool:
+    n = _header_norm(header)
+    return n in {"status", "state"} or n.endswith(" status")
+
+
+def _is_date_header(header: str) -> bool:
+    n = _header_norm(header)
+    return n.endswith(" at") or "date" in n or n in {"created", "updated", "due", "when"}
+
+
+def _is_queue_title_chrome(header: str, raw: str) -> bool:
+    if _is_status_header(header) or _is_date_header(header) or _looks_uuid_cell(raw):
+        return True
+    return is_sequence_title_key(header)
+
+
+def _pick_related_queue_title(pairs: list[tuple[str, str]]) -> str:
+    for header, raw in pairs:
+        if _header_norm(header) in _QUEUE_IDENTITY_HEADERS:
+            return raw
+    for header, raw in pairs:
+        if not _is_queue_title_chrome(header, raw):
+            return raw
+    return pairs[0][1] if pairs else ""
+
+
+def related_queue_title_and_meta(
+    cells: Sequence[Any],
+    headers: Sequence[Any] = (),
+    *,
+    limit: int = 8,
+) -> tuple[str, list[tuple[str, str]]]:
+    """Pick clerk identity + labelled meta for ``display: queue`` related rows.
+
+    Related payment queues used to take the first column, so invoice hub
+    attempts titled ``1`` and hid ``card_declined`` (oral #140). Sequence
+    numbers, status badges, and dates stay meta. Leftover junk stays put.
+    """
+    pairs = _related_file_pairs(cells, headers)
+    title = _pick_related_queue_title(pairs)
+    metas: list[tuple[str, str]] = []
+    for header, raw in pairs:
+        if raw == title or _looks_uuid_cell(raw):
+            continue
+        metas.append((header, raw))
+        if len(metas) >= limit:
+            break
+    return title, metas
