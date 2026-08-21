@@ -184,6 +184,8 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     name = str(getattr(field, "name", "") or "")
     if name.endswith("_minor"):
         return "currency"
+    if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
+        return "bytes"
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine

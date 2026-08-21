@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from dazzle.render.cell_chrome import related_card_media_and_text
+from dazzle.render.cell_chrome import related_card_media_and_text, related_file_name_and_meta
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
@@ -634,10 +634,15 @@ class _RenderTablesMixin:
             drill = t.row_drill[i] if t.row_drill else ""
             attrs = self._related_drill_attrs(drill, ctx)
             if kind == "files":
+                # Filename is identity; uploader / storage UUID / raw bytes
+                # are chrome (oral #139).
+                name, metas = related_file_name_and_meta(row, t.headers, limit=1)
+                slots = [name, *metas]
                 lines = "".join(
                     f'<span class="dz-related-file-{"name" if j == 0 else "meta"}">'
                     f"{ctx.escape(c)}</span>"
-                    for j, c in enumerate(row[:2])
+                    for j, c in enumerate(slots)
+                    if c
                 )
                 items.append(f'<div class="dz-related-file-row"{attrs}>{lines}</div>')
             else:

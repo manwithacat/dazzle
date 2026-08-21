@@ -268,6 +268,9 @@ def _render_typed_value(
 
         return RawHTML(_currency_filter(value))
 
+    if col_type == "bytes":
+        return RawHTML(_html_escape(format_cell(value, "bytes")))
+
     if col_type == "color":
         # #1626 R5 / P0-8 — swatch on brand desk queues/cards (not raw hex).
         return RawHTML(_render_color_swatch_html(value))

@@ -1462,6 +1462,14 @@ dialect formed — and where it started to Goodhart itself — is
     ``format_cell`` title-cases it. Leftover ``zzz`` notes
     stay put. Standing refusals apply.
 
+139. **Related file_list titled the uploader.** Cycle 2271:
+    Attachment ``display: file_list`` took the first two entity
+    columns, so task Files titled ``Alex Field`` and hid
+    ``brief.md``. Storage UUIDs and raw ``size_bytes`` are
+    chrome; filename is the walk. ``format_cell`` kind
+    ``bytes`` humanises 18432 → ``18 KB``. Leftover ``zzz``
+    filenames stay put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1544,6 +1552,7 @@ the end of every new oral *is* expensive — point here instead.
 | Queue money dropped after expansion | Title the ISO date / raw pence after ``amount: money`` expands; clone leftover-token stay-put or CSV format_cell | #136 |
 | Timeline duration-as-title | Title a session/queue as raw ``duration_minutes`` / temperature; clone leftover-token stay-put or queue money titles | #137 |
 | Kanban enum-as-title | Title a board as ``debugging`` after repr_fields sheds notes; clone leftover-token stay-put or duration titles | #138 |
+| Related file_list uploader-as-title | Title files as the uploader FK; clone leftover-token stay-put, status_card preview URL, or kanban enum titles | #139 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1622,6 +1631,7 @@ how the handbook was learned.
 | One queue/timeline money title after format_primary_if_minor exists | Call format_primary_if_minor on remaining ``*_minor`` primaries, then STOP (oral #136) |
 | One duration/temperature title after _is_measurement_title_key exists | Skip remaining measurement primaries, then STOP (oral #137) |
 | One kanban/queue enum title after _entity_text_identity_key exists | Call _entity_text_identity_key / format_primary_display on remaining badge primaries, then STOP (oral #138) |
+| One related file_list uploader title after related_file_name_and_meta exists | Call related_file_name_and_meta on remaining file rows, then STOP (oral #139) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

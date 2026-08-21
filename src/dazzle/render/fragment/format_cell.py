@@ -24,6 +24,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from dazzle.i18n.display_locale import DisplayLocaleProfile, get_display_locale, relative_day_label
+from dazzle.render.cell_chrome import format_byte_size
 
 # v1 currency symbols; unknown codes fall back to a "<amount> <CODE>" suffix.
 _CURRENCY_SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
@@ -134,6 +135,8 @@ def _infer(
         return _friendly_dt(value, with_time=False, profile=prof)
     if kind == "datetime":
         return _friendly_dt(value, with_time=True, profile=prof)
+    if kind == "bytes":
+        return format_byte_size(value)
     if isinstance(value, (float, Decimal)):
         return f"{float(value):.2f}"
     return str(value)
@@ -178,7 +181,7 @@ def format_cell(
     """Render ``value`` to a RAW (unescaped) display string.
 
     ``kind`` is the column's display type (``text``/``bool``/``date``/
-    ``currency``/``badge``/``ref``/``json``). ``override`` (Phase 2) wins over inference.
+    ``currency``/``badge``/``ref``/``json``/``bytes``). ``override`` (Phase 2) wins over inference.
     ``profile`` (#1597) is the display locale; defaults to the request-bound
     :func:`~dazzle.i18n.display_locale.get_display_locale` (product en-GB).
     The renderer escapes the result at emit time — do not escape here.

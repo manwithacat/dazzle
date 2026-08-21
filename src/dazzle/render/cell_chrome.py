@@ -165,3 +165,150 @@ def related_card_media_and_text(cells: Sequence[Any], *, limit: int = 3) -> tupl
         return "", texts
     alt = texts[0] if texts else ""
     return _render_media_thumb_html(media_url, alt=alt), texts[:limit]
+
+
+_UUID_CELL_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+_FILE_EXT_RE = re.compile(r"\.[A-Za-z0-9]{2,5}$")
+_HTTP_PREFIXES = ("http://", "https://")
+
+
+def _header_norm(header: str) -> str:
+    return (header or "").strip().lower().replace("_", " ")
+
+
+def _looks_uuid_cell(raw: str) -> bool:
+    text = (raw or "").strip()
+    if _UUID_CELL_RE.match(text):
+        return True
+    compact = text.replace("-", "")
+    return len(compact) >= 32 and all(c in "0123456789abcdefABCDEF" for c in compact)
+
+
+def format_byte_size(value: Any) -> str:
+    """Clerk-facing file size. Leftover junk stays put (oral #139)."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if n < 0:
+        return str(value)
+    if n < 1000:
+        return f"{n} B"
+    if n < 1_000_000:
+        kb = n / 1000
+        return f"{kb:.0f} KB" if kb >= 10 else f"{kb:.1f} KB"
+    mb = n / 1_000_000
+    return f"{mb:.1f} MB" if mb < 10 else f"{mb:.0f} MB"
+
+
+def _is_filename_header(header: str) -> bool:
+    n = _header_norm(header)
+    return n in {"filename", "file name", "original name", "original filename"} or n.endswith(
+        " filename"
+    )
+
+
+def _is_name_header(header: str) -> bool:
+    n = _header_norm(header)
+    return _is_filename_header(header) or n in {"name", "title", "label"}
+
+
+def _is_file_pointer_header(header: str) -> bool:
+    return _header_norm(header) in {"file", "storage", "blob", "pointer", "path", "key"}
+
+
+def _is_size_header(header: str) -> bool:
+    n = _header_norm(header)
+    return "size" in n or n.endswith("bytes") or n == "bytes"
+
+
+def _is_uploader_header(header: str) -> bool:
+    n = _header_norm(header)
+    return any(token in n for token in ("upload", "author", "owner"))
+
+
+def _is_storage_chrome(header: str, raw: str) -> bool:
+    return _is_file_pointer_header(header) or _looks_uuid_cell(raw)
+
+
+def _related_file_pairs(cells: Sequence[Any], headers: Sequence[Any]) -> list[tuple[str, str]]:
+    header_list = [str(h or "") for h in (headers or ())]
+    pairs: list[tuple[str, str]] = []
+    for i, cell in enumerate(cells or ()):
+        raw = "" if cell is None else str(cell).strip()
+        if not raw or raw == "—":
+            continue
+        header = header_list[i] if i < len(header_list) else ""
+        pairs.append((header, raw))
+    return pairs
+
+
+def _looks_like_filename_token(raw: str) -> bool:
+    path = raw.split("?", 1)[0]
+    if raw.lower().startswith(_HTTP_PREFIXES):
+        return False
+    return bool(_FILE_EXT_RE.search(path))
+
+
+def _is_non_identity_meta(header: str, raw: str) -> bool:
+    return (
+        _is_storage_chrome(header, raw)
+        or _is_size_header(header)
+        or _is_uploader_header(header)
+        or raw.isdigit()
+    )
+
+
+def _pick_related_file_name(pairs: list[tuple[str, str]]) -> str:
+    for header, raw in pairs:
+        if _is_storage_chrome(header, raw):
+            continue
+        if _is_filename_header(header) or _is_name_header(header):
+            return raw
+    for header, raw in pairs:
+        if _is_storage_chrome(header, raw):
+            continue
+        if _looks_like_filename_token(raw):
+            return raw
+    for header, raw in pairs:
+        if _is_non_identity_meta(header, raw):
+            continue
+        return raw
+    for header, raw in pairs:
+        if _is_filename_header(header) or _is_name_header(header):
+            return raw
+    return pairs[0][1] if pairs else ""
+
+
+def _related_file_metas(pairs: list[tuple[str, str]], name: str, *, limit: int) -> list[str]:
+    ranked: list[tuple[int, str]] = []
+    for header, raw in pairs:
+        if raw == name or _is_storage_chrome(header, raw):
+            continue
+        if _is_size_header(header):
+            ranked.append((0, format_byte_size(raw) if raw.isdigit() else raw))
+        elif _is_uploader_header(header):
+            ranked.append((2, raw))
+        else:
+            ranked.append((1, raw))
+    ranked.sort(key=lambda item: item[0])
+    return [raw for _, raw in ranked[:limit]]
+
+
+def related_file_name_and_meta(
+    cells: Sequence[Any],
+    headers: Sequence[Any] = (),
+    *,
+    limit: int = 1,
+) -> tuple[str, list[str]]:
+    """Pick clerk file identity + meta for ``display: file_list``.
+
+    Related file rows used to take the first two entity columns, so
+    Attachment lists titled the uploader and hid ``filename`` (oral #139).
+    Storage UUIDs stay off the name. Leftover junk stays put.
+    """
+    pairs = _related_file_pairs(cells, headers)
+    name = _pick_related_file_name(pairs)
+    return name, _related_file_metas(pairs, name, limit=limit)

@@ -153,6 +153,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_kanban_enum_title.py",
     "tests/unit/test_queue_display_key.py::test_pick_display_key_does_not_fallback_to_badge",
     "tests/unit/test_queue_display_key.py::test_entity_text_identity_key_notes_on_task",
+    # cycle 2271: related file_list must not title the uploader (oral #139)
+    "tests/unit/test_related_file_list_title.py",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

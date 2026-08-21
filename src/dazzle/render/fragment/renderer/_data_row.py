@@ -320,6 +320,8 @@ def _render_cell_display(
         if value is None:
             return "—"
         return _html_mod.escape(f"{value}%", quote=False)
+    if col_type == "bytes":
+        return _html_mod.escape(format_cell(value, "bytes"), quote=False)
     if col_type == "file":
         # ADR-0049 Phase 2 / #1551: file fields render a download link via the
         # scope-gated document route. ``entity_name`` + ``record_id`` are

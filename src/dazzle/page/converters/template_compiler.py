@@ -188,7 +188,13 @@ def _field_type_to_column_type(
         FieldTypeKind.REF: "ref",
         FieldTypeKind.BELONGS_TO: "ref",
     }
-    return type_map.get(kind, "text")
+    mapped = type_map.get(kind)
+    if mapped is not None:
+        return mapped
+    name = field_name or str(getattr(field_spec, "name", "") or "")
+    if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
+        return "bytes"
+    return "text"
 
 
 def _enum_semantic_map(

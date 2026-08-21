@@ -317,6 +317,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   `format_cell` date/datetime. Leftover junk stays put. Do **not**
   walk another leftover-token stay-put, CSV money clone, timeago, or
   workspace-today (oral #121–#125).
+- **Related file_list uploader-as-title** (first two entity columns
+  titled the FK, not ``filename``) closed cycle 2271 (oral #139).
+  Helper: `related_file_name_and_meta` / `format_byte_size`. Leftover
+  ``zzz`` filenames stay put. Do **not** walk remaining file_list
+  identity siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
