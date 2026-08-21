@@ -364,6 +364,8 @@ entity TestSession "Test Session":
   logged_at: datetime auto_add
   created_at: datetime auto_add
   updated_at: datetime auto_update
+  # Walk notes are identity — duration_minutes is measurement chrome (oral #137).
+  display_field: notes
 
   # Invariant: duration must be positive
   invariant: duration_minutes > 0
@@ -400,7 +402,7 @@ entity TestSession "Test Session":
   index logged_at
 
   fitness:
-    repr_fields: [device_id, tester_id, environment, duration_minutes, logged_at]
+    repr_fields: [notes, device_id, tester_id, environment, duration_minutes, logged_at]
 
 # Entity: FirmwareRelease
 entity FirmwareRelease "Firmware Release":

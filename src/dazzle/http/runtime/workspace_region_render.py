@@ -245,7 +245,40 @@ _TYPED_REGION_DISPLAYS: frozenset[str] = (
 # photo_url as display_key made grid titles raw placehold URLs and skipped thumbs.
 # Dates are temporal chrome, not identity — Salary queues titled ISO
 # ``effective_from`` after money expansion dropped ``amount`` (oral #136).
+# Durations / temperatures are measurement chrome — TestSession timelines
+# titled ``45`` (minutes) instead of the walk notes (oral #137).
 _NON_TITLE_COL_TYPES = frozenset({"badge", "ref", "image", "color", "bool", "date", "datetime"})
+
+_MEASUREMENT_TITLE_KEYS = frozenset(
+    {
+        "duration",
+        "duration_minutes",
+        "duration_seconds",
+        "duration_hours",
+        "duration_ms",
+        "minutes",
+        "seconds",
+        "hours",
+        "temperature",
+        "temp",
+        "temp_c",
+        "temp_f",
+        "days_open",
+    }
+)
+_MEASUREMENT_TITLE_SUFFIXES = ("_minutes", "_seconds", "_hours", "_ms", "_temperature")
+
+
+def _is_measurement_title_key(key: str) -> bool:
+    """True when ``key`` is duration/temp chrome, not row identity (oral #137)."""
+    k = (key or "").strip().lower()
+    if not k:
+        return False
+    if k in _MEASUREMENT_TITLE_KEYS:
+        return True
+    if k.endswith(_MEASUREMENT_TITLE_SUFFIXES):
+        return True
+    return "duration" in k
 
 
 def _pick_display_key(
@@ -262,13 +295,18 @@ def _pick_display_key(
     1. ``preferred`` (typically the entity's ``display_field``) when set —
        even if that field is not among the projected columns, so queue
        cards still label by subject/title rather than raw ``id``.
-    2. First non-badge / non-ref / non-media column.
+    2. First non-badge / non-ref / non-media / non-measurement column.
     3. First column key, else ``"name"``.
     """
     if preferred:
         return preferred
     return next(
-        (c["key"] for c in columns if c.get("type") not in _NON_TITLE_COL_TYPES),
+        (
+            c["key"]
+            for c in columns
+            if c.get("type") not in _NON_TITLE_COL_TYPES
+            and not _is_measurement_title_key(str(c.get("key") or ""))
+        ),
         columns[0]["key"] if columns else "name",
     )
 
