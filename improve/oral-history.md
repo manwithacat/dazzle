@@ -1562,6 +1562,18 @@ dialect formed — and where it started to Goodhart itself — is
     Live ops_dashboard alerts_weekly_stacked. Standing
     refusals apply.
 
+149. **Identity-dump sibling cadence.** Self-audit 2281:
+    cycles 2267–2280 shipped one clerk-visible title/label
+    dump per cycle (preview URL → money → duration → enum →
+    filename → sequence → salary reason → clock → datetime
+    rail → funnel → severity → bool filter → enum filter →
+    area legend). Each hole was real; the *cadence* is
+    leftover-token Goodhart in clerk-visible clothing.
+    Helpers exist. Remaining chart legend/axis / FilterBar
+    token siblings are STOP (oral #148). Next invent class
+    is not another title-pick or snake_case humanize.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1654,6 +1666,7 @@ the end of every new oral *is* expensive — point here instead.
 | Workspace bool FilterBar true/false | Dump ``true``/``false`` on workspace list bool filters after the grid says Yes/No; clone leftover-token stay-put, leftover REST bool VALUE, conversion chips, or related title-walks | #146 |
 | Workspace enum FilterBar snake_case | Dump ``in_progress`` on workspace enum filters after the grid says In Progress; clone leftover-token stay-put, bool FilterBar labels, conversion chips, or kanban enum titles | #147 |
 | Stacked area legend snake_case | Dump ``critical`` / ``in_progress`` as area-chart series names after bar-chart badges already humanize; clone leftover-token stay-put, FilterBar labels, or conversion chips | #148 |
+| Identity-dump title/label siblings | Walk another queue title / chart legend / FilterBar token after the identity helpers exist | #149 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1740,6 +1753,7 @@ how the handbook was learned.
 | One related queue severity/environment title after identity inject exists | Call related_queue_identity_from_record on remaining risk-first related queues, then STOP (oral #145) |
 | One workspace enum FilterBar token after enum_filter_options exists | Call enum_filter_options / clerk_stage_label on remaining badge filters, then STOP (oral #147) |
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
+| One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
