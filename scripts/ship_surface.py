@@ -178,6 +178,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_timeseries_series_shaping.py::test_pivot_to_series_groups_by_second_dimension",
     # cycle 2282: chart day buckets must not dump ISO storage dates (oral #150)
     "tests/unit/test_chart_day_bucket_label.py",
+    # cycle 2283: heatmap group_by must not dump an empty/zero matrix (oral #151)
+    "tests/unit/test_heatmap_group_by.py",
     "tests/unit/test_bar_chart_bucketed_aggregate.py::TestTimeBucketedAggregates::test_format_bucket_label_every_unit",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",

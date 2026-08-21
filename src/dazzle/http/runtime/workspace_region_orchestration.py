@@ -58,6 +58,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     compute_progress,
     compute_queue,
     compute_tree,
+    heatmap_from_bucketed_metrics,
 )
 from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
@@ -202,7 +203,7 @@ def _read_stored_insight(region_name: str) -> Any:
 
 
 # Display-mode groupings used by phase-4 gates.
-_GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART"})
+_GROUPED_MODES: frozenset[str] = frozenset({"KANBAN", "BAR_CHART", "FUNNEL_CHART", "HEATMAP"})
 # AREA_CHART is here *and* in _MULTI_DIM_MODES: with a single scalar/bucket
 # group_by it renders one filled series (this block); with `group_by: [a, b]`
 # the scalar group_by is None so this block is skipped and it routes through
@@ -218,6 +219,7 @@ _SINGLE_DIM_CHART_MODES: frozenset[str] = frozenset(
         "BAR_TRACK",
         "COMPARISON",
         "INSIGHT_SUMMARY",
+        "HEATMAP",
     }
 )
 _MULTI_DIM_MODES: frozenset[str] = frozenset({"PIVOT_TABLE", "AREA_CHART"})
@@ -609,13 +611,33 @@ async def compute_region_render_inputs(
         )
     else:
         heatmap_thresholds = list(getattr(ctx_region, "heatmap_thresholds", None) or [])
-    if display == "HEATMAP" and items:
-        heatmap_matrix, heatmap_col_values = compute_heatmap(
-            items,
-            rows_field=getattr(ctx_region, "heatmap_rows", "") or "",
-            cols_field=getattr(ctx_region, "heatmap_columns", "") or "",
-            value_field=getattr(ctx_region, "heatmap_value", "") or "",
-        )
+    if display == "HEATMAP":
+        rows_field = (getattr(ctx_region, "heatmap_rows", "") or "").strip()
+        cols_field = (getattr(ctx_region, "heatmap_columns", "") or "").strip()
+        value_field = (getattr(ctx_region, "heatmap_value", "") or "").strip()
+        gb_str = group_by if isinstance(group_by, str) else ""
+        if rows_field or cols_field:
+            if items:
+                heatmap_matrix, heatmap_col_values = compute_heatmap(
+                    items,
+                    rows_field=rows_field,
+                    cols_field=cols_field,
+                    value_field=value_field,
+                )
+        elif bucketed_metrics:
+            heatmap_matrix, heatmap_col_values = heatmap_from_bucketed_metrics(
+                bucketed_metrics,
+                bucket_values=kanban_columns or None,
+            )
+        elif items and gb_str:
+            heatmap_matrix, heatmap_col_values = compute_heatmap(
+                items,
+                rows_field="",
+                cols_field="",
+                value_field=value_field,
+                group_by=gb_str,
+                bucket_values=kanban_columns or None,
+            )
 
     # Progress (v0.44.0): stage counts + completion pct.
     progress_stages_list: list[str] = list(getattr(ctx_region, "progress_stages", None) or [])

@@ -1582,6 +1582,16 @@ dialect formed — and where it started to Goodhart itself — is
     week/month/quarter stay compact ticks. Live ops_dashboard
     ``alerts_timeseries``. Standing refusals apply.
 
+151. **Heatmap ignored group_by, dumped an empty matrix.** Cycle
+    2283: ``display: heatmap`` with ``group_by: severity`` and no
+    ``heatmap_rows`` / ``heatmap_columns`` called ``compute_heatmap``
+    with empty axes, so ``_display`` became both row and column and
+    every cell was 0. Ops command center Alert Heatmap walked empty
+    while alerts existed. 1-d density now comes from bucketed
+    aggregates (item-count fallback). 2-d rows/columns unchanged.
+    Leftover ``zzz`` stays put as a column. Live ops_dashboard
+    ``alert_heatmap``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1764,6 +1774,7 @@ how the handbook was learned.
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
+| One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

@@ -218,11 +218,46 @@ def build_insight_inputs(
     )
 
 
+def heatmap_from_bucketed_metrics(
+    buckets: list[dict[str, Any]],
+    *,
+    row_label: str = "Count",
+    bucket_values: list[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """1-d heatmap from ``group_by`` + aggregate buckets (oral #151).
+
+    ``display: heatmap`` with ``group_by: severity`` and no
+    ``heatmap_rows`` / ``heatmap_columns`` used to call
+    :func:`compute_heatmap` with empty axis fields, which dumped
+    ``_display`` as both axes and zeroed every cell. Live
+    ops_dashboard ``alert_heatmap`` walked empty. Leftover junk
+    stays put as a column.
+    """
+    counts: dict[str, float] = {}
+    order: list[str] = []
+    for bucket in buckets:
+        if not isinstance(bucket, dict):
+            continue
+        label = str(bucket.get("label") or "")
+        if not label:
+            continue
+        try:
+            counts[label] = float(bucket.get("value") or 0)
+        except (TypeError, ValueError):
+            counts[label] = 0.0
+        if label not in order:
+            order.append(label)
+    return _heatmap_strip(counts, row_label, bucket_values, extra=order)
+
+
 def compute_heatmap(
     items: list[dict[str, Any]],
     rows_field: str,
     cols_field: str,
     value_field: str,
+    *,
+    group_by: str = "",
+    bucket_values: list[str] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Build (matrix, col_values) for a HEATMAP region.
 
@@ -235,28 +270,44 @@ def compute_heatmap(
     #633: when the FK is a dict use its ``id``; when it's a UUID
     string, treat it as the target entity ID; otherwise fall back
     to the source item's id.
+
+    When both axis fields are empty, honor ``group_by`` as a 1-d
+    density strip (count per value, or sum of ``value_field``).
+    Do not invent a matrix from ``_display`` (oral #151).
     """
     if not items:
         return [], []
 
-    col_set: set[str] = set()
-    for item in items:
-        cv = str(item.get(f"{cols_field}_display", "")) or _resolve_display_name(
-            item.get(cols_field, "")
-        )
-        if cv:
-            col_set.add(cv)
-    col_values = sorted(col_set)
+    rows_field = (rows_field or "").strip()
+    cols_field = (cols_field or "").strip()
+    value_field = (value_field or "").strip()
+    group_by = (group_by or "").strip()
+
+    if not rows_field and not cols_field:
+        if not group_by:
+            return [], []
+        return _heatmap_from_group(items, group_by, value_field, bucket_values)
+    return _heatmap_from_axes(items, rows_field, cols_field, value_field)
+
+
+def _heatmap_axis_label(item: dict[str, Any], field: str) -> str:
+    return str(item.get(f"{field}_display", "")) or _resolve_display_name(item.get(field, ""))
+
+
+def _heatmap_from_axes(
+    items: list[dict[str, Any]],
+    rows_field: str,
+    cols_field: str,
+    value_field: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """2-d pivot used by heatmap_rows + heatmap_columns."""
+    col_values = sorted({cv for item in items if (cv := _heatmap_axis_label(item, cols_field))})
 
     row_map: dict[str, dict[str, float]] = {}
     row_ids: dict[str, str] = {}
     for item in items:
-        rv = str(item.get(f"{rows_field}_display", "")) or _resolve_display_name(
-            item.get(rows_field, "")
-        )
-        cv = str(item.get(f"{cols_field}_display", "")) or _resolve_display_name(
-            item.get(cols_field, "")
-        )
+        rv = _heatmap_axis_label(item, rows_field)
+        cv = _heatmap_axis_label(item, cols_field)
         val = float(item.get(value_field, 0) or 0)
         if rv not in row_map:
             row_map[rv] = {}
@@ -272,12 +323,66 @@ def compute_heatmap(
 
     matrix: list[dict[str, Any]] = []
     for row_label in sorted(row_map.keys()):
-        cells: list[dict[str, Any]] = []
-        for col_label in col_values:
-            cell_val = row_map[row_label].get(col_label, 0.0)
-            cells.append({"value": cell_val, "column": col_label})
+        cells = [
+            {"value": row_map[row_label].get(col_label, 0.0), "column": col_label}
+            for col_label in col_values
+        ]
         matrix.append({"row": row_label, "row_id": row_ids.get(row_label, ""), "cells": cells})
     return matrix, col_values
+
+
+def _heatmap_from_group(
+    items: list[dict[str, Any]],
+    group_field: str,
+    value_field: str,
+    bucket_values: list[str] | None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Count (or sum) items along one group_by axis."""
+    counts: dict[str, float] = {}
+    extra: list[str] = []
+    for item in items:
+        label = str(item.get(f"{group_field}_display", "")) or _resolve_display_name(
+            item.get(group_field, "")
+        )
+        if not label:
+            continue
+        if label not in counts:
+            counts[label] = 0.0
+            extra.append(label)
+        if value_field:
+            try:
+                counts[label] += float(item.get(value_field, 0) or 0)
+            except (TypeError, ValueError):
+                continue
+        else:
+            counts[label] += 1.0
+    return _heatmap_strip(counts, "Count", bucket_values, extra=extra)
+
+
+def _heatmap_strip(
+    counts: dict[str, float],
+    row_label: str,
+    bucket_values: list[str] | None,
+    extra: list[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """One-row density matrix; leftover labels stay put."""
+    col_values: list[str] = []
+    seen: set[str] = set()
+    for raw in bucket_values or ():
+        token = str(raw)
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        col_values.append(token)
+        counts.setdefault(token, 0.0)
+    for label in extra or list(counts.keys()):
+        if label not in seen:
+            seen.add(label)
+            col_values.append(label)
+    if not col_values:
+        return [], []
+    cells = [{"value": counts.get(col, 0.0), "column": col} for col in col_values]
+    return [{"row": row_label, "row_id": "", "cells": cells}], col_values
 
 
 def compute_progress(
