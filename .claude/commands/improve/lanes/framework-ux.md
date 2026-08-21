@@ -327,6 +327,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Helper: `related_queue_title_and_meta` / `is_sequence_title_key`.
   Leftover ``zzz`` reasons stay put. Do **not** walk remaining
   attempt/count/quantity title siblings.
+- **Related salary reason-as-title** (DSL ``amount`` missed
+  ``amount_minor``, titled ``annual_review``) closed cycle 2273
+  (oral #141). Helper: `_related_proj_index` / bare ``reason``
+  chrome. Leftover ``zzz`` stays put. Do **not** walk remaining
+  related money-projection or generic-reason title siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -1478,6 +1478,15 @@ dialect formed — and where it started to Goodhart itself — is
     ``attempt_number`` the same way. Leftover ``zzz`` reasons
     stay put. Standing refusals apply.
 
+141. **Related salary history titled the reason enum.** Cycle
+    2273: person hub ``related compensation`` projected DSL
+    ``amount`` against runtime ``amount_minor``, so pay dropped
+    and ``related_queue_title_and_meta`` titled the badge
+    ``annual_review``. Money aliases stay in the projection;
+    bare ``reason`` is chrome; ``failure reason`` still the
+    payment walk. Leftover ``zzz`` stays put. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1562,6 +1571,7 @@ the end of every new oral *is* expensive — point here instead.
 | Kanban enum-as-title | Title a board as ``debugging`` after repr_fields sheds notes; clone leftover-token stay-put or duration titles | #138 |
 | Related file_list uploader-as-title | Title files as the uploader FK; clone leftover-token stay-put, status_card preview URL, or kanban enum titles | #139 |
 | Related queue sequence-as-title | Title payment/related queues as ``1`` / ``attempt_number``; clone leftover-token stay-put, file_list uploader, or kanban enum titles | #140 |
+| Related salary reason-as-title | Title compensation as ``annual_review`` after DSL ``amount`` misses ``amount_minor``; clone leftover-token stay-put, queue money titles, or sequence titles | #141 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

@@ -1220,6 +1220,35 @@ def _compile_form_surface(
         )
 
 
+def _related_proj_index(col_key: str, order: dict[str, int]) -> int | None:
+    """Map a related-tab column key onto the DSL ``columns:`` order.
+
+    Money fields compile as ``{name}_minor`` while authors write ``amount``.
+    Matching ``c.key in order`` therefore dropped pay from salary history
+    and the related queue titled the reason enum (oral #141).
+    """
+    if col_key in order:
+        return order[col_key]
+    if col_key.endswith("_minor"):
+        base = col_key[: -len("_minor")]
+        if base in order and f"{base}_minor" not in order:
+            return order[base]
+    return None
+
+
+def _project_related_columns(
+    columns: list[ColumnContext], order: dict[str, int]
+) -> list[ColumnContext]:
+    """Keep related-tab columns in DSL projection order, including money aliases."""
+    ranked: list[tuple[int, ColumnContext]] = []
+    for col in columns:
+        idx = _related_proj_index(col.key, order)
+        if idx is not None:
+            ranked.append((idx, col))
+    ranked.sort(key=lambda pair: pair[0])
+    return [col for _, col in ranked]
+
+
 def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
     """Build table columns from an entity's fields, excluding PK and FK fields."""
     columns: list[ColumnContext] = []
@@ -1382,12 +1411,12 @@ def _compile_view_surface(
             proj = list(getattr(group, "columns", None) or [])
             if proj:
                 order = {name: i for i, name in enumerate(proj)}
-                projected_tabs: list[RelatedTabContext] = []
-                for tab in group_tabs:
-                    filtered = [c for c in tab.columns if c.key in order]
-                    filtered.sort(key=lambda c: order.get(c.key, 999))
-                    projected_tabs.append(tab.model_copy(update={"columns": filtered}))
-                group_tabs = projected_tabs
+                group_tabs = [
+                    tab.model_copy(
+                        update={"columns": _project_related_columns(list(tab.columns), order)}
+                    )
+                    for tab in group_tabs
+                ]
             # #1646: stamp DSL related limit/page_size onto tabs so page_routes
             # honour a first-paint budget instead of only the default 8.
             _budget = getattr(group, "limit", None)

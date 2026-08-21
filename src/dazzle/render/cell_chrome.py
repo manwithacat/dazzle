@@ -335,7 +335,6 @@ _SEQUENCE_TITLE_KEYS = frozenset(
 _QUEUE_IDENTITY_HEADERS = frozenset(
     {
         "failure reason",
-        "reason",
         "description",
         "title",
         "name",
@@ -372,8 +371,15 @@ def _is_date_header(header: str) -> bool:
     return n.endswith(" at") or "date" in n or n in {"created", "updated", "due", "when"}
 
 
+def _is_reason_header(header: str) -> bool:
+    """Bare ``reason`` is badge chrome; ``failure reason`` stays identity (oral #141)."""
+    return _header_norm(header) == "reason"
+
+
 def _is_queue_title_chrome(header: str, raw: str) -> bool:
     if _is_status_header(header) or _is_date_header(header) or _looks_uuid_cell(raw):
+        return True
+    if _is_reason_header(header):
         return True
     return is_sequence_title_key(header)
 
@@ -398,7 +404,8 @@ def related_queue_title_and_meta(
 
     Related payment queues used to take the first column, so invoice hub
     attempts titled ``1`` and hid ``card_declined`` (oral #140). Sequence
-    numbers, status badges, and dates stay meta. Leftover junk stays put.
+    numbers, status badges, dates, and bare ``reason`` enums stay meta.
+    Leftover junk stays put.
     """
     pairs = _related_file_pairs(cells, headers)
     title = _pick_related_queue_title(pairs)

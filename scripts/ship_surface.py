@@ -158,6 +158,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2272: related/workspace queue must not title attempt numbers (oral #140)
     "tests/unit/test_related_queue_sequence_title.py",
     "tests/unit/test_queue_display_key.py::test_pick_display_key_skips_attempt_prefers_failure_reason",
+    # cycle 2273: related salary history must not title the reason enum (oral #141)
+    "tests/unit/test_related_queue_money_title.py",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",
