@@ -46,7 +46,7 @@ from dazzle.render.context import (
     TableContext,
     TransitionContext,
 )
-from dazzle.render.filters import status_tone_map
+from dazzle.render.filters import clerk_percent_points_field, status_tone_map
 from dazzle.render.fragment.state_affordance import transition_action_label
 
 
@@ -169,6 +169,10 @@ def _field_type_to_column_type(
         # `field_kind_to_col_type` so list cells humanise with time (#1597).
         if field_name.endswith("_at"):
             return "datetime"
+        if field_name.endswith("_bytes") or field_name in {"size", "filesize", "byte_size"}:
+            return "bytes"
+        if clerk_percent_points_field(field_name):
+            return "percentage"
         return "text"
     kind = field_spec.type.kind
     type_map = {
@@ -189,11 +193,13 @@ def _field_type_to_column_type(
         FieldTypeKind.BELONGS_TO: "ref",
     }
     mapped = type_map.get(kind)
-    if mapped is not None:
-        return mapped
     name = field_name or str(getattr(field_spec, "name", "") or "")
     if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
         return "bytes"
+    if clerk_percent_points_field(name):
+        return "percentage"
+    if mapped is not None:
+        return mapped
     return "text"
 
 

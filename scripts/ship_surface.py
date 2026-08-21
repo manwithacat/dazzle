@@ -186,6 +186,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_comparison_whole_count.py",
     # cycle 2286: *_ms measures must not dump unitless numbers (oral #154)
     "tests/unit/test_measure_unit_suffix.py",
+    # cycle 2288: 0-100 rate fields must not dump unitless 2.40 (oral #155)
+    "tests/unit/test_percent_points_display.py",
     "tests/unit/test_build_comparison.py::test_renders_ranks_labels_values",
     "tests/unit/test_insight_summary_orchestration.py::test_build_insight_inputs_picks_first_aggregate",
     "tests/unit/test_insight_summary_orchestration.py::test_prefers_aggregate_with_func_over_derived",

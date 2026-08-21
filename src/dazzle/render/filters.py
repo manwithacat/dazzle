@@ -479,6 +479,52 @@ def clerk_measure_display(value: Any, field_key: Any = "") -> str:
     return f"{shown}{suffix}" if suffix else shown
 
 
+# 0–100 stored rates (ops ``error_rate`` / ``cpu_usage``). Not 0–1
+# ``format: percent`` fractions (those still multiply by 100).
+_PERCENT_POINTS_SUFFIXES: tuple[str, ...] = (
+    "_percent",
+    "_pct",
+    "_rate",
+    "_usage",
+)
+
+
+def clerk_percent_points_field(field_key: Any) -> bool:
+    """True when the field stores 0–100 percent points (oral #155).
+
+    Leftover field tokens stay unitless.
+    """
+    key = str(field_key or "").strip()
+    if not key or key.lower() in _LEFTOVER_STAGE_TOKENS:
+        return False
+    lower = key.lower()
+    return any(lower.endswith(suffix) for suffix in _PERCENT_POINTS_SUFFIXES)
+
+
+def clerk_percent_points_display(value: Any, field_key: Any = "") -> str:
+    """Clerk-facing 0–100 rate: ``2.4%`` not unitless ``2.40`` (oral #155).
+
+    Does not multiply by 100 (these are already percent points). Leftover
+    junk stays put. Unknown / leftover field names stay unitless.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lower() in _LEFTOVER_STAGE_TOKENS:
+            return value
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    shown = f"{number:.2f}".rstrip("0").rstrip(".")
+    if field_key and not clerk_percent_points_field(field_key):
+        return shown
+    return f"{shown}%"
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):

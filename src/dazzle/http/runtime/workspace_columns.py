@@ -27,7 +27,7 @@ from typing import Any
 
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
-from dazzle.render.filters import clerk_stage_label, status_tone_map
+from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
 
 
 def _column_label(field_name: str, surface_label: str | None = None) -> str:
@@ -222,6 +222,8 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         return "currency"
     if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
         return "bytes"
+    if clerk_percent_points_field(name):
+        return "percentage"
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine

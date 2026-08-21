@@ -25,7 +25,11 @@ from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
 )
-from dazzle.render.filters import _ref_display_name
+from dazzle.render.filters import (
+    _ref_display_name,
+    clerk_percent_points_display,
+    clerk_percent_points_field,
+)
 from dazzle.render.fragment import (
     URL,
     CsvExportButton,
@@ -141,14 +145,24 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
             return f"{code} {num:,.2f}".strip() if code else f"{num:,.2f}"
         except (TypeError, ValueError):
             return _human_queue_meta_text(raw)
-    if col_type in ("number", "decimal", "float", "int"):
-        try:
-            num = float(raw)
-            return f"{int(num):,}" if num == int(num) else f"{num:,.2f}"
-        except (TypeError, ValueError):
-            return _human_queue_meta_text(raw)
+    numeric = _format_queue_meta_numeric(raw, col_type, key)
+    if numeric is not None:
+        return numeric
     text = _human_queue_meta_text(raw)
     return text[:45] + "…" if len(text) > 48 else text
+
+
+def _format_queue_meta_numeric(raw: Any, col_type: str, key: str) -> str | None:
+    """Number / 0–100 rate queue meta, or None when not numeric."""
+    if col_type in ("percentage", "percent_points") or clerk_percent_points_field(key):
+        return clerk_percent_points_display(raw, key)
+    if col_type not in ("number", "decimal", "float", "int"):
+        return None
+    try:
+        num = float(raw)
+    except (TypeError, ValueError):
+        return _human_queue_meta_text(raw)
+    return f"{int(num):,}" if num == int(num) else f"{num:,.2f}"
 
 
 def _queue_meta_raw(item: dict[str, Any], key: str) -> Any:

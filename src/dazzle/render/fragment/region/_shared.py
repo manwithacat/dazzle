@@ -26,6 +26,7 @@ from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
 )
+from dazzle.render.filters import clerk_percent_points_display
 from dazzle.render.fragment import (
     URL,
     Fragment,
@@ -270,6 +271,9 @@ def _render_typed_value(
 
     if col_type == "bytes":
         return RawHTML(_html_escape(format_cell(value, "bytes")))
+
+    if col_type in ("percentage", "percent_points"):
+        return RawHTML(_html_escape(clerk_percent_points_display(value, key)))
 
     if col_type == "color":
         # #1626 R5 / P0-8 — swatch on brand desk queues/cards (not raw hex).

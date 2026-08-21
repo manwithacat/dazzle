@@ -30,6 +30,7 @@ from dazzle.render.filters import (
     _ref_display_name,
     _truncate_filter,
     badge_icon_html,
+    clerk_percent_points_display,
     resolve_status_tone,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
@@ -316,10 +317,10 @@ def _render_cell_display(
         if isinstance(value, dict):
             return _html_mod.escape(_ref_display_name(value), quote=False)
         return _html_mod.escape(explicit or str(value or ""), quote=False)
-    if col_type == "percentage":
+    if col_type in ("percentage", "percent_points"):
         if value is None:
             return "—"
-        return _html_mod.escape(f"{value}%", quote=False)
+        return _html_mod.escape(clerk_percent_points_display(value, col.get("key")), quote=False)
     if col_type == "bytes":
         return _html_mod.escape(format_cell(value, "bytes"), quote=False)
     if col_type == "file":
