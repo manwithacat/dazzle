@@ -61,6 +61,17 @@ def _minor_currency_code(col: dict[str, Any], item: dict[str, Any] | None = None
     return code or "GBP"
 
 
+def _display_col_for_key(columns: Any, display_key: str) -> dict[str, Any] | None:
+    return next(
+        (
+            c
+            for c in (columns or [])
+            if isinstance(c, dict) and str(c.get("key") or "") == display_key
+        ),
+        None,
+    )
+
+
 def format_primary_if_minor(
     primary: Any,
     display_key: str,
@@ -70,18 +81,34 @@ def format_primary_if_minor(
     """Format queue/timeline titles when the primary column is ``*_minor``."""
     if not display_key.endswith("_minor"):
         return primary
-    display_col = next(
-        (
-            c
-            for c in (columns or [])
-            if isinstance(c, dict) and str(c.get("key") or "") == display_key
-        ),
-        None,
-    )
+    display_col = _display_col_for_key(columns, display_key)
     return format_minor_money_display(
         primary,
         currency_code=_minor_currency_code(display_col or {}, item),
     )
+
+
+def format_primary_display(
+    primary: Any,
+    display_key: str,
+    columns: Any,
+    item: dict[str, Any],
+) -> Any:
+    """Clerk-facing primary title: money minors + badge/enum tokens.
+
+    ``*_minor`` → sterling (oral #136). Badge ``debugging`` → ``Debugging``
+    (oral #138). Leftover junk stays put (``format_cell``).
+    """
+    if primary is None or primary == "":
+        return primary
+    if display_key.endswith("_minor"):
+        return format_primary_if_minor(primary, display_key, columns, item)
+    display_col = _display_col_for_key(columns, display_key)
+    kind = str((display_col or {}).get("type") or "")
+    if kind != "badge":
+        return primary
+    text = format_cell(primary, "badge")
+    return text if text else str(primary)
 
 
 def _region_title(region: Any) -> str:

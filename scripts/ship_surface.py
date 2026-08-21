@@ -149,6 +149,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2269: timeline must not title sessions as raw duration minutes (oral #137)
     "tests/unit/test_timeline_duration_title.py",
     "tests/unit/test_queue_display_key.py::test_pick_display_key_skips_duration_prefers_notes",
+    # cycle 2270: kanban must not title tasks as snake_case enum tokens (oral #138)
+    "tests/unit/test_kanban_enum_title.py",
+    "tests/unit/test_queue_display_key.py::test_pick_display_key_does_not_fallback_to_badge",
+    "tests/unit/test_queue_display_key.py::test_entity_text_identity_key_notes_on_task",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

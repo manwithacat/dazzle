@@ -296,7 +296,8 @@ def _pick_display_key(
        even if that field is not among the projected columns, so queue
        cards still label by subject/title rather than raw ``id``.
     2. First non-badge / non-ref / non-media / non-measurement column.
-    3. First column key, else ``"name"``.
+    3. Empty — do not fall back to a badge/enum token (``debugging``) when
+       fitness.repr_fields / column economy shed the notes (oral #138).
     """
     if preferred:
         return preferred
@@ -307,8 +308,53 @@ def _pick_display_key(
             if c.get("type") not in _NON_TITLE_COL_TYPES
             and not _is_measurement_title_key(str(c.get("key") or ""))
         ),
-        columns[0]["key"] if columns else "name",
+        "",
     )
+
+
+_TEXT_IDENTITY_KEYS = (
+    "title",
+    "name",
+    "subject",
+    "headline",
+    "notes",
+    "body",
+    "comment",
+    "description",
+    "summary",
+    "label",
+)
+_TEXT_KIND_TOKENS = frozenset({"text", "str", "string", "varchar"})
+
+
+def _field_is_textish(field: Any) -> bool:
+    """True when ``field`` is a clerk string, not enum/ref/datetime chrome."""
+    ft = getattr(field, "type", None)
+    kind = getattr(ft, "kind", None)
+    token = str(getattr(kind, "value", kind) or "").lower()
+    if token in _TEXT_KIND_TOKENS:
+        return True
+    if token != "scalar":
+        return False
+    st = getattr(ft, "scalar_type", None)
+    return str(getattr(st, "value", st) or "").lower() in _TEXT_KIND_TOKENS
+
+
+def _entity_text_identity_key(ctx: Any) -> str:
+    """First text identity field on the entity (notes/title/name/…).
+
+    Fitness ``repr_fields`` often keep type/status/refs and shed notes, so
+    ``_pick_display_key`` sees only badges. The row still carries notes.
+    """
+    spec = getattr(ctx, "entity_spec", None)
+    if spec is None:
+        return ""
+    by_name = {str(getattr(f, "name", "") or ""): f for f in (getattr(spec, "fields", None) or [])}
+    for key in _TEXT_IDENTITY_KEYS:
+        field = by_name.get(key)
+        if field is not None and _field_is_textish(field):
+            return key
+    return ""
 
 
 def _entity_display_field(ctx: Any) -> str:
@@ -497,9 +543,10 @@ def _build_chart_adapter_ctx(
 
 def _set_display_key(adapter_ctx: dict[str, Any], inputs: Any, ctx: Any) -> None:
     """Entity display_field-aware primary label for card/row titles."""
-    adapter_ctx["display_key"] = _pick_display_key(
-        inputs.columns, preferred=_entity_display_field(ctx)
-    )
+    key = _pick_display_key(inputs.columns, preferred=_entity_display_field(ctx))
+    if not key:
+        key = _entity_text_identity_key(ctx)
+    adapter_ctx["display_key"] = key
 
 
 def _set_detail_url_template(

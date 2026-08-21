@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 from dazzle.http.runtime.workspace_region_render import (
     _entity_display_field,
+    _entity_text_identity_key,
     _pick_display_key,
 )
 
@@ -70,6 +71,33 @@ def test_pick_display_key_skips_duration_prefers_notes() -> None:
     assert _pick_display_key(columns, preferred="notes") == "notes"
     # Author display_field still wins even when it is measurement chrome.
     assert _pick_display_key(columns, preferred="duration_minutes") == "duration_minutes"
+
+
+def test_pick_display_key_does_not_fallback_to_badge() -> None:
+    """Fitness repr that sheds notes must not title the enum token (oral #138)."""
+    columns = [
+        {"key": "type", "type": "badge"},
+        {"key": "status", "type": "badge"},
+        {"key": "assigned_to", "type": "ref"},
+        {"key": "created_by", "type": "ref"},
+    ]
+    assert _pick_display_key(columns) == ""
+    assert _pick_display_key(columns, preferred="notes") == "notes"
+
+
+def test_entity_text_identity_key_notes_on_task() -> None:
+    from pathlib import Path
+
+    from dazzle.core.project import load_project
+    from dazzle.http.converters.entity_converter import convert_entity
+
+    spec = load_project(Path("examples/fieldtest_hub"))
+    runtime = convert_entity(spec.get_entity("Task"))
+    ctx = SimpleNamespace(entity_spec=runtime)
+    assert _entity_display_field(ctx) == ""
+    assert _entity_text_identity_key(ctx) == "notes"
+    assert _entity_text_identity_key(SimpleNamespace(entity_spec=None)) == ""
+    assert _entity_text_identity_key(SimpleNamespace()) == ""
 
 
 def test_entity_display_field_from_ctx() -> None:

@@ -46,6 +46,7 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
     _wrap_surface,
+    format_primary_display,
 )
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 from dazzle.render.presentation import infer_role, present
@@ -167,7 +168,7 @@ class _BuildersCardsMixin:
                     return str(v)
             dk_val = item.get(display_key) if display_key else None
             if dk_val:
-                return str(dk_val)
+                return str(format_primary_display(dk_val, display_key, columns_meta, item))
             return entity_name
 
         kanban_cols: list[KanbanColumn] = []

@@ -1453,6 +1453,15 @@ dialect formed — and where it started to Goodhart itself — is
     dates. ``display_field: notes`` is the walk. Leftover
     ``zzz`` notes stay put. Standing refusals apply.
 
+138. **Kanban titled the enum token.** Cycle 2270:
+    Task ``fitness.repr_fields`` keeps type/status/refs and
+    sheds notes, so ``_pick_display_key`` fell back to
+    ``type`` and open-work cards titled ``debugging``.
+    Do not fall back to a badge column; use the entity
+    text identity (``notes``). If the title stays a badge,
+    ``format_cell`` title-cases it. Leftover ``zzz`` notes
+    stay put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1534,6 +1543,7 @@ the end of every new oral *is* expensive — point here instead.
 | Related status_card preview URL | Dump ``https://…png`` as the card title; clone leftover-token stay-put, CSV format_cell, or pdf_viewer suffix | #135 |
 | Queue money dropped after expansion | Title the ISO date / raw pence after ``amount: money`` expands; clone leftover-token stay-put or CSV format_cell | #136 |
 | Timeline duration-as-title | Title a session/queue as raw ``duration_minutes`` / temperature; clone leftover-token stay-put or queue money titles | #137 |
+| Kanban enum-as-title | Title a board as ``debugging`` after repr_fields sheds notes; clone leftover-token stay-put or duration titles | #138 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1611,6 +1621,7 @@ how the handbook was learned.
 | One related status_card preview-URL title after related_card_media_and_text exists | Call related_card_media_and_text on remaining card cells, then STOP (oral #135) |
 | One queue/timeline money title after format_primary_if_minor exists | Call format_primary_if_minor on remaining ``*_minor`` primaries, then STOP (oral #136) |
 | One duration/temperature title after _is_measurement_title_key exists | Skip remaining measurement primaries, then STOP (oral #137) |
+| One kanban/queue enum title after _entity_text_identity_key exists | Call _entity_text_identity_key / format_primary_display on remaining badge primaries, then STOP (oral #138) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

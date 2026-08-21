@@ -62,7 +62,7 @@ from dazzle.render.fragment.region._shared import (
     _render_typed_value,
     _wrap_surface,
     format_minor_money_display,
-    format_primary_if_minor,
+    format_primary_display,
 )
 from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
@@ -793,9 +793,7 @@ class _BuildersTablesMixin:
                 if resolved is not None and str(resolved).strip():
                     row_title = str(resolved)
                 elif primary is not None and str(primary).strip():
-                    row_title = str(primary)
-                if display_key.endswith("_minor") and primary is not None:
-                    row_title = str(format_primary_if_minor(primary, display_key, columns, item))
+                    row_title = str(format_primary_display(primary, display_key, columns, item))
 
             # Badges = columns with type=="badge" and key != display_key.
             badges: list[QueueBadgeColumn] = []
