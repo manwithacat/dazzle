@@ -243,7 +243,9 @@ _TYPED_REGION_DISPLAYS: frozenset[str] = (
 # Column types that must not become card/grid titles (chrome or binary media).
 # Goal B media: image/color are visual affordances, not row identity — picking
 # photo_url as display_key made grid titles raw placehold URLs and skipped thumbs.
-_NON_TITLE_COL_TYPES = frozenset({"badge", "ref", "image", "color", "bool"})
+# Dates are temporal chrome, not identity — Salary queues titled ISO
+# ``effective_from`` after money expansion dropped ``amount`` (oral #136).
+_NON_TITLE_COL_TYPES = frozenset({"badge", "ref", "image", "color", "bool", "date", "datetime"})
 
 
 def _pick_display_key(

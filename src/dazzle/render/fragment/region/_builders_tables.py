@@ -57,9 +57,12 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
+    _minor_currency_code,
     _region_title,
     _render_typed_value,
     _wrap_surface,
+    format_minor_money_display,
+    format_primary_if_minor,
 )
 from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
@@ -125,9 +128,12 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
     """Humanise a non-title queue column value for the meta line."""
     col_type = str(col.get("type") or "").lower()
     fmt = str(col.get("format") or "").lower()
+    key = str(col.get("key") or "")
     # Color meta uses HTML swatch in the row renderer — not this plain string path.
     if col_type == "color":
         return _human_queue_meta_text(raw)
+    if key.endswith("_minor"):
+        return format_minor_money_display(raw, currency_code=_minor_currency_code(col))
     if col_type in ("currency", "money") or "currency" in fmt:
         try:
             num = float(raw)
@@ -788,6 +794,8 @@ class _BuildersTablesMixin:
                     row_title = str(resolved)
                 elif primary is not None and str(primary).strip():
                     row_title = str(primary)
+                if display_key.endswith("_minor") and primary is not None:
+                    row_title = str(format_primary_if_minor(primary, display_key, columns, item))
 
             # Badges = columns with type=="badge" and key != display_key.
             badges: list[QueueBadgeColumn] = []

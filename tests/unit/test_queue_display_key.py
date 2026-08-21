@@ -31,6 +31,24 @@ def test_pick_display_key_without_preferred_skips_badge() -> None:
     assert _pick_display_key(columns) == "subject"
 
 
+def test_pick_display_key_skips_date_prefers_currency() -> None:
+    """ISO dates are chrome, not identity — salary queues titled pay (oral #136)."""
+    columns = [
+        {"key": "person", "type": "ref"},
+        {"key": "amount_minor", "type": "currency", "currency_code": "GBP"},
+        {"key": "effective_from", "type": "date"},
+        {"key": "reason", "type": "badge"},
+    ]
+    assert _pick_display_key(columns) == "amount_minor"
+    no_money = [
+        {"key": "person", "type": "ref"},
+        {"key": "effective_from", "type": "date"},
+        {"key": "reason", "type": "badge"},
+        {"key": "note", "type": "text"},
+    ]
+    assert _pick_display_key(no_money) == "note"
+
+
 def test_entity_display_field_from_ctx() -> None:
     ctx = SimpleNamespace(entity_spec=SimpleNamespace(display_field="subject"))
     assert _entity_display_field(ctx) == "subject"

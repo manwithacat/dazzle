@@ -1436,6 +1436,15 @@ dialect formed — and where it started to Goodhart itself — is
     thumb; the first non-image cell is the title. Leftover junk
     stays in the text slots. Standing refusals apply.
 
+136. **Queue titled the ISO date and dropped pay.** Cycle 2268:
+    ``convert_entities`` expands ``amount: money`` to
+    ``amount_minor`` / ``amount_currency``. LIST-surface
+    ``field amount`` then missed the runtime field map, so
+    compensation queues titled ``2024-06-01`` and omitted
+    sterling. Surface ``amount`` still projects the minor
+    column; ``*_minor`` titles format via ``format_cell``.
+    Leftover ``zzz`` stays put. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1515,6 +1524,7 @@ the end of every new oral *is* expensive — point here instead.
 | Walk host-prefixed session cookie | Parse only ``dazzle_session=`` on tenant_host login; clone leftover-token stay-put or CSV format_cell walks | #133 |
 | PDF chrome on non-PDF files | Mount PDF.js / ``Download PDF`` on a plain ``.md`` / ``.xlsx`` file; clone leftover-token stay-put or CSV format_cell walks | #134 |
 | Related status_card preview URL | Dump ``https://…png`` as the card title; clone leftover-token stay-put, CSV format_cell, or pdf_viewer suffix | #135 |
+| Queue money dropped after expansion | Title the ISO date / raw pence after ``amount: money`` expands; clone leftover-token stay-put or CSV format_cell | #136 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1589,6 +1599,8 @@ how the handbook was learned.
 | One CSV/surface header host after build_surface_columns uses element.label | Honor author labels on remaining CSV/column emitters in one ship, then STOP (oral #132) |
 | One walk/login Set-Cookie extractor after session_token_from_login_response exists | Call the helper on remaining login extractors, then STOP (oral #133) |
 | One pdf_viewer non-PDF suffix after looks_like_pdf exists | Call looks_like_pdf on remaining plain-file viewers, then STOP (oral #134) |
+| One related status_card preview-URL title after related_card_media_and_text exists | Call related_card_media_and_text on remaining card cells, then STOP (oral #135) |
+| One queue/timeline money title after format_primary_if_minor exists | Call format_primary_if_minor on remaining ``*_minor`` primaries, then STOP (oral #136) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

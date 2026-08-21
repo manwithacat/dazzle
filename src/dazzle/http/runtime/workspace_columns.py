@@ -130,6 +130,38 @@ def _media_col_type_for_field_name(name: str) -> str | None:
     return None
 
 
+def _resolve_surface_field(
+    field_map: dict[str, Any], fn: str
+) -> tuple[Any, str] | tuple[None, str]:
+    """Resolve a LIST-surface field name against IR or runtime entity fields.
+
+    ``convert_entities`` expands ``amount: money`` into ``amount_minor`` +
+    ``amount_currency``. Surface ``field amount`` must still project the
+    minor column — otherwise queue/timeline pads drop pay and title the
+    ISO date (oral #136).
+    """
+    f = field_map.get(fn)
+    if f is not None:
+        return f, _resolved_field_kind_token(f)
+    minor = field_map.get(f"{fn}_minor")
+    if minor is not None and f"{fn}_currency" in field_map:
+        return minor, "money"
+    return None, ""
+
+
+def _money_currency_code(field_map: dict[str, Any], fn: str, money_field: Any) -> str:
+    """ISO code from the money type, else the expanded currency default."""
+    ft = getattr(money_field, "type", None)
+    code = getattr(ft, "currency_code", None) if ft is not None else None
+    if code:
+        return str(code)
+    ccy = field_map.get(f"{fn}_currency")
+    default = getattr(ccy, "default", None) if ccy is not None else None
+    if default:
+        return str(default)
+    return "GBP"
+
+
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
 
@@ -149,6 +181,9 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     mapped = _KIND_TO_COL_TYPE.get(kind_val)
     if mapped is not None:
         return mapped
+    name = str(getattr(field, "name", "") or "")
+    if name.endswith("_minor"):
+        return "currency"
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine
@@ -214,14 +249,12 @@ def build_surface_columns(
 
     columns: list[dict[str, Any]] = []
     for fn in surface_fields:
-        f = field_map.get(fn)
-        if not f:
+        f, kind_val = _resolve_surface_field(field_map, fn)
+        if f is None:
             continue
         _vis_cond = field_visible_conditions.get(fn)
         _fmt = field_formats.get(fn)
         ft = f.type
-        kind = ft.kind
-        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
         # Ref and belongs_to fields
         if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
@@ -252,10 +285,12 @@ def build_surface_columns(
         # #1626 R5: color picker fields must not render as raw hex text on desks.
         if field_widgets.get(fn) == "color":
             col_type = "color"
-        col_key = f"{f.name}_minor" if kind_val == "money" else f.name
+        if kind_val == "money":
+            col_type = "currency"
+        col_key = f"{fn}_minor" if kind_val == "money" else f.name
         col: dict[str, Any] = {
             "key": col_key,
-            "label": _column_label(f.name, field_labels.get(fn)),
+            "label": _column_label(fn, field_labels.get(fn)),
             "type": col_type,
             "sortable": True,
         }
@@ -265,7 +300,7 @@ def build_surface_columns(
             col["format_kind"] = _fmt.kind
             col["format_arg"] = _fmt.arg or ""
         if kind_val == "money":
-            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
+            col["currency_code"] = _money_currency_code(field_map, fn, f)
         if col_type == "badge":
             # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
             _sem = status_tone_map(ft, enums, entity_spec.state_machine)

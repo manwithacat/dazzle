@@ -41,6 +41,7 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
     _wrap_surface,
+    format_primary_if_minor,
 )
 from dazzle.render.fragment.renderer._related_conversation import conversation_bubble_tone
 from dazzle.render.presentation import present
@@ -370,6 +371,7 @@ class _BuildersTimelineMixin:
             primary = item.get(display_key) if display_key else None
             if primary is None:
                 primary = item.get("name") or entity_name
+            primary = format_primary_if_minor(primary, display_key, columns, item)
             # Secondary fields — every non-date, non-display column.
             fields: list[tuple[str, object]] = []
             for col in columns:

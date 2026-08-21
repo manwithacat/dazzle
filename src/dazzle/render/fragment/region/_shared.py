@@ -43,6 +43,47 @@ _ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def format_minor_money_display(value: Any, *, currency_code: str = "GBP") -> str:
+    """Clerk-facing money for expanded ``*_minor`` storage (oral #136).
+
+    Leftover junk stays put (``format_cell`` / ``_currency``).
+    """
+    text = format_cell(value, "currency", currency_code=currency_code or "GBP")
+    return text or ("" if value is None else str(value))
+
+
+def _minor_currency_code(col: dict[str, Any], item: dict[str, Any] | None = None) -> str:
+    """ISO code from the column, else the sibling ``{name}_currency`` cell."""
+    code = str(col.get("currency_code") or "")
+    key = str(col.get("key") or "")
+    if not code and key.endswith("_minor") and item is not None:
+        code = str(item.get(f"{key[:-6]}_currency") or "")
+    return code or "GBP"
+
+
+def format_primary_if_minor(
+    primary: Any,
+    display_key: str,
+    columns: Any,
+    item: dict[str, Any],
+) -> Any:
+    """Format queue/timeline titles when the primary column is ``*_minor``."""
+    if not display_key.endswith("_minor"):
+        return primary
+    display_col = next(
+        (
+            c
+            for c in (columns or [])
+            if isinstance(c, dict) and str(c.get("key") or "") == display_key
+        ),
+        None,
+    )
+    return format_minor_money_display(
+        primary,
+        currency_code=_minor_currency_code(display_col or {}, item),
+    )
+
+
 def _region_title(region: Any) -> str:
     """Extract a region's display title.
 
