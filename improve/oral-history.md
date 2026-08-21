@@ -1600,6 +1600,15 @@ dialect formed — and where it started to Goodhart itself — is
     ``zzz`` stays put. Live ops_dashboard ``alert_insight``.
     Standing refusals apply.
 
+153. **Comparison dumped integer counts as two-decimal theater.** Cycle
+    2285: ``display: comparison`` ``rank_by: count`` formatted league
+    values via ``format_cell(..., "text")``, so a float ``12.0`` became
+    ``12.00`` on the ops system-alert league while the clerk is ranking
+    whole alerts. ``_fmt_num`` keeps whole counts bare; fractional
+    values keep two decimals; leftover ``zzz`` labels stay put.
+    Live ops_dashboard ``system_alert_league``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1695,6 +1704,7 @@ the end of every new oral *is* expensive — point here instead.
 | Identity-dump title/label siblings | Walk another queue title / chart legend / FilterBar token after the identity helpers exist | #149 |
 | Chart day-bucket ISO | Dump ``2026-05-18`` on chart day ticks after grid cells use the profile date; clone leftover-token stay-put, identity-dump titles, or week/month tick restyles | #150 |
 | Insight measure token | Dump ``count`` / unpluralized ``system`` as insight English after clerk_insight_*_noun exists; clone leftover-token stay-put, identity-dump titles, or heatmap 1-d | #152 |
+| Comparison whole-count 12.00 | Dump ranked integer counts as ``12.00`` after ``_fmt_num`` exists; clone leftover-token stay-put, insight citation labels, or identity-dump titles | #153 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

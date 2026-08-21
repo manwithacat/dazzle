@@ -182,6 +182,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_heatmap_group_by.py",
     # cycle 2284: insight_summary must not dump aggregate key ``count`` (oral #152)
     "tests/unit/test_insight_measure_noun.py",
+    # cycle 2285: comparison league must not dump integer counts as 12.00 (oral #153)
+    "tests/unit/test_comparison_whole_count.py",
+    "tests/unit/test_build_comparison.py::test_renders_ranks_labels_values",
     "tests/unit/test_insight_summary_orchestration.py::test_build_insight_inputs_picks_first_aggregate",
     "tests/unit/test_insight_summary_orchestration.py::test_prefers_aggregate_with_func_over_derived",
     "tests/unit/test_bar_chart_bucketed_aggregate.py::TestTimeBucketedAggregates::test_format_bucket_label_every_unit",

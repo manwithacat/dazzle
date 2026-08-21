@@ -362,6 +362,10 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   `clerk_stage_label`. FK ``_label`` rides. Leftover
   ``zzz`` stays put. Do **not** walk remaining chart
   legend/axis token siblings.
+- **Comparison whole-count 12.00** (ranked ``12.0`` dumped
+  ``12.00``) closed cycle 2285 (oral #153). Helper:
+  `_fmt_num`. Leftover ``zzz`` labels stay put. Do **not**
+  walk remaining two-decimal count siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

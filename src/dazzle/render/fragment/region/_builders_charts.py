@@ -56,7 +56,6 @@ from dazzle.render.fragment import (
     TimeSeries,
     TimeSeriesSeries,
 )
-from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
     _region_title,
@@ -225,7 +224,9 @@ def _comparison_track_rows(raw_rows: Any) -> list[tuple[str, float, str, float]]
             fraction = 0.0
         rank = entry.get("rank")
         label = f"{rank}. {base_label}" if rank is not None else base_label
-        formatted = format_cell(raw_value, "text") if raw_value is not None else "—"
+        # Whole counts stay bare (12, not 12.00). format_cell("text") on a
+        # float dumps two-decimal theater (oral #153). Leftover labels stay put.
+        formatted = _fmt_num(raw_value) if raw_value is not None else "—"
         outlier = entry.get("outlier")
         if outlier in ("low", "high"):
             formatted = f"{formatted} ⚠ {outlier}"
