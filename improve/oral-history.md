@@ -1553,6 +1553,15 @@ dialect formed — and where it started to Goodhart itself — is
     kanban enum-as-title (oral #138). Live support_tickets
     ticket_queue open_queue. Standing refusals apply.
 
+148. **Stacked area legend dumped snake_case.** Cycle 2280:
+    ``display: area_chart`` with ``group_by: [bucket(…),
+    severity]`` named series ``critical`` / ``in_progress``
+    while bar-chart emit already humanizes via status-badge
+    HTML. ``_clerk_series_dim_label`` title-cases scalar
+    tokens; FK ``_label`` rides; leftover ``zzz`` stays put.
+    Live ops_dashboard alerts_weekly_stacked. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1644,6 +1653,7 @@ the end of every new oral *is* expensive — point here instead.
 | Related queue severity-as-title | Title issue/session queues as ``critical`` / ``indoor`` after related columns omit description/notes; clone leftover-token stay-put, kanban enum titles, or sequence titles | #145 |
 | Workspace bool FilterBar true/false | Dump ``true``/``false`` on workspace list bool filters after the grid says Yes/No; clone leftover-token stay-put, leftover REST bool VALUE, conversion chips, or related title-walks | #146 |
 | Workspace enum FilterBar snake_case | Dump ``in_progress`` on workspace enum filters after the grid says In Progress; clone leftover-token stay-put, bool FilterBar labels, conversion chips, or kanban enum titles | #147 |
+| Stacked area legend snake_case | Dump ``critical`` / ``in_progress`` as area-chart series names after bar-chart badges already humanize; clone leftover-token stay-put, FilterBar labels, or conversion chips | #148 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1729,6 +1739,7 @@ how the handbook was learned.
 | One funnel/progress stage token after clerk_stage_label exists | Call clerk_stage_label on remaining conversion/progress chips, then STOP (oral #144) |
 | One related queue severity/environment title after identity inject exists | Call related_queue_identity_from_record on remaining risk-first related queues, then STOP (oral #145) |
 | One workspace enum FilterBar token after enum_filter_options exists | Call enum_filter_options / clerk_stage_label on remaining badge filters, then STOP (oral #147) |
+| One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

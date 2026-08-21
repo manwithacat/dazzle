@@ -356,6 +356,12 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   `enum_filter_options`. Query values stay schema tokens.
   Leftover ``zzz`` stays put. Do **not** walk remaining enum
   filter-label siblings.
+- **Stacked area legend snake_case** (``in_progress`` /
+  ``critical`` as the series name) closed cycle 2280
+  (oral #148). Helper: `_clerk_series_dim_label` /
+  `clerk_stage_label`. FK ``_label`` rides. Leftover
+  ``zzz`` stays put. Do **not** walk remaining chart
+  legend/axis token siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

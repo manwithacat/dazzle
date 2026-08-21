@@ -25,7 +25,7 @@ def test_pivot_to_series_groups_by_second_dimension() -> None:
         {"triggered_at": "2026-06-08", "triggered_at_label": "W24", "severity": "low", "count": 3},
     ]
     series = _pivot_to_series(buckets, dim_specs, "count")
-    assert [s["name"] for s in series] == ["high", "low"]
+    assert [s["name"] for s in series] == ["High", "Low"]
     assert series[0]["points"] == [
         {"label": "W23", "value": 5.0},
         {"label": "W24", "value": 7.0},

@@ -55,6 +55,7 @@ from dazzle.http.runtime.workspace_card_fetchers import (
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.render.cell_chrome import is_sequence_title_key
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
     leftover_honest_iso_date,
@@ -374,6 +375,24 @@ def _entity_display_field(ctx: Any) -> str:
 # ──────────────────────────── chart family ─────────────────────────────
 
 
+def _clerk_series_dim_label(row: dict[str, Any], s_name: str) -> str:
+    """Clerk-facing stacked-area series name (oral #148).
+
+    Scalar enum dims dumped ``critical`` / ``in_progress`` as the legend
+    while bar-chart emit already humanizes via status-badge HTML. FK
+    ``_label`` display names ride. Leftover junk stays put. The
+    ``(none)`` sentinel is unchanged.
+    """
+    labeled = row.get(f"{s_name}_label")
+    if labeled:
+        return str(labeled)
+    raw = row.get(s_name)
+    if raw is None or raw == "":
+        return "(none)"
+    text = str(raw)
+    return clerk_stage_label(text) or text
+
+
 def _pivot_to_series(
     pivot_buckets: list[dict[str, Any]],
     pivot_dim_specs: list[dict[str, Any]],
@@ -385,8 +404,9 @@ def _pivot_to_series(
     so dim[0] is the time bucket (the shared x-axis) and dim[1] is the
     series dimension. Each pivot row is one `(time, series)` cell; we
     group rows by their series-dim value (its `_label` when an FK/label
-    is present, else the raw value) and emit `{name, points}` per series,
-    preserving first-seen order. Returns `[]` unless there are ≥2 dims.
+    is present, else the clerk-humanized raw value) and emit
+    `{name, points}` per series, preserving first-seen order. Returns
+    `[]` unless there are ≥2 dims.
     """
     if len(pivot_dim_specs) < 2 or not measure_name:
         return []
@@ -399,7 +419,7 @@ def _pivot_to_series(
         # sentinel so the bucket survives `_coerce_series_points`' empty-
         # label drop and never renders a blank legend chip (#1473 review).
         x_label = str(row.get(f"{x_name}_label") or row.get(x_name) or "") or "(none)"
-        s_label = str(row.get(f"{s_name}_label") or row.get(s_name) or "") or "(none)"
+        s_label = _clerk_series_dim_label(row, s_name)
         try:
             value = float(row.get(measure_name) or 0)
         except (TypeError, ValueError):
