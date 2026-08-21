@@ -119,6 +119,7 @@ class TestFieldKindToColType:
         fav_col = next(c for c in cols if c["key"] == "is_favorite")
         assert fav_col["type"] == "bool"
         assert fav_col.get("filterable") is True
+        assert fav_col["filter_options"] == [("true", "Yes"), ("false", "No")]
 
 
 class TestSsrFieldTypeToColumnType1597:

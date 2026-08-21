@@ -1531,6 +1531,17 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #140). Live fieldtest_hub device hub issues.
     Standing refusals apply.
 
+146. **Workspace bool FilterBar dumped ``true``/``false``.** Cycle
+    2278: contact_manager ``contacts.contact_list`` Favorite
+    filter used ``["true", "false"]`` as option labels while
+    grid cells already show Yes/No via ``format_cell``. Query
+    values stay ``true``/``false``. ``bool_filter_options``
+    supplies ``(true, Yes)`` / ``(false, No)``. Leftover
+    ``zzz`` stays put (All). Not leftover-token stay-put
+    (oral #121). Not leftover REST bool VALUE (oral #78). Not
+    funnel/progress conversion chips (oral #144). Not related
+    queue title picking (oral #145). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1620,6 +1631,7 @@ the end of every new oral *is* expensive — point here instead.
 | Timeline datetime rail skipped | Hide when on ``display: timeline`` because ``logged_at`` is ``datetime`` not ``date``; clone leftover-token stay-put, conversation clock slices, or duration titles | #143 |
 | Funnel/progress snake_case stages | Dump ``in_progress`` on funnel/progress after bar-chart already humanizes; clone leftover-token stay-put, kanban enum titles, or datetime rail | #144 |
 | Related queue severity-as-title | Title issue/session queues as ``critical`` / ``indoor`` after related columns omit description/notes; clone leftover-token stay-put, kanban enum titles, or sequence titles | #145 |
+| Workspace bool FilterBar true/false | Dump ``true``/``false`` on workspace list bool filters after the grid says Yes/No; clone leftover-token stay-put, leftover REST bool VALUE, conversion chips, or related title-walks | #146 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

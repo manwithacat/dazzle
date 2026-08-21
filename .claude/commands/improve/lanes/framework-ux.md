@@ -346,6 +346,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   the chip) closed cycle 2276 (oral #144). Helper:
   `clerk_stage_label`. Leftover ``zzz`` stays put. Do **not**
   walk remaining conversion-chip siblings.
+- **Workspace bool FilterBar true/false** (Favorite dumped
+  ``true``) closed cycle 2278 (oral #146). Helper:
+  `bool_filter_options`. Query values stay ``true``/``false``.
+  Leftover ``zzz`` stays put. Do **not** walk remaining bool
+  filter-label siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

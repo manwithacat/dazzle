@@ -43,6 +43,17 @@ def _column_label(field_name: str, surface_label: str | None = None) -> str:
     return str(field_name or "").replace("_", " ").title()
 
 
+# Query values stay ``true``/``false``; the FilterBar label is Yes/No
+# (same as format_cell bool / list-surface filters). Leftover junk is
+# not in this catalog (oral #146).
+_BOOL_FILTER_OPTIONS: tuple[tuple[str, str], ...] = (("true", "Yes"), ("false", "No"))
+
+
+def bool_filter_options() -> list[tuple[str, str]]:
+    """Workspace bool FilterBar options: ``true``/``false`` ride, labels Yes/No."""
+    return list(_BOOL_FILTER_OPTIONS)
+
+
 def _ref_detail_route(ref_entity: Any) -> str:
     """UI VIEW hub template for a ref/belongs_to column (``/app/<slug>/{id}``).
 
@@ -322,7 +333,7 @@ def build_surface_columns(
                         col["filter_options"] = list(states)
         if col_type == "bool":
             col["filterable"] = True
-            col["filter_options"] = ["true", "false"]
+            col["filter_options"] = bool_filter_options()
         columns.append(col)
     return columns
 
@@ -405,7 +416,7 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
         _apply_badge_column_meta(col, ft, kind_val, enums, entity_spec)
     if col_type == "bool":
         col["filterable"] = True
-        col["filter_options"] = ["true", "false"]
+        col["filter_options"] = bool_filter_options()
     return col
 
 
