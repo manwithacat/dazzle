@@ -171,6 +171,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_related_queue_risk_title.py",
     # cycle 2278: workspace bool FilterBar must not dump true/false (oral #146)
     "tests/unit/test_bool_filter_label.py",
+    # cycle 2279: workspace enum FilterBar must not dump snake_case (oral #147)
+    "tests/unit/test_enum_filter_label.py",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

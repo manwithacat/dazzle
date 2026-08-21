@@ -1542,6 +1542,17 @@ dialect formed — and where it started to Goodhart itself — is
     funnel/progress conversion chips (oral #144). Not related
     queue title picking (oral #145). Standing refusals apply.
 
+147. **Workspace enum FilterBar dumped snake_case.** Cycle
+    2279: support_tickets ticket queues listed ``in_progress``
+    / ``on_track`` while grid badges and list-surface filters
+    already say In Progress / On Track. ``enum_filter_options``
+    keeps query tokens and labels via ``clerk_stage_label``.
+    Leftover ``zzz`` stays put. Not leftover-token stay-put
+    (oral #121). Not bool FilterBar true/false (oral #146).
+    Not funnel/progress conversion chips (oral #144). Not
+    kanban enum-as-title (oral #138). Live support_tickets
+    ticket_queue open_queue. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1632,6 +1643,7 @@ the end of every new oral *is* expensive — point here instead.
 | Funnel/progress snake_case stages | Dump ``in_progress`` on funnel/progress after bar-chart already humanizes; clone leftover-token stay-put, kanban enum titles, or datetime rail | #144 |
 | Related queue severity-as-title | Title issue/session queues as ``critical`` / ``indoor`` after related columns omit description/notes; clone leftover-token stay-put, kanban enum titles, or sequence titles | #145 |
 | Workspace bool FilterBar true/false | Dump ``true``/``false`` on workspace list bool filters after the grid says Yes/No; clone leftover-token stay-put, leftover REST bool VALUE, conversion chips, or related title-walks | #146 |
+| Workspace enum FilterBar snake_case | Dump ``in_progress`` on workspace enum filters after the grid says In Progress; clone leftover-token stay-put, bool FilterBar labels, conversion chips, or kanban enum titles | #147 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1716,6 +1728,7 @@ how the handbook was learned.
 | One timeline date-only rail after _timeline_when_col_key exists | Call _timeline_when_col_key on remaining chronological rails, then STOP (oral #143) |
 | One funnel/progress stage token after clerk_stage_label exists | Call clerk_stage_label on remaining conversion/progress chips, then STOP (oral #144) |
 | One related queue severity/environment title after identity inject exists | Call related_queue_identity_from_record on remaining risk-first related queues, then STOP (oral #145) |
+| One workspace enum FilterBar token after enum_filter_options exists | Call enum_filter_options / clerk_stage_label on remaining badge filters, then STOP (oral #147) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

@@ -37,6 +37,9 @@ from starlette.responses import StreamingResponse
 
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.renderer._render_interactive import (
+    leftover_honest_catalog_option_values,
+)
 
 
 def _csv_format_override(raw: Any, column: dict[str, Any]) -> str | None:
@@ -75,8 +78,10 @@ def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
         return format_cell(raw, kind)
     if kind == "badge":
         options = column.get("filter_options")
-        if options is not None and str(raw) not in {str(o) for o in options}:
-            return str(raw)
+        if options is not None:
+            known = leftover_honest_catalog_option_values(options)
+            if known and str(raw) not in known:
+                return str(raw)
         return format_cell(raw, "badge")
     if isinstance(raw, datetime):
         return format_cell(raw, "datetime")

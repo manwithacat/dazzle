@@ -27,7 +27,7 @@ from typing import Any
 
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
-from dazzle.render.filters import status_tone_map
+from dazzle.render.filters import clerk_stage_label, status_tone_map
 
 
 def _column_label(field_name: str, surface_label: str | None = None) -> str:
@@ -52,6 +52,31 @@ _BOOL_FILTER_OPTIONS: tuple[tuple[str, str], ...] = (("true", "Yes"), ("false", 
 def bool_filter_options() -> list[tuple[str, str]]:
     """Workspace bool FilterBar options: ``true``/``false`` ride, labels Yes/No."""
     return list(_BOOL_FILTER_OPTIONS)
+
+
+def enum_filter_options(values: Any) -> list[tuple[str, str]]:
+    """Workspace enum FilterBar: query tokens ride, labels clerk-humanized.
+
+    List surfaces already title-case via ``_infer_filter_type``. Workspace
+    dumped ``in_progress`` as the option text. Leftover junk stays put
+    (oral #147).
+    """
+    out: list[tuple[str, str]] = []
+    for raw in values or ():
+        if isinstance(raw, dict):
+            token = str(raw.get("value") or "")
+            given = str(raw.get("label") or "")
+        elif isinstance(raw, (tuple, list)) and len(raw) >= 2:
+            token = str(raw[0])
+            given = str(raw[1])
+        else:
+            token = str(raw)
+            given = ""
+        if not token:
+            continue
+        label = given if given and given != token else clerk_stage_label(token)
+        out.append((token, label))
+    return out
 
 
 def _ref_detail_route(ref_entity: Any) -> str:
@@ -323,14 +348,14 @@ def build_surface_columns(
                 ev = getattr(ft, "enum_values", None)
                 if ev:
                     col["filterable"] = True
-                    col["filter_options"] = list(ev)
+                    col["filter_options"] = enum_filter_options(ev)
             else:
                 sm = entity_spec.state_machine
                 if sm:
                     states = sm.states
                     if states:
                         col["filterable"] = True
-                        col["filter_options"] = list(states)
+                        col["filter_options"] = enum_filter_options(states)
         if col_type == "bool":
             col["filterable"] = True
             col["filter_options"] = bool_filter_options()
@@ -378,7 +403,7 @@ def _apply_badge_column_meta(
         ev = getattr(ft, "enum_values", None)
         if ev:
             col["filterable"] = True
-            col["filter_options"] = list(ev)
+            col["filter_options"] = enum_filter_options(ev)
         return
     sm = entity_spec.state_machine
     if not sm:
@@ -386,7 +411,7 @@ def _apply_badge_column_meta(
     states = sm.states
     if states:
         col["filterable"] = True
-        col["filter_options"] = list(states)
+        col["filter_options"] = enum_filter_options(states)
 
 
 def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict[str, Any] | None:

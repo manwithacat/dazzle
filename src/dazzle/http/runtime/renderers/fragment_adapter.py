@@ -619,7 +619,7 @@ class FragmentSurfaceAdapter:
             FilterColumn(
                 key=col["key"],
                 label=str(col.get("label", col["key"])),
-                options=tuple(col.get("filter_options", []) or ()),
+                options=tuple(_filter_option(o) for o in (col.get("filter_options") or [])),
                 selected=str(filter_values.get(col["key"], "")),
             )
             for col in columns

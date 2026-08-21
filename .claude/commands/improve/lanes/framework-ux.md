@@ -351,6 +351,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   `bool_filter_options`. Query values stay ``true``/``false``.
   Leftover ``zzz`` stays put. Do **not** walk remaining bool
   filter-label siblings.
+- **Workspace enum FilterBar snake_case** (``in_progress`` as
+  the option) closed cycle 2279 (oral #147). Helper:
+  `enum_filter_options`. Query values stay schema tokens.
+  Leftover ``zzz`` stays put. Do **not** walk remaining enum
+  filter-label siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
