@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from dazzle.core.ir import AggregateRef, DerivedMetricExpr
-from dazzle.render.filters import _metric_number_filter
+from dazzle.render.filters import _metric_number_filter, clerk_stage_label
 from dazzle.render.fragment import (
     Accordion,
     AccordionItem,
@@ -373,7 +373,7 @@ class _BuildersMetricsMixin:
             except (TypeError, ValueError):
                 count = 0
             complete = bool(entry.get("complete"))
-            stages.append((name, count, complete))
+            stages.append((clerk_stage_label(name) or name, count, complete))
 
         # Legacy fallback — items: [{label, percent}]
         if not stages:
@@ -388,7 +388,8 @@ class _BuildersMetricsMixin:
                 except (TypeError, ValueError):
                     percent = 0
                 percent = max(0, min(100, percent))
-                stages.append((f"{name} ({percent}%)", percent, percent == 100))
+                label = clerk_stage_label(name) or name
+                stages.append((f"{label} ({percent}%)", percent, percent == 100))
 
         body: Fragment
         if not stages:

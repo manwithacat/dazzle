@@ -342,6 +342,10 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Helper: `_timeline_when_col_key`. Leftover ``zzz`` stays
   put. Do **not** walk remaining date-vs-datetime rail
   siblings.
+- **Funnel/progress snake_case stages** (``in_progress`` as
+  the chip) closed cycle 2276 (oral #144). Helper:
+  `clerk_stage_label`. Leftover ``zzz`` stays put. Do **not**
+  walk remaining conversion-chip siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

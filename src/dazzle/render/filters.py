@@ -402,6 +402,28 @@ def _humanize_filter(value: Any) -> str:
     return text.replace("_", " ").title()
 
 
+_LEFTOVER_STAGE_TOKENS = frozenset({"zzz", "2abc", "1e2", "ghost"})
+
+
+def clerk_stage_label(value: Any) -> str:
+    """Clerk-facing funnel/progress stage label (oral #144).
+
+    Bar-chart emit already humanizes via status-badge HTML. Funnel and
+    progress dumped ``in_progress`` as the stage name. Leftover junk
+    stays put. Dual-lock emit is unchanged — builders pass clerk labels.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    text = str(value).strip()
+    if not text:
+        return text
+    if text.lower() in _LEFTOVER_STAGE_TOKENS:
+        return text
+    return _humanize_filter(text)
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):

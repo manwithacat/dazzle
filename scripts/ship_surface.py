@@ -164,6 +164,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_conversation_clock_title.py",
     # cycle 2275: timeline must rail datetime when, not hide logged_at (oral #143)
     "tests/unit/test_timeline_datetime_rail.py",
+    # cycle 2276: funnel/progress must not dump snake_case stage tokens (oral #144)
+    "tests/unit/test_funnel_stage_label.py",
+    "tests/unit/test_region_adapter.py::test_funnel_chart_renders_dedicated_primitive",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

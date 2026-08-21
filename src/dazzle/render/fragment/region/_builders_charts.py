@@ -29,6 +29,7 @@ import math
 from html import escape as _html_escape
 from typing import Any, Literal
 
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment import (
     BarChart,
     BarTrack,
@@ -727,22 +728,30 @@ class _BuildersChartsMixin:
                         counts[key] += 1
             for stage in kanban_columns:
                 key = str(stage)
-                stages.append(FunnelStage(label=key, count=counts.get(key, 0)))
+                label = clerk_stage_label(key)
+                stages.append(FunnelStage(label=label or key, count=counts.get(key, 0)))
         else:
             # Legacy fallbacks: pre-sorted buckets, or metrics list.
             for entry in ctx.get("buckets") or []:
                 if isinstance(entry, (list, tuple)) and len(entry) >= 2:
                     try:
-                        stages.append(FunnelStage(label=str(entry[0]), count=int(entry[1])))
+                        raw_label = str(entry[0])
+                        stages.append(
+                            FunnelStage(
+                                label=clerk_stage_label(raw_label) or raw_label,
+                                count=int(entry[1]),
+                            )
+                        )
                     except (TypeError, ValueError):
                         continue
             if not stages:
                 for m in ctx.get("metrics") or []:
                     if isinstance(m, dict):
                         try:
+                            raw_label = str(m.get("label") or "")
                             stages.append(
                                 FunnelStage(
-                                    label=str(m.get("label") or ""),
+                                    label=clerk_stage_label(raw_label) or raw_label,
                                     count=int(m.get("value") or 0),
                                 )
                             )

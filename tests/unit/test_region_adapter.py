@@ -2053,11 +2053,12 @@ def test_funnel_chart_renders_dedicated_primitive() -> None:
     fragment = adapter.build(_FakeRegion("f", display="funnel_chart"), ctx)
     html = _render(fragment)
     assert "dz-funnel-chart-region" in html
-    # Stages preserved in declared order: signed_up (100), verified (50), paid (25).
-    pos_signed = html.find("signed_up")
-    pos_verified = html.find("verified")
-    pos_paid = html.find("paid")
+    # Stages preserved in declared order; clerk labels (oral #144).
+    pos_signed = html.find("Signed Up")
+    pos_verified = html.find("Verified")
+    pos_paid = html.find("Paid")
     assert pos_signed < pos_verified < pos_paid
+    assert "signed_up" not in html
     # Width relative to first stage: 100% / 50% / 25%.
     assert "width: 100%" in html
     assert "width: 50%" in html
