@@ -6,7 +6,16 @@ can render MessageScroller chrome without bloating `_render_tables.py`.
 
 from __future__ import annotations
 
+import re
+
 from dazzle.render.fragment.primitives import Bubble, Message, RelatedTab
+
+# Honest clock at the tail of a datetime cell. Seconds and tz optional.
+# Linear — leftover after the clock (``15:30zzz``) fails ``$`` and stays put.
+_CONV_CLOCK_TAIL = re.compile(
+    r"(?:T| at | )(\d{1,2}:\d{2})(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?\s*$",
+    re.IGNORECASE,
+)
 
 _CONV_TEXT_KEYS = frozenset(
     {
@@ -164,17 +173,20 @@ def conversation_channel_label(raw: str) -> str:
 
 
 def conversation_time_label(raw: str) -> tuple[str, str]:
-    """Short clock label + full datetime attr from a pre-formatted cell."""
+    """Short clock label + full datetime attr from a pre-formatted cell.
+
+    Related discussion cells are already ``format_cell`` output, so en-GB
+    ``16 Jul 2026 15:30`` used to split on the first space and title the
+    month fragment ``Jul 2`` (oral #142). ISO ``T`` / Postgres space
+    timestamps still ride. Leftover junk stays put.
+    """
     text = str(raw or "").strip()
     if not text:
         return "", ""
-    sep = "T" if "T" in text else (" " if " " in text and len(text) >= 16 else "")
-    if not sep:
+    match = _CONV_CLOCK_TAIL.search(text)
+    if match is None:
         return text, text
-    clock = text.split(sep, 1)[1]
-    clock = clock.replace("Z", "").split("+", 1)[0].split("-", 1)[0]
-    label = clock[:5] if len(clock) >= 5 else clock
-    return label, text
+    return match.group(1), text
 
 
 def conversation_initials(author: str) -> str:

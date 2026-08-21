@@ -332,6 +332,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   (oral #141). Helper: `_related_proj_index` / bare ``reason``
   chrome. Leftover ``zzz`` stays put. Do **not** walk remaining
   related money-projection or generic-reason title siblings.
+- **Conversation clock month-fragment** (friendly
+  ``16 Jul 2026 15:30`` titled ``Jul 2``) closed cycle 2274
+  (oral #142). Helper: `conversation_time_label`. Leftover
+  ``zzz`` stays put. Do **not** walk remaining clock-slice
+  siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

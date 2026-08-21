@@ -43,7 +43,10 @@ from dazzle.render.fragment.region._shared import (
     _wrap_surface,
     format_primary_display,
 )
-from dazzle.render.fragment.renderer._related_conversation import conversation_bubble_tone
+from dazzle.render.fragment.renderer._related_conversation import (
+    conversation_bubble_tone,
+    conversation_time_label,
+)
 from dazzle.render.presentation import present
 from dazzle.render.user_chip import looks_like_person_ref
 
@@ -164,7 +167,11 @@ def _conversation_orientation(item: dict[str, Any]) -> str:
 
 
 def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
-    """Return (time_label, time_datetime) from common timestamp fields."""
+    """Return (time_label, time_datetime) from common timestamp fields.
+
+    Friendly profile dates and ISO/Postgres timestamps share
+    ``conversation_time_label`` (oral #142). Leftover junk stays put.
+    """
     for key in ("created_at", "timestamp", "time", "sent_at", "updated_at"):
         raw = item.get(key)
         if raw is None or raw == "":
@@ -172,16 +179,7 @@ def _conversation_time(item: dict[str, Any]) -> tuple[str, str]:
         text = str(raw).strip()
         if not text:
             continue
-        # Prefer a short clock label when ISO-ish; keep full string as datetime.
-        # Accept both ``2026-07-12T10:02:00Z`` and Postgres ``2026-07-12 10:02:00+01:00``.
-        label = text
-        sep = "T" if "T" in text else (" " if " " in text and len(text) >= 16 else "")
-        if sep:
-            clock = text.split(sep, 1)[1]
-            # Drop tz tail: 10:02:00+01:00 / 10:02:00Z → 10:02
-            clock = clock.replace("Z", "").split("+", 1)[0].split("-", 1)[0]
-            label = clock[:5] if len(clock) >= 5 else clock
-        return label, text
+        return conversation_time_label(text)
     return "", ""
 
 
