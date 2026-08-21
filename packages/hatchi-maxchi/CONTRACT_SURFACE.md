@@ -31,7 +31,7 @@ blast radius (who embeds / refuses this part).
 | `breadcrumb` | `breadcrumb` | `.dz-breadcrumb` | .dz-breadcrumb[] | — |
 | `bubble` | `bubble` | `.dz-bubble` | .dz-bubble[] | — |
 | `bulk_actions` | `bulk-actions` | `.dz-bulk-actions` | .dz-bulk-actions[] | — |
-| `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
+| `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt; unit_suffix:str:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
 | `button` | `button` | `.dz-button` | .dz-button[] | — |
 | `calendar` | `calendar` | `[data-dz-calendar]` | [data-dz-calendar][data-dz-calendar=present] | Calendar(body_html:str:opt; events:list[CalendarEvent]:opt; view:Literal:opt); CalendarEvent(label:str:req; when:str:opt) |
 | `card` | `card` | `.dz-card` | .dz-card[] | — |

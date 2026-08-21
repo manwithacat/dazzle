@@ -1609,6 +1609,16 @@ dialect formed — and where it started to Goodhart itself — is
     Live ops_dashboard ``system_alert_league``.
     Standing refusals apply.
 
+154. **Measure field dumped the number without its unit.** Cycle 2286:
+    histogram / box-plot / bullet / profile_card stats for
+    ``response_time_ms`` showed ``340`` while the sibling bar_track
+    already formatted ``{:.0f}ms``. Clerk could not tell milliseconds
+    from counts. ``clerk_measure_suffix`` / ``clerk_measure_display``
+    append ``ms`` (and the other named suffixes); leftover ``zzz`` /
+    ``1e2`` stay put. Live ops_dashboard ``response_time_distribution``
+    / ``response_time_spread`` / ``system_response_bullet`` /
+    ``system_identity``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1705,6 +1715,7 @@ the end of every new oral *is* expensive — point here instead.
 | Chart day-bucket ISO | Dump ``2026-05-18`` on chart day ticks after grid cells use the profile date; clone leftover-token stay-put, identity-dump titles, or week/month tick restyles | #150 |
 | Insight measure token | Dump ``count`` / unpluralized ``system`` as insight English after clerk_insight_*_noun exists; clone leftover-token stay-put, identity-dump titles, or heatmap 1-d | #152 |
 | Comparison whole-count 12.00 | Dump ranked integer counts as ``12.00`` after ``_fmt_num`` exists; clone leftover-token stay-put, insight citation labels, or identity-dump titles | #153 |
+| Measure unit suffix dropped | Dump ``340`` on ``*_ms`` histogram/box-plot/bullet/profile stats after ``clerk_measure_display`` exists; clone leftover-token stay-put, 12.00 counts, or identity-dump titles | #154 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1795,6 +1806,7 @@ how the handbook was learned.
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
+| One ``*_ms`` / unitless measure site after clerk_measure_display exists | Call clerk_measure_display / clerk_measure_suffix on remaining measure fields, then STOP (oral #154). Do not restyle count 12.00 or identity-dump titles as siblings |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

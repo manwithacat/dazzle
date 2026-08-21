@@ -29,7 +29,7 @@ import math
 from html import escape as _html_escape
 from typing import Any, Literal
 
-from dazzle.render.filters import clerk_stage_label
+from dazzle.render.filters import clerk_measure_suffix, clerk_stage_label
 from dazzle.render.fragment import (
     BarChart,
     BarTrack,
@@ -61,6 +61,15 @@ from dazzle.render.fragment.region._shared import (
     _region_title,
     _wrap_surface,
 )
+
+
+def _region_measure_suffix(region: Any, *field_attrs: str) -> str:
+    """Unit suffix from a region's measure field (``value:`` / ``bullet_actual:``)."""
+    for attr in field_attrs:
+        key = getattr(region, attr, None) or ""
+        if key:
+            return clerk_measure_suffix(key)
+    return ""
 
 
 def _parse_reference_lines(raw: Any) -> tuple[ReferenceLine, ...]:
@@ -354,6 +363,7 @@ class _BuildersChartsMixin:
                 samples=tuple(samples) if any_sample else (),
                 reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
                 reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
+                unit_suffix=_region_measure_suffix(region, "heatmap_value"),
             )
 
         return _wrap_surface(title, "report", body)
@@ -689,6 +699,7 @@ class _BuildersChartsMixin:
             max_value=max_value if rows else 1.0,  # invariant guard for empty
             reference_bands=_parse_reference_bands(ctx.get("reference_bands")),
             empty_message=str(empty_msg),
+            unit_suffix=_region_measure_suffix(region, "bullet_actual"),
         )
         return _wrap_surface(title, "report", body)
 
@@ -815,6 +826,7 @@ class _BuildersChartsMixin:
             bins=tuple(bins),
             reference_lines=_parse_reference_lines(ctx.get("reference_lines")),
             empty_message=str(empty_msg),
+            unit_suffix=_region_measure_suffix(region, "heatmap_value"),
         )
         return _wrap_surface(title, "report", body)
 

@@ -1048,6 +1048,7 @@ class Histogram:
     bins: tuple[HistogramBin, ...]
     reference_lines: tuple[ReferenceLine, ...] = ()
     empty_message: str = "No data available."
+    unit_suffix: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1140,6 +1141,7 @@ class Bullet:
     max_value: float
     reference_bands: tuple[ReferenceBand, ...] = ()
     empty_message: str = "No data available."
+    unit_suffix: str = ""
 
     def __post_init__(self) -> None:
         if self.max_value <= 0 and self.rows:
@@ -1441,6 +1443,7 @@ class BoxPlot:
     # is omitted so existing 6-tuple-only callers keep the prior
     # behaviour. Length must match `groups` if non-empty.
     samples: tuple[int, ...] = ()
+    unit_suffix: str = ""
 
     def __post_init__(self) -> None:
         if not self.groups:

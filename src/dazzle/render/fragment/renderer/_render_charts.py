@@ -373,6 +373,7 @@ class _RenderChartsMixin:
             b.groups,
             reference_lines=b.reference_lines,
             samples=b.samples,
+            unit_suffix=b.unit_suffix,
         )
         samples = b.samples if b.samples else (0,) * len(b.groups)
         return render_box_plot(
@@ -402,6 +403,7 @@ class _RenderChartsMixin:
                     BulletRowSeam(label=r.label, actual=r.actual, target=r.target) for r in b.rows
                 ],
                 max_value=b.max_value,
+                unit_suffix=b.unit_suffix,
                 bands=[
                     BulletBandSeam(
                         from_value=band.from_value,
@@ -714,7 +716,12 @@ class _RenderChartsMixin:
             )
 
         svg_bins = tuple((b.label, b.count, b.low, b.high) for b in h.bins)
-        svg = histogram_svg(h.label, svg_bins, reference_lines=h.reference_lines)
+        svg = histogram_svg(
+            h.label,
+            svg_bins,
+            reference_lines=h.reference_lines,
+            unit_suffix=h.unit_suffix,
+        )
         return render_histogram(
             HistogramSeam(
                 label=h.label,

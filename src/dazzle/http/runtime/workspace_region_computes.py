@@ -25,6 +25,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
+from dazzle.render.filters import clerk_measure_display
 from dazzle.render.fragment.insight import (
     InsightNarrative,
     build_insight_narrative,
@@ -696,7 +697,7 @@ def compute_profile_card(
         "stats": [
             {
                 "label": stat["label"],
-                "value": str(_resolve_path(item, stat["value"]) or ""),
+                "value": clerk_measure_display(_resolve_path(item, stat["value"]), stat["value"]),
             }
             for stat in stats_specs
         ],

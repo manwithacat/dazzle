@@ -366,6 +366,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   ``12.00``) closed cycle 2285 (oral #153). Helper:
   `_fmt_num`. Leftover ``zzz`` labels stay put. Do **not**
   walk remaining two-decimal count siblings.
+- **Measure unit suffix dropped** (``response_time_ms`` dumped
+  ``340`` while bar_track already said ``340ms``) closed cycle
+  2286 (oral #154). Helper: `clerk_measure_display` /
+  `clerk_measure_suffix`. Leftover ``zzz`` stays put. Do
+  **not** walk remaining ``*_ms`` / ``*_seconds`` sites.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

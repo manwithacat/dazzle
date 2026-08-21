@@ -470,6 +470,7 @@ class Bullet(BaseModel):
     max_value: float = 100.0
     bands: list[BulletBand] = Field(default_factory=list)
     empty_message: str = "No data available."
+    unit_suffix: str = ""
 
 
 # ── Bar-track seam copy (contracts/bar_track.py) ─────────────────────

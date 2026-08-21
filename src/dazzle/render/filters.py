@@ -424,6 +424,61 @@ def clerk_stage_label(value: Any) -> str:
     return _humanize_filter(text)
 
 
+# Longest-first so ``_milliseconds`` wins over ``_ms``.
+_MEASURE_FIELD_SUFFIXES: tuple[tuple[str, str], ...] = (
+    ("_milliseconds", "ms"),
+    ("_millis", "ms"),
+    ("_ms", "ms"),
+    ("_seconds", "s"),
+    ("_secs", "s"),
+    ("_minutes", "min"),
+    ("_mins", "min"),
+    ("_hours", "h"),
+    ("_hrs", "h"),
+    ("_percent", "%"),
+    ("_pct", "%"),
+)
+
+
+def clerk_measure_suffix(field_key: Any) -> str:
+    """Unit suffix implied by a measure field name (oral #154).
+
+    ``response_time_ms`` → ``ms``. Leftover field tokens stay unitless.
+    """
+    key = str(field_key or "").strip()
+    if not key or key.lower() in _LEFTOVER_STAGE_TOKENS:
+        return ""
+    lower = key.lower()
+    for suffix, unit in _MEASURE_FIELD_SUFFIXES:
+        if lower.endswith(suffix):
+            return unit
+    return ""
+
+
+def clerk_measure_display(value: Any, field_key: Any = "") -> str:
+    """Clerk-facing measure: ``340ms`` not unitless ``340`` (oral #154).
+
+    Leftover junk stays put (including scientific ``1e2``). Unknown
+    fields stay unitless. Zero is ``0ms``, not empty.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lower() in _LEFTOVER_STAGE_TOKENS:
+            return value
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return str(value)
+    rounded = round(number, 1)
+    shown = str(int(rounded)) if rounded == int(rounded) else str(rounded)
+    suffix = clerk_measure_suffix(field_key)
+    return f"{shown}{suffix}" if suffix else shown
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):

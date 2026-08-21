@@ -32,6 +32,12 @@ _LINE_DASHARRAY: dict[str, str] = {
     "dotted": "1,3",
 }
 
+
+def _with_unit(shown: str, unit_suffix: str = "") -> str:
+    """Append a measure unit when the host named a ``*_ms`` (etc.) field."""
+    return f"{shown}{unit_suffix}" if unit_suffix else shown
+
+
 # Reference-band fills — keys match `ReferenceBand.color`. Token-driven
 # so the rendered SVG inherits the design palette.
 _BAND_COLORS: dict[str, str] = {
@@ -407,6 +413,7 @@ def box_plot_svg(
     *,
     reference_lines: tuple[Any, ...] = (),
     samples: tuple[int, ...] = (),
+    unit_suffix: str = "",
 ) -> str:
     """Produce inline SVG for a BoxPlot primitive.
 
@@ -465,7 +472,8 @@ def box_plot_svg(
         f'viewBox="0 0 {w} {h}" '
         f'class="dz-box-plot-svg" role="img" '
         f'aria-label="{_escape(label, quote=True)} box plot — '
-        f'{count} groups, range {round(y_min, 1)}–{round(y_max, 1)}">',
+        f"{count} groups, range {_with_unit(str(round(y_min, 1)), unit_suffix)}"
+        f'–{_with_unit(str(round(y_max, 1)), unit_suffix)}">',
         # Baseline + Y-axis lines.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
@@ -478,12 +486,12 @@ def box_plot_svg(
         f'text-anchor="end" font-size="9" '
         f'fill="var(--colour-text-muted)" '
         f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
-        f"{round(y_min, 1)}</text>",
+        f"{_with_unit(str(round(y_min, 1)), unit_suffix)}</text>",
         f'<text x="{pl - 4}" y="{pt + 4}" '
         f'text-anchor="end" font-size="9" '
         f'fill="var(--colour-text-muted)" '
         f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
-        f"{round(y_max, 1)}</text>",
+        f"{_with_unit(str(round(y_max, 1)), unit_suffix)}</text>",
     ]
 
     def _fmt_stat(val: float) -> str:
@@ -500,7 +508,7 @@ def box_plot_svg(
         label_dx: float,
     ) -> str:
         """Key-point hit target + figure shown on hover (CSS, no JS)."""
-        shown = _fmt_stat(value)
+        shown = _with_unit(_fmt_stat(value), unit_suffix)
         role_title = role.replace("_", " ")
         lx = round(cx + label_dx, 2)
         ly = round(cy + 3, 2)
@@ -560,8 +568,10 @@ def box_plot_svg(
             f'width="{round(box_w, 2)}" height="{box_h}" '
             f'fill="var(--colour-brand)" fill-opacity="0.18" '
             f'stroke="var(--colour-brand)" stroke-width="1">'
-            f"<title>{_escape(group_label)}: Q1 {round(q1, 1)}, "
-            f"median {round(median, 1)}, Q3 {round(q3, 1)}"
+            f"<title>{_escape(group_label)}: "
+            f"Q1 {_with_unit(str(round(q1, 1)), unit_suffix)}, "
+            f"median {_with_unit(str(round(median, 1)), unit_suffix)}, "
+            f"Q3 {_with_unit(str(round(q3, 1)), unit_suffix)}"
             f"{n_suffix}</title>"
             f"</rect>"
         )
@@ -606,7 +616,7 @@ def box_plot_svg(
             f'x2="{pl + plot_w}" y2="{ref_y}" '
             f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
-            f"<title>{_escape(ref.label)}: {ref.value}</title>"
+            f"<title>{_escape(ref.label)}: {_with_unit(_fmt_stat(ref.value), unit_suffix)}</title>"
             f"</line>"
         )
 
@@ -754,6 +764,7 @@ def histogram_svg(
     bins: tuple[tuple[str, int, float, float], ...],
     *,
     reference_lines: tuple[Any, ...] = (),
+    unit_suffix: str = "",
 ) -> str:
     """Produce inline SVG for a Histogram primitive.
 
@@ -831,7 +842,7 @@ def histogram_svg(
             f'x2="{ref_x}" y2="{pt + plot_h}" '
             f'stroke="var(--colour-text-muted)" '
             f'stroke-width="1" stroke-dasharray="{dasharray}">'
-            f"<title>{_escape(ref.label)}: {ref_value_str}</title>"
+            f"<title>{_escape(ref.label)}: {_with_unit(ref_value_str, unit_suffix)}</title>"
             f"</line>"
         )
         parts.append(
@@ -861,7 +872,7 @@ def histogram_svg(
                 f'text-anchor="middle" font-size="9" '
                 f'fill="var(--colour-text-muted)" '
                 f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
-                f"{low_str}</text>"
+                f"{_with_unit(low_str, unit_suffix)}</text>"
             )
 
     parts.append("</svg>")
