@@ -1574,6 +1574,14 @@ dialect formed — and where it started to Goodhart itself — is
     is not another title-pick or snake_case humanize.
     Standing refusals apply.
 
+150. **Chart day-bucket dumps ISO storage date.** Cycle 2282:
+    ``_format_bucket_label(..., "day")`` emitted ``2026-05-18``
+    on line/sparkline/area x-axis ticks while grid cells already
+    show ``18 May 2026`` via DisplayLocaleProfile. Day buckets
+    now call ``format_date_value``; leftover ``zzz`` stays put;
+    week/month/quarter stay compact ticks. Live ops_dashboard
+    ``alerts_timeseries``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1667,6 +1675,7 @@ the end of every new oral *is* expensive — point here instead.
 | Workspace enum FilterBar snake_case | Dump ``in_progress`` on workspace enum filters after the grid says In Progress; clone leftover-token stay-put, bool FilterBar labels, conversion chips, or kanban enum titles | #147 |
 | Stacked area legend snake_case | Dump ``critical`` / ``in_progress`` as area-chart series names after bar-chart badges already humanize; clone leftover-token stay-put, FilterBar labels, or conversion chips | #148 |
 | Identity-dump title/label siblings | Walk another queue title / chart legend / FilterBar token after the identity helpers exist | #149 |
+| Chart day-bucket ISO | Dump ``2026-05-18`` on chart day ticks after grid cells use the profile date; clone leftover-token stay-put, identity-dump titles, or week/month tick restyles | #150 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1754,6 +1763,7 @@ how the handbook was learned.
 | One workspace enum FilterBar token after enum_filter_options exists | Call enum_filter_options / clerk_stage_label on remaining badge filters, then STOP (oral #147) |
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
+| One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

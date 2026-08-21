@@ -911,13 +911,13 @@ class TestTimeBucketedAggregates:
         )
         assert rows == [
             {
-                "label": "2026-04-21",
+                "label": "21 Apr 2026",
                 "value": 3,
                 "metrics": {"count": 3},
                 "bucket": "2026-04-21T00:00:00",
             },
             {
-                "label": "2026-04-22",
+                "label": "22 Apr 2026",
                 "value": 7,
                 "metrics": {"count": 7},
                 "bucket": "2026-04-22T00:00:00",
@@ -1020,7 +1020,7 @@ class TestTimeBucketedAggregates:
         from dazzle.http.runtime.workspace_aggregation import _format_bucket_label
 
         d = dt.datetime(2026, 5, 18, 14, 30)  # Monday, week 21
-        assert _format_bucket_label(d, "day") == "2026-05-18"
+        assert _format_bucket_label(d, "day") == "18 May 2026"
         assert _format_bucket_label(d, "week") == "2026-W21"
         assert _format_bucket_label(d, "month") == "May 2026"
         assert _format_bucket_label(d, "quarter") == "Q2 2026"

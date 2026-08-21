@@ -51,6 +51,7 @@ from dazzle.http.runtime.tenant_isolation import (
     get_current_host_tenant_id,
     get_current_rls_user_attrs,
 )
+from dazzle.i18n.display_locale import get_display_locale
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.render.display_names import _resolve_display_name
 
@@ -130,30 +131,29 @@ def _substitute_current_bucket(expr: Any, bucket_key: str) -> Any:
 
 
 def _format_bucket_label(value: Any, unit: str) -> str:
-    """Render a time-bucket SQL value as a human-readable string.
+    """Render a time-bucket SQL value as a clerk-facing chart tick.
 
     ``date_trunc`` returns a datetime object (or tz-aware datetime on
-    timestamptz columns). We emit a stable, locale-free label per unit
-    so templates, snapshot tests, and charts all agree.
+    timestamptz columns). Day buckets use the display-locale calendar
+    label (same path as grid cells — oral #150) so line/sparkline/area
+    axes do not dump ISO ``2026-05-18`` while the clerk's list shows
+    ``18 May 2026``. Week/month/quarter/year stay compact chart ticks.
 
-        day     → ``2026-04-23``
+        day     → profile date (en-GB default ``18 May 2026``)
         week    → ``2026-W17``    (ISO week — Monday start)
         month   → ``Apr 2026``
         quarter → ``Q2 2026``
         year    → ``2026``
 
-    Non-datetime / None values pass through as ``str(value)`` — the caller
-    is responsible for deciding whether a null time bucket deserves a
-    placeholder or should be filtered out.
+    Non-datetime / None values pass through as ``str(value)`` — leftover
+    junk stays put.
     """
     if value is None:
         return ""
     if not isinstance(value, _dt.datetime | _dt.date):
         return str(value)
-    # date (from date_trunc on a date column) vs datetime — both have
-    # the strftime hooks we need.
     if unit == "day":
-        return value.strftime("%Y-%m-%d")
+        return get_display_locale().format_date_value(value)
     if unit == "week":
         # ISO week format — `%G` is ISO year, `%V` is ISO week number.
         return value.strftime("%G-W%V")
