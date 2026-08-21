@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import html as _html_mod
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 # #1626 R5 / P0-8 — palette chips on brand desks (list + queue + card).
@@ -347,18 +347,85 @@ _QUEUE_IDENTITY_HEADERS = frozenset(
         "label",
         "message",
         "subject",
+        "scope summary",
+        "suggested response",
+    }
+)
+_QUEUE_IDENTITY_KEYS: tuple[str, ...] = (
+    "title",
+    "name",
+    "subject",
+    "headline",
+    "notes",
+    "body",
+    "comment",
+    "content",
+    "summary",
+    "label",
+    "failure_reason",
+    "message",
+    "description",
+    "scope_summary",
+    "suggested_response",
+)
+_RISK_TITLE_KEYS = frozenset(
+    {
+        "severity",
+        "priority",
+        "category",
+        "environment",
+        "rating",
+        "score",
+        "quality_score",
+        "confidence",
+        "skill_level",
+        "customer_tone",
     }
 )
 
 
+def _norm_title_key(key: str) -> str:
+    return (key or "").strip().lower().replace(" ", "_")
+
+
 def is_sequence_title_key(key: str) -> bool:
     """True when ``key`` is sequence/count chrome, not row identity (oral #140)."""
-    k = (key or "").strip().lower().replace(" ", "_")
-    if not k:
-        return False
-    if k in _SEQUENCE_TITLE_KEYS:
-        return True
-    return k.endswith(("_count", "_qty", "_rank", "_index"))
+    k = _norm_title_key(key)
+    return bool(k) and (
+        k in _SEQUENCE_TITLE_KEYS or k.endswith(("_count", "_qty", "_rank", "_index"))
+    )
+
+
+def is_risk_title_key(key: str) -> bool:
+    """True when ``key`` is severity/environment chrome, not row identity (oral #145)."""
+    k = _norm_title_key(key)
+    return bool(k) and (
+        k in _RISK_TITLE_KEYS or k.endswith(("_severity", "_priority", "_score", "_rating"))
+    )
+
+
+def related_queue_columns_omit_identity(column_keys: Iterable[Any]) -> bool:
+    """True when related ``columns:`` listed no clerk identity field."""
+    keys = {str(k or "").strip().lower() for k in column_keys}
+    return not bool(keys & {k.lower() for k in _QUEUE_IDENTITY_KEYS})
+
+
+def related_queue_identity_from_record(record: Any) -> str:
+    """First non-empty identity field on a related row dict.
+
+    Device hub IssueReport queues listed ``severity, status, category``
+    and hid ``description`` (oral #145). Leftover junk stays put.
+    """
+    if not isinstance(record, dict):
+        return ""
+    for key in _QUEUE_IDENTITY_KEYS:
+        raw = record.get(key)
+        if raw is None or isinstance(raw, dict):
+            continue
+        text = str(raw).strip()
+        if text:
+            return text
+    return ""
 
 
 def _is_status_header(header: str) -> bool:
@@ -380,6 +447,8 @@ def _is_queue_title_chrome(header: str, raw: str) -> bool:
     if _is_status_header(header) or _is_date_header(header) or _looks_uuid_cell(raw):
         return True
     if _is_reason_header(header):
+        return True
+    if is_risk_title_key(header):
         return True
     return is_sequence_title_key(header)
 
@@ -404,8 +473,8 @@ def related_queue_title_and_meta(
 
     Related payment queues used to take the first column, so invoice hub
     attempts titled ``1`` and hid ``card_declined`` (oral #140). Sequence
-    numbers, status badges, dates, and bare ``reason`` enums stay meta.
-    Leftover junk stays put.
+    numbers, status badges, dates, bare ``reason`` enums, and risk tokens
+    (severity / environment) stay meta. Leftover junk stays put.
     """
     pairs = _related_file_pairs(cells, headers)
     title = _pick_related_queue_title(pairs)

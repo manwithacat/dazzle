@@ -1519,6 +1519,18 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #121). Not timeline datetime rail (oral #143). Not
     kanban enum-as-title (oral #138). Standing refusals apply.
 
+145. **Related queue titled severity / environment.** Cycle
+    2277: Device hub IssueReport queues listed
+    ``severity, status, category`` and hid ``description``, so
+    cards titled ``critical``. Tester activity mixed
+    environment/severity the same way. Identity omitted from
+    related ``columns:`` is injected as ``Title`` from the row
+    (notes / description). Risk tokens stay meta. Leftover
+    ``zzz`` stays put. Not leftover-token stay-put (oral #121).
+    Not kanban enum-as-title (oral #138). Not sequence titles
+    (oral #140). Live fieldtest_hub device hub issues.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1607,6 +1619,7 @@ the end of every new oral *is* expensive — point here instead.
 | Conversation clock month-fragment | Title related/workspace discussion as ``Jul 2`` from a friendly datetime; clone leftover-token stay-put or related title-walks | #142 |
 | Timeline datetime rail skipped | Hide when on ``display: timeline`` because ``logged_at`` is ``datetime`` not ``date``; clone leftover-token stay-put, conversation clock slices, or duration titles | #143 |
 | Funnel/progress snake_case stages | Dump ``in_progress`` on funnel/progress after bar-chart already humanizes; clone leftover-token stay-put, kanban enum titles, or datetime rail | #144 |
+| Related queue severity-as-title | Title issue/session queues as ``critical`` / ``indoor`` after related columns omit description/notes; clone leftover-token stay-put, kanban enum titles, or sequence titles | #145 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1690,6 +1703,7 @@ how the handbook was learned.
 | One related/workspace conversation clock slice after conversation_time_label exists | Call conversation_time_label on remaining discussion trails, then STOP (oral #142) |
 | One timeline date-only rail after _timeline_when_col_key exists | Call _timeline_when_col_key on remaining chronological rails, then STOP (oral #143) |
 | One funnel/progress stage token after clerk_stage_label exists | Call clerk_stage_label on remaining conversion/progress chips, then STOP (oral #144) |
+| One related queue severity/environment title after identity inject exists | Call related_queue_identity_from_record on remaining risk-first related queues, then STOP (oral #145) |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

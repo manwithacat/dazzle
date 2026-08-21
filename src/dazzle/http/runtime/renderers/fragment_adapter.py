@@ -15,6 +15,7 @@ from typing import Any
 
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
+from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.fragment import (
     URL,
@@ -38,7 +39,6 @@ from dazzle.render.fragment import (
     RawHTML,
     Region,
     RelatedGroup,
-    RelatedTab,
     Row,
     SearchBox,
     SlideOver,
@@ -642,60 +642,16 @@ class FragmentSurfaceAdapter:
         """ADR-0049 Phase 2 Task 3a: build a `RelatedGroup` primitive from the
         fetched related-group ctx. Cells are formatted via `_format_cell`
         (typed); drill + create hrefs are pre-built here (page-free renderer)."""
-        tabs: list[RelatedTab] = []
-        for tab in group.get("tabs", []) or []:
-            cols = tab.get("columns", []) or []
-            headers = tuple(str(c.get("label", c.get("key", ""))) for c in cols)
-            rows: list[tuple[str, ...]] = []
-            drills: list[str] = []
-            tmpl = str(tab.get("detail_url_template", "") or "")
-            for record in tab.get("rows", []) or []:
-                rec = record if isinstance(record, dict) else {}
-                cells = tuple(
-                    _format_cell(
-                        rec.get(c.get("key", "")),
-                        str(c.get("type", "text") or "text"),
-                        str(c.get("currency_code", "") or ""),
-                        "",
-                        "",
-                    )
-                    for c in cols
-                )
-                rows.append(cells)
-                rid = str(rec.get("id", "") or "")
-                drills.append(tmpl.replace("{id}", rid) if (tmpl and rid) else "")
-            create_url = str(tab.get("create_url", "") or "")
-            create_href = create_action = create_label = ""
-            if create_url:
-                sep = "&" if "?" in create_url else "?"
-                filter_field = str(tab.get("filter_field", "") or "")
-                create_href = f"{create_url}{sep}{filter_field}={item_id}"
-                ftf = str(tab.get("filter_type_field", "") or "")
-                if ftf:
-                    create_href += f"&{ftf}={tab.get('filter_type_value', '') or ''}"
-                create_action = f"{tab.get('entity_name', '') or ''}.create"
-                create_label = str(tab.get("label", "") or "")
-            total = int(tab.get("total", 0) or 0)
-            if total < len(rows):
-                total = len(rows)
-            tabs.append(
-                RelatedTab(
-                    tab_id=str(tab.get("tab_id", "") or ""),
-                    label=str(tab.get("label", "") or ""),
-                    headers=headers,
-                    rows=tuple(rows),
-                    row_drill=tuple(drills),
-                    create_href=create_href,
-                    create_action=create_action,
-                    create_label=create_label,
-                    total=total,
-                )
-            )
+        display = str(group.get("display", "table") or "table")
+        tabs = tuple(
+            related_tab_from_ctx(tab, item_id, display=display)
+            for tab in (group.get("tabs", []) or [])
+        )
         return RelatedGroup(
             group_id=str(group.get("group_id", "") or ""),
             label=str(group.get("label", "") or ""),
-            display=str(group.get("display", "table") or "table"),
-            tabs=tuple(tabs),
+            display=display,
+            tabs=tabs,
             is_auto=bool(group.get("is_auto", False)),
             active_tab=str(group.get("active_tab", "") or ""),
         )
