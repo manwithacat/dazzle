@@ -27,6 +27,7 @@ from dazzle.render.cell_chrome import (
 )
 from dazzle.render.filters import (
     _ref_display_name,
+    _timeago_filter,
     clerk_percent_points_display,
     clerk_percent_points_field,
 )
@@ -81,6 +82,9 @@ from dazzle.render.presentation import infer_role, present
 
 # Cap queue meta density lines so rows stay scannable (#1626).
 _QUEUE_META_MAX = 3
+# Date columns already timeago on queues; datetime/time used to dump
+# storage ISO on the meta line (oral #156).
+_QUEUE_WHEN_COL_TYPES = frozenset({"date", "datetime", "time"})
 
 
 def _ref_dict_has_display_substance(raw: dict[str, Any]) -> bool:
@@ -136,6 +140,8 @@ def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
     # Color meta uses HTML swatch in the row renderer — not this plain string path.
     if col_type == "color":
         return _human_queue_meta_text(raw)
+    if col_type in _QUEUE_WHEN_COL_TYPES:
+        return _timeago_filter(raw)
     if key.endswith("_minor"):
         return format_minor_money_display(raw, currency_code=_minor_currency_code(col))
     if col_type in ("currency", "money") or "currency" in fmt:
@@ -207,7 +213,7 @@ def _queue_row_meta_columns(
     columns once folded.
     """
     meta: list[QueueMetaColumn] = []
-    skip_types = frozenset({"badge", "date"})
+    skip_types = frozenset({"badge", *_QUEUE_WHEN_COL_TYPES})
     col_list = [c for c in (columns or []) if isinstance(c, dict)]
     currency_code = ""
     currency_keys: set[str] = set()
@@ -735,10 +741,7 @@ class _BuildersTablesMixin:
             queue_api_endpoint: str URL — base URL for transitions
                 (transitions PUT to f"{queue_api_endpoint}/{item.id}")
         """
-        from dazzle.render.filters import (
-            _metric_number_filter,
-            _timeago_filter,
-        )
+        from dazzle.render.filters import _metric_number_filter
 
         title = _region_title(region)
         items = ctx.get("items", []) or []
@@ -822,12 +825,13 @@ class _BuildersTablesMixin:
                 if col.get("type") == "badge":
                     badges.append(QueueBadgeColumn(key=key, value=item.get(key)))
 
-            # Date secondaries = columns with type=="date" and a non-empty value.
+            # When-secondaries: date *and* datetime (oral #156). Date-only
+            # already timeago'd; datetime used to dump storage ISO on meta.
             date_columns: list[QueueDateColumn] = []
             for col in columns:
                 if not isinstance(col, dict):
                     continue
-                if col.get("type") != "date":
+                if str(col.get("type") or "").lower() not in _QUEUE_WHEN_COL_TYPES:
                     continue
                 key = str(col.get("key") or "")
                 val = item.get(key)

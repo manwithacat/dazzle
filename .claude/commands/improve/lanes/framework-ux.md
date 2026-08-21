@@ -371,6 +371,16 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   2286 (oral #154). Helper: `clerk_measure_display` /
   `clerk_measure_suffix`. Leftover ``zzz`` stays put. Do
   **not** walk remaining ``*_ms`` / ``*_seconds`` sites.
+- **Percent-points rate dumped unitless** (``error_rate`` dumped
+  ``2.40``) closed cycle 2288 (oral #155). Helper:
+  `clerk_percent_points_display`. Leftover ``zzz`` stays put.
+  Do **not** walk remaining percent-points cells.
+- **Queue datetime storage ISO** (``triggered_at`` dumped
+  ``2026-05-18 14:30:00+00:00`` on meta while date columns
+  already timeago) closed cycle 2290 (oral #156). Helper:
+  `_QUEUE_WHEN_COL_TYPES` + `_timeago_filter`. Leftover
+  ``zzz`` stays put. Do **not** walk remaining queue
+  datetime siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -1631,6 +1631,14 @@ dialect formed — and where it started to Goodhart itself — is
     (``pct`` → ``42`` red the #1505 row fixtures). Pass ``typed=True``.
     Standing refusals apply.
 
+156. **Queue datetime dumped storage ISO.** Cycle 2290: date columns
+    already timeago on queues, but ``type=datetime`` (ops
+    ``triggered_at`` / ``last_check``) skipped that path and landed
+    on meta as ``2026-05-18 14:30:00+00:00`` while the grid cell
+    already shows the profile clock. ``_QUEUE_WHEN_COL_TYPES``
+    timeago's date *and* datetime; leftover ``zzz`` stays put.
+    Live ops_dashboard ``ack_queue``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1729,6 +1737,7 @@ the end of every new oral *is* expensive — point here instead.
 | Comparison whole-count 12.00 | Dump ranked integer counts as ``12.00`` after ``_fmt_num`` exists; clone leftover-token stay-put, insight citation labels, or identity-dump titles | #153 |
 | Measure unit suffix dropped | Dump ``340`` on ``*_ms`` histogram/box-plot/bullet/profile stats after ``clerk_measure_display`` exists; clone leftover-token stay-put, 12.00 counts, or identity-dump titles | #154 |
 | Percent-points rate dumped unitless | Dump ``2.40`` on ``*_rate`` / ``*_usage`` list/queue cells, or strip ``%`` from typed ``percentage`` columns, after ``clerk_percent_points_display`` exists; clone leftover-token stay-put, remaining ``*_ms`` sites, or 12.00 counts | #155 |
+| Queue datetime storage ISO | Dump ``2026-05-18 14:30:00+00:00`` on queue meta after date columns already timeago; clone leftover-token stay-put, remaining ``*_ms`` sites, or percent-points cells | #156 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
