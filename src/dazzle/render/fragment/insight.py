@@ -13,9 +13,56 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
+from dazzle.core.strings import pluralize, to_api_plural
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.outliers import flag_outliers
 
 _ADDITIVE = {"count", "sum"}
+_LEFTOVER_MEASURE_TOKENS = frozenset({"zzz", "2abc", "1e2", "ghost"})
+_GENERIC_MEASURE_KEYS = frozenset({"count", "sum", "avg", "min", "max", "value", "total"})
+
+
+def clerk_insight_measure_noun(
+    measure_name: str,
+    measure_func: str = "",
+    entity: str = "",
+) -> str:
+    """Clerk-facing insight measure noun (oral #152).
+
+    ``display: insight_summary`` dumped the aggregate key ``count`` as
+    English (``12 count across 5 system``). Count aggregates use the
+    source entity plural (``alerts``). Leftover junk stays put.
+    """
+    name = str(measure_name or "").strip()
+    if name.lower() in _LEFTOVER_MEASURE_TOKENS:
+        return name
+    func = str(measure_func or "").strip().lower()
+    if (func == "count" or name.lower() in _GENERIC_MEASURE_KEYS) and entity:
+        return to_api_plural(entity)
+    if name.lower() == "count":
+        return "items"
+    if not name:
+        return "items"
+    human = clerk_stage_label(name)
+    return human.lower() if human else name
+
+
+def clerk_insight_group_noun(group_by: str) -> str:
+    """Clerk-facing insight group noun (oral #152).
+
+    Orchestration used the raw ``group_by`` field (``system``) so the
+    scale line said ``across 5 system``. Pluralize the last word.
+    Leftover junk stays put.
+    """
+    text = str(group_by or "").strip()
+    if not text or text.lower() in _LEFTOVER_MEASURE_TOKENS:
+        return text
+    words = text.replace("_", " ").split()
+    if not words:
+        return text
+    words[-1] = pluralize(words[-1]).lower()
+    words[:-1] = [w.lower() for w in words[:-1]]
+    return " ".join(words)
 
 
 @dataclass(frozen=True, slots=True)

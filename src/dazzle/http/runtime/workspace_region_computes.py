@@ -25,7 +25,11 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
-from dazzle.render.fragment.insight import InsightNarrative, build_insight_narrative
+from dazzle.render.fragment.insight import (
+    InsightNarrative,
+    build_insight_narrative,
+    clerk_insight_measure_noun,
+)
 from dazzle.render.fragment.outliers import Flag, flag_outliers
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_id,
@@ -201,6 +205,7 @@ def build_insight_inputs(
         next(iter(aggregates.items()), ("value", None)),
     )
     measure_func = getattr(ref, "func", "") or ""
+    entity = getattr(ref, "entity", "") or ""
     records = [
         {
             "label": b.get("label"),
@@ -210,7 +215,7 @@ def build_insight_inputs(
     ]
     return build_insight_narrative(
         records,
-        measure_name=measure_name,
+        measure_name=clerk_insight_measure_noun(str(measure_name), measure_func, str(entity)),
         measure_func=measure_func,
         group_label=group_label,
         scope_desc=scope_desc,

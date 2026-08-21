@@ -64,6 +64,7 @@ from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import RegionRenderInputs
 from dazzle.page.runtime.action_urls import fill_row_id_in_url
+from dazzle.render.fragment.insight import clerk_insight_group_noun
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_catalog_id
 
 logger = logging.getLogger(__name__)
@@ -413,7 +414,7 @@ async def compute_region_render_inputs(
     # Insight summary (#1470): deterministic narrative over the grouped aggregate.
     if display == "INSIGHT_SUMMARY" and group_by and bucketed_metrics:
         _gb = group_by if isinstance(group_by, str) else str(group_by)
-        group_label = _gb.replace("_", " ")
+        group_label = clerk_insight_group_noun(_gb)
         scope_desc = f"across all {group_label}"
         if getattr(ctx.ir_region, "filter", None) is not None:
             scope_desc += " (filtered)"

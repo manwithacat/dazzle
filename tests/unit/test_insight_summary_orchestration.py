@@ -24,7 +24,10 @@ def test_build_insight_inputs_picks_first_aggregate() -> None:
         scope_desc="across all teams",
         outlier_spec=_SPEC,
     )
-    assert nar.lines and "across 2 teams" in " ".join(nar.lines)
+    joined = " ".join(nar.lines)
+    assert nar.lines and "across 2 teams" in joined
+    assert "alerts" in joined
+    assert " count " not in f" {joined} "
     assert ("Platform", 12.0) in nar.citations
 
 
@@ -68,6 +71,8 @@ def test_prefers_aggregate_with_func_over_derived() -> None:
         scope_desc="across all teams",
         outlier_spec=_SPEC,
     )
-    # count is additive → narrates "10 ... across" with a %, and cites the count values.
-    assert "10" in " ".join(nar.lines) and "%" in " ".join(nar.lines)
+    # count is additive → narrates "10 alerts ... across" with a %, and cites the count values.
+    joined = " ".join(nar.lines)
+    assert "10 alerts" in joined and "%" in joined
+    assert " count " not in f" {joined} "
     assert ("A", 8.0) in nar.citations

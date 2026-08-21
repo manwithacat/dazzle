@@ -1592,6 +1592,14 @@ dialect formed — and where it started to Goodhart itself — is
     Leftover ``zzz`` stays put as a column. Live ops_dashboard
     ``alert_heatmap``. Standing refusals apply.
 
+152. **Insight dumped aggregate key ``count`` as English.** Cycle
+    2284: ``display: insight_summary`` ``aggregate: count: count(Alert)``
+    narrated ``12 count across 5 system`` while the clerk already
+    knows they are alerts grouped by systems. Measure noun is the
+    counted entity plural; group noun is the plural field. Leftover
+    ``zzz`` stays put. Live ops_dashboard ``alert_insight``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1686,6 +1694,7 @@ the end of every new oral *is* expensive — point here instead.
 | Stacked area legend snake_case | Dump ``critical`` / ``in_progress`` as area-chart series names after bar-chart badges already humanize; clone leftover-token stay-put, FilterBar labels, or conversion chips | #148 |
 | Identity-dump title/label siblings | Walk another queue title / chart legend / FilterBar token after the identity helpers exist | #149 |
 | Chart day-bucket ISO | Dump ``2026-05-18`` on chart day ticks after grid cells use the profile date; clone leftover-token stay-put, identity-dump titles, or week/month tick restyles | #150 |
+| Insight measure token | Dump ``count`` / unpluralized ``system`` as insight English after clerk_insight_*_noun exists; clone leftover-token stay-put, identity-dump titles, or heatmap 1-d | #152 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1775,6 +1784,7 @@ how the handbook was learned.
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
+| One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
