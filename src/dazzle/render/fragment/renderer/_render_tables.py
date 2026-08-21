@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dazzle.render.cell_chrome import related_card_media_and_text
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
@@ -640,10 +641,15 @@ class _RenderTablesMixin:
                 )
                 items.append(f'<div class="dz-related-file-row"{attrs}>{lines}</div>')
             else:
-                lines = "".join(
+                # Image URLs are thumbs, not the card title (oral #135).
+                thumb, texts = related_card_media_and_text(row, limit=3)
+                lines = ""
+                if thumb:
+                    lines += f'<div class="dz-related-status-card-media">{thumb}</div>'
+                lines += "".join(
                     f'<div class="dz-related-status-card-'
                     f'{"primary" if j == 0 else "secondary"}">{ctx.escape(c)}</div>'
-                    for j, c in enumerate(row[:3])
+                    for j, c in enumerate(texts)
                 )
                 items.append(f'<div class="dz-related-status-card"{attrs}>{lines}</div>')
         if items:

@@ -138,6 +138,11 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2264: walk login must read __Host-/__Secure- session cookies (#1652, oral #133)
     "tests/unit/test_session_manager.py::TestSessionTokenFromLoginResponse",
     "tests/unit/test_session_manager.py::TestSessionManagerAsync::test_create_session_login_reads_host_session_cookie",
+    # cycle 2267: related status_cards must not dump preview_url as title (oral #135)
+    "tests/unit/test_media_thumb_goal_b.py::test_related_card_preview_url_is_thumb_not_title",
+    "tests/unit/test_media_thumb_goal_b.py::test_related_card_leftover_url_stays_put",
+    "tests/unit/test_related_groups_substrate_phase2.py::test_status_cards_preview_url_is_thumb_not_primary",
+    "tests/unit/test_related_groups_substrate_phase2.py::test_status_cards_leftover_preview_stays_put",
     # cycle 2265: plain-file pdf_viewer must not invent PDF.js on .md/.xlsx (oral #134)
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_markdown_does_not_invent_pdf_chrome",
     "tests/unit/test_pdf_viewer_dsl_hook.py::TestTypedRenderer::test_plain_pdf_filename_keeps_pdf_chrome",

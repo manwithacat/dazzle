@@ -1429,6 +1429,13 @@ dialect formed — and where it started to Goodhart itself — is
     keeps the viewer; anything else (including leftover ``zzz``)
     is a download. Standing refusals apply.
 
+135. **Related status_cards dump preview_url as the card title.**
+    Cycle 2267: campaign hub ``display: status_cards`` with
+    ``columns: preview_url, name, …`` put the raw HTTPS URL in
+    ``.dz-related-status-card-primary``. Safe image URLs become a
+    thumb; the first non-image cell is the title. Leftover junk
+    stays in the text slots. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1507,6 +1514,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV header schema title | Dump ``Photo Url`` / ``Is Favorite`` instead of the grid's ``Photo`` / ``Favorite``; clone leftover-token stay-put or CSV cell format_cell walks | #132 |
 | Walk host-prefixed session cookie | Parse only ``dazzle_session=`` on tenant_host login; clone leftover-token stay-put or CSV format_cell walks | #133 |
 | PDF chrome on non-PDF files | Mount PDF.js / ``Download PDF`` on a plain ``.md`` / ``.xlsx`` file; clone leftover-token stay-put or CSV format_cell walks | #134 |
+| Related status_card preview URL | Dump ``https://…png`` as the card title; clone leftover-token stay-put, CSV format_cell, or pdf_viewer suffix | #135 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

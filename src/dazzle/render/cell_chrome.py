@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html as _html_mod
 import re
+from collections.abc import Sequence
 from typing import Any
 
 # #1626 R5 / P0-8 — palette chips on brand desks (list + queue + card).
@@ -132,3 +133,35 @@ def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
         f'alt="{alt_esc}" loading="lazy" decoding="async" />'
         f"</div>"
     )
+
+
+def related_card_media_and_text(cells: Sequence[Any], *, limit: int = 3) -> tuple[str, list[str]]:
+    """Split related status_card cells into (thumb_html, text slots).
+
+    A safe https image URL is a preview thumb — not the card title.
+    Campaign hubs used to dump ``preview_url`` as primary text (oral #135).
+    Leftover junk stays in the text slots; do not invent a thumb.
+    """
+    media_url = ""
+    texts: list[str] = []
+    for cell in cells:
+        raw = "" if cell is None else str(cell).strip()
+        if not raw or raw == "—":
+            continue
+        if not media_url and _safe_media_image_url(raw):
+            media_url = raw
+            continue
+        texts.append(raw)
+        if len(texts) >= limit:
+            break
+    if not media_url:
+        texts = []
+        for cell in cells:
+            raw = "" if cell is None else str(cell).strip()
+            if raw and raw != "—":
+                texts.append(raw)
+            if len(texts) >= limit:
+                break
+        return "", texts
+    alt = texts[0] if texts else ""
+    return _render_media_thumb_html(media_url, alt=alt), texts[:limit]

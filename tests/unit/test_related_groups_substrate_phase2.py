@@ -157,6 +157,55 @@ def test_status_cards_mode_renders_cards() -> None:
     assert "Design" in html
 
 
+def test_status_cards_preview_url_is_thumb_not_primary() -> None:
+    """Campaign-style related cards: preview_url is a thumb, name is title."""
+    url = "https://placehold.co/320x200/0F172A/F59E0B/png?text=NW+LOGO+v3"
+    tab = _tab(
+        columns=[
+            ColumnContext(key="preview_url", label="Preview"),
+            ColumnContext(key="title", label="Name"),
+            ColumnContext(key="version", label="Version"),
+        ],
+        rows=[
+            {
+                "id": "t1",
+                "preview_url": url,
+                "title": "Primary logo (SVG)",
+                "version": "3",
+            }
+        ],
+    )
+    html = _render(
+        RelatedGroupContext(
+            group_id="g1", label="Campaign assets", display="status_cards", tabs=[tab]
+        )
+    )
+    assert "dz-media-thumb" in html
+    assert "dz-related-status-card-media" in html
+    assert 'class="dz-related-status-card-primary">Primary logo (SVG)<' in html
+    assert f'class="dz-related-status-card-primary">{url}' not in html
+    assert url in html  # src= on the thumb
+    assert "Primary logo (SVG)" in html
+
+
+def test_status_cards_leftover_preview_stays_put() -> None:
+    tab = _tab(
+        columns=[
+            ColumnContext(key="preview_url", label="Preview"),
+            ColumnContext(key="title", label="Name"),
+        ],
+        rows=[{"id": "t1", "preview_url": "zzz", "title": "Primary logo (SVG)"}],
+    )
+    html = _render(
+        RelatedGroupContext(
+            group_id="g1", label="Campaign assets", display="status_cards", tabs=[tab]
+        )
+    )
+    assert "dz-media-thumb" not in html
+    assert "zzz" in html
+    assert "Primary logo (SVG)" in html
+
+
 def test_status_cards_mode_multi_tab_uses_hm_tabs() -> None:
     """Cycle 1510 — multi related status_cards use HM tabs (not stacked h4s)."""
     g = RelatedGroupContext(

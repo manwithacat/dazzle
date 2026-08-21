@@ -13,6 +13,7 @@ from dazzle.http.runtime.workspace_columns import (
 from dazzle.render.cell_chrome import (
     _render_media_thumb_html,
     _safe_media_image_url,
+    related_card_media_and_text,
 )
 
 
@@ -75,6 +76,31 @@ def test_design_studio_asset_preview_column() -> None:
     asset = next(e for e in spec.domain.entities if e.name == "Asset")
     by = {c["key"]: c["type"] for c in build_entity_columns(asset)}
     assert by.get("preview_url") == "image"
+
+
+def test_related_card_preview_url_is_thumb_not_title() -> None:
+    """Related status_cards must not dump preview_url as primary (oral #135)."""
+    url = "https://placehold.co/320x200/0F172A/F59E0B/png?text=NW+LOGO+v3"
+    thumb, texts = related_card_media_and_text((url, "Primary logo (SVG)", "3"))
+    assert "dz-media-thumb" in thumb
+    assert url in thumb
+    assert url not in texts
+    assert texts[0] == "Primary logo (SVG)"
+    assert "3" in texts
+
+
+def test_related_card_leftover_url_stays_put() -> None:
+    thumb, texts = related_card_media_and_text(("zzz", "Primary logo (SVG)", "3"))
+    assert thumb == ""
+    assert texts[0] == "zzz"
+    assert "Primary logo (SVG)" in texts
+
+
+def test_related_card_off_allowlist_url_stays_put() -> None:
+    url = "https://evil.example/creative.png"
+    thumb, texts = related_card_media_and_text((url, "Primary logo (SVG)"))
+    assert thumb == ""
+    assert texts[0] == url
 
 
 def test_asset_seeds_have_preview_urls() -> None:
