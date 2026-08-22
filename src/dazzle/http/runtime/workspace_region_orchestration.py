@@ -60,6 +60,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     compute_tabbed_slices,
     compute_tree,
     heatmap_from_bucketed_metrics,
+    infer_progress_stages,
 )
 from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
@@ -641,12 +642,31 @@ async def compute_region_render_inputs(
                 bucket_values=kanban_columns or None,
             )
 
-    # Progress (v0.44.0): stage counts + completion pct.
-    progress_stages_list: list[str] = list(getattr(ctx_region, "progress_stages", None) or [])
+    # Progress (v0.44.0 / oral #165): authored stages, else enum/SM + leftover.
+    authored_progress_stages: list[str] = list(getattr(ctx_region, "progress_stages", None) or [])
     progress_complete_at: str = getattr(ctx_region, "progress_complete_at", "") or ""
+    progress_stages_list: list[str] = []
+    leftover_progress: frozenset[str] = frozenset()
+    progress_group = group_by if isinstance(group_by, str) else ""
+    if display == "PROGRESS":
+        status_field = progress_group or "status"
+        progress_stages_list, leftover_progress = infer_progress_stages(
+            items if isinstance(items, list) else [],
+            status_field,
+            ctx.entity_spec,
+            authored_progress_stages,
+        )
+        if not authored_progress_stages and not progress_complete_at:
+            canonical = [s for s in progress_stages_list if s not in leftover_progress]
+            if canonical:
+                progress_complete_at = canonical[-1]
     if display == "PROGRESS" and items and progress_stages_list:
         prog = compute_progress(
-            items, progress_stages_list, progress_complete_at, group_by or "status"
+            items,
+            progress_stages_list,
+            progress_complete_at,
+            progress_group or "status",
+            leftover_stages=leftover_progress,
         )
         progress_stage_counts: list[dict[str, Any]] = prog["stage_counts"]
         progress_total: int = prog["total"]

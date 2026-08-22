@@ -1713,6 +1713,15 @@ dialect formed — and where it started to Goodhart itself — is
     a tab. Multi-source shells still own source_tabs. Live
     fieldtest_hub ``issue_tabs``. Standing refusals apply.
 
+165. **Progress group_by dumps empty stages.** Cycle 2299:
+    ``display: progress`` + ``group_by: status`` required authored
+    ``stages:``, so support ``agent_lifecycle_progress`` showed
+    "No progress" while tickets existed. ``infer_progress_stages``
+    uses enum/SM then leftover distinct values; leftover ``zzz``
+    stays a chip and is never marked complete. Authored ``stages:``
+    still win. Live support_tickets ``agent_lifecycle_progress``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1911,6 +1920,7 @@ how the handbook was learned.
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
 | One tabbed_list group_by after compute_tabbed_slices exists | Call compute_tabbed_slices on remaining scalar group_by tabbed lists, then STOP (oral #164). Do not restyle remaining tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
+| One progress group_by after infer_progress_stages exists | Call infer_progress_stages on remaining group_by-only progress regions, then STOP (oral #165). Do not restyle remaining tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

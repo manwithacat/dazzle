@@ -406,6 +406,13 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Multi-source shells still own source_tabs. Do **not**
   restyle remaining tree group_by siblings (oral #163) or
   remaining ops_dashboard widget formatters.
+- **Progress group_by empty stages** (``group_by: status``
+  dumped "No progress" because only authored ``stages:``
+  were wired) closed cycle 2299 (oral #165). Helper:
+  `infer_progress_stages`. Leftover ``zzz`` stays a chip.
+  Authored ``stages:`` still win. Do **not** restyle remaining
+  tabbed_list/tree group_by siblings or remaining ops_dashboard
+  widget formatters.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

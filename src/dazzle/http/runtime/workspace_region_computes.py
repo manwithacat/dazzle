@@ -396,6 +396,7 @@ def compute_progress(
     stages_list: list[str],
     complete_at: str,
     status_field: str,
+    leftover_stages: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Build progress-counter dict for a PROGRESS region (v0.44.0).
 
@@ -408,11 +409,13 @@ def compute_progress(
           "complete_pct": float,
         }
 
-    Empty stages_list returns a zeroed shape.
+    Empty stages_list returns a zeroed shape. Leftover stage names
+    stay chips but are never marked complete (oral #165).
     """
     if not stages_list:
         return {"stage_counts": [], "total": 0, "complete_count": 0, "complete_pct": 0.0}
 
+    leftover = leftover_stages or frozenset()
     stage_counter: dict[str, int] = dict.fromkeys(stages_list, 0)
     for item in items:
         item_stage = str(item.get(status_field, ""))
@@ -425,7 +428,7 @@ def compute_progress(
     complete_count = 0
     for i, stage_name in enumerate(stages_list):
         cnt = stage_counter.get(stage_name, 0)
-        is_complete = complete_idx >= 0 and i >= complete_idx
+        is_complete = complete_idx >= 0 and i >= complete_idx and stage_name not in leftover
         stage_counts.append({"name": stage_name, "count": cnt, "complete": is_complete})
         if is_complete:
             complete_count += cnt
@@ -437,6 +440,46 @@ def compute_progress(
         "complete_count": complete_count,
         "complete_pct": complete_pct,
     }
+
+
+def _append_unique_stage(stages: list[str], seen: set[str], token: str) -> None:
+    """Keep first-seen order; skip blank leftover-empty keys."""
+    label = token.strip()
+    if not label or label in seen:
+        return
+    seen.add(label)
+    stages.append(label)
+
+
+def infer_progress_stages(
+    items: list[dict[str, Any]],
+    group_field: str,
+    entity_spec: Any,
+    authored: list[str] | None = None,
+) -> tuple[list[str], frozenset[str]]:
+    """Authored ``stages:``, else enum/SM, then leftover distinct values.
+
+    ``display: progress`` + ``group_by: status`` without ``stages:``
+    dumped empty "No progress" while tickets existed (oral #165).
+    Leftover ``zzz`` stays a chip. Returns (stages, leftover_names).
+    """
+    field = group_field if isinstance(group_field, str) else str(group_field or "")
+    if not field:
+        field = "status"
+    stages: list[str] = []
+    seen: set[str] = set()
+    for raw in authored or []:
+        _append_unique_stage(stages, seen, str(raw))
+    canonical = set(seen)
+    if not stages:
+        for token in compute_kanban_columns(entity_spec, field):
+            _append_unique_stage(stages, seen, str(token))
+        canonical = set(seen)
+    for item in items:
+        if isinstance(item, dict):
+            _append_unique_stage(stages, seen, _tree_group_label(item, field))
+    leftover = frozenset(s for s in stages if s not in canonical)
+    return stages, leftover
 
 
 def _tree_parent_id(item: dict[str, Any], parent_field: str) -> str:
