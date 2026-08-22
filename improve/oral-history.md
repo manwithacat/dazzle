@@ -1890,6 +1890,15 @@ dialect formed — and where it started to Goodhart itself — is
     empty invents no suffix. Do not restyle remaining open-via hop
     labels (oral #182). Standing refusals apply.
 
+184. **Carousel aspect chips dump schema tokens.** Cycle 2318:
+    ``display: carousel`` rendered ``icon_glyph`` on the media chip
+    while the asset catalog already says ``Icon Glyph``. Live
+    design_studio ``asset_carousel`` + Asset ``asset_type``.
+    ``clerk_carousel_chip_label`` reuses ``clerk_stage_label``;
+    leftover ``zzz`` stays put; empty invents no chip. Do not
+    restyle remaining open-via hop labels or remaining related-tab
+    FK siblings (oral #183). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2016,6 +2025,7 @@ the end of every new oral *is* expensive — point here instead.
 | Conversation channel schema-token dump | Dump ``status_page`` / ``repro`` on conversation author suffixes after ``conversation_channel_label`` uses ``clerk_stage_label``; clone leftover-token stay-put, remaining bubble bodies, remaining ops_dashboard widget formatters, remaining FTS snippet bodies, or remaining audit-history actor UUIDs | #181 |
 | List find-by schema-key dump | Dump ``first name`` / ``job title`` on workspace list ``?q=`` chrome after ``clerk_list_search_field_label`` exists; clone leftover-token stay-put, remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, or remaining ops_dashboard widget formatters | #182 |
 | Related-tab FK schema-key dump | Dump ``assigned to`` / ``created by`` on dual-FK related tabs after ``clerk_related_tab_fk_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, or remaining conversation bubble bodies | #183 |
+| Carousel chip schema-token dump | Dump ``icon_glyph`` on carousel aspect chips after ``clerk_carousel_chip_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, or remaining conversation bubble bodies | #184 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2087,6 +2097,7 @@ how the handbook was learned.
 | One conversation channel suffix host after conversation_channel_label clerk-humanizes | Call conversation_channel_label on remaining workspace + related emit sites in one ship, then STOP (oral #181) |
 | One list find-by schema-key dump after clerk_list_search_field_label exists | Call clerk_list_search_field_label on remaining workspace list ``?q=`` chrome in one ship, then STOP (oral #182). Do not restyle remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, remaining ops_dashboard widget formatters, or leftover-token stay-put |
 | One related-tab FK schema-key dump after clerk_related_tab_fk_label exists | Call clerk_related_tab_fk_label on remaining dual-FK related-tab compilers in one ship, then STOP (oral #183). Do not restyle remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, remaining conversation bubble bodies, or leftover-token stay-put |
+| One carousel aspect-chip schema-token dump after clerk_carousel_chip_label exists | Call clerk_carousel_chip_label on remaining carousel item/entry chips in one ship, then STOP (oral #184). Do not restyle remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, remaining conversation bubble bodies, or leftover-token stay-put |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

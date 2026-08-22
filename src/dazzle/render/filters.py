@@ -576,6 +576,17 @@ def clerk_related_tab_fk_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
+def clerk_carousel_chip_label(value: Any) -> str:
+    """Schema enum → clerk carousel aspect chip (oral #184).
+
+    ``display: carousel`` dumped ``icon_glyph`` on the media chip while
+    the asset catalog already says ``Icon Glyph``. Leftover junk stays
+    put. Empty invents no chip. Do not restyle remaining open-via hop
+    labels or remaining related-tab FK siblings.
+    """
+    return clerk_stage_label(value)
+
+
 def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
     """Clerk-facing entity-card quick-action CTA (oral #158).
 

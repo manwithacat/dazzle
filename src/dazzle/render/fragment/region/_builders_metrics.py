@@ -24,6 +24,7 @@ from typing import Any, Literal
 from dazzle.core.ir import AggregateRef, DerivedMetricExpr
 from dazzle.render.filters import (
     _metric_number_filter,
+    clerk_carousel_chip_label,
     clerk_pipeline_stage_value,
     clerk_stage_label,
 )
@@ -254,7 +255,7 @@ def _carousel_slides_from_items(items: list[Any]) -> list[CarouselSlide]:
         alt = str(
             item.get("name") or item.get("title") or item.get("label") or item.get("alt") or "Slide"
         )
-        chip = str(item.get("chip") or item.get("asset_type") or "")
+        chip = clerk_carousel_chip_label(item.get("chip") or item.get("asset_type") or "")
         slides.append(CarouselSlide(src=src, alt=alt, chip=chip))
     return slides
 
@@ -266,7 +267,7 @@ def _carousel_slides_from_entries(raw_entries: list[Any]) -> list[CarouselSlide]
             continue
         entry_title = str(raw.get("title") or raw.get("alt") or "")
         src = str(raw.get("body") or raw.get("caption") or raw.get("src") or "")
-        chip = str(raw.get("icon") or raw.get("chip") or "")
+        chip = clerk_carousel_chip_label(raw.get("icon") or raw.get("chip") or "")
         if src:
             slides.append(CarouselSlide(src=src, alt=entry_title or "Slide", chip=chip))
         elif entry_title:
