@@ -80,6 +80,9 @@ def test_clerk_chart_axis_label_schema_not_raw() -> None:
     assert clerk_chart_axis_label(True) == "Yes"
     assert clerk_chart_axis_label("zzz") == "zzz"
     assert clerk_chart_axis_label("ghost") == "ghost"
+    assert clerk_chart_axis_label("mon") == "Mon"
+    assert clerk_chart_axis_label("g1") == "G1"
+    assert clerk_chart_axis_label("p50") == "P50"
     assert clerk_stage_label("api") == "Api"
 
 

@@ -1944,6 +1944,15 @@ dialect formed — and where it started to Goodhart itself — is
     compact level-acronym siblings (oral #186), or remaining
     bar-chart bool buckets (oral #185). Standing refusals apply.
 
+189. **Clerk-label a display without retargeting region-adapter smokes.**
+    Cycle 2323: cycle 2322 ``clerk_chart_axis_label`` humanized radar /
+    box-plot / heatmap axes; dedicated dump tests passed ship-surface,
+    but ``test_region_adapter`` still pinned ``mon`` / ``g1`` / ``p50``
+    and py3.12/13/14 went red. Same ship must retarget existing
+    region-adapter substring smokes (or promote them into ship-surface).
+    Do not restyle remaining radar / box-plot / heatmap axis siblings
+    (oral #188). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2149,6 +2158,7 @@ how the handbook was learned.
 | One bar-chart / badge level-acronym dump after _humanize_filter uppercases letter+digit tokens | Call clerk_stage_label / _humanize_filter on remaining compact level tokens in one ship, then STOP (oral #186). Do not restyle remaining bar-chart bool buckets, remaining chart legend snake_case, remaining carousel chips, or leftover-token stay-put |
 | One kanban / badge region-acronym dump after _humanize_filter uppercases sales-region tokens | Call clerk_stage_label / _humanize_filter on remaining UN/sales region tokens in one ship, then STOP (oral #187). Do not restyle remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
 | One radar / box-plot / heatmap schema-axis dump after clerk_chart_axis_label exists | Call clerk_chart_axis_label on remaining polar/quartile/matrix axes in one ship, then STOP (oral #188). Do not restyle remaining sales-region acronym siblings, remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
+| Clerk-label a display without retargeting region-adapter smokes | Ship clerk_* without updating existing region-adapter substring pins (or promoting them into ship-surface) | #189 |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

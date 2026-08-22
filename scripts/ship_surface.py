@@ -248,6 +248,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_region_acronym_dump.py",
     # cycle 2322: radar / box-plot / heatmap axes must not dump api/critical (oral #188)
     "tests/unit/test_chart_axis_dump.py",
+    # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
+    "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
+    "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",
+    "tests/unit/test_region_adapter.py::test_display_renders_dz_marker_and_item_content[box_plot]",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

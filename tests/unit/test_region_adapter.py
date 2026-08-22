@@ -1378,7 +1378,7 @@ def test_heatmap_renders_dedicated_primitive() -> None:
     fragment = adapter.build(_FakeRegion("h", display="heatmap"), ctx)
     html = _render(fragment)
     assert "dz-heatmap-region" in html
-    assert "mon" in html and "tue" in html
+    assert "Mon" in html and "Tue" in html
     assert "9am" in html and "10am" in html
     assert "5.0" in html and "3.0" in html
     assert 'data-dz-heatmap-tone="good"' in html  # 5.0 > 4.0
@@ -3061,7 +3061,8 @@ def test_empty_data_with_empty_message_renders_empty_state(
 # - bar_chart: buckets as {label, value} or {key, count} dicts; labels
 #   humanized via render_status_badge (v0.66.110) — "open" → "Open".
 # - radar: axes as {axis, value} or {label, value} dicts.
-# - box_plot: groups as {label, min, q1, median, q3, max} dicts.
+# - box_plot: groups as {label, min, q1, median, q3, max} dicts;
+#   labels humanized via clerk_chart_axis_label — "g1" → "G1".
 # - line_chart (TimeSeries): points as {x, y} or {label, value} dicts.
 # - diagram: edges as {from, to} (or {source, target}) dicts.
 _ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
@@ -3084,7 +3085,7 @@ _ALT_DICT_SHAPE_CASES: list[tuple[str, dict, tuple[str, ...]]] = [
     (
         "box_plot",
         {"groups": [{"label": "g1", "min": 0, "q1": 1, "median": 2, "q3": 3, "max": 4}]},
-        ("g1",),
+        ("G1",),
     ),
     (
         "line_chart",
@@ -3119,7 +3120,8 @@ def test_alternative_dict_item_shape_normalizes_to_same_render(
 # - kanban: `dz-kanban` CSS hook so workspace layout CSS can target the
 #   column structure; title + card content render.
 # - radar: polar axes labels render inside dz-radar.
-# - box_plot: quartile groups render inside dz-box-plot.
+# - box_plot: quartile groups render inside dz-box-plot;
+#   labels humanized via clerk_chart_axis_label — "p50" → "P50".
 # - line_chart: v0.66.110 — legacy region wrapper class is
 #   `dz-line-chart-region` (chrome stripping).
 # - area_chart: v0.66.110 — wrapper is `dz-area-chart-region` (legacy
@@ -3146,7 +3148,7 @@ _RENDER_SMOKE_CASES: list[tuple[str, str | None, dict, tuple[str, ...]]] = [
         "box_plot",
         None,
         {"groups": [("p50", 0, 1, 2, 3, 4), ("p99", 5, 6, 7, 8, 9)]},
-        ("dz-box-plot", "p50", "p99"),
+        ("dz-box-plot", "P50", "P99"),
     ),
     (
         "line_chart",
