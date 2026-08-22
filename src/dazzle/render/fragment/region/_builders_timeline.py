@@ -45,6 +45,7 @@ from dazzle.render.fragment.region._shared import (
 )
 from dazzle.render.fragment.renderer._related_conversation import (
     conversation_bubble_tone,
+    conversation_channel_label,
     conversation_time_label,
 )
 from dazzle.render.presentation import present
@@ -493,33 +494,20 @@ class _BuildersTimelineMixin:
                 or str(item.get("user_name") or item.get("name") or "").strip()
             )
             # Peer channel suffix on live trails: support portal/email/chat/phone
-            # plus ops page_channel (bridge/slack/pager/status_page). Default
-            # paths (portal, bridge) stay unsuffixed.
-            channel = (
-                str(
-                    item.get("channel")
-                    or item.get("source_channel")
-                    or item.get("contact_channel")
-                    or item.get("page_channel")
-                    or item.get("notify_channel")
-                    or item.get("note_kind")
-                    or item.get("kind")
-                    or ""
-                )
-                .strip()
-                .lower()
-                .replace(" ", "_")
+            # plus ops page_channel (bridge/slack/pager/status_page). Skip-set
+            # defaults stay unsuffixed; clerk_stage_label humanizes the rest
+            # (oral #181 — ``status_page`` not dumped as schema token).
+            channel = conversation_channel_label(
+                item.get("channel")
+                or item.get("source_channel")
+                or item.get("contact_channel")
+                or item.get("page_channel")
+                or item.get("notify_channel")
+                or item.get("note_kind")
+                or item.get("kind")
+                or ""
             )
-            if channel and channel not in {
-                "none",
-                "unknown",
-                "n/a",
-                "na",
-                "portal",
-                "bridge",
-                "note",
-                "comment",
-            }:
+            if channel:
                 author = f"{author} · {channel}" if author else channel
             time_label, time_dt = _conversation_time(item)
             media = str(item.get("media") or item.get("initials") or "").strip()

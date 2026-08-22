@@ -1861,6 +1861,17 @@ dialect formed — and where it started to Goodhart itself — is
     Do not restyle remaining snippet bodies or JSON API keys
     (oral #179). Standing refusals apply.
 
+181. **Conversation channel suffix dumps schema tokens.** Cycle
+    2315: ``display: conversation`` and related discussion
+    suffixed authors with ``status_page`` / ``repro`` while
+    funnel/progress already say ``Status Page``. Live
+    ops_dashboard ``live_conversation`` + IncidentNote
+    ``page_channel``. ``conversation_channel_label`` reuses
+    ``clerk_stage_label``; leftover ``zzz`` stays put; skip-set
+    defaults invent no suffix. Do not restyle remaining
+    conversation bubble bodies or remaining ops_dashboard
+    widget formatters (oral #180). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1984,6 +1995,7 @@ the end of every new oral *is* expensive — point here instead.
 | Group-by empty + typed list-cell dump cadence | Walk another group_by-empty dump or typed list/queue cell after helpers exist (oral #163–#176) | #178 |
 | Audit-history ISO / snake_case dump | Dump ISO clocks / ``update`` / ``dunning_state`` / ``True`` on the HTMX history region after ``clerk_audit_*`` exists; clone leftover-token stay-put, remaining group_by/list-cell dumps, remaining actor-UUID joins, or remaining money/IBAN before/after values | #179 |
 | FTS snippet schema-key dump | Dump ``first_name:`` on search_box hits after ``clerk_fts_snippet_field_label`` exists; clone leftover-token stay-put, remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, or remaining money/IBAN before/after | #180 |
+| Conversation channel schema-token dump | Dump ``status_page`` / ``repro`` on conversation author suffixes after ``conversation_channel_label`` uses ``clerk_stage_label``; clone leftover-token stay-put, remaining bubble bodies, remaining ops_dashboard widget formatters, remaining FTS snippet bodies, or remaining audit-history actor UUIDs | #181 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2052,6 +2064,7 @@ how the handbook was learned.
 | One leftover search ``?entity=`` site after leftover_honest_search_entity exists | Call leftover_honest_search_entity on remaining search restrict sites in one ship, then STOP (oral #117) |
 | One leftover fragment ``?source=`` site after leftover_honest_fragment_source exists | Call leftover_honest_fragment_source on remaining fragment search/select sites in one ship, then STOP (oral #118) |
 | One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
+| One conversation channel suffix host after conversation_channel_label clerk-humanizes | Call conversation_channel_label on remaining workspace + related emit sites in one ship, then STOP (oral #181) |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

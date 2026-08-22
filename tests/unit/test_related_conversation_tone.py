@@ -58,7 +58,7 @@ def test_related_conversation_note_kind_repro_suffix_and_danger() -> None:
     )
     msgs = related_conversation_messages(tab)
     assert len(msgs) == 2
-    assert msgs[0].author == "engineer · repro"
+    assert msgs[0].author == "engineer · Repro"
     assert msgs[0].bubble.tone == "danger"
     assert msgs[1].author == "manager"
     assert msgs[1].bubble.tone == ""
@@ -143,10 +143,10 @@ def test_related_conversation_messages_channel_suffix_and_escalation() -> None:
     )
     msgs = related_conversation_messages(tab)
     assert len(msgs) == 2
-    assert msgs[0].author == "Casey Customer · phone"
+    assert msgs[0].author == "Casey Customer · Phone"
     assert msgs[0].bubble.tone == "danger"
     assert msgs[0].media_label == "CC"
-    assert msgs[1].author == "Alex Agent · email"
+    assert msgs[1].author == "Alex Agent · Email"
     assert msgs[1].bubble.tone == ""
     assert msgs[1].bubble.from_ == "out"
 
@@ -164,7 +164,7 @@ def test_related_conversation_skips_portal_channel_suffix() -> None:
     )
     msgs = related_conversation_messages(tab)
     assert msgs[0].author == "Casey"
-    assert msgs[1].author == "Casey · chat"
+    assert msgs[1].author == "Casey · Chat"
 
 
 def test_related_conversation_ops_phase_and_page_channel() -> None:
@@ -194,7 +194,7 @@ def test_related_conversation_ops_phase_and_page_channel() -> None:
     msgs = related_conversation_messages(tab)
     assert len(msgs) == 2
     assert msgs[0].bubble.tone == "danger"
-    assert msgs[0].author == "admin · slack"
+    assert msgs[0].author == "admin · Slack"
     assert msgs[1].bubble.tone == ""
     # bridge is ops default path — no author suffix (portal parity).
     assert msgs[1].author == "ops_engineer"

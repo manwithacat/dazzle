@@ -462,6 +462,12 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   put. Do **not** join remaining actor UUIDs or restyle remaining
   money/IBAN before/after values. Do **not** restyle remaining
   group_by-empty / typed list-cell dumps (oral #163–#178).
+- **Conversation channel schema-token dump** closed cycle 2315
+  (oral #181). Helper: `conversation_channel_label` /
+  `clerk_stage_label`. Leftover ``zzz`` stays put. Do **not**
+  restyle remaining bubble bodies or remaining ops_dashboard
+  widget formatters. Workspace + related emit sites closed in
+  one ship.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

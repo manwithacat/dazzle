@@ -152,7 +152,8 @@ def test_build_conversation_note_kind_repro_suffix_and_danger() -> None:
     }
     surface = _A()._build_conversation(region, ctx)
     html = FragmentRenderer().render(surface)
-    assert "engineer · repro" in html
+    assert "engineer · Repro" in html
+    assert "engineer · repro" not in html
     assert "manager · note" not in html
     assert "manager" in html
     assert html.count('data-dz-tone="danger"') >= 1

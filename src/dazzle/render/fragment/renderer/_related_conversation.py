@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.primitives import Bubble, Message, RelatedTab
 
 # Honest clock at the tail of a datetime cell. Seconds and tz optional.
@@ -165,11 +166,15 @@ def conversation_bubble_tone(raw: str) -> str:
 
 
 def conversation_channel_label(raw: str) -> str:
-    """Normalize inbound channel for author suffix (empty when noise/default)."""
+    """Normalize inbound channel for author suffix (empty when noise/default).
+
+    Clerk-facing: ``status_page`` → ``Status Page`` (oral #181). Skip-set
+    defaults (portal/bridge/note) invent no suffix. Leftover junk stays put.
+    """
     s = str(raw or "").strip().lower().replace(" ", "_").replace("-", "_")
     if s in _CONV_CHANNEL_SKIP:
         return ""
-    return s
+    return clerk_stage_label(s)
 
 
 def conversation_time_label(raw: str) -> tuple[str, str]:

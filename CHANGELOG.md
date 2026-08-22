@@ -9,6 +9,13 @@
   (`invoice_detail` `show_history: true`).
 
 ### Fixed
+- **Conversation author suffix dumped schema tokens (cycle 2315)** —
+  `display: conversation` and related discussion suffixed authors
+  with `status_page` / `repro` while funnel/progress already say
+  `Status Page`. `conversation_channel_label` emits clerk labels;
+  leftover `zzz` stays put; skip-set defaults invent no suffix.
+  Live ops_dashboard `live_conversation` + IncidentNote
+  `page_channel`. Oral #181.
 - **Audit-history dumped ISO clocks and snake_case schema (cycle 2313)** —
   `/_dazzle/audit-history` rendered `str(at)` / `update` /
   `dunning_state` / `True` while list/queue already timeago + title-case.
