@@ -135,7 +135,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     """
     import html
 
-    from dazzle.render.filters import _gettext
+    from dazzle.render.filters import _gettext, clerk_fts_snippet_field_label
 
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
@@ -200,7 +200,7 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
                 snip = item.get(f"{fld}__snippet")
                 if not snip:
                     continue
-                fld_html = html.escape(str(fld), quote=True)
+                fld_html = html.escape(clerk_fts_snippet_field_label(fld), quote=True)
                 # Snippet HTML is server-trusted (PG ts_headline output) —
                 # the configured StartSel/StopSel `<mark>` tags must
                 # survive. Surrounding text is pre-escaped by PG.

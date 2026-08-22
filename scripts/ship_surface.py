@@ -230,6 +230,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_iban_cell_dump.py",
     # cycle 2313: audit-history must not dump ISO clocks / snake_case schema (oral #179)
     "tests/unit/test_audit_history_dump.py",
+    # cycle 2314: FTS search_box snippets must not dump schema keys (oral #180)
+    "tests/unit/test_fts_snippet_field_dump.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

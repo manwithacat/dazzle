@@ -1852,6 +1852,15 @@ dialect formed — and where it started to Goodhart itself — is
     actor UUIDs or restyle remaining money/IBAN before/after
     (oral #175/#176/#178). Standing refusals apply.
 
+180. **FTS search_box snippet fields dump schema keys.** Cycle
+    2314: the HTMX ``/_dazzle/fts/{entity}?html=1`` fragment rendered
+    ``first_name:`` / ``job_title:`` while the directory already says
+    ``First Name``. Live contact_manager ``search on Contact`` +
+    ``display: search_box``. ``clerk_fts_snippet_field_label`` reuses
+    ``clerk_entity_card_field_label``; leftover ``zzz`` stays put.
+    Do not restyle remaining snippet bodies or JSON API keys
+    (oral #179). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1974,6 +1983,7 @@ the end of every new oral *is* expensive — point here instead.
 | List/queue IBAN ungrouped blob | Dump ``GB82WEST…`` after ``clerk_iban_display`` exists; clone leftover-token stay-put, remaining INT cents, remaining temperature/email/phone/rating/tags, or generic account-number grouping | #176 |
 | Group-by empty + typed list-cell dump cadence | Walk another group_by-empty dump or typed list/queue cell after helpers exist (oral #163–#176) | #178 |
 | Audit-history ISO / snake_case dump | Dump ISO clocks / ``update`` / ``dunning_state`` / ``True`` on the HTMX history region after ``clerk_audit_*`` exists; clone leftover-token stay-put, remaining group_by/list-cell dumps, remaining actor-UUID joins, or remaining money/IBAN before/after values | #179 |
+| FTS snippet schema-key dump | Dump ``first_name:`` on search_box hits after ``clerk_fts_snippet_field_label`` exists; clone leftover-token stay-put, remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, or remaining money/IBAN before/after | #180 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2066,6 +2076,7 @@ how the handbook was learned.
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
 | One group_by-empty / typed list-cell dump per cycle after display-dump STOP | STOP; remaining group_by + list-cell siblings closed (oral #163–#176). New invent class (oral #178) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
+| One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
 | One tabbed_list group_by after compute_tabbed_slices exists | Call compute_tabbed_slices on remaining scalar group_by tabbed lists, then STOP (oral #164). Do not restyle remaining tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One progress group_by after infer_progress_stages exists | Call infer_progress_stages on remaining group_by-only progress regions, then STOP (oral #165). Do not restyle remaining tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
