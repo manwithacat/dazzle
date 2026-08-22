@@ -222,6 +222,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_rating_cell_dump.py",
     # cycle 2307: list/queue email/phone must be mailto/tel, not dead text (oral #173)
     "tests/unit/test_channel_cell_dump.py",
+    # cycle 2308: list/queue temperature must not dump a unitless decimal (oral #174)
+    "tests/unit/test_temperature_cell_dump.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

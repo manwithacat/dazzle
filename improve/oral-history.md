@@ -1794,6 +1794,14 @@ dialect formed — and where it started to Goodhart itself — is
     does not clone the HTTP scan. Do not map generic URL fields.
     Live contact_manager ``contact_list``. Standing refusals apply.
 
+174. **List/queue temperature dumps a unitless decimal.** Cycle 2308:
+    fieldtest_hub ``test_session_list`` showed ``28.5`` while seeds
+    are Celsius field readings. ``clerk_temperature_display`` emits
+    ``28.5°C`` (``temp_f`` → ``°F``); leftover ``zzz`` stays put;
+    empty invents no unit; CSV matches. Do not map generic decimals
+    or remaining ``duration_minutes`` measure cells (oral #154).
+    Live fieldtest_hub ``test_session_list``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1910,6 +1918,7 @@ the end of every new oral *is* expensive — point here instead.
 | List/queue tags comma blob | Dump ``brand,spring`` as a sentence after ``clerk_tags_cell_html`` exists; clone leftover-token stay-put, remaining workspace file UUID siblings, remaining kanban FK siblings, or remaining ops_dashboard formatters | #171 |
 | List/queue rating bare integer | Dump ``4`` on 1–5 ``rating`` / ``quality_score`` after ``clerk_rating_display`` exists; clone leftover-token stay-put, remaining tags/labels list-cell siblings, remaining workspace file UUID siblings, or remaining ops_dashboard formatters | #172 |
 | List/queue email/phone dead text | Dump mailbox/phone as truncated strings after mailto/tel helpers exist; clone leftover-token stay-put, remaining rating/tags/file siblings, or remaining ops_dashboard formatters | #173 |
+| List/queue temperature unitless | Dump ``22.5`` on ``temperature`` / ``temp_c`` after ``clerk_temperature_display`` exists; clone leftover-token stay-put, remaining email/phone, remaining rating/tags/file, remaining duration_minutes measure cells, or remaining ops_dashboard formatters | #174 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2007,6 +2016,7 @@ how the handbook was learned.
 | One map empty dump after MAP is on the typed HTTP whitelist | Call _build_map on remaining display: map hosts, then STOP (oral #167). Do not restyle remaining diagram ER siblings, remaining group_by empty dumps, ops_dashboard formatters, or leftover-token stay-put |
 | One tags/labels list cell after clerk_tags_cell_html exists | Call clerk_tags_cell_html on remaining list/queue/detail emitters, then STOP (oral #171). Do not restyle remaining workspace file UUID siblings, remaining kanban FK siblings, remaining accordion whitelist dumps, or leftover-token stay-put |
 | One email/phone list cell after clerk_email_cell_html exists | Call clerk_email_* / clerk_phone_* on remaining reachable-channel hosts in one ship, then STOP (oral #173). Do not restyle remaining 1–5 rating siblings, remaining tags/labels, remaining file UUID, or leftover-token stay-put |
+| One temperature list cell after clerk_temperature_display exists | Call clerk_temperature_* on remaining temperature hosts in one ship, then STOP (oral #174). Do not restyle remaining email/phone, remaining 1–5 rating, remaining duration_minutes measure cells, remaining tags/file, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

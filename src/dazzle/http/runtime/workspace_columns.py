@@ -31,6 +31,7 @@ from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
 from dazzle.render.rating_cell import rating_field_name
 from dazzle.render.tags_cell import tags_field_name
+from dazzle.render.temperature_cell import temperature_field_name
 
 
 def _column_label(field_name: str, surface_label: str | None = None) -> str:
@@ -183,6 +184,8 @@ def _name_heuristic_col_type(name: str) -> str | None:
         return "tags"
     if rating_field_name(name):
         return "rating"
+    if temperature_field_name(name):
+        return "temperature"
     if phone_field_name(name):
         return "phone"
     if email_field_name(name):

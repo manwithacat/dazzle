@@ -80,6 +80,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_temporal_query,
 )
 from dazzle.render.presentation import infer_role, present
+from dazzle.render.temperature_cell import clerk_temperature_display, temperature_field_name
 
 # Cap queue meta density lines so rows stay scannable (#1626).
 _QUEUE_META_MAX = 3
@@ -165,6 +166,8 @@ def _format_queue_meta_numeric(raw: Any, col_type: str, key: str) -> str | None:
         return clerk_percent_points_display(
             raw, key, typed=col_type in ("percentage", "percent_points")
         )
+    if col_type == "temperature" or temperature_field_name(key):
+        return clerk_temperature_display(raw, key)
     if col_type not in ("number", "decimal", "float", "int"):
         return None
     try:

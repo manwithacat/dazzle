@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.rating_cell import clerk_rating_cell_html
 from dazzle.render.tags_cell import clerk_tags_cell_html
+from dazzle.render.temperature_cell import clerk_temperature_cell_html
 from dazzle.render.user_chip import looks_like_person_ref
 
 # Defensive ISO / Postgres timestamptz leak detector (parity with _data_row.py).
@@ -326,6 +327,10 @@ def _render_typed_value(
 
     if col_type == "phone":
         html = clerk_phone_cell_html(value)
+        return RawHTML(html) if html else RawHTML("—")
+
+    if col_type == "temperature":
+        html = clerk_temperature_cell_html(value, key)
         return RawHTML(html) if html else RawHTML("—")
 
     if col_type == "file":

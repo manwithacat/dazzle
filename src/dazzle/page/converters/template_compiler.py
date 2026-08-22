@@ -50,6 +50,7 @@ from dazzle.render.context import (
 from dazzle.render.filters import clerk_percent_points_field, status_tone_map
 from dazzle.render.fragment.state_affordance import transition_action_label
 from dazzle.render.rating_cell import rating_field_name
+from dazzle.render.temperature_cell import temperature_field_name
 
 
 def _ref_column_meta(field_spec: ir.FieldSpec | None) -> tuple[str, str, str]:
@@ -164,6 +165,8 @@ def _name_heuristic_column_type(field_name: str, *, allow_at: bool = False) -> s
         return "percentage"
     if rating_field_name(field_name):
         return "rating"
+    if temperature_field_name(field_name):
+        return "temperature"
     if phone_field_name(field_name):
         return "phone"
     if email_field_name(field_name):

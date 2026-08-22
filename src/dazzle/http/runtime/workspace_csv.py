@@ -44,6 +44,7 @@ from dazzle.render.fragment.renderer._render_interactive import (
 )
 from dazzle.render.rating_cell import clerk_rating_display
 from dazzle.render.tags_cell import clerk_tags_join
+from dazzle.render.temperature_cell import clerk_temperature_display
 
 _CSV_CHANNEL_FORMATTERS = {
     "tags": clerk_tags_join,
@@ -87,6 +88,8 @@ def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
         )
     if kind in ("date", "datetime"):
         return format_cell(raw, kind)
+    if kind == "temperature":
+        return clerk_temperature_display(raw, column.get("key"))
     if kind == "badge":
         options = column.get("filter_options")
         if options is not None:
