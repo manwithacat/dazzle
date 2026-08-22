@@ -30,6 +30,7 @@ from dazzle.render.filters import (
     _timeago_filter,
     clerk_percent_points_display,
     clerk_percent_points_field,
+    clerk_pivot_measure_keys,
 )
 from dazzle.render.fragment import (
     URL,
@@ -947,7 +948,6 @@ class _BuildersTablesMixin:
 
         # Production path: pivot_buckets + pivot_dim_specs.
         dim_specs: list[PivotDimSpec] = []
-        dim_field_names: set[str] = set()
         for spec in raw_specs:
             if not isinstance(spec, dict):
                 continue
@@ -961,24 +961,14 @@ class _BuildersTablesMixin:
                     is_fk=bool(spec.get("is_fk")),
                 )
             )
-            dim_field_names.add(name)
-            dim_field_names.add(f"{name}_label")
 
-        # Measure keys = ALL first-row keys, NOT filtered. The legacy
-        # template intends to filter out dimension fields via an inner
-        # `{% set is_dim_field = true %}` mutation inside a nested
-        # `{% for spec in pivot_dim_specs %}` loop, but Jinja's set
-        # scoping doesn't propagate the mutation out of the inner block,
-        # so the filter never applies and EVERY row key (including
-        # dim fields like `status`/`severity` and FK label fields like
-        # `status_label`) ends up as a measure column. Phase 4B.4 wave
-        # 4 (v0.66.116) replicates this scoping bug exactly for
-        # byte-equivalence — Jinja-scope quirks of the kind we
-        # accumulated in v0.66.106 (pipeline_steps progress) and
-        # v0.66.111 (radar tooltip).
+        # Oral #160: drop dim names / ``*_label`` from measure columns.
+        # v0.66.116 copied a Jinja-scope leak so every first-row key
+        # (system / system_label / severity / count) rendered as a
+        # measure. Leftover ``zzz`` keys stay put.
         measure_keys: list[str] = []
         if raw_buckets and isinstance(raw_buckets[0], dict):
-            measure_keys = [str(k) for k in raw_buckets[0].keys()]
+            measure_keys = list(clerk_pivot_measure_keys(raw_buckets[0].keys(), dim_specs))
 
         rows_norm = tuple(b for b in raw_buckets if isinstance(b, dict))
 

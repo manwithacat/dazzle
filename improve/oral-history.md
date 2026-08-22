@@ -1664,6 +1664,18 @@ dialect formed — and where it started to Goodhart itself — is
     remaining halo/flags or quick-action slug siblings (oral #157/#158).
     Live ops_dashboard ``alert_360``. Standing refusals apply.
 
+160. **Pivot leaked dimension keys as measure columns.** Cycle 2294:
+    ``display: pivot_table`` copied a Jinja-scope bug (v0.66.116) so
+    every first-row key (``system`` / ``system_label`` / ``severity`` /
+    ``count``) rendered as a measure. Ops ``alert_pivot`` dumped extra
+    System/Severity measure columns next to the real dim columns, and
+    ``str(12.0)``. ``clerk_pivot_measure_keys`` drops dim names +
+    ``*_label``; counts stay bare; leftover ``zzz`` stays put.
+    Not leftover-token stay-put (oral #121). Not identity-dump
+    title/label (oral #149). Not remaining entity-card siblings
+    (oral #157–#159). Live ops_dashboard ``alert_pivot``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1861,6 +1873,7 @@ how the handbook was learned.
 | One entity-card halo/flags schema dump after clerk_entity_card_field_* exists | Call clerk_entity_card_field_label / clerk_entity_card_field_display on remaining halo/flags fields, then STOP (oral #157). Do not restyle remaining queue datetime siblings or identity-dump title/label |
 | One entity-card quick-action slug CTA after clerk_quick_action_label exists | Call clerk_quick_action_label on remaining quick_actions sections, then STOP (oral #158). Do not restyle remaining halo/flags schema dumps or identity-dump title/label |
 | One entity-card stamps omit after clerk_stamp_chrono_fields exists | Call clerk_stamp_chrono_fields on remaining stamps sections, then STOP (oral #159). Do not restyle remaining halo/flags schema dumps, quick-action slug CTAs, or identity-dump title/label |
+| One pivot leaked-dim measure after clerk_pivot_measure_keys exists | Call clerk_pivot_measure_keys / clerk_pivot_measure_display on remaining pivot hosts, then STOP (oral #160). Do not restyle remaining stamps/halo/quick-action siblings or identity-dump title/label |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

@@ -30,6 +30,11 @@ from dazzle.render.cell_chrome import (
     related_file_name_and_meta,
     related_queue_title_and_meta,
 )
+from dazzle.render.filters import (
+    clerk_pivot_measure_display,
+    clerk_pivot_measure_keys,
+    clerk_stage_label,
+)
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
@@ -1121,7 +1126,8 @@ class _RenderTablesMixin:
             return render_pivot_table(PivotTableSeam(empty_message=p.empty_message))
 
         dim_headers = [s.label for s in p.dim_specs]
-        measure_headers = [k.replace("_", " ").title() for k in p.measure_keys]
+        measure_keys = clerk_pivot_measure_keys(p.measure_keys, p.dim_specs)
+        measure_headers = [clerk_stage_label(k) for k in measure_keys]
         seam_rows: list[list[str]] = []
         for row in p.rows:
             cells: list[str] = []
@@ -1139,9 +1145,9 @@ class _RenderTablesMixin:
                         cells.append('<span class="dz-pivot-null">—</span>')
                     else:
                         cells.append(_render_status_badge_html(sval, size="sm"))
-            for k in p.measure_keys:
+            for k in measure_keys:
                 v = row.get(k)
-                cells.append(ctx.escape(str(v)))
+                cells.append(ctx.escape(clerk_pivot_measure_display(v)))
             seam_rows.append(cells)
 
         return render_pivot_table(

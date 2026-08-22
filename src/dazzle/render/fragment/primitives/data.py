@@ -967,8 +967,8 @@ class PivotTableRegion:
     byte-for-byte. Columns = N dimensions (from `dim_specs`) + M
     measures (from `measure_keys`). Per-row cells: dim cells render
     FK-label fallback for `is_fk=True`, status_badge for non-FK,
-    em-dash placeholder for None. Measure cells render raw values
-    with `.is-measure` modifier.
+    em-dash placeholder for None. Measure cells are clerk-facing
+    counts (oral #160 — dim keys are not measures).
 
     `rows` is a tuple of dicts (the legacy `pivot_buckets` shape)
     — the renderer looks up keys per spec rather than pre-computing

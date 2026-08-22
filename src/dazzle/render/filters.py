@@ -617,6 +617,55 @@ def clerk_entity_card_field_display(value: Any, field_key: Any = "") -> str:
     return str(value)
 
 
+def clerk_pivot_measure_keys(bucket_keys: Any, dim_specs: Any) -> tuple[str, ...]:
+    """Drop dimension keys / FK labels from pivot measure columns (oral #160).
+
+    v0.66.116 copied a Jinja-scope bug so every first-row key (including
+    ``system`` / ``system_label`` / ``severity``) rendered as a measure.
+    Leftover ``zzz`` keys stay put when they are not dim names.
+    """
+    dim_names: set[str] = set()
+    for spec in dim_specs or []:
+        if isinstance(spec, dict):
+            name = str(spec.get("name") or "")
+        else:
+            name = str(getattr(spec, "name", "") or "")
+        if name:
+            dim_names.add(name)
+            dim_names.add(f"{name}_label")
+    keys: list[str] = []
+    seen: set[str] = set()
+    for raw in bucket_keys or []:
+        key = str(raw)
+        if not key or key in seen or key in dim_names:
+            continue
+        seen.add(key)
+        keys.append(key)
+    return tuple(keys)
+
+
+def clerk_pivot_measure_display(value: Any) -> str:
+    """Clerk-facing pivot measure: ``12`` not leaked UUID / ``12.0`` (oral #160).
+
+    Leftover junk stays put (including scientific ``1e2``). None is an em dash.
+    """
+    if value is None:
+        return "—"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lower() in _LEFTOVER_STAGE_TOKENS:
+            return value
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if number == int(number):
+        return str(int(number))
+    return f"{number:.2f}".rstrip("0").rstrip(".")
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):
