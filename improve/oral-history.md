@@ -1685,6 +1685,17 @@ dialect formed — and where it started to Goodhart itself — is
     lets literals ride; leftover ``zzz`` stays put.
     Live ops_dashboard ``alert_pipeline``. Standing refusals apply.
 
+162. **Clerk-visible display-dump cadence.** Self-audit 2296:
+    cycles 2282–2295 shipped one ops_dashboard widget formatter
+    per cycle after oral #149 STOP on title/label (ISO ticks →
+    empty heatmap → insight noun → 12.00 → 340ms → 2.4% →
+    datetime ISO → schema keys → slug CTA → stamps omit →
+    pivot leak → pipeline emdash). Each hole was real; the
+    *cadence* is leftover-token Goodhart in display clothing.
+    Helpers exist. Remaining widget siblings STOP
+    (oral #150–#161). Next invent class is not another
+    ops_dashboard formatter. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1779,6 +1790,7 @@ the end of every new oral *is* expensive — point here instead.
 | Stacked area legend snake_case | Dump ``critical`` / ``in_progress`` as area-chart series names after bar-chart badges already humanize; clone leftover-token stay-put, FilterBar labels, or conversion chips | #148 |
 | Identity-dump title/label siblings | Walk another queue title / chart legend / FilterBar token after the identity helpers exist | #149 |
 | Chart day-bucket ISO | Dump ``2026-05-18`` on chart day ticks after grid cells use the profile date; clone leftover-token stay-put, identity-dump titles, or week/month tick restyles | #150 |
+| Heatmap group_by empty matrix | Walk remaining 2-d heatmap rows/columns after compute_heatmap honors group_by; clone leftover-token stay-put or identity-dump titles | #151 |
 | Insight measure token | Dump ``count`` / unpluralized ``system`` as insight English after clerk_insight_*_noun exists; clone leftover-token stay-put, identity-dump titles, or heatmap 1-d | #152 |
 | Comparison whole-count 12.00 | Dump ranked integer counts as ``12.00`` after ``_fmt_num`` exists; clone leftover-token stay-put, insight citation labels, or identity-dump titles | #153 |
 | Measure unit suffix dropped | Dump ``340`` on ``*_ms`` histogram/box-plot/bullet/profile stats after ``clerk_measure_display`` exists; clone leftover-token stay-put, 12.00 counts, or identity-dump titles | #154 |
@@ -1789,6 +1801,7 @@ the end of every new oral *is* expensive — point here instead.
 | Entity-card stamps omit chrono | Omit history when ``fields`` are empty after rows carry datetime; clone leftover-token stay-put, remaining halo/flags schema dumps, or remaining quick-action slug CTAs | #159 |
 | Pivot leaked-dim measures | Dump ``system`` / ``system_label`` as extra measure columns after ``clerk_pivot_measure_keys`` exists; clone leftover-token stay-put, remaining stamps field-list, or remaining entity-card siblings | #160 |
 | Pipeline literal value emdash | Dump ``—`` for quoted ``value:`` flow-card strings after ``clerk_pipeline_stage_value`` exists; clone leftover-token stay-put, remaining pivot leaked-dim, or remaining entity-card siblings | #161 |
+| Clerk-visible display-dump cadence | Walk another ops_dashboard widget formatter after helpers exist (oral #150–#161) | #162 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1876,6 +1889,7 @@ how the handbook was learned.
 | One workspace enum FilterBar token after enum_filter_options exists | Call enum_filter_options / clerk_stage_label on remaining badge filters, then STOP (oral #147) |
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
+| One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
