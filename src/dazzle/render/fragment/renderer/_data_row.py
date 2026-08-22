@@ -22,6 +22,7 @@ from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
 )
+from dazzle.render.channel_cell import clerk_email_cell_html, clerk_phone_cell_html
 from dazzle.render.filters import (
     _basename_or_url_filter,
     _bool_icon_filter,
@@ -332,6 +333,12 @@ def _render_cell_display(
         return html if html else "—"
     if col_type == "rating":
         html = clerk_rating_cell_html(value)
+        return html if html else "—"
+    if col_type == "email":
+        html = clerk_email_cell_html(value)
+        return html if html else "—"
+    if col_type == "phone":
+        html = clerk_phone_cell_html(value)
         return html if html else "—"
     if col_type == "file":
         # ADR-0049 Phase 2 / #1551: file fields render a download link via the

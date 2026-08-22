@@ -26,6 +26,7 @@ from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
 )
+from dazzle.render.channel_cell import clerk_email_cell_html, clerk_phone_cell_html
 from dazzle.render.file_cell import clerk_file_cell_display
 from dazzle.render.filters import _LEFTOVER_STAGE_TOKENS, clerk_percent_points_display
 from dazzle.render.fragment import (
@@ -317,6 +318,14 @@ def _render_typed_value(
 
     if col_type == "rating":
         html = clerk_rating_cell_html(value)
+        return RawHTML(html) if html else RawHTML("—")
+
+    if col_type == "email":
+        html = clerk_email_cell_html(value)
+        return RawHTML(html) if html else RawHTML("—")
+
+    if col_type == "phone":
+        html = clerk_phone_cell_html(value)
         return RawHTML(html) if html else RawHTML("—")
 
     if col_type == "file":

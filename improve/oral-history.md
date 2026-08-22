@@ -1784,6 +1784,16 @@ dialect formed — and where it started to Goodhart itself — is
     ``*_score``. Live design_studio ``feedback_list``.
     Standing refusals apply.
 
+173. **List/queue email and phone dump dead text.** Cycle 2307:
+    contact_manager ``contact_list`` showed mailboxes and
+    ``+44 20 7946 0936`` as truncated strings while SPEC/trial
+    ask for tappable channels. ``clerk_email_cell_html`` /
+    ``clerk_phone_cell_html`` emit ``mailto:`` / ``tel:``;
+    leftover ``zzz`` stays put; empty invents no link; CSV stays
+    plain text. ``is_mailbox_shape`` lives in ``core/`` so render
+    does not clone the HTTP scan. Do not map generic URL fields.
+    Live contact_manager ``contact_list``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1899,6 +1909,7 @@ the end of every new oral *is* expensive — point here instead.
 | Workspace file UUID cell | Dump storage UUID on timeline/queue/CSV file columns after ``clerk_file_cell_display`` exists; clone leftover-token stay-put, remaining kanban FK siblings, remaining accordion whitelist dumps, or remaining ops_dashboard formatters | #170 |
 | List/queue tags comma blob | Dump ``brand,spring`` as a sentence after ``clerk_tags_cell_html`` exists; clone leftover-token stay-put, remaining workspace file UUID siblings, remaining kanban FK siblings, or remaining ops_dashboard formatters | #171 |
 | List/queue rating bare integer | Dump ``4`` on 1–5 ``rating`` / ``quality_score`` after ``clerk_rating_display`` exists; clone leftover-token stay-put, remaining tags/labels list-cell siblings, remaining workspace file UUID siblings, or remaining ops_dashboard formatters | #172 |
+| List/queue email/phone dead text | Dump mailbox/phone as truncated strings after mailto/tel helpers exist; clone leftover-token stay-put, remaining rating/tags/file siblings, or remaining ops_dashboard formatters | #173 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1995,6 +2006,7 @@ how the handbook was learned.
 | One diagram empty ER after compute_diagram_data exists | Call compute_diagram_data on remaining display: diagram hosts, then STOP (oral #166). Do not restyle remaining progress/tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One map empty dump after MAP is on the typed HTTP whitelist | Call _build_map on remaining display: map hosts, then STOP (oral #167). Do not restyle remaining diagram ER siblings, remaining group_by empty dumps, ops_dashboard formatters, or leftover-token stay-put |
 | One tags/labels list cell after clerk_tags_cell_html exists | Call clerk_tags_cell_html on remaining list/queue/detail emitters, then STOP (oral #171). Do not restyle remaining workspace file UUID siblings, remaining kanban FK siblings, remaining accordion whitelist dumps, or leftover-token stay-put |
+| One email/phone list cell after clerk_email_cell_html exists | Call clerk_email_* / clerk_phone_* on remaining reachable-channel hosts in one ship, then STOP (oral #173). Do not restyle remaining 1–5 rating siblings, remaining tags/labels, remaining file UUID, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

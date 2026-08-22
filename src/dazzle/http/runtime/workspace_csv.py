@@ -35,6 +35,7 @@ from typing import Any
 
 from starlette.responses import StreamingResponse
 
+from dazzle.render.channel_cell import clerk_email_display, clerk_phone_display
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.file_cell import clerk_file_cell_display
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
@@ -43,6 +44,13 @@ from dazzle.render.fragment.renderer._render_interactive import (
 )
 from dazzle.render.rating_cell import clerk_rating_display
 from dazzle.render.tags_cell import clerk_tags_join
+
+_CSV_CHANNEL_FORMATTERS = {
+    "tags": clerk_tags_join,
+    "rating": clerk_rating_display,
+    "email": clerk_email_display,
+    "phone": clerk_phone_display,
+}
 
 
 def _csv_format_override(raw: Any, column: dict[str, Any]) -> str | None:
@@ -86,10 +94,9 @@ def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
             if known and str(raw) not in known:
                 return str(raw)
         return format_cell(raw, "badge")
-    if kind == "tags":
-        return clerk_tags_join(raw)
-    if kind == "rating":
-        return clerk_rating_display(raw)
+    channel = _CSV_CHANNEL_FORMATTERS.get(kind)
+    if channel is not None:
+        return channel(raw)
     if isinstance(raw, datetime):
         return format_cell(raw, "datetime")
     if isinstance(raw, date):

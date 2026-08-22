@@ -17,6 +17,7 @@ from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
+from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.fragment import (
     URL,
     Badge,
@@ -153,6 +154,10 @@ def _detail_display_type(f: dict[str, Any]) -> str:
         return media
     if rating_field_name(key):
         return "rating"
+    if phone_field_name(key):
+        return "phone"
+    if email_field_name(key) or kind == "email":
+        return "email"
     if widget == "color" or kind == "color":
         return "color"
     if widget in ("image", "media") or kind in ("image", "media"):

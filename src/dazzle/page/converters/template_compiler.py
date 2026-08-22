@@ -26,6 +26,7 @@ from dazzle.page.open_via import (
     resolve_list_detail_url_template,
     resolve_list_same_entity_detail_template,
 )
+from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.context import (
     ColumnContext,
     CompanionContext,
@@ -153,6 +154,23 @@ def _build_currency_options(
     return options
 
 
+def _name_heuristic_column_type(field_name: str, *, allow_at: bool = False) -> str | None:
+    """Column type from field name when the IR kind is missing or unmapped."""
+    if allow_at and field_name.endswith("_at"):
+        return "datetime"
+    if field_name.endswith("_bytes") or field_name in {"size", "filesize", "byte_size"}:
+        return "bytes"
+    if clerk_percent_points_field(field_name):
+        return "percentage"
+    if rating_field_name(field_name):
+        return "rating"
+    if phone_field_name(field_name):
+        return "phone"
+    if email_field_name(field_name):
+        return "email"
+    return None
+
+
 def _field_type_to_column_type(
     field_spec: ir.FieldSpec | None,
     field_name: str = "",
@@ -168,15 +186,7 @@ def _field_type_to_column_type(
     if not field_spec or not field_spec.type:
         # Framework-injected timestamps (created_at / updated_at) — match HTMX
         # `field_kind_to_col_type` so list cells humanise with time (#1597).
-        if field_name.endswith("_at"):
-            return "datetime"
-        if field_name.endswith("_bytes") or field_name in {"size", "filesize", "byte_size"}:
-            return "bytes"
-        if clerk_percent_points_field(field_name):
-            return "percentage"
-        if rating_field_name(field_name):
-            return "rating"
-        return "text"
+        return _name_heuristic_column_type(field_name, allow_at=True) or "text"
     kind = field_spec.type.kind
     type_map = {
         FieldTypeKind.BOOL: "bool",
@@ -194,15 +204,13 @@ def _field_type_to_column_type(
         FieldTypeKind.ENUM: "badge",
         FieldTypeKind.REF: "ref",
         FieldTypeKind.BELONGS_TO: "ref",
+        FieldTypeKind.EMAIL: "email",
     }
     mapped = type_map.get(kind)
     name = field_name or str(getattr(field_spec, "name", "") or "")
-    if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
-        return "bytes"
-    if clerk_percent_points_field(name):
-        return "percentage"
-    if rating_field_name(name):
-        return "rating"
+    named = _name_heuristic_column_type(name)
+    if named is not None:
+        return named
     if mapped is not None:
         return mapped
     return "text"

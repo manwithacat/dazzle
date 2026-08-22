@@ -442,6 +442,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   1–5 slider) closed cycle 2306 (oral #172). Helper:
   `clerk_rating_cell_html` / `clerk_rating_display`. Leftover
   ``zzz`` stays put. Do **not** map generic ``*_score``.
+- **List/queue email/phone dead text** (mailbox / ``+44 20 7946
+  0936`` as truncated strings while SPEC asks for tappable
+  channels) closed cycle 2307 (oral #173). Helper:
+  `clerk_email_cell_html` / `clerk_phone_cell_html`. Leftover
+  ``zzz`` stays put. Do **not** map generic URL fields.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

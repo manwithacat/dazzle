@@ -27,6 +27,7 @@ from typing import Any
 
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
+from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
 from dazzle.render.rating_cell import rating_field_name
 from dazzle.render.tags_cell import tags_field_name
@@ -125,6 +126,7 @@ _KIND_TO_COL_TYPE: dict[str, str] = {
     "datetime": "datetime",
     "money": "currency",
     "file": "file",
+    "email": "email",
 }
 
 
@@ -166,6 +168,25 @@ def _media_col_type_for_field_name(name: str) -> str | None:
         return "color"
     if key in _IMAGE_FIELD_KEYS or key.endswith("_image_url") or key.endswith("_thumb_url"):
         return "image"
+    return None
+
+
+def _name_heuristic_col_type(name: str) -> str | None:
+    """Column type from field name when the IR kind is unmapped."""
+    if name.endswith("_minor"):
+        return "currency"
+    if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
+        return "bytes"
+    if clerk_percent_points_field(name):
+        return "percentage"
+    if tags_field_name(name):
+        return "tags"
+    if rating_field_name(name):
+        return "rating"
+    if phone_field_name(name):
+        return "phone"
+    if email_field_name(name):
+        return "email"
     return None
 
 
@@ -221,16 +242,9 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     if mapped is not None:
         return mapped
     name = str(getattr(field, "name", "") or "")
-    if name.endswith("_minor"):
-        return "currency"
-    if name.endswith("_bytes") or name in {"size", "filesize", "byte_size"}:
-        return "bytes"
-    if clerk_percent_points_field(name):
-        return "percentage"
-    if tags_field_name(name):
-        return "tags"
-    if rating_field_name(name):
-        return "rating"
+    named = _name_heuristic_col_type(name)
+    if named is not None:
+        return named
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine
@@ -238,7 +252,7 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
             return "badge"
     # URL-typed media keys → image thumbs; palette names → color swatches
     # (entity-fallback desks otherwise showed raw hex / bare URLs).
-    media = _media_col_type_for_field_name(str(getattr(field, "name", "") or ""))
+    media = _media_col_type_for_field_name(name)
     if media is not None:
         return media
     return "text"
