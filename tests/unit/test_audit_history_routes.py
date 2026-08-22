@@ -207,8 +207,8 @@ class TestAuthenticatedRoute:
         client = TestClient(app)
         resp = client.get("/_dazzle/audit-history/Manuscript/abc")
         assert resp.status_code == 200
-        assert "draft" in resp.text
-        assert "submitted" in resp.text
+        assert "Draft" in resp.text
+        assert "Submitted" in resp.text
 
     def test_denied_persona_sees_empty_state(self):
         spec = _AuditSpec(entity="Manuscript", show_to=_ShowTo(personas=["admin"]))
@@ -242,7 +242,7 @@ class TestAuthenticatedRoute:
         client = TestClient(app)
         resp = client.get("/_dazzle/audit-history/Manuscript/abc")
         assert resp.status_code == 200
-        assert "draft" in resp.text
+        assert "Draft" in resp.text
 
 
 # ---------------------------------------------------------------------------

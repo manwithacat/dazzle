@@ -5,8 +5,16 @@
   isolation from `TenantConfig`. `"schema"` fail-closes an unbound
   `connection()` lease (#1651). Default `"none"` keeps existing
   single-schema apps unchanged.
+- acme_billing `expected/compliance-auditspec.json` dsl_hash refreshed
+  (`invoice_detail` `show_history: true`).
 
 ### Fixed
+- **Audit-history dumped ISO clocks and snake_case schema (cycle 2313)** —
+  `/_dazzle/audit-history` rendered `str(at)` / `update` /
+  `dunning_state` / `True` while list/queue already timeago + title-case.
+  `clerk_audit_*` emits relative clocks, `Update`, `Dunning State`,
+  Yes/No; leftover `zzz` stays put. Live acme_billing Invoice
+  `audit: all` + `invoice_detail` `show_history`. Oral #179.
 - **Schema isolation lease wrote entity SQL into `public` (#1651)** —
   `PostgresBackend.connection()` used default `search_path=public` when
   no tenant context var was bound, so host services / jobs dual-wrote

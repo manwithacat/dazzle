@@ -217,6 +217,9 @@ surface invoice_detail "Invoice":
   uses entity Invoice
   mode: view
   render: fragment
+  # Cycle 2313 / oral #179: audit: all already writes; hub must not dump ISO /
+  # snake_case history. Opt-in HTMX region (not Goal B coat rails).
+  show_history: true
 
   section summary "Summary":
     field number "Number"

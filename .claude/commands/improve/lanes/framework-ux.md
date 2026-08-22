@@ -457,6 +457,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
 - **List/queue IBAN ungrouped blob** closed cycle 2310 (oral
   #176). Helper: `clerk_iban_display`. Leftover ``zzz`` stays
   put. Do **not** group remaining sort codes / account numbers.
+- **Audit-history ISO / snake_case dump** closed cycle 2313
+  (oral #179). Helper: `clerk_audit_*`. Leftover ``zzz`` stays
+  put. Do **not** join remaining actor UUIDs or restyle remaining
+  money/IBAN before/after values. Do **not** restyle remaining
+  group_by-empty / typed list-cell dumps (oral #163–#178).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -35,6 +35,13 @@ from collections.abc import Iterable
 from typing import Any
 
 from dazzle.http.runtime.audit_visibility import find_audit_spec, load_history
+from dazzle.render.audit_history_cell import (
+    clerk_audit_field_label,
+    clerk_audit_op_display,
+    clerk_audit_value_display,
+    clerk_audit_when_attr,
+    clerk_audit_when_display,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +54,20 @@ _EMPTY_REGION = (
 
 
 def _render_field(change_op: str, f: Any) -> str:
-    name = html.escape(str(getattr(f, "field_name", "") or ""), quote=False)
+    field_key = str(getattr(f, "field_name", "") or "")
+    name = html.escape(clerk_audit_field_label(field_key), quote=False)
     before = getattr(f, "decoded_before", None)
     after = getattr(f, "decoded_after", None)
+    before_shown = clerk_audit_value_display(before, field_key) if before is not None else ""
+    after_shown = clerk_audit_value_display(after, field_key) if after is not None else ""
     before_html = (
         f'<span class="dz-audit-history__value dz-audit-history__value--before">'
-        f"{html.escape(str(before), quote=False) if before is not None else ''}"
+        f"{html.escape(before_shown, quote=False)}"
         f"</span>"
     )
     after_html = (
         f'<span class="dz-audit-history__value dz-audit-history__value--after">'
-        f"{html.escape(str(after), quote=False) if after is not None else ''}"
+        f"{html.escape(after_shown, quote=False)}"
         f"</span>"
     )
     if change_op == "create":
@@ -89,14 +99,17 @@ def _render_change(change: Any) -> str:
 
     op = str(getattr(change, "operation", "") or "")
     op_attr = html.escape(op, quote=True)
-    op_text = html.escape(op, quote=False)
+    op_text = html.escape(clerk_audit_op_display(op), quote=False)
     head_op = f'<span class="dz-audit-history__op dz-audit-history__op--{op_attr}">{op_text}</span>'
 
     at = getattr(change, "at", None)
-    if at:
-        at_attr = html.escape(str(at), quote=True)
-        at_text = html.escape(str(at), quote=False)
-        head_at = f'<time class="dz-audit-history__at" datetime="{at_attr}">{at_text}</time>'
+    at_text = clerk_audit_when_display(at)
+    at_attr = clerk_audit_when_attr(at)
+    if at_text:
+        attr = f' datetime="{html.escape(at_attr, quote=True)}"' if at_attr else ""
+        head_at = (
+            f'<time class="dz-audit-history__at"{attr}>{html.escape(at_text, quote=False)}</time>'
+        )
     else:
         head_at = ""
 
