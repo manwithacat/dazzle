@@ -419,6 +419,9 @@ class WorkspaceRouteBuilder:
                         "STATUS_LIST",
                         "CONFIRM_ACTION_PANEL",
                         "DIAGRAM",
+                        # oral #167 — sourceless display: map (entries: pins)
+                        # 404'd the HTMX region while HQ/Depot existed.
+                        "MAP",
                     )
                     if not ctx_region.source and ctx_region.display not in _BODYLESS_DISPLAYS:
                         continue

@@ -14,12 +14,12 @@ Pipeline (post phases 1-5):
 4. Wrap the typed-primitive HTML in the ``<div data-dz-region>``
    chrome and return the string.
 
-Family layout (35 displays):
+Family layout (36 displays):
 
 - **chart** (11): BAR_CHART, LINE_CHART, AREA_CHART, SPARKLINE,
   HISTOGRAM, HEATMAP, FUNNEL_CHART, BAR_TRACK, BULLET, BOX_PLOT, RADAR
-- **list** (8): LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED,
-  CONVERSATION
+- **list** (9): LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED,
+  CONVERSATION, MAP
 - **card** (6): DETAIL, PROFILE_CARD, ENTITY_CARD (async), CONFIRM_ACTION_PANEL,
   METRICS, STATUS_LIST
 - **dashboard** (6): COHORT_STRIP, DAY_TIMELINE, TASK_INBOX (async),
@@ -204,6 +204,9 @@ _LIST_FAMILY: frozenset[str] = frozenset(
         # (display: conversation). Without this whitelist membership the
         # HTTP path returned empty region chrome (no adapter_ctx items).
         "CONVERSATION",
+        # oral #167 — display: map dumped empty MapBoard for the same
+        # reason (fieldtest device_map / simple_task sample_map).
+        "MAP",
     }
 )
 
@@ -746,8 +749,10 @@ def _build_list_adapter_ctx(
         # #1303 / cycle 1415 — activity rows drill via detail_url_template
         # (action: …/edit demotes when UPDATE denied, same as TIMELINE/LIST).
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
-    elif display_upper == "CONVERSATION":
-        _apply_conversation_list_ctx(adapter_ctx, inputs, ctx, ctx_region, env)
+    elif display_upper in ("CONVERSATION", "MAP"):
+        _apply_conversation_list_ctx(
+            adapter_ctx, inputs, ctx, ctx_region, env, display_upper=display_upper
+        )
 
     return adapter_ctx
 
@@ -758,18 +763,25 @@ def _apply_conversation_list_ctx(
     ctx: Any,
     ctx_region: Any,
     env: RenderEnv,
+    *,
+    display_upper: str = "CONVERSATION",
 ) -> None:
-    """Populate adapter_ctx for ``display: conversation`` (MessageScroller).
+    """Populate adapter_ctx for row+entry list displays.
 
-    Live Comment/Note rows + static status_entries dogfood (sample_thread).
+    ``display: conversation`` — MessageScroller of live Comment/Note rows
+    plus static status_entries (sample_thread).
+    ``display: map`` — MapBoard of entity pins plus authored entries
+    (fieldtest device_map / simple_task sample_map). Oral #167: without
+    this branch the HTTP typed path dumped empty chrome.
     Extracted so ``_build_list_adapter_ctx`` stays under the complexity ratchet.
     """
+    empty_default = {"MAP": "No locations."}.get(display_upper, "No conversation yet.")
     adapter_ctx["items"] = inputs.items
     adapter_ctx["status_entries"] = getattr(ctx_region, "status_entries", []) or []
     adapter_ctx["empty_message"] = (
         getattr(ctx, "surface_empty_message", None)
         or getattr(ctx_region, "empty_message", None)
-        or "No conversation yet."
+        or empty_default
     )
     _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
 

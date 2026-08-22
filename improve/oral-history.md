@@ -1729,6 +1729,15 @@ dialect formed — and where it started to Goodhart itself — is
     ``erDiagram`` from AppSpec; leftover ``zzz`` is not an entity.
     Live fieldtest_hub ``fleet_diagram``. Standing refusals apply.
 
+167. **Map dumps empty pins.** Cycle 2301: ``display: map`` had a
+    MapBoard builder but was missing from ``_TYPED_REGION_DISPLAYS``,
+    so the live HTTP path returned empty region chrome while Devices
+    existed. ``MAP`` joins the list family; items + authored
+    ``entries:`` forward to pins (name/status; leftover ``zzz`` stays
+    a pin). Sourceless ``entries:`` maps join the bodyless route
+    allowlist. Live fieldtest_hub ``device_map``. Standing refusals
+    apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1838,6 +1847,7 @@ the end of every new oral *is* expensive — point here instead.
 | Tree group_by scalar flat list | Dump every device as a root after ``group_by: batch_number``; clone leftover-token stay-put, identity-dump titles, or remaining ops_dashboard widget formatters | #163 |
 | Tabbed list group_by empty tabs | Dump "No tabs" after ``group_by: status``; clone leftover-token stay-put, identity-dump titles, remaining ops_dashboard formatters, or remaining tree group_by siblings | #164 |
 | Diagram empty ER | Dump "No entity relationships" after ``compute_diagram_data`` exists; clone leftover-token stay-put, remaining group_by empty dumps, or remaining ops_dashboard formatters | #166 |
+| Map empty pins | Dump empty MapBoard after MAP is on the typed HTTP whitelist; clone leftover-token stay-put, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #167 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1930,6 +1940,7 @@ how the handbook was learned.
 | One tabbed_list group_by after compute_tabbed_slices exists | Call compute_tabbed_slices on remaining scalar group_by tabbed lists, then STOP (oral #164). Do not restyle remaining tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One progress group_by after infer_progress_stages exists | Call infer_progress_stages on remaining group_by-only progress regions, then STOP (oral #165). Do not restyle remaining tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One diagram empty ER after compute_diagram_data exists | Call compute_diagram_data on remaining display: diagram hosts, then STOP (oral #166). Do not restyle remaining progress/tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
+| One map empty dump after MAP is on the typed HTTP whitelist | Call _build_map on remaining display: map hosts, then STOP (oral #167). Do not restyle remaining diagram ER siblings, remaining group_by empty dumps, ops_dashboard formatters, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

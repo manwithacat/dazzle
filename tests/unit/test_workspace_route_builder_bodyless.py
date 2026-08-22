@@ -114,12 +114,26 @@ workspace dash "Dash":
 """,
                 "/api/workspaces/dash/regions/authorise",
             ),
+            (
+                """module t
+app t "Test"
+workspace dash "Dash":
+  sites:
+    display: map
+    title: "Sites"
+    entries:
+      - title: "HQ"
+        body: "success"
+""",
+                "/api/workspaces/dash/regions/sites",
+            ),
         ],
         ids=[
             "test_action_grid_sourceless",
             "test_pipeline_steps_sourceless",
             "test_status_list_sourceless",
             "test_confirm_action_panel_sourceless",
+            "test_map_sourceless",
         ],
     )
     def test_sourceless_route_registered(self, tmp_path, src: str, expected_path: str) -> None:

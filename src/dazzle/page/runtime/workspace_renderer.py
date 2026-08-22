@@ -317,6 +317,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "PROGRESS": _TYPED_SHIM,
     "DETAIL": _TYPED_SHIM,
     "TREE": _TYPED_SHIM,
+    "MAP": _TYPED_SHIM,  # oral #167 — vendor-free Marker pin board
     "DIAGRAM": _TYPED_SHIM,
     "SEARCH_BOX": _TYPED_SHIM,
     "TABBED_LIST": _TYPED_SHIM,
