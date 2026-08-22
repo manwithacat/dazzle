@@ -82,6 +82,30 @@ def _default_segment_label(segment: str) -> str:
     return segment.replace("-", " ").replace("_", " ").title()
 
 
+def clerk_entity_noun(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing entity noun for toast / fallback detail (oral #192).
+
+    ``IssueReport was created`` dumped PascalCase while the DSL title is
+    ``Issue Report``. Catalog hit uses the entity title (name, folded, or
+    slug). Leftover junk invents no entity. Else PascalCase-split.
+    """
+    text = str(name or "").strip()
+    if not text:
+        return text
+    folded = text.lower()
+    if folded in _LEFTOVER_PATH_TOKENS:
+        return text
+    if catalog:
+        hit = catalog.get(text) or catalog.get(folded) or catalog.get(entity_slug(text))
+        if hit:
+            return str(hit)
+    parts = [p for p in _PASCAL_SPLIT.split(text) if p]
+    return " ".join(parts) or text
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()
@@ -90,8 +114,7 @@ def clerk_entity_title(entity: Any) -> str:
     name = str(getattr(entity, "name", "") or "").strip()
     if not name:
         return ""
-    parts = [p for p in _PASCAL_SPLIT.split(name) if p]
-    return " ".join(parts) or name
+    return clerk_entity_noun(name)
 
 
 def entity_path_labels_from_spec(appspec: Any) -> dict[str, str]:

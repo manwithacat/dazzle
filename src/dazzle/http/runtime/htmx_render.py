@@ -38,6 +38,7 @@ from dazzle.http.runtime.route_support import (
     _is_htmx_request,
     _wants_html,
 )
+from dazzle.render.breadcrumbs import clerk_entity_noun
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
 from dazzle.render.fragment.ingest import render_pagination
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
@@ -248,6 +249,7 @@ def _with_htmx_triggers(
     redirect_url: str | None = None,
     *,
     view_url: str | None = None,
+    entity_labels: dict[str, str] | None = None,
 ) -> Any:
     """Wrap a mutation result with HX-Trigger headers for HTMX requests.
 
@@ -263,6 +265,7 @@ def _with_htmx_triggers(
         redirect_url: Optional URL for HX-Redirect header (post-create navigation).
         view_url: Optional detail URL for a toast "View" action. Suppressed when
             ``redirect_url`` already navigates the browser to the same place.
+        entity_labels: Optional clerk title catalog for mutation toast (oral #192).
     """
 
     if not _is_htmx_request(request):
@@ -285,7 +288,9 @@ def _with_htmx_triggers(
     if toast_view and redirect_url and toast_view.rstrip("/") == redirect_url.rstrip("/"):
         toast_view = None
 
-    headers = htmx_trigger_headers(entity_name, action, view_url=toast_view)
+    headers = htmx_trigger_headers(
+        entity_name, action, view_url=toast_view, entity_labels=entity_labels
+    )
     if redirect_url:
         headers["HX-Redirect"] = redirect_url
     return JSONResponse(content=body, headers=headers)
@@ -345,7 +350,8 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
                 f'<dd class="dz-detail-fields-value">{value_html}</dd>'
             )
 
-        entity_label = _html_mod.escape(entity_name, quote=False)
+        noun = clerk_entity_noun(entity_name)
+        entity_label = _html_mod.escape(noun, quote=False)
         fragment_html = (
             '<div class="dz-detail-fields-card">'
             '<div class="dz-detail-fields-body">'
@@ -364,7 +370,7 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
         from dazzle.render.dispatch import dispatch_render_page
 
         page_ctx = PageContext(
-            page_title=f"{entity_name} Detail",
+            page_title=f"{noun} Detail",
             app_name="Dazzle",
             current_route=str(getattr(request.url, "path", "")),
         )

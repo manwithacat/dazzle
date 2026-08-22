@@ -252,6 +252,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_as_of_snapshot_chrome.py",
     # cycle 2325: shell breadcrumbs must not dump Issuereport (oral #191)
     "tests/unit/test_entity_path_label_dump.py",
+    # cycle 2326: mutation toast / fallback detail must not dump IssueReport (oral #192)
+    "tests/unit/test_mutation_toast_entity_dump.py",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
     "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
     "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",

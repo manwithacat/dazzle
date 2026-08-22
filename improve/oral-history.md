@@ -1972,6 +1972,15 @@ dialect formed — and where it started to Goodhart itself — is
     hop labels). Do not clone remaining as-of snapshot chrome (oral
     #190). Standing refusals apply.
 
+192. **Mutation toast dumps PascalCase entity name.** Cycle 2326:
+    HTMX ``showToast`` said ``IssueReport was created`` while the DSL
+    title is ``Issue Report``. ``clerk_entity_noun`` PascalCase-splits
+    (catalog optional); leftover ``zzz`` invents no entity. Fallback
+    HTML detail ``<h2>`` closed in the same ship. Machine
+    ``entityCreated.entity`` stays the identifier. Live fieldtest_hub
+    ``IssueReport``. Do not restyle remaining breadcrumb slug siblings
+    (oral #191). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2106,6 +2115,7 @@ the end of every new oral *is* expensive — point here instead.
 | Clerk-label without region-adapter retarget | Ship clerk_* without updating existing region-adapter substring pins (or promoting them into ship-surface) | #189 |
 | As-of snapshot silent chrome | Dump a historical ``?as_of=`` projection as live; clone leftover-token stay-put or remaining radar/box-plot/heatmap axis siblings | #190 |
 | Breadcrumb concatenated entity slug | Dump ``Issuereport`` after entity titles exist; clone leftover-token stay-put or remaining as-of snapshot chrome | #191 |
+| Mutation toast PascalCase entity name | Dump ``IssueReport was created`` after ``clerk_entity_noun`` exists; clone leftover-token stay-put or remaining breadcrumb slug siblings | #192 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2182,6 +2192,7 @@ how the handbook was learned.
 | One kanban / badge region-acronym dump after _humanize_filter uppercases sales-region tokens | Call clerk_stage_label / _humanize_filter on remaining UN/sales region tokens in one ship, then STOP (oral #187). Do not restyle remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
 | One radar / box-plot / heatmap schema-axis dump after clerk_chart_axis_label exists | Call clerk_chart_axis_label on remaining polar/quartile/matrix axes in one ship, then STOP (oral #188). Do not restyle remaining sales-region acronym siblings, remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
 | One as-of snapshot chrome after leftover_honest_iso_date is on the workspace heading | Call leftover_honest_iso_date on remaining temporal workspace shells in one ship, then STOP (oral #190). Do not restyle remaining radar / box-plot / heatmap axis siblings, remaining sales-region acronym siblings, or leftover-token stay-put |
+| One mutation-toast PascalCase dump after clerk_entity_noun exists | Call clerk_entity_noun on remaining toast + fallback detail headings in one ship, then STOP (oral #192). Do not restyle remaining breadcrumb slug siblings, remaining as-of snapshot chrome, or leftover-token stay-put |
 | Clerk-label a display without retargeting region-adapter smokes | Ship clerk_* without updating existing region-adapter substring pins (or promoting them into ship-surface) | #189 |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |

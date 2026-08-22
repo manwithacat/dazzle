@@ -17,6 +17,8 @@ from typing import Any
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from dazzle.render.breadcrumbs import clerk_entity_noun
+
 
 @dataclass(frozen=True, slots=True)
 class HtmxDetails:
@@ -130,6 +132,7 @@ def htmx_trigger_headers(
     *,
     title: str | None = None,
     view_url: str | None = None,
+    entity_labels: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Build HX-Trigger header dict for entity mutation responses.
 
@@ -143,15 +146,18 @@ def htmx_trigger_headers(
         title: Optional toast title. If None, action-derived default.
         view_url: When set (and no full-page redirect is taking the user
             there already), emit a "View" action link on the toast.
+        entity_labels: Optional ``entity_slug`` / name → clerk title catalog
+            (oral #192). PascalCase names still split without a catalog.
 
     Returns:
         Dictionary with "HX-Trigger" key ready to pass to Response headers.
     """
     event_name = f"entity{action.capitalize()}"
+    noun = clerk_entity_noun(entity_name, entity_labels)
     toast_title = title or _MUTATION_TOAST_TITLE.get(action, action.capitalize())
     toast_message = message or _MUTATION_TOAST_MESSAGE.get(
-        action, f"{entity_name} {action} successfully"
-    ).format(entity=entity_name)
+        action, f"{noun} {action} successfully"
+    ).format(entity=noun)
     toast: dict[str, Any] = {
         "message": toast_message,
         "type": "success",
