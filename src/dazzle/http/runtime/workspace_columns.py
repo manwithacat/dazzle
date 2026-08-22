@@ -122,6 +122,7 @@ _KIND_TO_COL_TYPE: dict[str, str] = {
     "date": "date",
     "datetime": "datetime",
     "money": "currency",
+    "file": "file",
 }
 
 
@@ -444,6 +445,8 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
     if col_type == "bool":
         col["filterable"] = True
         col["filter_options"] = bool_filter_options()
+    if col_type == "file":
+        col["entity_name"] = str(getattr(entity_spec, "name", "") or "")
     return col
 
 

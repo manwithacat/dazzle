@@ -69,8 +69,9 @@ class TestFieldKindToColType:
             ("updated_at", FieldTypeKind.DATETIME, None, "datetime"),
             ("amount", FieldTypeKind.MONEY, None, "currency"),
             ("title", FieldTypeKind.STR, None, "text"),
+            ("file", FieldTypeKind.FILE, None, "file"),
         ],
-        ids=["enum_badge", "bool", "date", "datetime_col", "money_currency", "str_text"],
+        ids=["enum_badge", "bool", "date", "datetime_col", "money_currency", "str_text", "file"],
     )
     def test_kind_mapping(self, field_name, kind, enum_values, expected) -> None:
         from dazzle.http.runtime.server import _field_kind_to_col_type

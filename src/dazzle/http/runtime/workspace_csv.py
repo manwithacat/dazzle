@@ -36,6 +36,7 @@ from typing import Any
 from starlette.responses import StreamingResponse
 
 from dazzle.render.display_names import _resolve_display_name
+from dazzle.render.file_cell import clerk_file_cell_display
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_option_values,
@@ -107,10 +108,12 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
     (oral #131).
     """
     key = column["key"]
+    raw = item.get(key)
+    if str(column.get("type") or "") == "file":
+        return clerk_file_cell_display(item, key, raw)
     display = item.get(f"{key}_display")
     if display is not None and str(display) != "":
         return str(display)
-    raw = item.get(key)
     if raw is None or raw == "":
         return ""
     if isinstance(raw, dict):

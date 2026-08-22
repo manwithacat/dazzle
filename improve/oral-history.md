@@ -1758,6 +1758,15 @@ dialect formed — and where it started to Goodhart itself — is
     unknown keys. Live simple_task ``by_assignee``. Standing
     refusals apply.
 
+170. **Workspace file cells dump storage UUIDs.** Cycle 2304:
+    ``display: timeline`` on project_tracker ``recent_uploads``
+    titled ``brief.pdf`` then dumped ``File:
+    a1000000-…`` because ``file`` mapped to ``text``.
+    ``clerk_file_cell_display`` uses ``filename`` / basename;
+    leftover ``zzz`` stays put; UUID-only storage becomes
+    ``Download``. Live project_tracker ``recent_uploads``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1870,6 +1879,7 @@ the end of every new oral *is* expensive — point here instead.
 | Map empty pins | Dump empty MapBoard after MAP is on the typed HTTP whitelist; clone leftover-token stay-put, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #167 |
 | Accordion empty FAQ | Dump empty accordion chrome after ACCORDION is on the typed HTTP whitelist; walk remaining carousel/progress_bar whitelist dumps one-per-cycle; clone leftover-token stay-put, remaining map pin siblings, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #168 |
 | Kanban FK group_by empty board | Dump empty people columns after ``group_by: assigned_to``; clone leftover-token stay-put, remaining accordion whitelist dumps, remaining map pin siblings, remaining tree/tabbed/progress group_by siblings, or remaining ops_dashboard formatters | #169 |
+| Workspace file UUID cell | Dump storage UUID on timeline/queue/CSV file columns after ``clerk_file_cell_display`` exists; clone leftover-token stay-put, remaining kanban FK siblings, remaining accordion whitelist dumps, or remaining ops_dashboard formatters | #170 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

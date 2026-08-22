@@ -26,7 +26,8 @@ from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
 )
-from dazzle.render.filters import clerk_percent_points_display
+from dazzle.render.file_cell import clerk_file_cell_display
+from dazzle.render.filters import _LEFTOVER_STAGE_TOKENS, clerk_percent_points_display
 from dazzle.render.fragment import (
     URL,
     Fragment,
@@ -189,6 +190,29 @@ def _render_status_badge_html(
     )
 
 
+def _render_file_cell(item: dict[str, Any], col: dict[str, Any]) -> Fragment:
+    """Workspace file cell: filename download, not storage UUID (oral #170)."""
+    key = str(col.get("key") or "")
+    value = item.get(key) if key else None
+    label = clerk_file_cell_display(item, key, value)
+    if not label:
+        return RawHTML("—")
+    if label.lower() in _LEFTOVER_STAGE_TOKENS:
+        return RawHTML(_html_escape(label))
+    entity = str(col.get("entity_name") or "")
+    record_id = str(item.get("id") or "")
+    if entity and record_id and key:
+        href = _html_escape(
+            f"/_dazzle/documents/{entity}/{record_id}/{key}/file",
+            quote=True,
+        )
+        return RawHTML(
+            f'<a href="{href}" target="_blank" rel="noopener" '
+            f'class="dz-detail-file-link">{_html_escape(label)}</a>'
+        )
+    return RawHTML(_html_escape(label))
+
+
 def _render_typed_value(
     item: dict[str, Any],
     col: dict[str, Any],
@@ -284,6 +308,9 @@ def _render_typed_value(
         return RawHTML(
             _render_media_thumb_html(value, alt=str(col.get("label") or col.get("key") or ""))
         )
+
+    if col_type == "file":
+        return _render_file_cell(item, col)
 
     if col_type == "ref":
         ref_route = str(col.get("ref_route") or "")
