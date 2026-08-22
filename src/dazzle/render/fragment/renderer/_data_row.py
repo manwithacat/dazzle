@@ -45,6 +45,7 @@ from dazzle.render.fragment.region._row_links import (
     open_hop_label,
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
+from dazzle.render.iban_cell import clerk_iban_cell_html
 from dazzle.render.open_discovery import edit_action_open_attr_suffix
 from dazzle.render.rating_cell import clerk_rating_cell_html
 from dazzle.render.tags_cell import clerk_tags_cell_html
@@ -343,6 +344,9 @@ def _render_cell_display(
         return html if html else "—"
     if col_type == "temperature":
         html = clerk_temperature_cell_html(value, col.get("key"))
+        return html if html else "—"
+    if col_type == "iban":
+        html = clerk_iban_cell_html(value)
         return html if html else "—"
     if col_type == "file":
         # ADR-0049 Phase 2 / #1551: file fields render a download link via the

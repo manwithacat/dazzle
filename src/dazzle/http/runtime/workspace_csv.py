@@ -42,6 +42,7 @@ from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_option_values,
 )
+from dazzle.render.iban_cell import clerk_iban_display
 from dazzle.render.rating_cell import clerk_rating_display
 from dazzle.render.tags_cell import clerk_tags_join
 from dazzle.render.temperature_cell import clerk_temperature_display
@@ -51,6 +52,7 @@ _CSV_CHANNEL_FORMATTERS = {
     "rating": clerk_rating_display,
     "email": clerk_email_display,
     "phone": clerk_phone_display,
+    "iban": clerk_iban_display,
 }
 
 

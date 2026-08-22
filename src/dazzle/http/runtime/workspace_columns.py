@@ -30,6 +30,7 @@ from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
+from dazzle.render.iban_cell import iban_field_name
 from dazzle.render.rating_cell import rating_field_name
 from dazzle.render.tags_cell import tags_field_name
 from dazzle.render.temperature_cell import temperature_field_name
@@ -191,6 +192,8 @@ def _name_heuristic_col_type(name: str) -> str | None:
         return "phone"
     if email_field_name(name):
         return "email"
+    if iban_field_name(name):
+        return "iban"
     return None
 
 

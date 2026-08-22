@@ -447,6 +447,16 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   channels) closed cycle 2307 (oral #173). Helper:
   `clerk_email_cell_html` / `clerk_phone_cell_html`. Leftover
   ``zzz`` stays put. Do **not** map generic URL fields.
+- **List/queue temperature unitless decimal** closed cycle 2308
+  (oral #174). Helper: `clerk_temperature_display`. Leftover
+  ``zzz`` stays put. Do **not** map generic decimals or remaining
+  ``duration_minutes`` measure cells (oral #154).
+- **List/queue INT cents raw pence** closed cycle 2309 (oral
+  #175). Helper: `is_money_field_name` + INT → currency. Leftover
+  ``zzz`` stays put. Do **not** map decimal majors.
+- **List/queue IBAN ungrouped blob** closed cycle 2310 (oral
+  #176). Helper: `clerk_iban_display`. Leftover ``zzz`` stays
+  put. Do **not** group remaining sort codes / account numbers.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -26,6 +26,7 @@ from typing import Any
 from dazzle.i18n.display_locale import DisplayLocaleProfile, get_display_locale, relative_day_label
 from dazzle.render.cell_chrome import format_byte_size
 from dazzle.render.channel_cell import clerk_email_display, clerk_phone_display
+from dazzle.render.iban_cell import clerk_iban_display
 from dazzle.render.rating_cell import clerk_rating_display
 from dazzle.render.temperature_cell import clerk_temperature_display
 
@@ -201,6 +202,8 @@ def format_cell(
         return clerk_phone_display(value)
     if kind == "temperature":
         return clerk_temperature_display(value)
+    if kind == "iban":
+        return clerk_iban_display(value)
     return _infer(value, kind, currency_code, profile=profile)
 
 
