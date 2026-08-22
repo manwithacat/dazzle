@@ -48,6 +48,7 @@ from dazzle.render.context import (
 )
 from dazzle.render.filters import clerk_percent_points_field, status_tone_map
 from dazzle.render.fragment.state_affordance import transition_action_label
+from dazzle.render.rating_cell import rating_field_name
 
 
 def _ref_column_meta(field_spec: ir.FieldSpec | None) -> tuple[str, str, str]:
@@ -173,6 +174,8 @@ def _field_type_to_column_type(
             return "bytes"
         if clerk_percent_points_field(field_name):
             return "percentage"
+        if rating_field_name(field_name):
+            return "rating"
         return "text"
     kind = field_spec.type.kind
     type_map = {
@@ -198,6 +201,8 @@ def _field_type_to_column_type(
         return "bytes"
     if clerk_percent_points_field(name):
         return "percentage"
+    if rating_field_name(name):
+        return "rating"
     if mapped is not None:
         return mapped
     return "text"

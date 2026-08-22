@@ -431,6 +431,17 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Same-ship close of remaining sourceless hyperpart emitters
   (carousel / progress_bar). Do **not** walk remaining map pin
   siblings or remaining whitelist dumps one-per-cycle.
+- **Kanban FK group_by empty board** (``group_by: assigned_to``
+  dumped empty people columns) closed cycle 2303 (oral #169).
+- **Workspace file UUID cell** (timeline/queue dumped storage
+  UUID) closed cycle 2304 (oral #170). Helper:
+  `clerk_file_cell_display`. Leftover ``zzz`` stays put.
+- **List/queue tags comma blob** closed cycle 2305 (oral #171).
+  Helper: `clerk_tags_cell_html`. Leftover ``zzz`` stays a chip.
+- **List/queue rating bare integer** (``4`` while the form is a
+  1–5 slider) closed cycle 2306 (oral #172). Helper:
+  `clerk_rating_cell_html` / `clerk_rating_display`. Leftover
+  ``zzz`` stays put. Do **not** map generic ``*_score``.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -38,6 +38,7 @@ from dazzle.render.fragment import (
     Surface,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.rating_cell import clerk_rating_cell_html
 from dazzle.render.tags_cell import clerk_tags_cell_html
 from dazzle.render.user_chip import looks_like_person_ref
 
@@ -312,6 +313,10 @@ def _render_typed_value(
 
     if col_type == "tags":
         html = clerk_tags_cell_html(value)
+        return RawHTML(html) if html else RawHTML("—")
+
+    if col_type == "rating":
+        html = clerk_rating_cell_html(value)
         return RawHTML(html) if html else RawHTML("—")
 
     if col_type == "file":

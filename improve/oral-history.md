@@ -1775,6 +1775,15 @@ dialect formed — and where it started to Goodhart itself — is
     CSV stays comma-joined. Live design_studio ``asset_list``.
     Standing refusals apply.
 
+172. **List/queue rating dumps a bare integer.** Cycle 2306:
+    design_studio ``feedback_list`` / ``asset_list`` dumped
+    ``4`` while create/edit already use a 1–5 slider.
+    ``clerk_rating_cell_html`` emits stars; CSV / related
+    ``clerk_rating_display`` is ``4/5``; leftover ``zzz``
+    stays put; empty invents no stars. Do not map generic
+    ``*_score``. Live design_studio ``feedback_list``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1889,6 +1898,7 @@ the end of every new oral *is* expensive — point here instead.
 | Kanban FK group_by empty board | Dump empty people columns after ``group_by: assigned_to``; clone leftover-token stay-put, remaining accordion whitelist dumps, remaining map pin siblings, remaining tree/tabbed/progress group_by siblings, or remaining ops_dashboard formatters | #169 |
 | Workspace file UUID cell | Dump storage UUID on timeline/queue/CSV file columns after ``clerk_file_cell_display`` exists; clone leftover-token stay-put, remaining kanban FK siblings, remaining accordion whitelist dumps, or remaining ops_dashboard formatters | #170 |
 | List/queue tags comma blob | Dump ``brand,spring`` as a sentence after ``clerk_tags_cell_html`` exists; clone leftover-token stay-put, remaining workspace file UUID siblings, remaining kanban FK siblings, or remaining ops_dashboard formatters | #171 |
+| List/queue rating bare integer | Dump ``4`` on 1–5 ``rating`` / ``quality_score`` after ``clerk_rating_display`` exists; clone leftover-token stay-put, remaining tags/labels list-cell siblings, remaining workspace file UUID siblings, or remaining ops_dashboard formatters | #172 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1910,6 +1920,7 @@ how the handbook was learned.
 | One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
 | One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
 | One hyperpart-emitter whitelist dump per cycle after MAP helper exists | Add remaining sourceless emitters to list family + bodyless allowlist in one ship, then STOP (oral #168) |
+| One 1–5 rating/quality_score cell after clerk_rating_display exists | Call clerk_rating_* on remaining 1–5 rating hosts in one ship, then STOP (oral #172) |
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |

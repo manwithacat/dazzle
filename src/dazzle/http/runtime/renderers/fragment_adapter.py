@@ -53,6 +53,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.html import esc as _html_esc
+from dazzle.render.rating_cell import rating_field_name
 
 # Collection suffixes that leak from list surface titles into CTAs
 # (#1626 P0-2): "New Contact List" / "New Issue Board" / "New Staff Directory".
@@ -150,6 +151,8 @@ def _detail_display_type(f: dict[str, Any]) -> str:
     media = _media_col_type_for_field_name(key)
     if media is not None:
         return media
+    if rating_field_name(key):
+        return "rating"
     if widget == "color" or kind == "color":
         return "color"
     if widget in ("image", "media") or kind in ("image", "media"):

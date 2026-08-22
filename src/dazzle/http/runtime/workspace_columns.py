@@ -28,6 +28,7 @@ from typing import Any
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
+from dazzle.render.rating_cell import rating_field_name
 from dazzle.render.tags_cell import tags_field_name
 
 
@@ -228,6 +229,8 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         return "percentage"
     if tags_field_name(name):
         return "tags"
+    if rating_field_name(name):
+        return "rating"
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine

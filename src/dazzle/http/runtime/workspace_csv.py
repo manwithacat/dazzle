@@ -41,6 +41,7 @@ from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_option_values,
 )
+from dazzle.render.rating_cell import clerk_rating_display
 from dazzle.render.tags_cell import clerk_tags_join
 
 
@@ -87,6 +88,8 @@ def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
         return format_cell(raw, "badge")
     if kind == "tags":
         return clerk_tags_join(raw)
+    if kind == "rating":
+        return clerk_rating_display(raw)
     if isinstance(raw, datetime):
         return format_cell(raw, "datetime")
     if isinstance(raw, date):
