@@ -26,6 +26,7 @@ from dazzle.page.open_via import (
     resolve_list_detail_url_template,
     resolve_list_same_entity_detail_template,
 )
+from dazzle.render.breadcrumbs import entity_path_labels_from_spec
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.context import (
     ColumnContext,
@@ -1957,6 +1958,7 @@ def compile_appspec_to_templates(
         ctx.nav_groups_by_persona = nav_groups_by_persona
         ctx.view_name = surface.name
         ctx.entity_ref = surface.entity_ref or ""
+        ctx.entity_path_labels = entity_path_labels_from_spec(appspec)
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")

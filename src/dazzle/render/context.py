@@ -531,6 +531,9 @@ class PageContext(BaseModel):
     # ``surface feedback_create`` against its own entity while the framework
     # auto-synthesises one with the same name against FeedbackReport. See #828.
     entity_ref: str = ""
+    # oral #191: ``entity_slug(name)`` → clerk title so shell breadcrumbs
+    # do not dump ``Issuereport`` from ``/app/issuereport``. Empty = title-case.
+    entity_path_labels: dict[str, str] = Field(default_factory=dict)
     # Parent workspace name when rendering a workspace shell (cycle 1560).
     # Dispatch uses this to infer content_measure=app when measure is unset.
     # Empty on entity list/form/detail pages.

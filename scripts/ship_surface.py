@@ -250,6 +250,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_chart_axis_dump.py",
     # cycle 2324: temporal workspace as-of snapshot must not be silent (oral #190)
     "tests/unit/test_as_of_snapshot_chrome.py",
+    # cycle 2325: shell breadcrumbs must not dump Issuereport (oral #191)
+    "tests/unit/test_entity_path_label_dump.py",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
     "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
     "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",

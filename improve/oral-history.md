@@ -1962,6 +1962,16 @@ dialect formed — and where it started to Goodhart itself — is
     remaining radar / box-plot / heatmap axis siblings (oral #188).
     Live hr_records ``time_machine``. Standing refusals apply.
 
+191. **Breadcrumb dumps concatenated entity slug.** Cycle 2325:
+    ``/app/issuereport/{id}`` crumb said ``Issuereport`` while the
+    DSL title is ``Issue Report``. ``clerk_entity_path_label`` uses
+    AppSpec titles keyed by ``entity_slug``. Leftover ``zzz`` invents
+    no entity. UUID crumbs stay copiable. Prefix overrides still win
+    on the leaf. Live fieldtest_hub ``IssueReport``. Open-discovery
+    ``data-dz-open-entity`` still slug-title-cases (oral #183 remaining
+    hop labels). Do not clone remaining as-of snapshot chrome (oral
+    #190). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2095,6 +2105,7 @@ the end of every new oral *is* expensive — point here instead.
 | Radar / box-plot / heatmap schema-axis dump | Dump ``api`` / ``critical`` on polar/quartile/matrix axes after ``clerk_chart_axis_label`` exists; clone leftover-token stay-put, remaining sales-region acronym siblings, remaining compact level-acronym siblings, or remaining bar-chart bool buckets | #188 |
 | Clerk-label without region-adapter retarget | Ship clerk_* without updating existing region-adapter substring pins (or promoting them into ship-surface) | #189 |
 | As-of snapshot silent chrome | Dump a historical ``?as_of=`` projection as live; clone leftover-token stay-put or remaining radar/box-plot/heatmap axis siblings | #190 |
+| Breadcrumb concatenated entity slug | Dump ``Issuereport`` after entity titles exist; clone leftover-token stay-put or remaining as-of snapshot chrome | #191 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

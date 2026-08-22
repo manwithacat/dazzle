@@ -12,12 +12,18 @@ from dazzle.render.breadcrumbs import (
     Crumb,
     build_breadcrumb_trail,
     build_shell_breadcrumb,
+    clerk_entity_path_label,
+    clerk_entity_title,
     crumbs_to_breadcrumb,
+    entity_path_labels_from_spec,
 )
 
 __all__ = [
     "Crumb",
     "build_breadcrumb_trail",
     "build_shell_breadcrumb",
+    "clerk_entity_path_label",
+    "clerk_entity_title",
     "crumbs_to_breadcrumb",
+    "entity_path_labels_from_spec",
 ]

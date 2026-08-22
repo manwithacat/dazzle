@@ -63,6 +63,7 @@ from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by
 from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.breadcrumbs import entity_path_labels_from_spec
 from dazzle.render.context import CustomRenderCtx, TransitionContext
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.display_names import _inject_display_names
@@ -1721,6 +1722,7 @@ async def build_app_page_context(
         nav_items=[],
         nav_groups=[],
         current_route=current_route,
+        entity_path_labels=entity_path_labels_from_spec(appspec),
         nav_model=nav_model,
         user_roles=list(user_roles),
         tenant_config=getattr(getattr(request, "state", None), "tenant_config", {}) or {},
@@ -3586,6 +3588,7 @@ async def _workspace_handler(
         nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
         nav_groups=ws_groups,
         current_route=effective_route,
+        entity_path_labels=entity_path_labels_from_spec(getattr(deps, "appspec", None)),
         nav_model=_nav_model,
         # #1324 FR-4: roles + per-tenant config for render-time nav ``when``
         # eval. ``user_roles`` carries the ``role_``-prefixed names (the sidebar
