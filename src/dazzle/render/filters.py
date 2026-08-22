@@ -554,6 +554,17 @@ def clerk_fts_snippet_field_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
+def clerk_list_search_field_label(field_key: Any) -> str:
+    """Schema key → clerk list find-by chrome (oral #182).
+
+    ``first_name`` dumped as ``first name`` on workspace list ``?q=``
+    chrome while the directory already says ``First Name``. Leftover
+    junk stays put. Do not restyle remaining FTS snippet bodies or
+    JSON API keys.
+    """
+    return clerk_entity_card_field_label(field_key)
+
+
 def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
     """Clerk-facing entity-card quick-action CTA (oral #158).
 

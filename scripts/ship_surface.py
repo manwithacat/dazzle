@@ -234,6 +234,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_fts_snippet_field_dump.py",
     # cycle 2315: conversation author suffix must not dump status_page (oral #181)
     "tests/unit/test_conversation_channel_dump.py",
+    # cycle 2316: list find-by chrome must not dump schema keys (oral #182)
+    "tests/unit/test_list_search_field_dump.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

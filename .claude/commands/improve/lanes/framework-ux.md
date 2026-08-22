@@ -468,6 +468,10 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   restyle remaining bubble bodies or remaining ops_dashboard
   widget formatters. Workspace + related emit sites closed in
   one ship.
+- **List find-by schema-key dump** closed cycle 2316 (oral
+  #182). Helper: `clerk_list_search_field_label`. Leftover
+  ``zzz`` stays put. Do **not** restyle remaining FTS snippet
+  bodies or JSON API keys. Empty invents no chrome.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

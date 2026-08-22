@@ -28,6 +28,7 @@ from dazzle.render.cell_chrome import (
 from dazzle.render.filters import (
     _ref_display_name,
     _timeago_filter,
+    clerk_list_search_field_label,
     clerk_percent_points_display,
     clerk_percent_points_field,
     clerk_pivot_measure_keys,
@@ -447,10 +448,10 @@ class _BuildersTablesMixin:
             # the single list filter is obvious when FTS search_box is absent.
             field_labels: list[str] = []
             for f in search_fields_raw[:4]:
-                s = str(f or "").strip()
+                s = clerk_list_search_field_label(f)
                 if not s:
                     continue
-                field_labels.append(s.replace("_", " "))
+                field_labels.append(s)
             if field_labels:
                 hint = ", ".join(field_labels)
                 placeholder = _html.escape(f"Find by {hint}…", quote=True)

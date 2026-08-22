@@ -393,7 +393,7 @@ def test_list_with_search_fields_renders_q_input() -> None:
     assert "data-dz-list-search" in html
     assert 'hx-get="/api/workspaces/contacts/regions/contact_list"' in html
     # Visible find-by-name label from search_fields (not FTS results panel).
-    assert "Find by first name" in html
+    assert "Find by First Name" in html
     assert "dz-list-search-label" in html
     assert "filter-label" in html
     # Swap target must resolve on dual_pane list bodies (data-dz-region) and
