@@ -9,3 +9,13 @@ name: "Dazzle CodeQL config"
 packs:
   python:
     - manwithacat/dazzle-python-models@0.0.2
+
+# Characterization / unit tests write HTML goldens (data-row IBAN cells).
+# py/clear-text-storage-sensitive-data treats those writes as production
+# storage (CWE-312). Test-classified high alerts preempt /improve.
+# Production clerk_iban_display is list/CSV presentation, not cookie storage.
+# Oral #177.
+paths-ignore:
+  - tests
+  - "**/test_*.py"
+  - "**/conftest.py"

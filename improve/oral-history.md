@@ -1821,6 +1821,14 @@ dialect formed — and where it started to Goodhart itself — is
     generic ``bank_account_ref`` / sort codes. Live invoice_ops
     ``SupplierBankAccount.iban``. Standing refusals apply.
 
+177. **CodeQL IBAN fixture write is not production storage.** Cycle
+    2311: ``py/clear-text-storage-sensitive-data`` treated
+    ``clerk_iban_display`` flowing into characterization
+    ``path.write_text`` as high CWE-312. The only instance was
+    classified test. Do not mask clerk IBANs (oral #176). Ignore
+    ``tests/`` in CodeQL config. Dismiss ``used_in_tests``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2040,6 +2048,7 @@ how the handbook was learned.
 | One temperature list cell after clerk_temperature_display exists | Call clerk_temperature_* on remaining temperature hosts in one ship, then STOP (oral #174). Do not restyle remaining email/phone, remaining 1–5 rating, remaining duration_minutes measure cells, remaining tags/file, or leftover-token stay-put |
 | One INT cents amount cell after is_money_field_name + INT maps to currency | Call the INT+money-name mapping on remaining amount/unit_amount hosts in one ship, then STOP (oral #175). Do not map decimal majors, remaining duration_minutes measure cells, remaining temperature/email/phone/rating/tags, or leftover-token stay-put |
 | One IBAN list cell after clerk_iban_display exists | Call clerk_iban_* on remaining IBAN hosts in one ship, then STOP (oral #176). Do not group remaining sort codes / account numbers, remaining INT cents, remaining temperature/email/phone/rating/tags, or leftover-token stay-put |
+| CodeQL test-sink on clerk IBAN display | Mask IBANs or drop grouping to silence py/clear-text-storage; scan tests/ as production storage | #177 |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
