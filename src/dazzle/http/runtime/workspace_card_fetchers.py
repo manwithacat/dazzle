@@ -18,6 +18,10 @@ import logging
 from typing import Any
 
 from dazzle.http.runtime.workspace_scope import _apply_workspace_scope_filters
+from dazzle.render.filters import (
+    clerk_entity_card_field_display,
+    clerk_entity_card_field_label,
+)
 from dazzle.render.fragment.region.workspace_card_bodies import (
     _dazzle_html_escape,
     _render_mini_bars_body,
@@ -349,7 +353,8 @@ def _build_entity_card_sections(
                 if value is None or value == "":
                     continue
                 rows.append(
-                    f"<dt>{_dazzle_html_escape(str(field))}</dt><dd>{_dazzle_html_escape(str(value))}</dd>"
+                    f"<dt>{_dazzle_html_escape(clerk_entity_card_field_label(field))}</dt>"
+                    f"<dd>{_dazzle_html_escape(clerk_entity_card_field_display(value, field))}</dd>"
                 )
             if rows:
                 body_html = f'<dl class="dz-entity-card-{mode}-grid">{"".join(rows)}</dl>'

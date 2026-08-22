@@ -526,6 +526,77 @@ def clerk_percent_points_display(value: Any, field_key: Any = "", *, typed: bool
     return f"{shown}%"
 
 
+# Schema tokens dumped as <dt>/<dd> on entity-card halo/flags (oral #157).
+# Free text (spaces / capitals) must not be title-cased.
+_SCHEMA_TOKEN_RE = _re.compile(r"^[a-z][a-z0-9_]*$")
+_ISO_DT_PREFIX_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:")
+_ISO_DATE_ONLY_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def clerk_entity_card_field_label(field_key: Any) -> str:
+    """Schema key → clerk ``<dt>`` on entity-card halo/flags (oral #157).
+
+    ``acknowledged_by`` dumped as the label while the grid already says
+    ``Acknowledged By``. Leftover junk stays put.
+    """
+    return clerk_stage_label(field_key)
+
+
+def _clerk_entity_card_iso_display(text: str) -> str | None:
+    """Profile clock for ISO date/datetime strings, else None."""
+    if _ISO_DT_PREFIX_RE.match(text):
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return get_display_locale().format_datetime_value(parsed)
+    if _ISO_DATE_ONLY_RE.match(text):
+        try:
+            parsed_d = date.fromisoformat(text[:10])
+        except ValueError:
+            return None
+        return get_display_locale().format_date_value(parsed_d)
+    return None
+
+
+def _clerk_entity_card_str_display(value: str) -> str:
+    """String ``<dd>``: leftover stay-put, ISO clock, schema token, else raw."""
+    text = value.strip()
+    if text.lower() in _LEFTOVER_STAGE_TOKENS:
+        return value
+    iso_shown = _clerk_entity_card_iso_display(text)
+    if iso_shown is not None:
+        return iso_shown
+    if _SCHEMA_TOKEN_RE.fullmatch(text):
+        return clerk_stage_label(text)
+    return value
+
+
+def clerk_entity_card_field_display(value: Any, field_key: Any = "") -> str:
+    """Raw storage → clerk ``<dd>`` on entity-card halo/flags (oral #157).
+
+    Halo/flags used ``str(field)`` / ``str(value)``, so ``severity`` /
+    ``active`` / ISO datetimes landed as schema dumps while list cells
+    already format_cell. Leftover ``zzz`` stays put. Free-text messages
+    are not title-cased.
+    """
+    if value is None or value == "":
+        return ""
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, dict):
+        return _ref_display_name(value)
+    if isinstance(value, datetime):
+        return get_display_locale().format_datetime_value(value)
+    if isinstance(value, date):
+        return get_display_locale().format_date_value(value)
+    if isinstance(value, str):
+        return _clerk_entity_card_str_display(value)
+    if isinstance(value, (int, float)):
+        return clerk_measure_display(value, field_key)
+    return str(value)
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):

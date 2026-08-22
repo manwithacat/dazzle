@@ -381,6 +381,12 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   `_QUEUE_WHEN_COL_TYPES` + `_timeago_filter`. Leftover
   ``zzz`` stays put. Do **not** walk remaining queue
   datetime siblings.
+- **Entity-card schema dump** (halo/flags dumped
+  ``acknowledged_by`` / ``active``) closed cycle 2291
+  (oral #157). Helper: `clerk_entity_card_field_label` /
+  `clerk_entity_card_field_display`. Leftover ``zzz`` stays
+  put. Do **not** walk remaining halo/flags schema-key
+  siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

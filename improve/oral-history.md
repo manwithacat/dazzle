@@ -1639,6 +1639,14 @@ dialect formed — and where it started to Goodhart itself — is
     timeago's date *and* datetime; leftover ``zzz`` stays put.
     Live ops_dashboard ``ack_queue``. Standing refusals apply.
 
+157. **Entity-card halo/flags dumped schema keys and raw storage.** Cycle
+    2291: ``display: entity_card`` halo/flags rendered
+    ``<dt>acknowledged_by</dt><dd>active</dd>`` while list cells already
+    format_cell / badge-humanize. Labels use ``clerk_entity_card_field_label``;
+    values use ``clerk_entity_card_field_display`` (enum tokens, datetime,
+    leftover ``zzz`` stay-put; free-text messages are not title-cased).
+    Live ops_dashboard ``alert_360``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1738,6 +1746,7 @@ the end of every new oral *is* expensive — point here instead.
 | Measure unit suffix dropped | Dump ``340`` on ``*_ms`` histogram/box-plot/bullet/profile stats after ``clerk_measure_display`` exists; clone leftover-token stay-put, 12.00 counts, or identity-dump titles | #154 |
 | Percent-points rate dumped unitless | Dump ``2.40`` on ``*_rate`` / ``*_usage`` list/queue cells, or strip ``%`` from typed ``percentage`` columns, after ``clerk_percent_points_display`` exists; clone leftover-token stay-put, remaining ``*_ms`` sites, or 12.00 counts | #155 |
 | Queue datetime storage ISO | Dump ``2026-05-18 14:30:00+00:00`` on queue meta after date columns already timeago; clone leftover-token stay-put, remaining ``*_ms`` sites, or percent-points cells | #156 |
+| Entity-card schema dump | Dump ``acknowledged_by`` / ``active`` / ISO on halo/flags after ``clerk_entity_card_field_*`` exists; clone leftover-token stay-put, remaining queue datetime siblings, or identity-dump title/label | #157 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1830,6 +1839,7 @@ how the handbook was learned.
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
 | One ``*_ms`` / unitless measure site after clerk_measure_display exists | Call clerk_measure_display / clerk_measure_suffix on remaining measure fields, then STOP (oral #154). Do not restyle count 12.00 or identity-dump titles as siblings |
 | One 0–100 ``*_rate`` / ``*_usage`` cell after clerk_percent_points_display exists | Call clerk_percent_points_display(..., typed=True) on remaining typed percentage / rate cells, then STOP (oral #155). Do not restyle remaining ``*_ms`` charts, 12.00 counts, or identity-dump titles |
+| One entity-card halo/flags schema dump after clerk_entity_card_field_* exists | Call clerk_entity_card_field_label / clerk_entity_card_field_display on remaining halo/flags fields, then STOP (oral #157). Do not restyle remaining queue datetime siblings or identity-dump title/label |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

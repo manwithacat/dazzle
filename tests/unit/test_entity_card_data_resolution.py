@@ -69,9 +69,9 @@ def test_halo_body_renders_dl_grid_with_field_values() -> None:
     )
     body = out[0]["body"]
     assert "<dl" in body
-    assert "<dt>name</dt>" in body
+    assert "<dt>Name</dt>" in body
     assert "<dd>Alice</dd>" in body
-    assert "<dt>score</dt>" in body
+    assert "<dt>Score</dt>" in body
     assert "<dd>78</dd>" in body
 
 
@@ -99,12 +99,12 @@ def test_section_omitted_when_record_has_no_field_values() -> None:
 def test_skips_fields_with_none_or_empty_values() -> None:
     cfg = _config(sections=[_section(name="halo", fields=["a", "b", "c"])])
     out = _build_entity_card_sections(
-        items=[{"id": "p1", "a": "kept", "b": None, "c": ""}], config=cfg
+        items=[{"id": "p1", "a": "kept item", "b": None, "c": ""}], config=cfg
     )
     body = out[0]["body"]
-    assert "<dd>kept</dd>" in body
-    assert "<dt>b</dt>" not in body
-    assert "<dt>c</dt>" not in body
+    assert "<dd>kept item</dd>" in body
+    assert "<dt>B</dt>" not in body
+    assert "<dt>C</dt>" not in body
 
 
 def test_per_mode_sections_omit_when_no_rows_pre_fetched() -> None:
