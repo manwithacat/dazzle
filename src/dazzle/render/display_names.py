@@ -45,3 +45,72 @@ def _inject_display_names(item: dict[str, Any]) -> dict[str, Any]:
     if extras:
         item.update(extras)
     return item
+
+
+def group_field_key(item: dict[str, Any], field: str) -> str:
+    """Stable group/parent id (UUID / scalar — never ``str(dict)``).
+
+    Shared by tree parent-ref nesting and kanban FK columns (oral #169).
+    Runtime rows expose refs as a bare UUID, ``{field}_id``, or nested
+    ``{id/uuid/pk}``. Leftover ``zzz`` stays a key.
+    """
+    val: Any = item.get(field)
+    if val is None or val == "":
+        val = item.get(f"{field}_id")
+    if isinstance(val, dict):
+        val = val.get("id") or val.get("uuid") or val.get("pk")
+    if val is None:
+        return ""
+    return str(val).strip()
+
+
+def kanban_group_label(item: dict[str, Any], field: str, key: str) -> str:
+    """Clerk-facing kanban column label.
+
+    Prefers ``{field}_display`` / nested name. Bare leftover ``zzz`` /
+    UUID without a display name stays put — do not invent a person.
+    """
+    disp = item.get(f"{field}_display")
+    if disp not in (None, ""):
+        text = str(disp).strip()
+        if text:
+            return text
+    val = item.get(field)
+    if isinstance(val, dict):
+        name = _resolve_display_name(val)
+        if name and name != key:
+            return name
+        for nested in ("name", "title", "label", "__display__"):
+            inner = val.get(nested)
+            if inner not in (None, ""):
+                return str(inner).strip()
+    return key
+
+
+def compute_kanban_item_columns(
+    items: list[dict[str, Any]],
+    field: str,
+) -> list[tuple[str, str]]:
+    """Distinct ``(bucket_key, label)`` when enum/SM columns are empty.
+
+    ``compute_kanban_columns`` only returns enum / state-machine values,
+    so live ``group_by: assigned_to`` boards (simple_task ``by_assignee``
+    / ``plate_by_person``) dumped empty chrome while assigned tasks
+    existed (oral #169). Empty items invent nothing. Leftover ``zzz``
+    stays a column.
+    """
+    group_field = field if isinstance(field, str) else str(field or "")
+    if not group_field or not items:
+        return []
+    seen: dict[str, str] = {}
+    order: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = group_field_key(item, group_field)
+        if not key:
+            continue
+        if key not in seen:
+            seen[key] = kanban_group_label(item, group_field, key)
+            order.append(key)
+    return [(k, seen[k]) for k in order]

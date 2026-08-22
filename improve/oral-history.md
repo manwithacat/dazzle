@@ -1748,6 +1748,16 @@ dialect formed — and where it started to Goodhart itself — is
     not a one-kind-per-cycle whitelist walk. Live simple_task
     ``task_faq``. Standing refusals apply.
 
+169. **Kanban FK group_by dumps empty board.** Cycle 2303:
+    ``display: kanban`` + ``group_by: assigned_to`` only emitted
+    enum/SM ``kanban_columns``, so simple_task ``by_assignee`` /
+    ``plate_by_person`` showed empty chrome while assigned tasks
+    existed. ``compute_kanban_item_columns`` uses distinct item
+    values; ``{field}_display`` / nested name labels; leftover
+    ``zzz`` stays a column. Declared enum columns still drop
+    unknown keys. Live simple_task ``by_assignee``. Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1859,6 +1869,7 @@ the end of every new oral *is* expensive — point here instead.
 | Diagram empty ER | Dump "No entity relationships" after ``compute_diagram_data`` exists; clone leftover-token stay-put, remaining group_by empty dumps, or remaining ops_dashboard formatters | #166 |
 | Map empty pins | Dump empty MapBoard after MAP is on the typed HTTP whitelist; clone leftover-token stay-put, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #167 |
 | Accordion empty FAQ | Dump empty accordion chrome after ACCORDION is on the typed HTTP whitelist; walk remaining carousel/progress_bar whitelist dumps one-per-cycle; clone leftover-token stay-put, remaining map pin siblings, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #168 |
+| Kanban FK group_by empty board | Dump empty people columns after ``group_by: assigned_to``; clone leftover-token stay-put, remaining accordion whitelist dumps, remaining map pin siblings, remaining tree/tabbed/progress group_by siblings, or remaining ops_dashboard formatters | #169 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

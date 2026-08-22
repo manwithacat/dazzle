@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from dazzle.render.display_names import compute_kanban_item_columns, group_field_key
 from dazzle.render.fragment import (
     URL,
     ActionCard,
@@ -79,6 +80,27 @@ def _kanban_person_field(item: dict[str, Any], col: dict[str, Any]) -> tuple[str
     return (label, str(raw))
 
 
+def _kanban_column_plan(
+    ctx: RegionContext,
+    items: list[dict[str, Any]],
+    group_by: str,
+) -> tuple[list[str], dict[str, str]]:
+    """Board column keys + clerk labels.
+
+    Declared enum/SM ``kanban_columns`` keep token labels (badge
+    humanizes; unknown keys still drop). Empty declared + live items
+    synthesize distinct FK/scalar columns so ``group_by: assigned_to``
+    is a people board, not empty chrome (oral #169).
+    """
+    declared = [str(k) for k in (ctx.get("kanban_columns") or ctx.get("group_keys") or []) if k]
+    raw_labels = ctx.get("kanban_column_labels") or {}
+    labels = {str(k): str(v) for k, v in raw_labels.items()} if isinstance(raw_labels, dict) else {}
+    if declared:
+        return declared, {k: labels.get(k, k) for k in declared}
+    planned = compute_kanban_item_columns(items, group_by)
+    return [k for k, _lab in planned], dict(planned)
+
+
 class _BuildersCardsMixin:
     """Mixin adding the 5 cards-family `_build_*` methods to
     `WorkspaceRegionAdapter`. Same pattern as other family mixins.
@@ -113,9 +135,10 @@ class _BuildersCardsMixin:
         title = _region_title(region)
         items: list[dict[str, Any]] = ctx.get("items", []) or []
         # Accept both legacy `kanban_columns`/`group_by` and Phase 4A
-        # `group_keys`/`group_by_field` shapes.
-        column_keys: list[str] = list(ctx.get("kanban_columns") or ctx.get("group_keys") or [])
+        # `group_keys`/`group_by_field` shapes. Empty declared columns
+        # fall back to distinct item values (oral #169 FK people board).
         group_by: str = str(ctx.get("group_by") or ctx.get("group_by_field") or "")
+        column_keys, column_labels = _kanban_column_plan(ctx, items, group_by)
         columns_meta = ctx.get("columns") or []
         display_key = str(ctx.get("display_key") or "")
         entity_name = str(ctx.get("entity_name") or "Item")
@@ -185,12 +208,12 @@ class _BuildersCardsMixin:
             )
             return _wrap_surface(title, "kanban", body)
 
-        # Group items by column key.
+        # Group items by column key (UUID / scalar — never str(dict)).
         buckets: dict[str, list[dict[str, Any]]] = {k: [] for k in column_keys}
         for item in items:
             if not isinstance(item, dict):
                 continue
-            key = str(item.get(group_by, "") or "")
+            key = group_field_key(item, group_by) if group_by else ""
             buckets.setdefault(key, []).append(item)
 
         # #1303 / cycle 1410: resolve hub drills once for all dict items
@@ -279,7 +302,9 @@ class _BuildersCardsMixin:
                         rank=card_rank,
                     )
                 )
-            kanban_cols.append(KanbanColumn(label=col_key, cards=tuple(cards)))
+            kanban_cols.append(
+                KanbanColumn(label=column_labels.get(col_key, col_key), cards=tuple(cards))
+            )
 
         empty_msg = (
             ctx.get("empty_message") or getattr(region, "empty_message", None) or "No items found."

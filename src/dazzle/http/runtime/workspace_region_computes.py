@@ -26,6 +26,7 @@ from dazzle.http.runtime.workspace_card_data import (
 )
 from dazzle.render.diagram_mermaid import compute_diagram_data as compute_diagram_data
 from dazzle.render.display_names import _resolve_display_name
+from dazzle.render.display_names import group_field_key as _tree_parent_id
 from dazzle.render.filters import clerk_measure_display, clerk_stage_label
 from dazzle.render.fragment.insight import (
     InsightNarrative,
@@ -481,27 +482,6 @@ def infer_progress_stages(
             _append_unique_stage(stages, seen, _tree_group_label(item, field))
     leftover = frozenset(s for s in stages if s not in canonical)
     return stages, leftover
-
-
-def _tree_parent_id(item: dict[str, Any], parent_field: str) -> str:
-    """Resolve parent FK to a bare id string for tree nesting (#1626 S4).
-
-    Runtime list rows often expose refs as:
-    * bare UUID string (JSONL seeds)
-    * ``{parent_field}_id`` scalar
-    * nested ``{id: ...}`` / ``{uuid: ...}`` dict after ORM serialize
-
-    Without this, ``str(dict)`` never matches ``items_by_id`` and every
-    node becomes a root — flat alphabetical “tree” theater.
-    """
-    val: Any = item.get(parent_field)
-    if val is None or val == "":
-        val = item.get(f"{parent_field}_id")
-    if isinstance(val, dict):
-        val = val.get("id") or val.get("uuid") or val.get("pk")
-    if val is None:
-        return ""
-    return str(val).strip()
 
 
 def _tree_group_label(item: dict[str, Any], group_field: str) -> str:
@@ -1966,7 +1946,8 @@ def compute_kanban_columns(
     ``status_field`` matches ``group_by_field``).
 
     Returns an empty list when the field has no enum and no matching
-    state machine — caller should fall back to distinct items[group_by].
+    state machine — caller should fall back to
+    ``compute_kanban_item_columns`` (oral #169 people boards).
     """
     if entity_spec is None:
         return []
