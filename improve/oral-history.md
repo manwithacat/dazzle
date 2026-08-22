@@ -1676,6 +1676,15 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #157–#159). Live ops_dashboard ``alert_pivot``.
     Standing refusals apply.
 
+161. **Pipeline literal value coerced to emdash.** Cycle 2295:
+    ``display: pipeline_steps`` IR already accepts a quoted string
+    as ``value:`` (v0.61.66 #4 — ``"Daily 02:00 UTC"``). The typed
+    ``PipelineStage.value`` was ``int | None``, so ``int()`` of the
+    Audit stage became ``None`` and ops ``alert_pipeline`` showed
+    ``—``. ``clerk_pipeline_stage_value`` keeps counts as int and
+    lets literals ride; leftover ``zzz`` stays put.
+    Live ops_dashboard ``alert_pipeline``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1778,6 +1787,8 @@ the end of every new oral *is* expensive — point here instead.
 | Entity-card schema dump | Dump ``acknowledged_by`` / ``active`` / ISO on halo/flags after ``clerk_entity_card_field_*`` exists; clone leftover-token stay-put, remaining queue datetime siblings, or identity-dump title/label | #157 |
 | Entity-card quick-action slug CTA | Dump ``Alert Create`` from the action id after ``clerk_quick_action_label`` exists; clone leftover-token stay-put, remaining halo/flags schema dumps, or identity-dump title/label | #158 |
 | Entity-card stamps omit chrono | Omit history when ``fields`` are empty after rows carry datetime; clone leftover-token stay-put, remaining halo/flags schema dumps, or remaining quick-action slug CTAs | #159 |
+| Pivot leaked-dim measures | Dump ``system`` / ``system_label`` as extra measure columns after ``clerk_pivot_measure_keys`` exists; clone leftover-token stay-put, remaining stamps field-list, or remaining entity-card siblings | #160 |
+| Pipeline literal value emdash | Dump ``—`` for quoted ``value:`` flow-card strings after ``clerk_pipeline_stage_value`` exists; clone leftover-token stay-put, remaining pivot leaked-dim, or remaining entity-card siblings | #161 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.

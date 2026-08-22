@@ -22,7 +22,11 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from dazzle.core.ir import AggregateRef, DerivedMetricExpr
-from dazzle.render.filters import _metric_number_filter, clerk_stage_label
+from dazzle.render.filters import (
+    _metric_number_filter,
+    clerk_pipeline_stage_value,
+    clerk_stage_label,
+)
 from dazzle.render.fragment import (
     Accordion,
     AccordionItem,
@@ -302,16 +306,9 @@ class _BuildersMetricsMixin:
                 label = str(entry.get("label") or entry.get("name") or "")
                 if not label:
                     continue
-                # value: None preserved (renders as "—"); coerce to int else.
-                value: int | None
-                value_raw = entry.get("value")
-                if value_raw is None:
-                    value = None
-                else:
-                    try:
-                        value = int(value_raw)
-                    except (TypeError, ValueError):
-                        value = None
+                # Counts stay int; literal flow-card strings ride (oral #161).
+                # ``int("Daily 02:00 UTC")`` used to become None → "—".
+                value = clerk_pipeline_stage_value(entry.get("value"))
                 # progress: None preserved (omits the bar); coerce to int else.
                 progress: int | None
                 progress_raw = entry.get("progress")

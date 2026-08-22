@@ -484,7 +484,7 @@ class _RenderChartsMixin:
         last_idx = len(p.stages) - 1
         items: list[str] = []
         for i, stage in enumerate(p.stages):
-            value_str = str(stage.value) if stage.value is not None else "—"
+            value_str = "—" if stage.value is None else ctx.escape(str(stage.value))
             caption_html = (
                 f'<span class="dz-pipeline-stage-caption">{ctx.escape(stage.caption)}</span>'
                 if stage.caption

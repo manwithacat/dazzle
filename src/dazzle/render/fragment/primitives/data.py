@@ -1075,14 +1075,15 @@ class PipelineStage:
     """Single stage in a `PipelineSteps` row.
 
     `value` is the headline aggregate (None renders as "—" matching the
-    legacy template's null-coalesce). `progress` is an optional 0-100
-    fill percentage; when None the progress bar block is omitted.
+    legacy template's null-coalesce) **or** a literal flow-card string
+    (oral #161 — ``Daily 02:00 UTC``, not ``—``). `progress` is an optional
+    0-100 fill percentage; when None the progress bar block is omitted.
     `progress_overshoot=True` flags values that were clamped from >100
     so themes can surface "over capacity" via `data-dz-progress-overshoot`.
     """
 
     label: str
-    value: int | None = None
+    value: int | str | None = None
     caption: str = ""
     progress: int | None = None
     progress_overshoot: bool = False

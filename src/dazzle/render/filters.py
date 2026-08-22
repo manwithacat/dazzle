@@ -666,6 +666,30 @@ def clerk_pivot_measure_display(value: Any) -> str:
     return f"{number:.2f}".rstrip("0").rstrip(".")
 
 
+def clerk_pipeline_stage_value(value: Any) -> int | str | None:
+    """Pipeline headline: counts stay int; literal strings ride (oral #161).
+
+    Typed ``PipelineStage.value`` used to be ``int | None``, so
+    ``int("Daily 02:00 UTC")`` became ``None`` and the Audit stage
+    rendered ``—``. Leftover ``zzz`` stays put. Blank / None is omitted.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value == int(value):
+            return int(value)
+        return str(value)
+    if isinstance(value, str):
+        if not value.strip():
+            return None
+        return value
+    return str(value)
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict."""
     if not isinstance(value, dict):
