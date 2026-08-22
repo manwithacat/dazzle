@@ -29,7 +29,11 @@ import math
 from html import escape as _html_escape
 from typing import Any, Literal
 
-from dazzle.render.filters import clerk_measure_suffix, clerk_stage_label
+from dazzle.render.filters import (
+    clerk_chart_axis_label,
+    clerk_measure_suffix,
+    clerk_stage_label,
+)
 from dazzle.render.fragment import (
     BarChart,
     BarTrack,
@@ -268,17 +272,20 @@ class _BuildersChartsMixin:
         for entry in raw_axes:
             if isinstance(entry, (list, tuple)) and len(entry) >= 2:
                 try:
-                    axes.append((str(entry[0]), float(entry[1])))
+                    raw_label = entry[0]
+                    shown = clerk_chart_axis_label(raw_label) or str(raw_label)
+                    axes.append((shown, float(entry[1])))
                 except (TypeError, ValueError):
                     continue
             elif isinstance(entry, dict):
-                label = str(entry.get("axis") or entry.get("label") or "")
+                raw_label = entry.get("axis") or entry.get("label") or ""
+                shown = clerk_chart_axis_label(raw_label) or str(raw_label)
                 try:
                     val = float(entry.get("value") or 0)
                 except (TypeError, ValueError):
                     val = 0.0
-                if label:
-                    axes.append((label, val))
+                if shown:
+                    axes.append((shown, val))
 
         body: Fragment
         # Radar primitive requires ≥3 axes; fewer collapses to a line.
@@ -319,12 +326,14 @@ class _BuildersChartsMixin:
             n_present = False
             if isinstance(entry, (list, tuple)) and len(entry) == 6:
                 try:
-                    label = str(entry[0])
+                    raw_label = entry[0]
+                    label = clerk_chart_axis_label(raw_label) or str(raw_label)
                     mn, q1, med, q3, mx = (float(v) for v in entry[1:6])
                 except (TypeError, ValueError):
                     continue
             elif isinstance(entry, dict):
-                label = str(entry.get("label") or "")
+                raw_label = entry.get("label") or ""
+                label = clerk_chart_axis_label(raw_label) or str(raw_label)
                 try:
                     mn = float(entry.get("min") or 0)
                     q1 = float(entry.get("q1") or 0)
@@ -869,7 +878,8 @@ class _BuildersChartsMixin:
         for row_dict in matrix:
             if not isinstance(row_dict, dict):
                 continue
-            row_label = str(row_dict.get("row") or "")
+            raw_row = row_dict.get("row") or ""
+            row_label = clerk_chart_axis_label(raw_row) or str(raw_row)
             cells_raw = row_dict.get("cells") or []
             cell_values: list[float] = []
             for cell in cells_raw:
@@ -892,7 +902,7 @@ class _BuildersChartsMixin:
             or "No data available."
         )
         body: Fragment = Heatmap(
-            columns=tuple(str(c) for c in col_values),
+            columns=tuple(clerk_chart_axis_label(c) or str(c) for c in col_values),
             rows=tuple(rows),
             thresholds=tuple(thresholds),
             total=total,

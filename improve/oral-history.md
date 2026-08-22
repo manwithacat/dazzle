@@ -1932,6 +1932,18 @@ dialect formed — and where it started to Goodhart itself — is
     compact level-acronym siblings (oral #186) or remaining
     bar-chart bool buckets (oral #185). Standing refusals apply.
 
+188. **Radar / box-plot / heatmap dump raw schema axes.** Cycle
+    2322: ``display: radar`` / ``box_plot`` / ``heatmap`` rendered
+    ``api`` / ``critical`` while bar-chart / FilterBar already
+    clerk-label. Those families skipped ``clerk_stage_label``.
+    ``clerk_chart_axis_label`` humanizes schema tokens; leftover
+    ``zzz`` stays put; free-text / already-display labels stay
+    put. Live ops_dashboard ``service_type_profile`` +
+    ``response_time_spread`` + ``alert_heatmap``. Do not restyle
+    remaining sales-region acronym siblings (oral #187), remaining
+    compact level-acronym siblings (oral #186), or remaining
+    bar-chart bool buckets (oral #185). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2136,6 +2148,7 @@ how the handbook was learned.
 | One carousel aspect-chip schema-token dump after clerk_carousel_chip_label exists | Call clerk_carousel_chip_label on remaining carousel item/entry chips in one ship, then STOP (oral #184). Do not restyle remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, remaining conversation bubble bodies, or leftover-token stay-put |
 | One bar-chart / badge level-acronym dump after _humanize_filter uppercases letter+digit tokens | Call clerk_stage_label / _humanize_filter on remaining compact level tokens in one ship, then STOP (oral #186). Do not restyle remaining bar-chart bool buckets, remaining chart legend snake_case, remaining carousel chips, or leftover-token stay-put |
 | One kanban / badge region-acronym dump after _humanize_filter uppercases sales-region tokens | Call clerk_stage_label / _humanize_filter on remaining UN/sales region tokens in one ship, then STOP (oral #187). Do not restyle remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
+| One radar / box-plot / heatmap schema-axis dump after clerk_chart_axis_label exists | Call clerk_chart_axis_label on remaining polar/quartile/matrix axes in one ship, then STOP (oral #188). Do not restyle remaining sales-region acronym siblings, remaining compact level-acronym siblings, remaining bar-chart bool buckets, remaining chart legend snake_case, or leftover-token stay-put |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

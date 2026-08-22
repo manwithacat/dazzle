@@ -113,7 +113,8 @@ def test_heatmap_html_shows_counts_not_empty_state() -> None:
     )
     html = FragmentRenderer().render(node)
     assert "dz-heatmap-region" in html
-    assert ">critical<" in html
+    assert ">Critical<" in html
+    assert ">critical<" not in html
     assert ">zzz<" in html
     assert "4" in html
     assert "No alerts" not in html

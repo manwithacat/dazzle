@@ -246,6 +246,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_bar_chart_level_acronym.py",
     # cycle 2321: kanban / badge / FilterBar region tokens must not dump Emea (oral #187)
     "tests/unit/test_region_acronym_dump.py",
+    # cycle 2322: radar / box-plot / heatmap axes must not dump api/critical (oral #188)
+    "tests/unit/test_chart_axis_dump.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

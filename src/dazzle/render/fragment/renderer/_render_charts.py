@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dazzle.render.filters import clerk_stage_label
+from dazzle.render.filters import clerk_chart_axis_label, clerk_stage_label
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
@@ -343,6 +343,8 @@ class _RenderChartsMixin:
         """Render a Radar via HM dual-lock Radar seam.
 
         SVG geometry stays in ``dazzle.render.svg.radar_svg``.
+        Spoke labels use clerk_chart_axis_label so ``api`` dumps
+        ``Api``, not the schema token (oral #188).
         """
         from dazzle.render.filters import _metric_number_filter
         from dazzle.render.svg import radar_svg
@@ -350,14 +352,15 @@ class _RenderChartsMixin:
         if not r.axes:
             return render_radar(RadarSeam(label=r.label, axes=[]))
 
-        svg = radar_svg(r.label, r.axes)
-        max_val = max((v for _, v in r.axes), default=1) or 1
+        axes = tuple((clerk_chart_axis_label(lbl) or str(lbl), val) for lbl, val in r.axes)
+        svg = radar_svg(r.label, axes)
+        max_val = max((v for _, v in axes), default=1) or 1
         max_for_filter = int(max_val) if max_val == int(max_val) else max_val
         max_val_str = _metric_number_filter(max_for_filter)
         return render_radar(
             RadarSeam(
                 label=r.label,
-                axes=[RadarAxisSeam(label=lbl, value=val) for lbl, val in r.axes],
+                axes=[RadarAxisSeam(label=lbl, value=val) for lbl, val in axes],
                 svg_html=svg,
                 peak_display=max_val_str,
             )
@@ -368,20 +371,26 @@ class _RenderChartsMixin:
 
         SVG geometry stays in ``dazzle.render.svg.box_plot_svg``; the seam
         carries the trusted SVG plus group stats for the summary line.
+        Group labels use clerk_chart_axis_label so ``api`` dumps
+        ``Api``, not the schema token (oral #188).
         """
         from dazzle.render.svg import box_plot_svg
 
         if not b.groups:
             return render_box_plot(BoxPlotSeam(label=b.label, groups=[]))
 
+        groups = tuple(
+            (clerk_chart_axis_label(label) or str(label), mn, q1, med, q3, mx)
+            for label, mn, q1, med, q3, mx in b.groups
+        )
         svg = box_plot_svg(
             b.label,
-            b.groups,
+            groups,
             reference_lines=b.reference_lines,
             samples=b.samples,
             unit_suffix=b.unit_suffix,
         )
-        samples = b.samples if b.samples else (0,) * len(b.groups)
+        samples = b.samples if b.samples else (0,) * len(groups)
         return render_box_plot(
             BoxPlotSeam(
                 label=b.label,
@@ -395,7 +404,7 @@ class _RenderChartsMixin:
                         max=mx,
                         samples=samples[i] if i < len(samples) else 0,
                     )
-                    for i, (label, mn, q1, med, q3, mx) in enumerate(b.groups)
+                    for i, (label, mn, q1, med, q3, mx) in enumerate(groups)
                 ],
                 svg_html=svg,
             )
@@ -697,11 +706,21 @@ class _RenderChartsMixin:
         )
 
     def _emit_heatmap(self, h: Heatmap, ctx: RenderContext) -> str:
-        """Render a Heatmap via HM dual-lock Heatmap seam."""
+        """Render a Heatmap via HM dual-lock Heatmap seam.
+
+        Axis tokens use clerk_chart_axis_label so group_by dumps
+        ``Critical``, not schema ``critical`` (oral #188).
+        """
         return render_heatmap(
             HeatmapSeam(
-                columns=list(h.columns),
-                rows=[HeatmapRowSeam(label=r.label, cells=list(r.cells)) for r in h.rows],
+                columns=[clerk_chart_axis_label(c) or str(c) for c in h.columns],
+                rows=[
+                    HeatmapRowSeam(
+                        label=clerk_chart_axis_label(r.label) or r.label,
+                        cells=list(r.cells),
+                    )
+                    for r in h.rows
+                ],
                 thresholds=list(h.thresholds),
                 total=h.total,
                 empty_message=h.empty_message,

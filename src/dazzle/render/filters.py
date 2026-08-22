@@ -579,6 +579,19 @@ _ISO_DT_PREFIX_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:")
 _ISO_DATE_ONLY_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def clerk_chart_axis_label(value: Any) -> str:
+    """Schema token → clerk radar / box-plot / heatmap axis (oral #188).
+
+    Polar, quartile, and matrix charts dumped raw ``api`` / ``critical``
+    while bar-chart / FilterBar already clerk-label. Leftover junk stays
+    put via clerk_stage_label. Free-text / already-display labels stay put.
+    """
+    if isinstance(value, bool):
+        return clerk_stage_label(value)
+    text = "" if value is None else str(value).strip()
+    return clerk_stage_label(text) if text and _SCHEMA_TOKEN_RE.fullmatch(text) else text
+
+
 def clerk_entity_card_field_label(field_key: Any) -> str:
     """Schema key → clerk ``<dt>`` on entity-card halo/flags (oral #157).
 

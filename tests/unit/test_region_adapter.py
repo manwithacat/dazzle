@@ -1238,8 +1238,9 @@ def test_box_plot_silently_drops_non_monotonic_groups() -> None:
     }
     fragment = adapter.build(_FakeRegion("b", display="box_plot"), ctx)
     html = _render(fragment)
-    assert "good" in html
+    assert "Good" in html
     assert "bad" not in html
+    assert "Bad" not in html
 
 
 def test_sparkline_renders_dedicated_primitive() -> None:
