@@ -1829,6 +1829,19 @@ dialect formed — and where it started to Goodhart itself — is
     ``tests/`` in CodeQL config. Dismiss ``used_in_tests``.
     Standing refusals apply.
 
+178. **Group-by empty + typed list-cell dump cadence.** Self-audit
+    2312: cycles 2297–2310 shipped one group_by-empty dump or
+    typed list/queue cell per cycle after oral #162 STOP on
+    ops_dashboard widgets (tree folders → tabs → progress chips
+    → ER → map pins → accordion FAQ → kanban people → file UUID
+    → tags chips → rating stars → mailto/tel → °C → INT cents
+    → IBAN groups). Each hole was real; the *cadence* is
+    leftover-token Goodhart in display clothing. Helpers exist.
+    Remaining siblings STOP (oral #163–#176). Next invent class
+    is not another col_type restyle, remaining sourceless
+    whitelist dump, remaining duration_minutes, or remaining
+    sort-code grouping. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1937,6 +1950,7 @@ the end of every new oral *is* expensive — point here instead.
 | Clerk-visible display-dump cadence | Walk another ops_dashboard widget formatter after helpers exist (oral #150–#161) | #162 |
 | Tree group_by scalar flat list | Dump every device as a root after ``group_by: batch_number``; clone leftover-token stay-put, identity-dump titles, or remaining ops_dashboard widget formatters | #163 |
 | Tabbed list group_by empty tabs | Dump "No tabs" after ``group_by: status``; clone leftover-token stay-put, identity-dump titles, remaining ops_dashboard formatters, or remaining tree group_by siblings | #164 |
+| Progress group_by empty stages | Dump "No progress" after ``infer_progress_stages`` exists; clone leftover-token stay-put, remaining tabbed_list/tree group_by siblings, or remaining ops_dashboard formatters | #165 |
 | Diagram empty ER | Dump "No entity relationships" after ``compute_diagram_data`` exists; clone leftover-token stay-put, remaining group_by empty dumps, or remaining ops_dashboard formatters | #166 |
 | Map empty pins | Dump empty MapBoard after MAP is on the typed HTTP whitelist; clone leftover-token stay-put, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #167 |
 | Accordion empty FAQ | Dump empty accordion chrome after ACCORDION is on the typed HTTP whitelist; walk remaining carousel/progress_bar whitelist dumps one-per-cycle; clone leftover-token stay-put, remaining map pin siblings, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #168 |
@@ -1948,6 +1962,7 @@ the end of every new oral *is* expensive — point here instead.
 | List/queue temperature unitless | Dump ``22.5`` on ``temperature`` / ``temp_c`` after ``clerk_temperature_display`` exists; clone leftover-token stay-put, remaining email/phone, remaining rating/tags/file, remaining duration_minutes measure cells, or remaining ops_dashboard formatters | #174 |
 | List/queue INT cents raw pence | Dump ``125000`` on INT ``amount`` / ``unit_amount`` after currency mapping exists; clone leftover-token stay-put, remaining temperature cells, remaining duration_minutes measure cells, remaining email/phone/rating/tags, or decimal-major ``format: currency`` restyles | #175 |
 | List/queue IBAN ungrouped blob | Dump ``GB82WEST…`` after ``clerk_iban_display`` exists; clone leftover-token stay-put, remaining INT cents, remaining temperature/email/phone/rating/tags, or generic account-number grouping | #176 |
+| Group-by empty + typed list-cell dump cadence | Walk another group_by-empty dump or typed list/queue cell after helpers exist (oral #163–#176) | #178 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2038,6 +2053,7 @@ how the handbook was learned.
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
+| One group_by-empty / typed list-cell dump per cycle after display-dump STOP | STOP; remaining group_by + list-cell siblings closed (oral #163–#176). New invent class (oral #178) |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
 | One tabbed_list group_by after compute_tabbed_slices exists | Call compute_tabbed_slices on remaining scalar group_by tabbed lists, then STOP (oral #164). Do not restyle remaining tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One progress group_by after infer_progress_stages exists | Call infer_progress_stages on remaining group_by-only progress regions, then STOP (oral #165). Do not restyle remaining tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
