@@ -47,7 +47,11 @@ from dazzle.render.context import (
     TableContext,
     TransitionContext,
 )
-from dazzle.render.filters import clerk_percent_points_field, status_tone_map
+from dazzle.render.filters import (
+    clerk_percent_points_field,
+    clerk_related_tab_fk_label,
+    status_tone_map,
+)
 from dazzle.render.fragment.state_affordance import transition_action_label
 from dazzle.render.iban_cell import iban_field_name
 from dazzle.render.rating_cell import rating_field_name
@@ -1371,8 +1375,9 @@ def _compile_view_surface(
     # Build related entity tabs from reverse references. An entity with more than
     # one FK path to the parent yields one tab per path (#1523): disambiguate the
     # tab_id (the Alpine activeTab key — duplicates render all tabs active) and the
-    # label by the FK field, so "Task · assigned to" / "Task · reviewed by" instead
-    # of N identical "Task" tabs. Single-path entities keep the historical shape.
+    # label by the FK field, so "Task · Assigned To" / "Task · Reviewed By"
+    # instead of N identical "Task" tabs. Single-path entities keep the
+    # historical shape. Leftover junk stays put (oral #183).
     _ref_path_counts = Counter(name for name, _, _ in reverse_refs or [])
     related_tabs: list[RelatedTabContext] = []
     for ref_entity_name, fk_field, ref_entity in reverse_refs or []:
@@ -1382,7 +1387,9 @@ def _compile_view_surface(
         tab_id = f"tab-{ref_slug}"
         if _ref_path_counts[ref_entity_name] > 1:
             tab_id = f"tab-{ref_slug}-{fk_field.replace('_', '-')}"
-            tab_label = f"{tab_label} · {fk_field.replace('_', ' ')}"
+            fk_label = clerk_related_tab_fk_label(fk_field)
+            if fk_label:
+                tab_label = f"{tab_label} · {fk_label}"
         # Build columns from the related entity's fields (exclude FK to parent)
         tab_columns = [c for c in _build_entity_columns(ref_entity) if c.key != fk_field]
         # Match section visible condition to tab (#501)

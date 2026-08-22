@@ -824,8 +824,8 @@ class TestRelatedEntityTabs:
             "tab-contact-billing-company",
         }
         assert {t.label for t in tabs} == {
-            "Contact · company",
-            "Contact · billing company",
+            "Contact · Company",
+            "Contact · Billing Company",
         }
         # Each tab still filters by its own FK path — the data was never identical.
         assert {t.filter_field for t in tabs} == {"company", "billing_company"}

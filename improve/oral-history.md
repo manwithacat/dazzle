@@ -1881,6 +1881,15 @@ dialect formed — and where it started to Goodhart itself — is
     empty invents no chrome. Do not restyle remaining FTS snippet
     bodies or JSON API keys (oral #180). Standing refusals apply.
 
+183. **Related-tab FK disambiguation dumps schema keys.** Cycle
+    2317: dual-FK related tabs rendered ``Task · assigned to`` /
+    ``Task · created by`` while forms already say ``Assigned To``.
+    Live simple_task ``user_detail`` ``related work`` ``show: Task``.
+    ``clerk_related_tab_fk_label`` reuses
+    ``clerk_entity_card_field_label``; leftover ``zzz`` stays put;
+    empty invents no suffix. Do not restyle remaining open-via hop
+    labels (oral #182). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2006,6 +2015,7 @@ the end of every new oral *is* expensive — point here instead.
 | FTS snippet schema-key dump | Dump ``first_name:`` on search_box hits after ``clerk_fts_snippet_field_label`` exists; clone leftover-token stay-put, remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, or remaining money/IBAN before/after | #180 |
 | Conversation channel schema-token dump | Dump ``status_page`` / ``repro`` on conversation author suffixes after ``conversation_channel_label`` uses ``clerk_stage_label``; clone leftover-token stay-put, remaining bubble bodies, remaining ops_dashboard widget formatters, remaining FTS snippet bodies, or remaining audit-history actor UUIDs | #181 |
 | List find-by schema-key dump | Dump ``first name`` / ``job title`` on workspace list ``?q=`` chrome after ``clerk_list_search_field_label`` exists; clone leftover-token stay-put, remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, or remaining ops_dashboard widget formatters | #182 |
+| Related-tab FK schema-key dump | Dump ``assigned to`` / ``created by`` on dual-FK related tabs after ``clerk_related_tab_fk_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, or remaining conversation bubble bodies | #183 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2076,6 +2086,7 @@ how the handbook was learned.
 | One leftover file ``?entity=`` persist site after leftover_honest_file_entity exists | Call leftover_honest_file_entity on remaining file association sites in one ship, then STOP (oral #120) |
 | One conversation channel suffix host after conversation_channel_label clerk-humanizes | Call conversation_channel_label on remaining workspace + related emit sites in one ship, then STOP (oral #181) |
 | One list find-by schema-key dump after clerk_list_search_field_label exists | Call clerk_list_search_field_label on remaining workspace list ``?q=`` chrome in one ship, then STOP (oral #182). Do not restyle remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, remaining ops_dashboard widget formatters, or leftover-token stay-put |
+| One related-tab FK schema-key dump after clerk_related_tab_fk_label exists | Call clerk_related_tab_fk_label on remaining dual-FK related-tab compilers in one ship, then STOP (oral #183). Do not restyle remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, remaining conversation bubble bodies, or leftover-token stay-put |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

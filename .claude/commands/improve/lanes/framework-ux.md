@@ -472,6 +472,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   #182). Helper: `clerk_list_search_field_label`. Leftover
   ``zzz`` stays put. Do **not** restyle remaining FTS snippet
   bodies or JSON API keys. Empty invents no chrome.
+- **Related-tab FK schema-key dump** closed cycle 2317 (oral
+  #183). Helper: `clerk_related_tab_fk_label`. Leftover
+  ``zzz`` stays put. Do **not** restyle remaining open-via hop
+  labels or remaining list find-by chrome siblings. Empty
+  invents no suffix.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -565,6 +565,17 @@ def clerk_list_search_field_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
+def clerk_related_tab_fk_label(field_key: Any) -> str:
+    """Schema key → clerk related-tab FK disambiguation (oral #183).
+
+    Dual-FK related tabs dumped ``assigned to`` while forms already
+    say ``Assigned To``. Leftover junk stays put. Empty invents no
+    suffix. Do not restyle remaining open-via hop labels or remaining
+    list find-by chrome siblings.
+    """
+    return clerk_entity_card_field_label(field_key)
+
+
 def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
     """Clerk-facing entity-card quick-action CTA (oral #158).
 
