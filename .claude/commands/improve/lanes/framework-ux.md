@@ -477,6 +477,15 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   ``zzz`` stays put. Do **not** restyle remaining open-via hop
   labels or remaining list find-by chrome siblings. Empty
   invents no suffix.
+- **Carousel chip schema-token dump** closed cycle 2318 (oral
+  #184). Helper: ``clerk_carousel_chip_label``. Leftover
+  ``zzz`` stays put. Do **not** restyle remaining open-via hop
+  labels or remaining related-tab FK siblings.
+- **Bar-chart bool True/False** closed cycle 2319 (oral #185).
+  Helper: ``clerk_stage_label`` true/false strings + bar-chart
+  emit. Leftover ``zzz`` stays put. Do **not** restyle remaining
+  chart legend snake_case siblings (oral #148) or remaining
+  carousel chip siblings.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

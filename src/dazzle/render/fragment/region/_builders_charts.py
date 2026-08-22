@@ -917,17 +917,20 @@ class _BuildersChartsMixin:
         for entry in raw_buckets:
             if isinstance(entry, (list, tuple)) and len(entry) >= 2:
                 try:
-                    buckets.append((str(entry[0]), int(entry[1])))
+                    raw_label = entry[0]
+                    shown = clerk_stage_label(raw_label) or str(raw_label)
+                    buckets.append((shown, int(entry[1])))
                 except (TypeError, ValueError):
                     continue
             elif isinstance(entry, dict):
-                key = str(entry.get("label") or entry.get("key") or "")
+                raw_label = entry.get("label") or entry.get("key") or ""
+                shown = clerk_stage_label(raw_label) or str(raw_label)
                 try:
                     val = int(entry.get("value") or entry.get("count") or 0)
                 except (TypeError, ValueError):
                     val = 0
-                if key:
-                    buckets.append((key, val))
+                if shown:
+                    buckets.append((shown, val))
 
         body: Fragment
         if not buckets:

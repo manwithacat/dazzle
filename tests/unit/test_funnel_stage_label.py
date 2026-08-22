@@ -36,6 +36,9 @@ def test_clerk_stage_label_humanizes_snake_case() -> None:
     assert clerk_stage_label("In Progress") == "In Progress"
     assert clerk_stage_label(True) == "Yes"
     assert clerk_stage_label(False) == "No"
+    assert clerk_stage_label("true") == "Yes"
+    assert clerk_stage_label("False") == "No"
+    assert clerk_stage_label("TRUE") == "Yes"
 
 
 def test_clerk_stage_label_leftover_stays_put() -> None:

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dazzle.render.filters import clerk_stage_label
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
@@ -132,8 +133,9 @@ class _RenderChartsMixin:
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
         """Render a BarChart via HM dual-lock BarChart seam.
 
-        Bucket labels still use status-badge HTML (product path); widths
-        are computed here and passed into the seam model.
+        Bucket labels use status-badge HTML with clerk_stage_label so
+        bool group_by dumps Yes/No, not Python ``True`` (oral #185).
+        Widths are computed here and passed into the seam model.
         """
         from dazzle.render.fragment.region import (
             _render_status_badge_html,
@@ -143,15 +145,17 @@ class _RenderChartsMixin:
             return render_bar_chart(BarChartSeam(rows=[]))
 
         max_val = max((c for _, c in b.buckets), default=1) or 1
-        rows = [
-            BarChartRowSeam(
-                label=str(label),
-                count=int(count),
-                width_pct=int(count / max_val * 100),
-                label_html=_render_status_badge_html(label, size="sm"),
+        rows = []
+        for label, count in b.buckets:
+            shown = clerk_stage_label(label) or str(label)
+            rows.append(
+                BarChartRowSeam(
+                    label=shown,
+                    count=int(count),
+                    width_pct=int(count / max_val * 100),
+                    label_html=_render_status_badge_html(label, size="sm", display=shown),
+                )
             )
-            for label, count in b.buckets
-        ]
         return render_bar_chart(BarChartSeam(rows=rows))
 
     def _emit_timeline(self, t: Timeline, ctx: RenderContext) -> str:

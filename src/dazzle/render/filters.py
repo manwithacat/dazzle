@@ -407,12 +407,17 @@ def _humanize_filter(value: Any) -> str:
 _LEFTOVER_STAGE_TOKENS = frozenset({"zzz", "2abc", "1e2", "ghost"})
 
 
-def clerk_stage_label(value: Any) -> str:
-    """Clerk-facing funnel/progress stage label (oral #144).
+_BOOL_STAGE_TOKENS: dict[str, str] = {"true": "Yes", "false": "No"}
 
-    Bar-chart emit already humanizes via status-badge HTML. Funnel and
-    progress dumped ``in_progress`` as the stage name. Leftover junk
-    stays put. Dual-lock emit is unchanged — builders pass clerk labels.
+
+def clerk_stage_label(value: Any) -> str:
+    """Clerk-facing funnel/progress/bar-chart stage label (oral #144 / #185).
+
+    Funnel and progress dumped ``in_progress`` as the stage name.
+    Bar-chart bool ``group_by`` stringifies to ``True`` / ``False`` so
+    status-badge HTML kept the Python repr while FilterBar already
+    says Yes/No. Leftover junk stays put. Dual-lock emit is unchanged
+    — builders pass clerk labels.
     """
     if value is None:
         return ""
@@ -421,8 +426,12 @@ def clerk_stage_label(value: Any) -> str:
     text = str(value).strip()
     if not text:
         return text
-    if text.lower() in _LEFTOVER_STAGE_TOKENS:
+    folded = text.lower()
+    if folded in _LEFTOVER_STAGE_TOKENS:
         return text
+    bool_label = _BOOL_STAGE_TOKENS.get(folded)
+    if bool_label is not None:
+        return bool_label
     return _humanize_filter(text)
 
 

@@ -1899,6 +1899,18 @@ dialect formed — and where it started to Goodhart itself — is
     restyle remaining open-via hop labels or remaining related-tab
     FK siblings (oral #183). Standing refusals apply.
 
+185. **Bar-chart bool group_by dumps True/False.** Cycle 2319:
+    ``display: bar_chart`` + ``group_by: is_internal`` rendered
+    badge ``True`` while FilterBar already says Yes/No and
+    ``clerk_stage_label`` already mapped Python bool. Aggregation
+    stringifies to ``"True"``, so status-badge ``_humanize_filter``
+    kept the repr. String true/false now map; bar-chart emit uses
+    the helper. Leftover ``zzz`` stays put. Live support_tickets
+    ``agent_comment_chart`` + acme_billing ``sensitive_share``.
+    Do not restyle remaining chart legend snake_case siblings
+    (oral #148) or remaining carousel chips (oral #184).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2026,6 +2038,7 @@ the end of every new oral *is* expensive — point here instead.
 | List find-by schema-key dump | Dump ``first name`` / ``job title`` on workspace list ``?q=`` chrome after ``clerk_list_search_field_label`` exists; clone leftover-token stay-put, remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, or remaining ops_dashboard widget formatters | #182 |
 | Related-tab FK schema-key dump | Dump ``assigned to`` / ``created by`` on dual-FK related tabs after ``clerk_related_tab_fk_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, or remaining conversation bubble bodies | #183 |
 | Carousel chip schema-token dump | Dump ``icon_glyph`` on carousel aspect chips after ``clerk_carousel_chip_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, or remaining conversation bubble bodies | #184 |
+| Bar-chart bool True/False | Dump ``True`` / ``False`` on bool ``group_by`` after ``clerk_stage_label`` maps true/false strings; clone leftover-token stay-put, remaining chart legend snake_case siblings, remaining carousel chips, or remaining related-tab FK siblings | #185 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
