@@ -92,6 +92,7 @@ class RegionRenderInputs:
     pivot_buckets: list[dict[str, Any]] = field(default_factory=list)
     pivot_dim_specs: list[dict[str, Any]] = field(default_factory=list)
     tree_items: list[dict[str, Any]] = field(default_factory=list)
+    tabbed_slices: list[dict[str, Any]] = field(default_factory=list)
     source_tabs: list[Any] = field(default_factory=list)
     bar_track_rows: list[dict[str, Any]] = field(default_factory=list)
     bar_track_max: float = 0.0
@@ -1015,6 +1016,9 @@ def _build_specialty_adapter_ctx(
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
         adapter_ctx["active_tab"] = _request_catalog_tab(env.request)
         adapter_ctx["source_tabs"] = _tabbed_list_source_tabs(inputs.source_tabs)
+        if not adapter_ctx["source_tabs"] and inputs.tabbed_slices:
+            adapter_ctx["tabs"] = inputs.tabbed_slices
+            adapter_ctx["columns"] = inputs.columns
     elif display_upper == "PIVOT_TABLE":
         adapter_ctx["pivot_buckets"] = inputs.pivot_buckets
         adapter_ctx["pivot_dim_specs"] = inputs.pivot_dim_specs

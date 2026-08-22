@@ -57,6 +57,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     compute_profile_card,
     compute_progress,
     compute_queue,
+    compute_tabbed_slices,
     compute_tree,
     heatmap_from_bucketed_metrics,
 )
@@ -663,6 +664,12 @@ async def compute_region_render_inputs(
     if display == "TREE" and tree_group and items:
         tree_items = compute_tree(items, tree_group)
 
+    # Tabbed list (oral #164): scalar group_by without multi-source tabs.
+    tabbed_slices: list[dict[str, Any]] = []
+    tab_group = group_by if isinstance(group_by, str) else ""
+    if display == "TABBED_LIST" and tab_group and items and not source_tabs:
+        tabbed_slices = compute_tabbed_slices(items, tab_group, columns)
+
     # #1144 Gap 1 phase 2: cohort_strip primary_aggregate lens runtime.
     # When the active lens carries `primary_aggregate:`, fire per-member
     # aggregate queries (N+1 fan-out; phase 3 will batch via GROUP BY).
@@ -715,6 +722,7 @@ async def compute_region_render_inputs(
         pivot_buckets=pivot_buckets,
         pivot_dim_specs=pivot_dim_specs,
         tree_items=tree_items,
+        tabbed_slices=tabbed_slices,
         source_tabs=source_tabs,
         bar_track_rows=bar_track_rows,
         bar_track_max=bar_track_max,

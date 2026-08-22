@@ -25,7 +25,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _resolve_path,
 )
 from dazzle.render.display_names import _resolve_display_name
-from dazzle.render.filters import clerk_measure_display
+from dazzle.render.filters import clerk_measure_display, clerk_stage_label
 from dazzle.render.fragment.insight import (
     InsightNarrative,
     build_insight_narrative,
@@ -571,6 +571,44 @@ def compute_tree(
     if _tree_is_parent_ref(items, field, items_by_id):
         return _compute_parent_tree(items, field, items_by_id)
     return _compute_group_tree(items, field)
+
+
+def compute_tabbed_slices(
+    items: list[dict[str, Any]],
+    group_field: str,
+    columns: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """One eager tab per distinct scalar ``group_by`` (oral #164).
+
+    Multi-source ``source_tabs`` still own ``display: tabbed_list`` when
+    present. Scalar ``group_by: status`` without sources dumped empty
+    "No tabs" while issues existed. Leftover ``zzz`` stays a tab label.
+    """
+    field = group_field if isinstance(group_field, str) else str(group_field or "")
+    if not field or not items:
+        return []
+    cols = [c for c in (columns or []) if isinstance(c, dict) and c.get("key")]
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    order: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = _tree_group_label(item, field)
+        if not key:
+            continue
+        if key not in buckets:
+            buckets[key] = []
+            order.append(key)
+        buckets[key].append(item)
+    return [
+        {
+            "key": key,
+            "label": clerk_stage_label(key),
+            "items": buckets[key],
+            "columns": cols,
+        }
+        for key in order
+    ]
 
 
 def compute_queue(

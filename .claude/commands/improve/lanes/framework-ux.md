@@ -399,6 +399,13 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   group label. Do **not** restyle remaining ops_dashboard
   widget formatters (oral #150–#162) or walk leftover-token
   stay-put.
+- **Tabbed list group_by empty tabs** (``group_by: status``
+  dumped "No tabs" because only multi-source ``source_tabs``
+  were wired) closed cycle 2298 (oral #164). Helper:
+  `compute_tabbed_slices`. Leftover ``zzz`` stays a tab.
+  Multi-source shells still own source_tabs. Do **not**
+  restyle remaining tree group_by siblings (oral #163) or
+  remaining ops_dashboard widget formatters.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

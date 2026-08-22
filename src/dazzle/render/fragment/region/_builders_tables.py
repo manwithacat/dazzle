@@ -1071,6 +1071,7 @@ class _BuildersTablesMixin:
 
         built: list[tuple[str, object]] = []
         seen_keys = set()
+        seen_shown = set()
         for tab in raw_tabs:
             if not isinstance(tab, dict):
                 continue
@@ -1091,7 +1092,11 @@ class _BuildersTablesMixin:
                     tuple(str(item.get(c["key"], "")) for c in cols) for item in items
                 )
                 tab_body = Table(columns=column_labels, rows=rows_data)
-            built.append((key, tab_body))
+            shown = str(tab.get("label") or key)
+            if shown in seen_shown:
+                shown = key
+            seen_shown.add(shown)
+            built.append((shown, tab_body))
 
         if not built:
             body = EmptyState(title="No tabs", description="")
