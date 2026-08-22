@@ -422,6 +422,12 @@ class WorkspaceRouteBuilder:
                         # oral #167 — sourceless display: map (entries: pins)
                         # 404'd the HTMX region while HQ/Depot existed.
                         "MAP",
+                        # oral #168 — sourceless accordion / carousel /
+                        # progress_bar (FAQ / gallery / capacity entries)
+                        # 404'd while authored panels existed.
+                        "ACCORDION",
+                        "CAROUSEL",
+                        "PROGRESS_BAR",
                     )
                     if not ctx_region.source and ctx_region.display not in _BODYLESS_DISPLAYS:
                         continue

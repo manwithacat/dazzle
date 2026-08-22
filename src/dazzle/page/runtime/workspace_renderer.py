@@ -318,6 +318,9 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "DETAIL": _TYPED_SHIM,
     "TREE": _TYPED_SHIM,
     "MAP": _TYPED_SHIM,  # oral #167 — vendor-free Marker pin board
+    "ACCORDION": _TYPED_SHIM,  # oral #168 — exclusive FAQ disclosure
+    "CAROUSEL": _TYPED_SHIM,  # oral #168 — media stage strip
+    "PROGRESS_BAR": _TYPED_SHIM,  # oral #168 — determinate .dz-progress
     "DIAGRAM": _TYPED_SHIM,
     "SEARCH_BOX": _TYPED_SHIM,
     "TABBED_LIST": _TYPED_SHIM,

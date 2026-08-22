@@ -1738,6 +1738,16 @@ dialect formed — and where it started to Goodhart itself — is
     allowlist. Live fieldtest_hub ``device_map``. Standing refusals
     apply.
 
+168. **Accordion dumps empty FAQ.** Cycle 2302: ``display: accordion``
+    had a builder but was missing from ``_TYPED_REGION_DISPLAYS``,
+    so simple_task ``task_faq`` showed empty chrome while FAQ entries
+    existed. ``ACCORDION`` joins the list family; authored
+    ``entries:`` forward to panels; leftover ``zzz`` stays a panel.
+    Same-ship close of remaining sourceless hyperpart emitters
+    (``CAROUSEL`` / ``PROGRESS_BAR``) after MAP's helper existed —
+    not a one-kind-per-cycle whitelist walk. Live simple_task
+    ``task_faq``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1848,6 +1858,7 @@ the end of every new oral *is* expensive — point here instead.
 | Tabbed list group_by empty tabs | Dump "No tabs" after ``group_by: status``; clone leftover-token stay-put, identity-dump titles, remaining ops_dashboard formatters, or remaining tree group_by siblings | #164 |
 | Diagram empty ER | Dump "No entity relationships" after ``compute_diagram_data`` exists; clone leftover-token stay-put, remaining group_by empty dumps, or remaining ops_dashboard formatters | #166 |
 | Map empty pins | Dump empty MapBoard after MAP is on the typed HTTP whitelist; clone leftover-token stay-put, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #167 |
+| Accordion empty FAQ | Dump empty accordion chrome after ACCORDION is on the typed HTTP whitelist; walk remaining carousel/progress_bar whitelist dumps one-per-cycle; clone leftover-token stay-put, remaining map pin siblings, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #168 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1868,6 +1879,7 @@ how the handbook was learned.
 | One `hx-get` sibling per cycle after the helper exists | Call `leftover_honest_temporal_query` on remaining emitters in one ship, then STOP (oral #67) |
 | One catalog sibling per cycle after the helper exists | Call `leftover_honest_catalog_id` on remaining pickers in one ship, then STOP (oral #69) |
 | One `date_from` site per cycle after the helper exists | Call `leftover_honest_iso_date` on remaining bound sites in one ship, then STOP (oral #70) |
+| One hyperpart-emitter whitelist dump per cycle after MAP helper exists | Add remaining sourceless emitters to list family + bodyless allowlist in one ship, then STOP (oral #168) |
 | One `context_id` site per cycle after the helper exists | Call `leftover_honest_entity_id` on remaining entity-id query params in one ship, then STOP (oral #71) |
 | One `filter_<enum>` fetch site after picker honesty exists | Call `compute_filter_columns_and_active` from fetch, then STOP (oral #72) |
 | One FastAPI `?sort=` site after leftover-honest sort exists | Call `leftover_honest_sort` on remaining list endpoints, then STOP (oral #73) |

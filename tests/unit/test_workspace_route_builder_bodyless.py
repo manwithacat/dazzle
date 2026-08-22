@@ -127,6 +127,45 @@ workspace dash "Dash":
 """,
                 "/api/workspaces/dash/regions/sites",
             ),
+            (
+                """module t
+app t "Test"
+workspace dash "Dash":
+  faq:
+    display: accordion
+    title: "FAQ"
+    entries:
+      - title: "How does priority work?"
+        body: "Priority is a closed enum."
+""",
+                "/api/workspaces/dash/regions/faq",
+            ),
+            (
+                """module t
+app t "Test"
+workspace dash "Dash":
+  gallery:
+    display: carousel
+    title: "Gallery"
+    entries:
+      - title: "Board"
+        body: "https://placehold.co/640x360/png?text=Board"
+""",
+                "/api/workspaces/dash/regions/gallery",
+            ),
+            (
+                """module t
+app t "Test"
+workspace dash "Dash":
+  capacity:
+    display: progress_bar
+    title: "Capacity"
+    entries:
+      - title: "Board fill"
+        body: "62"
+""",
+                "/api/workspaces/dash/regions/capacity",
+            ),
         ],
         ids=[
             "test_action_grid_sourceless",
@@ -134,6 +173,9 @@ workspace dash "Dash":
             "test_status_list_sourceless",
             "test_confirm_action_panel_sourceless",
             "test_map_sourceless",
+            "test_accordion_sourceless",
+            "test_carousel_sourceless",
+            "test_progress_bar_sourceless",
         ],
     )
     def test_sourceless_route_registered(self, tmp_path, src: str, expected_path: str) -> None:

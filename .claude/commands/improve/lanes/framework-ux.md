@@ -419,6 +419,18 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Helper: `compute_diagram_data`. Leftover ``zzz`` is not an
   entity. Do **not** restyle remaining progress/tabbed_list/tree
   group_by siblings or remaining ops_dashboard widget formatters.
+- **Map empty pins** (``display: map`` dumped empty chrome because
+  MAP was missing from ``_TYPED_REGION_DISPLAYS``) closed cycle
+  2301 (oral #167). Helper: list family + `_apply_conversation_list_ctx`.
+  Leftover ``zzz`` stays a pin. Do **not** restyle remaining
+  diagram ER siblings.
+- **Accordion empty FAQ** (``display: accordion`` dumped empty
+  chrome because ACCORDION was missing from the typed HTTP
+  whitelist) closed cycle 2302 (oral #168). Helper: list family
+  + bodyless allowlist. Leftover ``zzz`` stays a panel.
+  Same-ship close of remaining sourceless hyperpart emitters
+  (carousel / progress_bar). Do **not** walk remaining map pin
+  siblings or remaining whitelist dumps one-per-cycle.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

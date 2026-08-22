@@ -14,12 +14,12 @@ Pipeline (post phases 1-5):
 4. Wrap the typed-primitive HTML in the ``<div data-dz-region>``
    chrome and return the string.
 
-Family layout (36 displays):
+Family layout (39 displays):
 
 - **chart** (11): BAR_CHART, LINE_CHART, AREA_CHART, SPARKLINE,
   HISTOGRAM, HEATMAP, FUNNEL_CHART, BAR_TRACK, BULLET, BOX_PLOT, RADAR
-- **list** (9): LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED,
-  CONVERSATION, MAP
+- **list** (12): LIST, KANBAN, QUEUE, TIMELINE, GRID, TREE, ACTIVITY_FEED,
+  CONVERSATION, MAP, ACCORDION, CAROUSEL, PROGRESS_BAR
 - **card** (6): DETAIL, PROFILE_CARD, ENTITY_CARD (async), CONFIRM_ACTION_PANEL,
   METRICS, STATUS_LIST
 - **dashboard** (6): COHORT_STRIP, DAY_TIMELINE, TASK_INBOX (async),
@@ -207,6 +207,11 @@ _LIST_FAMILY: frozenset[str] = frozenset(
         # oral #167 — display: map dumped empty MapBoard for the same
         # reason (fieldtest device_map / simple_task sample_map).
         "MAP",
+        # oral #168 — sourceless hyperpart emitters dumped empty chrome
+        # (simple_task task_faq / sample_gallery / sample_progress).
+        "ACCORDION",
+        "CAROUSEL",
+        "PROGRESS_BAR",
     }
 )
 
@@ -749,7 +754,13 @@ def _build_list_adapter_ctx(
         # #1303 / cycle 1415 — activity rows drill via detail_url_template
         # (action: …/edit demotes when UPDATE denied, same as TIMELINE/LIST).
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
-    elif display_upper in ("CONVERSATION", "MAP"):
+    elif display_upper in (
+        "CONVERSATION",
+        "MAP",
+        "ACCORDION",
+        "CAROUSEL",
+        "PROGRESS_BAR",
+    ):
         _apply_conversation_list_ctx(
             adapter_ctx, inputs, ctx, ctx_region, env, display_upper=display_upper
         )
@@ -773,9 +784,18 @@ def _apply_conversation_list_ctx(
     ``display: map`` — MapBoard of entity pins plus authored entries
     (fieldtest device_map / simple_task sample_map). Oral #167: without
     this branch the HTTP typed path dumped empty chrome.
+    ``display: accordion`` / ``carousel`` / ``progress_bar`` — sourceless
+    hyperpart emitters (simple_task task_faq / sample_gallery /
+    sample_progress). Oral #168: remaining whitelist dumps closed in
+    one ship after MAP's helper existed.
     Extracted so ``_build_list_adapter_ctx`` stays under the complexity ratchet.
     """
-    empty_default = {"MAP": "No locations."}.get(display_upper, "No conversation yet.")
+    empty_default = {
+        "MAP": "No locations.",
+        "ACCORDION": "No panels.",
+        "CAROUSEL": "No slides.",
+        "PROGRESS_BAR": "No progress.",
+    }.get(display_upper, "No conversation yet.")
     adapter_ctx["items"] = inputs.items
     adapter_ctx["status_entries"] = getattr(ctx_region, "status_entries", []) or []
     adapter_ctx["empty_message"] = (
