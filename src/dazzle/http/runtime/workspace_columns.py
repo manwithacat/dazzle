@@ -28,6 +28,7 @@ from typing import Any
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.filters import clerk_percent_points_field, clerk_stage_label, status_tone_map
+from dazzle.render.tags_cell import tags_field_name
 
 
 def _column_label(field_name: str, surface_label: str | None = None) -> str:
@@ -225,6 +226,8 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         return "bytes"
     if clerk_percent_points_field(name):
         return "percentage"
+    if tags_field_name(name):
+        return "tags"
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine
@@ -326,6 +329,8 @@ def build_surface_columns(
         # #1626 R5: color picker fields must not render as raw hex text on desks.
         if field_widgets.get(fn) == "color":
             col_type = "color"
+        if field_widgets.get(fn) == "tags":
+            col_type = "tags"
         if kind_val == "money":
             col_type = "currency"
         col_key = f"{fn}_minor" if kind_val == "money" else f.name

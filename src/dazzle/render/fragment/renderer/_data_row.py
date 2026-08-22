@@ -45,6 +45,7 @@ from dazzle.render.fragment.region._row_links import (
 )
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 from dazzle.render.open_discovery import edit_action_open_attr_suffix
+from dazzle.render.tags_cell import clerk_tags_cell_html
 from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_linked_html
 
 # Raw ISO / Postgres timestamptz leak detector for the text fallback path.
@@ -325,6 +326,9 @@ def _render_cell_display(
         )
     if col_type == "bytes":
         return _html_mod.escape(format_cell(value, "bytes"), quote=False)
+    if col_type == "tags":
+        html = clerk_tags_cell_html(value)
+        return html if html else "—"
     if col_type == "file":
         # ADR-0049 Phase 2 / #1551: file fields render a download link via the
         # scope-gated document route. ``entity_name`` + ``record_id`` are

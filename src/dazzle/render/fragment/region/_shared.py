@@ -38,6 +38,7 @@ from dazzle.render.fragment import (
     Surface,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.tags_cell import clerk_tags_cell_html
 from dazzle.render.user_chip import looks_like_person_ref
 
 # Defensive ISO / Postgres timestamptz leak detector (parity with _data_row.py).
@@ -308,6 +309,10 @@ def _render_typed_value(
         return RawHTML(
             _render_media_thumb_html(value, alt=str(col.get("label") or col.get("key") or ""))
         )
+
+    if col_type == "tags":
+        html = clerk_tags_cell_html(value)
+        return RawHTML(html) if html else RawHTML("—")
 
     if col_type == "file":
         return _render_file_cell(item, col)

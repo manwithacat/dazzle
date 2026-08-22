@@ -1767,6 +1767,14 @@ dialect formed — and where it started to Goodhart itself — is
     ``Download``. Live project_tracker ``recent_uploads``.
     Standing refusals apply.
 
+171. **List/queue tags dump comma blobs.** Cycle 2305:
+    design_studio ``asset_list`` and project_tracker ``task_list``
+    dumped ``brand,spring,logo`` as a sentence while the edit
+    form already has tag chips. ``clerk_tags_cell_html`` emits
+    read-only ``.dz-tags-chip``s; leftover ``zzz`` stays a chip;
+    CSV stays comma-joined. Live design_studio ``asset_list``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1880,6 +1888,7 @@ the end of every new oral *is* expensive — point here instead.
 | Accordion empty FAQ | Dump empty accordion chrome after ACCORDION is on the typed HTTP whitelist; walk remaining carousel/progress_bar whitelist dumps one-per-cycle; clone leftover-token stay-put, remaining map pin siblings, remaining diagram ER siblings, remaining group_by empty dumps, or remaining ops_dashboard formatters | #168 |
 | Kanban FK group_by empty board | Dump empty people columns after ``group_by: assigned_to``; clone leftover-token stay-put, remaining accordion whitelist dumps, remaining map pin siblings, remaining tree/tabbed/progress group_by siblings, or remaining ops_dashboard formatters | #169 |
 | Workspace file UUID cell | Dump storage UUID on timeline/queue/CSV file columns after ``clerk_file_cell_display`` exists; clone leftover-token stay-put, remaining kanban FK siblings, remaining accordion whitelist dumps, or remaining ops_dashboard formatters | #170 |
+| List/queue tags comma blob | Dump ``brand,spring`` as a sentence after ``clerk_tags_cell_html`` exists; clone leftover-token stay-put, remaining workspace file UUID siblings, remaining kanban FK siblings, or remaining ops_dashboard formatters | #171 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1974,6 +1983,7 @@ how the handbook was learned.
 | One progress group_by after infer_progress_stages exists | Call infer_progress_stages on remaining group_by-only progress regions, then STOP (oral #165). Do not restyle remaining tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One diagram empty ER after compute_diagram_data exists | Call compute_diagram_data on remaining display: diagram hosts, then STOP (oral #166). Do not restyle remaining progress/tabbed_list/tree group_by siblings, ops_dashboard formatters, or leftover-token stay-put |
 | One map empty dump after MAP is on the typed HTTP whitelist | Call _build_map on remaining display: map hosts, then STOP (oral #167). Do not restyle remaining diagram ER siblings, remaining group_by empty dumps, ops_dashboard formatters, or leftover-token stay-put |
+| One tags/labels list cell after clerk_tags_cell_html exists | Call clerk_tags_cell_html on remaining list/queue/detail emitters, then STOP (oral #171). Do not restyle remaining workspace file UUID siblings, remaining kanban FK siblings, remaining accordion whitelist dumps, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |
