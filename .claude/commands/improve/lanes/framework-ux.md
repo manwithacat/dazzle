@@ -392,6 +392,13 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   2293 (oral #159). Helper: `clerk_stamp_chrono_fields`.
   Leftover ``zzz`` stays put. Do **not** walk remaining
   stamps field-list siblings.
+- **Tree group_by scalar flat list** (`batch_number` treated as
+  a parent FK so every device was a root) closed cycle 2297
+  (oral #163). Helper: `compute_tree` grouping folders.
+  Parent-ref trees stay nested. Leftover ``zzz`` stays a
+  group label. Do **not** restyle remaining ops_dashboard
+  widget formatters (oral #150–#162) or walk leftover-token
+  stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

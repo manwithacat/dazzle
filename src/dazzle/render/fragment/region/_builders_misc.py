@@ -243,6 +243,9 @@ class _BuildersMiscMixin:
         )
 
         def _node_drill(node: dict[str, Any]) -> str:
+            # Scalar group folders are not rows — do not invent a device hub.
+            if node.get("_group"):
+                return ""
             if not (detail_url_template or candidate_tmpls or fallback_tmpl):
                 return ""
             links = _resolve_row_links(

@@ -460,18 +460,54 @@ def _tree_parent_id(item: dict[str, Any], parent_field: str) -> str:
     return str(val).strip()
 
 
-def compute_tree(
+def _tree_group_label(item: dict[str, Any], group_field: str) -> str:
+    """Clerk-facing bucket label for a scalar ``group_by`` tree.
+
+    Parent-ref trees use ``_tree_parent_id``. Grouping trees (batch
+    numbers, statuses) must not dump a nested FK dict / UUID when the
+    hydrated row already carries a name. Leftover ``zzz`` stays put.
+    """
+    val: Any = item.get(group_field)
+    if val is None or val == "":
+        val = item.get(f"{group_field}_id")
+    if isinstance(val, dict):
+        for key in ("name", "title", "label"):
+            inner = val.get(key)
+            if inner not in (None, ""):
+                return str(inner).strip()
+        val = val.get("id") or val.get("uuid") or val.get("pk")
+    if val is None:
+        return ""
+    return str(val).strip()
+
+
+def _tree_is_parent_ref(
     items: list[dict[str, Any]],
     parent_field: str,
-) -> list[dict[str, Any]]:
-    """Build a tree of items by walking each item's ``parent_field``
-    against the set of item ids (#565).
+    items_by_id: dict[str, dict[str, Any]],
+) -> bool:
+    """True when ``group_by`` points at sibling row ids (org tree).
 
-    Items whose parent is not in the set become roots. Each node gets
-    a mutated ``_children`` key with the recursively-built subtree.
-    Returns the list of root nodes.
+    All-empty parents → every row is a root (existing contract).
+    Any parent id in ``items_by_id`` → nest. Otherwise the field is a
+    grouping scalar (batch_number) — a flat root list is theater.
     """
-    items_by_id = {str(item.get("id", "")): item for item in items}
+    saw_parent = False
+    for item in items:
+        pid = _tree_parent_id(item, parent_field)
+        if not pid:
+            continue
+        saw_parent = True
+        if pid in items_by_id:
+            return True
+    return not saw_parent
+
+
+def _compute_parent_tree(
+    items: list[dict[str, Any]],
+    parent_field: str,
+    items_by_id: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
     children_map: dict[str, list[dict[str, Any]]] = {}
     for item in items:
         parent_id = _tree_parent_id(item, parent_field)
@@ -487,6 +523,54 @@ def compute_tree(
         return node
 
     return [_build_subtree(r) for r in roots]
+
+
+def _compute_group_tree(
+    items: list[dict[str, Any]],
+    group_field: str,
+) -> list[dict[str, Any]]:
+    """Virtual parent per distinct scalar; leaves stay the source rows."""
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    order: list[str] = []
+    for item in items:
+        key = _tree_group_label(item, group_field)
+        if key not in buckets:
+            buckets[key] = []
+            order.append(key)
+        buckets[key].append(item)
+    return [
+        {
+            "name": key,
+            "_group": True,
+            "_children": buckets[key],
+        }
+        for key in order
+    ]
+
+
+def compute_tree(
+    items: list[dict[str, Any]],
+    parent_field: str,
+) -> list[dict[str, Any]]:
+    """Build a tree from ``group_by``.
+
+    Parent-ref (#565 / #1626 S4): walk each item's field against sibling
+    ids (``parent_department``). Scalar group (oral #163): when no parent
+    id matches a sibling, emit one folder per distinct value so
+    ``group_by: batch_number`` is a deployment tree, not a flat list.
+    Leftover ``zzz`` stays a group label. Group nodes are ``_group``
+    (no drill).
+    """
+    if not items:
+        return []
+    field = parent_field if isinstance(parent_field, str) else str(parent_field or "")
+    if not field:
+        return []
+    items_by_id = {str(item.get("id", "")): item for item in items}
+    items_by_id.pop("", None)
+    if _tree_is_parent_ref(items, field, items_by_id):
+        return _compute_parent_tree(items, field, items_by_id)
+    return _compute_group_tree(items, field)
 
 
 def compute_queue(

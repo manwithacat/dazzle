@@ -657,10 +657,11 @@ async def compute_region_render_inputs(
         progress_complete_count = 0
         progress_complete_pct = 0.0
 
-    # Tree (#565): nested hierarchy via group_by as parent ref.
+    # Tree (#565 / oral #163): parent-ref nest, else scalar group folders.
     tree_items: list[dict[str, Any]] = []
-    if display == "TREE" and group_by and items:
-        tree_items = compute_tree(items, group_by)
+    tree_group = group_by if isinstance(group_by, str) else ""
+    if display == "TREE" and tree_group and items:
+        tree_items = compute_tree(items, tree_group)
 
     # #1144 Gap 1 phase 2: cohort_strip primary_aggregate lens runtime.
     # When the active lens carries `primary_aggregate:`, fire per-member

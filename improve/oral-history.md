@@ -1696,6 +1696,15 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #150–#161). Next invent class is not another
     ops_dashboard formatter. Standing refusals apply.
 
+163. **Tree group_by scalar dumps a flat list.** Cycle 2297:
+    ``display: tree`` + ``group_by: batch_number`` treated the
+    scalar as a parent FK, so fieldtest ``device_tree`` showed
+    every device as a root (no batch folders). Parent-ref trees
+    (``parent_department``) still nest. ``compute_tree`` groups
+    when no parent id matches a sibling row; leftover ``zzz``
+    stays a group label. Live fieldtest_hub ``device_tree``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1802,6 +1811,7 @@ the end of every new oral *is* expensive — point here instead.
 | Pivot leaked-dim measures | Dump ``system`` / ``system_label`` as extra measure columns after ``clerk_pivot_measure_keys`` exists; clone leftover-token stay-put, remaining stamps field-list, or remaining entity-card siblings | #160 |
 | Pipeline literal value emdash | Dump ``—`` for quoted ``value:`` flow-card strings after ``clerk_pipeline_stage_value`` exists; clone leftover-token stay-put, remaining pivot leaked-dim, or remaining entity-card siblings | #161 |
 | Clerk-visible display-dump cadence | Walk another ops_dashboard widget formatter after helpers exist (oral #150–#161) | #162 |
+| Tree group_by scalar flat list | Dump every device as a root after ``group_by: batch_number``; clone leftover-token stay-put, identity-dump titles, or remaining ops_dashboard widget formatters | #163 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1890,6 +1900,7 @@ how the handbook was learned.
 | One stacked-area series token after _clerk_series_dim_label exists | Call _clerk_series_dim_label / clerk_stage_label on remaining chart legend/axis tokens, then STOP (oral #148) |
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
+| One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

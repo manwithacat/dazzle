@@ -150,6 +150,18 @@ class TestTreeBuilder:
         for node in tree:
             assert node["_children"] == []
 
+    def test_scalar_group_by_nests_under_batch_163(self) -> None:
+        """Oral #163: batch_number is a grouping scalar, not a parent FK."""
+        items = [
+            {"id": "d1", "name": "FT-PROBE-A12", "batch_number": "B-2026-01"},
+            {"id": "d2", "name": "FT-PROBE-B07", "batch_number": "B-2026-01"},
+            {"id": "d3", "name": "FT-GATEWAY-01", "batch_number": "B-2026-02"},
+            {"id": "d4", "name": "Leftover", "batch_number": "zzz"},
+        ]
+        tree = self._build_tree(items, "batch_number")
+        assert [n["name"] for n in tree] == ["B-2026-01", "B-2026-02", "zzz"]
+        assert {c["name"] for c in tree[0]["_children"]} == {"FT-PROBE-A12", "FT-PROBE-B07"}
+
     def test_nested_dict_parent_ref_resolves_1626(self) -> None:
         """#1626 S4: ORM-shaped parent {id: …} must nest, not flatten to roots."""
         items = [
