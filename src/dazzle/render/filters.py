@@ -400,6 +400,28 @@ def _basename_or_url_filter(value: Any) -> str:
 # dumped ``Ic1`` while the role catalog already says ``IC1`` (oral #186).
 _ACRONYM_TOKEN_RE = _re.compile(r"^[A-Za-z]{1,4}\d{1,3}$")
 
+# UN / sales-region tokens (invoice_ops ``emea`` / ``amer`` / ``apac``).
+# Title Case dumped ``Emea`` while the vendor board already says ``EMEA``
+# (oral #187). Leftover ``zzz`` is not in this set.
+_REGION_ACRONYMS = frozenset(
+    {
+        "emea",
+        "amer",
+        "apac",
+        "latam",
+        "mena",
+        "dach",
+        "anzac",
+        "anz",
+        "gcc",
+        "cis",
+        "eea",
+        "nafta",
+        "asean",
+        "brics",
+    }
+)
+
 
 def _humanize_filter(value: Any) -> str:
     """Convert snake_case or slug values to human-readable Title Case."""
@@ -408,6 +430,8 @@ def _humanize_filter(value: Any) -> str:
     text = str(value)
     stripped = text.strip()
     if _ACRONYM_TOKEN_RE.fullmatch(stripped):
+        return stripped.upper()
+    if stripped.lower() in _REGION_ACRONYMS:
         return stripped.upper()
     return text.replace("_", " ").title()
 
@@ -419,14 +443,16 @@ _BOOL_STAGE_TOKENS: dict[str, str] = {"true": "Yes", "false": "No"}
 
 
 def clerk_stage_label(value: Any) -> str:
-    """Clerk-facing funnel/progress/bar-chart stage label (oral #144 / #185 / #186).
+    """Clerk-facing funnel/progress/bar-chart/kanban stage label.
 
-    Funnel and progress dumped ``in_progress`` as the stage name.
-    Bar-chart bool ``group_by`` stringifies to ``True`` / ``False`` so
-    status-badge HTML kept the Python repr while FilterBar already
-    says Yes/No. Compact level tokens (``ic1``) dumped ``Ic1`` while
-    HR already says ``IC1``. Leftover junk stays put. Dual-lock emit
-    is unchanged — builders pass clerk labels.
+    Funnel and progress dumped ``in_progress`` as the stage name
+    (oral #144). Bar-chart bool ``group_by`` stringifies to ``True`` /
+    ``False`` so status-badge HTML kept the Python repr while FilterBar
+    already says Yes/No (oral #185). Compact level tokens (``ic1``)
+    dumped ``Ic1`` while HR already says ``IC1`` (oral #186). Sales
+    region tokens (``emea``) dumped ``Emea`` while the vendor board
+    already says ``EMEA`` (oral #187). Leftover junk stays put.
+    Dual-lock emit is unchanged — builders pass clerk labels.
     """
     if value is None:
         return ""

@@ -491,6 +491,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   compact ``ic1`` → ``IC1``. Leftover ``zzz`` stays put. Do
   **not** restyle remaining bar-chart bool buckets (oral #185)
   or remaining chart legend snake_case siblings (oral #148).
+- **Kanban / badge region acronym** closed cycle 2321 (oral
+  #187). Helper: ``_humanize_filter`` / ``clerk_stage_label``
+  ``emea`` → ``EMEA``. Leftover ``zzz`` stays put. Do **not**
+  restyle remaining compact level-acronym siblings (oral #186)
+  or remaining bar-chart bool buckets (oral #185).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
