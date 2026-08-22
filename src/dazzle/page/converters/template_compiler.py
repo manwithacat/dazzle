@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
-from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
+from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale, is_money_field_name
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
@@ -216,6 +216,9 @@ def _field_type_to_column_type(
         return named
     if mapped is not None:
         return mapped
+    # INT cents (acme Invoice.amount) — not decimal majors (oral #175).
+    if kind == FieldTypeKind.INT and is_money_field_name(name):
+        return "currency"
     return "text"
 
 
@@ -407,6 +410,8 @@ def _build_columns(
                     if is_sensitive
                     else _field_type_to_column_type(field_spec, element.field_name)
                 )
+                if col_type == "currency" and not col_currency:
+                    col_currency = "GBP"
                 col_label = element.label or col_key.replace("_", " ").title()
                 # Element visible: takes precedence; fall back to section visible (#585)
                 _el_vis = getattr(element, "visible", None)
@@ -458,6 +463,8 @@ def _build_columns(
                 col_type = (
                     "sensitive" if is_sensitive else _field_type_to_column_type(field, field.name)
                 )
+                if col_type == "currency" and not col_currency:
+                    col_currency = "GBP"
                 _ref_ent, _ref_api, _ref_route = _ref_column_meta(field)
                 columns.append(
                     ColumnContext(
@@ -1291,11 +1298,14 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
         elif field.type and field.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO):
             col_key = field.name[:-3] if field.name.endswith("_id") else field.name
         _ref_ent, _ref_api, _ref_route = _ref_column_meta(field)
+        col_type = _field_type_to_column_type(field, field.name)
+        if col_type == "currency" and not col_currency:
+            col_currency = "GBP"
         columns.append(
             ColumnContext(
                 key=col_key,
                 label=col_key.replace("_", " ").title(),
-                type=_field_type_to_column_type(field, field.name),
+                type=col_type,
                 currency_code=col_currency,
                 filter_ref_entity=_ref_ent,
                 filter_ref_api=_ref_api,

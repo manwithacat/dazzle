@@ -13,6 +13,7 @@ import json
 import re
 from typing import Any
 
+from dazzle.core.ir.money import is_money_field_name
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
@@ -158,6 +159,8 @@ def _detail_display_type(f: dict[str, Any]) -> str:
         return "phone"
     if email_field_name(key) or kind == "email":
         return "email"
+    if is_money_field_name(key) and kind in ("number", "int", "integer", "currency", "money"):
+        return "currency"
     if widget == "color" or kind == "color":
         return "color"
     if widget in ("image", "media") or kind in ("image", "media"):

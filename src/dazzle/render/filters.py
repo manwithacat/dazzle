@@ -30,8 +30,10 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
             divided by the correct ISO 4217 scale before display.
             Defaults to True to match the ``_minor`` column convention.
     """
-    if value is None:
+    if value is None or value == "":
         return ""
+    if isinstance(value, str) and value.strip().lower() in _LEFTOVER_STAGE_TOKENS:
+        return value.strip()
     try:
         amount = float(value)
     except (TypeError, ValueError):

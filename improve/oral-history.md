@@ -1802,6 +1802,16 @@ dialect formed — and where it started to Goodhart itself — is
     or remaining ``duration_minutes`` measure cells (oral #154).
     Live fieldtest_hub ``test_session_list``. Standing refusals apply.
 
+175. **List/queue INT cents dump raw pence.** Cycle 2309:
+    acme_billing ``invoice_list`` showed ``125000`` while seeds
+    are integer cents (``Amount stored as integer cents``).
+    ``is_money_field_name`` + INT maps ``amount`` / ``unit_amount``
+    to currency; ``_currency_filter`` emits ``£1,250.00``; leftover
+    ``zzz`` / ``1e2`` stay put; empty invents no pounds; CSV matches.
+    Do not map decimal majors (invoice_ops ``format: currency``) or
+    remaining duration_minutes measure cells (oral #154). Live
+    acme_billing ``invoice_list``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1919,6 +1929,7 @@ the end of every new oral *is* expensive — point here instead.
 | List/queue rating bare integer | Dump ``4`` on 1–5 ``rating`` / ``quality_score`` after ``clerk_rating_display`` exists; clone leftover-token stay-put, remaining tags/labels list-cell siblings, remaining workspace file UUID siblings, or remaining ops_dashboard formatters | #172 |
 | List/queue email/phone dead text | Dump mailbox/phone as truncated strings after mailto/tel helpers exist; clone leftover-token stay-put, remaining rating/tags/file siblings, or remaining ops_dashboard formatters | #173 |
 | List/queue temperature unitless | Dump ``22.5`` on ``temperature`` / ``temp_c`` after ``clerk_temperature_display`` exists; clone leftover-token stay-put, remaining email/phone, remaining rating/tags/file, remaining duration_minutes measure cells, or remaining ops_dashboard formatters | #174 |
+| List/queue INT cents raw pence | Dump ``125000`` on INT ``amount`` / ``unit_amount`` after currency mapping exists; clone leftover-token stay-put, remaining temperature cells, remaining duration_minutes measure cells, remaining email/phone/rating/tags, or decimal-major ``format: currency`` restyles | #175 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2017,6 +2028,7 @@ how the handbook was learned.
 | One tags/labels list cell after clerk_tags_cell_html exists | Call clerk_tags_cell_html on remaining list/queue/detail emitters, then STOP (oral #171). Do not restyle remaining workspace file UUID siblings, remaining kanban FK siblings, remaining accordion whitelist dumps, or leftover-token stay-put |
 | One email/phone list cell after clerk_email_cell_html exists | Call clerk_email_* / clerk_phone_* on remaining reachable-channel hosts in one ship, then STOP (oral #173). Do not restyle remaining 1–5 rating siblings, remaining tags/labels, remaining file UUID, or leftover-token stay-put |
 | One temperature list cell after clerk_temperature_display exists | Call clerk_temperature_* on remaining temperature hosts in one ship, then STOP (oral #174). Do not restyle remaining email/phone, remaining 1–5 rating, remaining duration_minutes measure cells, remaining tags/file, or leftover-token stay-put |
+| One INT cents amount cell after is_money_field_name + INT maps to currency | Call the INT+money-name mapping on remaining amount/unit_amount hosts in one ship, then STOP (oral #175). Do not map decimal majors, remaining duration_minutes measure cells, remaining temperature/email/phone/rating/tags, or leftover-token stay-put |
 | One chart day-bucket ISO after _format_bucket_label uses format_date_value | Call format_date_value on remaining day ticks, then STOP (oral #150). Do not restyle week/month/quarter ticks as siblings |
 | One heatmap group_by 1-d after compute_heatmap honors group_by | Call heatmap_from_bucketed_metrics on remaining group_by-only heatmaps, then STOP (oral #151). Do not restyle 2-d rows/columns heatmaps as siblings |
 | One insight measure/group token after clerk_insight_measure_noun exists | Call clerk_insight_measure_noun / clerk_insight_group_noun on remaining insight_summary regions, then STOP (oral #152). Do not restyle insight citation labels as siblings |

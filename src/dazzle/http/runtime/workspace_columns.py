@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.core.ir.money import is_money_field_name
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.channel_cell import email_field_name, phone_field_name
@@ -245,6 +246,9 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     if mapped is not None:
         return mapped
     name = str(getattr(field, "name", "") or "")
+    # INT cents (acme Invoice.amount) — not decimal majors (oral #175).
+    if str(kind_val or "").strip().lower() in {"int", "integer"} and is_money_field_name(name):
+        return "currency"
     named = _name_heuristic_col_type(name)
     if named is not None:
         return named
@@ -367,6 +371,8 @@ def build_surface_columns(
             col["format_arg"] = _fmt.arg or ""
         if kind_val == "money":
             col["currency_code"] = _money_currency_code(field_map, fn, f)
+        elif col_type == "currency":
+            col["currency_code"] = "GBP"
         if col_type == "badge":
             # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
             _sem = status_tone_map(ft, enums, entity_spec.state_machine)
@@ -465,6 +471,8 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
     }
     if kind_val == "money":
         col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
+    elif col_type == "currency":
+        col["currency_code"] = "GBP"
     if col_type == "badge":
         _apply_badge_column_meta(col, ft, kind_val, enums, entity_spec)
     if col_type == "bool":
