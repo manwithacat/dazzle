@@ -486,6 +486,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   emit. Leftover ``zzz`` stays put. Do **not** restyle remaining
   chart legend snake_case siblings (oral #148) or remaining
   carousel chip siblings.
+- **Bar-chart / badge level acronym** closed cycle 2320 (oral
+  #186). Helper: ``_humanize_filter`` / ``clerk_stage_label``
+  compact ``ic1`` → ``IC1``. Leftover ``zzz`` stays put. Do
+  **not** restyle remaining bar-chart bool buckets (oral #185)
+  or remaining chart legend snake_case siblings (oral #148).
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

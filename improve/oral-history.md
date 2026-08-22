@@ -1911,6 +1911,17 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #148) or remaining carousel chips (oral #184).
     Standing refusals apply.
 
+186. **Bar-chart / badge level tokens dump Ic1.** Cycle 2320:
+    ``display: bar_chart`` + ``group_by: level`` rendered ``Ic1``
+    while the role catalog already says ``IC1``. Title Case
+    lowercases trailing letters of compact letter+digit tokens.
+    ``_humanize_filter`` / ``clerk_stage_label`` uppercase
+    ``ic1`` / ``m2``; leftover ``zzz`` stays put. Live
+    hr_records ``role_level_mix`` + ``by_level``. Do not restyle
+    remaining bar-chart bool buckets (oral #185) or remaining
+    chart legend snake_case siblings (oral #148).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2039,6 +2050,7 @@ the end of every new oral *is* expensive — point here instead.
 | Related-tab FK schema-key dump | Dump ``assigned to`` / ``created by`` on dual-FK related tabs after ``clerk_related_tab_fk_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, or remaining conversation bubble bodies | #183 |
 | Carousel chip schema-token dump | Dump ``icon_glyph`` on carousel aspect chips after ``clerk_carousel_chip_label`` exists; clone leftover-token stay-put, remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, or remaining conversation bubble bodies | #184 |
 | Bar-chart bool True/False | Dump ``True`` / ``False`` on bool ``group_by`` after ``clerk_stage_label`` maps true/false strings; clone leftover-token stay-put, remaining chart legend snake_case siblings, remaining carousel chips, or remaining related-tab FK siblings | #185 |
+| Bar-chart / badge level acronym | Dump ``Ic1`` on compact ``ic1`` / ``m2`` after ``_humanize_filter`` uppercases letter+digit tokens; clone leftover-token stay-put, remaining bar-chart bool buckets, remaining chart legend snake_case, or remaining carousel chips | #186 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2111,6 +2123,7 @@ how the handbook was learned.
 | One list find-by schema-key dump after clerk_list_search_field_label exists | Call clerk_list_search_field_label on remaining workspace list ``?q=`` chrome in one ship, then STOP (oral #182). Do not restyle remaining FTS snippet bodies, JSON API keys, remaining conversation bubble bodies, remaining ops_dashboard widget formatters, or leftover-token stay-put |
 | One related-tab FK schema-key dump after clerk_related_tab_fk_label exists | Call clerk_related_tab_fk_label on remaining dual-FK related-tab compilers in one ship, then STOP (oral #183). Do not restyle remaining open-via hop labels, remaining list find-by chrome siblings, remaining FTS snippet bodies, remaining conversation bubble bodies, or leftover-token stay-put |
 | One carousel aspect-chip schema-token dump after clerk_carousel_chip_label exists | Call clerk_carousel_chip_label on remaining carousel item/entry chips in one ship, then STOP (oral #184). Do not restyle remaining open-via hop labels, remaining related-tab FK siblings, remaining list find-by chrome, remaining conversation bubble bodies, or leftover-token stay-put |
+| One bar-chart / badge level-acronym dump after _humanize_filter uppercases letter+digit tokens | Call clerk_stage_label / _humanize_filter on remaining compact level tokens in one ship, then STOP (oral #186). Do not restyle remaining bar-chart bool buckets, remaining chart legend snake_case, remaining carousel chips, or leftover-token stay-put |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |

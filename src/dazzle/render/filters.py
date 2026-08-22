@@ -396,11 +396,19 @@ def _basename_or_url_filter(value: Any) -> str:
     return text
 
 
+# Compact job-level / protocol tokens (hr ``ic1`` / ``m2``). Title Case
+# dumped ``Ic1`` while the role catalog already says ``IC1`` (oral #186).
+_ACRONYM_TOKEN_RE = _re.compile(r"^[A-Za-z]{1,4}\d{1,3}$")
+
+
 def _humanize_filter(value: Any) -> str:
     """Convert snake_case or slug values to human-readable Title Case."""
     if value is None:
         return ""
     text = str(value)
+    stripped = text.strip()
+    if _ACRONYM_TOKEN_RE.fullmatch(stripped):
+        return stripped.upper()
     return text.replace("_", " ").title()
 
 
@@ -411,13 +419,14 @@ _BOOL_STAGE_TOKENS: dict[str, str] = {"true": "Yes", "false": "No"}
 
 
 def clerk_stage_label(value: Any) -> str:
-    """Clerk-facing funnel/progress/bar-chart stage label (oral #144 / #185).
+    """Clerk-facing funnel/progress/bar-chart stage label (oral #144 / #185 / #186).
 
     Funnel and progress dumped ``in_progress`` as the stage name.
     Bar-chart bool ``group_by`` stringifies to ``True`` / ``False`` so
     status-badge HTML kept the Python repr while FilterBar already
-    says Yes/No. Leftover junk stays put. Dual-lock emit is unchanged
-    — builders pass clerk labels.
+    says Yes/No. Compact level tokens (``ic1``) dumped ``Ic1`` while
+    HR already says ``IC1``. Leftover junk stays put. Dual-lock emit
+    is unchanged — builders pass clerk labels.
     """
     if value is None:
         return ""

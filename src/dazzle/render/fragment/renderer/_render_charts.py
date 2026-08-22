@@ -134,7 +134,9 @@ class _RenderChartsMixin:
         """Render a BarChart via HM dual-lock BarChart seam.
 
         Bucket labels use status-badge HTML with clerk_stage_label so
-        bool group_by dumps Yes/No, not Python ``True`` (oral #185).
+        bool group_by dumps Yes/No, not Python ``True`` (oral #185),
+        and compact levels dump ``IC1``, not title-cased ``Ic1``
+        (oral #186).
         Widths are computed here and passed into the seam model.
         """
         from dazzle.render.fragment.region import (
