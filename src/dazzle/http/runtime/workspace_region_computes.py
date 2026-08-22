@@ -24,6 +24,7 @@ from dazzle.http.runtime.workspace_card_data import (
     _interpolate_card_template,
     _resolve_path,
 )
+from dazzle.render.diagram_mermaid import compute_diagram_data as compute_diagram_data
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.filters import clerk_measure_display, clerk_stage_label
 from dazzle.render.fragment.insight import (

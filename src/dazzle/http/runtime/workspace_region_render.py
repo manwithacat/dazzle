@@ -1005,6 +1005,10 @@ def _build_specialty_adapter_ctx(
     adapter_ctx = dict(base_ctx)
 
     if display_upper == "DIAGRAM":
+        # oral #166 — live HTTP path dumped empty ER because mermaid never
+        # left the page compile-time RegionContext. Prefer precomputed
+        # AppSpec ER; authored nodes/edges remain the structural fallback.
+        adapter_ctx["diagram_data"] = getattr(ctx, "diagram_data", "") or ""
         adapter_ctx["nodes"] = getattr(ctx_region, "nodes", []) or []
         adapter_ctx["edges"] = getattr(ctx_region, "edges", []) or []
     elif display_upper == "SEARCH_BOX":

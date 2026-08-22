@@ -91,3 +91,6 @@ class WorkspaceRegionContext:
     # oral #158 — surface name → authored title for entity-card quick_actions
     # CTAs (``Create Alert``, not slug ``Alert Create``). Empty → slug humanize.
     surface_titles: dict[str, str] = field(default_factory=dict)
+    # oral #166 — precomputed Mermaid ER for ``display: diagram``. Empty
+    # dumps "No entity relationships" even when Device/Tester refs exist.
+    diagram_data: str = ""

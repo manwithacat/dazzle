@@ -413,6 +413,12 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   Authored ``stages:`` still win. Do **not** restyle remaining
   tabbed_list/tree group_by siblings or remaining ops_dashboard
   widget formatters.
+- **Diagram empty ER** (``display: diagram`` dumped
+  "No entity relationships" because the HTTP typed path never
+  forwarded AppSpec Mermaid) closed cycle 2300 (oral #166).
+  Helper: `compute_diagram_data`. Leftover ``zzz`` is not an
+  entity. Do **not** restyle remaining progress/tabbed_list/tree
+  group_by siblings or remaining ops_dashboard widget formatters.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

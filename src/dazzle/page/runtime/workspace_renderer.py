@@ -39,6 +39,7 @@ from dazzle.page.runtime.workspace_persona_focus import (
 from dazzle.page.runtime.workspace_persona_focus import (
     collect_workspace_persona_overrides,
 )
+from dazzle.render.diagram_mermaid import compute_diagram_data
 
 # Action URL helpers live in action_urls.py (MI leaf). Tests may import
 # `_action_to_url` from this module or from action_urls directly.
@@ -283,32 +284,7 @@ def _build_diagram_data(display_mode: str, app_spec: Any) -> str:
     """Generate a Mermaid entity-relationship diagram for DIAGRAM regions."""
     if display_mode != "DIAGRAM" or app_spec is None:
         return ""
-    lines = ["erDiagram"]
-    domain = getattr(app_spec, "domain", None)
-    if domain is None:
-        return ""
-    entities = getattr(domain, "entities", [])
-    entity_names = {e.name for e in entities}
-    for entity in entities:
-        if getattr(entity, "domain", "") == "platform":
-            continue
-        lines.append(f"    {entity.name} {{")
-        for field in entity.fields[:8]:
-            kind = getattr(field.type, "kind", "str")
-            kind_str = kind.value if hasattr(kind, "value") else str(kind)
-            lines.append(f"        {kind_str} {field.name}")
-        if len(entity.fields) > 8:
-            lines.append(f"        string _plus_{len(entity.fields) - 8}_more")
-        lines.append("    }")
-    for entity in entities:
-        if getattr(entity, "domain", "") == "platform":
-            continue
-        for field in entity.fields:
-            ref = getattr(field.type, "ref_entity", None)
-            if ref and ref in entity_names:
-                label = field.name
-                lines.append(f"    {entity.name} }}o--|| {ref} : {label}")
-    return "\n".join(lines)
+    return compute_diagram_data(app_spec)
 
 
 # Phase 4 region migration deletion sweep (v0.67.52): 33 region kinds

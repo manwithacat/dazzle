@@ -206,6 +206,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_tabbed_list_group_by.py",
     # cycle 2299: progress group_by must slice status chips, not dump empty (oral #165)
     "tests/unit/test_progress_group_by.py",
+    # cycle 2300: diagram must emit AppSpec ER, not dump empty relationships (oral #166)
+    "tests/unit/test_diagram_er.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

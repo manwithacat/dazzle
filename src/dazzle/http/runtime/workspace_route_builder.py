@@ -32,8 +32,18 @@ from dazzle.http.runtime.workspace_handlers import (
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler
 from dazzle.page import app_paths
 from dazzle.page.runtime.action_urls import region_row_drill_url
+from dazzle.render.diagram_mermaid import compute_diagram_data
 
 logger = logging.getLogger(__name__)
+
+
+def _diagram_data_for(ctx_region: Any, ir_region: Any, appspec: AppSpec) -> str:
+    """Precompute Mermaid ER when either region view is ``display: diagram``."""
+    for region in (ctx_region, ir_region):
+        raw = getattr(region, "display", "") or ""
+        if str(getattr(raw, "value", raw) or "").upper() == "DIAGRAM":
+            return compute_diagram_data(appspec)
+    return ""
 
 
 def context_selector_option_filters(sel: Any) -> dict[str, Any]:
@@ -294,6 +304,7 @@ class WorkspaceRouteBuilder:
                                     ir_region, _src_name
                                 ),  # #1303
                                 entity_detail_urls=_detail_urls_for(ir_region),  # #1303
+                                diagram_data=_diagram_data_for(_src_ctx_region, ir_region, appspec),
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -359,6 +370,7 @@ class WorkspaceRouteBuilder:
                             surface_titles=surface_titles,
                             detail_url_template="",
                             entity_detail_urls=_detail_urls_for(ir_region),
+                            diagram_data=_diagram_data_for(ctx_region, ir_region, appspec),
                         )
                         _ws_region_ctxs.append(_base_region_ctx)
 
@@ -484,6 +496,7 @@ class WorkspaceRouteBuilder:
                         surface_titles=surface_titles,
                         detail_url_template=_detail_url_template_for(ir_region, _source),  # #1303
                         entity_detail_urls=_detail_urls_for(ir_region),  # #1303
+                        diagram_data=_diagram_data_for(ctx_region, ir_region, appspec),
                     )
                     _ws_region_ctxs.append(_region_ctx)
 
