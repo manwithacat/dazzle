@@ -194,6 +194,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_entity_card_schema_dump.py",
     # cycle 2292: entity-card quick_actions must use authored surface titles (oral #158)
     "tests/unit/test_quick_action_surface_title.py",
+    # cycle 2293: entity-card stamps must not omit history when fields omitted (oral #159)
+    "tests/unit/test_entity_card_stamps_chrono.py",
     # cycle 2289: typed percentage cells must keep % (CI red after 2288 pct→42)
     "tests/unit/test_data_row_characterization_1505.py::TestRenderDataRowParity::test_render_data_row_matches_fixture",
     "tests/unit/test_list_handler_substrate_parity_1505.py::test_build_data_table_rows_match_fixture",

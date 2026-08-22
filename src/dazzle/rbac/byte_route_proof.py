@@ -7,6 +7,7 @@ resolved by adding to ALLOWLIST with a comment — never by loosening the walk.
 """
 
 import ast
+from collections.abc import Iterator
 from pathlib import Path
 
 # (file stem, function name) pairs allowed to build a streaming response
@@ -58,6 +59,10 @@ def find_byte_route_violations(repo_root: Path) -> list[str]:
     Response(content=...) construction that is not in ALLOWLIST.
 
     Returns an empty list when the boundary is sound.
+
+    One walk per file (not per-node ``ast.walk`` to find the enclosing
+    function) — ``page_routes.py`` is thousands of lines; the old O(n²)
+    enclosing lookup hung ship-surface.
     """
     runtime = repo_root / "src" / "dazzle" / "http" / "runtime"
     violations: list[str] = []
@@ -65,8 +70,7 @@ def find_byte_route_violations(repo_root: Path) -> list[str]:
         if path.name == "byte_serving.py":
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for node in ast.walk(tree):
-            func = _enclosing_func(tree, node)
+        for node, func in _walk_with_enclosing_func(tree):
             if isinstance(node, ast.Call) and _is_stream_construct(node):
                 if (path.stem, func) in ALLOWLIST:
                     continue
@@ -89,15 +93,23 @@ def _is_stream_construct(node: ast.Call) -> bool:
     return False
 
 
+def _walk_with_enclosing_func(tree: ast.AST) -> Iterator[tuple[ast.AST, str | None]]:
+    """Yield ``(node, innermost_function_name)`` in a single O(n) walk."""
+    stack: list[tuple[ast.AST, str | None]] = [(tree, None)]
+    while stack:
+        node, func = stack.pop()
+        yield node, func
+        child_func = func
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            child_func = node.name
+        children = list(ast.iter_child_nodes(node))
+        for child in reversed(children):
+            stack.append((child, child_func))
+
+
 def _enclosing_func(tree: ast.AST, target: ast.AST) -> str | None:
     """Return the name of the innermost function that contains *target*."""
-    best: str | None = None
-    for n in ast.walk(tree):
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if (
-                getattr(n, "lineno", 0)
-                <= getattr(target, "lineno", -1)
-                <= getattr(n, "end_lineno", 0)
-            ):
-                best = n.name
-    return best
+    for node, func in _walk_with_enclosing_func(tree):
+        if node is target:
+            return func
+    return None

@@ -29,7 +29,146 @@ from dazzle.core.ir.conditions import (
     LogicalOperator,
 )
 from dazzle.i18n.display_locale import get_display_locale
-from dazzle.render.filters import clerk_quick_action_label
+from dazzle.render.filters import _LEFTOVER_STAGE_TOKENS, clerk_quick_action_label
+
+# Entity-card stamps with omitted fields used to drop the section even
+# when rows carried a datetime (ops alert_360 history — oral #159).
+_STAMP_WHEN_PREFERRED = (
+    "triggered_at",
+    "logged_at",
+    "occurred_at",
+    "happened_at",
+    "created_at",
+    "updated_at",
+    "timestamp",
+    "sent_at",
+    "received_at",
+)
+_STAMP_LABEL_PREFERRED = (
+    "message",
+    "title",
+    "name",
+    "body",
+    "description",
+    "subject",
+    "summary",
+    "note",
+    "text",
+)
+
+
+def _stamp_key_is_leftover(key: str) -> bool:
+    return key.strip().lower() in _LEFTOVER_STAGE_TOKENS
+
+
+def _stamp_key_usable(key: str) -> bool:
+    return (
+        bool(key)
+        and not _stamp_key_is_leftover(key)
+        and key not in {"id", "pk"}
+        and not key.endswith("_id")
+    )
+
+
+def _stamp_value_is_when(value: Any) -> bool:
+    if isinstance(value, (_dt.datetime, _dt.date)):
+        return True
+    if isinstance(value, str) and value.strip():
+        text = value.strip().rstrip("Z")
+        try:
+            if "T" in text or " " in text or text.endswith("+00:00"):
+                _dt.datetime.fromisoformat(text)
+                return True
+            if len(text) == 10 and text[4] == "-" and text[7] == "-":
+                _dt.date.fromisoformat(text)
+                return True
+        except ValueError:
+            return False
+    return False
+
+
+def _stamp_declared_fields(fields: list[str] | None) -> tuple[str, str, str] | None:
+    declared = [str(f).strip() for f in (fields or []) if str(f).strip()]
+    if not declared:
+        return None
+    timestamp = declared[0]
+    label = declared[1] if len(declared) > 1 else ""
+    detail = declared[2] if len(declared) > 2 else ""
+    return timestamp, label, detail
+
+
+def _stamp_row_keys(rows: list[dict[str, Any]]) -> list[str]:
+    keys: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        for raw_key in row:
+            key = str(raw_key)
+            if key not in seen:
+                seen.add(key)
+                keys.append(key)
+    return keys
+
+
+def _stamp_sample(rows: list[dict[str, Any]], key: str) -> Any:
+    return next((row.get(key) for row in rows if row.get(key) not in (None, "")), None)
+
+
+def _stamp_infer_when(rows: list[dict[str, Any]], keys: list[str]) -> str:
+    seen = set(keys)
+    preferred = next((k for k in _STAMP_WHEN_PREFERRED if k in seen and _stamp_key_usable(k)), "")
+    if preferred:
+        return preferred
+    suffix = next(
+        (
+            key
+            for key in keys
+            if _stamp_key_usable(key)
+            and key.endswith("_at")
+            and _stamp_value_is_when(_stamp_sample(rows, key))
+        ),
+        "",
+    )
+    if suffix:
+        return suffix
+    return next(
+        (
+            key
+            for key in keys
+            if _stamp_key_usable(key) and _stamp_value_is_when(_stamp_sample(rows, key))
+        ),
+        "",
+    )
+
+
+def _stamp_infer_label(keys: list[str], timestamp: str) -> str:
+    seen = set(keys)
+    return next(
+        (
+            k
+            for k in _STAMP_LABEL_PREFERRED
+            if k in seen and _stamp_key_usable(k) and k != timestamp
+        ),
+        "",
+    )
+
+
+def clerk_stamp_chrono_fields(
+    rows: list[dict[str, Any]],
+    fields: list[str] | None,
+) -> tuple[str, str, str]:
+    """Timestamp / label / detail keys for entity-card stamps (oral #159).
+
+    Declared ``fields`` always win (leftover ``zzz`` stays put). When
+    the DSL omits fields, infer a datetime column + a prose label so
+    history does not vanish while rows exist. Do not invent from
+    leftover keys or from ``_display``.
+    """
+    declared = _stamp_declared_fields(fields)
+    if declared is not None:
+        return declared
+    keys = _stamp_row_keys(rows)
+    timestamp = _stamp_infer_when(rows, keys)
+    return timestamp, _stamp_infer_label(keys, timestamp), ""
 
 
 def _eval_row_condition(cond: ConditionExpr, row: dict[str, Any]) -> bool:

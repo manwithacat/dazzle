@@ -1654,6 +1654,16 @@ dialect formed — and where it started to Goodhart itself — is
     uses the surface title catalog; leftover ``zzz`` / unknown ids stay
     put. Live ops_dashboard ``alert_360``. Standing refusals apply.
 
+159. **Entity-card stamps omitted history when fields were empty.** Cycle
+    2293: ``mode: stamps`` with no ``fields:`` required ``fields[0]`` as
+    the timestamp, so ops ``alert_360`` history vanished even though
+    Alert rows carry ``triggered_at`` and ``message``. ``clerk_stamp_chrono_fields``
+    infers datetime + prose; declared leftover ``zzz`` stays put and is
+    not rewritten to ``triggered_at``. Not leftover-token stay-put
+    (oral #121). Not identity-dump title/label (oral #149). Not
+    remaining halo/flags or quick-action slug siblings (oral #157/#158).
+    Live ops_dashboard ``alert_360``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1755,6 +1765,7 @@ the end of every new oral *is* expensive — point here instead.
 | Queue datetime storage ISO | Dump ``2026-05-18 14:30:00+00:00`` on queue meta after date columns already timeago; clone leftover-token stay-put, remaining ``*_ms`` sites, or percent-points cells | #156 |
 | Entity-card schema dump | Dump ``acknowledged_by`` / ``active`` / ISO on halo/flags after ``clerk_entity_card_field_*`` exists; clone leftover-token stay-put, remaining queue datetime siblings, or identity-dump title/label | #157 |
 | Entity-card quick-action slug CTA | Dump ``Alert Create`` from the action id after ``clerk_quick_action_label`` exists; clone leftover-token stay-put, remaining halo/flags schema dumps, or identity-dump title/label | #158 |
+| Entity-card stamps omit chrono | Omit history when ``fields`` are empty after rows carry datetime; clone leftover-token stay-put, remaining halo/flags schema dumps, or remaining quick-action slug CTAs | #159 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1849,6 +1860,7 @@ how the handbook was learned.
 | One 0–100 ``*_rate`` / ``*_usage`` cell after clerk_percent_points_display exists | Call clerk_percent_points_display(..., typed=True) on remaining typed percentage / rate cells, then STOP (oral #155). Do not restyle remaining ``*_ms`` charts, 12.00 counts, or identity-dump titles |
 | One entity-card halo/flags schema dump after clerk_entity_card_field_* exists | Call clerk_entity_card_field_label / clerk_entity_card_field_display on remaining halo/flags fields, then STOP (oral #157). Do not restyle remaining queue datetime siblings or identity-dump title/label |
 | One entity-card quick-action slug CTA after clerk_quick_action_label exists | Call clerk_quick_action_label on remaining quick_actions sections, then STOP (oral #158). Do not restyle remaining halo/flags schema dumps or identity-dump title/label |
+| One entity-card stamps omit after clerk_stamp_chrono_fields exists | Call clerk_stamp_chrono_fields on remaining stamps sections, then STOP (oral #159). Do not restyle remaining halo/flags schema dumps, quick-action slug CTAs, or identity-dump title/label |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |

@@ -28,6 +28,7 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _render_quick_actions_body,
     _render_stamps_body,
     _render_thread_summary_body,
+    clerk_stamp_chrono_fields,
 )
 
 logger = logging.getLogger(__name__)
@@ -396,14 +397,14 @@ def _build_entity_card_sections(
         elif mode == "stamps":
             # stamps renders a chronological event list from rows
             # pre-fetched by the per-section fan-out (#1017 v0.67.19).
-            # `fields[0]` is the timestamp column; `fields[1]` is the
-            # label column; `fields[2]` (optional) is a secondary
-            # detail (e.g. actor / category). Sort descending by
-            # timestamp — most recent event first. Section omits
-            # when there are no rows.
-            timestamp_field = fields[0] if fields else ""
-            label_field = fields[1] if len(fields) > 1 else ""
-            detail_field = fields[2] if len(fields) > 2 else ""
+            # Declared `fields[0]` is the timestamp column; `fields[1]`
+            # is the label; `fields[2]` (optional) is a secondary
+            # detail. When fields are omitted, infer datetime + prose
+            # so history does not vanish (oral #159). Leftover ``zzz``
+            # stays put. Sort descending — most recent first.
+            timestamp_field, label_field, detail_field = clerk_stamp_chrono_fields(
+                section_rows, fields
+            )
             body_html = _render_stamps_body(
                 rows=section_rows,
                 timestamp_field=timestamp_field,
