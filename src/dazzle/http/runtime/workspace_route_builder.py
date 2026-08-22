@@ -138,9 +138,14 @@ class WorkspaceRouteBuilder:
             # ``data-dz-row-action-url`` on row_action buttons so the
             # client-side handler can POST without re-deriving the route.
             row_action_routes: dict[str, str] = {}
+            surface_titles: dict[str, str] = {}
             for _surf in appspec.surfaces:
                 if _surf.mode == SurfaceMode.CREATE and _surf.entity_ref:
                     row_action_routes[_surf.name] = f"/{to_api_plural(_surf.entity_ref)}"
+                _sname = str(getattr(_surf, "name", "") or "")
+                _stitle = str(getattr(_surf, "title", "") or "").strip()
+                if _sname and _stitle:
+                    surface_titles[_sname] = _stitle
 
             # #1303 — entities that have a VIEW (detail) surface. Rows in a
             # workspace list/task_inbox region drill to the entity detail
@@ -284,6 +289,7 @@ class WorkspaceRouteBuilder:
                                 entity_access_specs=entity_access_specs,
                                 entity_ref_targets=self._entity_ref_targets,
                                 row_action_routes=row_action_routes,
+                                surface_titles=surface_titles,
                                 detail_url_template=_detail_url_template_for(
                                     ir_region, _src_name
                                 ),  # #1303
@@ -350,6 +356,7 @@ class WorkspaceRouteBuilder:
                             entity_access_specs=entity_access_specs,
                             entity_ref_targets=self._entity_ref_targets,
                             row_action_routes=row_action_routes,
+                            surface_titles=surface_titles,
                             detail_url_template="",
                             entity_detail_urls=_detail_urls_for(ir_region),
                         )
@@ -474,6 +481,7 @@ class WorkspaceRouteBuilder:
                         entity_access_specs=entity_access_specs,
                         entity_ref_targets=self._entity_ref_targets,
                         row_action_routes=row_action_routes,
+                        surface_titles=surface_titles,
                         detail_url_template=_detail_url_template_for(ir_region, _source),  # #1303
                         entity_detail_urls=_detail_urls_for(ir_region),  # #1303
                     )

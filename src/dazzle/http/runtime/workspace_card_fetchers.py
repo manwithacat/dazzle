@@ -308,6 +308,7 @@ def _build_entity_card_sections(
     items: list[dict[str, Any]],
     config: Any,
     rows_per_section: dict[int, list[dict[str, Any]]] | None = None,
+    action_titles: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build entity_card section dicts from the scoped record (#1017).
 
@@ -373,7 +374,7 @@ def _build_entity_card_sections(
             # action list is empty the section omits entirely.
             actions = list(getattr(section, "actions", []) or [])
             if actions:
-                body_html = _render_quick_actions_body(actions)
+                body_html = _render_quick_actions_body(actions, titles=action_titles)
             else:
                 is_omitted = True
         elif mode == "mini_bars":

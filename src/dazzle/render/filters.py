@@ -542,6 +542,26 @@ def clerk_entity_card_field_label(field_key: Any) -> str:
     return clerk_stage_label(field_key)
 
 
+def clerk_quick_action_label(action_id: Any, titles: dict[str, str] | None = None) -> str:
+    """Clerk-facing entity-card quick-action CTA (oral #158).
+
+    ``alert_create`` dumped as ``Alert Create`` while the authored
+    surface is ``Create Alert``. Leftover junk stays put. Unknown ids
+    with a title catalog stay put (do not invent title-case).
+    """
+    text = str(action_id or "").strip()
+    if not text:
+        return ""
+    if text.lower() in _LEFTOVER_STAGE_TOKENS:
+        return text
+    if titles:
+        titled = str(titles.get(text) or "").strip()
+        if titled:
+            return titled
+        return text
+    return clerk_stage_label(text)
+
+
 def _clerk_entity_card_iso_display(text: str) -> str | None:
     """Profile clock for ISO date/datetime strings, else None."""
     if _ISO_DT_PREFIX_RE.match(text):

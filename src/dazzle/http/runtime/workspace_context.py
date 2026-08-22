@@ -88,3 +88,6 @@ class WorkspaceRegionContext:
     # Required when ``master_detail_pane`` is True — htmx cannot reach a cousin
     # pane via ``closest`` alone.
     master_detail_target: str = ""
+    # oral #158 — surface name → authored title for entity-card quick_actions
+    # CTAs (``Create Alert``, not slug ``Alert Create``). Empty → slug humanize.
+    surface_titles: dict[str, str] = field(default_factory=dict)

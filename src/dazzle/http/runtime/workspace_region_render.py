@@ -831,6 +831,7 @@ async def _build_card_adapter_ctx(
                 items=inputs.items,
                 config=card_cfg,
                 rows_per_section=rows_per_section,
+                action_titles=getattr(env.ctx, "surface_titles", None) or {},
             )
             if inputs.items:
                 record = inputs.items[0]

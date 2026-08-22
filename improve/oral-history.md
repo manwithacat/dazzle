@@ -1647,6 +1647,13 @@ dialect formed — and where it started to Goodhart itself — is
     leftover ``zzz`` stay-put; free-text messages are not title-cased).
     Live ops_dashboard ``alert_360``. Standing refusals apply.
 
+158. **Entity-card quick_actions dumped slug titles, not surfaces.** Cycle
+    2292: ``mode: quick_actions`` buttons titled ``Alert Create`` /
+    ``Alert List`` from snake_case action ids while the authored
+    surfaces are ``Create Alert`` / ``Alerts``. ``clerk_quick_action_label``
+    uses the surface title catalog; leftover ``zzz`` / unknown ids stay
+    put. Live ops_dashboard ``alert_360``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -1747,6 +1754,7 @@ the end of every new oral *is* expensive — point here instead.
 | Percent-points rate dumped unitless | Dump ``2.40`` on ``*_rate`` / ``*_usage`` list/queue cells, or strip ``%`` from typed ``percentage`` columns, after ``clerk_percent_points_display`` exists; clone leftover-token stay-put, remaining ``*_ms`` sites, or 12.00 counts | #155 |
 | Queue datetime storage ISO | Dump ``2026-05-18 14:30:00+00:00`` on queue meta after date columns already timeago; clone leftover-token stay-put, remaining ``*_ms`` sites, or percent-points cells | #156 |
 | Entity-card schema dump | Dump ``acknowledged_by`` / ``active`` / ISO on halo/flags after ``clerk_entity_card_field_*`` exists; clone leftover-token stay-put, remaining queue datetime siblings, or identity-dump title/label | #157 |
+| Entity-card quick-action slug CTA | Dump ``Alert Create`` from the action id after ``clerk_quick_action_label`` exists; clone leftover-token stay-put, remaining halo/flags schema dumps, or identity-dump title/label | #158 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -1840,6 +1848,7 @@ how the handbook was learned.
 | One ``*_ms`` / unitless measure site after clerk_measure_display exists | Call clerk_measure_display / clerk_measure_suffix on remaining measure fields, then STOP (oral #154). Do not restyle count 12.00 or identity-dump titles as siblings |
 | One 0–100 ``*_rate`` / ``*_usage`` cell after clerk_percent_points_display exists | Call clerk_percent_points_display(..., typed=True) on remaining typed percentage / rate cells, then STOP (oral #155). Do not restyle remaining ``*_ms`` charts, 12.00 counts, or identity-dump titles |
 | One entity-card halo/flags schema dump after clerk_entity_card_field_* exists | Call clerk_entity_card_field_label / clerk_entity_card_field_display on remaining halo/flags fields, then STOP (oral #157). Do not restyle remaining queue datetime siblings or identity-dump title/label |
+| One entity-card quick-action slug CTA after clerk_quick_action_label exists | Call clerk_quick_action_label on remaining quick_actions sections, then STOP (oral #158). Do not restyle remaining halo/flags schema dumps or identity-dump title/label |
 | Empty-body / leftover-honest-param subject / leftover-token clone past cadence | Clerk-visible subject + Before/After/Live; ``python scripts/improve_commit_contract.py`` (oral #127) |
 | Reprint the ancestor refusal litany on every new oral | Point at **Standing refusals**; add at most one new row |
 | New example app to “fix depth” | Forbidden by depth menu |
