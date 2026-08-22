@@ -1402,10 +1402,9 @@ workspace time_machine "Time Machine":
   # active on 2025-06-01. Without the param, all three regions render
   # currently-active rows (same as default behaviour everywhere else).
   #
-  # The workspace shell doesn't yet ship date-picker chrome — that's a
-  # UI follow-up. For now the URL is editable by hand or via project-
-  # side route override (e.g. a custom landing page that POSTs a date
-  # form and redirects to the time_machine URL with ?as_of= appended).
+  # Cycle 2324 / oral #190: workspace heading ships leftover-honest
+  # as-of chrome (date input + clerk <time>) when any region source is
+  # temporal. Leftover ``?as_of=zzz`` invents no snapshot chip.
 
   snapshot_pulse:
     source: Employment

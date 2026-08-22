@@ -33,8 +33,10 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date as _date
 from typing import TYPE_CHECKING
 
+from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.nav_icons import infer_nav_icon
@@ -57,6 +59,7 @@ from dazzle.render.fragment.primitives import (
     WorkspaceShell,
     WorkspaceToolbar,
 )
+from dazzle.render.fragment.renderer._render_interactive import leftover_honest_iso_date
 from dazzle.render.open_discovery import (
     breadcrumb_open_attr_suffix,
     link_open_discovery_attr_suffix,
@@ -759,8 +762,43 @@ class _RenderShellMixin:
             f"{fold_attr}>"
             f'<div class="dz-workspace-heading">'
             f'<h2 class="dz-workspace-title">{ctx.escape(w.title)}</h2>'
+            f"{self._emit_workspace_as_of(w, ctx)}"
             f"{primary_actions_html}"
             f"</div>"
             f"{body_html}"
             f"</div>"
+        )
+
+    def _emit_workspace_as_of(self, w: WorkspaceShell, ctx: RenderContext) -> str:
+        """Snapshot chrome for temporal workspaces (oral #190).
+
+        Valid ``?as_of=YYYY-MM-DD`` shows a clerk date (not storage ISO)
+        plus a Now hop back to current. Leftover junk invents no chip
+        and does not populate the date input. Empty stays current.
+        """
+        if not getattr(w, "as_of_enabled", False):
+            return ""
+
+        honest = leftover_honest_iso_date(getattr(w, "as_of", ""))
+        name = ctx.escape_attr(w.workspace_name)
+        action = f"/app/workspaces/{name}"
+        input_id = f"dz-as-of-{name}"
+        value_attr = f' value="{ctx.escape_attr(honest)}"' if honest else ""
+        when_html = ""
+        if honest:
+            shown = get_display_locale().format_date_value(_date.fromisoformat(honest))
+            when_html = (
+                f'<time class="dz-workspace-as-of-when" datetime="{ctx.escape_attr(honest)}">'
+                f"{ctx.escape(shown)}</time>"
+                f'<a class="dz-link" href="{action}">Now</a>'
+            )
+        return (
+            f'<form class="dz-workspace-context dz-workspace-as-of" method="get" '
+            f'action="{action}" hx-boost="true" data-test-id="dz-workspace-as-of">'
+            f'<label class="dz-workspace-context-label" for="{input_id}">As of</label>'
+            f'<input id="{input_id}" class="dz-workspace-context-select" type="date" '
+            f'name="as_of"{value_attr}>'
+            f'<button type="submit" class="dz-workspace-reset">View</button>'
+            f"{when_html}"
+            f"</form>"
         )

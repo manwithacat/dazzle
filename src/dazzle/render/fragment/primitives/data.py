@@ -2326,6 +2326,11 @@ class WorkspaceShell:
     # native `<details>` `More ⋯` overflow menu after the primary row.
     overflow_actions: tuple[WorkspacePrimaryAction, ...] = ()
     fold_count: int | None = None
+    # Oral #190: leftover-honest as_of snapshot chrome on temporal
+    # workspaces. Raw query value; emitter leftover-parses. Empty /
+    # leftover invents no chip and no date in the input.
+    as_of: str = ""
+    as_of_enabled: bool = False
 
 
 @dataclass(frozen=True, slots=True)

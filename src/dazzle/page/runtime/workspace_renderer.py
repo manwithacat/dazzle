@@ -234,6 +234,10 @@ class WorkspaceContext(BaseModel):
     # multi-region dashboards, not unconstrained full-bleed. Authors may
     # override via ``ux: measure: product|wide|full`` on the workspace.
     content_measure: str = "app"
+    # Oral #190: True when any region source is a temporal entity
+    # (``?as_of=`` re-projects). Workspace heading then ships snapshot
+    # chrome so clerks are not looking at a silent historical slice.
+    as_of_enabled: bool = False
 
 
 # =============================================================================
@@ -443,6 +447,7 @@ def build_workspace_context(
 
     regions: list[RegionContext] = []
     ws_regions = workspace.regions
+    as_of_enabled = False
 
     for idx, region in enumerate(ws_regions):
         # #1492 — single dispatch decision. A genuinely-unset `display:` (and an
@@ -481,6 +486,10 @@ def build_workspace_context(
         source_name = region.source or ""
         region_sources = list(region.sources or [])
         endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}" if source_name else ""
+        if not as_of_enabled:
+            _temporal_ent = _entities_by_name.get(source_name)
+            if getattr(_temporal_ent, "temporal", None) is not None:
+                as_of_enabled = True
 
         # Serialize IR filter to JSON for the data endpoint
         filter_expr = ""
@@ -744,6 +753,7 @@ def build_workspace_context(
         persona_focus=persona_focus,
         persona_purposes=persona_purposes,
         content_measure=content_measure,
+        as_of_enabled=as_of_enabled,
     )
 
 
@@ -1037,6 +1047,8 @@ def render_workspace_content_typed(
         overflow_actions=typed_overflow,
         fold_count=fold_count if fold_count is not None else 0,
         body=Sequence(children=tuple(inner_pieces)),
+        as_of=as_of,
+        as_of_enabled=bool(getattr(workspace, "as_of_enabled", False)),
     )
 
     renderer = FragmentRenderer()
