@@ -420,3 +420,7 @@ class TestViolationError:
         with pytest.raises(InvariantViolationError) as ei:
             check_invariants_for_update([inv], {"qty": 5}, {"qty": -1}, entity="LineItem")
         assert ei.value.entity == "LineItem"
+        # oral #202 / #200: clerk-label without leaving generic or schema pins.
+        assert str(ei.value) == "Qty >= 0"
+        assert "qty" not in str(ei.value)
+        assert render_invariant_expr(ei.value.invariant.expression) == "qty >= 0"

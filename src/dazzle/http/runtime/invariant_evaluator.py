@@ -18,6 +18,9 @@ from dazzle.http.specs.entity import (
     InvariantSpec,
 )
 from dazzle.i18n.display_locale import calendar_today as _calendar_today
+from dazzle.render.filters import clerk_form_error_field_label, clerk_stage_label
+
+_GENERIC_INVARIANT_SPEECH = "Invariant constraint violated"
 
 
 class InvariantViolationError(Exception):
@@ -68,6 +71,81 @@ def render_invariant_expr(expr: Any) -> str:
     if kind == "not":
         return f"not {render_invariant_expr(getattr(expr, 'not_operand', None))}"
     return str(expr)
+
+
+def _clerk_invariant_literal(expr: Any) -> str:
+    value = getattr(expr, "value", None)
+    if value is None:
+        return "empty"
+    if isinstance(value, (bool, str)):
+        return clerk_stage_label(value)
+    return str(value)
+
+
+def _clerk_invariant_field_ref(expr: Any) -> str:
+    parts = [
+        clerk_form_error_field_label(segment) for segment in (getattr(expr, "path", None) or [])
+    ]
+    return " ".join(p for p in parts if p)
+
+
+def _clerk_invariant_duration(expr: Any) -> str:
+    unit = getattr(getattr(expr, "duration_unit", None), "value", None) or "days"
+    return f"{getattr(expr, 'duration_value', '?')} {clerk_stage_label(unit)}"
+
+
+def _clerk_invariant_binary(expr: Any, prefix: str) -> str:
+    op = getattr(getattr(expr, f"{prefix}_op", None), "value", None) or "?"
+    left = clerk_invariant_expr(getattr(expr, f"{prefix}_left", None))
+    right = clerk_invariant_expr(getattr(expr, f"{prefix}_right", None))
+    return f"{left} {op} {right}".strip()
+
+
+def _clerk_invariant_not(expr: Any) -> str:
+    inner = clerk_invariant_expr(getattr(expr, "not_operand", None))
+    return f"not {inner}".strip() if inner else "not"
+
+
+_CLERK_INVARIANT_KIND = {
+    "literal": _clerk_invariant_literal,
+    "field_ref": _clerk_invariant_field_ref,
+    "duration": _clerk_invariant_duration,
+    "comparison": lambda expr: _clerk_invariant_binary(expr, "comparison"),
+    "logical": lambda expr: _clerk_invariant_binary(expr, "logical"),
+    "not": _clerk_invariant_not,
+}
+
+
+def clerk_invariant_expr(expr: Any) -> str:
+    """Schema invariant expression → clerk 422 speech (oral #202).
+
+    ``duration_minutes > 0`` dumped as itself (or the generic
+    ``Invariant constraint violated``) while the log-session form
+    already says ``Duration (min)``. Leftover junk stays put. JSON
+    ``invariant`` / ``entity`` stay identifiers.
+    """
+    if expr is None:
+        return ""
+    kind = getattr(expr, "kind", None)
+    if not isinstance(kind, str):
+        return str(expr)
+    handler = _CLERK_INVARIANT_KIND.get(kind)
+    return handler(expr) if handler is not None else str(expr)
+
+
+def clerk_invariant_speech(invariant: Any = None, message: str | None = None) -> str:
+    """Clerk-facing invariant 422 body (oral #202).
+
+    Authored ``message`` wins (including leftover junk). Empty /
+    generic message synthesizes field labels from the expression.
+    """
+    authored = (message or getattr(invariant, "message", None) or "").strip()
+    if authored and authored != _GENERIC_INVARIANT_SPEECH:
+        return authored
+    rendered = clerk_invariant_expr(
+        getattr(invariant, "expression", None) if invariant is not None else None
+    )
+    return rendered or _GENERIC_INVARIANT_SPEECH
 
 
 # =============================================================================
@@ -308,7 +386,7 @@ def validate_invariants(
     for invariant in invariants:
         if not validate_invariant(invariant, record):
             if raise_on_violation:
-                message = invariant.message or "Invariant constraint violated"
+                message = clerk_invariant_speech(invariant)
                 raise InvariantViolationError(message, invariant, entity=entity)
             violations.append(invariant)
 

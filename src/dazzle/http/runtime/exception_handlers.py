@@ -91,9 +91,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         ``code``, and the entity name so the UI can render an actionable error
         instead of a generic "constraint violated" (#1387).
         """
-        from dazzle.http.runtime.invariant_evaluator import render_invariant_expr
+        from dazzle.http.runtime.invariant_evaluator import (
+            clerk_invariant_speech,
+            render_invariant_expr,
+        )
 
-        content: dict[str, Any] = {"detail": str(exc), "type": "invariant_violation"}
+        speech = clerk_invariant_speech(exc.invariant, message=str(exc))
+        content: dict[str, Any] = {"detail": speech, "type": "invariant_violation"}
         inv = exc.invariant
         if inv is not None and getattr(inv, "expression", None) is not None:
             rendered = render_invariant_expr(inv.expression)
@@ -104,7 +108,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
-                [{"loc": [], "msg": str(exc)}],
+                [{"loc": [], "msg": speech}],
                 error_type="invariant_violation",
             )
         return _JSONResponse(status_code=422, content=content)

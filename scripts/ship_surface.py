@@ -268,6 +268,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_transition_speech_dump.py",
     # cycle 2335: unique/FK 422 must not dump IssueReport / ticket_number (oral #201)
     "tests/unit/test_constraint_speech_dump.py",
+    # cycle 2336: invariant 422 must not dump duration_minutes (oral #202)
+    "tests/unit/test_invariant_speech_dump.py",
+    # cycle 2336: unauthored qty invariant still asserted schema/generic
+    "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys
     "tests/unit/test_composite_guards.py::TestAllTrueGuard::test_all_true_transition_blocked_with_clear_message",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
