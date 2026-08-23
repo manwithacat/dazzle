@@ -29,6 +29,8 @@ from dazzle.http.specs.entity import (
     FieldType,
     ScalarType,
 )
+from dazzle.render.breadcrumbs import clerk_entity_noun
+from dazzle.render.filters import clerk_form_error_field_label
 
 logger = logging.getLogger(__name__)
 
@@ -473,22 +475,27 @@ def _translate_integrity_error(exc: Exception, table_name: str) -> ConstraintVio
     ``create_subtype`` / ``update_subtype`` paths so all four sites raise
     identical-shape errors. #1239 extracted this to dedupe four ~19-line
     copies that had drifted out of slice 3e.iii.
+
+    Clerk speech humanizes the table/field (oral #201); ``field`` stays
+    the identifier for JSON clients.
     """
     ctype, field = _parse_constraint_error(exc, table_name)
+    noun = clerk_entity_noun(table_name)
+    field_label = clerk_form_error_field_label(field) if field else ""
     if ctype == "unique":
         msg = (
-            f"A {table_name} with this {field} already exists"
+            f"A {noun} with this {field_label} already exists"
             if field
-            else f"Duplicate value violates unique constraint on {table_name}"
+            else f"Duplicate value violates unique constraint on {noun}"
         )
     elif ctype == "foreign_key":
         msg = (
-            f"Referenced record not found for field '{field}' on {table_name}"
+            f"Referenced record not found for field '{field_label}' on {noun}"
             if field
-            else f"Referenced record does not exist for {table_name}"
+            else f"Referenced record does not exist for {noun}"
         )
     else:
-        msg = f"Integrity constraint violated on {table_name}: {exc}"
+        msg = f"Integrity constraint violated on {noun}: {exc}"
     return ConstraintViolationError(msg, field=field, constraint_type=ctype)
 
 
@@ -1085,7 +1092,8 @@ class Repository[T: BaseModel]:
             exc_str = str(exc)
             if "ForeignKeyViolation" in type(exc).__name__ or "foreign key" in exc_str.lower():
                 raise ValueError(
-                    f"Cannot delete {self.table_name}: referenced by other records"
+                    f"Cannot delete {clerk_entity_noun(self.table_name)}: "
+                    "referenced by other records"
                 ) from exc
             raise
         latency_ms = (time.perf_counter() - start) * 1000

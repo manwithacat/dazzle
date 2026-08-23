@@ -266,6 +266,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_form_error_field_dump.py",
     # cycle 2333: state-machine 422 must not dump in_progress (oral #199)
     "tests/unit/test_transition_speech_dump.py",
+    # cycle 2335: unique/FK 422 must not dump IssueReport / ticket_number (oral #201)
+    "tests/unit/test_constraint_speech_dump.py",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys
     "tests/unit/test_composite_guards.py::TestAllTrueGuard::test_all_true_transition_blocked_with_clear_message",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188

@@ -2066,6 +2066,19 @@ dialect formed — and where it started to Goodhart itself — is
     them into ship-surface). Do not restyle remaining state-machine
     422 speech siblings (oral #199). Standing refusals apply.
 
+201. **Unique/FK 422 dumps PascalCase entities and snake_case fields.**
+    Cycle 2335: creating an IssueNote against a missing IssueReport
+    said ``Referenced IssueReport with ID '…' not found (field:
+    issue)`` while the form already says ``Issue``. Unique
+    ``ticket_number`` said ``A Ticket with this ticket_number already
+    exists``. Constraint speech (insert failed) is not state-machine
+    422 or form-error loc prefixes. ``_translate_integrity_error`` /
+    missing-ref 422 reuse ``clerk_entity_noun`` /
+    ``clerk_form_error_field_label``; leftover ``zzz`` stays put;
+    JSON ``field`` stays the identifier. Live fieldtest IssueNote +
+    support_tickets Ticket. Do not restyle remaining state-machine
+    422 speech siblings (oral #199). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2208,6 +2221,7 @@ the end of every new oral *is* expensive — point here instead.
 | 403 permission-speech PascalCase entity | Dump ``create EngagementLetter`` / ``Entity: EngagementLetter`` after clerk nouns exist; clone leftover-token stay-put or remaining signing ceremony siblings | #197 |
 | Form-error schema-key dump | Dump ``first_name: Field required`` after ``clerk_form_error_field_label`` exists; clone leftover-token stay-put or remaining 403 permission-speech siblings | #198 |
 | State-machine snake_case speech | Dump ``in_progress`` on HTMX 422 after ``clerk_transition_state`` exists; clone leftover-token stay-put or remaining form-error field-label siblings | #199 |
+| Unique/FK 422 schema dump | Dump ``IssueReport`` / ``ticket_number`` on unique/FK 422 after clerk nouns exist on constraint speech; clone leftover-token stay-put or remaining state-machine 422 siblings | #201 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2317,6 +2331,7 @@ how the handbook was learned.
 | One 403 permission-speech PascalCase dump after clerk_entity_noun exists | Call clerk_entity_noun / clerk_entity_confirm_noun on remaining 403 message + Entity panel in one ship, then STOP (oral #197). Do not restyle remaining signing ceremony siblings, remaining download / CSV filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One HTMX form-error schema-key dump after clerk_form_error_field_label exists | Call clerk_form_error_field_label on remaining HTMX 422 loc prefixes in one ship, then STOP (oral #198). Do not restyle JSON API loc keys, remaining 403 permission-speech siblings, remaining signing ceremony, remaining download / CSV filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One state-machine 422 snake_case dump after clerk_transition_state exists | Call clerk_transition_state on remaining InvalidTransitionError + GuardNotSatisfiedError hosts in one ship, then STOP (oral #199). Do not restyle remaining form-error field-label siblings, JSON API loc keys, remaining 403, remaining signing ceremony, remaining download / CSV, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
+| One unique/FK 422 schema dump after clerk_entity_noun is on constraint speech | Call clerk_entity_noun / clerk_form_error_field_label on remaining unique + FK + missing-ref + cannot-delete hosts in one ship, then STOP (oral #201). Do not restyle remaining state-machine 422 speech siblings, remaining form-error field-label siblings, JSON API loc keys, remaining 403, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

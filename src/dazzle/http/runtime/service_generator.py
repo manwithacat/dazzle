@@ -25,6 +25,8 @@ from dazzle.http.specs.entity import EntitySpec, StateMachineSpec
 from dazzle.http.specs.service import (
     ServiceSpec,
 )
+from dazzle.render.breadcrumbs import clerk_entity_noun
+from dazzle.render.filters import clerk_form_error_field_label
 
 if TYPE_CHECKING:
     from dazzle.http.runtime.repository import Repository
@@ -786,9 +788,10 @@ class CRUDService[T: BaseModel, CreateT: BaseModel, UpdateT: BaseModel](BaseServ
                             InvariantViolationError,
                         )
 
+                        noun = clerk_entity_noun(ref_entity)
+                        field_label = clerk_form_error_field_label(field.name)
                         raise InvariantViolationError(
-                            f"Referenced {ref_entity} with ID '{ref_id}' not found "
-                            f"(field: {field.name})"
+                            f"Referenced {noun} with ID '{ref_id}' not found (field: {field_label})"
                         )
 
 
