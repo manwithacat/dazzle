@@ -371,12 +371,72 @@ def _clerk_error_loc_label(loc: Any) -> str:
     return clerk_form_error_field_label(names[-1])
 
 
+# Pydantic type codes whose default ``Input should be a valid integer/UUID``
+# speech dumps Python types (oral #204). value_error / missing stay put —
+# enum AfterValidator and "Field required" are already clerk.
+_CLERK_TYPE_SPEECH: dict[str, str] = {
+    "int_parsing": "number",
+    "int_from_float": "number",
+    "int_type": "number",
+    "float_parsing": "number",
+    "float_type": "number",
+    "decimal_parsing": "number",
+    "decimal_type": "number",
+    "bool_parsing": "yes or no",
+    "bool_type": "yes or no",
+    "uuid_parsing": "id",
+    "uuid_type": "id",
+    "uuid_version": "id",
+    "date_parsing": "date",
+    "date_from_datetime_parsing": "date",
+    "date_from_datetime": "date",
+    "date_type": "date",
+    "datetime_parsing": "date and time",
+    "datetime_from_date_parsing": "date and time",
+    "datetime_from_date": "date and time",
+    "datetime_type": "date and time",
+    "time_parsing": "time",
+    "url_parsing": "web address",
+    "url_scheme": "web address",
+    "url_type": "web address",
+}
+
+
+def clerk_pydantic_type_speech(err: dict[str, Any] | None) -> str:
+    """Pydantic type 422 → clerk speech (oral #204).
+
+    ``Due Date: Input should be a valid date or datetime`` dumped Python
+    types while the edit form already says ``Due Date``. Submitted leftover
+    junk stays put. JSON ``type`` / ``loc`` / ``msg`` stay the identifiers.
+    Unknown codes (``value_error``, ``missing``) keep the original ``msg``.
+    """
+    payload = err or {}
+    raw = str(payload.get("msg") or "").strip()
+    kind = str(payload.get("type") or "")
+    noun = _CLERK_TYPE_SPEECH.get(kind)
+    if not noun:
+        return raw or str(payload)
+    submitted = payload.get("input")
+    leftover = "" if submitted is None else str(submitted)
+    if leftover:
+        if noun == "number":
+            return f"'{leftover}' is not a number"
+        if noun == "yes or no":
+            return f"'{leftover}' is not yes or no"
+        return f"'{leftover}' is not a valid {noun}"
+    if noun == "number":
+        return "is not a number"
+    if noun == "yes or no":
+        return "is not yes or no"
+    return f"is not a valid {noun}"
+
+
 def _errors_to_messages(errors: list[dict[str, Any]]) -> list[str]:
     """Convert Pydantic error dicts to clerk-readable HTMX messages."""
     messages = []
     for err in errors:
         loc = err.get("loc", [])
-        msg = err.get("msg", str(err))
+        msg = clerk_pydantic_type_speech(err)
         field = _clerk_error_loc_label(loc)
         if field:
             messages.append(f"{field}: {msg}")

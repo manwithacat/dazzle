@@ -273,6 +273,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2337: enum 422 must not dump in_progress / status (oral #203)
     "tests/unit/test_enum_speech_dump.py",
     "tests/unit/test_enum_validation.py::TestEnumEntityModel::test_invalid_enum_rejected",
+    # cycle 2338: pydantic type 422 must not dump integer / UUID / date (oral #204)
+    "tests/unit/test_type_speech_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys
