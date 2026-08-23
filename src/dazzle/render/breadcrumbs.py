@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 # PascalCase → clerk words (IssueReport → Issue Report). Digit/acronym
 # boundaries keep IBGPolicy → IBG Policy.
 _PASCAL_SPLIT = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+_DOWNLOAD_UNSAFE = re.compile(r"[^A-Za-z0-9]+")
 _LEFTOVER_PATH_TOKENS = frozenset({"zzz", "2abc", "1e2", "ghost"})
 
 
@@ -124,6 +125,26 @@ def clerk_entity_confirm_noun(
     if text.lower() in _LEFTOVER_PATH_TOKENS:
         return text
     return text.lower()
+
+
+def clerk_entity_download_stem(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Filesystem stem for clerk downloads (oral #195).
+
+    ``EngagementLetter-{uuid}.pdf`` dumped PascalCase while toast already
+    says ``Engagement Letter was created``. Catalog / PascalCase-split via
+    ``clerk_entity_noun``, then kebab-case. Leftover junk invents no entity.
+    """
+    noun = clerk_entity_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text:
+        return text
+    if text.lower() in _LEFTOVER_PATH_TOKENS:
+        return text
+    kebab = _DOWNLOAD_UNSAFE.sub("-", text).strip("-").lower()
+    return kebab or text
 
 
 def clerk_entity_title(entity: Any) -> str:

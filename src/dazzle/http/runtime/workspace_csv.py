@@ -35,6 +35,7 @@ from typing import Any
 
 from starlette.responses import StreamingResponse
 
+from dazzle.render.breadcrumbs import clerk_entity_download_stem
 from dazzle.render.channel_cell import clerk_email_display, clerk_phone_display
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.file_cell import clerk_file_cell_display
@@ -213,8 +214,8 @@ def render_entity_list_csv(
     columns: list[dict[str, Any]] | None,
     entity_name: str,
 ) -> StreamingResponse:
-    """Clerk CSV for ``GET /{entities}?format=csv`` (oral #129)."""
+    """Clerk CSV for ``GET /{entities}?format=csv`` (oral #129 / #195)."""
     rows = _items_as_dicts(items)
     cols = _columns_for_list_csv(columns, rows)
-    slug = (entity_name or "export").replace(" ", "_")
+    slug = clerk_entity_download_stem(entity_name) or "export"
     return _render_csv_response(rows, cols, slug)

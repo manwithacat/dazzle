@@ -47,7 +47,7 @@ def test_entity_list_csv_datetime_does_not_invent_wall_iso() -> None:
         "Task",
     )
     assert resp.media_type == "text/csv"
-    assert 'filename="Task.csv"' in resp.headers["content-disposition"]
+    assert 'filename="task.csv"' in resp.headers["content-disposition"]
     rows = _parse_csv(_get_body(resp))
     assert rows[0] == ["Title", "Created"]
     assert rows[1][0] == "Review Q3 brand guidelines draft"

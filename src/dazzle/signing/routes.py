@@ -42,10 +42,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from dazzle.core.ir import EntitySpec
+from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.render.breadcrumbs import clerk_entity_download_stem, clerk_entity_title
 from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
     InvalidTokenError,
@@ -438,16 +440,18 @@ async def _handle_post(
             signed_pdf,
             entity_name=entity.name,
             record_id=str(record_id),
+            filename=_signed_pdf_filename(entity, record_id),
         )
         if url:
             patch["signed_document"] = url
 
     await repo.update(record_id, patch)
 
+    download_name = _signed_pdf_filename(entity, record_id)
     return Response(
         content=signed_pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": (f'attachment; filename="{entity.name}-{record_id}.pdf"')},
+        headers={"Content-Disposition": (f'attachment; filename="{download_name}"')},
     )
 
 
@@ -1061,7 +1065,7 @@ async def _handle_signed_copy(
             media_type="application/pdf",
             headers={
                 "Content-Disposition": (
-                    f'attachment; filename="{entity.name}-{record_id}-signed.pdf"'
+                    f'attachment; filename="{_signed_pdf_filename(entity, record_id, signed=True)}"'
                 )
             },
         )
@@ -1073,12 +1077,35 @@ async def _handle_signed_copy(
     return HTMLResponse(body, status_code=404)  # nosemgrep
 
 
+def _signed_pdf_filename(
+    entity: EntitySpec,
+    record_id: Any,
+    *,
+    signed: bool = False,
+) -> str:
+    """Clerk-facing signed-PDF download name (oral #195).
+
+    Storage ``path_prefix`` stays the entity identifier. Leftover junk
+    invents no entity.
+    """
+    catalog: dict[str, str] = {}
+    title = clerk_entity_title(entity)
+    slug = entity_slug(entity.name)
+    if slug and title:
+        catalog[slug] = title
+    stem = clerk_entity_download_stem(entity.name, catalog) or "document"
+    if signed:
+        return f"{stem}-{record_id}-signed.pdf"
+    return f"{stem}-{record_id}.pdf"
+
+
 async def _persist_signed_pdf(
     file_service: Any,
     signed_pdf: bytes,
     *,
     entity_name: str,
     record_id: str,
+    filename: str | None = None,
 ) -> str | None:
     """Persist signed PDF; return public URL for ``signed_document`` or None.
 
@@ -1087,7 +1114,7 @@ async def _persist_signed_pdf(
     """
     import io as _io
 
-    filename = f"{entity_name}-{record_id}.pdf"
+    filename = filename or f"{entity_name}-{record_id}.pdf"
     path_prefix = f"signing/{entity_name}"
     try:
         metadata = await file_service.upload(

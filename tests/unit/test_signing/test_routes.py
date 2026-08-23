@@ -452,6 +452,8 @@ class TestFullSignFlow:
         )
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/pdf"
+        assert f'filename="contract-{record_id}.pdf"' in resp.headers["content-disposition"]
+        assert f"Contract-{record_id}.pdf" not in resp.headers["content-disposition"]
         assert resp.content.startswith(b"%PDF-")
         # Repo got the signed-state patch.
         assert len(repo.update_calls) == 1
@@ -484,7 +486,7 @@ class TestFullSignFlow:
         # File service got the signed PDF.
         assert len(file_service.uploads) == 1
         upload = file_service.uploads[0]
-        assert upload["filename"] == f"Contract-{record_id}.pdf"
+        assert upload["filename"] == f"contract-{record_id}.pdf"
         assert upload["content_type"] == "application/pdf"
         assert upload["entity_name"] == "Contract"
         assert upload["entity_id"] == record_id
@@ -494,7 +496,7 @@ class TestFullSignFlow:
 
         # The entity row's signed_document field carries the URL.
         _, patch = repo.update_calls[0]
-        assert patch["signed_document"] == f"/files/Contract-{record_id}.pdf"
+        assert patch["signed_document"] == f"/files/contract-{record_id}.pdf"
 
     def test_sign_storage_fallback_when_upload_fails(self, tmp_path: Any) -> None:
         """TR-49: metadata/upload failure still leaves a durable signed_document URL."""
@@ -532,6 +534,8 @@ class TestFullSignFlow:
         copy = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": token})
         assert copy.status_code == 200
         assert copy.headers["content-type"].startswith("application/pdf")
+        assert f'filename="contract-{record_id}-signed.pdf"' in copy.headers["content-disposition"]
+        assert f"Contract-{record_id}" not in copy.headers["content-disposition"]
         assert copy.content.startswith(b"%PDF-")
 
     def test_signing_template_provides_document_body(self) -> None:

@@ -256,6 +256,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_mutation_toast_entity_dump.py",
     # cycle 2328: delete confirm must not dump issuereport (oral #194)
     "tests/unit/test_delete_confirm_entity_dump.py",
+    # cycle 2329: signed PDF / list CSV must not dump EngagementLetter (oral #195)
+    "tests/unit/test_download_filename_entity_dump.py",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
     "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
     "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",
