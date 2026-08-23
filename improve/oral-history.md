@@ -2144,6 +2144,16 @@ dialect formed — and where it started to Goodhart itself — is
     bypass `densify_allowed=0` or leftover-token cadence. Same spirit
     as self-audit cadence (oral #18). Standing refusals apply.
 
+208. **422-speech dump cadence.** Self-audit 2342: cycles 2332–2340
+    shipped one HTMX 422 clerk-speech dump per cycle after chrome
+    STOP (form loc → transition state → unique/FK → invariant →
+    enum → pydantic type → length/pattern → decimal scale; 2334
+    repaired all_true pins). Each hole was real; the *cadence* is
+    leftover-token Goodhart in 422 clothing. Helpers exist.
+    Remaining siblings STOP (oral #198–#206). Next invent class is
+    not another pydantic constraint restyle or remaining JSON
+    ``type`` / ``loc`` / ``msg`` dump. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2154,6 +2164,7 @@ the end of every new oral *is* expensive — point here instead.
 |--------------|--------|------|
 | Goal B coat | Add example-app density recipes (rails, chips, stills) to look busy | 2109; Goal C distill |
 | Yield capability-sweep to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap does not skip cadence | #207 |
+| 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
 | Temporal echo | Walk the next list/grid `hx-get` for `include_closed` / `as_of` after the helper exists | #67 |
@@ -2408,6 +2419,7 @@ how the handbook was learned.
 | One pydantic type 422 schema dump after clerk_pydantic_type_speech exists | Call clerk_pydantic_type_speech on remaining HTMX type-parse hosts in one ship, then STOP (oral #204). Do not restyle remaining enum 422 speech siblings, remaining string_too_long / pattern siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One length/pattern 422 schema dump after clerk_pydantic_constraint_speech exists | Call clerk_pydantic_constraint_speech on remaining HTMX string_too_long / too_short / pattern / slug-must hosts in one ship, then STOP (oral #205). Do not restyle remaining pydantic type 422 speech siblings, remaining enum 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One decimal scale 422 schema dump after clerk_pydantic_constraint_speech covers decimal digits | Call clerk_pydantic_constraint_speech on remaining HTMX decimal_max_places / max_digits hosts in one ship, then STOP (oral #206). Do not restyle remaining length/pattern 422 speech siblings, remaining pydantic type 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
+| One 422-speech dump per cycle after clerk_* speech helpers exist | STOP; remaining form-error / transition / unique / invariant / enum / type / length / decimal 422 siblings closed (oral #198–#206). New invent class (oral #208) |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
