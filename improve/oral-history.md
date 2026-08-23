@@ -2045,6 +2045,17 @@ dialect formed — and where it started to Goodhart itself — is
     not restyle remaining 403 permission-speech siblings (oral #197).
     Standing refusals apply.
 
+199. **State-machine 422 dumps snake_case states.** Cycle 2333: a
+    blocked Task status change said ``Invalid transition from
+    'in_progress' to 'done'`` while the grid already says ``In
+    Progress``. Lifecycle speech (status change failed) is not
+    form-error loc prefixes. ``InvalidTransitionError`` /
+    ``GuardNotSatisfiedError`` reuse ``clerk_transition_state`` /
+    ``clerk_form_error_field_label``; leftover ``zzz`` stays put;
+    machine ``from_state`` / ``to_state`` stay identifiers. Live
+    simple_task Task. Do not restyle remaining form-error field-label
+    siblings (oral #198). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2186,6 +2197,7 @@ the end of every new oral *is* expensive — point here instead.
 | Signing ceremony entity-type principal | Dump ``Sign EngagementLetter`` / ``on behalf of EngagementLetter`` after ``clerk_signing_heading`` exists; clone leftover-token stay-put or remaining download / CSV filename siblings | #196 |
 | 403 permission-speech PascalCase entity | Dump ``create EngagementLetter`` / ``Entity: EngagementLetter`` after clerk nouns exist; clone leftover-token stay-put or remaining signing ceremony siblings | #197 |
 | Form-error schema-key dump | Dump ``first_name: Field required`` after ``clerk_form_error_field_label`` exists; clone leftover-token stay-put or remaining 403 permission-speech siblings | #198 |
+| State-machine snake_case speech | Dump ``in_progress`` on HTMX 422 after ``clerk_transition_state`` exists; clone leftover-token stay-put or remaining form-error field-label siblings | #199 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2293,6 +2305,7 @@ how the handbook was learned.
 | One signing ceremony entity-type principal after clerk_signing_heading exists | Call clerk_signing_heading / clerk_signing_mid on remaining ceremony title / stub / authority checkbox in one ship, then STOP (oral #196). Do not restyle remaining workspace region CSV / data-dz-csv-filename siblings, remaining download filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One 403 permission-speech PascalCase dump after clerk_entity_noun exists | Call clerk_entity_noun / clerk_entity_confirm_noun on remaining 403 message + Entity panel in one ship, then STOP (oral #197). Do not restyle remaining signing ceremony siblings, remaining download / CSV filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One HTMX form-error schema-key dump after clerk_form_error_field_label exists | Call clerk_form_error_field_label on remaining HTMX 422 loc prefixes in one ship, then STOP (oral #198). Do not restyle JSON API loc keys, remaining 403 permission-speech siblings, remaining signing ceremony, remaining download / CSV filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
+| One state-machine 422 snake_case dump after clerk_transition_state exists | Call clerk_transition_state on remaining InvalidTransitionError + GuardNotSatisfiedError hosts in one ship, then STOP (oral #199). Do not restyle remaining form-error field-label siblings, JSON API loc keys, remaining 403, remaining signing ceremony, remaining download / CSV, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

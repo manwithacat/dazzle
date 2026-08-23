@@ -74,10 +74,14 @@ def register_exception_handlers(app: FastAPI) -> None:
                 [{"loc": [], "msg": str(exc)}],
                 error_type="transition_error",
             )
-        return _JSONResponse(
-            status_code=422,
-            content={"detail": str(exc), "type": "transition_error"},
-        )
+        content: dict[str, Any] = {"detail": str(exc), "type": "transition_error"}
+        from_state = getattr(exc, "from_state", None)
+        to_state = getattr(exc, "to_state", None)
+        if from_state is not None:
+            content["from_state"] = from_state
+        if to_state is not None:
+            content["to_state"] = to_state
+        return _JSONResponse(status_code=422, content=content)
 
     @app.exception_handler(InvariantViolationError)
     async def invariant_error_handler(request: Request, exc: InvariantViolationError) -> Response:

@@ -14,11 +14,35 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from dazzle.i18n.display_locale import calendar_today
+from dazzle.render.filters import clerk_form_error_field_label, clerk_stage_label
 
 if TYPE_CHECKING:
     from dazzle.http.specs.entity import StateMachineSpec, StateTransitionSpec
 
 logger = logging.getLogger(__name__)
+
+
+def clerk_transition_state(value: Any) -> str:
+    """Clerk-facing state token in transition 422 speech (oral #199).
+
+    Invalid-transition HTMX said ``in_progress`` while the task grid
+    already says ``In Progress``. Leftover junk stays put. The
+    ``<none>`` sentinel (no current status) is ``none``. Machine
+    ``from_state`` / ``to_state`` stay identifiers.
+    """
+    text = "" if value is None else str(value).strip()
+    if text == "<none>":
+        return "none"
+    return clerk_stage_label(value)
+
+
+def _clerk_guard_value(guard_type: str, guard_value: str) -> str:
+    """Clerk-label guard speech; leftover junk stays put (oral #199)."""
+    if guard_type == "requires":
+        return clerk_form_error_field_label(guard_value)
+    if guard_type == "role":
+        return clerk_transition_state(guard_value)
+    return str(guard_value)
 
 
 # =============================================================================
@@ -48,12 +72,16 @@ class InvalidTransitionError(TransitionError):
         if message:
             super().__init__(message)
         elif allowed_states:
-            allowed = ", ".join(sorted(allowed_states))
+            allowed = ", ".join(clerk_transition_state(s) for s in sorted(allowed_states))
             super().__init__(
-                f"Invalid transition from '{from_state}' to '{to_state}'. Allowed states: {allowed}"
+                f"Invalid transition from '{clerk_transition_state(from_state)}' "
+                f"to '{clerk_transition_state(to_state)}'. Allowed states: {allowed}"
             )
         else:
-            super().__init__(f"Invalid transition from '{from_state}' to '{to_state}'")
+            super().__init__(
+                f"Invalid transition from '{clerk_transition_state(from_state)}' "
+                f"to '{clerk_transition_state(to_state)}'"
+            )
 
 
 class GuardNotSatisfiedError(TransitionError):
@@ -75,8 +103,10 @@ class GuardNotSatisfiedError(TransitionError):
             super().__init__(message)
         else:
             super().__init__(
-                f"Guard not satisfied for transition '{from_state}' -> '{to_state}': "
-                f"{guard_type} {guard_value}"
+                f"Guard not satisfied for transition "
+                f"'{clerk_transition_state(from_state)}' -> "
+                f"'{clerk_transition_state(to_state)}': "
+                f"{guard_type} {_clerk_guard_value(guard_type, guard_value)}"
             )
 
 
@@ -417,8 +447,10 @@ class TransitionValidator:
                             to_state,
                             "requires",
                             guard.requires_field,
-                            f"Field '{guard.requires_field}' must be set "
-                            f"for transition '{from_state}' -> '{to_state}'",
+                            f"{clerk_form_error_field_label(guard.requires_field)} "
+                            f"must be set for transition "
+                            f"'{clerk_transition_state(from_state)}' -> "
+                            f"'{clerk_transition_state(to_state)}'",
                         )
                     )
 
@@ -433,8 +465,10 @@ class TransitionValidator:
                                 to_state,
                                 "role",
                                 guard.requires_role,
-                                f"User must have role '{guard.requires_role}' "
-                                f"for transition '{from_state}' -> '{to_state}'",
+                                f"User must have role "
+                                f"'{clerk_transition_state(guard.requires_role)}' "
+                                f"for transition '{clerk_transition_state(from_state)}' "
+                                f"-> '{clerk_transition_state(to_state)}'",
                             )
                         )
 
@@ -506,14 +540,23 @@ def _build_guard_failure_message(
                 if not value:
                     false_fields.append(field_name)
         if false_fields:
-            items = ", ".join(false_fields)
+            items = ", ".join(clerk_form_error_field_label(name) for name in false_fields)
             return (
-                f"Cannot transition '{from_state}' -> '{to_state}': "
+                f"Cannot transition '{clerk_transition_state(from_state)}' -> "
+                f"'{clerk_transition_state(to_state)}': "
                 f"checklist items not completed: {items}"
             )
-        return f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
+        return (
+            f"Guard condition not met for transition "
+            f"'{clerk_transition_state(from_state)}' -> "
+            f"'{clerk_transition_state(to_state)}'"
+        )
 
-    return f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
+    return (
+        f"Guard condition not met for transition "
+        f"'{clerk_transition_state(from_state)}' -> "
+        f"'{clerk_transition_state(to_state)}'"
+    )
 
 
 def validate_status_update(
@@ -561,8 +604,8 @@ def validate_status_update(
                     "<none>",
                     new_status,
                     set(state_machine.states),
-                    f"Invalid state '{new_status}'. "
-                    f"Valid states: {', '.join(state_machine.states)}",
+                    f"Invalid state '{clerk_transition_state(new_status)}'. "
+                    f"Valid states: {', '.join(clerk_transition_state(s) for s in state_machine.states)}",
                 )
             )
 

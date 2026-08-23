@@ -264,6 +264,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_forbidden_entity_dump.py",
     # cycle 2332: HTMX form errors must not dump first_name (oral #198)
     "tests/unit/test_form_error_field_dump.py",
+    # cycle 2333: state-machine 422 must not dump in_progress (oral #199)
+    "tests/unit/test_transition_speech_dump.py",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
     "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
     "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",
