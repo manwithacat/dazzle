@@ -500,15 +500,26 @@ def _clerk_slug_constraint_speech(raw: str, leftover: str) -> str | None:
     return _clerk_with_leftover(leftover, "is not a valid slug")
 
 
+def _clerk_decimal_bound_speech(leftover: str, *, places: bool, n: int | None) -> str:
+    """``Decimal input should have no more than N decimal places/digits`` → clerk."""
+    noun = "decimal places" if places else "digits"
+    if n is None:
+        return _clerk_with_leftover(leftover, f"has too many {noun}")
+    return _clerk_with_leftover(leftover, f"has too many {noun} (at most {n})")
+
+
 def clerk_pydantic_constraint_speech(err: dict[str, Any] | None) -> str | None:
-    """Length/pattern 422 → clerk speech (oral #205).
+    """Length/pattern/decimal-scale 422 → clerk speech (oral #205 / #206).
 
     ``Title: String should have at most 200 characters`` dumped the Python
     type. ``Slug: Value error, slug must be lowercase…`` dumped the schema
     type (and regex-adjacent rules) while the form already says ``Title`` /
-    ``Slug``. Submitted leftover junk stays put. JSON ``type`` / ``loc`` /
+    ``Slug``. ``Amount: Decimal input should have no more than 2 decimal
+    places`` dumped the Python type while the create form already says
+    ``Amount``. Submitted leftover junk stays put. JSON ``type`` / ``loc`` /
     ``msg`` stay the identifiers. Type-parse / enum / missing stay on their
-    helpers. Returns ``None`` when this is not a length/pattern 422.
+    helpers. Returns ``None`` when this is not a length/pattern/decimal-scale
+    422.
     """
     payload = err or {}
     kind = str(payload.get("type") or "")
@@ -520,6 +531,18 @@ def clerk_pydantic_constraint_speech(err: dict[str, Any] | None) -> str | None:
         return _clerk_length_speech(leftover, short=True, n=_clerk_ctx_int(ctx, "min_length"))
     if kind == "string_pattern_mismatch":
         return _clerk_with_leftover(leftover, "is not the expected format")
+    if kind == "decimal_max_places":
+        return _clerk_decimal_bound_speech(
+            leftover, places=True, n=_clerk_ctx_int(ctx, "decimal_places")
+        )
+    if kind == "decimal_max_digits":
+        return _clerk_decimal_bound_speech(
+            leftover, places=False, n=_clerk_ctx_int(ctx, "max_digits")
+        )
+    if kind == "decimal_whole_digits":
+        return _clerk_decimal_bound_speech(
+            leftover, places=False, n=_clerk_ctx_int(ctx, "whole_digits")
+        )
     if kind == "value_error":
         return _clerk_slug_constraint_speech(str(payload.get("msg") or ""), leftover)
     return None

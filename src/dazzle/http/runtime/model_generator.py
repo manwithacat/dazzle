@@ -237,6 +237,16 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
     if field.type.max_length:
         field_kwargs["max_length"] = field.type.max_length
 
+    # Decimal precision/scale → pydantic digits (oral #206). DSL
+    # ``decimal(15,2)`` was metadata-only; extra pence invented a
+    # scale the form's Amount already implies. JSON clients still see
+    # pydantic ``type`` / ``loc`` / ``msg``.
+    if field.type.kind == "scalar" and field.type.scalar_type == ScalarType.DECIMAL:
+        if field.type.precision is not None:
+            field_kwargs["max_digits"] = field.type.precision
+        if field.type.scale is not None:
+            field_kwargs["decimal_places"] = field.type.scale
+
     # Build the field definition
     if field_kwargs:
         return (python_type, Field(**field_kwargs))
