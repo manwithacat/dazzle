@@ -98,9 +98,9 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 2350 | USED |
-| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 2350 | USED |
-| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2350 | USED |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 2370 | USED |
+| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 2370 | USED |
+| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2370 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 2273 | STALE |
@@ -123,8 +123,8 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2361 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2361 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2370 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2370 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -137,4 +137,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 2361 (2026-08-23).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=31 HYGIENE_STALE_eff=37; USED→STALE=1 (ref_as_repr@2326 lag 35). Stamp probes/CodeQL/inbox @2361. Goal B saturated; residual=0; densify_allowed=0; dual_lock=0 coherence=0. Next → housekeeping idle; explore 100/100 — no product digs until dazzle-updated or `/improve --reset-budget`. Top COGNITION after reset: MCP `demo_world` / `qa trial` / domain (not metered vision, not WI densify). Semgrep USED@2350 next~2370.
+> **Cycle 2361 (2026-08-23).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=31 HYGIENE_STALE_eff=37; USED→STALE=1 (ref_as_repr@2326 lag 35). Stamp probes/CodeQL/inbox @2361. Goal B saturated; residual=0; densify_allowed=0; dual_lock=0 coherence=0. Next → housekeeping idle; explore 100/100 — no product digs until dazzle-updated or `/improve --reset-budget`. Top COGNITION after reset: MCP `demo_world` / `qa trial` / domain (not metered vision, not WI densify). Semgrep USED@2370 next~2390.
