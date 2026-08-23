@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
+from dazzle.render.breadcrumbs import clerk_entity_confirm_noun
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
@@ -415,7 +416,9 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     detail_url_template = table.get("detail_url_template") or ""
     entity_name = str(table.get("entity_name") or "Item")
     entity_name_attr = _html_mod.escape(entity_name, quote=True)
-    entity_name_lower = entity_name.lower()
+    entity_title = str(table.get("entity_title") or "")
+    _confirm_catalog = {entity_name: entity_title} if entity_title else None
+    entity_confirm_noun = clerk_entity_confirm_noun(entity_name, _confirm_catalog)
     api_endpoint = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
     inline_editable = set(table.get("inline_editable") or [])
     # Mutation affordances — default True for fixtures without RBAC. List
@@ -816,7 +819,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f'aria-label="Delete {row_label_attr}" '
             f'hx-delete="{api_endpoint}/{item_id_attr}" '
             f'hx-trigger="click" '
-            f'hx-confirm="Delete this {_html_mod.escape(entity_name_lower, quote=False)}?" '
+            f'hx-confirm="Delete this {_html_mod.escape(entity_confirm_noun, quote=False)}?" '
             f'hx-target="closest tr" '
             f'hx-swap="outerHTML swap:300ms" '
             f'class="dz-tr-action is-destructive">'
@@ -900,6 +903,7 @@ def render_data_row(
     caps: RowCapabilities,
     *,
     entity_name: str = "Item",
+    entity_title: str = "",
     api_endpoint: str = "",
     detail_url_template: str = "",
     detail_url_candidates: tuple[str, ...] | list[str] = (),
@@ -919,6 +923,7 @@ def render_data_row(
     table: dict[str, Any] = {
         "columns": list(columns),
         "entity_name": entity_name,
+        "entity_title": entity_title,
         "api_endpoint": api_endpoint,
         # `drill` is the authoritative gate for the whole-row hx-get + view/edit
         # links — the template only flows through when the capability is on.

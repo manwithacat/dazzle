@@ -106,6 +106,26 @@ def clerk_entity_noun(
     return " ".join(parts) or text
 
 
+def clerk_entity_confirm_noun(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Mid-sentence entity noun for hx-confirm (oral #194).
+
+    ``Delete this issuereport?`` dumped concatenated slug while toast
+    already says ``Issue Report was created``. Catalog / PascalCase-split
+    via ``clerk_entity_noun``, then lower for mid-sentence English.
+    Leftover junk invents no entity.
+    """
+    noun = clerk_entity_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text:
+        return text
+    if text.lower() in _LEFTOVER_PATH_TOKENS:
+        return text
+    return text.lower()
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

@@ -18,6 +18,7 @@ from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
+from dazzle.render.breadcrumbs import clerk_entity_confirm_noun
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.fragment import (
     URL,
@@ -677,6 +678,9 @@ class FragmentSurfaceAdapter:
         edit_url = ctx.get("edit_url") or ""
         delete_url = ctx.get("delete_url") or ""
         entity_name = ctx.get("entity_name") or "record"
+        entity_title = str(ctx.get("entity_title") or "")
+        _confirm_catalog = {str(entity_name): entity_title} if entity_title else None
+        entity_confirm_noun = clerk_entity_confirm_noun(str(entity_name), _confirm_catalog)
         status_field = str(ctx.get("status_field") or "status")
         transitions = ctx.get("transitions") or []
         integration_actions = ctx.get("integration_actions") or []
@@ -780,7 +784,7 @@ class FragmentSurfaceAdapter:
                     hx_delete=URL(str(delete_url)),
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
-                    hx_confirm=f"Delete this {str(entity_name).lower()}?",
+                    hx_confirm=f"Delete this {entity_confirm_noun}?",
                     data_action=f"{entity_name}.delete",
                 )
             )

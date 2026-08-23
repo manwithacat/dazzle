@@ -1993,6 +1993,16 @@ dialect formed — and where it started to Goodhart itself — is
     axis / crumb / toast restyle, remaining hop-label dump, or
     remaining JSON API key dump. Standing refusals apply.
 
+194. **Destructive confirm dumps concatenated entity slug.** Cycle
+    2328: ``hx-confirm`` said ``Delete this issuereport?`` while
+    toast already says ``Issue Report was created``. Gating speech
+    (before destroy) is not success chrome. ``clerk_entity_confirm_noun``
+    lowercases ``clerk_entity_noun`` for mid-sentence English; leftover
+    ``zzz`` invents no entity. Live fieldtest_hub ``IssueReport``
+    row trash + detail Delete. Do not restyle remaining toast /
+    breadcrumb / hop-label siblings (oral #191–#193). Standing
+    refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2129,6 +2139,7 @@ the end of every new oral *is* expensive — point here instead.
 | Breadcrumb concatenated entity slug | Dump ``Issuereport`` after entity titles exist; clone leftover-token stay-put or remaining as-of snapshot chrome | #191 |
 | Mutation toast PascalCase entity name | Dump ``IssueReport was created`` after ``clerk_entity_noun`` exists; clone leftover-token stay-put or remaining breadcrumb slug siblings | #192 |
 | Schema-token chrome dump cadence | Walk another audit-history / FTS / conversation / find-by / related-tab / carousel / chart-axis / breadcrumb / toast dump after helpers exist (oral #179–#192) | #193 |
+| Destructive-confirm concatenated slug | Dump ``issuereport`` on ``hx-confirm`` after ``clerk_entity_confirm_noun`` exists; clone leftover-token stay-put or remaining toast / breadcrumb siblings | #194 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2231,6 +2242,7 @@ how the handbook was learned.
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
 | One group_by-empty / typed list-cell dump per cycle after display-dump STOP | STOP; remaining group_by + list-cell siblings closed (oral #163–#176). New invent class (oral #178) |
 | One schema-token chrome dump per cycle after list-cell STOP | STOP; remaining chrome dumps closed (oral #179–#192). New invent class (oral #193) |
+| One destructive-confirm concatenated slug after clerk_entity_confirm_noun exists | Call clerk_entity_confirm_noun on remaining row + detail hx-confirm hosts in one ship, then STOP (oral #194). Do not restyle remaining toast / breadcrumb / hop-label siblings, remaining schema-token chrome, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
