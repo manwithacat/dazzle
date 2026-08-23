@@ -1981,6 +1981,18 @@ dialect formed — and where it started to Goodhart itself — is
     ``IssueReport``. Do not restyle remaining breadcrumb slug siblings
     (oral #191). Standing refusals apply.
 
+193. **Schema-token chrome dump cadence.** Self-audit 2327: cycles
+    2313–2326 shipped one chrome schema-token dump per cycle after
+    oral #178 STOP on group_by/list-cell (audit ISO → FTS keys →
+    conversation channel → find-by chrome → related-tab FK →
+    carousel chips → bool True → IC1 → EMEA → radar axes → as-of
+    heading → Issuereport crumb → IssueReport toast). Each hole
+    was real; the *cadence* is leftover-token Goodhart in chrome
+    clothing. Helpers exist. Remaining siblings STOP (oral
+    #179–#192). Next invent class is not another field-label /
+    axis / crumb / toast restyle, remaining hop-label dump, or
+    remaining JSON API key dump. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2116,6 +2128,7 @@ the end of every new oral *is* expensive — point here instead.
 | As-of snapshot silent chrome | Dump a historical ``?as_of=`` projection as live; clone leftover-token stay-put or remaining radar/box-plot/heatmap axis siblings | #190 |
 | Breadcrumb concatenated entity slug | Dump ``Issuereport`` after entity titles exist; clone leftover-token stay-put or remaining as-of snapshot chrome | #191 |
 | Mutation toast PascalCase entity name | Dump ``IssueReport was created`` after ``clerk_entity_noun`` exists; clone leftover-token stay-put or remaining breadcrumb slug siblings | #192 |
+| Schema-token chrome dump cadence | Walk another audit-history / FTS / conversation / find-by / related-tab / carousel / chart-axis / breadcrumb / toast dump after helpers exist (oral #179–#192) | #193 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2217,6 +2230,7 @@ how the handbook was learned.
 | One clerk-visible title/label dump per cycle after identity helpers exist | STOP; remaining chart/filter token siblings closed (oral #148). New invent class (oral #149) |
 | One clerk-visible display dump per cycle after identity-dump STOP | STOP; remaining ops_dashboard widget siblings closed (oral #150–#161). New invent class (oral #162) |
 | One group_by-empty / typed list-cell dump per cycle after display-dump STOP | STOP; remaining group_by + list-cell siblings closed (oral #163–#176). New invent class (oral #178) |
+| One schema-token chrome dump per cycle after list-cell STOP | STOP; remaining chrome dumps closed (oral #179–#192). New invent class (oral #193) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |
