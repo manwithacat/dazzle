@@ -2111,6 +2111,19 @@ dialect formed — and where it started to Goodhart itself — is
     ``loc`` / ``msg`` stay identifiers. Live Task. Do not restyle
     remaining enum 422 speech siblings. Standing refusals apply.
 
+205. **Length/pattern 422 dumps ``String`` and ``slug must``.** Cycle
+    2339: creating a Task with a 201-char title said ``String should
+    have at most 200 characters`` while the form already says
+    ``Title``. A Workspace slug ``ZZZ`` said ``Value error, slug must
+    be lowercase letters…`` while the list already says ``Slug``.
+    Length/pattern speech is not type-parse (oral #204) or enum
+    choice lists. ``clerk_pydantic_constraint_speech`` emits
+    ``too long (at most 200 characters)`` / ``'ZZZ' must be lowercase
+    letters, digits, and hyphens``; leftover ``zzz`` stays put; JSON
+    ``type`` / ``loc`` / ``msg`` stay identifiers. Live Task title +
+    Workspace slug. Do not restyle remaining pydantic type 422 speech
+    siblings (oral #204). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2257,6 +2270,7 @@ the end of every new oral *is* expensive — point here instead.
 | Invariant 422 schema dump | Dump ``duration_minutes > 0`` / generic ``Invariant constraint violated`` after ``clerk_invariant_speech`` exists; clone leftover-token stay-put or remaining unique/FK 422 siblings | #202 |
 | Enum 422 schema dump | Dump ``status`` / ``in_progress`` on enum 422 after ``clerk_enum_speech`` exists; clone leftover-token stay-put or remaining invariant 422 siblings | #203 |
 | Pydantic type 422 schema dump | Dump ``integer`` / ``UUID`` / ``date or datetime`` on type 422 after ``clerk_pydantic_type_speech`` exists; clone leftover-token stay-put or remaining enum 422 siblings | #204 |
+| Length/pattern 422 schema dump | Dump ``String should have at most`` / ``slug must`` / regex on length/pattern 422 after ``clerk_pydantic_constraint_speech`` exists; clone leftover-token stay-put or remaining type 422 siblings | #205 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2370,6 +2384,7 @@ how the handbook was learned.
 | One invariant 422 schema dump after clerk_invariant_speech exists | Call clerk_invariant_speech on remaining unauthored invariant hosts in one ship, then STOP (oral #202). Do not restyle remaining unique/FK 422 speech siblings, remaining state-machine 422 speech siblings, JSON API invariant/entity keys, or leftover-token stay-put |
 | One enum 422 schema dump after clerk_enum_speech exists | Call clerk_enum_speech on remaining enum AfterValidator hosts in one ship, then STOP (oral #203). Do not restyle remaining invariant 422 speech siblings, remaining unique/FK 422 speech siblings, JSON API loc keys, or leftover-token stay-put |
 | One pydantic type 422 schema dump after clerk_pydantic_type_speech exists | Call clerk_pydantic_type_speech on remaining HTMX type-parse hosts in one ship, then STOP (oral #204). Do not restyle remaining enum 422 speech siblings, remaining string_too_long / pattern siblings, JSON API type/loc/msg, or leftover-token stay-put |
+| One length/pattern 422 schema dump after clerk_pydantic_constraint_speech exists | Call clerk_pydantic_constraint_speech on remaining HTMX string_too_long / too_short / pattern / slug-must hosts in one ship, then STOP (oral #205). Do not restyle remaining pydantic type 422 speech siblings, remaining enum 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

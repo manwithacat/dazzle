@@ -431,12 +431,108 @@ def clerk_pydantic_type_speech(err: dict[str, Any] | None) -> str:
     return f"is not a valid {noun}"
 
 
+_CLERK_LEFTOVER_QUOTE_MAX = 48
+
+
+def _clerk_leftover_quote(submitted: Any) -> str:
+    """Short leftover stays put in speech; long dumps are omitted (form keeps them)."""
+    if submitted is None:
+        return ""
+    leftover = str(submitted)
+    if not leftover or len(leftover) > _CLERK_LEFTOVER_QUOTE_MAX:
+        return ""
+    return leftover
+
+
+def _clerk_ctx_int(ctx: Any, key: str) -> int | None:
+    if not isinstance(ctx, dict) or key not in ctx:
+        return None
+    try:
+        return int(ctx[key])
+    except (TypeError, ValueError):
+        return None
+
+
+def _clerk_bound_from_msg(raw: str, token: str) -> int | None:
+    lower = raw.lower()
+    i = lower.find(token)
+    if i < 0:
+        return None
+    rest = raw[i + len(token) :].strip().split(None, 1)
+    if not rest:
+        return None
+    try:
+        return int(rest[0])
+    except ValueError:
+        return None
+
+
+def _clerk_with_leftover(leftover: str, rest: str) -> str:
+    """``rest`` is a predicate (``is too long (…)`` / ``must be …``)."""
+    if leftover:
+        return f"'{leftover}' {rest}"
+    if rest.startswith("is "):
+        return rest[3:]
+    return rest
+
+
+def _clerk_length_speech(leftover: str, *, short: bool, n: int | None) -> str:
+    adj = "short" if short else "long"
+    if n is None:
+        return _clerk_with_leftover(leftover, f"is too {adj}")
+    prep = "at least" if short else "at most"
+    return _clerk_with_leftover(leftover, f"is too {adj} ({prep} {n} characters)")
+
+
+def _clerk_slug_constraint_speech(raw: str, leftover: str) -> str | None:
+    """Slug AfterValidator 422 → clerk (oral #205). JSON ``msg`` stays the identifier."""
+    lower = raw.lower()
+    if "slug must" not in lower:
+        return None
+    if "at least" in lower:
+        return _clerk_length_speech(leftover, short=True, n=_clerk_bound_from_msg(raw, "at least"))
+    if "at most" in lower:
+        return _clerk_length_speech(leftover, short=False, n=_clerk_bound_from_msg(raw, "at most"))
+    if "double hyphen" in lower:
+        return _clerk_with_leftover(leftover, "must not contain double hyphens")
+    if "lowercase" in lower:
+        return _clerk_with_leftover(leftover, "must be lowercase letters, digits, and hyphens")
+    return _clerk_with_leftover(leftover, "is not a valid slug")
+
+
+def clerk_pydantic_constraint_speech(err: dict[str, Any] | None) -> str | None:
+    """Length/pattern 422 → clerk speech (oral #205).
+
+    ``Title: String should have at most 200 characters`` dumped the Python
+    type. ``Slug: Value error, slug must be lowercase…`` dumped the schema
+    type (and regex-adjacent rules) while the form already says ``Title`` /
+    ``Slug``. Submitted leftover junk stays put. JSON ``type`` / ``loc`` /
+    ``msg`` stay the identifiers. Type-parse / enum / missing stay on their
+    helpers. Returns ``None`` when this is not a length/pattern 422.
+    """
+    payload = err or {}
+    kind = str(payload.get("type") or "")
+    leftover = _clerk_leftover_quote(payload.get("input"))
+    ctx = payload.get("ctx")
+    if kind == "string_too_long":
+        return _clerk_length_speech(leftover, short=False, n=_clerk_ctx_int(ctx, "max_length"))
+    if kind == "string_too_short":
+        return _clerk_length_speech(leftover, short=True, n=_clerk_ctx_int(ctx, "min_length"))
+    if kind == "string_pattern_mismatch":
+        return _clerk_with_leftover(leftover, "is not the expected format")
+    if kind == "value_error":
+        return _clerk_slug_constraint_speech(str(payload.get("msg") or ""), leftover)
+    return None
+
+
 def _errors_to_messages(errors: list[dict[str, Any]]) -> list[str]:
     """Convert Pydantic error dicts to clerk-readable HTMX messages."""
     messages = []
     for err in errors:
         loc = err.get("loc", [])
-        msg = clerk_pydantic_type_speech(err)
+        msg = clerk_pydantic_constraint_speech(err)
+        if msg is None:
+            msg = clerk_pydantic_type_speech(err)
         field = _clerk_error_loc_label(loc)
         if field:
             messages.append(f"{field}: {msg}")
