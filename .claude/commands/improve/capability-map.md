@@ -54,14 +54,14 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 2051 | STALE |
 | **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 2051 | STALE |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list + **presentation residual**) | COGNITION | MCP | **example-apps** + framework-ux | 2184 | STALE |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 2257 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** + framework-ux | 2257 | STALE |
 | MCP `presentation` (cognition / opportunities / residual) | COGNITION | MCP | **framework-ux** + example-apps | 2184 | STALE |
-| **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 2318 | USED |
+| **hyperpart_presentation** process (`present()` matrix + strategy) | COGNITION | strategy + CLI + MCP | **framework-ux** (+ example-apps recapture) | 2318 | STALE |
 | counter-prior `ref_as_repr` (dict/UUID chrome) | COGNITION | KG + docs | framework-ux + example-apps | 2326 | USED |
 | **interesting_product** (post-5.8 Goal B depth menu + still proof) | COGNITION | strategy + doctrine | **example-apps** | 2108 | STALE |
 | **goal_b_coat / distill** (Goal C subtract filter-wall / cartesian) | COGNITION | script + strategy | **example-apps** | 2109 | STALE |
 | doctrine `interesting-saas-context` (Goal A harness vs Goal B) | COGNITION | docs | example-apps + driver | 2096 | STALE |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 2262 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 2262 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1918 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1951 | STALE |
@@ -69,15 +69,15 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2340 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2341 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1951 | STALE |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 2269 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 2269 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 2269 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 2269 | STALE |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 2269 | STALE |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 2269 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 2184 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 2264 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 2264 | STALE |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 2098 | STALE |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 2045 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -103,7 +103,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2116 | STALE |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 2273 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 2273 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 2172 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1341 | STALE |
@@ -123,8 +123,8 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2336 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2336 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2341 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2341 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -137,4 +137,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 2252 (2026-08-18).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=31 HYGIENE_STALE_eff=40; no USED→STALE flips (probes/CodeQL/inbox @2252; presentation@2184 / gallery@2162 / dual_lock@2172 still STALE-eff). Goal B recommend=- (interesting_product_saturated); residual=1 smoke_stale_days only; densify_allowed=0; dual_lock=0 coherence=0. Next → framework-ux **different invent class** in a live app (not leftover-token stay-put; oral #121). Do not stamp presentation (residual=0) or smoke.
+> **Cycle 2341 (2026-08-23).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=30 HYGIENE_STALE_eff=40; USED→STALE=8 (demo quality/reset-and-load/test walk/qa_smoke+crawl+dig/hyperpart_presentation@2318, composition@2273). Goal B saturated; residual=0; densify_allowed=0; dual_lock=0 coherence=0. Next → self-audit@2342; explore 100/100 — no product digs until dazzle-updated or `/improve --reset-budget`. Top COGNITION after reset: MCP `demo_world` / `qa trial` / domain (not metered vision, not WI densify). Semgrep STALE@2116.
