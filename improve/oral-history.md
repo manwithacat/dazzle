@@ -2013,6 +2013,17 @@ dialect formed — and where it started to Goodhart itself — is
     ``EngagementLetter``. Do not restyle remaining workspace region
     CSV / ``data-dz-csv-filename`` siblings. Standing refusals apply.
 
+196. **Signing ceremony dumps the entity type as the principal.** Cycle
+    2330: the unauthenticated sign page titled ``Sign EngagementLetter``
+    and the pad checkbox said ``on behalf of EngagementLetter`` while
+    Downloads already say ``engagement-letter-{id}.pdf``. The signatory
+    reads ceremony speech, not chrome. ``clerk_signing_heading`` /
+    ``clerk_signing_mid`` reuse ``clerk_entity_noun``; leftover ``zzz``
+    invents no entity. Machine ``entity`` in island props stays the
+    identifier. Live contact_manager ``EngagementLetter``. Do not restyle
+    remaining workspace region CSV / ``data-dz-csv-filename`` siblings
+    (oral #195). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2151,6 +2162,7 @@ the end of every new oral *is* expensive — point here instead.
 | Schema-token chrome dump cadence | Walk another audit-history / FTS / conversation / find-by / related-tab / carousel / chart-axis / breadcrumb / toast dump after helpers exist (oral #179–#192) | #193 |
 | Destructive-confirm concatenated slug | Dump ``issuereport`` on ``hx-confirm`` after ``clerk_entity_confirm_noun`` exists; clone leftover-token stay-put or remaining toast / breadcrumb siblings | #194 |
 | Download PascalCase filename | Dump ``EngagementLetter-{uuid}.pdf`` after ``clerk_entity_download_stem`` exists; clone leftover-token stay-put or remaining toast / confirm / breadcrumb siblings | #195 |
+| Signing ceremony entity-type principal | Dump ``Sign EngagementLetter`` / ``on behalf of EngagementLetter`` after ``clerk_signing_heading`` exists; clone leftover-token stay-put or remaining download / CSV filename siblings | #196 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2255,6 +2267,7 @@ how the handbook was learned.
 | One schema-token chrome dump per cycle after list-cell STOP | STOP; remaining chrome dumps closed (oral #179–#192). New invent class (oral #193) |
 | One destructive-confirm concatenated slug after clerk_entity_confirm_noun exists | Call clerk_entity_confirm_noun on remaining row + detail hx-confirm hosts in one ship, then STOP (oral #194). Do not restyle remaining toast / breadcrumb / hop-label siblings, remaining schema-token chrome, or leftover-token stay-put |
 | One download PascalCase filename after clerk_entity_download_stem exists | Call clerk_entity_download_stem on remaining signed-PDF + entity-list CSV emitters in one ship, then STOP (oral #195). Do not restyle remaining workspace region CSV / data-dz-csv-filename siblings, remaining toast / confirm / breadcrumb / hop-label, or leftover-token stay-put |
+| One signing ceremony entity-type principal after clerk_signing_heading exists | Call clerk_signing_heading / clerk_signing_mid on remaining ceremony title / stub / authority checkbox in one ship, then STOP (oral #196). Do not restyle remaining workspace region CSV / data-dz-csv-filename siblings, remaining download filename, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

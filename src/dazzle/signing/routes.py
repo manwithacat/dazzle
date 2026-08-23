@@ -47,7 +47,12 @@ from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
-from dazzle.render.breadcrumbs import clerk_entity_download_stem, clerk_entity_title
+from dazzle.render.breadcrumbs import (
+    clerk_entity_confirm_noun,
+    clerk_entity_download_stem,
+    clerk_entity_noun,
+    clerk_entity_title,
+)
 from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
     InvalidTokenError,
@@ -336,6 +341,7 @@ async def _handle_get(
         token=token,
         document_body=document_body,
         intended_email=signer_email,
+        entity=entity,
     )
     return HTMLResponse(body)  # nosemgrep
 
@@ -721,10 +727,42 @@ def _resolve_document_body(
         record_uuid = UUID(record_id_str)
     except (ValueError, AttributeError):
         record_uuid = UUID(int=0)
-    return _stub_document_body(entity_name=entity.name, record_id=record_uuid)
+    return _stub_document_body(entity_name=entity.name, record_id=record_uuid, entity=entity)
 
 
-def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
+def _entity_label_catalog(entity: EntitySpec | None) -> dict[str, str]:
+    """Map entity name/slug → DSL title for clerk ceremony speech (oral #196)."""
+    if entity is None:
+        return {}
+    title = clerk_entity_title(entity)
+    name = str(getattr(entity, "name", "") or "").strip()
+    if not title:
+        return {}
+    catalog: dict[str, str] = {}
+    if name:
+        catalog[name] = title
+    slug = entity_slug(name)
+    if slug:
+        catalog[slug] = title
+    return catalog
+
+
+def clerk_signing_heading(entity_name: str, entity: EntitySpec | None = None) -> str:
+    """Title-case ceremony noun. Leftover junk invents no entity (oral #196)."""
+    return clerk_entity_noun(entity_name, _entity_label_catalog(entity)) or "document"
+
+
+def clerk_signing_mid(entity_name: str, entity: EntitySpec | None = None) -> str:
+    """Mid-sentence ceremony noun. Leftover junk invents no entity (oral #196)."""
+    return clerk_entity_confirm_noun(entity_name, _entity_label_catalog(entity)) or "document"
+
+
+def _stub_document_body(
+    *,
+    entity_name: str,
+    record_id: UUID,
+    entity: EntitySpec | None = None,
+) -> str:
     """Placeholder document body for phase 3d.
 
     Phase 4 will swap this for project-supplied template lookup
@@ -732,7 +770,7 @@ def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
     typed-Fragment template). For now it prints enough identifying
     detail that the signed PDF is auditable.
     """
-    safe_entity = html.escape(entity_name)
+    safe_entity = html.escape(clerk_signing_heading(entity_name, entity))
     safe_id = html.escape(str(record_id))
     return (
         f"<h1>{safe_entity}</h1>"
@@ -750,10 +788,13 @@ def _signing_page(
     token: str,
     document_body: str,
     intended_email: str | None = None,
+    entity: EntitySpec | None = None,
 ) -> str:
     import json
 
-    safe_entity = html.escape(entity_name)
+    heading = clerk_signing_heading(entity_name, entity)
+    mid = clerk_signing_mid(entity_name, entity)
+    safe_entity = html.escape(heading)
     safe_id = html.escape(record_id)
     # Transparency banner (TR-15): a signing link is an unauthenticated
     # bearer credential delivered to the named signatory's email, so the
@@ -783,7 +824,7 @@ def _signing_page(
             "record": record_id,
             "token": token,
             "signatoryName": "Signer",
-            "entityName": entity_name,
+            "entityName": mid,
             "apiBase": "/api/sign",
         }
     )
@@ -1088,11 +1129,7 @@ def _signed_pdf_filename(
     Storage ``path_prefix`` stays the entity identifier. Leftover junk
     invents no entity.
     """
-    catalog: dict[str, str] = {}
-    title = clerk_entity_title(entity)
-    slug = entity_slug(entity.name)
-    if slug and title:
-        catalog[slug] = title
+    catalog = _entity_label_catalog(entity)
     stem = clerk_entity_download_stem(entity.name, catalog) or "document"
     if signed:
         return f"{stem}-{record_id}-signed.pdf"

@@ -52,7 +52,7 @@ export function mount({ el, props }) {
   const declText = document.createElement("span");
   declText.className = "label-text";
   declText.textContent =
-    "I confirm that I am authorised to sign on behalf of " +
+    "I confirm that I am authorised to sign this " +
     entityName +
     " and agree to the terms set out above.";
 
