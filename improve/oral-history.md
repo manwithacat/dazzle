@@ -2154,6 +2154,15 @@ dialect formed — and where it started to Goodhart itself — is
     not another pydantic constraint restyle or remaining JSON
     ``type`` / ``loc`` / ``msg`` dump. Standing refusals apply.
 
+209. **Semgrep hygiene cadence is hard preemption.** When ≥20 cycles
+    since `semgrep hygiene` / `lane: … semgrep` (rule 3b), run it
+    this cycle — do not idle at explore-cap (2343–2349 did). Hygiene
+    is `budget_consumed: 0` unless a true-positive fix ships.
+    Sentinel STALE@2116 was 234 cycles overdue. Same spirit as
+    capability-sweep cadence (oral #207). Do not mass-nosemgrep
+    JWT unverified-decode / write_handler SQL (already classified).
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2164,6 +2173,7 @@ the end of every new oral *is* expensive — point here instead.
 |--------------|--------|------|
 | Goal B coat | Add example-app density recipes (rails, chips, stills) to look busy | 2109; Goal C distill |
 | Yield capability-sweep to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap does not skip cadence | #207 |
+| Yield semgrep hygiene to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap does not skip cadence | #209 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2421,6 +2431,7 @@ how the handbook was learned.
 | One decimal scale 422 schema dump after clerk_pydantic_constraint_speech covers decimal digits | Call clerk_pydantic_constraint_speech on remaining HTMX decimal_max_places / max_digits hosts in one ship, then STOP (oral #206). Do not restyle remaining length/pattern 422 speech siblings, remaining pydantic type 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One 422-speech dump per cycle after clerk_* speech helpers exist | STOP; remaining form-error / transition / unique / invariant / enum / type / length / decimal 422 siblings closed (oral #198–#206). New invent class (oral #208) |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
+| Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

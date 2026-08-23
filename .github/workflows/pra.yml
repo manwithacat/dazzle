@@ -110,19 +110,26 @@ jobs:
 
     - name: Run PRA test
       id: test
+      env:
+        # Route dispatch input through env (never ${{ }} inside run:).
+        # Choice options are the only legal ScenarioType names.
+        SCENARIO: ${{ github.event.inputs.scenario }}
       run: |
-        SCENARIO="${{ github.event.inputs.scenario }}"
-
+        case "$SCENARIO" in
+          quick|standard|burst|backpressure|full) ;;
+          *) echo "scenario must be a PRA ScenarioType name" >&2; exit 2 ;;
+        esac
         python -c "
         import asyncio
         import json
+        import os
         import sys
         from pathlib import Path
         from dazzle.http.pra import StressHarness, ScenarioType
         from dazzle.http.metrics.reporter import ReportFormat
 
         async def main():
-            scenario = ScenarioType('${SCENARIO}')
+            scenario = ScenarioType(os.environ['SCENARIO'])
             harness = StressHarness()
             result = await harness.run_scenario(scenario)
 
