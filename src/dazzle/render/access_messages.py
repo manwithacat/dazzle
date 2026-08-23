@@ -13,7 +13,29 @@ crossing the back↔ui boundary.
 import logging
 from typing import Any
 
+from dazzle.core.strings import entity_slug
+from dazzle.render.breadcrumbs import (
+    clerk_entity_confirm_noun,
+    clerk_entity_noun,
+    clerk_entity_title,
+)
+
 logger = logging.getLogger(__name__)
+
+
+def _forbidden_label_catalog(entity: Any | None) -> dict[str, str] | None:
+    """Map entity name/slug → DSL title for 403 speech (oral #197)."""
+    if entity is None:
+        return None
+    title = clerk_entity_title(entity)
+    name = str(getattr(entity, "name", "") or "").strip()
+    if not title or not name:
+        return None
+    catalog: dict[str, str] = {name: title, name.lower(): title}
+    slug = entity_slug(name)
+    if slug:
+        catalog[slug] = title
+    return catalog
 
 
 def _forbidden_detail(
@@ -22,6 +44,8 @@ def _forbidden_detail(
     operation: Any,
     cedar_access_spec: Any,
     current_roles: list[str] | None = None,
+    entity: Any | None = None,
+    catalog: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a structured 403 detail dict disclosing role requirements.
 
@@ -63,10 +87,15 @@ def _forbidden_detail(
     except Exception:  # pragma: no cover — defensive: never shadow the 403 (#smells-1.1)
         logger.debug("Permitted-personas computation failed; omitting from 403", exc_info=True)
 
+    labels = catalog if catalog is not None else _forbidden_label_catalog(entity)
+    heading = clerk_entity_noun(entity_name, labels)
+    mid = clerk_entity_confirm_noun(entity_name, labels)
+    speech = mid or heading or entity_name
     return {
         "error": "forbidden",
-        "message": f"You don't have permission to {op_str} {entity_name}.",
+        "message": f"You don't have permission to {op_str} {speech}.",
         "entity": entity_name,
+        "entity_label": heading or entity_name,
         "operation": op_str,
         "permitted_personas": permitted,
         "current_roles": list(current_roles or []),

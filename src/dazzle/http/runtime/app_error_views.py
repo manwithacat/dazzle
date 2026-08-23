@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.render.breadcrumbs import clerk_entity_noun
 from dazzle.render.fragment import (
     URL,
     Card,
@@ -103,8 +104,13 @@ def build_app_403_view(
 
     extra: list[Any] = []
     if forbidden_detail:
-        if forbidden_detail.get("entity"):
-            extra.append(Text(body=f"Entity: {forbidden_detail['entity']}", tone="muted"))
+        entity_label = str(
+            forbidden_detail.get("entity_label")
+            or clerk_entity_noun(str(forbidden_detail.get("entity") or ""))
+            or ""
+        ).strip()
+        if entity_label:
+            extra.append(Text(body=f"Entity: {entity_label}", tone="muted"))
         if forbidden_detail.get("operation"):
             extra.append(Text(body=f"Operation: {forbidden_detail['operation']}", tone="muted"))
         permitted = forbidden_detail.get("permitted_personas") or []

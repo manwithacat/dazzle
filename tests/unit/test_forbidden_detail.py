@@ -104,8 +104,9 @@ class TestForbiddenDetail:
             cedar_access_spec=spec,
             current_roles=[],
         )
-        assert "read" in detail["message"].lower()
-        assert "Alert" in detail["message"]
+        assert detail["message"] == "You don't have permission to read alert."
+        assert detail["entity"] == "Alert"
+        assert detail["entity_label"] == "Alert"
 
     def test_malformed_spec_does_not_shadow_the_403(self) -> None:
         """If the spec has a weird shape (misconfigured at generation

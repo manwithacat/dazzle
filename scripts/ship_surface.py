@@ -260,6 +260,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_download_filename_entity_dump.py",
     # cycle 2330: signing ceremony must not dump EngagementLetter as principal (oral #196)
     "tests/unit/test_signing_ceremony_entity_dump.py",
+    # cycle 2331: 403 permission speech must not dump EngagementLetter (oral #197)
+    "tests/unit/test_forbidden_entity_dump.py",
     # cycle 2323 cimonitor: region-adapter smokes still pinned mon/g1/p50 after #188
     "tests/unit/test_region_adapter.py::test_heatmap_renders_dedicated_primitive",
     "tests/unit/test_region_adapter.py::test_alternative_dict_item_shape_normalizes_to_same_render[box_plot]",
