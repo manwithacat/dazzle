@@ -2090,6 +2090,17 @@ dialect formed — and where it started to Goodhart itself — is
     restyle remaining unique/FK 422 speech siblings (oral #201).
     Standing refusals apply.
 
+203. **Enum 422 dumps schema field keys and snake_case choices.** Cycle
+    2337: editing a Task with ``status=zzz`` said ``Invalid value 'zzz'
+    for 'status'. Allowed: todo, in_progress, review, done`` while the
+    form already says ``Status`` and the grid already says ``In
+    Progress``. Choice speech (invalid enum) is not invariant /
+    unique/FK / loc-prefix form-error. ``clerk_enum_speech`` reuses
+    ``clerk_form_error_field_label`` / ``clerk_stage_label``; leftover
+    ``zzz`` stays put; JSON ``loc`` stays the identifier. Live
+    simple_task Task. Do not restyle remaining invariant 422 speech
+    siblings (oral #202). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2234,6 +2245,7 @@ the end of every new oral *is* expensive — point here instead.
 | State-machine snake_case speech | Dump ``in_progress`` on HTMX 422 after ``clerk_transition_state`` exists; clone leftover-token stay-put or remaining form-error field-label siblings | #199 |
 | Unique/FK 422 schema dump | Dump ``IssueReport`` / ``ticket_number`` on unique/FK 422 after clerk nouns exist on constraint speech; clone leftover-token stay-put or remaining state-machine 422 siblings | #201 |
 | Invariant 422 schema dump | Dump ``duration_minutes > 0`` / generic ``Invariant constraint violated`` after ``clerk_invariant_speech`` exists; clone leftover-token stay-put or remaining unique/FK 422 siblings | #202 |
+| Enum 422 schema dump | Dump ``status`` / ``in_progress`` on enum 422 after ``clerk_enum_speech`` exists; clone leftover-token stay-put or remaining invariant 422 siblings | #203 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
@@ -2345,6 +2357,7 @@ how the handbook was learned.
 | One state-machine 422 snake_case dump after clerk_transition_state exists | Call clerk_transition_state on remaining InvalidTransitionError + GuardNotSatisfiedError hosts in one ship, then STOP (oral #199). Do not restyle remaining form-error field-label siblings, JSON API loc keys, remaining 403, remaining signing ceremony, remaining download / CSV, remaining toast / confirm / breadcrumb, or leftover-token stay-put |
 | One unique/FK 422 schema dump after clerk_entity_noun is on constraint speech | Call clerk_entity_noun / clerk_form_error_field_label on remaining unique + FK + missing-ref + cannot-delete hosts in one ship, then STOP (oral #201). Do not restyle remaining state-machine 422 speech siblings, remaining form-error field-label siblings, JSON API loc keys, remaining 403, or leftover-token stay-put |
 | One invariant 422 schema dump after clerk_invariant_speech exists | Call clerk_invariant_speech on remaining unauthored invariant hosts in one ship, then STOP (oral #202). Do not restyle remaining unique/FK 422 speech siblings, remaining state-machine 422 speech siblings, JSON API invariant/entity keys, or leftover-token stay-put |
+| One enum 422 schema dump after clerk_enum_speech exists | Call clerk_enum_speech on remaining enum AfterValidator hosts in one ship, then STOP (oral #203). Do not restyle remaining invariant 422 speech siblings, remaining unique/FK 422 speech siblings, JSON API loc keys, or leftover-token stay-put |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One FTS snippet field dump after clerk_fts_snippet_field_label exists | Call clerk_fts_snippet_field_label on remaining HTML snippet hosts in one ship, then STOP (oral #180). Do not restyle remaining snippet bodies, JSON API keys, remaining audit-history actor UUIDs, remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
 | One tree group_by scalar after compute_tree groups unmatched parent ids | Call compute_tree grouping on remaining scalar group_by trees, then STOP (oral #163). Do not restyle remaining ops_dashboard widget formatters or leftover-token stay-put |

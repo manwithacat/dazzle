@@ -20,6 +20,7 @@ from dazzle.http.specs.entity import (
     ScalarType,
 )
 from dazzle.i18n.display_locale import calendar_today
+from dazzle.render.filters import clerk_form_error_field_label, clerk_stage_label
 
 # Try to import relativedelta for months/years arithmetic
 try:
@@ -68,14 +69,29 @@ def _scalar_type_to_python(scalar_type: ScalarType) -> type:
     return mapping.get(scalar_type, str)
 
 
+def clerk_enum_speech(
+    value: Any, field_name: Any = "", allowed: list[str] | tuple[str, ...] | None = None
+) -> str:
+    """Schema enum 422 → clerk choice speech (oral #203).
+
+    ``Invalid value 'zzz' for 'status'. Allowed: todo, in_progress`` dumped
+    schema tokens while the edit form already says ``Status`` / ``In Progress``.
+    Submitted leftover junk stays put. JSON ``loc`` stays the identifier.
+    """
+    submitted = "" if value is None else str(value)
+    field_label = clerk_form_error_field_label(field_name)
+    choices = ", ".join(clerk_stage_label(item) for item in (allowed or ()))
+    if field_label:
+        return f"Invalid value '{submitted}' for '{field_label}'. Allowed: {choices}"
+    return f"Invalid value '{submitted}'. Allowed: {choices}"
+
+
 def _make_enum_validator(allowed: list[str], field_name: str) -> Callable[[str], str]:
     """Create a validator function that checks enum values."""
 
     def _validate(v: str) -> str:
         if v not in allowed:
-            raise ValueError(
-                f"Invalid value '{v}' for '{field_name}'. Allowed: {', '.join(allowed)}"
-            )
+            raise ValueError(clerk_enum_speech(v, field_name, allowed))
         return v
 
     return _validate

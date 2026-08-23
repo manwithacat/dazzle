@@ -59,8 +59,11 @@ class TestEnumEntityModel:
         Model = generate_entity_model(entity)
         with pytest.raises(ValidationError) as exc_info:
             Model(id=uuid4(), title="Bug", priority="critical")
-        assert "Invalid value 'critical' for 'priority'" in str(exc_info.value)
-        assert "Allowed: low, medium, high" in str(exc_info.value)
+        speech = str(exc_info.value)
+        assert "Invalid value 'critical' for 'Priority'" in speech
+        assert "Allowed: Low, Medium, High" in speech
+        assert "for 'priority'" not in speech
+        assert "low, medium, high" not in speech
 
     def test_default_enum_value(self):
         from uuid import uuid4
