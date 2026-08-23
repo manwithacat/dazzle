@@ -147,12 +147,16 @@ class TestAllTrueGuard:
 
         assert not result.is_valid
         assert isinstance(result.error, GuardNotSatisfiedError)
-        # Error message should list which items are unchecked
+        # Clerk speech lists unchecked items; completed check_figures stays off (oral #199)
         msg = str(result.error)
-        assert "check_references" in msg
-        assert "check_calculations" in msg
-        # check_figures is True, should NOT appear in the message
+        assert "Check References" in msg
+        assert "Check Calculations" in msg
+        assert "In Review" in msg
+        assert "Approved" in msg
+        assert "check_references" not in msg
+        assert "check_calculations" not in msg
         assert "check_figures" not in msg
+        assert "Check Figures" not in msg
 
     def test_all_true_with_custom_message(self) -> None:
         """When guard_message is provided, it overrides the auto-generated message."""

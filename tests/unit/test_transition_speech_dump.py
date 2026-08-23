@@ -9,6 +9,7 @@ from dazzle.http.runtime.htmx import json_or_htmx_error
 from dazzle.http.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
+    _build_guard_failure_message,
     clerk_transition_state,
 )
 
@@ -87,6 +88,42 @@ def test_guard_requires_field_is_clerk_not_schema() -> None:
     assert "in_progress" not in speech
     assert exc.guard_value == "assigned_to"
     assert exc.from_state == "todo"
+
+
+def test_all_true_checklist_speech_is_clerk_not_schema() -> None:
+    """all_true 422 lists clerk field labels, not check_references (cycle 2334)."""
+    expr = {
+        "name": "all_true",
+        "args": [
+            {"path": ["check_figures"]},
+            {"path": ["check_references"]},
+            {"path": ["check_calculations"]},
+        ],
+    }
+    speech = _build_guard_failure_message(
+        expr,
+        {
+            "check_figures": True,
+            "check_references": False,
+            "check_calculations": False,
+        },
+        "in_review",
+        "approved",
+    )
+    assert "Check References" in speech
+    assert "Check Calculations" in speech
+    assert "In Review" in speech
+    assert "Approved" in speech
+    assert "check_references" not in speech
+    assert "Check Figures" not in speech
+    leftover = _build_guard_failure_message(
+        {"name": "all_true", "args": [{"path": ["zzz"]}]},
+        {"zzz": False},
+        "in_review",
+        "approved",
+    )
+    assert "zzz" in leftover
+    assert "Zzz" not in leftover
 
 
 def test_htmx_transition_error_is_clerk_not_schema() -> None:

@@ -2056,6 +2056,16 @@ dialect formed — and where it started to Goodhart itself — is
     simple_task Task. Do not restyle remaining form-error field-label
     siblings (oral #198). Standing refusals apply.
 
+200. **Clerk-label a transition without retargeting composite-guard pins.**
+    Cycle 2334: cycle 2333 ``clerk_transition_state`` /
+    ``clerk_form_error_field_label`` humanized ``all_true`` checklist
+    422; dedicated dump tests passed ship-surface, but
+    ``TestAllTrueGuard`` still pinned ``check_references`` /
+    ``check_calculations`` and py3.12/13/14 went red. Same ship must
+    retarget existing composite-guard substring pins (or promote
+    them into ship-surface). Do not restyle remaining state-machine
+    422 speech siblings (oral #199). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2276,6 +2286,7 @@ how the handbook was learned.
 | One as-of snapshot chrome after leftover_honest_iso_date is on the workspace heading | Call leftover_honest_iso_date on remaining temporal workspace shells in one ship, then STOP (oral #190). Do not restyle remaining radar / box-plot / heatmap axis siblings, remaining sales-region acronym siblings, or leftover-token stay-put |
 | One mutation-toast PascalCase dump after clerk_entity_noun exists | Call clerk_entity_noun on remaining toast + fallback detail headings in one ship, then STOP (oral #192). Do not restyle remaining breadcrumb slug siblings, remaining as-of snapshot chrome, or leftover-token stay-put |
 | Clerk-label a display without retargeting region-adapter smokes | Ship clerk_* without updating existing region-adapter substring pins (or promoting them into ship-surface) | #189 |
+| Clerk-label a transition without retargeting composite-guard pins | Ship clerk_transition_state without updating existing all_true substring pins (or promoting them into ship-surface) | #200 |
 | One leftover token field per cycle after ≥10 leftover-honest ships since last self-audit | Different invent class (not token stay-put) or capability-sweep (oral #121). Machine cap: 2 consecutive / 3 since last self-audit (oral #127, ``improve_commit_contract.py``) |
 | One workspace ``today`` host after evaluate_date_expr exists | Call evaluate_date_expr on remaining today/now bind sites in one ship, then STOP (oral #125) |
 | One CSV date/datetime host after _csv_cell uses format_cell | Call format_cell on remaining CSV date/datetime/bool cells in one ship, then STOP (oral #126) |
