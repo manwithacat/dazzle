@@ -18,6 +18,9 @@ from typing import Any
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from dazzle.render.breadcrumbs import clerk_entity_noun
+from dazzle.render.filters import clerk_form_error_field_label
+
+_ERROR_LOC_ENVELOPES = frozenset({"body", "query", "path", "header", "cookie"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -349,13 +352,32 @@ def htmx_toast_error_response(errors: list[str]) -> HTMLResponse:
     )
 
 
+def _clerk_error_loc_label(loc: Any) -> str:
+    """Last schema loc → clerk form-error field (oral #198).
+
+    Skip HTTP envelopes and list indices. Leftover junk stays put.
+    JSON API ``loc`` is unchanged — this labels HTMX speech only.
+    """
+    names: list[str] = []
+    for part in loc or ():
+        if isinstance(part, bool) or isinstance(part, int):
+            continue
+        text = str(part).strip()
+        if not text or text.lower() in _ERROR_LOC_ENVELOPES:
+            continue
+        names.append(text)
+    if not names:
+        return ""
+    return clerk_form_error_field_label(names[-1])
+
+
 def _errors_to_messages(errors: list[dict[str, Any]]) -> list[str]:
-    """Convert Pydantic error dicts to human-readable messages."""
+    """Convert Pydantic error dicts to clerk-readable HTMX messages."""
     messages = []
     for err in errors:
         loc = err.get("loc", [])
         msg = err.get("msg", str(err))
-        field = ".".join(str(p) for p in loc if p != "body") if loc else ""
+        field = _clerk_error_loc_label(loc)
         if field:
             messages.append(f"{field}: {msg}")
         else:

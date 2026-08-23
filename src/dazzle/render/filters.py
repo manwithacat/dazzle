@@ -622,6 +622,16 @@ def clerk_list_search_field_label(field_key: Any) -> str:
     return clerk_entity_card_field_label(field_key)
 
 
+def clerk_form_error_field_label(field_key: Any) -> str:
+    """Schema key → clerk HTMX form-error field (oral #198).
+
+    ``first_name: Field required`` dumped the schema key while the
+    create form already says ``First Name``. Leftover junk stays put.
+    Do not restyle JSON API ``loc`` keys or remaining 403 siblings.
+    """
+    return clerk_entity_card_field_label(field_key)
+
+
 def clerk_related_tab_fk_label(field_key: Any) -> str:
     """Schema key → clerk related-tab FK disambiguation (oral #183).
 
