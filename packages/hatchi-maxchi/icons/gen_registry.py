@@ -24,7 +24,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-LUCIDE_VERSION = "0.577.0"  # matches static/dist/dazzle-icons.min.js
+LUCIDE_VERSION = "1.34.0"  # matches static/dist/dazzle-icons.min.js
 CDN = f"https://unpkg.com/lucide-static@{LUCIDE_VERSION}/icons"
 PKG = Path(__file__).resolve().parent
 OUT_HM = PKG / "registry.py"

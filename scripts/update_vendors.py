@@ -258,10 +258,15 @@ def update_htmx_extensions(*, check_only: bool) -> None:
 def update_lucide(*, check_only: bool) -> None:
     """Update lucide icons.
 
-    Pin: 0.x (no leading 'v' in lucide's tags). The 0.x → 1.x bump
-    in May 2026 wants verification before adopting.
+    Pin: 1.x (no leading 'v' in lucide's tags). The 0.x → 1.x bump
+    (May 2026) was adopted deliberately in Aug 2026 after verification:
+    the deprecated ``icon-name`` attribute is gone in 1.0 (Dazzle only
+    emits ``data-lucide``), brand icons moved to the separate
+    ``@lucide/lab`` package (none referenced), and all 140 curated
+    registry icons exist in lucide-static@1.34.0. Keep the major pin —
+    the cron tracks 1.x only.
     """
-    release = _latest_stable_release("lucide-icons", "lucide", "0.")
+    release = _latest_stable_release("lucide-icons", "lucide", "1.")
     tag = release["tag_name"]
     latest = _tag_version(tag)
     current = _detect_lucide_version()
