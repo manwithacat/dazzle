@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "dazzle": {
+      "type": "local",
+      "command": [
+        "/Volumes/SSD/Dazzle/.venv/bin/python",
+        "-m",
+        "dazzle.mcp",
+        "--working-dir",
+        "/Volumes/SSD/Dazzle"
+      ],
+      "enabled": true
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "mcpServers": {
     "dazzle": {
       "type": "stdio",
-      "command": "/Users/james/.pyenv/versions/dazzle-dev/bin/python",
+      "command": "/Volumes/SSD/Dazzle/.venv/bin/python",
       "args": [
         "-m",
         "dazzle.mcp",
