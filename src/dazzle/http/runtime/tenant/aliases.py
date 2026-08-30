@@ -22,6 +22,7 @@ from typing import Any, Protocol, cast, runtime_checkable
 from uuid import UUID
 
 from dazzle.http.runtime.auth.domain_verification import DnspythonResolver, DnsTxtResolver
+from dazzle.http.runtime.tenant.metrics import note_alias_verify
 
 # Fail-closed: missing/mismatched TXT never verifies.
 _TXT_PREFIX = "dazzle-verify="
@@ -366,16 +367,22 @@ def verify_step(
     """Advance one attach step. TXT fail-closed; CNAME fail-closed."""
     row = store.get_by_hostname(hostname)
     if row is None:
+        note_alias_verify("not_found")
         raise AliasError("not_found", f"no alias claimed for {hostname!r}")
     moment = now or datetime.now(UTC)
     if row.state == "pending_txt":
         if not txt_matches(txt_resolver, row.hostname, row.txt_token):
+            note_alias_verify("txt_not_found")
             raise AliasError("txt_not_found", "expected TXT record is missing or mismatched")
+        note_alias_verify("txt_ok")
         return cast(AliasRow, store.save(replace(row, state="pending_cname", verified_at=moment)))
     if row.state == "pending_cname":
         if not cname_matches(cname_resolver, row.hostname, row.cname_target):
+            note_alias_verify("cname_not_found")
             raise AliasError("cname_not_found", "expected CNAME is missing or mismatched")
+        note_alias_verify("cname_ok")
         return cast(AliasRow, store.save(replace(row, state="active", attached_at=moment)))
+    note_alias_verify("wrong_state")
     raise AliasError("wrong_state", f"alias is {row.state}; nothing to verify")
 
 

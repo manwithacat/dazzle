@@ -49,6 +49,7 @@ from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.query_builder import quote_identifier
+from dazzle.http.runtime.tenant.metrics import note_rls_unbound
 from dazzle.http.runtime.tenant_isolation import (
     _current_tenant_id,
     get_current_tenant_id,
@@ -617,6 +618,7 @@ def _signing_rls_tenant(
     if not tenant_id and entity is not None and record_id is not None:
         tenant_id = _signing_lookup_partition_root(request, entity, record_id, repositories or {})
     if not tenant_id:
+        note_rls_unbound(path="/sign")
         yield
         return
 

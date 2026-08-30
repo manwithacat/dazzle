@@ -50,6 +50,7 @@ from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
 from dazzle.db.artifact_registry import DB_ARTIFACTS
+from dazzle.http.runtime.tenant.audit import render_tenancy_planes
 
 # =============================================================================
 # Group: dazzle inspect <ext-point>
@@ -566,6 +567,8 @@ def rls_command(
 
     entries = [_rls_entry(d) for d in descriptors]
     result = InspectResult(ext_point="rls", entries=entries)
+
+    result.notes.append(render_tenancy_planes(appspec))
 
     if not descriptors:
         result.notes.append(

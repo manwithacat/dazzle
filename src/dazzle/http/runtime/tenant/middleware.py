@@ -18,6 +18,7 @@ from starlette.types import ASGIApp
 
 from dazzle.http.runtime.slug_validator import validate_slug
 from dazzle.http.runtime.tenant.cache import NEGATIVE, TenantCache
+from dazzle.http.runtime.tenant.metrics import note_tenant_resolve
 from dazzle.http.runtime.tenant.resolver import (
     ExpiredHistoryHit,
     HistoryHit,
@@ -77,6 +78,7 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
 
         if host in self._b.canonical_hosts:
             request.state.tenant = None
+            note_tenant_resolve(self._b.topology, "canonical")
             return await call_next(request)
 
         # ADR-0055 PR4: alias table before B slug parse / A unknown-Host 400.
@@ -86,15 +88,18 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
             logger.exception("alias lookup failed for %s", host)
             return Response("Tenant lookup failed", status_code=502)
         if aliased is not None:
+            note_tenant_resolve(self._b.topology, "hit")
             return await self._bind_and_call(request, call_next, aliased)
 
         # ADR-0055 topology A: Host does not name a tenant. Leftover labels
         # are not slugs — 400 rather than inventing B.
         if self._b.topology != "provider_subdomain":
+            note_tenant_resolve(self._b.topology, "bad_host")
             return Response("Bad Host", status_code=400)
 
         suffix = "." + self._b.domain
         if not host.endswith(suffix):
+            note_tenant_resolve(self._b.topology, "bad_host")
             return Response("Bad Host", status_code=400)
 
         slug = host[: -len(suffix)]
@@ -111,10 +116,12 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         try:
             validate_slug(slug)
         except ValueError:
+            note_tenant_resolve(self._b.topology, "404")
             return HTMLResponse(self._b.not_found_renderer(host), status_code=404)  # nosemgrep
 
         cached = self._b.cache.get(slug)
         if cached is NEGATIVE:
+            note_tenant_resolve(self._b.topology, "404")
             return HTMLResponse(self._b.not_found_renderer(host), status_code=404)  # nosemgrep
 
         result = cached
@@ -127,17 +134,21 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
             self._b.cache.set(slug, result if result is not None else NEGATIVE)
 
         if result is None:
+            note_tenant_resolve(self._b.topology, "404")
             return HTMLResponse(self._b.not_found_renderer(host), status_code=404)  # nosemgrep
 
         if isinstance(result, HistoryHit):
+            note_tenant_resolve(self._b.topology, "301")
             target = f"https://{result.new_slug}.{self._b.domain}/"
             return RedirectResponse(target, status_code=301)
 
         if isinstance(result, ExpiredHistoryHit):
+            note_tenant_resolve(self._b.topology, "410")
             body = self._b.expired_renderer(result.old_slug, result.new_slug, self._b.domain)
             return HTMLResponse(body, status_code=410)  # nosemgrep
 
         assert isinstance(result, ResolvedTenant)
+        note_tenant_resolve(self._b.topology, "hit")
         return await self._bind_and_call(request, call_next, result)
 
     async def _probe_alias(self, host: str) -> ResolvedTenant | None:

@@ -89,6 +89,7 @@ def test_inspect_rls_lists_expected_policies_per_scoped_entity(runner: CliRunner
 
     # Workspace is the tenant root (not tenant-scoped) → no policies.
     assert not any(e["detail"].startswith("Workspace") for e in payload["entries"])
+    assert any("shared_schema" in n and "topology" in n for n in payload["notes"]), payload["notes"]
 
 
 def test_inspect_rls_human_output(runner: CliRunner) -> None:

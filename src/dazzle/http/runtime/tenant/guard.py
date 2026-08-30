@@ -28,6 +28,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
+from dazzle.http.runtime.tenant.metrics import note_cross_tenant_guard
+
 
 class GuardOutcome(Enum):
     PASS = "pass"
@@ -69,37 +71,46 @@ def check_cross_tenant(
     not invent that A exception (B marketing-apex 403 stays).
     """
     if cookie_kind is None:
+        note_cross_tenant_guard("pass")
         return GuardOutcome.PASS
 
     if cookie_kind == "host":
         if request_tenant_id is None:
             if topology == "apex":
                 if session_tenant_id is None:
+                    note_cross_tenant_guard("host_cookie_on_apex")
                     raise HostCookieMissingTenant(
                         "host-bound cookie on apex topology carries no "
                         "active-membership tenant binding"
                     )
+                note_cross_tenant_guard("pass")
                 return GuardOutcome.PASS
+            note_cross_tenant_guard("host_cookie_on_apex")
             raise HostCookieMissingTenant("host-bound cookie presented on apex (no tenant) request")
         if session_tenant_id is None:
             # Fail-closed (#1518): a host-bound cookie whose session carries no
             # active-membership tenant binding cannot be proven to belong to this
             # host. Every membership-gated tenant_host login binds a membership,
             # so this only rejects the unexercised membership_gated:false path.
+            note_cross_tenant_guard("host_cookie_on_apex")
             raise HostCookieMissingTenant(
                 "host-bound cookie carries no active-membership tenant binding"
             )
         acceptable = {request_tenant_id, *request_ancestor_ids}
         if session_tenant_id not in acceptable:
+            note_cross_tenant_guard("cross_tenant")
             raise CrossTenantForbidden(
                 f"host-bound cookie for tenant {session_tenant_id!r} "
                 f"presented on {request_tenant_id!r}"
             )
+        note_cross_tenant_guard("pass")
         return GuardOutcome.PASS
 
     # cookie_kind == "apex"
     if user_role != super_admin_role:
+        note_cross_tenant_guard("apex_not_superadmin")
         raise ApexCookieNotSuperAdmin(
             f"apex cookie presented by role {user_role!r}, requires {super_admin_role!r}"
         )
+    note_cross_tenant_guard("pass")
     return GuardOutcome.PASS

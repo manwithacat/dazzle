@@ -19,6 +19,7 @@ from dazzle.core.ir.params import ParamRef
 from dazzle.http.runtime.predicate_compiler import _USER_GUC_PREFIX
 from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.rls_schema import HOST_TENANT_GUC, TENANT_GUC, USER_GUC_PREFIX
+from dazzle.http.runtime.tenant.metrics import note_rls_unbound
 from dazzle.http.runtime.tenant_isolation import TenantContextError
 from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
@@ -494,6 +495,9 @@ class PostgresBackend:
         # #1394 — bind dazzle.host_tenant_id (the host-resolved tenant) for
         # `current_tenant` scope policies. None (non-tenant / apex) → no-op.
         host_tenant_id = get_current_host_tenant_id()
+        # ADR-0055: host GUC set + fence unset on a data lease is the #1656 class.
+        if not platform and host_tenant_id and not tenant_id:
+            note_rls_unbound()
         # RLS tenancy Phase C — bind the dazzle.user_<attr> GUCs the intra-tenant
         # scope policies read. Empty (no scope rules / unauthenticated) → no-op.
         rls_user_attrs = get_current_rls_user_attrs()

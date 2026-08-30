@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.113.0] - 2026-08-30
+
+### Added
+- **Tenancy observability (ADR-0055 follow-up)** —
+  `dazzle_tenant_resolve_total{topology,result}` (hit / canonical /
+  bad_host / 404 / 301 / 410), `dazzle_rls_unbound_total` (host GUC
+  set with fence unset, including `/sign/*`), plus the missed
+  `dazzle_cross_tenant_guard_total{reason}` and
+  `dazzle_alias_verify_total{result}`. `dazzle inspect rls` prints
+  isolation + membership root + topology as one auditor line.
+
 ## [0.112.7] - 2026-08-30
 
 ### Added
