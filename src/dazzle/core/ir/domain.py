@@ -346,6 +346,9 @@ class TenantHostSpec(BaseModel):
 
     domain: str
     slug_field: str
+    # ADR-0055: hosting topology. None until T1; after validate, one of the two
+    # tokens. Not inferred from cookie_scope / canonical_hosts.
+    topology: Literal["apex", "provider_subdomain"] | None = None
     canonical_hosts: list[str] = Field(default_factory=list)
     cookie_scope: Literal["host", "apex"] = "host"
     super_admin_role: str = "super_admin"

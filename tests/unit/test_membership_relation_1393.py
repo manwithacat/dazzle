@@ -30,6 +30,7 @@ entity Org "Org":
   slug: str(60) unique required
   role: str(40)
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   membership:
@@ -39,6 +40,7 @@ entity Team "Team":
   slug: str(60) unique required
   org: ref Org required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: org
@@ -75,6 +77,7 @@ entity Org "Org":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   membership:
@@ -92,6 +95,7 @@ entity Org "Org":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   membership:
@@ -113,6 +117,7 @@ entity Org "Org":
   slug: slug required
   role: str(40)
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   membership:
@@ -129,6 +134,7 @@ entity Org "Org":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 entity Team "Team":
@@ -137,6 +143,7 @@ entity Team "Team":
   org: ref Org required
   role: str(40)
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: org
@@ -168,6 +175,7 @@ entity Org "Org":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   membership:

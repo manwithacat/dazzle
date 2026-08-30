@@ -106,6 +106,7 @@ entity Trust "Trust":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     order: 1
@@ -114,6 +115,7 @@ entity School "School":
   slug: slug required
   trust: ref Trust required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: trust
@@ -253,6 +255,7 @@ entity Trust "Trust":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 entity School "School":
@@ -260,6 +263,7 @@ entity School "School":
   slug: str(60) unique required
   trust: ref Trust required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: trust

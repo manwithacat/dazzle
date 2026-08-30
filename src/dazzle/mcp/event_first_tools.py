@@ -649,29 +649,32 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
             "suggested_actions": [],
         }
 
-    # Check for host-based tenancy (ADR-0036/0037 verified-domain-join).
-    # An entity carrying a `tenant_host:` block IS a declared tenant root
-    # even without a top-level `tenancy:` config: the host routes each
-    # request to a tenant and `current_tenant` scopes fence its data
-    # against one shared schema. Without this check the inference misses
-    # apps that are provably multi-tenant via tenant_host and wrongly
-    # reports single_tenant (e.g. examples/domain_join_co).
+    # Host-based tenancy (ADR-0055): tenant_host: is the *hosting* plane, not
+    # isolation. Isolation still wants an explicit `tenancy:` block; hosting
+    # topology is `tenant_host.topology`. Do not claim current_tenant fences
+    # data (lens ≠ fence).
     host_tenant_entities = [
-        entity.name
+        entity
         for entity in appspec.domain.entities
         if getattr(entity, "tenant_host", None) is not None
     ]
     if host_tenant_entities:
+        signals = [
+            {
+                "type": "tenant_host",
+                "entity": entity.name,
+                "topology": getattr(entity.tenant_host, "topology", None),
+                "confidence": 1.0,
+            }
+            for entity in host_tenant_entities
+        ]
         return {
             "mode": "shared_schema",
-            "signals": [
-                {"type": "tenant_host", "entity": name, "confidence": 1.0}
-                for name in host_tenant_entities
-            ],
+            "signals": signals,
             "entities_with_tenant_id": [],
-            "recommendation": "shared_schema",
+            "recommendation": ("declare tenancy: isolation AND tenant_host.topology (hosting)"),
             "status": "configured",
-            "tenant_entity": host_tenant_entities[0],
+            "tenant_entity": host_tenant_entities[0].name,
             "suggested_actions": [],
         }
 

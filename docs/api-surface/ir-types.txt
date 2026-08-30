@@ -3011,6 +3011,7 @@ ir_class: TenantHostSpec
     - order: int | None = None
     - parent: str | None = None
     - super_admin_role: str = 'super_admin'
+    - topology: Literal[apex, provider_subdomain] | None = None
 
 ir_class: TenantIsolationSpec
   required: (none)

@@ -27,6 +27,7 @@ when a stem or gate points at it — not as pre-reading.
 | [0042](0042-poly-ref-scoping.md) | `poly_ref` escape hatch |
 | [0053](0053-hm-frontend-ui-ownership.md) | Pages compose Hyperparts |
 | [0054](0054-htmx-swap-identity-contract.md) | HTMX swap identity |
+| [0055](0055-hosting-topology-declared-plane.md) | Hosting topology is declared (A apex / B subdomain) |
 
 ### Historical / subsystem-only
 
@@ -40,6 +41,7 @@ Stems + counter-priors beat bulk ADR reading.
 
 Architectural Decision Records for the Dazzle project. Agent-scannable: each line is a decision that prevents a wrong proposal.
 
+- [0055](0055-hosting-topology-declared-plane.md) — *Accepted (2026-08-30).* **Hosting topology is a declared plane.** Isolation / membership / hosting / lens must not collapse. `tenant_host.topology` is required (`apex` | `provider_subdomain`); do not infer from `cookie_scope` or `canonical_hosts` (#1657 class). Custom domains are composing aliases, not a third token. Host never writes the RLS fence except proven-token paths. Stem: `stems/tenancy.md`.
 - [0054](0054-htmx-swap-identity-contract.md) — *Accepted (2026-07-26).* **HTMX swap / identity contract.** Sole identity owner for persistent slots; innerHTML/innerMorph responses must be body-only (no re-wrap of `id` / `data-dz-region`); outer* may replace identity; nested region hooks are a contract violation. Orthogonal to dual-lock (part shape) and card-safety (nested `dz-card`). Complements ADR-0011/0053; HM decision 0012 + lint/gates.
 - [0053](0053-hm-frontend-ui-ownership.md) — *Accepted (2026-07-14; #1585).* **Pages compose Hyperparts; HM owns the UI shape.** Novel UX is funneled through gallery + dual-lock (invention ladder) — not blocked, not stranded as page one-offs. `dazzle.page` is host + residual glue (promote chrome out). No second UI kit; no bulk file-move without Hyperparts. Tooling must not glob removed `src/dazzle_ui/**`.
 - [0052](0052-scope-all-tenant-kind-subtree.md) — *Accepted (2026-07-07; #1541).* **`scope: all` on tenant-kind entities compiles to the partition-root subtree.** Tenant kinds (`tenant_host:` anchors, usually `entities_excluded` → NO fence) previously got `Tautology` from `all` = every row of every tenant (cross-trust leak reproduced live). Now READ/LIST `all` on a tenant kind compiles to `id = current_user.tenant_id OR <parent> = … OR <parent>.<parent> = …` walking the entity's own `tenant_host.parent` chain — the inverse of ADR-0036's self-or-ancestor expansion, bound by the same depth cap, fail-closed on broken/cyclic chains (partial legs = narrower, never broader; membership-less sessions hit the deny sentinel). `current_user.tenant_id` resolves to the #1463 membership partition root. Write-verb `all` keeps Tautology (subtree writes need the #1455 probe machinery — follow-up). Non-kind entities unchanged. Shipped with the #1541 observability fixes (scope/permit denials + swallowed fetch errors logged; errored fetch renders distinct copy).

@@ -87,21 +87,33 @@ def _stash_tenant_state_marker(app: "FastAPI", appspec: AppSpec) -> None:
     # (validator rule 6). Take the first as authoritative.
     canonical_hosts: set[str] = set()
     super_admin_role = "super_admin"
+    cookie_scope = "host"
+    topology = ""
+    domain = ""
     for e in tenant_entities:
         assert e.tenant_host is not None
         canonical_hosts.update(e.tenant_host.canonical_hosts)
         super_admin_role = e.tenant_host.super_admin_role
+        cookie_scope = e.tenant_host.cookie_scope
+        topology = e.tenant_host.topology or ""
+        domain = e.tenant_host.domain
 
     @dataclass(frozen=True)
     class _TenantStateMarker:
         app_name: str
         canonical_hosts: frozenset[str]
         super_admin_role: str
+        topology: str
+        cookie_scope: str
+        domain: str
 
     app.state.tenant_host = _TenantStateMarker(
         app_name=appspec.name,
         canonical_hosts=frozenset(canonical_hosts),
         super_admin_role=super_admin_role,
+        topology=topology,
+        cookie_scope=cookie_scope,
+        domain=domain,
     )
 
 
@@ -253,6 +265,7 @@ def _mount_tenant_resolution_middleware(
                     app_name=_app, old_slug=old, new_slug=new, domain=dom
                 ),
             ),
+            topology=first_th.topology or "",
         )
         app.add_middleware(TenantResolutionMiddleware, binding=binding)
 
@@ -272,6 +285,7 @@ def _mount_tenant_resolution_middleware(
                 root_slug_field=_root.tenant_host.slug_field,
                 repositories=repositories,
                 cookie_scope=first_th.cookie_scope or "host",
+                topology=first_th.topology or "",
             )
 
         # #1289 slice 6: register the cache so dazzle.tenant.bust(slug) can

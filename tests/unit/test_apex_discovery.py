@@ -26,8 +26,31 @@ class TestResolveApexRedirect:
             slug_for_tenant=_slug_map({"t-1": "acme"}),
             memberships_required=True,
             cookie_scope="apex",
+            topology="provider_subdomain",
         )
         assert url == "https://acme.example.com/"
+
+    def test_apex_topology_does_not_bounce_even_with_apex_cookies(self) -> None:
+        url = resolve_apex_redirect(
+            [_m("m-1", "t-1")],
+            domain="example.com",
+            slug_for_tenant=_slug_map({"t-1": "acme"}),
+            memberships_required=True,
+            cookie_scope="apex",
+            topology="apex",
+        )
+        assert url is None
+
+    def test_leftover_topology_does_not_invent_a_bounce(self) -> None:
+        url = resolve_apex_redirect(
+            [_m("m-1", "t-1")],
+            domain="example.com",
+            slug_for_tenant=_slug_map({"t-1": "acme"}),
+            memberships_required=True,
+            cookie_scope="apex",
+            topology="zzz",
+        )
+        assert url is None
 
     def test_single_membership_stays_on_apex_when_host_cookies(self) -> None:
         """#1657: __Host-* cookies cannot follow a slug-host 302."""
@@ -95,6 +118,7 @@ class TestResolveApexRedirect:
             slug_for_tenant=_slug_map({}),  # t-1 not present
             memberships_required=True,
             cookie_scope="apex",
+            topology="provider_subdomain",
         )
         assert url is None
 
@@ -106,5 +130,6 @@ class TestResolveApexRedirect:
             slug_for_tenant=_slug_map({"t-1": "ev/il.attacker.com"}),
             memberships_required=True,
             cookie_scope="apex",
+            topology="provider_subdomain",
         )
         assert url is None

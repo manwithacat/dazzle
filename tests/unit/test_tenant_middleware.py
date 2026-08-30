@@ -60,6 +60,7 @@ def _binding(
     rows: dict[tuple[str, str], dict],
     *,
     canonical: list[str] | None = None,
+    topology: str = "provider_subdomain",
 ) -> TenantHostBinding:
     cache = TenantCache(max_entries=64, ttl_seconds=60)
     resolver = Resolver(
@@ -75,7 +76,24 @@ def _binding(
         resolver=resolver,
         not_found_renderer=lambda host: f"<p>404 {host}</p>",
         expired_renderer=lambda old, new, domain: f"<p>410 {old} -> {new}</p>",
+        topology=topology,
     )
+
+
+def test_apex_topology_does_not_parse_leftover_host_as_slug() -> None:
+    """ADR-0055: topology A never invents B from a leftover Host label."""
+    binding = _binding({}, canonical=["www.example.com"], topology="apex")
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "acme.example.com"})
+    assert resp.status_code == 400
+
+
+def test_leftover_topology_does_not_invent_slug_extract() -> None:
+    """Leftover / omitted topology stays put — does not invent B."""
+    binding = _binding({}, canonical=["www.example.com"], topology="")
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "acme.example.com"})
+    assert resp.status_code == 400
 
 
 def test_canonical_host_passes_through_with_no_tenant():
@@ -160,6 +178,7 @@ def test_negative_cache_short_circuits_second_request():
         resolver=resolver,
         not_found_renderer=lambda host: "<p>404</p>",
         expired_renderer=lambda old, new, domain: "<p>410</p>",
+        topology="provider_subdomain",
     )
     client = TestClient(_app_with_binding(binding))
     client.get("/whoami", headers={"host": "ghost.example.com"})

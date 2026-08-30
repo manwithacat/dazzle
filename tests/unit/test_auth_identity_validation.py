@@ -111,6 +111,7 @@ entity Org "Org":
   id: uuid pk
   slug: slug
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     canonical_hosts: [localhost]

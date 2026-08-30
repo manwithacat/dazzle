@@ -48,6 +48,8 @@ class TenantHostBinding:
     resolver: Resolver
     not_found_renderer: NotFoundRenderer
     expired_renderer: ExpiredRenderer
+    # ADR-0055: leftover tokens never invent B. Empty / unknown ≠ slug extract.
+    topology: str = ""
 
 
 class TenantResolutionMiddleware(BaseHTTPMiddleware):
@@ -70,6 +72,11 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         if host in self._b.canonical_hosts:
             request.state.tenant = None
             return await call_next(request)
+
+        # ADR-0055 topology A: Host does not name a tenant. Leftover labels
+        # are not slugs — 400 rather than inventing B.
+        if self._b.topology != "provider_subdomain":
+            return Response("Bad Host", status_code=400)
 
         suffix = "." + self._b.domain
         if not host.endswith(suffix):

@@ -8,9 +8,13 @@ unaffected.
 
 ## When to use it
 
-When your app routes by subdomain — `acme.example.com`,
-`westwood.example.com` — and you want the framework to handle
-resolution, caching, redirect history, and cookie scoping.
+When your app is multi-tenant over HTTP. Declare **`topology:`**
+(ADR-0055 / `stems/tenancy.md`) — do not infer it from `cookie_scope:`
+or `canonical_hosts:`:
+
+- `topology: apex` — one (or few) canonical hosts; Host does **not**
+  name the tenant; membership + RLS do (CyFuture / www-only).
+- `topology: provider_subdomain` — `{slug}.{domain}` names the tenant.
 
 ## Minimum example
 
@@ -19,6 +23,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
 ```
@@ -32,10 +37,11 @@ the framework's tenant middleware. `request.state.tenant` carries a typed
 
 | Sub-field | Default | Meaning |
 |---|---|---|
+| `topology:` (required) | — | `apex` (canonical hosts only) or `provider_subdomain` (`{slug}.{domain}`). Not inferred. |
 | `domain:` (required) | — | the base host suffix (e.g. `aegismark.ai`) |
 | `slug_field:` (required) | — | name of the `slug:` field on this entity |
-| `canonical_hosts:` | `[]` | host(s) that pass through with `request.state.tenant = None` (admin / marketing on apex) |
-| `cookie_scope:` | `host` | `host` or `apex`. `host` (default) issues `__Host-*` cookies that cannot leave this host, so apex discovery does **not** 302 `/` / `/app` to `{slug}.{domain}` (#1657). `apex` keeps the cross-host bounce for subdomain-per-org deploys. |
+| `canonical_hosts:` | `[]` | host(s) that pass through with `request.state.tenant = None`. **Required and exhaustive on `topology: apex`.** |
+| `cookie_scope:` | `host` | Bounce intent on B only. Cross-host slug bounce fires iff `topology: provider_subdomain` **and** `cookie_scope: apex`. That is **not** session sharing until Domain cookies are wired. A + `cookie_scope: apex` is a validate error. |
 | `super_admin_role:` | `super_admin` | role allowed to hold the apex cookie |
 | `history_entity:` | _none_ | entity tracking renamed slugs (`old_slug`, `new_slug`, `expires_at` fields) |
 | `not_found_template:` | framework default | dotted-path callable (`module:symbol`) returning 404 HTML |

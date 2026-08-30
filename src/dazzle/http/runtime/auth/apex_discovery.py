@@ -5,7 +5,8 @@ shared-domain landing, not a tenant subdomain — route them to where their
 membership(s) say they belong:
 
 * exactly one active membership  → 302 to ``https://{slug}.{domain}/``
-  **only when** ``cookie_scope: apex`` (session cookies can follow).
+  **only when** ``topology == provider_subdomain`` **and**
+  ``cookie_scope: apex``. Topology A never slug-bounces (ADR-0055).
   Default ``cookie_scope: host`` stays on the canonical host — ``__Host-*``
   cookies cannot travel to the slug host (#1657).
 * two or more active memberships → the org picker (``/auth/select-org``)
@@ -38,6 +39,16 @@ PICKER_PATH = "/auth/select-org"
 NO_ORGS_PATH = "/auth/no-orgs"
 
 
+# Cheap bounce counter for PR1 regression detector
+# (dazzle_apex_bounce_total{topology,outcome}). Tests read this dict.
+_BOUNCE_COUNTS: dict[tuple[str, str], int] = {}
+
+
+def note_apex_bounce(topology: str, outcome: str) -> None:
+    key = (topology or "", outcome)
+    _BOUNCE_COUNTS[key] = _BOUNCE_COUNTS.get(key, 0) + 1
+
+
 def resolve_apex_redirect(
     memberships: list[MembershipRecord],
     *,
@@ -45,6 +56,7 @@ def resolve_apex_redirect(
     slug_for_tenant: Callable[[str], str | None],
     memberships_required: bool,
     cookie_scope: str = "host",
+    topology: str = "apex",
 ) -> str | None:
     """Decide where to send an authed identity that hit the apex root, or ``None``.
 
@@ -55,22 +67,23 @@ def resolve_apex_redirect(
     identity is **not** routed to ``/auth/no-orgs`` — the apex is just its landing,
     so pass through (``None``).
 
-    ``cookie_scope`` is the ``tenant_host:`` cookie model. Only exact ``"apex"``
-    enables the cross-host slug redirect — ``__Host-*`` cookies (the ``host``
-    default) cannot follow it, so www-only / single-domain deploys would land
-    logged-out on a host that may not even be served (#1657). Leftover values
-    stay put (no invented bounce). Picker / no-orgs are same-host paths and
-    do not consult the scope.
+    ``cookie_scope`` is the cookie-name / bounce-intent knob. ``topology`` is
+    the ADR-0055 hosting plane (runtime ``str`` so leftover tokens never
+    invent B). Cross-host slug bounce fires only when
+    ``topology == "provider_subdomain"`` **and** ``cookie_scope == "apex"``.
+    That bounce is not session sharing until Domain cookies are wired.
+    Leftover topology/scope stay put (no invented bounce). Picker / no-orgs
+    are same-host paths and do not consult topology.
 
-    Returns an absolute ``https://{slug}.{domain}/`` URL for the single-org
-    + ``cookie_scope: apex`` case (a cross-host redirect, so it cannot loop
-    on the apex), a relative apex path for the picker / no-orgs cases, or
-    ``None`` to serve the apex page unchanged.
+    Returns an absolute ``https://{slug}.{domain}/`` URL for the B + apex
+    cookie case, a relative apex path for picker / no-orgs, or ``None`` to
+    serve the apex page unchanged.
     """
     outcome = resolve_activation(memberships=memberships, host_tenant_id=None)
 
     if isinstance(outcome, Activated):
-        if cookie_scope != "apex":
+        if topology != "provider_subdomain" or cookie_scope != "apex":
+            note_apex_bounce(topology, "suppressed")
             return None
         tenant_id = next((m.tenant_id for m in memberships if m.id == outcome.membership_id), None)
         slug = slug_for_tenant(tenant_id) if tenant_id is not None else None
@@ -80,7 +93,9 @@ def resolve_apex_redirect(
             validate_slug(slug)  # never build a redirect from an unvalidated slug
         except ValueError:
             return None
-        return f"https://{slug}.{domain}/"
+        url = f"https://{slug}.{domain}/"
+        note_apex_bounce(topology, "redirect")
+        return url
 
     if isinstance(outcome, NeedsPicker):
         return PICKER_PATH

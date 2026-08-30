@@ -55,6 +55,7 @@ entity Workspace "Workspace":
   role: str(40)
   display_field: name
   tenant_host:
+    topology: provider_subdomain
     domain: domainjoin.example
     slug_field: slug
     canonical_hosts: [localhost]   # apex / dev / health-check host → no tenant bound

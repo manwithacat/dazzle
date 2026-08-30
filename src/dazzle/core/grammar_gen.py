@@ -1855,6 +1855,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     canonical_hosts: [www.example.com, example.com]
@@ -1866,13 +1867,15 @@ entity Trust:
     order: 1
 ```
 
-Sub-fields: `domain:` (required), `slug_field:` (required, must reference a
-`slug:`-typed field on the same entity), `canonical_hosts:`, `cookie_scope:`
-(`host` | `apex`, default `host` — `host` keeps apex `/app` on this host;
-`apex` 302s a single-org login to `{slug}.{domain}`), `super_admin_role:` (default
+Sub-fields: `topology:` (required: `apex` | `provider_subdomain`; ADR-0055),
+`domain:` (required), `slug_field:` (required, must reference a
+`slug:`-typed field on the same entity), `canonical_hosts:` (required and
+exhaustive on `topology: apex`), `cookie_scope:`
+(`host` | `apex`, default `host` — slug bounce only when topology is
+`provider_subdomain` **and** `cookie_scope: apex`), `super_admin_role:` (default
 `super_admin`), `history_entity:`, `not_found_template:` (dotted-path
 callable), `expired_template:` (dotted-path callable), `order:` (required
-when 2+ entities share a `domain:`).
+when 2+ entities share a `domain:`), `membership_gated:`, `parent:`.
 
 See the full design in
 [`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md).
@@ -1885,13 +1888,16 @@ entity_tenant_host_block = "tenant_host" ":" NEWLINE INDENT
 tenant_host_field =
     "domain"             ":" string  NEWLINE
   | "slug_field"         ":" IDENT   NEWLINE
+  | "topology"           ":" ("apex" | "provider_subdomain") NEWLINE
   | "canonical_hosts"    ":" "[" host_list "]" NEWLINE
   | "cookie_scope"       ":" ("host" | "apex") NEWLINE
   | "super_admin_role"   ":" IDENT   NEWLINE
   | "history_entity"     ":" IDENT   NEWLINE
   | "not_found_template" ":" dotted_callable NEWLINE
   | "expired_template"   ":" dotted_callable NEWLINE
-  | "order"              ":" NUMBER  NEWLINE ;
+  | "order"              ":" NUMBER  NEWLINE
+  | "membership_gated"   ":" ("true" | "false") NEWLINE
+  | "parent"             ":" IDENT   NEWLINE ;
 ```
 """
 

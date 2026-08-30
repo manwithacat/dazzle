@@ -9,6 +9,7 @@
 | [authoring-boundary](authoring-boundary.md) | Structural Dazzle authoring stays in-session; APIs get data, not DSL writes |
 | [clean-breaks](clean-breaks.md) | No backward-compat shims; update all callers in the same change |
 | [rbac-and-scope](rbac-and-scope.md) | Permit vs scope are separate; never collapse into one “auth” blob |
+| [tenancy](tenancy.md) | Isolation, membership, hosting topology, and lens are four planes; host is not the fence |
 | [epistemic-layout](epistemic-layout.md) | Stems / AGENTS / ADRs / DDs / counter-priors / gates — hierarchy of reconstruction |
 
 **Not stems (sibling epistemic classes):**

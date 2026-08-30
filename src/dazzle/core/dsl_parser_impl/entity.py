@@ -974,6 +974,7 @@ class EntityParserMixin:
         {
             "domain",
             "slug_field",
+            "topology",  # ADR-0055: apex | provider_subdomain
             "canonical_hosts",
             "cookie_scope",
             "super_admin_role",
@@ -1031,6 +1032,17 @@ class EntityParserMixin:
                         val_tok.column,
                     )
                 fields[key] = val_tok.value == "true"
+            elif key == "topology":
+                val_tok = self.expect_identifier_or_keyword()
+                if val_tok.value not in ("apex", "provider_subdomain"):
+                    raise make_parse_error(
+                        "tenant_host: topology expects apex or provider_subdomain, "
+                        f"got {val_tok.value!r}",
+                        self.file,
+                        val_tok.line,
+                        val_tok.column,
+                    )
+                fields[key] = val_tok.value
             else:
                 # Scalar: collect remaining tokens on line as a compact string.
                 # Handles simple identifiers (e.g. "host", "admin"), dotted paths

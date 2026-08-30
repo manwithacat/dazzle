@@ -153,7 +153,7 @@ class TestTenancyInference:
 
         result = infer_multi_tenancy(appspec)
 
-        assert result["recommendation"] == "shared_schema"
+        assert "tenant_host.topology" in result["recommendation"]
         assert result["mode"] == "shared_schema"
         assert result["tenant_entity"] == "Workspace"
         assert result["status"] == "configured"

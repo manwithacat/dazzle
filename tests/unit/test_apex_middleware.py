@@ -32,6 +32,7 @@ def _build(
     memberships_required=True,
     rows=None,
     cookie_scope: str = "host",
+    topology: str = "apex",
 ):
     async def _home(_request):
         return PlainTextResponse("APP")
@@ -45,6 +46,7 @@ def _build(
         root_slug_field="slug",
         repositories={"Org": _FakeRepo(rows or {})},
         cookie_scope=cookie_scope,
+        topology=topology,
     )
     app.state.auth_store = SimpleNamespace(get_memberships_for_identity=lambda _id: memberships)
     app.state.memberships_required = memberships_required
@@ -69,6 +71,7 @@ class TestApexDiscoveryMiddleware:
             memberships=[_m("m-1", "t-1")],
             rows={"t-1": "acme"},
             cookie_scope="apex",
+            topology="provider_subdomain",
         )
         r = c.get("/", headers={"host": "example.com"}, follow_redirects=False)
         assert r.status_code == 302

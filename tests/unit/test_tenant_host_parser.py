@@ -46,6 +46,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     canonical_hosts: [www.example.com, example.com]
@@ -72,6 +73,7 @@ def test_parser_extracts_full_tenant_host_block():
     assert th.not_found_template == "pkg.tpl:render_404"
     assert th.expired_template == "pkg.tpl:render_410"
     assert th.order == 1
+    assert th.topology == "provider_subdomain"
 
 
 def test_parser_defaults_when_block_minimal():
@@ -92,6 +94,25 @@ entity Trust:
     assert trust.tenant_host.canonical_hosts == []
     assert trust.tenant_host.cookie_scope == "host"
     assert trust.tenant_host.order is None
+    assert trust.tenant_host.topology is None  # T1 owns missing, not parse
+
+
+def test_parser_rejects_unknown_topology_token() -> None:
+    src = """
+module t
+app t "T"
+entity Org:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    topology: zzz
+    domain: example.com
+    slug_field: slug
+""".lstrip()
+    from dazzle.core.errors import ParseError
+
+    with pytest.raises(ParseError, match="apex or provider_subdomain"):
+        parse_dsl(src, Path("<test>"))
 
 
 def test_middleware_class_is_importable():
@@ -115,6 +136,7 @@ entity Org:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     membership_gated: false
@@ -134,6 +156,7 @@ entity Org:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     membership_gated: maybe

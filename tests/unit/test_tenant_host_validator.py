@@ -22,6 +22,7 @@ entity Trust:
   id: uuid pk
   name: str(40) required
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: name
 """.lstrip()
@@ -37,6 +38,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     history_entity: NoSuchEntity
@@ -53,12 +55,14 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
 entity School:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
 """.lstrip()
@@ -74,6 +78,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     order: 1
@@ -81,6 +86,7 @@ entity School:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     order: 2
@@ -98,6 +104,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     not_found_template: no.such.module:render
@@ -115,6 +122,7 @@ entity Trust:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     order: 1
@@ -123,6 +131,7 @@ entity School:
   id: uuid pk
   slug: slug required unique
   tenant_host:
+    topology: provider_subdomain
     domain: example.com
     slug_field: slug
     order: 2
@@ -130,3 +139,52 @@ entity School:
 """.lstrip()
     errors = _parse_and_validate(src)
     assert any("super_admin_role" in e and "example.com" in e for e in errors)
+
+
+def test_validator_requires_topology() -> None:
+    src = """
+module t
+app t "T"
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    domain: example.com
+    slug_field: slug
+""".lstrip()
+    errors = _parse_and_validate(src)
+    assert any("topology" in e and "cookie_scope" in e for e in errors)
+
+
+def test_validator_apex_requires_canonical_hosts() -> None:
+    src = """
+module t
+app t "T"
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    topology: apex
+    domain: example.com
+    slug_field: slug
+""".lstrip()
+    errors = _parse_and_validate(src)
+    assert any("canonical_hosts" in e and "apex" in e for e in errors)
+
+
+def test_validator_forbids_apex_plus_cookie_scope_apex() -> None:
+    src = """
+module t
+app t "T"
+entity Trust:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    topology: apex
+    domain: example.com
+    slug_field: slug
+    canonical_hosts: [www.example.com]
+    cookie_scope: apex
+""".lstrip()
+    errors = _parse_and_validate(src)
+    assert any("cookie_scope" in e and "provider_subdomain" in e for e in errors)

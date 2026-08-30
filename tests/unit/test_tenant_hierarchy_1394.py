@@ -26,6 +26,7 @@ entity Org "Org":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 entity Team "Team":
@@ -33,6 +34,7 @@ entity Team "Team":
   slug: str(60) unique required
   org: ref Org required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: org
@@ -71,6 +73,7 @@ entity Shop "Shop":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 """
@@ -89,6 +92,7 @@ entity Org "Org":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 entity Team "Team":
@@ -96,6 +100,7 @@ entity Team "Team":
   slug: slug required
   org: ref Org required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: org
@@ -113,6 +118,7 @@ entity Team "Team":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: nope
@@ -132,6 +138,7 @@ entity Team "Team":
   slug: slug required
   plain: ref Plain required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: plain
@@ -148,6 +155,7 @@ entity Team "Team":
   slug: slug required
   org: str(40)
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: org
@@ -164,6 +172,7 @@ entity A "A":
   slug: slug required
   b: ref B required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: b
@@ -173,6 +182,7 @@ entity B "B":
   slug: slug required
   a: ref A required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: a
@@ -192,6 +202,7 @@ entity Trust "Trust":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     order: 1
@@ -200,6 +211,7 @@ entity School "School":
   slug: slug required
   trust: ref Trust required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: trust
@@ -282,6 +294,7 @@ entity Org "Org":
   id: uuid pk
   slug: slug required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
 entity Doc "Doc":
@@ -338,6 +351,7 @@ entity Region "Region":
   id: uuid pk
   slug: str(60) unique required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
   permit:
@@ -350,6 +364,7 @@ entity Trust "Trust":
   slug: str(60) unique required
   region: ref Region required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: region
@@ -366,6 +381,7 @@ entity School "School":
   slug: str(60) unique required
   trust: ref Trust required
   tenant_host:
+    topology: provider_subdomain
     domain: app.example
     slug_field: slug
     parent: trust

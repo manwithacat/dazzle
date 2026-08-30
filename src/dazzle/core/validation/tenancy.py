@@ -150,6 +150,28 @@ def validate_tenant_host_blocks(
 
         by_domain.setdefault(th.domain, []).append((idx, entity))
 
+        # T1 (ADR-0055): topology is required — do not infer from cookie_scope.
+        if getattr(th, "topology", None) not in ("apex", "provider_subdomain"):
+            errors.append(
+                f"Entity {entity.name!r}: declare tenant_host.topology: "
+                "apex | provider_subdomain — do not infer from cookie_scope."
+            )
+
+        # T3: apex has no slug Host; every serving host must be named.
+        if getattr(th, "topology", None) == "apex" and not th.canonical_hosts:
+            errors.append(
+                f"Entity {entity.name!r}: apex topology has no slug Host; "
+                "name every serving host in `canonical_hosts`."
+            )
+
+        # T4: cookie_scope: apex is B-only.
+        if getattr(th, "topology", None) == "apex" and th.cookie_scope == "apex":
+            errors.append(
+                f"Entity {entity.name!r}: cookie_scope: apex is only legal on "
+                "topology: provider_subdomain (A cannot share a session across "
+                "a slug host that does not exist)."
+            )
+
     # Rule 3: when 2+ entities share a domain, each MUST carry distinct order:
     for domain, items in by_domain.items():
         if len(items) < 2:
@@ -166,7 +188,7 @@ def validate_tenant_host_blocks(
     for domain, items in by_domain.items():
         if len(items) < 2:
             continue
-        for shared in ("cookie_scope", "super_admin_role", "canonical_hosts"):
+        for shared in ("cookie_scope", "super_admin_role", "canonical_hosts", "topology"):
             values = {
                 tuple(getattr(e.tenant_host, shared))
                 if shared == "canonical_hosts"

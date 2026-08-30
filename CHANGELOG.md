@@ -1,5 +1,20 @@
 ## [Unreleased]
 
+## [0.112.4] - 2026-08-30
+
+### Added
+- **Hosting topology is a declared plane (ADR-0055)** — `tenant_host.topology`
+  is required (`apex` | `provider_subdomain`). Isolation, membership, hosting,
+  and lens are four planes (`stems/tenancy.md`). CONOPS:
+  `docs/superpowers/specs/2026-08-30-hosting-topology-conops.md`.
+
+### Changed
+- **Apex slug-bounce is topology-gated** — cross-host 302 fires only when
+  `topology: provider_subdomain` **and** `cookie_scope: apex`. Topology A
+  never invents `{slug}.{domain}` routing from leftover Host labels
+  (unknown Host → 400). Leftover topology tokens stay put. Does not wire
+  Domain cookies.
+
 ## [0.112.3] - 2026-08-30
 
 ### Fixed

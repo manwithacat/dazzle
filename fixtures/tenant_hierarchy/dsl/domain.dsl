@@ -16,6 +16,7 @@ entity Region "Region":
   name: str(120) required
   role: str(40)
   tenant_host:
+    topology: provider_subdomain
     domain: hierarchy.example
     slug_field: slug
     canonical_hosts: [localhost]   # apex / dev / health-check host → no tenant bound
@@ -30,6 +31,7 @@ entity Trust "Trust":
   name: str(120) required
   region: ref Region required
   tenant_host:
+    topology: provider_subdomain
     domain: hierarchy.example
     slug_field: slug
     canonical_hosts: [localhost]   # must match across all kinds on this domain
@@ -43,6 +45,7 @@ entity School "School":
   name: str(120) required
   trust: ref Trust required
   tenant_host:
+    topology: provider_subdomain
     domain: hierarchy.example
     slug_field: slug
     canonical_hosts: [localhost]   # must match across all kinds on this domain
