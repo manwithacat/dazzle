@@ -120,6 +120,25 @@ class AuthenticateRequest(BaseModel):
     role: str | None = None
 
 
+class PersonaCredentials(BaseModel):
+    """Email/password pair for one declared persona on reset (#1655)."""
+
+    email: str | None = None
+    password: str | None = None
+
+
+class ResetRequest(BaseModel):
+    """Optional body for ``POST /__test__/reset`` (#1655).
+
+    ``personas`` is leftover-honest: only ids declared on the app's
+    persona list ride; leftover slugs are omitted (the server does not
+    invent users for unknown keys). An empty/absent body keeps the
+    historical file → env → defaults path.
+    """
+
+    personas: dict[str, PersonaCredentials] | None = None
+
+
 class AuthenticateResponse(BaseModel):
     """Test authentication response."""
 
@@ -405,21 +424,107 @@ def _clear_auth_users_for_reset(deps: _TestDeps) -> None:
         logger.warning("Could not clear auth users table", exc_info=True)
 
 
-async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
-    """
-    Clear all data from the database and recreate demo auth users.
+def _declared_persona_ids(deps: _TestDeps) -> frozenset[str]:
+    return frozenset(str(p.get("id") or "") for p in (deps.personas or []) if p.get("id"))
 
-    Truncates all entity tables while preserving schema, then
-    recreates auth users for each configured persona so that
+
+def _load_server_persona_credentials(deps: _TestDeps) -> dict[str, dict[str, str]]:
+    """Read ``.dazzle/test_credentials.json`` on the server (#688). Gitignored; often absent on deploy."""
+    out: dict[str, dict[str, str]] = {}
+    if not deps.project_root:
+        return out
+    creds_path = deps.project_root / ".dazzle" / "test_credentials.json"
+    if not creds_path.exists():
+        return out
+    try:
+        creds = json.loads(creds_path.read_text(encoding="utf-8"))
+    except Exception:
+        logger.debug("Could not load test_credentials.json", exc_info=True)
+        return out
+    personas = creds.get("personas") or {}
+    if not isinstance(personas, dict):
+        return out
+    declared = _declared_persona_ids(deps)
+    for pid, rec in personas.items():
+        if pid not in declared or not isinstance(rec, dict):
+            continue
+        slot: dict[str, str] = {}
+        email = rec.get("email")
+        password = rec.get("password")
+        if isinstance(email, str) and email:
+            slot["email"] = email
+        if isinstance(password, str) and password:
+            slot["password"] = password
+        if slot:
+            out[str(pid)] = slot
+    return out
+
+
+def _merge_reset_credentials(
+    deps: _TestDeps, body: ResetRequest | None
+) -> dict[str, dict[str, str]]:
+    """Resolve per-persona email/password for reset (#1655).
+
+    Declared persona ids only (leftover slugs stay put). Overlay order:
+    server credentials file, then runner-supplied body (wins), then
+    ``DAZZLE_TEST_EMAIL`` / ``DAZZLE_TEST_PASSWORD`` for ``admin`` only
+    as fill-in-the-blanks. Missing fields fall back to
+    ``<id>@demo.dazzle.local`` / ``demo_<id>_password`` at create time.
+    """
+    declared = _declared_persona_ids(deps)
+    merged = _load_server_persona_credentials(deps)
+    if body and body.personas:
+        for pid, rec in body.personas.items():
+            if pid not in declared:
+                continue
+            slot = merged.setdefault(pid, {})
+            if rec.email:
+                slot["email"] = rec.email
+            if rec.password:
+                slot["password"] = rec.password
+    env_email = (os.environ.get("DAZZLE_TEST_EMAIL") or "").strip()
+    env_password = (os.environ.get("DAZZLE_TEST_PASSWORD") or "").strip()
+    if "admin" in declared and env_email and env_password:
+        slot = merged.setdefault("admin", {})
+        slot.setdefault("email", env_email)
+        slot.setdefault("password", env_password)
+    return merged
+
+
+async def _read_reset_request(request: Request) -> ResetRequest:
+    """Parse an optional JSON object body; empty/absent → empty ResetRequest."""
+    try:
+        raw = await request.json()
+    except Exception:
+        return ResetRequest()
+    if not raw:
+        return ResetRequest()
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=400, detail="reset body must be a JSON object")
+    return ResetRequest.model_validate(raw)
+
+
+async def _reset_test_data(deps: _TestDeps, body: ResetRequest | None = None) -> dict[str, str]:
+    """
+    Clear leaf test data and recreate demo auth users.
+
+    Truncates entity tables while preserving schema, then recreates
+    auth users for each configured persona so that
     ``/__test__/authenticate`` works immediately after reset.
 
-    When ``.dazzle/test_credentials.json`` exists in the project root,
-    uses the emails and passwords defined there instead of generic
-    defaults so that generated auth tests work without extra config (#688).
+    Tenant-root entities (``archetype: tenant`` / ``is_tenant_root``)
+    are **not** deleted (#1655): on ``shared_schema`` + ``tenant_host:``
+    wiping the practice/org row 404s every subsequent host lookup.
+
+    Credentials: runner-supplied body (dsl-run's local
+    ``test_credentials.json``) wins over the server's gitignored copy
+    (#688), then ``DAZZLE_TEST_*`` env for admin, then generic defaults.
     """
     # Delete each entity in its own connection so FK violations on one
     # table don't abort the transaction and poison subsequent deletes.
-    for sql in deps.entity_sql.values():
+    for name, sql in deps.entity_sql.items():
+        if _entity_is_tenant_root(deps, name):
+            continue
         try:
             with deps.db_manager.connection() as conn:
                 conn.execute(sql.delete_all)
@@ -428,16 +533,7 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
 
     _clear_auth_users_for_reset(deps)
 
-    # Load project-specific credentials if available (#688)
-    creds_personas: dict[str, dict[str, str]] = {}
-    if deps.project_root:
-        creds_path = deps.project_root / ".dazzle" / "test_credentials.json"
-        if creds_path.exists():
-            try:
-                creds = json.loads(creds_path.read_text(encoding="utf-8"))
-                creds_personas = creds.get("personas", {})
-            except Exception:
-                logger.debug("Could not load test_credentials.json", exc_info=True)
+    creds_personas = _merge_reset_credentials(deps, body)
 
     # Recreate demo auth users from personas (#465, #688).
     # #1626: when a stable demo UUID is known, force that id so domain seeds
@@ -447,7 +543,6 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             pid = p.get("id", "")
             if not pid:
                 continue
-            # Use credentials file when available, fall back to generic defaults
             persona_creds = creds_personas.get(pid, {})
             email = persona_creds.get("email") or (pid + "@demo.dazzle.local")
             password = persona_creds.get("password") or ("demo_" + pid + "_password")  # nosec B106
@@ -465,6 +560,10 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
                     )
             except Exception:
                 logger.warning("Could not recreate demo user for %s", pid, exc_info=True)
+
+    # Re-attach demo personas to the preserved tenant-root org so
+    # shared_schema RLS still binds after the user wipe (#1655).
+    _ensure_demo_persona_memberships(deps)
 
     return {"status": "reset_complete"}
 
@@ -855,8 +954,9 @@ def create_test_routes(
     async def seed(request: SeedRequest) -> SeedResponse:
         return await _seed_fixtures(deps, request)
 
-    async def reset() -> dict[str, str]:
-        return await _reset_test_data(deps)
+    async def reset(request: Request) -> dict[str, str]:
+        payload = await _read_reset_request(request)
+        return await _reset_test_data(deps, payload)
 
     async def snapshot() -> SnapshotResponse:
         return await _get_snapshot(deps)

@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.112.2] - 2026-08-30
+
+### Fixed
+- **dsl-run reset wiped tenant-root + wrong users (#1655)** —
+  `POST /__test__/reset` `DELETE`d every entity table including
+  `archetype: tenant` rows, so shared_schema `tenant_host:` apps
+  404'd after the first test. Tenant-root tables are now preserved
+  and demo memberships re-attached. The runner posts its local
+  (gitignored) `test_credentials.json` persona map so a deployed
+  app recreates the emails the generated AUTH tests log in as,
+  instead of `<persona>@demo.dazzle.local`. Leftover persona slugs
+  in the body stay put.
+
 ## [0.112.1] - 2026-08-30
 
 ### Changed

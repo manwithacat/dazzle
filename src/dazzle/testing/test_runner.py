@@ -145,6 +145,49 @@ class TestRunResult:
         return (self.passed / self.runnable) * 100
 
 
+def _persona_cred_slot(rec: Any) -> dict[str, str] | None:
+    """email/password pair from one credentials-file persona record."""
+    if not isinstance(rec, dict):
+        return None
+    slot: dict[str, str] = {}
+    email = rec.get("email")
+    password = rec.get("password")
+    if isinstance(email, str) and email:
+        slot["email"] = email
+    if isinstance(password, str) and password:
+        slot["password"] = password
+    return slot or None
+
+
+def _client_reset_payload() -> dict[str, Any] | None:
+    """Persona map from the runner's ``test_credentials.json`` (#1655).
+
+    Posted as ``POST /__test__/reset`` body so a deployed server that
+    lacks the gitignored file still recreates the emails the generated
+    AUTH tests embed. Leftover-honest filtering of unknown persona ids
+    happens on the server against the app's declared persona list.
+    """
+    creds_path = Path(".dazzle/test_credentials.json")
+    if not creds_path.exists():
+        return None
+    try:
+        creds = json.loads(creds_path.read_text(encoding="utf-8"))
+    except Exception:
+        logger.warning("Failed to load test credentials for reset", exc_info=True)
+        return None
+    personas = creds.get("personas") or {}
+    if not isinstance(personas, dict):
+        return None
+    out: dict[str, dict[str, str]] = {}
+    for pid, rec in personas.items():
+        if not isinstance(pid, str) or not pid:
+            continue
+        slot = _persona_cred_slot(rec)
+        if slot:
+            out[pid] = slot
+    return {"personas": out} if out else None
+
+
 class DazzleClient:
     """HTTP client for interacting with a the Dazzle runtime server."""
 
@@ -231,11 +274,20 @@ class DazzleClient:
 
         Calls ``/__test__/reset`` when available (DAZZLE_ENV=test).
         Gracefully skips when test routes are not available (e.g. live sites).
+
+        When ``.dazzle/test_credentials.json`` is present on the *client*,
+        its persona map is posted so a deployed app (where that file is
+        gitignored and absent) recreates the same users the generated
+        tests log in as (#1655).
         """
         if self._test_routes_available is False:
             return False
         try:
-            resp = self._request("POST", f"{self.api_url}/__test__/reset")
+            payload = _client_reset_payload()
+            kwargs: dict[str, Any] = {}
+            if payload is not None:
+                kwargs["json"] = payload
+            resp = self._request("POST", f"{self.api_url}/__test__/reset", **kwargs)
             if resp.status_code == 404:
                 self._test_routes_available = False
                 return False

@@ -20,11 +20,15 @@ from dazzle.http.runtime.test_routes import (
     AuthenticateRequest,
     AuthenticateResponse,
     FixtureData,
+    PersonaCredentials,
+    ResetRequest,
     SeedRequest,
     SeedResponse,
     SnapshotResponse,
     _clear_auth_users_for_reset,
+    _merge_reset_credentials,
     _mirror_auth_user_to_domain,
+    _reset_test_data,
 )
 
 
@@ -65,6 +69,79 @@ def test_clear_auth_users_deletes_children_before_users() -> None:
     assert 'DELETE FROM "user_preferences"' in sqls
     assert 'DELETE FROM "users"' in sqls
     assert sqls.index('DELETE FROM "sessions"') < sqls.index('DELETE FROM "users"')
+
+
+class _NamedSQL:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.delete_all = f'DELETE FROM "{name}"'
+
+
+class TestResetPreservesTenantRoot:
+    """#1655: reset must not DELETE the tenant-root table."""
+
+    def _deps(self, *, personas: list[dict[str, str]] | None = None) -> tuple[object, list[str]]:
+        from types import SimpleNamespace
+
+        deleted: list[str] = []
+
+        class _Conn:
+            def __enter__(self) -> _Conn:
+                return self
+
+            def __exit__(self, *a: object) -> None:
+                return None
+
+            def execute(self, sql: str, params: tuple | None = None) -> None:
+                deleted.append(sql)
+
+        practice = SimpleNamespace(name="Practice", is_tenant_root=True, archetype_kind=None)
+        invoice = SimpleNamespace(name="Invoice", is_tenant_root=False, archetype_kind=None)
+        deps = SimpleNamespace(
+            entities=[practice, invoice],
+            entity_sql={"Practice": _NamedSQL("Practice"), "Invoice": _NamedSQL("Invoice")},
+            db_manager=SimpleNamespace(connection=lambda: _Conn()),
+            auth_store=None,
+            personas=personas or [],
+            project_root=None,
+        )
+        return deps, deleted
+
+    def test_skips_tenant_root_delete_all(self) -> None:
+        import asyncio
+
+        deps, deleted = self._deps()
+        asyncio.run(_reset_test_data(deps))  # type: ignore[arg-type]
+        assert 'DELETE FROM "Invoice"' in deleted
+        assert 'DELETE FROM "Practice"' not in deleted
+
+    def test_body_credentials_win_over_defaults_for_declared_persona(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("DAZZLE_TEST_EMAIL", raising=False)
+        monkeypatch.delenv("DAZZLE_TEST_PASSWORD", raising=False)
+        deps, _deleted = self._deps(personas=[{"id": "admin", "label": "Admin"}])
+        merged = _merge_reset_credentials(
+            deps,  # type: ignore[arg-type]
+            ResetRequest(
+                personas={
+                    "admin": PersonaCredentials(email="real@cyfuture.test", password="secret"),
+                    "zzz": PersonaCredentials(email="leftover@x.test", password="nope"),
+                }
+            ),
+        )
+        assert merged["admin"]["email"] == "real@cyfuture.test"
+        assert "zzz" not in merged
+
+    def test_leftover_persona_slug_stays_put(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("DAZZLE_TEST_EMAIL", raising=False)
+        monkeypatch.delenv("DAZZLE_TEST_PASSWORD", raising=False)
+        deps, _deleted = self._deps(personas=[{"id": "admin"}])
+        merged = _merge_reset_credentials(
+            deps,  # type: ignore[arg-type]
+            ResetRequest(personas={"ghost": PersonaCredentials(email="g@x.test")}),
+        )
+        assert merged == {}
 
 
 class TestMirrorAuthUserSchemaDerived:

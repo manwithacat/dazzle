@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dazzle.testing.test_runner import DazzleClient
+from dazzle.testing.test_runner import DazzleClient, _client_reset_payload
 
 
 @pytest.fixture
@@ -124,6 +124,48 @@ class TestLoginWithCredentials:
             patch("dazzle.testing.test_runner.Path", return_value=creds_path),
         ):
             assert runner._login_with_credentials("customer") is False
+
+
+class TestClientResetPayload:
+    """dsl-run posts the local credentials file on /__test__/reset (#1655)."""
+
+    def test_posts_personas_from_creds_file(self, tmp_path: Path) -> None:
+        creds = {
+            "personas": {
+                "admin": {"email": "admin@cyfuture.test", "password": "apw"},
+                "partner": {"email": "p@cyfuture.test", "password": "ppw"},
+            }
+        }
+        creds_path = tmp_path / ".dazzle" / "test_credentials.json"
+        creds_path.parent.mkdir(parents=True)
+        creds_path.write_text(json.dumps(creds))
+        with patch("dazzle.testing.test_runner.Path", return_value=creds_path):
+            payload = _client_reset_payload()
+        assert payload == {
+            "personas": {
+                "admin": {"email": "admin@cyfuture.test", "password": "apw"},
+                "partner": {"email": "p@cyfuture.test", "password": "ppw"},
+            }
+        }
+
+    def test_absent_file_posts_nothing(self, tmp_path: Path) -> None:
+        missing = tmp_path / "nope.json"
+        with patch("dazzle.testing.test_runner.Path", return_value=missing):
+            assert _client_reset_payload() is None
+
+    def test_reset_database_sends_payload(self, runner: DazzleClient, tmp_path: Path) -> None:
+        creds_path = tmp_path / ".dazzle" / "test_credentials.json"
+        creds_path.parent.mkdir(parents=True)
+        creds_path.write_text(
+            json.dumps({"personas": {"admin": {"email": "a@t", "password": "p"}}})
+        )
+        resp = MagicMock(status_code=200)
+        runner._test_routes_available = None
+        runner._request = MagicMock(return_value=resp)  # type: ignore[method-assign]
+        with patch("dazzle.testing.test_runner.Path", return_value=creds_path):
+            assert runner.reset_database() is True
+        kwargs = runner._request.call_args.kwargs
+        assert kwargs["json"]["personas"]["admin"]["email"] == "a@t"
 
 
 class TestAuthenticatePassesPersona:
