@@ -148,7 +148,13 @@ owner bypasses unless `FORCE ROW LEVEL SECURITY` (which Dazzle sets). So:
   - `dazzle_app` — the **runtime role** the app connects as. `LOGIN`, **no
     `BYPASSRLS`**. Subject to every policy.
   - `dazzle_bypass` — `BYPASSRLS`, for excision / cross-tenant ops only (never the
-    app's request path).
+    app's request **LOGIN**). HMAC signing-on-A (ADR-0055 D5) emits a
+    `SECURITY DEFINER` function `dazzle_signing_lookup_tenant` **owned by
+    `dazzle_bypass`** with `GRANT EXECUTE` to `dazzle_app`. The request
+    connection stays `dazzle_app`; do not `SET ROLE`, do not add a bypass
+    pool, and do not `GRANT BYPASSRLS` to `dazzle_owner` (FORCE RLS still
+    fences the owner). Local superuser `DATABASE_URL` still bypasses RLS
+    as today — the DEFINER path is for production `dazzle_app`.
 - **Point the app's `DATABASE_URL` at `dazzle_app`** in production. If it connects
   as a superuser/owner, RLS is silently bypassed (data still isolated by the
   app-layer scope filters, but the DB-level guarantee is lost).

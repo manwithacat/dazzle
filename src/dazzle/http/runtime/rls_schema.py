@@ -242,8 +242,10 @@ def build_all_rls_ddl(
 
     pk = tenancy.isolation.partition_key
     scoped = scoped_entity_names(appspec.domain.entities, pk)
+    statements: list[str] = []
     if not scoped:
-        return []
+        statements.extend(build_signing_lookup_ddl(appspec))
+        return statements
 
     fk_graph = getattr(appspec, "fk_graph", None)
     # Lazy (entity, field) -> pg-type resolver for the GUC casts in scope policy
@@ -260,7 +262,6 @@ def build_all_rls_ddl(
     # without an FK graph cannot compile a policy body → fail loud rather than
     # silently fall back to a permissive baseline (which would widen the
     # intra-tenant authorization the scope rule meant to enforce).
-    statements: list[str] = []
     flat_names: list[str] = []
     for entity in entities:
         if entity.name not in scoped:
@@ -281,6 +282,7 @@ def build_all_rls_ddl(
 
     # Tenant-flat entities keep Phase B's fence + permissive baseline.
     statements.extend(build_rls_policy_ddl(sorted(flat_names), partition_key=pk))
+    statements.extend(build_signing_lookup_ddl(appspec))
 
     return statements
 
@@ -727,6 +729,54 @@ def _scope_policy_create(policy_name: str, table: str, verb: str, body: str) -> 
     # param-free policy fragment from the predicate compiler's policy mode
     # (current_setting GUC reads + literals inlined via _inline_sql_literal).
     return f"CREATE POLICY {policy_name} ON {table}\n    AS PERMISSIVE\n    FOR {verb}\n{clauses}"
+
+
+def build_signing_lookup_ddl(appspec: Any) -> list[str]:
+    """SECURITY DEFINER PK lookup for HMAC signing-on-A (ADR-0055 D5).
+
+    Owned by ``dazzle_bypass`` (BYPASSRLS) so FORCE RLS does not hide the
+    row when the GUC is unset. Request LOGIN stays ``dazzle_app``. The
+    CASE list is IR ``signable: true`` names only — leftover entity
+    tokens are not interpolated.
+    """
+    domain = getattr(appspec, "domain", None)
+    entities = getattr(domain, "entities", None) or []
+    signable = [e for e in entities if getattr(e, "signable", False)]
+    if not signable:
+        return []
+    tenancy = getattr(appspec, "tenancy", None)
+    pk = getattr(getattr(tenancy, "isolation", None), "partition_key", None) or "tenant_id"
+    whens: list[str] = []
+    for entity in sorted(signable, key=lambda e: e.name):
+        fields = {getattr(f, "name", "") for f in getattr(entity, "fields", None) or []}
+        col = pk if pk in fields else "id"
+        lit = entity.name.replace("'", "''")
+        whens.append(
+            f"    WHEN '{lit}' THEN (SELECT {quote_identifier(col)} "
+            f"FROM {quote_identifier(entity.name)} WHERE id = p_id)"
+        )
+    body = "\n".join(whens)
+    return [
+        (
+            "CREATE OR REPLACE FUNCTION dazzle_signing_lookup_tenant"
+            "(p_entity text, p_id uuid)\n"
+            "RETURNS uuid\n"
+            "LANGUAGE plpgsql\n"
+            "SECURITY DEFINER\n"
+            "SET search_path = pg_catalog, public\n"
+            "AS $$\n"
+            "BEGIN\n"
+            "  RETURN CASE p_entity\n"
+            f"{body}\n"
+            "    ELSE NULL\n"
+            "  END;\n"
+            "END;\n"
+            "$$"
+        ),
+        "ALTER FUNCTION dazzle_signing_lookup_tenant(text, uuid) OWNER TO dazzle_bypass",
+        "REVOKE ALL ON FUNCTION dazzle_signing_lookup_tenant(text, uuid) FROM PUBLIC",
+        "GRANT EXECUTE ON FUNCTION dazzle_signing_lookup_tenant(text, uuid) TO dazzle_app",
+    ]
 
 
 def build_rls_role_ddl(

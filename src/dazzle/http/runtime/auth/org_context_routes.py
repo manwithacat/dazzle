@@ -22,8 +22,7 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_honest_auth_error,
     leftover_honest_auth_token,
 )
-from dazzle.http.runtime.auth.cookie_name import read_session_id
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path,
     leftover_honest_auth_next,
@@ -100,14 +99,13 @@ async def _activate_and_redirect(
         # Not the user's membership / not active — bounce to the picker.
         return RedirectResponse(url="/auth/select-org?error=invalid_org", status_code=303)
     response = RedirectResponse(url=next_target, status_code=303)
-    # Privilege set changed → rotate the CSRF secret and re-issue the cookie.
     new_secret = auth_store.regenerate_session_csrf(session_id)
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=new_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session_id,
+        csrf_secret=new_secret,
+        user_roles=list(getattr(ctx, "effective_roles", None) or getattr(ctx, "roles", None) or []),
     )
     return response
 

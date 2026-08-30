@@ -8,23 +8,23 @@ class TestCookieSecurity:
 
     def test_session_cookie_samesite(self):
         """V3.4.1: Session cookies must set SameSite attribute."""
-        from dazzle.http.runtime.auth.routes import _login
+        from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 
-        source = inspect.getsource(_login)
-        assert 'samesite="lax"' in source or "samesite=" in source.lower()
+        source = inspect.getsource(set_session_cookies)
+        assert "samesite" in source.lower() and "lax" in source.lower()
 
     def test_session_cookie_httponly(self):
         """V3.4.2: Session cookies must be HttpOnly."""
-        from dazzle.http.runtime.auth.routes import _login
+        from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 
-        source = inspect.getsource(_login)
-        assert "httponly=True" in source
+        source = inspect.getsource(set_session_cookies)
+        assert "httponly" in source and "True" in source
 
     def test_session_cookie_secure_flag(self):
         """V3.4.3: Session cookies must use Secure flag detection."""
-        from dazzle.http.runtime.auth.routes import _login
+        from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 
-        source = inspect.getsource(_login)
+        source = inspect.getsource(set_session_cookies)
         assert "cookie_secure" in source
 
 

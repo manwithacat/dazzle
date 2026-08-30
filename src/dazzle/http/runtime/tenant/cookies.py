@@ -36,12 +36,19 @@ def apex_cookie_name(app_name: str) -> str:
     return f"__Secure-{normalise_app_name(app_name)}_admin"
 
 
+def domain_session_cookie_name(app_name: str) -> str:
+    """B + cookie_scope apex: Domain-capable member session (not ``__Host-``)."""
+    return f"__Secure-{normalise_app_name(app_name)}_session"
+
+
 def choose_session_cookie_name(
     *,
     app_name: str,
     is_canonical_host: bool,
     user_role: str,
     super_admin_role: str,
+    topology: str = "",
+    cookie_scope: str = "host",
 ) -> str:
     """Login-flow decision tree (spec §Cookie wiring).
 
@@ -49,8 +56,12 @@ def choose_session_cookie_name(
       * the login request landed on a canonical host, AND
       * the authenticated user holds the configured super-admin role.
 
-    Every other authenticated request gets the host-bound cookie.
+    B + ``cookie_scope: apex`` issues ``__Secure-<app>_session`` (Domain
+    cookies). Leftover topology/scope stay put — they never invent Domain.
+    Every other authenticated request gets the host-bound ``__Host-`` cookie.
     """
     if is_canonical_host and user_role == super_admin_role:
         return apex_cookie_name(app_name)
+    if topology == "provider_subdomain" and cookie_scope == "apex":
+        return domain_session_cookie_name(app_name)
     return host_cookie_name(app_name)

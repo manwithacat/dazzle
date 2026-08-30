@@ -92,6 +92,43 @@ def test_host_cookie_on_apex_raises():
         )
 
 
+def test_apex_topology_host_cookie_on_canonical_passes_with_membership():
+    """ADR-0055: www *is* the app. Host cookie + no request tenant PASSes."""
+    out = check_cross_tenant(
+        cookie_kind="host",
+        session_tenant_id=str(uuid4()),
+        request_tenant_id=None,
+        user_role="member",
+        super_admin_role="super_admin",
+        topology="apex",
+    )
+    assert out is GuardOutcome.PASS
+
+
+def test_apex_topology_host_cookie_without_membership_fails_closed():
+    with pytest.raises(HostCookieMissingTenant):
+        check_cross_tenant(
+            cookie_kind="host",
+            session_tenant_id=None,
+            request_tenant_id=None,
+            user_role="member",
+            super_admin_role="super_admin",
+            topology="apex",
+        )
+
+
+def test_leftover_topology_does_not_invent_apex_guard_pass():
+    with pytest.raises(HostCookieMissingTenant):
+        check_cross_tenant(
+            cookie_kind="host",
+            session_tenant_id=str(uuid4()),
+            request_tenant_id=None,
+            user_role="member",
+            super_admin_role="super_admin",
+            topology="zzz",
+        )
+
+
 def test_apex_cookie_with_super_admin_passes_for_any_tenant():
     out = check_cross_tenant(
         cookie_kind="apex",

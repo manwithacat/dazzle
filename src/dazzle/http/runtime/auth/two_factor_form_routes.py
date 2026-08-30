@@ -24,7 +24,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.leftover_2fa_code import leftover_honest_2fa_code
 from dazzle.http.runtime.auth.org_activation import (
@@ -123,7 +123,7 @@ def create_two_factor_form_routes(
         # the client presented (separate from the pending 2FA token deleted
         # above) so an attacker-planted id can't survive into the
         # authenticated state.
-        pre_auth_sid = request.cookies.get(cookie_name)
+        pre_auth_sid = read_session_id(request, default=cookie_name)
         # Phase 2 (auth Plan 1b): the post-2FA session is the real authenticated
         # session — activate an org context for the proven identity.
         safe_next = next if next and next != "/" and _is_safe_redirect_path(next) else "/app"
@@ -144,25 +144,13 @@ def create_two_factor_form_routes(
             auth_store.delete_session(pre_auth_sid)
 
         response = RedirectResponse(url=redirect_to, status_code=303)
-        response.set_cookie(
-            key=cookie_name,
-            value=session.id,
-            httponly=True,
-            secure=cookie_secure(request),
-            samesite="lax",
-            max_age=session_expires_days * 24 * 60 * 60,
-        )
-        # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted
-        # on form-based 2FA-verification success. httponly=False so htmx/JS can
-        # echo it into the X-CSRF-Token header. Cookies set on a 303 redirect are
-        # honoured by the browser. See
-        # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-        response.set_cookie(
-            key="dazzle_csrf",
-            value=session.csrf_secret,
-            httponly=False,
-            secure=cookie_secure(request),
-            samesite="lax",
+        set_session_cookies(
+            response,
+            request,
+            session_id=session.id,
+            csrf_secret=session.csrf_secret,
+            user_roles=list(getattr(user, "roles", []) or []),
+            default_cookie_name=cookie_name,
             max_age=session_expires_days * 24 * 60 * 60,
         )
         return response

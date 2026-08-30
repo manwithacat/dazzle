@@ -22,7 +22,7 @@ from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from dazzle.http.runtime.auth.connections import ConnectionError, resolve_provider
-from dazzle.http.runtime.auth.cookie_name import names_to_clear
+from dazzle.http.runtime.auth.cookie_name import clear_session_cookies
 from dazzle.http.runtime.auth.enterprise_login import (
     EnterpriseLoginError,
     provision_enterprise_login,
@@ -261,9 +261,7 @@ def create_saml_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
 
 def _clear_session_cookies(response: Response, request: Request, cookie_name: str) -> None:
     """Clear this browser's auth + CSRF cookies (best-effort for the carrier browser)."""
-    for name in names_to_clear(request, default=cookie_name):
-        response.delete_cookie(name)
-    response.delete_cookie("dazzle_csrf")
+    clear_session_cookies(response, request, default_cookie_name=cookie_name)
 
 
 def _logged_out_response(request: Request, cookie_name: str) -> Response:

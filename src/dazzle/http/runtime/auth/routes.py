@@ -10,8 +10,8 @@ from fastapi import APIRouter, HTTPException, Response
 from fastapi import Request as FastAPIRequest
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from .cookie_name import names_to_clear, read_session_id, select_write_name
-from .crypto import cookie_secure, verify_password
+from .cookie_name import clear_session_cookies, read_session_id, set_session_cookies
+from .crypto import verify_password
 from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
 from .models import (
     ChangePasswordRequest,
@@ -168,25 +168,13 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
         }
     )
 
-    response.set_cookie(
-        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    # Declarative-CSRF Phase 1: bind the CSRF token to this session. httponly=False
-    # so htmx/JS can echo it into the X-CSRF-Token header; SameSite=Lax + the
-    # session-stable secret means it survives swaps/multi-tab. Rotates on login
-    # (new session => new secret). See docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(user.roles or []),
+        default_cookie_name=deps.cookie_name,
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
@@ -228,11 +216,7 @@ async def _logout(deps: _AuthDeps, request: FastAPIRequest) -> Response:
     else:
         # JSON/API callers stay local (no browser to follow the IdP round-trip).
         response = JSONResponse(content={"message": "Logout successful"})
-    for name in names_to_clear(request, default=deps.cookie_name):
-        response.delete_cookie(name)
-    # Declarative-CSRF Phase 1: drop the session-bound CSRF cookie on logout so a
-    # stale secret can't linger past the session it was bound to.
-    response.delete_cookie("dazzle_csrf")
+    clear_session_cookies(response, request, default_cookie_name=deps.cookie_name)
 
     return response
 
@@ -285,25 +269,13 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
         status_code=201,
     )
 
-    response.set_cookie(
-        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    # Declarative-CSRF Phase 1: bind the CSRF token to this freshly-created
-    # session (registration auto-login). httponly=False so htmx/JS can echo it
-    # into the X-CSRF-Token header. See
-    # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(user.roles or []),
+        default_cookie_name=deps.cookie_name,
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
@@ -374,25 +346,13 @@ async def _change_password(
 
     response = JSONResponse(content={"message": "Password changed successfully"})
 
-    response.set_cookie(
-        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    # Declarative-CSRF Phase 1: re-bind the CSRF token to the new session minted
-    # after a password change (old sessions were just invalidated). httponly=False
-    # so htmx/JS can echo it. See
-    # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(user.roles or []),
+        default_cookie_name=deps.cookie_name,
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
@@ -460,24 +420,13 @@ async def _reset_password(
 
     response = JSONResponse(content={"message": "Password reset successful"})
 
-    response.set_cookie(
-        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    # Declarative-CSRF Phase 1: bind the CSRF token to the new session minted
-    # by the reset-password auto-login. httponly=False so htmx/JS can echo it.
-    # See docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(user.roles or []),
+        default_cookie_name=deps.cookie_name,
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 

@@ -11,8 +11,7 @@ from fastapi.responses import JSONResponse
 
 from dazzle.core.ir.security import TwoFactorConfig
 
-from .cookie_name import read_session_id, select_write_name
-from .crypto import cookie_secure
+from .cookie_name import read_session_id, set_session_cookies
 from .events import emit_user_logged_in
 from .leftover_2fa_code import leftover_honest_2fa_code
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
@@ -263,25 +262,13 @@ async def _verify_2fa(
         }
     )
 
-    response.set_cookie(
-        key=select_write_name(request, user_roles=list(user.roles or []), default=deps.cookie_name),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-        max_age=deps.session_expires_days * 24 * 60 * 60,
-    )
-
-    # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted on
-    # 2FA-verification success. httponly=False so htmx/JS can echo it into the
-    # X-CSRF-Token header. See
-    # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(user.roles or []),
+        default_cookie_name=deps.cookie_name,
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 

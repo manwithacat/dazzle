@@ -20,8 +20,7 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
 from dazzle.http.runtime.auth.auth_views import leftover_auth_email_or_400
-from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.org_activation import (
     FORBIDDEN_SENTINEL,
@@ -57,31 +56,13 @@ def _set_session_cookie(
     *,
     user_roles: list[str] | None = None,
 ) -> None:
-    """Attach the session cookie to ``response`` with the same flags
-    the JSON ``/auth/login`` endpoint sets — httpOnly, samesite=lax,
-    secure when the request is HTTPS. The cookie name is per-request:
-    apps with ``tenant_host:`` get the spec'd ``__Host-`` / ``__Secure-``
-    names, single-tenant apps keep ``dazzle_session``.
-
-    Also sets the declarative-CSRF Phase 1 cookie (``dazzle_csrf``) bound to
-    this session's secret. httponly=False so htmx/JS can echo it into the
-    X-CSRF-Token header. Both cookies omit ``max_age`` to match the auth
-    cookie's session-cookie style at this endpoint. See
-    docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-    """
-    response.set_cookie(
-        key=select_write_name(request, user_roles=user_roles),
-        value=session_id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-    )
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    """Attach session + CSRF cookies via the topology-aware helper."""
+    set_session_cookies(
+        response,
+        request,
+        session_id=session_id,
+        csrf_secret=csrf_secret,
+        user_roles=user_roles,
     )
 
 

@@ -4,6 +4,7 @@ Plan 1a introduced membership-first binding; Plan 1d removed the legacy
 preferences fallback (clean break) — a membership-less session binds nothing and
 the RLS fence denies (fail-closed)."""
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
@@ -46,3 +47,31 @@ def test_unauthenticated_binds_nothing() -> None:
     with patch("dazzle.http.runtime.tenant_isolation.set_current_tenant_id") as set_tid:
         _bind_rls_tenant_id(AuthContext())
     set_tid.assert_not_called()
+
+
+def test_apex_topology_binds_host_lens_from_membership() -> None:
+    from dazzle.http.runtime.auth.dependencies import _bind_apex_lens
+
+    m = MembershipRecord(id="m-1", tenant_id="practice-1", identity_id="u-1")
+    request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(tenant_host=SimpleNamespace(app_name="app", topology="apex"))
+        )
+    )
+    with patch("dazzle.http.runtime.tenant_isolation.set_current_host_tenant_id") as set_host:
+        _bind_apex_lens(request, _ctx(active_membership=m))
+    set_host.assert_called_once_with("practice-1")
+
+
+def test_leftover_topology_does_not_invent_apex_lens() -> None:
+    from dazzle.http.runtime.auth.dependencies import _bind_apex_lens
+
+    m = MembershipRecord(id="m-1", tenant_id="practice-1", identity_id="u-1")
+    request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(tenant_host=SimpleNamespace(app_name="app", topology="zzz"))
+        )
+    )
+    with patch("dazzle.http.runtime.tenant_isolation.set_current_host_tenant_id") as set_host:
+        _bind_apex_lens(request, _ctx(active_membership=m))
+    set_host.assert_not_called()

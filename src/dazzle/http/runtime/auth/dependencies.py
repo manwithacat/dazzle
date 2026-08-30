@@ -33,6 +33,52 @@ def _enforce_cross_tenant(request: FastAPIRequest, auth_context: AuthContext) ->
     enforce_cross_tenant(request, auth_context)
 
 
+def _bind_apex_lens(request: FastAPIRequest, auth_context: AuthContext) -> None:
+    """On topology A, membership is the host lens (not the fence).
+
+    Task-isolated (no middleware ``finally``). Leftover topology does not
+    invent a lens.
+    """
+    if not auth_context.is_authenticated:
+        return
+    membership = auth_context.active_membership
+    tenant_id = getattr(membership, "tenant_id", None) if membership is not None else None
+    if not tenant_id:
+        return
+    app = getattr(request, "app", None)
+    cfg = getattr(getattr(app, "state", None), "tenant_host", None) if app is not None else None
+    if cfg is None or getattr(cfg, "topology", "") != "apex":
+        return
+    from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
+
+    set_current_host_tenant_id(str(tenant_id))
+
+
+def _resolve_auth_context(
+    request: FastAPIRequest,
+    auth_store: AuthStore,
+    cookie_name: str,
+) -> AuthContext:
+    """Cookie if present (do not consult Authorization); else Bearer JWT."""
+    from dazzle.http.runtime.auth.cookie_name import read_session_id
+
+    session_id = read_session_id(request, default=cookie_name)
+    if session_id:
+        return auth_store.validate_session(session_id)
+
+    verifier = getattr(getattr(request, "app", None), "state", None)
+    jwt_verifier = getattr(verifier, "jwt_verifier", None) if verifier is not None else None
+    get_ctx = getattr(jwt_verifier, "get_auth_context", None)
+    if not callable(get_ctx):
+        return AuthContext()
+    jwt_auth = get_ctx(request)
+    if not getattr(jwt_auth, "is_authenticated", False):
+        return AuthContext()
+    from dazzle.http.runtime.auth.jwt_bind import bind_jwt_tenant_context
+
+    return bind_jwt_tenant_context(request, jwt_auth, auth_store)
+
+
 def _bind_rls_tenant_id(auth_context: AuthContext) -> None:
     """Bind the RLS tenant id + scope-attr GUCs from the authenticated user.
 
@@ -133,14 +179,13 @@ def create_auth_dependency(
         from dazzle.http.runtime.auth.cookie_name import read_session_id
 
         session_id = read_session_id(request, default=cookie_name)
+        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
 
-        if not session_id:
+        if session_id:
+            if not auth_context.is_authenticated:
+                raise HTTPException(status_code=401, detail="Session expired")
+        elif not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Not authenticated")
-
-        auth_context = auth_store.validate_session(session_id)
-
-        if not auth_context.is_authenticated:
-            raise HTTPException(status_code=401, detail="Session expired")
 
         # #1289 slice 5 wiring: enforce cross-tenant cookie binding (#1519: via the
         # shared helper so deny/optional factories enforce it too). No-op on apps
@@ -164,6 +209,7 @@ def create_auth_dependency(
                 )
 
         _bind_rls_tenant_id(auth_context)
+        _bind_apex_lens(request, auth_context)
         return auth_context
 
     return get_current_user
@@ -190,14 +236,7 @@ def create_deny_dependency(
 
     async def check_deny_roles(request: FastAPIRequest) -> AuthContext:
         """Reject users with denied roles."""
-        from dazzle.http.runtime.auth.cookie_name import read_session_id
-
-        session_id = read_session_id(request, default=cookie_name)
-
-        if not session_id:
-            return AuthContext()
-
-        auth_context = auth_store.validate_session(session_id)
+        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
 
         if not auth_context.is_authenticated:
             return auth_context
@@ -221,6 +260,7 @@ def create_deny_dependency(
         # The bind is guarded on is_authenticated and fail-closed, so the
         # empty/unauthenticated early returns above need no equivalent call.
         _bind_rls_tenant_id(auth_context)
+        _bind_apex_lens(request, auth_context)
         return auth_context
 
     return check_deny_roles
@@ -245,19 +285,13 @@ def create_optional_auth_dependency(
 
     async def get_optional_user(request: FastAPIRequest) -> AuthContext:
         """Get current user if authenticated, or empty context."""
-        from dazzle.http.runtime.auth.cookie_name import read_session_id
-
-        session_id = read_session_id(request, default=cookie_name)
-
-        if not session_id:
-            return AuthContext()
-
-        auth_context = auth_store.validate_session(session_id)
+        auth_context = _resolve_auth_context(request, auth_store, cookie_name)
         # #1519: enforce the cross-tenant cookie guard on optional-auth routes too.
         # An expired/invalid session stays anonymous (helper no-ops when
         # unauthenticated); a valid cross-tenant cookie 403s.
         _enforce_cross_tenant(request, auth_context)
         _bind_rls_tenant_id(auth_context)
+        _bind_apex_lens(request, auth_context)
         return auth_context
 
     return get_optional_user

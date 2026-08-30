@@ -20,7 +20,7 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_auth_email_or_400,
     leftover_honest_auth_token,
 )
-from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.member_admin import (
     declared_persona_ids,
     leftover_honest_persona_roles,
@@ -149,7 +149,6 @@ def create_invitation_routes() -> APIRouter:
     async def accept_submit(
         request: Request, token: Annotated[str, Query()] = ""
     ) -> HTMLResponse | RedirectResponse:
-        from dazzle.http.runtime.auth.crypto import cookie_secure
         from dazzle.http.runtime.auth.invitations import InvitationError, accept_invitation
 
         store = request.app.state.auth_store
@@ -161,7 +160,7 @@ def create_invitation_routes() -> APIRouter:
         token = honest
         session_id = read_session_id(request)
         ctx = store.validate_session(session_id) if session_id else None
-        if ctx is None or not ctx.is_authenticated or ctx.user is None:
+        if ctx is None or not ctx.is_authenticated or ctx.user is None or session_id is None:
             return RedirectResponse(url=f"/login?next=/auth/accept-invite/{token}", status_code=303)
         try:
             membership = accept_invitation(
@@ -177,12 +176,12 @@ def create_invitation_routes() -> APIRouter:
         store.set_session_active_membership(session_id, membership.id, identity_id=str(ctx.user.id))
         response = RedirectResponse(url="/app", status_code=303)
         new_secret = store.regenerate_session_csrf(session_id)
-        response.set_cookie(
-            key="dazzle_csrf",
-            value=new_secret,
-            httponly=False,
-            secure=cookie_secure(request),
-            samesite="lax",
+        set_session_cookies(
+            response,
+            request,
+            session_id=session_id,
+            csrf_secret=new_secret,
+            user_roles=list(ctx.effective_roles),
         )
         return response
 

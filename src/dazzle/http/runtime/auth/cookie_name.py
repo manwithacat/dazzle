@@ -26,6 +26,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.tenant.cookies import (
+    apex_cookie_name,
+    choose_session_cookie_name,
+    domain_session_cookie_name,
+    host_cookie_name,
+)
+
 LEGACY_NAME = "dazzle_session"
 
 
@@ -77,8 +85,6 @@ def select_write_name(
     if cfg is None:
         return default
 
-    from dazzle.http.runtime.tenant.cookies import choose_session_cookie_name
-
     normalised = {r.removeprefix("role_") for r in (user_roles or [])}
     role = cfg.super_admin_role if cfg.super_admin_role in normalised else ""
 
@@ -87,6 +93,8 @@ def select_write_name(
         is_canonical_host=_request_host(request) in cfg.canonical_hosts,
         user_role=role,
         super_admin_role=cfg.super_admin_role,
+        topology=getattr(cfg, "topology", "") or "",
+        cookie_scope=getattr(cfg, "cookie_scope", "") or "host",
     )
 
 
@@ -110,10 +118,10 @@ def read_session_id(request: Any, *, default: str = LEGACY_NAME) -> str | None:
     if cfg is None:
         return None
 
-    from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
-
-    found = cookies.get(host_cookie_name(cfg.app_name)) or cookies.get(
-        apex_cookie_name(cfg.app_name)
+    found = (
+        cookies.get(host_cookie_name(cfg.app_name))
+        or cookies.get(domain_session_cookie_name(cfg.app_name))
+        or cookies.get(apex_cookie_name(cfg.app_name))
     )
     return str(found) if found else None
 
@@ -127,6 +135,90 @@ def names_to_clear(request: Any, *, default: str = LEGACY_NAME) -> list[str]:
     if cfg is None:
         return [default]
 
-    from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
+    return [
+        default,
+        host_cookie_name(cfg.app_name),
+        domain_session_cookie_name(cfg.app_name),
+        apex_cookie_name(cfg.app_name),
+    ]
 
-    return [default, host_cookie_name(cfg.app_name), apex_cookie_name(cfg.app_name)]
+
+def _domain_attr(cfg: Any, cookie_name: str) -> str | None:
+    """Domain=.{marker.domain} only for B+apex Domain session cookies.
+
+    Never parse Domain from the request Host. Never Domain on ``__Host-``.
+    Leftover topology/scope stay put.
+    """
+    if cfg is None:
+        return None
+    if getattr(cfg, "topology", "") != "provider_subdomain":
+        return None
+    if getattr(cfg, "cookie_scope", "") != "apex":
+        return None
+    domain = getattr(cfg, "domain", "") or ""
+    if not domain:
+        return None
+    if cookie_name != domain_session_cookie_name(cfg.app_name):
+        return None
+    return f".{domain}"
+
+
+def set_session_cookies(
+    response: Any,
+    request: Any,
+    *,
+    session_id: str,
+    csrf_secret: str,
+    user_roles: list[str] | None = None,
+    default_cookie_name: str = LEGACY_NAME,
+    max_age: int | None = None,
+) -> None:
+    """Write the session cookie + host-scoped CSRF cookie (ADR-0055 D4).
+
+    CSRF never gets Domain. Session Domain is only B ∧ cookie_scope apex
+    on the ``__Secure-<app>_session`` name.
+    """
+    name = select_write_name(request, user_roles=user_roles, default=default_cookie_name)
+    secure = cookie_secure(request)
+    session_kw: dict[str, Any] = {
+        "key": name,
+        "value": session_id,
+        "httponly": True,
+        "secure": secure,
+        "samesite": "lax",
+        "path": "/",
+    }
+    if max_age is not None:
+        session_kw["max_age"] = max_age
+    domain = _domain_attr(_tenant_cfg(request), name)
+    if domain is not None:
+        session_kw["domain"] = domain
+    response.set_cookie(**session_kw)
+    csrf_kw: dict[str, Any] = {
+        "key": "dazzle_csrf",
+        "value": csrf_secret,
+        "httponly": False,
+        "secure": secure,
+        "samesite": "lax",
+        "path": "/",
+    }
+    if max_age is not None:
+        csrf_kw["max_age"] = max_age
+    response.set_cookie(**csrf_kw)
+
+
+def clear_session_cookies(
+    response: Any,
+    request: Any,
+    *,
+    default_cookie_name: str = LEGACY_NAME,
+) -> None:
+    """Delete every recognised session cookie + the CSRF cookie."""
+    cfg = _tenant_cfg(request)
+    for name in names_to_clear(request, default=default_cookie_name):
+        domain = _domain_attr(cfg, name)
+        if domain is not None:
+            response.delete_cookie(name, path="/", domain=domain)
+        else:
+            response.delete_cookie(name, path="/")
+    response.delete_cookie("dazzle_csrf", path="/")

@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 from dazzle.http.runtime.auth.qa_provision import QA_SLUG_PREFIX
 from dazzle.http.runtime.auth.qa_sign import QaTokenError, verify_qa_token
 
@@ -81,19 +81,12 @@ def create_qa_secure_routes() -> APIRouter | None:
 
         # Mint a session scoped to the test org's membership (binds dazzle.tenant_id).
         session = auth_store.create_session(user, active_membership_id=membership.id)
-        response.set_cookie(
-            key="dazzle_session",
-            value=session.id,
-            httponly=True,
-            secure=cookie_secure(request),
-            samesite="lax",
-        )
-        response.set_cookie(
-            key="dazzle_csrf",
-            value=session.csrf_secret,
-            httponly=False,
-            secure=cookie_secure(request),
-            samesite="lax",
+        set_session_cookies(
+            response,
+            request,
+            session_id=session.id,
+            csrf_secret=session.csrf_secret,
+            user_roles=list(getattr(user, "roles", []) or []),
         )
         logger.warning("[QA-AUTH] minted contained session for run_id=%r", claims.run_id)
         return {"ok": True, "tenant_id": org.id}

@@ -13,8 +13,7 @@ from typing import Any
 
 from fastapi.responses import RedirectResponse
 
-from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 
 
 def finish_login_session(
@@ -39,22 +38,12 @@ def finish_login_session(
         store.delete_session(pre_auth_sid)
 
     response = RedirectResponse(url=safe_next, status_code=303)
-    response.set_cookie(
-        key=select_write_name(
-            request, user_roles=list(getattr(user, "roles", []) or []), default=cookie_name
-        ),
-        value=session.id,
-        httponly=True,
-        secure=cookie_secure(request),
-        samesite="lax",
-    )
-    # Declarative-CSRF: bind the CSRF token to the new session (httponly=False so htmx/JS
-    # can echo it into X-CSRF-Token). Mirrors the auth cookie's flags.
-    response.set_cookie(
-        key="dazzle_csrf",
-        value=session.csrf_secret,
-        httponly=False,
-        secure=cookie_secure(request),
-        samesite="lax",
+    set_session_cookies(
+        response,
+        request,
+        session_id=session.id,
+        csrf_secret=session.csrf_secret,
+        user_roles=list(getattr(user, "roles", []) or []),
+        default_cookie_name=cookie_name,
     )
     return response

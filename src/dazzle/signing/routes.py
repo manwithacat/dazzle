@@ -48,6 +48,7 @@ from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.http.runtime.query_builder import quote_identifier
 from dazzle.http.runtime.tenant_isolation import (
     _current_tenant_id,
     get_current_tenant_id,
@@ -140,32 +141,30 @@ def create_signing_routes(
     async def render_signing_page(
         entity_name: str, record_id: UUID, request: Request
     ) -> HTMLResponse:
-        with _signing_rls_tenant(request):
-            return await _handle_get(
-                entity_name=entity_name,
-                record_id=record_id,
-                request=request,
-                signable=signable,
-                repositories=repositories,
-                project_root=project_root,
-                support_contact=support_contact,
-                resend_hook=resend_hook,
-            )
+        return await _handle_get(
+            entity_name=entity_name,
+            record_id=record_id,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            project_root=project_root,
+            support_contact=support_contact,
+            resend_hook=resend_hook,
+        )
 
     @router.post("/sign/{entity_name}/{record_id}/resend", response_class=HTMLResponse)
     async def request_link_resend(
         entity_name: str, record_id: UUID, request: Request
     ) -> HTMLResponse:
-        with _signing_rls_tenant(request):
-            return await _handle_resend(
-                entity_name=entity_name,
-                record_id=record_id,
-                request=request,
-                signable=signable,
-                repositories=repositories,
-                support_contact=support_contact,
-                resend_hook=resend_hook,
-            )
+        return await _handle_resend(
+            entity_name=entity_name,
+            record_id=record_id,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            support_contact=support_contact,
+            resend_hook=resend_hook,
+        )
 
     @router.post("/api/sign/{entity_name}/{record_id}")
     async def submit_signature(
@@ -174,34 +173,32 @@ def create_signing_routes(
         body: SignSubmission,
         request: Request,
     ) -> Response:
-        with _signing_rls_tenant(request):
-            return await _handle_post(
-                entity_name=entity_name,
-                record_id=record_id,
-                body=body,
-                request=request,
-                signable=signable,
-                repositories=repositories,
-                branding=resolved_branding,
-                file_service=file_service,
-                project_root=project_root,
-            )
+        return await _handle_post(
+            entity_name=entity_name,
+            record_id=record_id,
+            body=body,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            branding=resolved_branding,
+            file_service=file_service,
+            project_root=project_root,
+        )
 
     @router.get("/sign/{entity_name}/{record_id}/signed-copy")
     async def download_signed_copy(entity_name: str, record_id: UUID, request: Request) -> Response:
         """Durable retrieval of the persisted signed PDF (#1571). Gated by the
         ORIGINAL signing token — only the exact credential that signed (or could
         have signed) this record can fetch the copy."""
-        with _signing_rls_tenant(request):
-            return await _handle_signed_copy(
-                entity_name=entity_name,
-                record_id=record_id,
-                request=request,
-                signable=signable,
-                repositories=repositories,
-                file_service=file_service,
-                support_contact=support_contact,
-            )
+        return await _handle_signed_copy(
+            entity_name=entity_name,
+            record_id=record_id,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            file_service=file_service,
+            support_contact=support_contact,
+        )
 
     return router
 
@@ -305,55 +302,58 @@ async def _handle_get(
         body = _error_page("Token does not match record")
         return HTMLResponse(body, status_code=403)  # nosemgrep
 
-    row = await repo.read(record_id)
-    if row is None:
-        body = _error_page("Document not found")
-        return HTMLResponse(body, status_code=404)  # nosemgrep
+    with _signing_rls_tenant(
+        request, entity=entity, record_id=record_id, repositories=repositories
+    ):
+        row = await repo.read(record_id)
+        if row is None:
+            body = _error_page("Document not found")
+            return HTMLResponse(body, status_code=404)  # nosemgrep
 
-    status = _row_get(row, "status")
-    if status not in _active_signing_states(entity):
-        # #1571 / TR-49: a signatory reopening their ORIGINAL link after signing
-        # must not land on the dead-end "Document unavailable" terminal page.
-        # Gate on status=signed + the exact credential that signed (token_hash).
-        # The durable download CTA is shown when signed_document is present;
-        # when the best-effort upload failed at sign time we still show a
-        # completion page (not a terminal dead end) so the signatory knows
-        # the document is signed and how to recover a copy.
-        if status == "signed" and token_hash(token) == _row_get(row, "signing_token_hash"):
-            body = _signed_completion_page(
-                entity_name=entity.name,
-                record_id=str(record_id),
-                token=token,
-                support_contact=support_contact,
-                has_copy=bool(_row_get(row, "signed_document")),
-            )
+        status = _row_get(row, "status")
+        if status not in _active_signing_states(entity):
+            # #1571 / TR-49: a signatory reopening their ORIGINAL link after signing
+            # must not land on the dead-end "Document unavailable" terminal page.
+            # Gate on status=signed + the exact credential that signed (token_hash).
+            # The durable download CTA is shown when signed_document is present;
+            # when the best-effort upload failed at sign time we still show a
+            # completion page (not a terminal dead end) so the signatory knows
+            # the document is signed and how to recover a copy.
+            if status == "signed" and token_hash(token) == _row_get(row, "signing_token_hash"):
+                body = _signed_completion_page(
+                    entity_name=entity.name,
+                    record_id=str(record_id),
+                    token=token,
+                    support_contact=support_contact,
+                    has_copy=bool(_row_get(row, "signed_document")),
+                )
+                return HTMLResponse(body, status_code=200)  # nosemgrep
+            body = _terminal_page(status)
             return HTMLResponse(body, status_code=200)  # nosemgrep
-        body = _terminal_page(status)
-        return HTMLResponse(body, status_code=200)  # nosemgrep
 
-    # First-view transition (default lifecycle only — a no-op for custom enums
-    # without a "sent" state, which is fine: view-tracking is optional).
-    if status == "sent":
-        await repo.update(
-            record_id,
-            {
-                "status": "viewed",
-                "viewed_at": _utcnow(),
-                "signer_ip": _client_ip(request),
-                "signer_user_agent": request.headers.get("user-agent", "")[:500],
-            },
+        # First-view transition (default lifecycle only — a no-op for custom enums
+        # without a "sent" state, which is fine: view-tracking is optional).
+        if status == "sent":
+            await repo.update(
+                record_id,
+                {
+                    "status": "viewed",
+                    "viewed_at": _utcnow(),
+                    "signer_ip": _client_ip(request),
+                    "signer_user_agent": request.headers.get("user-agent", "")[:500],
+                },
+            )
+
+        document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
+        body = _signing_page(
+            entity_name=entity.name,
+            record_id=str(record_id),
+            token=token,
+            document_body=document_body,
+            intended_email=signer_email,
+            entity=entity,
         )
-
-    document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
-    body = _signing_page(
-        entity_name=entity.name,
-        record_id=str(record_id),
-        token=token,
-        document_body=document_body,
-        intended_email=signer_email,
-        entity=entity,
-    )
-    return HTMLResponse(body)  # nosemgrep
+        return HTMLResponse(body)  # nosemgrep
 
 
 async def _handle_post(
@@ -379,96 +379,101 @@ async def _handle_post(
     if verified_id != str(record_id):
         raise HTTPException(status_code=403, detail="Token does not match record")
 
-    row = require_found(await repo.read(record_id), "Document not found")
+    with _signing_rls_tenant(
+        request, entity=entity, record_id=record_id, repositories=repositories
+    ):
+        row = require_found(await repo.read(record_id), "Document not found")
 
-    status = _row_get(row, "status")
-    if status not in _active_signing_states(entity):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Document in terminal status {status!r}; cannot accept signature",
-        )
+        status = _row_get(row, "status")
+        if status not in _active_signing_states(entity):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Document in terminal status {status!r}; cannot accept signature",
+            )
 
-    if body.decline:
-        await repo.update(
-            record_id,
-            {
-                "status": "declined",
-                "signing_token_hash": token_hash(body.token),
-                "signer_ip": _client_ip(request),
-                "signer_user_agent": request.headers.get("user-agent", "")[:500],
-            },
-        )
-        return JSONResponse({"status": "declined"})
+        if body.decline:
+            await repo.update(
+                record_id,
+                {
+                    "status": "declined",
+                    "signing_token_hash": token_hash(body.token),
+                    "signer_ip": _client_ip(request),
+                    "signer_user_agent": request.headers.get("user-agent", "")[:500],
+                },
+            )
+            return JSONResponse({"status": "declined"})
 
-    if entity.signing_validator:
+        if entity.signing_validator:
+            try:
+                await _invoke_validator(entity.signing_validator, entity=entity, row=row)
+            except SigningError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        signatory_name = body.signatory_name or signer_email or "Signer"
+        signature_png: bytes | None = None
+        if body.signature_png_b64:
+            import base64
+
+            signature_png = base64.b64decode(body.signature_png_b64)
+
         try:
-            await _invoke_validator(entity.signing_validator, entity=entity, row=row)
+            document_body = _resolve_document_body(
+                entity=entity, row=row, project_root=project_root
+            )
         except SigningError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        # SigningError carries an actionable message (missing [signing] extra,
+        # unconfigured cert, …). Without this wrapper it escapes as a bare
+        # {"detail": "Internal Server Error"} that tells the signer nothing
+        # (#1377 — burned two trial persona runs before anyone saw the cause).
+        try:
+            pdf = generate_pdf(
+                document_body,
+                signer_name=signatory_name,
+                branding=branding,
+                signature_png_bytes=signature_png,
+            )
+            signed_pdf = await async_sign_pdf(
+                pdf,
+                signer_name=signatory_name,
+                signer_email=signer_email,
+                branding=branding,
+            )
+        except SigningError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    signatory_name = body.signatory_name or signer_email or "Signer"
-    signature_png: bytes | None = None
-    if body.signature_png_b64:
-        import base64
+        patch: dict[str, Any] = {
+            "status": "signed",
+            "signed_at": _utcnow(),
+            "signing_token_hash": token_hash(body.token),
+            "signer_ip": _client_ip(request),
+            "signer_user_agent": request.headers.get("user-agent", "")[:500],
+        }
 
-        signature_png = base64.b64decode(body.signature_png_b64)
+        # TR-49 / #1571: always try to leave a durable signed_document pointer so
+        # the signatory's re-open link can offer Download. Full FileService.upload
+        # is preferred (metadata in dazzle_files); if that fails (table missing,
+        # validator glitch, …) fall back to storage.store only so the PDF is still
+        # on disk and the field URL still embeds a resolvable id/key.
+        if file_service is not None:
+            url = await _persist_signed_pdf(
+                file_service,
+                signed_pdf,
+                entity_name=entity.name,
+                record_id=str(record_id),
+                filename=_signed_pdf_filename(entity, record_id),
+            )
+            if url:
+                patch["signed_document"] = url
 
-    try:
-        document_body = _resolve_document_body(entity=entity, row=row, project_root=project_root)
-    except SigningError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    # SigningError carries an actionable message (missing [signing] extra,
-    # unconfigured cert, …). Without this wrapper it escapes as a bare
-    # {"detail": "Internal Server Error"} that tells the signer nothing
-    # (#1377 — burned two trial persona runs before anyone saw the cause).
-    try:
-        pdf = generate_pdf(
-            document_body,
-            signer_name=signatory_name,
-            branding=branding,
-            signature_png_bytes=signature_png,
+        await repo.update(record_id, patch)
+
+        download_name = _signed_pdf_filename(entity, record_id)
+        return Response(
+            content=signed_pdf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": (f'attachment; filename="{download_name}"')},
         )
-        signed_pdf = await async_sign_pdf(
-            pdf,
-            signer_name=signatory_name,
-            signer_email=signer_email,
-            branding=branding,
-        )
-    except SigningError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    patch: dict[str, Any] = {
-        "status": "signed",
-        "signed_at": _utcnow(),
-        "signing_token_hash": token_hash(body.token),
-        "signer_ip": _client_ip(request),
-        "signer_user_agent": request.headers.get("user-agent", "")[:500],
-    }
-
-    # TR-49 / #1571: always try to leave a durable signed_document pointer so
-    # the signatory's re-open link can offer Download. Full FileService.upload
-    # is preferred (metadata in dazzle_files); if that fails (table missing,
-    # validator glitch, …) fall back to storage.store only so the PDF is still
-    # on disk and the field URL still embeds a resolvable id/key.
-    if file_service is not None:
-        url = await _persist_signed_pdf(
-            file_service,
-            signed_pdf,
-            entity_name=entity.name,
-            record_id=str(record_id),
-            filename=_signed_pdf_filename(entity, record_id),
-        )
-        if url:
-            patch["signed_document"] = url
-
-    await repo.update(record_id, patch)
-
-    download_name = _signed_pdf_filename(entity, record_id)
-    return Response(
-        content=signed_pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": (f'attachment; filename="{download_name}"')},
-    )
 
 
 async def _handle_resend(
@@ -515,7 +520,10 @@ async def _handle_resend(
     # active-state set for the renewal gate (#1385).
     entity = _lookup_signable(entity_name, signable)
     repo = _lookup_repo(entity_name, repositories)
-    row = await repo.read(record_id)
+    with _signing_rls_tenant(
+        request, entity=entity, record_id=record_id, repositories=repositories
+    ):
+        row = await repo.read(record_id)
     if row is None:
         body = _error_page("Document not found.", support_contact=support_contact)
         return HTMLResponse(body, status_code=404)  # nosemgrep
@@ -585,19 +593,20 @@ def _partition_root_from_host(tenant: Any) -> str | None:
 
 
 @contextmanager
-def _signing_rls_tenant(request: Request) -> Iterator[None]:
-    """Bind the host-resolved tenant onto ``dazzle.tenant_id`` (#1656).
+def _signing_rls_tenant(
+    request: Request,
+    *,
+    entity: EntitySpec | None = None,
+    record_id: UUID | None = None,
+    repositories: dict[str, Any] | None = None,
+) -> Iterator[None]:
+    """Bind ``dazzle.tenant_id`` for HMAC signing after token verify.
 
-    HMAC-gated ``/sign/*`` and ``/api/sign/*`` never hit the auth
-    dependency that normally sets ``_current_tenant_id``. On
-    ``shared_schema`` + ``tenant_host:`` the signer opens a token link
-    on the practice host with no session, so ``connection()`` sets no
-    GUC and ``tenant_fence`` hides a valid row as 404.
-
-    Copy the host-resolved tenant (partition root when hierarchical)
-    only when no session tenant is already bound. Does **not** fold
-    ``dazzle.host_tenant_id`` into the fence — those GUCs stay
-    separate (#1394). Apps without ``tenant_host:`` are a no-op.
+    B: copy the host-resolved partition root when Host already named a
+    tenant (#1656). A: ``dazzle_signing_lookup_tenant`` DEFINER PK
+    lookup (owner ``dazzle_bypass``; LOGIN stays ``dazzle_app``). Does
+    **not** fold ``dazzle.host_tenant_id`` into the fence. Does not mint
+    tenant into the HMAC token.
     """
     if get_current_tenant_id():
         yield
@@ -605,6 +614,8 @@ def _signing_rls_tenant(request: Request) -> Iterator[None]:
 
     tenant = getattr(getattr(request, "state", None), "tenant", None)
     tenant_id = _partition_root_from_host(tenant)
+    if not tenant_id and entity is not None and record_id is not None:
+        tenant_id = _signing_lookup_partition_root(request, entity, record_id, repositories or {})
     if not tenant_id:
         yield
         return
@@ -614,6 +625,102 @@ def _signing_rls_tenant(request: Request) -> Iterator[None]:
         yield
     finally:
         _current_tenant_id.reset(token)
+
+
+def _signing_lookup_partition_root(
+    request: Request,
+    entity: EntitySpec,
+    record_id: UUID,
+    repositories: dict[str, Any],
+) -> str | None:
+    """DEFINER lookup (or local-superuser PK SELECT). URL entity is never SQL."""
+    repo = repositories.get(entity.name)
+    db = getattr(repo, "db", None) if repo is not None else None
+    if db is None or not hasattr(db, "connection"):
+        return None
+    try:
+        with db.connection() as conn:
+            cur = conn.execute(
+                "SELECT dazzle_signing_lookup_tenant(%s, %s::uuid) AS tid",
+                (entity.name, str(record_id)),
+            )
+            row = cur.fetchone() if hasattr(cur, "fetchone") else None
+    except Exception as exc:
+        if not _is_undefined_function(exc):
+            raise
+        try:
+            tid = _signing_lookup_superuser(db, entity, record_id, request)
+        except Exception as super_exc:
+            raise HTTPException(
+                status_code=503, detail="Signing tenant lookup unavailable"
+            ) from super_exc
+        if tid is not None:
+            return tid
+        raise HTTPException(status_code=503, detail="Signing tenant lookup unavailable") from exc
+    tid = _row_tid(row)
+    return tid
+
+
+def _row_tid(row: Any) -> str | None:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        raw = row.get("tid")
+    else:
+        raw = row[0] if row else None
+    if raw is None:
+        return None
+    value = str(raw).strip()
+    return value or None
+
+
+def _is_undefined_function(exc: BaseException) -> bool:
+    sqlstate = getattr(exc, "sqlstate", None) or getattr(exc, "pgcode", None)
+    if sqlstate == "42883":
+        return True
+    text = str(exc).lower()
+    return "dazzle_signing_lookup_tenant" in text and "does not exist" in text
+
+
+def _signing_lookup_superuser(
+    db: Any, entity: EntitySpec, record_id: UUID, request: Request
+) -> str | None:
+    """Local superuser DATABASE_URL: RLS present but bypassed. PK SELECT."""
+    with db.connection(platform=True) as conn:
+        flag = conn.execute("SHOW is_superuser")
+        row = flag.fetchone() if hasattr(flag, "fetchone") else None
+        raw = _row_tid(
+            {
+                "tid": (
+                    row[0] if row and not isinstance(row, dict) else (row or {}).get("is_superuser")
+                )
+            }
+        )
+        if str(raw).lower() not in {"on", "true"}:
+            return None
+        pk = _signing_partition_col(entity, request)
+        sql = (
+            f"SELECT {quote_identifier(pk)}::text AS tid "
+            f"FROM {quote_identifier(entity.name)} WHERE id = %s"
+        )
+        cur = conn.execute(sql, (str(record_id),))
+        found = cur.fetchone() if hasattr(cur, "fetchone") else None
+        return _row_tid(found)
+
+
+def _signing_partition_col(entity: EntitySpec, request: Request) -> str:
+    appspec = getattr(getattr(request, "app", None), "state", None)
+    appspec = getattr(appspec, "appspec", None) if appspec is not None else None
+    pk = (
+        getattr(
+            getattr(getattr(appspec, "tenancy", None), "isolation", None),
+            "partition_key",
+            None,
+        )
+        or "tenant_id"
+    )
+    fields = {getattr(f, "name", "") for f in getattr(entity, "fields", None) or []}
+    return pk if pk in fields else "id"
 
 
 def _is_expired_but_valid(token: str, record_id: UUID) -> bool:
@@ -1115,7 +1222,10 @@ async def _handle_signed_copy(
             _error_page("Token does not match record"), status_code=403
         )  # nosemgrep
 
-    row = await repo.read(record_id)
+    with _signing_rls_tenant(
+        request, entity=entity, record_id=record_id, repositories=repositories
+    ):
+        row = await repo.read(record_id)
     if row is None:
         return HTMLResponse(_error_page("Document not found"), status_code=404)  # nosemgrep
     if _row_get(row, "status") != "signed":

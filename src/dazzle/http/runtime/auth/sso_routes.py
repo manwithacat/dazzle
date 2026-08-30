@@ -27,8 +27,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from dazzle.http.runtime.auth.cookie_name import read_session_id, select_write_name
-from dazzle.http.runtime.auth.crypto import cookie_secure
+from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
 from dazzle.http.runtime.auth.forbidden_org import forbidden_org_response
 from dazzle.http.runtime.auth.leftover_oauth_code import leftover_honest_oauth_code
 from dazzle.http.runtime.auth.leftover_sso_provider import leftover_honest_sso_provider
@@ -249,28 +248,13 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             auth_store.delete_session(pre_auth_sid)
 
         response = RedirectResponse(url=redirect_to, status_code=303)
-        response.set_cookie(
-            key=select_write_name(
-                request,
-                user_roles=list(getattr(user, "roles", []) or []),
-                default=cookie_name,
-            ),
-            value=session.id,
-            httponly=True,
-            secure=cookie_secure(request),
-            samesite="lax",
-        )
-        # Declarative-CSRF Phase 1: bind the CSRF token to the full session minted
-        # on SSO-callback success. httponly=False so htmx/JS can echo it into the
-        # X-CSRF-Token header. Mirrors the auth cookie's flags above (no max_age =
-        # session cookie). See
-        # docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
-        response.set_cookie(
-            key="dazzle_csrf",
-            value=session.csrf_secret,
-            httponly=False,
-            secure=cookie_secure(request),
-            samesite="lax",
+        set_session_cookies(
+            response,
+            request,
+            session_id=session.id,
+            csrf_secret=session.csrf_secret,
+            user_roles=list(getattr(user, "roles", []) or []),
+            default_cookie_name=cookie_name,
         )
         return response
 

@@ -70,8 +70,12 @@ surfaced in `dazzle rbac report`, never buried.
 - **A.2 — Single governed query path.** Every governed access uses the connection
   factory; there is exactly one governed query path. (Statically defended by the
   mediation pass, WP-4 — *test/assurance class*, not proof.)
-- **A.3 — No bypass role on request paths.** The application DB role does not hold
-  `BYPASSRLS`; no superuser connection serves request paths.
+- **A.3 — No bypass role on request paths.** The application DB **LOGIN**
+  role does not hold `BYPASSRLS`; no superuser connection serves request
+  paths. A.3 is the LOGIN role, not “no function may run as bypass.”
+  HMAC signing-on-A uses `dazzle_signing_lookup_tenant` `SECURITY DEFINER`
+  owned by `dazzle_bypass` (`GRANT EXECUTE` to `dazzle_app`); the request
+  LOGIN stays `dazzle_app` (ADR-0055 D5).
 - **A.4 — Trusted computing base.** PostgreSQL's RLS engine, psycopg3, the
   connection pooler, and the OS are trusted. The proof is *modulo* their
   correctness.

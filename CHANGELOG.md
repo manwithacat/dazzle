@@ -1,5 +1,25 @@
 ## [Unreleased]
 
+## [0.112.5] - 2026-08-30
+
+### Added
+- **Signing-on-A DEFINER lookup (ADR-0055 D5)** —
+  `dazzle_signing_lookup_tenant` is `SECURITY DEFINER`, owned by
+  `dazzle_bypass`, `GRANT EXECUTE` to `dazzle_app`. HMAC tokens stay
+  `record_id:email:expires` (no tenant). Leftover entity names return
+  NULL. Request LOGIN stays `dazzle_app`.
+
+### Changed
+- **Topology-aware session cookies, guard, JWT, and A lens** — B +
+  `cookie_scope: apex` issues `__Secure-<app>_session` with
+  `Domain=.{tenant_host.domain}` via one `set_session_cookies` helper
+  on every login path. CSRF stays host-scoped. Topology A: host cookie
+  on www PASSes iff the session has a membership; after auth the host
+  lens binds from membership (not Host → fence). Auth dependencies
+  take cookie if present, else Bearer; JWT `tenant_id` must be an
+  active membership (and match Host on B). Leftover topology/scope
+  stay put.
+
 ## [0.112.4] - 2026-08-30
 
 ### Added

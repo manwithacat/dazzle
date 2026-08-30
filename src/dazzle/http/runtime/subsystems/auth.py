@@ -8,6 +8,7 @@ optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth()
 import logging
 from typing import Any
 
+from dazzle.http.runtime.jwt_middleware import JWTMiddleware
 from dazzle.http.runtime.subsystems import SubsystemContext
 
 logger = logging.getLogger(__name__)
@@ -475,6 +476,7 @@ class AuthSubsystem:
 
         if self._jwt_service is None:
             self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
+        ctx.app.state.jwt_verifier = JWTMiddleware(self._jwt_service)
         if self._token_store is None:
             self._token_store = TokenStore(
                 database_url=ctx.database_url,

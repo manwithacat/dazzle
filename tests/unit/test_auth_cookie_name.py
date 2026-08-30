@@ -21,8 +21,13 @@ from dazzle.http.runtime.auth.cookie_name import (
     names_to_clear,
     read_session_id,
     select_write_name,
+    set_session_cookies,
 )
-from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
+from dazzle.http.runtime.tenant.cookies import (
+    apex_cookie_name,
+    domain_session_cookie_name,
+    host_cookie_name,
+)
 
 APP_NAME = "AegisMark"
 HOST_COOKIE = host_cookie_name(APP_NAME)
@@ -33,11 +38,17 @@ def _tenant_state(
     *,
     canonical: frozenset[str] = frozenset({"app.example.com"}),
     super_admin: str = "super_admin",
+    topology: str = "",
+    cookie_scope: str = "host",
+    domain: str = "example.com",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         app_name=APP_NAME,
         canonical_hosts=canonical,
         super_admin_role=super_admin,
+        topology=topology,
+        cookie_scope=cookie_scope,
+        domain=domain,
     )
 
 
@@ -170,8 +181,8 @@ def test_read_session_id(cookies: dict[str, str], tenant: bool, expected: str | 
         pytest.param(False, [LEGACY_NAME], id="legacy-app-returns-only-default"),
         pytest.param(
             True,
-            [LEGACY_NAME, HOST_COOKIE, APEX_COOKIE],
-            id="tenant-host-returns-all-three",
+            [LEGACY_NAME, HOST_COOKIE, domain_session_cookie_name(APP_NAME), APEX_COOKIE],
+            id="tenant-host-returns-all-session-names",
         ),
     ],
 )
@@ -191,3 +202,63 @@ def test_legacy_path_when_tenant_host_attr_is_not_a_marker():
     request = _request(tenant_state=bogus)
     assert select_write_name(request, user_roles=["super_admin"]) == LEGACY_NAME
     assert names_to_clear(request) == [LEGACY_NAME]
+
+
+DOMAIN_COOKIE = domain_session_cookie_name(APP_NAME)
+
+
+def test_b_apex_member_gets_domain_session_name() -> None:
+    request = _request(
+        host="acme.example.com",
+        tenant_state=_tenant_state(topology="provider_subdomain", cookie_scope="apex"),
+    )
+    assert select_write_name(request, user_roles=["member"]) == DOMAIN_COOKIE
+
+
+def test_leftover_cookie_scope_does_not_invent_domain_name() -> None:
+    request = _request(
+        host="acme.example.com",
+        tenant_state=_tenant_state(topology="provider_subdomain", cookie_scope="zzz"),
+    )
+    assert select_write_name(request, user_roles=["member"]) == HOST_COOKIE
+
+
+def test_leftover_topology_does_not_invent_domain_name() -> None:
+    request = _request(
+        host="acme.example.com",
+        tenant_state=_tenant_state(topology="zzz", cookie_scope="apex"),
+    )
+    assert select_write_name(request, user_roles=["member"]) == HOST_COOKIE
+
+
+class _Resp:
+    def __init__(self) -> None:
+        self.cookies: list[dict] = []
+
+    def set_cookie(self, **kwargs):
+        self.cookies.append(kwargs)
+
+
+def test_set_session_cookies_sets_domain_on_b_apex() -> None:
+    request = _request(
+        host="acme.example.com",
+        tenant_state=_tenant_state(topology="provider_subdomain", cookie_scope="apex"),
+    )
+    resp = _Resp()
+    set_session_cookies(resp, request, session_id="sid", csrf_secret="csrf", user_roles=["member"])
+    session = next(c for c in resp.cookies if c["key"] == DOMAIN_COOKIE)
+    csrf = next(c for c in resp.cookies if c["key"] == "dazzle_csrf")
+    assert session["domain"] == ".example.com"
+    assert session["path"] == "/"
+    assert "domain" not in csrf
+
+
+def test_set_session_cookies_never_domains_host_prefix() -> None:
+    request = _request(
+        host="acme.example.com",
+        tenant_state=_tenant_state(topology="apex", cookie_scope="host"),
+    )
+    resp = _Resp()
+    set_session_cookies(resp, request, session_id="sid", csrf_secret="csrf", user_roles=["member"])
+    session = next(c for c in resp.cookies if c["key"] == HOST_COOKIE)
+    assert "domain" not in session

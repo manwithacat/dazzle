@@ -53,6 +53,7 @@ def check_cross_tenant(
     request_ancestor_ids: tuple[str, ...] = (),
     user_role: str,
     super_admin_role: str,
+    topology: str = "",
 ) -> GuardOutcome:
     """Apply the cross-tenant truth table; pass or raise.
 
@@ -61,12 +62,24 @@ def check_cross_tenant(
     session has no active membership. `request_tenant_id` is `str(ResolvedTenant.id)`,
     or None for an apex (no-tenant) request; `request_ancestor_ids` is the host's
     `parent:` chain ids (ADR-0037), so a member of an ancestor tenant passes.
+
+    ``topology`` is ADR-0055 leftover-honest ``str``. On topology A the
+    canonical host *is* the app: a host-bound cookie + no request tenant
+    PASSes iff the session carries a membership. Leftover topology does
+    not invent that A exception (B marketing-apex 403 stays).
     """
     if cookie_kind is None:
         return GuardOutcome.PASS
 
     if cookie_kind == "host":
         if request_tenant_id is None:
+            if topology == "apex":
+                if session_tenant_id is None:
+                    raise HostCookieMissingTenant(
+                        "host-bound cookie on apex topology carries no "
+                        "active-membership tenant binding"
+                    )
+                return GuardOutcome.PASS
             raise HostCookieMissingTenant("host-bound cookie presented on apex (no tenant) request")
         if session_tenant_id is None:
             # Fail-closed (#1518): a host-bound cookie whose session carries no

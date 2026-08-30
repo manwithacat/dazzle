@@ -24,7 +24,11 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from dazzle.http.runtime.tenant.cookies import apex_cookie_name, host_cookie_name
+from dazzle.http.runtime.tenant.cookies import (
+    apex_cookie_name,
+    domain_session_cookie_name,
+    host_cookie_name,
+)
 from dazzle.http.runtime.tenant.guard import (
     ApexCookieNotSuperAdmin,
     CrossTenantForbidden,
@@ -72,6 +76,7 @@ def enforce_cross_tenant(request: Any, auth_context: Any) -> None:
             request_ancestor_ids=request_ancestor_ids,
             user_role=user_role,
             super_admin_role=tenant_cfg.super_admin_role,
+            topology=getattr(tenant_cfg, "topology", "") or "",
         )
     except (CrossTenantForbidden, HostCookieMissingTenant, ApexCookieNotSuperAdmin) as exc:
         from fastapi import HTTPException
@@ -102,7 +107,7 @@ def _cookies(request: Any) -> dict[str, str]:
 
 
 def _classify_cookie(cookies: dict[str, str], app_name: str) -> Literal["host", "apex"] | None:
-    if cookies.get(host_cookie_name(app_name)):
+    if cookies.get(host_cookie_name(app_name)) or cookies.get(domain_session_cookie_name(app_name)):
         return "host"
     if cookies.get(apex_cookie_name(app_name)):
         return "apex"
