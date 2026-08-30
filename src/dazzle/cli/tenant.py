@@ -7,12 +7,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from dazzle.cli.tenant_alias import alias_app
 from dazzle.core.manifest import load_manifest, resolve_database_url
 
 tenant_app = typer.Typer(
     help="Multi-tenant schema management",
     no_args_is_help=True,
 )
+tenant_app.add_typer(alias_app, name="alias")
 
 console = Console()
 

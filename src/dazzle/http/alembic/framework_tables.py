@@ -48,6 +48,7 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "scim_groups",
         "sessions",
         "spec_versions",
+        "tenant_host_aliases",
         "user_preferences",
         "users",
     }

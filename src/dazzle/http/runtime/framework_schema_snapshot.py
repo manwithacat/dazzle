@@ -16,7 +16,7 @@ followed by ``render_snapshot_literal``.
     This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
     by the #1431 app-entity migration-diffing path.  Do not conflate the two.
 
-**In-scope tables** (31): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
+**In-scope tables** (33): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
 **Excluded (not in this snapshot):** ops-database tables, event-bus
@@ -941,6 +941,50 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "idx_sessions_user_id": {"columns": ["user_id"], "predicate": None, "unique": False},
         },
         "uniques": [],
+    },
+    "tenant_host_aliases": {
+        "columns": {
+            "attached_at": {"default": None, "nullable": True, "pk": False, "type": "timestamptz"},
+            "cname_target": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "detach_requested_at": {
+                "default": None,
+                "nullable": True,
+                "pk": False,
+                "type": "timestamptz",
+            },
+            "hostname": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "id": {"default": "gen_random_uuid()", "nullable": False, "pk": True, "type": "uuid"},
+            "reusable_after": {
+                "default": None,
+                "nullable": True,
+                "pk": False,
+                "type": "timestamptz",
+            },
+            "state": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "txt_token": {"default": None, "nullable": False, "pk": False, "type": "text"},
+            "verified_at": {"default": None, "nullable": True, "pk": False, "type": "timestamptz"},
+        },
+        "fks": {},
+        "indexes": {
+            "uq_tenant_host_aliases_hostname": {
+                "columns": ["hostname"],
+                "predicate": None,
+                "unique": True,
+            },
+            "uq_tenant_host_aliases_one_live": {
+                "columns": ["tenant_id"],
+                "predicate": "(state "
+                "= "
+                "ANY "
+                "(ARRAY['pending_txt'::text, "
+                "'pending_cname'::text, "
+                "'active'::text, "
+                "'pending_detach'::text]))",
+                "unique": True,
+            },
+        },
+        "uniques": ["hostname"],
     },
     "user_preferences": {
         "columns": {

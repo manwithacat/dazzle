@@ -1037,7 +1037,8 @@ class EntityParserMixin:
                 if val_tok.value not in ("apex", "provider_subdomain"):
                     raise make_parse_error(
                         "tenant_host: topology expects apex or provider_subdomain, "
-                        f"got {val_tok.value!r}",
+                        f"got {val_tok.value!r} "
+                        "(custom domains are aliases, not a topology token)",
                         self.file,
                         val_tok.line,
                         val_tok.column,

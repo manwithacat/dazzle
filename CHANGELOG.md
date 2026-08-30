@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.112.7] - 2026-08-30
+
+### Added
+- **Custom-domain aliases (ADR-0055 PR4)** — `tenant_host_aliases` is a
+  composing resolver probe, not `topology: custom_alias`. Claim / TXT /
+  CNAME / detach CLI (`dazzle tenant alias`), ≥24h cooling, leftover
+  hostname 400. `{slug}.{domain}` still resolves on B. SNI runbook in
+  `docs/reference/tenant-hosts.md`. Do not reuse
+  `dazzle auth connection verify-domain`.
+
 ## [0.112.6] - 2026-08-30
 
 ### Removed

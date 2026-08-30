@@ -75,10 +75,11 @@ import dazzle.tenant
 dazzle.tenant.bust("renamed-slug")
 ```
 
-The framework also auto-busts on `Repository.update` for any
-slug-field change on a `tenant_host:` entity — that hook lands in a
-follow-up; today you should call `bust()` explicitly after each
-rename.
+`bust()` also accepts an alias hostname (the alias cache is registered
+next to the slug cache). The framework also auto-busts on
+`Repository.update` for any slug-field change on a `tenant_host:`
+entity — that hook lands in a follow-up; today you should call `bust()`
+explicitly after each rename.
 
 ## Validate-time checks
 
@@ -104,6 +105,49 @@ different tenant's host, and apex super-admin cookies can't be
 presented on a tenant host without the super-admin role. The
 auth-dependency integration is staged for a follow-up; today the guard
 is callable directly from project code.
+
+## Custom-domain aliases
+
+Customer hostnames are **aliases of an existing tenant id**, not a third
+`topology:` token. They compose with `apex` or `provider_subdomain`.
+`{slug}.{domain}` on B still resolves. Do not write
+`topology: custom_alias`.
+
+```bash
+dazzle tenant alias claim <tenant-id> app.customer.com \
+  --cname-target customers.example.com
+dazzle tenant alias show-verification app.customer.com
+# Publish TXT at _dazzle-challenge.app.customer.com
+dazzle tenant alias verify app.customer.com
+# CNAME app.customer.com → customers.example.com (or {slug}.{domain})
+dazzle tenant alias verify app.customer.com
+dazzle tenant alias detach app.customer.com   # keeps serving until DNS is gone
+```
+
+This is **not** `dazzle auth connection verify-domain` (email-domain join).
+
+v1: one live hostname per tenant; no bare apex (`customer.com`); no
+customer-supplied certs; no path tenancy. Detach cools ≥24h after DNS
+TXT and CNAME are gone. Leftover unknown Host is 400.
+
+### SNI / TLS runbook
+
+The provider-domain wildcard (`*.example.com`) covers B slug hosts. It
+does **not** cover `app.customer.com`. For each active alias:
+
+1. Customer CNAMEs `app.customer.com` to the platform target printed by
+   `show-verification`.
+2. Provision a **per-hostname** certificate (Let's Encrypt HTTP-01 or
+   TLS-ALPN-01, or ACM). HTTP-01 must answer on the alias hostname
+   itself once the CNAME is live.
+3. Attach the cert to the same listener that serves the app. Do not
+   expect `tenant_host.domain` to mint this cert.
+4. Cookies on the customer hostname are `__Host-*` (that host *is* the
+   cookie host). Sharing a session with `{slug}.{domain}` is B +
+   `cookie_scope: apex` Domain cookies, not alias v1.
+
+`dazzle.tenant.bust("app.customer.com")` drops the in-process alias
+cache after an out-of-band row change.
 
 ## See Also
 

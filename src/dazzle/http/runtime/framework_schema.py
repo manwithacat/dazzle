@@ -50,6 +50,7 @@ from dazzle.http.runtime.file_storage import ensure_file_storage_tables
 from dazzle.http.runtime.grant_store import ensure_grant_tables
 from dazzle.http.runtime.otp_store import ensure_otp_tables
 from dazzle.http.runtime.recovery_codes import ensure_recovery_code_tables
+from dazzle.http.runtime.tenant.aliases import ensure_tenant_host_aliases_table
 from dazzle.http.runtime.token_store import ensure_refresh_token_tables
 from dazzle.http.runtime.triggers import build_assert_subtype_kind_function
 from dazzle.http.runtime.usage_signal import ensure_usage_events_table
@@ -246,6 +247,11 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # Orchestrator-only (no request-path boot entry) — single DDL source in
     # usage_signal.py.
     ensure_usage_events_table(cur)
+
+    # ── TENANT HOST ALIASES (ADR-0055 PR4) ───────────────────────────────
+    # Composing custom-domain aliases. Orchestrator-only (no request-path
+    # boot entry). Alembic 0020 covers already-stamped 0019 production DBs.
+    ensure_tenant_host_aliases_table(cur)
 
 
 def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection

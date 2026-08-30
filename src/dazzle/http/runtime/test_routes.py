@@ -515,6 +515,8 @@ async def _reset_test_data(deps: _TestDeps, body: ResetRequest | None = None) ->
     Tenant-root entities (``archetype: tenant`` / ``is_tenant_root``)
     are **not** deleted (#1655): on ``shared_schema`` + ``tenant_host:``
     wiping the practice/org row 404s every subsequent host lookup.
+    Framework table ``tenant_host_aliases`` is not in ``entity_sql`` and
+    must stay (CONOPS PR4 — wiping aliases 404s the customer hostname).
 
     Credentials: runner-supplied body (dsl-run's local
     ``test_credentials.json``) wins over the server's gitignored copy

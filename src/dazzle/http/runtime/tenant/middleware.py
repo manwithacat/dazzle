@@ -23,7 +23,10 @@ from dazzle.http.runtime.tenant.resolver import (
     HistoryHit,
     ResolvedTenant,
     Resolver,
+    _maybe_await,
 )
+
+AliasLookup = Callable[[str], ResolvedTenant | None | Awaitable[ResolvedTenant | None]]
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,9 @@ class TenantHostBinding:
     expired_renderer: ExpiredRenderer
     # ADR-0055: leftover tokens never invent B. Empty / unknown ≠ slug extract.
     topology: str = ""
+    # Composing alias probe (PR4). None = no table wired; Host falls through to A/B.
+    alias_lookup: AliasLookup | None = None
+    alias_cache: TenantCache | None = None
 
 
 class TenantResolutionMiddleware(BaseHTTPMiddleware):
@@ -72,6 +78,15 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
         if host in self._b.canonical_hosts:
             request.state.tenant = None
             return await call_next(request)
+
+        # ADR-0055 PR4: alias table before B slug parse / A unknown-Host 400.
+        try:
+            aliased = await self._probe_alias(host)
+        except Exception:
+            logger.exception("alias lookup failed for %s", host)
+            return Response("Tenant lookup failed", status_code=502)
+        if aliased is not None:
+            return await self._bind_and_call(request, call_next, aliased)
 
         # ADR-0055 topology A: Host does not name a tenant. Leftover labels
         # are not slugs — 400 rather than inventing B.
@@ -123,6 +138,37 @@ class TenantResolutionMiddleware(BaseHTTPMiddleware):
             return HTMLResponse(body, status_code=410)  # nosemgrep
 
         assert isinstance(result, ResolvedTenant)
+        return await self._bind_and_call(request, call_next, result)
+
+    async def _probe_alias(self, host: str) -> ResolvedTenant | None:
+        lookup = self._b.alias_lookup
+        if lookup is None:
+            return None
+        cache = self._b.alias_cache
+        if cache is not None:
+            cached = cache.get(host)
+            if cached is NEGATIVE:
+                return None
+            if isinstance(cached, ResolvedTenant):
+                return cached
+        raw = await _maybe_await(lookup(host))
+        result = raw if isinstance(raw, ResolvedTenant) else None
+        if cache is None:
+            return result
+        if result is not None:
+            cache.set(host, result)
+            return result
+        # Negative-cache leftover hosts on A only. On B the miss may still be a slug.
+        if self._b.topology != "provider_subdomain":
+            cache.set(host, NEGATIVE)
+        return None
+
+    async def _bind_and_call(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+        result: ResolvedTenant,
+    ) -> Response:
         request.state.tenant = result
         # #1394: bind the host tenant id for `current_tenant` scope predicates +
         # the dazzle.host_tenant_id GUC. Reset on exit so it never leaks across

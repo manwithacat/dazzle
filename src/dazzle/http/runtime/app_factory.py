@@ -14,6 +14,7 @@ from dazzle.core.ir import AppSpec
 from dazzle.core.manifest import resolve_database_url
 from dazzle.core.renderer_registry import known_renderer_names
 from dazzle.http.runtime.server import DazzleBackendApp, ServerConfig
+from dazzle.http.runtime.tenant.aliases import AliasStore
 from dazzle.http.runtime.tenant.cache import TenantCache
 from dazzle.log_setup import ensure_dazzle_logging_configured
 from dazzle.page.converters.workspace_converter import compute_persona_default_routes
@@ -165,6 +166,7 @@ def _mount_tenant_resolution_middleware(
     from dazzle.http.runtime.tenant.resolver import (
         EntityProbe,
         HistoryProbe,
+        ResolvedTenant,
         Resolver,
     )
     from dazzle.http.runtime.tenant.templates import (
@@ -206,7 +208,8 @@ def _mount_tenant_resolution_middleware(
 
         return _fetch_by_id
 
-    _fetch_by_id_fn = _make_fetch_by_id() if _parent_map else None
+    # Always wire fetch-by-id: alias probe (PR4) and hierarchy walk both use it.
+    _fetch_by_id_fn = _make_fetch_by_id()
 
     for domain, entities in by_domain.items():
         ordered = sorted(entities, key=lambda e: e.tenant_host.order or 0)
@@ -240,19 +243,41 @@ def _mount_tenant_resolution_middleware(
             items = result.get("items") or []
             return items[0] if items else None
 
+        resolver = Resolver(
+            probes=probes,
+            history_probe=history_probe,
+            lookup_fn=_make_slug_lookup(slug_field_by_entity),
+            history_lookup_fn=_history_lookup if history_probe else None,
+            parent_map=_parent_map,  # ADR-0037 Phase 5 (global; empty = flat)
+            fetch_by_id_fn=_fetch_by_id_fn,
+        )
+        dbm = getattr(builder, "_db_manager", None)
+        alias_cache = TenantCache() if dbm is not None else None
+
+        async def _alias_lookup(
+            hostname: str, _dbm: Any = dbm, _resolver: Resolver = resolver
+        ) -> ResolvedTenant | None:
+            if _dbm is None:
+                return None
+            try:
+                with _dbm.connection(platform=True) as conn:
+                    row = AliasStore(conn).get_serving(hostname)
+            except Exception as exc:
+                # Unmigrated DBs have no table — treat as no aliases, not 502.
+                pgcode = getattr(getattr(exc, "orig", exc), "pgcode", None)
+                if pgcode == "42P01":
+                    return None
+                raise
+            if row is None:
+                return None
+            return await _resolver.lookup_by_id(row.tenant_id)
+
         binding = TenantHostBinding(
             app_name=appspec.name,
             domain=domain,
             canonical_hosts=tuple(first_th.canonical_hosts),
             cache=TenantCache(),
-            resolver=Resolver(
-                probes=probes,
-                history_probe=history_probe,
-                lookup_fn=_make_slug_lookup(slug_field_by_entity),
-                history_lookup_fn=_history_lookup if history_probe else None,
-                parent_map=_parent_map,  # ADR-0037 Phase 5 (global; empty = flat)
-                fetch_by_id_fn=_fetch_by_id_fn,
-            ),
+            resolver=resolver,
             not_found_renderer=_resolve_template_or_default(
                 first_th.not_found_template,
                 default=lambda host, _app=appspec.name: render_default_404(
@@ -266,6 +291,8 @@ def _mount_tenant_resolution_middleware(
                 ),
             ),
             topology=first_th.topology or "",
+            alias_lookup=_alias_lookup if dbm is not None else None,
+            alias_cache=alias_cache,
         )
         app.add_middleware(TenantResolutionMiddleware, binding=binding)
 
@@ -294,6 +321,8 @@ def _mount_tenant_resolution_middleware(
         # auto-bust on slug renames without any project-side wiring.
 
         _register_cache(binding.cache)
+        if binding.alias_cache is not None:
+            _register_cache(binding.alias_cache)
         for table_name, slug_col in slug_field_by_entity.items():
             _register_slug_field(table_name, slug_col)
 

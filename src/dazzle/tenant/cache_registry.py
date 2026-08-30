@@ -53,6 +53,6 @@ def _clear_registry() -> None:  # pragma: no cover - test hygiene only
 
 
 def bust(slug: str) -> None:
-    """Remove `slug` from every registered tenant cache."""
+    """Remove `slug` (or an alias hostname) from every registered tenant cache."""
     for cache in _active_caches():
         cache.bust(slug)

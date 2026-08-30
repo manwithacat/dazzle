@@ -180,3 +180,66 @@ class TestTenantStatusTransition:
         result = runner.invoke(tenant_app, [action, "unknown"])
         assert result.exit_code == 1
         assert "not found" in result.output
+
+
+class TestTenantAliasCli:
+    @patch("dazzle.cli.tenant_alias._connect")
+    @patch("dazzle.cli.tenant_alias._alias_context")
+    def test_claim_prints_txt_challenge(self, mock_ctx: MagicMock, mock_connect: MagicMock) -> None:
+        from uuid import uuid4
+
+        from dazzle.http.runtime.tenant.aliases import AliasRow, txt_name, txt_value
+
+        mock_ctx.return_value = (None, "postgresql://localhost/db", "example.com", ())
+        conn = MagicMock()
+        mock_connect.return_value.__enter__.return_value = conn
+        row = AliasRow(
+            id=uuid4(),
+            tenant_id="t1",
+            hostname="app.customer.com",
+            state="pending_txt",
+            txt_token="tok",
+            cname_target="customers.example.com",
+        )
+        with patch("dazzle.cli.tenant_alias.claim", return_value=row):
+            result = runner.invoke(
+                tenant_app,
+                [
+                    "alias",
+                    "claim",
+                    "t1",
+                    "app.customer.com",
+                    "--cname-target",
+                    "customers.example.com",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert "app.customer.com" in result.output
+        assert txt_name("app.customer.com") in result.output
+        assert txt_value("tok") in result.output
+        assert "verify-domain" not in result.output
+
+    @patch("dazzle.cli.tenant_alias._connect")
+    @patch("dazzle.cli.tenant_alias._alias_context")
+    def test_show_verification(self, mock_ctx: MagicMock, mock_connect: MagicMock) -> None:
+        from uuid import uuid4
+
+        from dazzle.http.runtime.tenant.aliases import AliasRow
+
+        mock_ctx.return_value = (None, "postgresql://localhost/db", "example.com", ())
+        conn = MagicMock()
+        mock_connect.return_value.__enter__.return_value = conn
+        row = AliasRow(
+            id=uuid4(),
+            tenant_id="t1",
+            hostname="app.customer.com",
+            state="pending_txt",
+            txt_token="tok",
+            cname_target="customers.example.com",
+        )
+        with patch("dazzle.cli.tenant_alias.AliasStore") as store_cls:
+            store_cls.return_value.get_by_hostname.return_value = row
+            result = runner.invoke(tenant_app, ["alias", "show-verification", "app.customer.com"])
+        assert result.exit_code == 0, result.output
+        assert "dazzle-verify=tok" in result.output
+        assert "_dazzle-challenge.app.customer.com" in result.output

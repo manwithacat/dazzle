@@ -14,8 +14,8 @@ from dazzle.db.artifact_registry import (
     in_baseline_tables,
 )
 
-# The framework tables in the ADR-0044 baseline (32 since ADR-0050 added
-# _dazzle_usage_events; was 31 since #1499 added _dazzle_outbox).
+# The framework tables in the ADR-0044 baseline (33 since ADR-0055 PR4 added
+# tenant_host_aliases; 32 since ADR-0050 added _dazzle_usage_events).
 _EXPECTED_BASELINE = frozenset(
     {
         "_dazzle_params",
@@ -50,6 +50,7 @@ _EXPECTED_BASELINE = frozenset(
         "_dazzle_event_outbox",
         "_dazzle_outbox",
         "_dazzle_usage_events",
+        "tenant_host_aliases",
     }
 )
 

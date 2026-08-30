@@ -187,6 +187,12 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.runtime.usage_signal.ensure_usage_events_table",
         boot_entry=None,
     ),
+    _fw(
+        "tenant_host_aliases",
+        "dazzle.http.runtime.tenant.aliases.ensure_tenant_host_aliases_table",
+        boot_entry=None,
+        notes="orchestrator-only; composing host aliases (ADR-0055 PR4)",
+    ),
     # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
     *[
         Artifact(

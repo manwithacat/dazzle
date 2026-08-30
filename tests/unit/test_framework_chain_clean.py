@@ -36,9 +36,9 @@ _STABLE_HEAD = "0019_process_runtime_tables"
 
 _ALLOWED_VERSIONS: dict[str, str] = {
     _STABLE_HEAD: "squashed baseline (chain root, down_revision=None)",
-    # Add documented incrementals here with a reason when intentionally adding
-    # a framework migration between releases.  Example:
-    # "0020_add_foo": "non-destructive additive — pending re-squash at 0.85.0",
+    "0020_tenant_host_aliases": (
+        "non-destructive additive — composing host aliases (ADR-0055 PR4)"
+    ),
 }
 
 

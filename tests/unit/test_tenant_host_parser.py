@@ -97,6 +97,25 @@ entity Trust:
     assert trust.tenant_host.topology is None  # T1 owns missing, not parse
 
 
+def test_parser_rejects_custom_alias_topology_token() -> None:
+    """PR4: custom domains are aliases, not a third topology token."""
+    src = """
+module t
+app t "T"
+entity Org:
+  id: uuid pk
+  slug: slug required unique
+  tenant_host:
+    topology: custom_alias
+    domain: example.com
+    slug_field: slug
+""".lstrip()
+    from dazzle.core.errors import ParseError
+
+    with pytest.raises(ParseError, match="aliases, not a topology"):
+        parse_dsl(src, Path("<test>"))
+
+
 def test_parser_rejects_unknown_topology_token() -> None:
     src = """
 module t

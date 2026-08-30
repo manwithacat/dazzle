@@ -12,7 +12,7 @@ from dazzle.http.runtime.tenant.middleware import (
     TenantHostBinding,
     TenantResolutionMiddleware,
 )
-from dazzle.http.runtime.tenant.resolver import EntityProbe, Resolver
+from dazzle.http.runtime.tenant.resolver import EntityProbe, ResolvedTenant, Resolver
 from dazzle.http.runtime.tenant.templates import (
     render_default_404,
     render_default_410,
@@ -148,6 +148,85 @@ def test_unknown_slug_returns_404_with_renderer():
     resp = client.get("/whoami", headers={"host": "nope.example.com"})
     assert resp.status_code == 404
     assert "404" in resp.text
+
+
+def test_active_alias_resolves_before_slug_parse():
+    """PR4: alias hostname binds the aliased tenant even on topology B."""
+    tenant_id = uuid4()
+    rows = {("Trust", "acme"): {"id": tenant_id, "slug": "acme", "name": "Acme"}}
+    binding = _binding(rows)
+    resolved = ResolvedTenant(kind="Trust", id=tenant_id, slug="acme", name="Acme")
+
+    async def alias_lookup(host: str) -> ResolvedTenant | None:
+        return resolved if host == "app.customer.com" else None
+
+    object.__setattr__(binding, "alias_lookup", alias_lookup)
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "app.customer.com"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": "acme"}
+
+
+def test_b_slug_host_still_resolves_with_alias_probe_wired():
+    rows = {("Trust", "acme"): {"id": uuid4(), "slug": "acme", "name": "Acme"}}
+    binding = _binding(rows)
+
+    async def alias_lookup(host: str) -> ResolvedTenant | None:
+        return None
+
+    object.__setattr__(binding, "alias_lookup", alias_lookup)
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "acme.example.com"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": "acme"}
+
+
+def test_leftover_alias_hostname_is_400_on_apex():
+    binding = _binding({}, canonical=["www.example.com"], topology="apex")
+
+    async def alias_lookup(host: str) -> ResolvedTenant | None:
+        return None
+
+    object.__setattr__(binding, "alias_lookup", alias_lookup)
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "app.customer.com"})
+    assert resp.status_code == 400
+
+
+def test_path_does_not_select_a_tenant():
+    """D7: no path tenancy. A path segment is not a tenant slug."""
+    rows = {("Trust", "acme"): {"id": uuid4(), "slug": "acme", "name": "Acme"}}
+    binding = _binding(rows, canonical=["www.example.com"], topology="apex")
+    app = FastAPI()
+
+    @app.get("/{rest:path}")
+    async def any_path(request: Request) -> dict:
+        tenant = getattr(request.state, "tenant", None)
+        return {"tenant": None if tenant is None else tenant.slug}
+
+    app.add_middleware(TenantResolutionMiddleware, binding=binding)
+    client = TestClient(app)
+    resp = client.get("/acme", headers={"host": "www.example.com"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": None}
+    resp = client.get("/acme", headers={"host": "other.example.net"})
+    assert resp.status_code == 400
+
+
+def test_apex_alias_binds_same_tenant_as_membership_host():
+    tenant_id = uuid4()
+    rows = {("Trust", "acme"): {"id": tenant_id, "slug": "acme", "name": "Acme"}}
+    binding = _binding(rows, canonical=["www.example.com"], topology="apex")
+    resolved = ResolvedTenant(kind="Trust", id=tenant_id, slug="acme", name="Acme")
+
+    async def alias_lookup(host: str) -> ResolvedTenant | None:
+        return resolved if host == "app.customer.com" else None
+
+    object.__setattr__(binding, "alias_lookup", alias_lookup)
+    client = TestClient(_app_with_binding(binding))
+    resp = client.get("/whoami", headers={"host": "app.customer.com"})
+    assert resp.status_code == 200
+    assert resp.json() == {"tenant": "acme"}
 
 
 def test_host_outside_domain_returns_400():

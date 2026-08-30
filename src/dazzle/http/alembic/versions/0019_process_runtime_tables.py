@@ -25,7 +25,7 @@ the framework-migration-baseline plan, ADR-0044).  It replaces the chain
   user_preferences, join_requests; process_runs, process_tasks;
   _dazzle_audit_log, _dazzle_atomic_audit, dazzle_files, refresh_tokens,
   devices, _grants, _grant_events, _dazzle_otp_codes, _dazzle_recovery_codes,
-  _dazzle_event_inbox, _dazzle_event_outbox.
+  _dazzle_event_inbox, _dazzle_event_outbox, tenant_host_aliases.
 
 **Excluded (same exclusions as the orchestrator):**
   ops_database tables (separate DB); event-bus ``{prefix}events/offsets/dlq``

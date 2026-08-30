@@ -113,6 +113,29 @@ class Resolver:
         self._parent_map = parent_map or {}
         self._fetch_by_id = fetch_by_id_fn
 
+    async def lookup_by_id(self, tenant_id: str) -> ResolvedTenant | None:
+        """Resolve a tenant-root id to ``ResolvedTenant`` (alias probe).
+
+        Walks the same entity probes as slug lookup. Missing fetch → None
+        (fail-closed; the alias hostname then falls through to A 400 / B slug).
+        """
+        if self._fetch_by_id is None:
+            return None
+        wanted = str(tenant_id)
+        for probe in self._probes:
+            row = await _maybe_await(self._fetch_by_id(probe.entity_name, wanted))
+            if row is None:
+                continue
+            raw_id = _row_get(row, "id")
+            return ResolvedTenant(
+                kind=probe.entity_name,
+                id=raw_id if isinstance(raw_id, UUID) else UUID(str(raw_id)),
+                slug=_row_get(row, probe.slug_field),
+                name=_row_get(row, "name"),
+                ancestor_ids=await self._walk_ancestors(probe.entity_name, row),
+            )
+        return None
+
     async def lookup(self, slug: str) -> ResolvedTenant | HistoryHit | ExpiredHistoryHit | None:
         for probe in self._probes:
             row = await _maybe_await(self._lookup(probe.entity_name, slug))

@@ -76,6 +76,30 @@ async def test_lookup_falls_through_to_second_entity():
     assert res.kind == "School"
 
 
+async def test_lookup_by_id_resolves_tenant_root() -> None:
+    tid = _id(9)
+    by_id = {("Trust", str(tid)): {"id": tid, "slug": "acme", "name": "Acme"}}
+    r = Resolver(
+        probes=[EntityProbe("Trust", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: None,
+        fetch_by_id_fn=lambda e, i: by_id.get((e, i)),
+    )
+    res = await r.lookup_by_id(str(tid))
+    assert isinstance(res, ResolvedTenant)
+    assert res.slug == "acme"
+    assert res.id == tid
+
+
+async def test_lookup_by_id_none_without_fetch() -> None:
+    r = Resolver(
+        probes=[EntityProbe("Trust", "slug")],
+        history_probe=None,
+        lookup_fn=lambda e, s: None,
+    )
+    assert await r.lookup_by_id("missing") is None
+
+
 async def test_lookup_returns_none_when_no_match_and_no_history():
     r = Resolver(
         probes=[EntityProbe("Trust", "slug")],
