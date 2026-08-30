@@ -35,7 +35,7 @@ the framework's tenant middleware. `request.state.tenant` carries a typed
 | `domain:` (required) | — | the base host suffix (e.g. `aegismark.ai`) |
 | `slug_field:` (required) | — | name of the `slug:` field on this entity |
 | `canonical_hosts:` | `[]` | host(s) that pass through with `request.state.tenant = None` (admin / marketing on apex) |
-| `cookie_scope:` | `host` | `host` or `apex`; drives cookie naming |
+| `cookie_scope:` | `host` | `host` or `apex`. `host` (default) issues `__Host-*` cookies that cannot leave this host, so apex discovery does **not** 302 `/` / `/app` to `{slug}.{domain}` (#1657). `apex` keeps the cross-host bounce for subdomain-per-org deploys. |
 | `super_admin_role:` | `super_admin` | role allowed to hold the apex cookie |
 | `history_entity:` | _none_ | entity tracking renamed slugs (`old_slug`, `new_slug`, `expires_at` fields) |
 | `not_found_template:` | framework default | dotted-path callable (`module:symbol`) returning 404 HTML |

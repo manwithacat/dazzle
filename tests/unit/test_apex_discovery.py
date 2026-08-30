@@ -19,14 +19,35 @@ def _slug_map(mapping: dict[str, str]):
 
 
 class TestResolveApexRedirect:
-    def test_single_membership_redirects_to_org_host(self) -> None:
+    def test_single_membership_redirects_to_org_host_when_apex_cookies(self) -> None:
+        url = resolve_apex_redirect(
+            [_m("m-1", "t-1")],
+            domain="example.com",
+            slug_for_tenant=_slug_map({"t-1": "acme"}),
+            memberships_required=True,
+            cookie_scope="apex",
+        )
+        assert url == "https://acme.example.com/"
+
+    def test_single_membership_stays_on_apex_when_host_cookies(self) -> None:
+        """#1657: __Host-* cookies cannot follow a slug-host 302."""
         url = resolve_apex_redirect(
             [_m("m-1", "t-1")],
             domain="example.com",
             slug_for_tenant=_slug_map({"t-1": "acme"}),
             memberships_required=True,
         )
-        assert url == "https://acme.example.com/"
+        assert url is None
+
+    def test_leftover_cookie_scope_does_not_invent_a_bounce(self) -> None:
+        url = resolve_apex_redirect(
+            [_m("m-1", "t-1")],
+            domain="example.com",
+            slug_for_tenant=_slug_map({"t-1": "acme"}),
+            memberships_required=True,
+            cookie_scope="zzz",
+        )
+        assert url is None
 
     def test_multiple_memberships_go_to_picker(self) -> None:
         url = resolve_apex_redirect(
@@ -73,6 +94,7 @@ class TestResolveApexRedirect:
             domain="example.com",
             slug_for_tenant=_slug_map({}),  # t-1 not present
             memberships_required=True,
+            cookie_scope="apex",
         )
         assert url is None
 
@@ -83,5 +105,6 @@ class TestResolveApexRedirect:
             domain="example.com",
             slug_for_tenant=_slug_map({"t-1": "ev/il.attacker.com"}),
             memberships_required=True,
+            cookie_scope="apex",
         )
         assert url is None

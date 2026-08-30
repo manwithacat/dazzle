@@ -24,7 +24,15 @@ class _FakeRepo:
         return {"items": [SimpleNamespace(slug=slug)] if slug else []}
 
 
-def _build(monkeypatch, *, uid: str | None, memberships, memberships_required=True, rows=None):
+def _build(
+    monkeypatch,
+    *,
+    uid: str | None,
+    memberships,
+    memberships_required=True,
+    rows=None,
+    cookie_scope: str = "host",
+):
     async def _home(_request):
         return PlainTextResponse("APP")
 
@@ -36,6 +44,7 @@ def _build(monkeypatch, *, uid: str | None, memberships, memberships_required=Tr
         root_entity="Org",
         root_slug_field="slug",
         repositories={"Org": _FakeRepo(rows or {})},
+        cookie_scope=cookie_scope,
     )
     app.state.auth_store = SimpleNamespace(get_memberships_for_identity=lambda _id: memberships)
     app.state.memberships_required = memberships_required
@@ -53,16 +62,28 @@ class TestApexDiscoveryMiddleware:
         r = c.get("/", headers={"host": "example.com"}, follow_redirects=False)
         assert r.status_code == 200 and r.text == "APP"
 
-    def test_authed_single_membership_redirects_to_org_host(self, monkeypatch) -> None:
+    def test_authed_single_membership_redirects_when_apex_cookies(self, monkeypatch) -> None:
+        c = _build(
+            monkeypatch,
+            uid="u-1",
+            memberships=[_m("m-1", "t-1")],
+            rows={"t-1": "acme"},
+            cookie_scope="apex",
+        )
+        r = c.get("/", headers={"host": "example.com"}, follow_redirects=False)
+        assert r.status_code == 302
+        assert r.headers["location"] == "https://acme.example.com/"
+
+    def test_authed_single_membership_stays_on_www_when_host_cookies(self, monkeypatch) -> None:
+        """#1657: www-only / host-scoped cookies must not bounce to {slug}.{domain}."""
         c = _build(
             monkeypatch,
             uid="u-1",
             memberships=[_m("m-1", "t-1")],
             rows={"t-1": "acme"},
         )
-        r = c.get("/", headers={"host": "example.com"}, follow_redirects=False)
-        assert r.status_code == 302
-        assert r.headers["location"] == "https://acme.example.com/"
+        r = c.get("/app", headers={"host": "example.com"}, follow_redirects=False)
+        assert r.status_code == 200 and r.text == "APP"
 
     def test_non_apex_host_passes_through(self, monkeypatch) -> None:
         # A tenant subdomain is not a canonical host → no discovery.
@@ -75,7 +96,7 @@ class TestApexDiscoveryMiddleware:
         # /auth/* is not a tracked root path (would loop) — but we only mounted "/" and
         # "/app"; request a path outside the app-root set.
         r = c.get("/app", headers={"host": "example.com"}, follow_redirects=False)
-        assert r.status_code == 302  # /app IS a root path → discovery fires
+        assert r.status_code == 200  # host cookies: root path stays on apex (#1657)
         # A non-root path is passed through: request "/" is root, "/app" is root; verify
         # a genuinely non-root GET is untouched by hitting a 404 path (middleware passes).
         r2 = c.get("/somewhere", headers={"host": "example.com"}, follow_redirects=False)

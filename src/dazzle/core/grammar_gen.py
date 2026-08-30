@@ -1868,7 +1868,8 @@ entity Trust:
 
 Sub-fields: `domain:` (required), `slug_field:` (required, must reference a
 `slug:`-typed field on the same entity), `canonical_hosts:`, `cookie_scope:`
-(`host` | `apex`, default `host`), `super_admin_role:` (default
+(`host` | `apex`, default `host` — `host` keeps apex `/app` on this host;
+`apex` 302s a single-org login to `{slug}.{domain}`), `super_admin_role:` (default
 `super_admin`), `history_entity:`, `not_found_template:` (dotted-path
 callable), `expired_template:` (dotted-path callable), `order:` (required
 when 2+ entities share a `domain:`).

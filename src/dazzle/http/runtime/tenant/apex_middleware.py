@@ -2,10 +2,12 @@
 
 Fires only for an **authenticated** GET to an **apex (canonical) host** app-root
 path. It resolves the identity's memberships and 302s to the org host / picker /
-no-orgs per ``resolve_apex_redirect`` (the pure mapper). Every other request —
-unauthenticated, non-apex host, non-root path, non-GET — passes straight through,
-so it can neither loop (the single-org redirect is cross-host) nor intercept the
-public apex landing for logged-out visitors.
+no-orgs per ``resolve_apex_redirect`` (the pure mapper). The org-host bounce
+is gated on ``cookie_scope: apex`` (#1657); the ``host`` default stays on the
+canonical host because ``__Host-*`` cookies cannot follow a slug hop. Every
+other request — unauthenticated, non-apex host, non-root path, non-GET —
+passes straight through, so it can neither loop (the single-org redirect is
+cross-host) nor intercept the public apex landing for logged-out visitors.
 
 The async DB work (membership fetch + ``tenant_id → slug``) lives here; the
 decision itself is the pure mapper, keeping the routing logic exhaustively
@@ -40,6 +42,7 @@ class ApexDiscoveryMiddleware(BaseHTTPMiddleware):
         root_entity: str,
         root_slug_field: str,
         repositories: dict[str, Any],
+        cookie_scope: str = "host",
     ) -> None:
         super().__init__(app)
         self._canonical_hosts = canonical_hosts
@@ -47,6 +50,7 @@ class ApexDiscoveryMiddleware(BaseHTTPMiddleware):
         self._root_entity = root_entity
         self._root_slug_field = root_slug_field
         self._repositories = repositories
+        self._cookie_scope = cookie_scope
 
     async def _slug_for_tenant(self, tenant_id: str) -> str | None:
         repo = self._repositories.get(self._root_entity)
@@ -88,7 +92,8 @@ class ApexDiscoveryMiddleware(BaseHTTPMiddleware):
         # the decision in the pure/sync mapper.
         active = [m for m in memberships if getattr(m, "status", None) == "active"]
         slug_map: dict[str, str] = {}
-        if len(active) == 1:
+        # Cross-host slug bounce only exists for cookie_scope: apex (#1657).
+        if len(active) == 1 and self._cookie_scope == "apex":
             slug = await self._slug_for_tenant(active[0].tenant_id)
             if slug:
                 slug_map[active[0].tenant_id] = slug
@@ -99,6 +104,7 @@ class ApexDiscoveryMiddleware(BaseHTTPMiddleware):
             domain=self._domain,
             slug_for_tenant=lambda tid: slug_map.get(tid),
             memberships_required=memberships_required,
+            cookie_scope=self._cookie_scope,
         )
         if target:
             return RedirectResponse(target, status_code=302)

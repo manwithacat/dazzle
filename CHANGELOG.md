@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.112.3] - 2026-08-30
+
+### Fixed
+- **Apex discovery bounced www `/app` to a slug host (#1657)** —
+  `ApexDiscoveryMiddleware` 302'd an authenticated canonical-host
+  GET of `/` / `/app` to `https://{slug}.{domain}/`. Default
+  `cookie_scope: host` uses `__Host-*` cookies that cannot follow
+  that hop, so www-only tenant_host deploys (CyFuture) lost the
+  session. Cross-host bounce now fires only for `cookie_scope: apex`;
+  leftover scope stays put. Picker / no-orgs paths are unchanged.
+
 ## [0.112.2] - 2026-08-30
 
 ### Fixed

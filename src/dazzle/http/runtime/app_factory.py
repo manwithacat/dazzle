@@ -271,6 +271,7 @@ def _mount_tenant_resolution_middleware(
                 root_entity=_root.name,
                 root_slug_field=_root.tenant_host.slug_field,
                 repositories=repositories,
+                cookie_scope=first_th.cookie_scope or "host",
             )
 
         # #1289 slice 6: register the cache so dazzle.tenant.bust(slug) can
