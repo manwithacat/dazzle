@@ -31,7 +31,8 @@ import html
 import importlib
 import logging
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,11 @@ from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.http.runtime.tenant_isolation import (
+    _current_tenant_id,
+    get_current_tenant_id,
+    set_current_tenant_id,
+)
 from dazzle.render.breadcrumbs import (
     clerk_entity_confirm_noun,
     clerk_entity_download_stem,
@@ -134,30 +140,32 @@ def create_signing_routes(
     async def render_signing_page(
         entity_name: str, record_id: UUID, request: Request
     ) -> HTMLResponse:
-        return await _handle_get(
-            entity_name=entity_name,
-            record_id=record_id,
-            request=request,
-            signable=signable,
-            repositories=repositories,
-            project_root=project_root,
-            support_contact=support_contact,
-            resend_hook=resend_hook,
-        )
+        with _signing_rls_tenant(request):
+            return await _handle_get(
+                entity_name=entity_name,
+                record_id=record_id,
+                request=request,
+                signable=signable,
+                repositories=repositories,
+                project_root=project_root,
+                support_contact=support_contact,
+                resend_hook=resend_hook,
+            )
 
     @router.post("/sign/{entity_name}/{record_id}/resend", response_class=HTMLResponse)
     async def request_link_resend(
         entity_name: str, record_id: UUID, request: Request
     ) -> HTMLResponse:
-        return await _handle_resend(
-            entity_name=entity_name,
-            record_id=record_id,
-            request=request,
-            signable=signable,
-            repositories=repositories,
-            support_contact=support_contact,
-            resend_hook=resend_hook,
-        )
+        with _signing_rls_tenant(request):
+            return await _handle_resend(
+                entity_name=entity_name,
+                record_id=record_id,
+                request=request,
+                signable=signable,
+                repositories=repositories,
+                support_contact=support_contact,
+                resend_hook=resend_hook,
+            )
 
     @router.post("/api/sign/{entity_name}/{record_id}")
     async def submit_signature(
@@ -166,32 +174,34 @@ def create_signing_routes(
         body: SignSubmission,
         request: Request,
     ) -> Response:
-        return await _handle_post(
-            entity_name=entity_name,
-            record_id=record_id,
-            body=body,
-            request=request,
-            signable=signable,
-            repositories=repositories,
-            branding=resolved_branding,
-            file_service=file_service,
-            project_root=project_root,
-        )
+        with _signing_rls_tenant(request):
+            return await _handle_post(
+                entity_name=entity_name,
+                record_id=record_id,
+                body=body,
+                request=request,
+                signable=signable,
+                repositories=repositories,
+                branding=resolved_branding,
+                file_service=file_service,
+                project_root=project_root,
+            )
 
     @router.get("/sign/{entity_name}/{record_id}/signed-copy")
     async def download_signed_copy(entity_name: str, record_id: UUID, request: Request) -> Response:
         """Durable retrieval of the persisted signed PDF (#1571). Gated by the
         ORIGINAL signing token — only the exact credential that signed (or could
         have signed) this record can fetch the copy."""
-        return await _handle_signed_copy(
-            entity_name=entity_name,
-            record_id=record_id,
-            request=request,
-            signable=signable,
-            repositories=repositories,
-            file_service=file_service,
-            support_contact=support_contact,
-        )
+        with _signing_rls_tenant(request):
+            return await _handle_signed_copy(
+                entity_name=entity_name,
+                record_id=record_id,
+                request=request,
+                signable=signable,
+                repositories=repositories,
+                file_service=file_service,
+                support_contact=support_contact,
+            )
 
     return router
 
@@ -549,6 +559,61 @@ async def _handle_resend(
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
+
+
+def _partition_root_from_host(tenant: Any) -> str | None:
+    """RLS partition key for a host-resolved tenant (#1656 / #1463).
+
+    Hierarchical hosts (Trust ▸ School) partition rows at the
+    ``archetype:tenant`` root; ``ResolvedTenant.ancestor_ids`` is
+    root-last and excludes self. Flat / root hosts bind ``tenant.id``.
+    Returns None when *tenant* is missing or has no usable id — the
+    fence then stays unbound (fail-closed).
+    """
+    if tenant is None:
+        return None
+    ancestor_ids = getattr(tenant, "ancestor_ids", ()) or ()
+    if ancestor_ids:
+        root = ancestor_ids[-1]
+        if root:
+            return str(root)
+    tid = getattr(tenant, "id", None)
+    if tid is None:
+        return None
+    value = str(tid).strip()
+    return value or None
+
+
+@contextmanager
+def _signing_rls_tenant(request: Request) -> Iterator[None]:
+    """Bind the host-resolved tenant onto ``dazzle.tenant_id`` (#1656).
+
+    HMAC-gated ``/sign/*`` and ``/api/sign/*`` never hit the auth
+    dependency that normally sets ``_current_tenant_id``. On
+    ``shared_schema`` + ``tenant_host:`` the signer opens a token link
+    on the practice host with no session, so ``connection()`` sets no
+    GUC and ``tenant_fence`` hides a valid row as 404.
+
+    Copy the host-resolved tenant (partition root when hierarchical)
+    only when no session tenant is already bound. Does **not** fold
+    ``dazzle.host_tenant_id`` into the fence — those GUCs stay
+    separate (#1394). Apps without ``tenant_host:`` are a no-op.
+    """
+    if get_current_tenant_id():
+        yield
+        return
+
+    tenant = getattr(getattr(request, "state", None), "tenant", None)
+    tenant_id = _partition_root_from_host(tenant)
+    if not tenant_id:
+        yield
+        return
+
+    token = set_current_tenant_id(tenant_id)
+    try:
+        yield
+    finally:
+        _current_tenant_id.reset(token)
 
 
 def _is_expired_but_valid(token: str, record_id: UUID) -> bool:

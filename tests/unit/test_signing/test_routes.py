@@ -1117,3 +1117,181 @@ class TestSignedCopyRetrieval1571:
         resp = client.get(f"/sign/Contract/{record_id}", params={"token": other})
         assert resp.status_code == 200
         assert "signed-copy" not in resp.text  # plain terminal page, no leak
+
+
+# ---------------------------------------------------------------------
+# Shared-schema RLS bind for unauthenticated token links (#1656)
+# ---------------------------------------------------------------------
+
+
+class _SpyTenantRepo(_MockRepo):
+    """Records ``dazzle.tenant_id`` at ``read`` time (the RLS GUC lease)."""
+
+    def __init__(self, rows: dict[str, dict[str, Any]]) -> None:
+        super().__init__(rows)
+        self.tenant_ids_at_read: list[str | None] = []
+
+    async def read(self, record_id: Any) -> dict[str, Any] | None:
+        from dazzle.http.runtime.tenant_isolation import get_current_tenant_id
+
+        self.tenant_ids_at_read.append(get_current_tenant_id())
+        return await super().read(record_id)
+
+
+class TestSigningRlsTenantBind:
+    def test_partition_root_prefers_ancestor_last(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.signing.routes import _partition_root_from_host
+
+        leaf = SimpleNamespace(id="school-1", ancestor_ids=("trust-root",))
+        assert _partition_root_from_host(leaf) == "trust-root"
+
+    def test_partition_root_falls_back_to_host_id(self) -> None:
+        from types import SimpleNamespace
+        from uuid import UUID
+
+        from dazzle.signing.routes import _partition_root_from_host
+
+        host_id = UUID("11111111-1111-1111-1111-111111111111")
+        flat = SimpleNamespace(id=host_id, ancestor_ids=())
+        assert _partition_root_from_host(flat) == str(host_id)
+        assert _partition_root_from_host(None) is None
+        assert _partition_root_from_host(SimpleNamespace()) is None
+
+    def test_helper_binds_host_and_resets(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.http.runtime.tenant_isolation import (
+            _current_tenant_id,
+            get_current_tenant_id,
+        )
+        from dazzle.signing.routes import _signing_rls_tenant
+
+        # Isolate from any leaked bind in this worker.
+        tok = _current_tenant_id.set(None)
+        try:
+            host = SimpleNamespace(id="practice-9", ancestor_ids=())
+            request = SimpleNamespace(state=SimpleNamespace(tenant=host))
+            assert get_current_tenant_id() is None
+            with _signing_rls_tenant(request):  # type: ignore[arg-type]
+                assert get_current_tenant_id() == "practice-9"
+            assert get_current_tenant_id() is None
+        finally:
+            _current_tenant_id.reset(tok)
+
+    def test_helper_noops_when_session_tenant_already_bound(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.http.runtime.tenant_isolation import (
+            _current_tenant_id,
+            get_current_tenant_id,
+            set_current_tenant_id,
+        )
+        from dazzle.signing.routes import _signing_rls_tenant
+
+        host = SimpleNamespace(id="practice-host", ancestor_ids=())
+        request = SimpleNamespace(state=SimpleNamespace(tenant=host))
+        tok = set_current_tenant_id("session-tenant")
+        try:
+            with _signing_rls_tenant(request):  # type: ignore[arg-type]
+                assert get_current_tenant_id() == "session-tenant"
+            assert get_current_tenant_id() == "session-tenant"
+        finally:
+            _current_tenant_id.reset(tok)
+
+    def test_helper_noops_without_host_tenant(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.http.runtime.tenant_isolation import (
+            _current_tenant_id,
+            get_current_tenant_id,
+        )
+        from dazzle.signing.routes import _signing_rls_tenant
+
+        tok = _current_tenant_id.set(None)
+        try:
+            request = SimpleNamespace(state=SimpleNamespace(tenant=None))
+            with _signing_rls_tenant(request):  # type: ignore[arg-type]
+                assert get_current_tenant_id() is None
+        finally:
+            _current_tenant_id.reset(tok)
+
+    def test_get_binds_host_tenant_before_repo_read(self) -> None:
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.requests import Request as StarletteRequest
+        from starlette.responses import Response as StarletteResponse
+
+        from dazzle.http.runtime.tenant.resolver import ResolvedTenant
+        from dazzle.http.runtime.tenant_isolation import _current_tenant_id
+
+        record_id = str(uuid4())
+        host_id = uuid4()
+        entity = _signable_entity("Contract")
+        repo = _SpyTenantRepo({record_id: {"status": "viewed"}})
+        router = create_signing_routes([entity], repositories={"Contract": repo})
+        assert router is not None
+        app = FastAPI()
+
+        class _AttachHost(BaseHTTPMiddleware):
+            async def dispatch(
+                self, request: StarletteRequest, call_next: Any
+            ) -> StarletteResponse:
+                request.state.tenant = ResolvedTenant(
+                    kind="Practice", id=host_id, slug="acme", ancestor_ids=()
+                )
+                return await call_next(request)
+
+        app.add_middleware(_AttachHost)
+        app.include_router(router)
+        tok = _current_tenant_id.set(None)
+        try:
+            client = TestClient(app)
+            token = mint_token(record_id, "a@example.com")
+            resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+            assert resp.status_code == 200
+            assert repo.tenant_ids_at_read == [str(host_id)]
+        finally:
+            _current_tenant_id.reset(tok)
+
+    def test_get_binds_partition_root_not_leaf_host(self) -> None:
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.requests import Request as StarletteRequest
+        from starlette.responses import Response as StarletteResponse
+
+        from dazzle.http.runtime.tenant.resolver import ResolvedTenant
+        from dazzle.http.runtime.tenant_isolation import _current_tenant_id
+
+        record_id = str(uuid4())
+        school_id = uuid4()
+        trust_id = str(uuid4())
+        entity = _signable_entity("Contract")
+        repo = _SpyTenantRepo({record_id: {"status": "viewed"}})
+        router = create_signing_routes([entity], repositories={"Contract": repo})
+        assert router is not None
+        app = FastAPI()
+
+        class _AttachHost(BaseHTTPMiddleware):
+            async def dispatch(
+                self, request: StarletteRequest, call_next: Any
+            ) -> StarletteResponse:
+                request.state.tenant = ResolvedTenant(
+                    kind="School",
+                    id=school_id,
+                    slug="north",
+                    ancestor_ids=(trust_id,),
+                )
+                return await call_next(request)
+
+        app.add_middleware(_AttachHost)
+        app.include_router(router)
+        tok = _current_tenant_id.set(None)
+        try:
+            client = TestClient(app)
+            token = mint_token(record_id, "a@example.com")
+            resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+            assert resp.status_code == 200
+            assert repo.tenant_ids_at_read == [trust_id]
+            assert trust_id != str(school_id)
+        finally:
+            _current_tenant_id.reset(tok)

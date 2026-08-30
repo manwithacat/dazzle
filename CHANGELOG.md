@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.112.1] - 2026-08-30
+
 ### Changed
 - **`PostgresBackend(..., *, isolation="none")`** — keyword-only tenant
   isolation from `TenantConfig`. `"schema"` fail-closes an unbound
@@ -9,6 +11,13 @@
   (`invoice_detail` `show_history: true`).
 
 ### Fixed
+- **Signing routes 404 under shared_schema RLS (#1656)** —
+  HMAC-gated `/sign/*` and `/api/sign/*` read via repositories with
+  no session, so `dazzle.tenant_id` was never set and a restrictive
+  `tenant_fence` hid a valid row as 404 for emailed token links.
+  After mount, copy the host-resolved tenant (partition root when
+  hierarchical) onto the RLS GUC when no session tenant is already
+  bound. Does not fold `dazzle.host_tenant_id` into the fence.
 - **Conversation author suffix dumped schema tokens (cycle 2315)** —
   `display: conversation` and related discussion suffixed authors
   with `status_page` / `repro` while funnel/progress already say

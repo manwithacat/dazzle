@@ -217,6 +217,21 @@ Request body:
 - **409** — Document is in a terminal status (`signed`, `declined`,
   `expired`, `superseded`).
 
+### Shared-schema RLS (`tenant_host:`)
+
+Signing links are unauthenticated by design — the signatory never has a
+portal session. On `tenancy: mode: shared_schema` apps served via
+`tenant_host:`, the HMAC-gated routes copy the host-resolved tenant
+onto `dazzle.tenant_id` for the duration of the handler so the
+restrictive `tenant_fence` can see the row. Hierarchical hosts bind
+the partition root (`ResolvedTenant.ancestor_ids` last, else the host
+id) — the same key memberships use (#1463). A session tenant already
+bound is left alone. Apps without `tenant_host:` are unchanged: no
+host tenant means the GUC stays unset and the fence fail-closes.
+
+Mint signing URLs on the tenant's own host (the practice subdomain),
+not the canonical apex — an apex request has no host tenant to copy.
+
 ## Token contract
 
 Tokens are URL-safe base64 of `<record_id>:<email>:<expires>:<hmac>`,
