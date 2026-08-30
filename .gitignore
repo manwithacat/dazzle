@@ -99,6 +99,10 @@ examples/*/dnr-ui/
 
 # Node.js
 node_modules/
+blue_sky/runs/*/node_modules/
+blue_sky/runs/*/dist/
+blue_sky/runs/*/.vite/
+blue_sky/runs/*/tsconfig.tsbuildinfo
 dev_docs/
 tmp/
 

@@ -473,6 +473,7 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
 - **stems** — Reconstruct framework/package/app judgement from `stems/` before inventing structure
+- **blue-sky** — Orthogonal prototype from an example's DSL; critique for framework gaps (not a second CRUD admin)
 
 ## Capability Mapping
 
@@ -541,4 +542,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.113.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.113.1 | **Python**: 3.12+ | **Status**: Production Ready

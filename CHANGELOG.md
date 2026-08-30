@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.113.1] - 2026-08-30
+
+### Added
+- **Blue Sky skill** — extract a Dazzle-agnostic scene spec from an
+  example app's DSL (`scripts/blue_sky_spec.py`), isolate a prototype
+  of the same job, critique for framework gaps. `invoice_ops` wave:
+  approver (On the Desk), finance (Till), requester (Daybook),
+  auditor (Carbon Desk). Consensus: today's work in hand, not the
+  entity list. Stem `story-driven-jobs` amended; no `stack:` primitive.
+
 ## [0.113.0] - 2026-08-30
 
 ### Added

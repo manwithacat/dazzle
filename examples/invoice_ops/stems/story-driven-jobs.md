@@ -26,6 +26,11 @@ not one shared mega-list plus warehouse CRUD.
 - Every product persona defaults to the same finance_ops desk.
 - Persona lands on a bare entity list when the job is triage, settle, or audit.
 - Story `given:` workspace names that disagree with `default_workspace`.
+- Job workspace that is still a **filtered entity list** as the work
+  object. Blue Sky 2026-08-30 (`invoice_ops` approver/finance/requester/auditor):
+  the object in hand is the sheet, blotter paper, slip, or carbon — next
+  after a decision, not return-to-list. Do not invent `stack:` from that
+  run; the stem is the judgement.
 
 ## Expressions
 
