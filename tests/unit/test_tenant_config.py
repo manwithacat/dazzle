@@ -18,9 +18,9 @@ class TestTenantConfigDefaults:
         config = TenantConfig()
         assert config.resolver == "subdomain"
 
-    def test_default_header_name(self) -> None:
+    def test_no_header_name_field(self) -> None:
         config = TenantConfig()
-        assert config.header_name == "X-Tenant-ID"
+        assert not hasattr(config, "header_name") or getattr(config, "header_name", None) is None
 
 
 class TestTenantConfigFromManifest:
@@ -46,14 +46,30 @@ class TestTenantConfigFromManifest:
 
             [tenant]
             isolation = "schema"
-            resolver = "header"
-            header_name = "X-Custom-Tenant"
+            resolver = "subdomain"
+            base_domain = "example.com"
         """)
         )
         manifest = load_manifest(toml)
         assert manifest.tenant.isolation == "schema"
-        assert manifest.tenant.resolver == "header"
-        assert manifest.tenant.header_name == "X-Custom-Tenant"
+        assert manifest.tenant.resolver == "subdomain"
+        assert manifest.tenant.base_domain == "example.com"
+
+    def test_leftover_header_resolver_is_rejected(self, tmp_path: Path) -> None:
+        toml = tmp_path / "dazzle.toml"
+        toml.write_text(
+            dedent("""\
+            [project]
+            name = "test"
+            version = "0.1.0"
+
+            [tenant]
+            isolation = "schema"
+            resolver = "header"
+        """)
+        )
+        with pytest.raises(ValueError, match="resolver"):
+            load_manifest(toml)
 
 
 class TestSlugValidation:

@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.112.6] - 2026-08-30
+
+### Removed
+- **Client-named tenant (ADR-0055 PR3)** — `X-Tenant-ID`,
+  `HeaderResolver`, `SessionResolver`, and `[tenant] resolver =
+  "header"|"session"` are gone. Schema isolation uses HTTP Host (and
+  membership on topology apex). Leftover `X-Tenant-ID: zzz` is ignored
+  and does not select a tenant. `DAZZLE_TENANT_SLUG` remains a server
+  override.
+
 ## [0.112.5] - 2026-08-30
 
 ### Added

@@ -5,6 +5,12 @@ from collections.abc import Awaitable, Callable
 from fastapi import HTTPException
 from fastapi import Request as FastAPIRequest
 
+from dazzle.http.runtime.tenant_isolation import (
+    get_current_tenant_schema,
+    set_current_host_tenant_id,
+    set_current_tenant_schema,
+)
+
 from .models import AuthContext
 from .store import AuthStore
 
@@ -49,9 +55,30 @@ def _bind_apex_lens(request: FastAPIRequest, auth_context: AuthContext) -> None:
     cfg = getattr(getattr(app, "state", None), "tenant_host", None) if app is not None else None
     if cfg is None or getattr(cfg, "topology", "") != "apex":
         return
-    from dazzle.http.runtime.tenant_isolation import set_current_host_tenant_id
-
     set_current_host_tenant_id(str(tenant_id))
+
+
+def _bind_schema_from_membership(request: FastAPIRequest, auth_context: AuthContext) -> None:
+    """Topology A / no Host slug: membership binds schema isolation search_path."""
+    if not auth_context.is_authenticated:
+        return
+    if get_current_tenant_schema():
+        return
+    membership = auth_context.active_membership
+    tenant_id = getattr(membership, "tenant_id", None) if membership is not None else None
+    if not tenant_id:
+        return
+    registry = getattr(getattr(request, "app", None), "state", None)
+    registry = getattr(registry, "tenant_registry", None) if registry is not None else None
+    get_by_id = getattr(registry, "get_by_id", None)
+    if not callable(get_by_id):
+        return
+    record = get_by_id(str(tenant_id))
+    if record is None or getattr(record, "status", None) == "suspended":
+        return
+    schema = getattr(record, "schema_name", None)
+    if schema:
+        set_current_tenant_schema(str(schema))
 
 
 def _resolve_auth_context(
@@ -210,6 +237,7 @@ def create_auth_dependency(
 
         _bind_rls_tenant_id(auth_context)
         _bind_apex_lens(request, auth_context)
+        _bind_schema_from_membership(request, auth_context)
         return auth_context
 
     return get_current_user
@@ -261,6 +289,7 @@ def create_deny_dependency(
         # empty/unauthenticated early returns above need no equivalent call.
         _bind_rls_tenant_id(auth_context)
         _bind_apex_lens(request, auth_context)
+        _bind_schema_from_membership(request, auth_context)
         return auth_context
 
     return check_deny_roles
@@ -292,6 +321,7 @@ def create_optional_auth_dependency(
         _enforce_cross_tenant(request, auth_context)
         _bind_rls_tenant_id(auth_context)
         _bind_apex_lens(request, auth_context)
+        _bind_schema_from_membership(request, auth_context)
         return auth_context
 
     return get_optional_user

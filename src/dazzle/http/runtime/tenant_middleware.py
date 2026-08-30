@@ -1,7 +1,8 @@
-"""Tenant middleware — resolves tenant from request, routes to schema.
+"""Tenant middleware — resolves tenant from Host, routes to schema.
 
-Resolver protocol + implementations (subdomain, header, session).
-TenantMiddleware class with registry cache.
+Schema isolation uses the same Host story as ``tenant_host:`` (ADR-0055 PR3).
+Client-named tenant (``X-Tenant-ID``, session cookie) is not a resolver.
+``DAZZLE_TENANT_SLUG`` remains a server override.
 """
 
 from __future__ import annotations  # required: forward reference
@@ -44,37 +45,15 @@ class SubdomainResolver:
         return slug if slug else None
 
 
-class HeaderResolver:
-    """Extracts tenant slug from an HTTP header."""
-
-    def __init__(self, header_name: str = "X-Tenant-ID") -> None:
-        self._header_name = header_name.lower()
-
-    def resolve(self, request: Request) -> str | None:
-        return request.headers.get(self._header_name) or None
-
-
-class SessionResolver:
-    """Extracts tenant slug from a session cookie."""
-
-    def __init__(self, cookie_name: str = "dazzle_tenant") -> None:
-        self._cookie_name = cookie_name
-
-    def resolve(self, request: Request) -> str | None:
-        return request.cookies.get(self._cookie_name) or None
-
-
 def build_resolver(tenant_config: Any) -> TenantResolver:
-    """Build the appropriate resolver from TenantConfig."""
-    resolver_type = tenant_config.resolver
+    """Host parser only. Leftover ``header`` / ``session`` tokens stay put."""
+    resolver_type = getattr(tenant_config, "resolver", "") or "subdomain"
     if resolver_type == "subdomain":
         return SubdomainResolver(base_domain=tenant_config.base_domain)
-    elif resolver_type == "header":
-        return HeaderResolver(header_name=tenant_config.header_name)
-    elif resolver_type == "session":
-        return SessionResolver()
-    else:
-        raise ValueError(f"Unknown tenant resolver: {resolver_type}")
+    raise ValueError(
+        f"Unknown tenant resolver: {resolver_type!r}. "
+        "Host is the tenant parser (tenant_host:); header/session were removed (ADR-0055)."
+    )
 
 
 class _RegistryCache:
@@ -142,10 +121,23 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in self._excluded_prefixes):
             return await call_next(request)
 
-        # Dev override: DAZZLE_TENANT_SLUG env var
-        slug = os.environ.get("DAZZLE_TENANT_SLUG") or self._resolver.resolve(request)
+        # Server override, then tenant_host ResolvedTenant, then Host slug.
+        # Leftover X-Tenant-ID / dazzle_tenant cookie are not resolvers.
+        slug = (os.environ.get("DAZZLE_TENANT_SLUG") or "").strip() or None
+        if not slug:
+            resolved = getattr(request.state, "tenant", None)
+            host_slug = getattr(resolved, "slug", None) if resolved is not None else None
+            slug = str(host_slug) if host_slug else self._resolver.resolve(request)
 
         if not slug:
+            marker = getattr(getattr(request, "app", None), "state", None)
+            topology = (
+                getattr(getattr(marker, "tenant_host", None), "topology", "")
+                if marker is not None
+                else ""
+            )
+            if topology == "apex":
+                return await call_next(request)
             return JSONResponse(
                 {"detail": "Tenant not specified"},
                 status_code=400,

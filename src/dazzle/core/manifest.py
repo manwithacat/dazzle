@@ -365,9 +365,8 @@ class TenantConfig:
     """
 
     isolation: str = "none"  # "none" | "schema"
-    resolver: str = "subdomain"  # "subdomain" | "header" | "session"
-    header_name: str = "X-Tenant-ID"  # only used when resolver = "header"
-    base_domain: str = ""  # only used when resolver = "subdomain"
+    resolver: str = "subdomain"  # Host parser only (ADR-0055 PR3)
+    base_domain: str = ""  # used when resolver = "subdomain"
 
 
 @dataclass
@@ -989,10 +988,15 @@ def load_manifest(path: Path) -> ProjectManifest:
 
     # Parse tenant config
     tenant_data = data.get("tenant", {})
+    resolver = str(tenant_data.get("resolver", "subdomain") or "subdomain")
+    if resolver not in ("subdomain",):
+        raise ValueError(
+            f"[tenant] resolver {resolver!r} is not supported; Host is the "
+            "tenant parser (tenant_host:). header/session were removed (ADR-0055)."
+        )
     tenant_config = TenantConfig(
         isolation=tenant_data.get("isolation", "none"),
-        resolver=tenant_data.get("resolver", "subdomain"),
-        header_name=tenant_data.get("header_name", "X-Tenant-ID"),
+        resolver=resolver,
         base_domain=tenant_data.get("base_domain", ""),
     )
 

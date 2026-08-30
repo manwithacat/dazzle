@@ -209,6 +209,20 @@ class TestGraphQLContext:
         with pytest.raises(FrozenInstanceError):
             ctx.tenant_id = "new-tenant"  # type: ignore
 
+    def test_leftover_x_tenant_id_does_not_select(self) -> None:
+        """ADR-0055 PR3: leftover X-Tenant-ID: zzz is ignored."""
+        from types import SimpleNamespace
+
+        from dazzle.http.graphql.context import create_context_from_request
+
+        request = SimpleNamespace(
+            state=SimpleNamespace(auth_context=None),
+            headers={"X-Tenant-ID": "zzz", "X-Request-ID": "r1"},
+            client=None,
+        )
+        ctx = create_context_from_request(request)  # type: ignore[arg-type]
+        assert ctx.tenant_id is None
+
 
 # =============================================================================
 # Schema Generator Tests (require Strawberry)

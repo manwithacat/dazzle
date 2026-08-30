@@ -99,7 +99,7 @@ def create_context_from_request(request: Request) -> GraphQLContext:
 
     Extracts tenant, user, and role information from:
     1. Request state (set by auth middleware)
-    2. Headers (X-Tenant-ID, X-Request-ID)
+    2. Headers (X-Request-ID only — leftover X-Tenant-ID is ignored)
     3. Client information
 
     Args:
@@ -125,11 +125,6 @@ def create_context_from_request(request: Request) -> GraphQLContext:
         roles_list = getattr(auth_context, "roles", [])
         roles = tuple(roles_list) if roles_list else ()
         session = getattr(auth_context, "session", {}) or {}
-
-    # Allow tenant override from header (for testing/admin)
-    header_tenant = request.headers.get("X-Tenant-ID")
-    if header_tenant and not tenant_id:
-        tenant_id = header_tenant
 
     # Get or generate request ID
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())

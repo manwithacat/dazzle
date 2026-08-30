@@ -59,6 +59,10 @@ _SELECT_BY_SLUG = """\
 SELECT id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at
 FROM public.tenants WHERE slug = %s"""
 
+_SELECT_BY_ID = """\
+SELECT id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at
+FROM public.tenants WHERE id = %s"""
+
 _SELECT_ALL = """\
 SELECT id, slug, display_name, schema_name, status, config, is_test, created_at, updated_at
 FROM public.tenants ORDER BY created_at"""
@@ -183,13 +187,20 @@ class TenantRegistry:
             conn.commit()
         return _row_to_record(row)
 
-    def get(self, slug: str) -> TenantRecord | None:
-        """Look up a tenant by slug."""
+    def _get_one(self, sql: str, key: str) -> TenantRecord | None:
         with self._connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(_SELECT_BY_SLUG, (slug,))
+                cur.execute(sql, (key,))
                 row = cur.fetchone()
         return _row_to_record(row) if row else None
+
+    def get(self, slug: str) -> TenantRecord | None:
+        """Look up a tenant by slug."""
+        return self._get_one(_SELECT_BY_SLUG, slug)
+
+    def get_by_id(self, tenant_id: str) -> TenantRecord | None:
+        """Look up a tenant by id (topology A: membership → schema)."""
+        return self._get_one(_SELECT_BY_ID, tenant_id)
 
     def list(self) -> list[TenantRecord]:
         """List all tenants."""

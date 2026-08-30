@@ -130,8 +130,8 @@ def generate_security_md(app_spec: AppSpec) -> str:
         sections.append("- **Production:** Tenant-per-schema in PostgreSQL")
         sections.append("")
         sections.append("**Tenant Identification:**")
-        sections.append("- Header: `X-Tenant-ID`")
-        sections.append("- Cookie: `dazzle_tenant_id`")
+        sections.append("- HTTP Host (`tenant_host:`); membership on topology apex")
+        sections.append("- Server override: `DAZZLE_TENANT_SLUG` (not a client header)")
     else:
         sections.append("- **Mode:** Disabled (single database)")
     sections.append("")

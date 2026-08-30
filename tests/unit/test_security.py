@@ -91,17 +91,18 @@ def test_cors_config_combined() -> None:
     assert basic_custom.allow_origins == ["https://myapp.com"]
     assert basic_custom.allow_credentials is True
 
-    # STANDARD — same-origin, credentials on, headers include Authorization + X-Tenant-ID.
+    # STANDARD — same-origin, credentials on; leftover X-Tenant-ID is not a CORS header.
     standard = configure_cors_for_profile("standard")
     assert standard.allow_origins is None
     assert standard.allow_credentials is True
     assert "Authorization" in standard.allow_headers
-    assert "X-Tenant-ID" in standard.allow_headers
+    assert "X-Tenant-ID" not in standard.allow_headers
 
     # STRICT — same-origin, X-Request-ID exposed.
     strict = configure_cors_for_profile("strict")
     assert strict.allow_origins is None
     assert "X-Request-ID" in strict.expose_headers
+    assert "X-Tenant-ID" not in strict.allow_headers
 
     # Custom origins override (positional arg).
     custom = configure_cors_for_profile("basic", ["https://example.com"])

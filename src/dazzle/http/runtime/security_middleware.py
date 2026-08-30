@@ -173,7 +173,7 @@ def configure_cors_for_profile(profile: str, custom_origins: list[str] | None = 
             allow_origins=custom_origins,  # None = same-origin only in production
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
+            allow_headers=["Authorization", "Content-Type"],
         )
     else:  # strict
         # Restrictive CORS for multi-tenant SaaS
@@ -181,7 +181,7 @@ def configure_cors_for_profile(profile: str, custom_origins: list[str] | None = 
             allow_origins=custom_origins,  # Must be explicitly configured
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
+            allow_headers=["Authorization", "Content-Type"],
             expose_headers=["X-Request-ID"],
         )
 

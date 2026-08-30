@@ -7,7 +7,7 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from dazzle.http.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
+from dazzle.http.runtime.tenant_middleware import SubdomainResolver, TenantMiddleware
 
 
 def _make_app(registry_records: dict[str, MagicMock] | None = None) -> Starlette:
@@ -37,7 +37,7 @@ def _make_app(registry_records: dict[str, MagicMock] | None = None) -> Starlette
 
     registry.get = mock_get
 
-    resolver = HeaderResolver(header_name="X-Tenant-ID")
+    resolver = SubdomainResolver(base_domain="example.com")
     app.add_middleware(
         TenantMiddleware,
         resolver=resolver,
@@ -46,10 +46,14 @@ def _make_app(registry_records: dict[str, MagicMock] | None = None) -> Starlette
     return app
 
 
+def _client(app: Starlette, *, host: str = "cyfuture.example.com") -> TestClient:
+    return TestClient(app, base_url=f"http://{host}")
+
+
 class TestMiddlewareExcludedPaths:
     def test_health_bypasses_tenant(self) -> None:
         app = _make_app()
-        client = TestClient(app)
+        client = _client(app)
         response = client.get("/health")
         assert response.status_code == 200
         assert response.text == "ok"
@@ -58,23 +62,41 @@ class TestMiddlewareExcludedPaths:
 class TestMiddlewareErrors:
     def test_missing_tenant_returns_400(self) -> None:
         app = _make_app()
-        client = TestClient(app)
+        client = _client(app, host="example.com")
         response = client.get("/")
         assert response.status_code == 400
         assert "Tenant not specified" in response.json()["detail"]
 
+    def test_leftover_x_tenant_id_does_not_select(self) -> None:
+        """ADR-0055 PR3: leftover X-Tenant-ID: zzz is ignored."""
+        record = MagicMock(slug="zzz", schema_name="tenant_zzz", status="active")
+        app = _make_app({"zzz": record})
+        client = _client(app, host="example.com")
+        response = client.get("/", headers={"X-Tenant-ID": "zzz"})
+        assert response.status_code == 400
+        assert "Tenant not specified" in response.json()["detail"]
+
+    def test_host_wins_over_leftover_x_tenant_id(self) -> None:
+        record = MagicMock(slug="cyfuture", schema_name="tenant_cyfuture", status="active")
+        zzz = MagicMock(slug="zzz", schema_name="tenant_zzz", status="active")
+        app = _make_app({"cyfuture": record, "zzz": zzz})
+        client = _client(app)
+        response = client.get("/", headers={"X-Tenant-ID": "zzz"})
+        assert response.status_code == 200
+        assert "tenant=cyfuture" in response.text
+
     def test_unknown_tenant_returns_404(self) -> None:
         app = _make_app()
-        client = TestClient(app)
-        response = client.get("/", headers={"X-Tenant-ID": "nonexistent"})
+        client = _client(app, host="nonexistent.example.com")
+        response = client.get("/")
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
 
     def test_suspended_tenant_returns_503(self) -> None:
         record = MagicMock(slug="cyfuture", schema_name="tenant_cyfuture", status="suspended")
         app = _make_app({"cyfuture": record})
-        client = TestClient(app)
-        response = client.get("/", headers={"X-Tenant-ID": "cyfuture"})
+        client = _client(app)
+        response = client.get("/")
         assert response.status_code == 503
         assert "suspended" in response.json()["detail"]
 
@@ -125,7 +147,7 @@ class TestMiddlewareHappyPath:
     def test_active_tenant_sets_context(self) -> None:
         record = MagicMock(slug="cyfuture", schema_name="tenant_cyfuture", status="active")
         app = _make_app({"cyfuture": record})
-        client = TestClient(app)
-        response = client.get("/", headers={"X-Tenant-ID": "cyfuture"})
+        client = _client(app)
+        response = client.get("/")
         assert response.status_code == 200
         assert "tenant=cyfuture" in response.text

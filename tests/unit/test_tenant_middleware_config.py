@@ -27,7 +27,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from dazzle.http.runtime.tenant_middleware import HeaderResolver, TenantMiddleware
+from dazzle.http.runtime.tenant_middleware import SubdomainResolver, TenantMiddleware
 
 
 @dataclass
@@ -77,11 +77,15 @@ def _make_app(
     app = Starlette(routes=[Route("/api/x", read_x), Route("/health", health)])
     app.add_middleware(
         TenantMiddleware,
-        resolver=HeaderResolver(header_name="X-Tenant-ID"),
+        resolver=SubdomainResolver(base_domain="example.com"),
         registry=_FakeRegistry({record.slug: record}),
         per_tenant_config_schema=schema,
     )
     return app
+
+
+def _client(app: Starlette, *, host: str = "acme.example.com") -> TestClient:
+    return TestClient(app, base_url=f"http://{host}")
 
 
 @pytest.fixture()
@@ -101,8 +105,8 @@ def test_request_state_tenant_config_populated(acme):
         record=acme,
         schema={"locale": "str", "max_users": "int", "feature_billing": "bool"},
     )
-    client = TestClient(app)
-    resp = client.get("/api/x", headers={"X-Tenant-ID": "acme"})
+    client = _client(app)
+    resp = client.get("/api/x")
     assert resp.status_code == 200
     body = json.loads(resp.text)
     assert body["tenant_slug"] == "acme"
@@ -119,8 +123,8 @@ def test_empty_schema_produces_empty_dict(acme):
     # Apps without a per_tenant_config block — request.state.tenant_config
     # must still exist (empty dict) so callers don't trip on getattr.
     app = _make_app(record=acme, schema=None)
-    client = TestClient(app)
-    resp = client.get("/api/x", headers={"X-Tenant-ID": "acme"})
+    client = _client(app)
+    resp = client.get("/api/x")
     assert resp.status_code == 200
     assert json.loads(resp.text)["tenant_config"] == {}
 
@@ -133,8 +137,8 @@ def test_missing_keys_get_zero_values():
         record=record,
         schema={"locale": "str", "max_users": "int", "feature_billing": "bool"},
     )
-    client = TestClient(app)
-    resp = client.get("/api/x", headers={"X-Tenant-ID": "acme"})
+    client = _client(app)
+    resp = client.get("/api/x")
     assert json.loads(resp.text)["tenant_config"] == {
         "locale": "",
         "max_users": 0,
@@ -147,8 +151,8 @@ def test_excluded_path_skips_middleware(acme):
     # short-circuits before touching resolver/registry, and
     # request.state.tenant_config is never set.
     app = _make_app(record=acme, schema={"locale": "str"})
-    client = TestClient(app)
-    resp = client.get("/health")  # no X-Tenant-ID header
+    client = _client(app)
+    resp = client.get("/health")
     assert resp.status_code == 200
     body = json.loads(resp.text)
     assert body["tenant_present"] is False
@@ -157,15 +161,15 @@ def test_excluded_path_skips_middleware(acme):
 
 def test_unknown_tenant_returns_404(acme):
     app = _make_app(record=acme, schema={"locale": "str"})
-    client = TestClient(app)
-    resp = client.get("/api/x", headers={"X-Tenant-ID": "unknown"})
+    client = _client(app, host="unknown.example.com")
+    resp = client.get("/api/x")
     assert resp.status_code == 404
 
 
 def test_missing_header_returns_400(acme):
     app = _make_app(record=acme, schema={"locale": "str"})
-    client = TestClient(app)
-    resp = client.get("/api/x")  # no X-Tenant-ID header
+    client = _client(app, host="example.com")
+    resp = client.get("/api/x")
     assert resp.status_code == 400
 
 
@@ -174,6 +178,6 @@ def test_record_with_none_config_uses_zero_values():
     # legacy / hand-constructed records with config=None.
     record = _FakeRecord(config=None)
     app = _make_app(record=record, schema={"locale": "str"})
-    client = TestClient(app)
-    resp = client.get("/api/x", headers={"X-Tenant-ID": "acme"})
+    client = _client(app)
+    resp = client.get("/api/x")
     assert json.loads(resp.text)["tenant_config"] == {"locale": ""}

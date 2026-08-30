@@ -818,6 +818,7 @@ class DazzleBackendApp:
             assert self._database_url is not None, "database_url required for tenant isolation"
             registry = TenantRegistry(self._database_url)
             registry.ensure_table()
+            self._app.state.tenant_registry = registry
 
             # #957 cycle 8 — pull per_tenant_config schema off the
             # linked tenancy spec so the middleware can coerce the

@@ -135,6 +135,14 @@ semantics — a failed startup handler aborts boot — and logs a deprecation wa
 per handler, so existing code works loudly rather than failing silently. Migrate
 to `register_lifespan_hook`.
 
+## Tenant identification (HTTP)
+
+Tenant is named by HTTP Host (`tenant_host:`) or, on topology `apex`, by
+membership. `[tenant] isolation = "schema"` uses that same Host /
+membership story for `search_path`. Client headers (`X-Tenant-ID`) and
+`resolver = "header"` / `"session"` are not production resolvers (ADR-0055).
+Local override: `DAZZLE_TENANT_SLUG` (server env, not a client header).
+
 ## Row-tenancy RLS roles (`tenancy: mode: shared_schema`)
 
 When an app uses shared-schema row tenancy, the tenant boundary is enforced by

@@ -1,7 +1,7 @@
 # Schema-Per-Tenant: Connection Routing Middleware (Sub-Project 2 of 3)
 
 **Date**: 2026-03-19
-**Status**: Design
+**Status**: Historical (superseded by ADR-0055 / `tenant_host:`. Header and session resolvers were removed in v0.112.6.)
 **Issue**: #531
 **Scope**: Sub-project 2 — request-time tenant resolution and schema routing. Depends on sub-project 1 (config, registry, CLI). Sub-project 3 (multi-schema migrations) is a separate spec.
 
