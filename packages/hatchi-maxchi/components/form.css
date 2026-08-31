@@ -186,13 +186,21 @@ select.dz-form-input {
 .dz-form-money-select {
   /* #930: matches updated input height; also gets line-height + padding
      so descenders in the currency option list don't clip. */
-  height: auto;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2.5rem;
   min-height: 2.5rem;
   line-height: 1.4;
   padding-block: var(--space-sm);
   width: 7rem;
   padding-inline: var(--space-sm);
-  background: var(--colour-surface);
+  padding-inline-end: 1.5rem;
+  background-color: var(--colour-surface);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.4rem center;
+  background-size: 0.75rem 0.75rem;
   color: var(--colour-text);
   font-size: var(--text-sm);
   border: 1px solid var(--colour-border);

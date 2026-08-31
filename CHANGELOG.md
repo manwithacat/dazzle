@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.113.15] - 2026-09-01
+
+### Fixed
+- **Native filter `<select>` clipping (CyFuture letters)** — list/queue
+  filter bars emit a bare select, not combobox. `base.css` pads every
+  `select`; `.dz-queue-filter-select` was `height: 1.75rem` and WebKit
+  ignores `min-height` on native selects, so "All Status" lost its
+  descenders. Same #930 treatment as `select.dz-form-input`:
+  `appearance: none`, pinned height, line-box padding, chevron.
+  Combobox remains the form-field Hyperpart.
+
 ## [0.113.14] - 2026-08-31
 
 ### Added

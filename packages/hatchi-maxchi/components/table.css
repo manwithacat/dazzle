@@ -715,17 +715,33 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
    * once the UA's default ~8px vertical padding + 1px borders were
    * subtracted, clipping the bottom of the text. min-height keeps the
    * ~2rem look but lets the control grow rather than crop. */
+  box-sizing: border-box;
   min-height: 2rem;
   width: 100%;
   border-radius: var(--radius-sm);
   border: 1px solid var(--colour-border);
-  background: var(--colour-surface);
+  background-color: var(--colour-surface);
   padding-inline: var(--space-sm);
   padding-block: 0.25rem;
   font-size: var(--text-sm);
+  line-height: 1.4;
   color: var(--colour-text);
   outline: none;
   transition: box-shadow var(--duration-base) var(--ease-out);
+}
+
+/* WebKit ignores min-height on native <select> (#930 / CyFuture
+ * letter filters). Pin height + flatten UA chrome so the line-box
+ * fits; keep a chevron after appearance:none. */
+select.dz-filter-select {
+  height: 2rem;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-inline-end: 1.5rem;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.4rem center;
+  background-size: 0.75rem 0.75rem;
 }
 
 .dz-filter-select:focus-visible,
