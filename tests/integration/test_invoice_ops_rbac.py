@@ -199,7 +199,7 @@ async def test_approver_can_approve(app) -> None:
     # Read as finance (broad reader) to get the full record.
     base = await _get_invoice_json(app, "finance", "northwind", invoice_id)
 
-    body = _build_put_body(base, status="approved")
+    body = _build_put_body(base, status="approved", approval_exception="Released for settlement")
 
     client = await app.client_as("approver", "northwind")
     resp = await _csrf_put(client, f"/invoices/{invoice_id}", body)

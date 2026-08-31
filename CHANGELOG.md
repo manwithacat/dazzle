@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [0.113.12] - 2026-08-31
+
+### Changed
+- **invoice_ops Blue Sky steal (#1668)** — requester `my_invoices` home is
+  work that still needs her (draft / rejected / disputed / approved-unsettled;
+  submitted stays in-flight). Lines stay notepad on the invoice hub.
+  `submitted -> approved` requires `approval_exception` (released for
+  settlement, not paid). Pay desk copy: a failed rail does not move Invoice.
+  Audit ribbon is today's attempts; earlier tries live on the invoice.
+  Leftover: unmatched LineItem `po_match` cannot collection-guard submit
+  (`not_applicable` is a kind). No NeedsYou entity.
+
 ## [0.113.11] - 2026-08-31
 
 ### Changed

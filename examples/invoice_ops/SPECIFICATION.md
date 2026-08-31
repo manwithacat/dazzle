@@ -46,15 +46,20 @@ history of an invoice is a first-class record rather than a status flag.
 ## Who uses it
 
 - **Requester** — the maker: raises supplier invoices, itemises them, and
-  submits them for approval. Requesters own the line items on their invoices.
-- **Approver** — the checker: reviews submitted invoices and approves or
-  rejects them. Approvers can see invoices, line items, suppliers, and payment
+  submits them for approval. Home is work that still needs her (draft,
+  rejected, disputed, approved-unsettled); submitted stays visible in-flight.
+  Line items live on the invoice slip, not a warehouse as home.
+- **Approver** — the checker: inspects a submitted invoice and stamps it
+  **released for settlement**, not paid. Approval requires a spoken exception
+  note. Approvers can see invoices, line items, suppliers, and payment
   attempts, but cannot create invoices — the maker/checker split is structural.
 - **Finance Operator** — settles approved invoices and handles disputes;
   manages suppliers and their bank accounts, and records payment attempts.
-- **Auditor** — a read-only reviewer with audit-export access: sees the users,
-  suppliers, invoices, line items, and payment attempts of their tenant, and
-  changes none of them.
+  A failed rail does not change invoice status; retry is the same pad.
+- **Auditor** — a read-only reviewer with audit-export access: today's
+  payment attempts on the desk; earlier tries live on the invoice. Sees the
+  users, suppliers, invoices, line items, and payment attempts of their
+  tenant, and changes none of them.
 - **Tenant Administrator** — manages the users, suppliers, and per-tenant
   configuration of one tenant, including approval thresholds; the only role
   that can delete invoices or payment records.
@@ -69,10 +74,11 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
 Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 
-- **My Invoices** — requester home: line-item composition (document body),
-  draft and in-flight queues, status kanban, supplier grid, and pipeline metrics
-  (no status bar-chart or twin invoice timeline under the fold).
-- **Approval Desk** — approver home: a **three-way match evidence** pack
+- **My Invoices** — requester home: work that still needs her — drafts,
+  in-flight, rejected, disputed, approved-unsettled — plus pipeline metrics
+  (lines stay on the invoice hub; no status bar-chart or twin timeline).
+- **Approval Desk** — approver home: inspect then stamp **released for
+  settlement**, not paid. A **three-way match evidence** pack
   (PO + goods receipt + packing slip — cycle 2002 peer-pack; not single-kind
   re-stack), a **goods receipt** three-way match watch
   (cycle 1967 peer-pack), a **tax certificate watch** of reverse-charge
@@ -81,7 +87,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   (remittance / credit memo / PO / tax / payment confirmation / goods receipt /
   dispute packet) as document composition, live AP discussion as Message/Bubble
   conversation chrome, approval board, and supplier context grid (no decision-timeline dump).
-- **Pay Desk** — finance home (multi-panel settlement): metrics, a **draft packet
+- **Pay Desk** — finance home (failed rail does not move the invoice; retry is
+  the same pad): metrics, a **draft packet
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
   publish before the settle batch), a **compliance draft gate** of vendor
   onboarding packets still draft (W-9 / COI / tax / lien / ACH — cycle 2000 peer-pack;
@@ -107,9 +114,10 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   or broader open past-due including submitted), named remittance/payment-confirmation
   packets, live AP notes as Message/Bubble conversation chrome, then settle board
   (no payment-health chart or twin dispute trail under the fold).
-- **Audit Review** — auditor home: evidence packet covers and named AP document
-  composition first (remittance / PO / tax), then disputed work and payment-attempt
-  trail (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
+- **Audit Review** — auditor home: today's payment attempts on this desk;
+  earlier tries live on the invoice. Evidence packet covers and named AP
+  document composition first (remittance / PO / tax), then disputed work
+  (cycle 1942 document peer-pack) — not chart-only or trail-only thrash.
 - **Finance Operations** — shared ops overview: **packet cover wall** first
   (InvoiceDocument.preview_url remittance / PO / tax / goods-receipt thumbs — peer Bill.com /
   Melio / Tipalti money grain, not teammate headshot shelves), document pulse
@@ -236,4 +244,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:64b68cd9260c9a379f81445b4f906cc00b97fea8604297bff67481b601c4f573 -->
+<!-- dazzle-spec-brief: sha256:eb9a58f2876ebf652a9e9c2d2dc510e3e3337758f02b30fb40a0a35d0944951f -->

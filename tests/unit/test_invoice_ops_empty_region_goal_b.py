@@ -45,20 +45,22 @@ def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
 
 
 def test_my_invoices_omits_status_mix_and_trail() -> None:
-    """Requester home: composition + queues + kanban — not status chart/trail dumps."""
+    """Requester home: needs-you queues + kanban — not status chart/trail dumps."""
     block = _workspace_block("my_invoices")
     assert "my_pipeline:" in block
-    assert "composition:" in block
     assert "drafts:" in block
     assert "in_flight:" in block
+    assert "rejected:" in block
+    assert "disputed:" in block
+    assert "awaiting_settle:" in block
     assert "my_status_board:" in block
     assert "my_status_mix:" not in block
     assert "my_trail:" not in block
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: my_pipeline, document_pulse, composition, drafts, in_flight, my_status_board"
-        in block
+        "focus: my_pipeline, document_pulse, drafts, in_flight, rejected, disputed, "
+        "awaiting_settle, my_status_board" in block
     )
 
 

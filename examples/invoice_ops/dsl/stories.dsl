@@ -26,7 +26,7 @@ story ST-002 "Approver opens invoice hub before approve or reject":
     - "Invoice.status is submitted"
   then:
     - "Invoice hub shows status strip, supplier, amount, and related line items as a pull queue"
-    - "Approver can transition to approved or rejected with reason"
+    - "Approver can transition to approved only with a spoken approval_exception (released for settlement, not paid) or reject with reason"
 
 story ST-003 "Finance settles invoices from the ready-to-pay queue":
   status: accepted
@@ -40,6 +40,7 @@ story ST-003 "Finance settles invoices from the ready-to-pay queue":
   then:
     - "Finance sees approved invoices in the ready_to_pay queue"
     - "Opening a row triple-hops Invoice via id | Supplier via supplier | User via submitted_by; Invoice hub shows payment attempts as a pull queue"
+    - "A failed rail does not change invoice status; retry is the same pad"
 
 story ST-004 "Finance works the open dispute queue":
   status: accepted
@@ -64,7 +65,8 @@ story ST-005 "Requester reviews own invoices and line items via hub":
     - "Requester is on the my_invoices workspace"
     - "Requester has list permission on Invoice"
   then:
-    - "Requester opens Invoice hub with related line items as a pull queue"
+    - "Requester home is work that still needs her (draft, rejected, disputed, approved-unsettled); submitted stays visible in-flight"
+    - "Requester opens Invoice hub with related line items as notepad on the slip, not a LineItem warehouse as home"
     - "Requester can add line items and submit draft invoices"
     - "Line item list triple-opens LineItem via id | Invoice via invoice | Tenant via tenant_id (line hub, parent invoice, tenant root)"
 
@@ -78,5 +80,6 @@ story ST-006 "Auditor traces payment attempts back to the invoice hub":
     - "Auditor is on the audit_review workspace"
     - "Auditor has list permission on PaymentAttempt"
   then:
+    - "Audit desk primary ribbon is today's payment attempts; earlier tries live on the invoice hub"
     - "Payment attempt rows triple-open PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id (attempt hub first, invoice then tenant)"
     - "Auditor cannot modify invoices or payments"

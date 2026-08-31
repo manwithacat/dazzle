@@ -7,10 +7,10 @@ not one shared mega-list plus warehouse CRUD.
 
 ## Reconstruct
 
-- requester → `my_invoices` (drafts + in-flight)
-- approver → `approval_desk` (awaiting + recently decided)
-- finance → `pay_desk` (multi-panel: ready-to-pay + disputes before notes)
-- auditor → `audit_review` (payment trail + settled invoices)
+- requester → `my_invoices` (needs-you: drafts, in-flight, rejected, disputed, approved-unsettled; lines on the slip)
+- approver → `approval_desk` (inspect then stamp released for settlement, not paid)
+- finance → `pay_desk` (ready-to-pay + disputes; failed rail does not move Invoice)
+- auditor → `audit_review` (today's attempts; earlier tries on the invoice)
 - tenant_admin / finance_admin → `finance_ops` (shared ops overview)
 - Stories `given:` match each persona’s `default_workspace`.
 
@@ -33,6 +33,10 @@ not one shared mega-list plus warehouse CRUD.
   run; the stem is the judgement.
 - Approver stamps from the pile. `approval_desk.awaiting_approval`
   uses `transitions: none` (#1663); inspect the invoice, then stamp.
+- Role-only approve is a lie (#1668): `submitted -> approved` requires
+  `approval_exception` (spoken "released for settlement"). Unmatched
+  submit still cannot collection-guard LineItem `po_match` (leftover;
+  `not_applicable` is a kind per `ap-domain-theory.md`).
 
 ## Expressions
 

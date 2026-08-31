@@ -185,6 +185,10 @@ entity Invoice "Invoice":
   submitted_by: ref User optional
   rejection_reason: text optional
   dispute_reason: text optional
+  # #1668: spoken exception on approve. Unmatched/partial PO match must
+  # say why; matched / not_applicable still write "released for settlement"
+  # (role-only approve is a lie). Collection-where on LineItem is leftover.
+  approval_exception: text optional
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
@@ -209,7 +213,7 @@ entity Invoice "Invoice":
 
   transitions:
     draft -> submitted: role(requester)
-    submitted -> approved: role(approver)
+    submitted -> approved: role(approver) requires approval_exception
     submitted -> rejected: role(approver) requires rejection_reason
     approved -> paid: role(finance)
     approved -> partially_paid: role(finance)

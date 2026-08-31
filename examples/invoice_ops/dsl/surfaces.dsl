@@ -45,6 +45,7 @@ surface invoice_detail "Invoice":
   section review "Review notes":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
+    field approval_exception "Released for settlement"
     field submitted_by "Submitted By"
   # Document composition (Goal B): line items are the invoice body, not a
   # warehouse table — ST-002/003/005 acceptance path scans composition then
@@ -410,6 +411,7 @@ surface invoice_edit "Edit Invoice":
     field status "Status"
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
+    field approval_exception "Released for settlement"
 
 # =============================================================================
 # SUPPLIER CREATE / EDIT SURFACES — tenant_admin & finance manage suppliers
@@ -961,10 +963,10 @@ workspace finance_ops "Finance Operations":
 # finance_ops remains the shared ops overview for admin/oversight personas.
 
 workspace my_invoices "My Invoices":
-  # Goal B document + empty_region (cycle 1820): requester home shows line
-  # composition + draft/submit queues + kanban — not status bar-chart voids or
-  # twin invoice timelines under the fold.
-  purpose: "Requester desk — line composition, drafts, submissions, and line-item work on my invoices"
+  # #1668: home is work that still needs the requester (draft, rejected,
+  # disputed, approved-unsettled). Submitted stays visible in-flight.
+  # Line composition is notepad on the invoice hub, not this desk's home.
+  purpose: "Requester desk — drafts, in-flight, rejected, disputed, and approved-unsettled work that still needs you"
   access: persona(requester)
 
   my_pipeline:
@@ -1017,9 +1019,36 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "Nothing waiting on approval"
 
+  rejected:
+    source: Invoice
+    filter: status = rejected
+    sort: updated_at desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "Nothing rejected — no slips to fix"
+
+  disputed:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "No disputes needing you"
+
+  awaiting_settle:
+    source: Invoice
+    filter: status = approved
+    sort: due_date asc
+    limit: 8
+    display: queue
+    action: invoice_detail
+    empty: "Nothing approved and waiting on finance"
+
   my_status_board:
     source: Invoice
-    filter: status = draft or status = submitted or status = approved or status = paid
+    filter: status = draft or status = submitted or status = rejected or status = disputed or status = approved
     display: kanban
     group_by: status
     sort: updated_at desc
@@ -1036,8 +1065,8 @@ workspace my_invoices "My Invoices":
 
   ux:
     as requester:
-      purpose: "My invoices — composition and draft/submit queues (no chart voids)"
-      focus: my_pipeline, document_pulse, composition, drafts, in_flight, my_status_board
+      purpose: "Work that still needs you — drafts, in-flight, rejected, disputed, approved-unsettled (lines live on the slip)"
+      focus: my_pipeline, document_pulse, drafts, in_flight, rejected, disputed, awaiting_settle, my_status_board
 
 workspace approval_desk "Approval Desk":
   # Goal B document (cycle 1879): peer AP approval homes (Bill.com / Coupa)
@@ -1046,7 +1075,7 @@ workspace approval_desk "Approval Desk":
   # Cycle 1965: PO packet watch — signed PO cover before approve (Coupa lean-in).
   # Cycle 1967: goods receipt three-way match before approve (Tipalti lean-in).
   # Cycle 2002: compound three-way match evidence (PO + GRN + packing slip).
-  purpose: "Approver job — three-way match evidence, goods receipt + PO/tax watch, awaiting queue, named AP packets, then live discussion"
+  purpose: "Approver job — inspect the invoice then stamp released for settlement, not paid. Three-way match evidence, awaiting queue, named packets"
   access: persona(approver, finance_admin)
 
   approval_load:
@@ -1174,10 +1203,10 @@ workspace approval_desk "Approval Desk":
 
   ux:
     as approver:
-      purpose: "Approval — three-way match evidence, goods receipt + PO/tax watch, named packets, queue, conversation"
+      purpose: "Approval — inspect then stamp; success is released for settlement, not paid. Finance owns pay_desk."
       focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
     as finance_admin:
-      purpose: "Approval — three-way match evidence, goods receipt + PO/tax watch, named packets, queue, conversation"
+      purpose: "Approval — inspect then stamp; success is released for settlement, not paid. Finance owns pay_desk."
       focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, awaiting_approval, live_conversation
 
 workspace pay_desk "Pay Desk":
@@ -1203,7 +1232,7 @@ workspace pay_desk "Pay Desk":
   # awaiting-approval Invoice boards before document rails and due stages
   # (Bill.com / Melio / Tipalti pipeline attention; not due_stage_density re-stack,
   # not draft_packets document gate alone, not settle-rail thrash).
-  purpose: "Multi-panel settlement — intake stage density (draft vs submitted), draft gate, settle rail, three-way match evidence, remittances, packing slips, due stage density"
+  purpose: "Multi-panel settlement — failed rail does not change invoice status; retry is the same pad. Intake, draft gate, settle rail, match evidence, due stages"
   access: persona(finance, finance_admin)
 
   settle_metrics:
@@ -1565,10 +1594,10 @@ workspace pay_desk "Pay Desk":
 
   ux:
     as finance:
-      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, settle rail, match evidence"
+      purpose: "Settle pad — failed rail does not move the invoice; retry here. Intake, due stages, settle rail, match evidence"
       focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, ready_to_pay, past_due
     as finance_admin:
-      purpose: "Multi-panel settlement — intake stage density (draft vs submitted), due stage density, settle rail, match evidence"
+      purpose: "Settle pad — failed rail does not move the invoice; retry here. Intake, due stages, settle rail, match evidence"
       focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, draft_packets, settle_rail, match_evidence, compliance_drafts, composition, ready_to_pay, past_due
 
   settle_board:
@@ -1585,7 +1614,7 @@ workspace audit_review "Audit Review":
   # desks put named remittance / PO / tax packet covers + composition above the
   # payment trail — not chart theater or trail-only evidence (recipe
   # audit_evidence_packets; not conversation re-stack after 1940).
-  purpose: "Auditor job — evidence packets first, then payment trail without warehouse CRUD"
+  purpose: "Auditor job — today's attempts on this desk; yesterday's try lives on the invoice. Evidence packets first."
   access: persona(auditor, finance_admin, tenant_admin)
 
   # Document pulse first — evidence volume buyers scan before attempt timelines.
@@ -1632,13 +1661,14 @@ workspace audit_review "Audit Review":
     action: invoice_detail
     empty: "No disputes open"
 
-  # Work-surface utility: payment attempts are dated events → timeline (under-fold).
+  # #1668: today's attempts on the desk; earlier tries stay on the invoice hub.
   payment_attempts:
     source: PaymentAttempt
+    filter: created_at >= today
     display: timeline
     sort: created_at desc
     limit: 12
-    empty: "No payment attempts to review"
+    empty: "No payment attempts today — earlier tries live on the invoice"
 
   settled_invoices:
     source: Invoice
@@ -1669,13 +1699,13 @@ workspace audit_review "Audit Review":
 
   ux:
     as auditor:
-      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      purpose: "Today's attempts + evidence packets; earlier tries live on the invoice"
       focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
     as finance_admin:
-      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      purpose: "Today's attempts + evidence packets; earlier tries live on the invoice"
       focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
     as tenant_admin:
-      purpose: "Evidence packets + composition before payment trail — multi-panel audit desk"
+      purpose: "Today's attempts + evidence packets; earlier tries live on the invoice"
       focus: document_pulse, packet_covers, composition, disputed_queue, payment_attempts, settled_invoices
 
 # Sixth product workspace: supplier / vendor desk so list shells
