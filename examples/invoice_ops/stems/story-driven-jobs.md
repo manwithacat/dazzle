@@ -18,6 +18,9 @@ not one shared mega-list plus warehouse CRUD.
   Invoice|Supplier|User(submitted_by); `payment_attempt_list` →
   PaymentAttempt|Invoice|Tenant; `line_item_list` → LineItem|Invoice|Tenant;
   `supplier_bank_account_list` → SupplierBankAccount|Supplier|Tenant.
+  Pipe order is three doors, not one folio (#1666). Carbon read order lives
+  on `payment_attempt_detail` sections (attempt, invoice, tenant). Do not
+  add `trail:`.
 - List dual-open: `supplier_list` / `user_list` → Tenant via tenant_id
   (admin roster context).
 

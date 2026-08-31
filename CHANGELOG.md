@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.113.13] - 2026-08-31
+
+### Changed
+- **Triple-open is three doors (#1666)** — `open: A | B | C` stays list
+  doors + agent chain, not a reading folio. invoice_ops
+  `payment_attempt_detail` authors carbon order as stacked sections
+  (attempt, invoice, tenant). `related` remains reverse-FK children.
+  No `trail:`.
+
 ## [0.113.12] - 2026-08-31
 
 ### Changed

@@ -221,6 +221,9 @@ keys, so host dual-lock remappers are not required for shape mismatches.
   Polymorphic clients: `open: first_non_null(company, sole_trader, partnership)`
   or pipe-chained `open: Company via company | SoleTrader via sole_trader`
   (first non-null FK wins; else same-entity fallback).
+  Pipe order is **doors** (primary row click + extra hubs), not a reading
+  folio (#1666). Author carbon order as stacked `section` blocks on the
+  child VIEW. `related` is reverse-FK children only — not parent hops.
 - **Status / RAG strip** — `layout: strip` on a VIEW section renders fields as a
   horizontal badge row (compliance status, lifecycle flags).
 

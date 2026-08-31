@@ -81,5 +81,6 @@ story ST-006 "Auditor traces payment attempts back to the invoice hub":
     - "Auditor has list permission on PaymentAttempt"
   then:
     - "Audit desk primary ribbon is today's payment attempts; earlier tries live on the invoice hub"
-    - "Payment attempt rows triple-open PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id (attempt hub first, invoice then tenant)"
+    - "Payment attempt rows triple-open PaymentAttempt via id | Invoice via invoice | Tenant via tenant_id (three doors, not one folio)"
+    - "Opening the attempt VIEW reads attempt, then invoice, then tenant on one scroll"
     - "Auditor cannot modify invoices or payments"

@@ -177,20 +177,25 @@ surface payment_attempt_list "Payment Attempts":
   ux:
     purpose: "Payment trail — open a row for the attempt, invoice, or tenant hub"
 
-# View surface so dual-open PaymentAttempt via id lands a readable attempt note.
+# #1666: carbon read order on this VIEW — attempt, then invoice, then tenant.
+# List `open:` pipe is three doors, not one folio. `related show: Invoice`
+# cannot embed the parent (linker: FK must point at this surface's entity).
 surface payment_attempt_detail "Payment Attempt":
   uses entity PaymentAttempt
   mode: view
-  section summary "Attempt":
-    field invoice "Invoice"
+  section attempt "Attempt":
     field attempt_number "Attempt"
     field status "Status"
+  section invoice "Invoice":
+    field invoice "Invoice"
+  section tenant "Tenant":
+    field tenant_id "Tenant"
   section provider "Provider":
     layout: strip
     field provider_reference "Provider reference"
     field failure_reason "Failure Reason"
   ux:
-    purpose: "Read one settlement attempt with invoice context"
+    purpose: "One carbon read: attempt, then invoice, then tenant — three hubs, not trail:"
 
 surface payment_attempt_create "New Payment Attempt":
   uses entity PaymentAttempt
