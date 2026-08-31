@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [0.113.2] - 2026-08-31
+
+### Fixed
+- **Signing lookup DDL leftover roles (ADR-0055)** —
+  `ALTER FUNCTION … OWNER TO dazzle_bypass` and
+  `GRANT EXECUTE … TO dazzle_app` are no-ops when those cluster roles
+  are absent. A bare ALTER aborted the RLS apply transaction, so
+  `dazzle serve` never bound (PostgreSQL Tests, INTERACTION_WALK,
+  GUIDE_WALK, UX Contracts). Leftover: function stays owned by the
+  applying role; production with the three-role model still ALTERs
+  and GRANTs.
+
 ## [0.113.1] - 2026-08-30
 
 ### Added
