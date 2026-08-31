@@ -28,13 +28,55 @@ from dazzle.testing.test_runner import StepResult, TestResult, TestRunner
 
 @pytest.mark.parametrize(
     "action",
-    ["fill_form", "submit_form", "create_expect_error", "assert_error"],
+    ["fill_form", "submit_form", "create_expect_error", "assert_error", "bind_existing"],
 )
 def test_action_has_dispatch_entry(action: str) -> None:
     """All four actions must resolve to a handler — silent skip is
     the bug class this issue closes."""
     dispatch = {**StepExecutor._STEP_DISPATCH_SINGLE, **StepExecutor._STEP_DISPATCH_MULTI}
     assert action in dispatch, f"{action!r} missing from runner dispatch tables"
+
+
+# ---------------------------------------------------------------------------
+# #1658: bind_existing — host-bound tenant/membership parents
+# ---------------------------------------------------------------------------
+
+
+def test_bind_existing_stores_first_row_without_cleanup() -> None:
+    """GET the live host row; do not POST and do not track for cleanup."""
+    runner = _runner()
+    runner.client = MagicMock()
+    row = {"id": "host-practice", "name": "CyFuture"}
+    runner.client.entities.get_entities = MagicMock(return_value=[row])
+    ctx: dict = {}
+    result = runner.execute_step(
+        {
+            "action": "bind_existing",
+            "target": "entity:Practice",
+            "store_result": "parent_practice",
+        },
+        design={},
+        context=ctx,
+    )
+    assert result.result is TestResult.PASSED
+    assert ctx["parent_practice"] is row
+    runner.client.entities.get_entities.assert_called_once_with("Practice")
+    runner.client.entities.create_entity.assert_not_called()
+    runner.client.cleanup.track.assert_not_called()
+
+
+def test_bind_existing_fails_when_host_row_missing() -> None:
+    runner = _runner()
+    runner.client = MagicMock()
+    runner.client.entities.get_entities = MagicMock(return_value=[])
+    result = runner.execute_step(
+        {"action": "bind_existing", "target": "entity:Practice", "store_result": "parent_practice"},
+        design={},
+        context={},
+    )
+    assert result.result is TestResult.FAILED
+    assert "No host-bound Practice" in result.message
+    runner.client.cleanup.track.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

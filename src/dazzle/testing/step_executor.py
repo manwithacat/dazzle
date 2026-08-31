@@ -207,6 +207,40 @@ class StepExecutor:
             duration_ms=(time.time() - start_time) * 1000,
         )
 
+    def _execute_bind_existing_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        **_kw: Any,
+    ) -> StepResult:
+        """Bind a host-provisioned parent (tenant root / membership). Do not POST."""
+        assert self.client is not None
+        entity_name = target.replace("entity:", "")
+        rows = self.client.entities.get_entities(entity_name)
+        if not rows:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message=(
+                    f"No host-bound {entity_name} to bind (archetype tenant/membership; skip POST)"
+                ),
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        row = rows[0]
+        if store_result:
+            context[store_result] = row
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
     def _execute_update_step(
         self,
         action: str,
@@ -1063,6 +1097,7 @@ class StepExecutor:
         "login_as": "_execute_login_as_step",
         "navigate_to": "_execute_navigate_to_step",
         "create": "_execute_create_step",
+        "bind_existing": "_execute_bind_existing_step",
         "update": "_execute_update_step",
         "assert_visible": "_execute_assert_visible_step",
         "assert_count": "_execute_assert_count_step",

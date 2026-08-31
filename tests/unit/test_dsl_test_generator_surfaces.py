@@ -1,6 +1,7 @@
 """Tests for surface-aware test generation (#248, #249, #250)."""
 
 from dazzle.core.ir import AppSpec
+from dazzle.core.ir.archetype import ArchetypeKind
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.invariant import (
@@ -363,3 +364,134 @@ class TestWorkspacePersona:
         admin_nav = next(d for d in suite.designs if d["test_id"] == "WS_ADMIN_DASH_NAV")
         assert agent_nav["persona"] == "agent"
         assert admin_nav["persona"] == "admin"
+
+
+# ---------------------------------------------------------------------------
+# #1658: host-bound parents (archetype tenant / membership) bind, do not POST
+# ---------------------------------------------------------------------------
+
+PRACTICE_ENTITY = EntitySpec(
+    name="Practice",
+    title="Practice",
+    archetype_kind=ArchetypeKind.TENANT,
+    is_tenant_root=True,
+    fields=[_pk_field(), _str_field("name")],
+)
+
+INVOICE_ENTITY = EntitySpec(
+    name="Invoice",
+    title="Invoice",
+    fields=[_pk_field(), _str_field("title"), _ref_field("practice", "Practice")],
+)
+
+MEMBERSHIP_ENTITY = EntitySpec(
+    name="Membership",
+    title="Membership",
+    archetype_kind=ArchetypeKind.USER_MEMBERSHIP,
+    fields=[_pk_field(), _ref_field("practice", "Practice")],
+)
+
+NOTE_ENTITY = EntitySpec(
+    name="Note",
+    title="Note",
+    fields=[_pk_field(), _str_field("body"), _ref_field("membership", "Membership")],
+)
+
+
+class TestHostBoundParentSetup:
+    """dsl-run must not POST archetype:tenant / user_membership parents."""
+
+    def test_tenant_parent_emits_bind_existing_not_create(self) -> None:
+        surfaces = [
+            SurfaceSpec(name="invoice_create", entity_ref="Invoice", mode=SurfaceMode.CREATE),
+        ]
+        appspec = _make_appspec([PRACTICE_ENTITY, INVOICE_ENTITY], surfaces=surfaces)
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_INVOICE_CREATE")
+        parent_steps = [s for s in create_test["steps"] if s["target"] == "entity:Practice"]
+        assert parent_steps, create_test["steps"]
+        assert all(s["action"] == "bind_existing" for s in parent_steps)
+        assert not any(
+            s["action"] == "create" and s["target"] == "entity:Practice"
+            for s in create_test["steps"]
+        )
+        assert parent_steps[0]["store_result"] == "parent_practice"
+
+    def test_user_membership_parent_emits_bind_existing(self) -> None:
+        surfaces = [
+            SurfaceSpec(name="note_create", entity_ref="Note", mode=SurfaceMode.CREATE),
+        ]
+        appspec = _make_appspec(
+            [PRACTICE_ENTITY, MEMBERSHIP_ENTITY, NOTE_ENTITY], surfaces=surfaces
+        )
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_NOTE_CREATE")
+        assert any(
+            s["action"] == "bind_existing" and s["target"] == "entity:Membership"
+            for s in create_test["steps"]
+        )
+        assert any(
+            s["action"] == "bind_existing" and s["target"] == "entity:Practice"
+            for s in create_test["steps"]
+        )
+        assert not any(
+            s["action"] == "create" and s["target"] in ("entity:Membership", "entity:Practice")
+            for s in create_test["steps"]
+        )
+        create_step = next(
+            s
+            for s in create_test["steps"]
+            if s["action"] == "create" and s["target"] == "entity:Note"
+        )
+        assert create_step["data"]["membership"] == "$ref:parent_membership.id"
+
+    def test_ordinary_parent_still_emits_create(self) -> None:
+        customer = EntitySpec(
+            name="Customer",
+            title="Customer",
+            fields=[_pk_field(), _str_field("name")],
+        )
+        order = EntitySpec(
+            name="Order",
+            title="Order",
+            fields=[_pk_field(), _str_field("title"), _ref_field("customer", "Customer")],
+        )
+        surfaces = [
+            SurfaceSpec(name="order_create", entity_ref="Order", mode=SurfaceMode.CREATE),
+        ]
+        appspec = _make_appspec([customer, order], surfaces=surfaces)
+        gen = DSLTestGenerator(appspec)
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_ORDER_CREATE")
+        parent_steps = [s for s in create_test["steps"] if s["target"] == "entity:Customer"]
+        assert parent_steps
+        assert all(s["action"] == "create" for s in parent_steps)
+        assert parent_steps[0]["store_result"] == "parent_customer"
+
+    def test_sm_tests_bind_tenant_parent(self) -> None:
+        from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition
+
+        invoice = EntitySpec(
+            name="Invoice",
+            title="Invoice",
+            fields=[
+                _pk_field(),
+                _str_field("title"),
+                _ref_field("practice", "Practice"),
+                _enum_field("status", ["draft", "sent"]),
+            ],
+            state_machine=StateMachineSpec(
+                status_field="status",
+                states=["draft", "sent"],
+                transitions=[StateTransition(from_state="draft", to_state="sent")],
+            ),
+        )
+        appspec = _make_appspec([PRACTICE_ENTITY, invoice])
+        gen = DSLTestGenerator(appspec)
+        tests = gen._generate_state_machine_tests(invoice)
+        valid = next(t for t in tests if "INVALID" not in t["test_id"])
+        assert valid["steps"][0]["action"] == "bind_existing"
+        assert valid["steps"][0]["target"] == "entity:Practice"
+        assert valid["steps"][1]["data"]["practice"] == "$ref:parent_practice.id"

@@ -32,7 +32,7 @@ _CAPS: dict[str, int] = {
     "EntityClient": 8,  # currently 6
     "CleanupManager": 8,  # currently 6
     "DataGenerator": 4,  # currently 2
-    "StepExecutor": 40,  # the cohesive _execute_*_step handler collection (currently 39)
+    "StepExecutor": 40,  # the cohesive _execute_*_step handler collection (currently 40)
 }
 
 _FILES = {

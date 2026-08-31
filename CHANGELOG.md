@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.113.6] - 2026-08-31
+
+### Fixed
+- **dsl-run host-bound parents (#1658)** — `archetype: tenant` /
+  `is_tenant_root` / `user_membership` setup binds the live host row
+  (`bind_existing`) instead of POSTing `/practices` or seed. CyFuture
+  47/50 `Create failed for Practice` (and the SM cascade) after #1655
+  preserved the tenant root.
+
 ## [0.113.5] - 2026-08-31
 
 ### Security

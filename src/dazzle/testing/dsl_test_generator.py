@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.ir import AppSpec
+from dazzle.core.ir.archetype import ArchetypeKind
 from dazzle.core.ir.domain import EntitySpec, PolicyEffect
 from dazzle.core.ir.eventing import EventSpec
 from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
@@ -308,6 +309,20 @@ def _get_required_refs(
     return refs
 
 
+def _is_host_bound_parent(entity: EntitySpec) -> bool:
+    """True when dsl-run must bind the live host row, not POST a parent.
+
+    ``archetype: tenant`` / ``is_tenant_root`` have no create surface (the
+    host tenant is provisioned and preserved by ``/__test__/reset``, #1655).
+    ``user_membership`` is framework-managed. Emitting ``create`` POSTs
+    ``/practices`` (or seed) and fails the whole child CRUD/SM cascade (#1658).
+    """
+    if entity.is_tenant_root:
+        return True
+    kind = entity.archetype_kind
+    return kind in (ArchetypeKind.TENANT, ArchetypeKind.USER_MEMBERSHIP)
+
+
 def _generate_parent_setup_steps(
     required_refs: list[tuple[str, str, str]],
     entity_map: dict[str, EntitySpec],
@@ -329,6 +344,23 @@ def _generate_parent_setup_steps(
 
         for _fn, target, _pk in parent_refs:
             _create_ancestors(target)
+
+        if _is_host_bound_parent(parent):
+            steps.append(
+                {
+                    "action": "bind_existing",
+                    "target": f"entity:{entity_name}",
+                    "data": {},
+                    "store_result": f"parent_{entity_name.lower()}",
+                    "rationale": (
+                        f"Bind host {parent.title or entity_name} "
+                        "(archetype tenant/membership — do not POST)"
+                    ),
+                }
+            )
+            created.add(entity_name)
+            visiting.discard(entity_name)
+            return
 
         parent_data = _generate_entity_data(parent, entity_map)
         for fn, target, pk in parent_refs:
