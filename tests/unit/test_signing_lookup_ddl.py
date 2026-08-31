@@ -33,6 +33,12 @@ def test_owner_is_dazzle_bypass_and_grant_is_app() -> None:
     assert "REVOKE ALL" in joined
     assert "WHEN 'Contract'" in joined
     assert "zzz" not in joined
+    owner = next(s for s in stmts if "OWNER TO dazzle_bypass" in s)
+    grant = next(s for s in stmts if "GRANT EXECUTE" in s)
+    assert "IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'dazzle_bypass')" in owner
+    assert "IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'dazzle_app')" in grant
+    assert not owner.strip().startswith("ALTER FUNCTION")
+    assert not grant.strip().startswith("GRANT EXECUTE")
 
 
 def test_tenant_root_selects_id_not_tenant_id() -> None:
