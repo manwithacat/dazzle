@@ -149,6 +149,7 @@ def test_auto_join_creates_membership_and_apex_routes_to_tenant(store_url: str) 
         slug_for_tenant=slug_for_tenant,
         memberships_required=True,
         cookie_scope="apex",
+        topology="provider_subdomain",
     )
 
     assert redirect == "https://acmecorp.example.com/", (
@@ -243,6 +244,7 @@ def test_admin_approval_blocks_routing_until_approved(store_url: str) -> None:
         slug_for_tenant=slug_for_tenant,
         memberships_required=True,
         cookie_scope="apex",
+        topology="provider_subdomain",
     )
     assert redirect_after == "https://pendingorg.example.com/", (
         f"Expected tenant-host URL after approval, got {redirect_after!r}"
