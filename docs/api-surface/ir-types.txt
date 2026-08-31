@@ -3459,6 +3459,7 @@ ir_class: WorkspaceRegion
     - tones: dict[str, str] = {}
     - track_format: str | None = None
     - track_max: float | None = None
+    - transitions: str | None = None
     - when_empty: WhenEmpty | None = None
     - width: int | None = None
 

@@ -31,6 +31,8 @@ not one shared mega-list plus warehouse CRUD.
   the object in hand is the sheet, blotter paper, slip, or carbon — next
   after a decision, not return-to-list. Do not invent `stack:` from that
   run; the stem is the judgement.
+- Approver stamps from the pile. `approval_desk.awaiting_approval`
+  uses `transitions: none` (#1663); inspect the invoice, then stamp.
 
 ## Expressions
 

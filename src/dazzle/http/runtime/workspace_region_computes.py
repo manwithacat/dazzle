@@ -635,6 +635,18 @@ def compute_tabbed_slices(
     ]
 
 
+def _transition_needs_inspect(transition: Any) -> bool:
+    """#1663: pile PUT cannot collect a field / when / expr guard."""
+    for guard in getattr(transition, "guards", None) or ():
+        if (
+            getattr(guard, "requires_field", None)
+            or getattr(guard, "condition", None)
+            or getattr(guard, "guard_expr", None)
+        ):
+            return True
+    return False
+
+
 def compute_queue(
     entity_spec: Any,
     source_name: str,
@@ -645,6 +657,10 @@ def compute_queue(
     transition dict per distinct ``to_state`` (first-occurrence wins
     on the order they appear in the IR — preserves the curated order
     DSL authors expect).
+
+    #1663: a ``to_state`` is omitted when *any* transition into it has
+    ``requires`` / ``when`` / an expression guard — inspect is implied;
+    the pile cannot collect those inputs. Role-only stamps stay.
     """
     transitions: list[dict[str, str]] = []
     status_field = ""
@@ -654,17 +670,23 @@ def compute_queue(
     sm = entity_spec.state_machine
     if sm:
         status_field = sm.status_field
+        inspect_blocked: set[str] = set()
+        for t in sm.transitions:
+            dest = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
+            if _transition_needs_inspect(t):
+                inspect_blocked.add(dest)
         seen: set[str] = set()
         for t in sm.transitions:
             to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
-            if to_state not in seen:
-                seen.add(to_state)
-                transitions.append(
-                    {
-                        "to_state": to_state,
-                        "label": transition_action_label(to_state),
-                    }
-                )
+            if to_state in seen or to_state in inspect_blocked:
+                continue
+            seen.add(to_state)
+            transitions.append(
+                {
+                    "to_state": to_state,
+                    "label": transition_action_label(to_state),
+                }
+            )
         # #1626 re-eval: queue rows must not show the full state-machine
         # button wall (Approved|Rejected|Paid|…). Prefer commercial
         # primary/secondary actions, hard-cap at 2.

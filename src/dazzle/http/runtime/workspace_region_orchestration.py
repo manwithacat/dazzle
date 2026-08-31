@@ -550,12 +550,18 @@ async def compute_region_render_inputs(
         queue_transitions, queue_status_field, queue_api_endpoint = compute_queue(
             ctx.entity_spec, ctx.source
         )
-        queue_transitions = gate_queue_transitions_for_principal(
-            queue_transitions,
-            ctx.cedar_access_spec,
-            user_ctx.auth_ctx_for_filters,
-            entity_name=ctx.source or "",
-        )
+        region_ir = ctx.ir_region if ctx.ir_region is not None else ctx_region
+        if getattr(region_ir, "transitions", None) == "none":
+            # #1663: inspect-before-stamp — cards drill; stamp lives on
+            # the record. Role-only pile PUTs are suppressed too.
+            queue_transitions = []
+        else:
+            queue_transitions = gate_queue_transitions_for_principal(
+                queue_transitions,
+                ctx.cedar_access_spec,
+                user_ctx.auth_ctx_for_filters,
+                entity_name=ctx.source or "",
+            )
     else:
         queue_transitions = []
         queue_status_field = ""

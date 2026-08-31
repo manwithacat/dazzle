@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.113.7] - 2026-08-31
+
+### Added
+- **Queue inspect-before-stamp (#1663)** — `transitions: none` on a
+  `display: queue` region omits inline SM PUTs; cards still drill.
+  A `to_state` with `requires` / `when` / an expression guard never
+  appears as a pile button (fail closed). Role-only acks stay unless
+  the flag is `none`. invoice_ops `approval_desk.awaiting_approval`
+  dogfoods the flag. Leftover: entity-list SM chips and `row_action:`
+  are unchanged.
+
 ## [0.113.6] - 2026-08-31
 
 ### Fixed

@@ -1142,6 +1142,7 @@ workspace approval_desk "Approval Desk":
     limit: 6
     display: queue
     action: invoice_detail
+    transitions: none
     empty: "Nothing awaiting approval"
 
   # display: conversation → Message/Bubble chrome (not queue meta of note rows).

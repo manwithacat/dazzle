@@ -1151,6 +1151,11 @@ class WorkspaceRegion(BaseModel):
     # default, states intent). The runtime gates on VIEW-surface existence
     # in all cases, so a drill link never points at a non-existent route.
     drill: str | None = None
+    # #1663: queue inline SM PUTs. None = unset (emit role-only, no-input
+    # stamps; field/expr/when guards never go on the pile). "none" = no
+    # inline PUT (cards drill; stamp lives on the record). "inline" =
+    # explicit form of the default. Does not touch `row_action:`.
+    transitions: str | None = None
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

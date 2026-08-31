@@ -2883,6 +2883,7 @@ class _WorkspaceRegionState:
     entity_card_config: ir.EntityCardConfig | None = None
     row_action: ir.RowActionSpec | None = None  # #1148
     drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
+    transitions: str | None = None  # #1663 — queue inline SM (none|inline)
     refresh_interval: int | None = None  # #1391 — `refresh: every Ns` poll seconds
     rank_by: str | None = None  # #1470 — comparison metric (aggregate key | numeric field)
     order: str = "desc"  # #1470 — comparison sort direction
@@ -3351,6 +3352,29 @@ def _kw_row_action(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
+def _kw_region_transitions(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1663: ``transitions: none | inline`` — queue inspect-before-stamp.
+
+    Unset → role-only no-input stamps stay on the card; ``requires`` /
+    ``when`` / expr guards never do. ``none`` → no inline PUT.
+    ``inline`` → explicit default. Lexer token is ``transitions``
+    (entity SM uses the same keyword as a block).
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    value = str(value_tok.value)
+    if value not in ("none", "inline"):
+        raise make_parse_error(
+            f"Unknown transitions value {value!r}. Expected 'none' or 'inline'.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.transitions = value
+    parser.skip_newlines()
+
+
 def _kw_drill(parser: Any, state: _WorkspaceRegionState) -> None:
     """#1303: ``drill: detail | none`` — per-row drill-to-detail control.
 
@@ -3728,6 +3752,7 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.OVERLAY_SERIES: _kw_overlay_series,
     TokenType.SHOW_OUTLIERS: _kw_show_outliers,
     TokenType.BINS: _kw_bins,
+    TokenType.TRANSITIONS: _kw_region_transitions,  # #1663
 }
 
 
@@ -3877,6 +3902,7 @@ def _build_workspace_region(
         entity_card_config=state.entity_card_config,
         row_action=state.row_action,
         drill=state.drill,  # #1303
+        transitions=state.transitions,  # #1663
         refresh_interval=state.refresh_interval,  # #1391
         rank_by=state.rank_by,  # #1470
         outlier_on=state.outlier_on,  # #1470
