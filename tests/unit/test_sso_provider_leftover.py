@@ -4,7 +4,7 @@ leftover-honest catalog already exists (oral #69 / leftover_honest_auth_error).
 ``GET /auth/sso/{provider}`` still forwarded leftover ``zzz`` / ``ghost``
 into get_provider and invented ``303 /login?error=sso_provider_unknown``.
 The same leftover on GET callback invented the same theater. Valid
-``google`` / ``microsoft`` ride; leftover stays put (400, no theater).
+``google`` / ``microsoft`` / ``apple`` ride; leftover stays put (400, no theater).
 Absent / blank still first-visit. Well-formed slugs that are not
 configured still bounce sso_provider_unknown. Live login
 ``/auth/sso/{provider}`` (sso_views Continue-with). Oral #112 — not
@@ -89,6 +89,7 @@ def _sso_app(*, configured: bool = True) -> FastAPI:
     [
         ("google", "google"),
         ("microsoft", "microsoft"),
+        ("apple", "apple"),
         ("", ""),
         (None, ""),
         ("   ", ""),
@@ -107,6 +108,7 @@ def _sso_app(*, configured: bool = True) -> FastAPI:
     ids=[
         "valid-google",
         "valid-microsoft",
+        "valid-apple",
         "empty-default",
         "none-default",
         "blank-default",
@@ -157,6 +159,22 @@ def test_wellformed_unconfigured_still_sso_provider_unknown() -> None:
     assert resp.headers["location"] == "/login?error=sso_provider_unknown"
 
 
+def test_leftover_callback_post_does_not_invent_sso_provider_unknown() -> None:
+    """Apple form_post is POST; leftover slug still stay-put 400."""
+    client = TestClient(_sso_app())
+    resp = client.post("/auth/sso/zzz/callback", data={"code": "x", "state": "s"})
+    assert resp.status_code == 400
+    assert "Unknown SSO provider" in resp.text
+    assert "sso_provider_unknown" not in (resp.headers.get("location") or "")
+
+
+def test_wellformed_unconfigured_apple_still_sso_provider_unknown() -> None:
+    client = TestClient(_sso_app(configured=False))
+    resp = client.get("/auth/sso/apple", follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login?error=sso_provider_unknown"
+
+
 def test_wellformed_unconfigured_callback_still_sso_provider_unknown() -> None:
     client = TestClient(_sso_app(configured=False))
     resp = client.get("/auth/sso/microsoft/callback?code=x", follow_redirects=False)
@@ -173,8 +191,8 @@ def test_helper_source_pins_sso_provider_leftover() -> None:
     assert "leftover_honest_auth_error" in helper
     assert "SSO_PROVIDER_TOKENS" in helper
     assert "SSO_PROVIDER_TOKENS" in config
-    assert '("google", "microsoft")' in config
-    assert SSO_PROVIDER_TOKENS == ("google", "microsoft")
+    assert '("google", "microsoft", "apple")' in config
+    assert SSO_PROVIDER_TOKENS == ("google", "microsoft", "apple")
     assert "leftover_honest_sso_provider" in routes
     assert "Unknown SSO provider" in routes
     assert "HTMLResponse" in routes

@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.113.9] - 2026-08-31
+
+### Added
+- **Sign in with Apple in the first-party SSO catalog (#1650)** —
+  `apple` rides `SSO_PROVIDER_TOKENS` / `DAZZLE_SSO_APPLE_CLIENT_ID`
+  + `_CLIENT_SECRET` (operator-minted ES256 JWT, not a runtime `.p8`).
+  Authorize uses `response_mode=form_post`; callback is GET or POST.
+  Leftover slugs stay 400. Email still required (`sso_no_email` if
+  Apple withholds it after first consent).
+
 ## [0.113.8] - 2026-08-31
 
 ### Added

@@ -1,6 +1,6 @@
 """SSO button-row typed view (Phase 1.C, v0.67.39).
 
-Renders the "Continue with Google / Microsoft" buttons that auth
+Renders the "Continue with Google / Microsoft / Apple" buttons that auth
 views append above the email/password form when SSO providers are
 configured. The buttons are plain `<a>` links — clicking one
 navigates to `/auth/sso/<provider>` which kicks off the OAuth dance

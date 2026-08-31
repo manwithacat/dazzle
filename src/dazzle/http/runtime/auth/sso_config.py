@@ -21,11 +21,11 @@ import os
 from dataclasses import dataclass
 from typing import Literal
 
-ProviderName = Literal["google", "microsoft"]
+ProviderName = Literal["google", "microsoft", "apple"]
 
 # Declared leftover-honest catalog (cycle 2242 / oral #112). Leftover
 # ``/auth/sso/zzz`` stays put; only these slugs ride.
-SSO_PROVIDER_TOKENS: tuple[str, ...] = ("google", "microsoft")
+SSO_PROVIDER_TOKENS: tuple[str, ...] = ("google", "microsoft", "apple")
 
 
 _PROVIDER_DEFAULTS: dict[ProviderName, dict[str, str]] = {
@@ -44,6 +44,15 @@ _PROVIDER_DEFAULTS: dict[ProviderName, dict[str, str]] = {
         ),
         "default_scopes": "openid email profile User.Read",
     },
+    "apple": {
+        "display_name": "Apple",
+        "discovery_url": "https://appleid.apple.com/.well-known/openid-configuration",
+        # Apple withholds ``email`` after first consent; ``name`` is
+        # first-consent only. ``CLIENT_SECRET`` is an operator-minted
+        # ES256 client-secret JWT (Services ID = sub/iss, aud
+        # https://appleid.apple.com, ≤6 months) — not a runtime .p8 mint.
+        "default_scopes": "openid email name",
+    },
 }
 
 
@@ -52,7 +61,7 @@ class SsoProviderConfig:
     """One enabled OIDC provider.
 
     Fields:
-        name: canonical provider key (``"google"`` or ``"microsoft"``).
+        name: canonical provider key (``"google"``, ``"microsoft"``, or ``"apple"``).
         display_name: human-readable label rendered on the sign-in
             button (e.g. ``"Continue with Google"`` — the "Continue
             with" prefix is added by the view).
@@ -90,6 +99,12 @@ def load_sso_providers_from_env(
         DAZZLE_SSO_GOOGLE_SCOPES (optional)
         DAZZLE_SSO_MICROSOFT_CLIENT_ID, DAZZLE_SSO_MICROSOFT_CLIENT_SECRET,
         DAZZLE_SSO_MICROSOFT_SCOPES (optional)
+        DAZZLE_SSO_APPLE_CLIENT_ID, DAZZLE_SSO_APPLE_CLIENT_SECRET,
+        DAZZLE_SSO_APPLE_SCOPES (optional)
+
+    Apple ``CLIENT_SECRET`` is an operator-minted ES256 JWT (Services ID
+    as ``sub``/``iss``, audience ``https://appleid.apple.com``). The
+    runtime does not mint from a ``.p8`` key.
 
     A provider is enabled when both its client_id and client_secret
     are set. Missing either → provider silently omitted (no SSO

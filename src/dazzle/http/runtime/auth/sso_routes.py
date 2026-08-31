@@ -1,8 +1,9 @@
 """SSO route handlers (Phase 1.C, v0.67.39).
 
-Two endpoints per provider:
+Endpoints per provider:
   GET /auth/sso/{provider}            — kick off OAuth flow
-  GET /auth/sso/{provider}/callback   — receive code, finish flow
+  GET|POST /auth/sso/{provider}/callback — receive code, finish flow
+  (POST is Apple ``response_mode=form_post``; Google/Microsoft stay GET.)
 
 The OAuth dance is driven by Authlib's `StarletteOAuth2App`. Each
 configured provider is registered once at startup (lazy import so
@@ -77,12 +78,16 @@ def _get_or_create_oauth_client(app_state: object, provider: SsoProviderConfig) 
     from authlib.integrations.starlette_client import OAuth
 
     oauth = OAuth()
+    client_kwargs: dict[str, Any] = {"scope": provider.scopes}
+    if provider.name == "apple":
+        # Apple authorize uses form_post; callback is POST body, not query.
+        client_kwargs["response_mode"] = "form_post"
     oauth.register(
         name=provider.name,
         client_id=provider.client_id,
         client_secret=provider.client_secret,
         server_metadata_url=provider.discovery_url,
-        client_kwargs={"scope": provider.scopes},
+        client_kwargs=client_kwargs,
     )
     client = getattr(oauth, provider.name)
     clients[provider.name] = client
@@ -144,7 +149,7 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
         result: RedirectResponse = await client.authorize_redirect(request, callback_url)
         return result
 
-    @router.get("/auth/sso/{provider}/callback")
+    @router.api_route("/auth/sso/{provider}/callback", methods=["GET", "POST"])
     async def sso_callback(
         provider: str,
         request: Request,
@@ -160,10 +165,21 @@ def create_sso_routes(*, cookie_name: str = "dazzle_session") -> APIRouter:
             return RedirectResponse(url="/login?error=sso_provider_unknown", status_code=303)
         # Leftover ``?code=zzz`` / ``?state=zzz`` used to invent sso_failed.
         # Stay-put inlined (clone ratchet vs leftover_auth_email_or_400).
-        honest_code = leftover_honest_oauth_code(request.query_params.get("code"))
+        # Apple form_post puts code/state on the POST body.
+        raw_code: str | None = request.query_params.get("code")
+        raw_state: str | None = request.query_params.get("state")
+        if request.method == "POST":
+            form = await request.form()
+            form_code = form.get("code")
+            form_state = form.get("state")
+            if raw_code is None and isinstance(form_code, str):
+                raw_code = form_code
+            if raw_state is None and isinstance(form_state, str):
+                raw_state = form_state
+        honest_code = leftover_honest_oauth_code(raw_code)
         if honest_code is None:
             return HTMLResponse("Unknown authorization code", status_code=400)
-        honest_state = leftover_honest_oauth_code(request.query_params.get("state"))
+        honest_state = leftover_honest_oauth_code(raw_state)
         if honest_state is None:
             return HTMLResponse("Unknown OAuth state", status_code=400)
 

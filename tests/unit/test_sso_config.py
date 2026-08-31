@@ -73,6 +73,21 @@ def test_microsoft_env_pair_enables_microsoft() -> None:
     assert urlparse(providers[0].discovery_url).netloc.endswith("microsoftonline.com")
 
 
+def test_apple_env_pair_enables_apple() -> None:
+    providers = load_sso_providers_from_env(
+        env={
+            "DAZZLE_SSO_APPLE_CLIENT_ID": "com.example.svc",
+            "DAZZLE_SSO_APPLE_CLIENT_SECRET": "eyJhbGciOiJFUzI1NiJ9.aaa.bbb",
+        }
+    )
+    assert len(providers) == 1
+    p = providers[0]
+    assert p.name == "apple"
+    assert p.display_name == "Apple"
+    assert "email" in p.scopes
+    assert urlparse(p.discovery_url).netloc.endswith("appleid.apple.com")
+
+
 def test_both_providers_enabled() -> None:
     providers = load_sso_providers_from_env(
         env={

@@ -1,7 +1,7 @@
 """Leftover-honest SSO provider slugs (cycle 2242, oral #112).
 
 Reuses leftover_honest_auth_error — declared catalog is google /
-microsoft (sso_config.SSO_PROVIDER_TOKENS). Initiate + callback
+microsoft / apple (sso_config.SSO_PROVIDER_TOKENS). Initiate + callback
 stay-put is inlined (clone ratchet vs leftover_auth_email_or_400).
 """
 
@@ -17,7 +17,7 @@ def leftover_honest_sso_provider(raw: Any) -> str | None:
     Leftover ``/auth/sso/zzz`` / ``ghost`` / ``unknown-provider`` on
     GET initiate used to invent ``303 /login?error=sso_provider_unknown``
     theater (catalog miss). The same leftover on GET callback invented
-    the same error. Valid ``google`` / ``microsoft`` ride. Absent /
+    the same error. Valid ``google`` / ``microsoft`` / ``apple`` ride. Absent /
     blank is first-visit (``""``). Well-formed slugs that are not
     configured still bounce ``sso_provider_unknown``. Distinct from
     leftover ``?connection=`` (oral #110), leftover ``?new=`` (oral
