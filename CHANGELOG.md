@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.113.3] - 2026-08-31
+
+### Fixed
+- **Join-routing PG tests vs topology A** — post-join apex slug bounce
+  is B + `cookie_scope: apex` only (ADR-0055). The live PG proofs now
+  pass `topology: provider_subdomain`; leftover A stays on the
+  canonical host (`None`). Exposed once signing-lookup OWNER no longer
+  aborted the postgres job.
+
 ## [0.113.2] - 2026-08-31
 
 ### Fixed
