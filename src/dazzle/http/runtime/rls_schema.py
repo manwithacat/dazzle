@@ -738,6 +738,13 @@ def build_signing_lookup_ddl(appspec: Any) -> list[str]:
     row when the GUC is unset. Request LOGIN stays ``dazzle_app``. The
     CASE list is IR ``signable: true`` names only — leftover entity
     tokens are not interpolated.
+
+    OWNER / GRANT target cluster roles that deploy creates out of band
+    (``build_rls_role_ddl`` is not auto-run on boot). Leftover CI /
+    local-superuser URLs have neither role; a bare ALTER/GRANT aborted
+    the RLS apply transaction and the server never bound. Those two
+    statements are no-ops when the role is absent. Production with the
+    three-role model still ALTERs and GRANTs.
     """
     domain = getattr(appspec, "domain", None)
     entities = getattr(domain, "entities", None) or []
@@ -773,9 +780,15 @@ def build_signing_lookup_ddl(appspec: Any) -> list[str]:
             "END;\n"
             "$$"
         ),
-        "ALTER FUNCTION dazzle_signing_lookup_tenant(text, uuid) OWNER TO dazzle_bypass",
+        _if_role_exists(
+            "dazzle_bypass",
+            "ALTER FUNCTION dazzle_signing_lookup_tenant(text, uuid) OWNER TO dazzle_bypass",
+        ),
         "REVOKE ALL ON FUNCTION dazzle_signing_lookup_tenant(text, uuid) FROM PUBLIC",
-        "GRANT EXECUTE ON FUNCTION dazzle_signing_lookup_tenant(text, uuid) TO dazzle_app",
+        _if_role_exists(
+            "dazzle_app",
+            "GRANT EXECUTE ON FUNCTION dazzle_signing_lookup_tenant(text, uuid) TO dazzle_app",
+        ),
     ]
 
 
@@ -840,6 +853,23 @@ def _login_options(password: str | None) -> str:
         return "LOGIN"
     escaped = password.replace("'", "''")
     return f"LOGIN PASSWORD '{escaped}'"
+
+
+def _if_role_exists(role: str, stmt: str) -> str:
+    """Run ``stmt`` only when cluster role ``role`` already exists.
+
+    ``role`` is a fixed framework constant. ``stmt`` is closed templated
+    DDL (no user input).
+    """
+    return (
+        "DO $$\n"
+        "BEGIN\n"
+        f"    IF EXISTS (SELECT FROM pg_roles WHERE rolname = '{role}') THEN\n"
+        f"        {stmt};\n"
+        "    END IF;\n"
+        "END\n"
+        "$$"
+    )
 
 
 def _guarded_create_role(role: str, options: str) -> str:
