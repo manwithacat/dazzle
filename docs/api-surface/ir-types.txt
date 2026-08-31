@@ -3397,6 +3397,7 @@ ir_class: WorkspaceRegion
   optional:
     - action: str | None = None
     - action_cards: list[ActionCardSpec] = []
+    - after: str | None = None
     - aggregates: dict[str, AggregateRef | DerivedMetric] = {}
     - avatar_field: str | None = None
     - bin_count: int | None = None

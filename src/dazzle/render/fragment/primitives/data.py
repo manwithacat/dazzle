@@ -949,6 +949,9 @@ class QueueRegion:
     queue_api_endpoint: str = ""
     region_name: str = ""
     empty_message: str = "Queue is empty."
+    # #1664: opt-in origin for after:next pile stamps.
+    after_workspace: str = ""
+    after_region: str = ""
 
 
 @dataclass(frozen=True, slots=True)

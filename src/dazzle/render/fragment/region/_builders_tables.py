@@ -897,6 +897,8 @@ class _BuildersTablesMixin:
             queue_api_endpoint=queue_api_endpoint,
             region_name=region_name,
             empty_message=str(empty_msg),
+            after_workspace=str(ctx.get("after_workspace") or ""),
+            after_region=str(ctx.get("after_region") or ""),
         )
         return _wrap_surface(title, "list", body)
 

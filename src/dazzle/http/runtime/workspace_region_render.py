@@ -42,6 +42,7 @@ from dazzle.http.runtime.handlers.list_handlers import (
     gate_edit_path_drill_for_principal,
     gate_edit_path_drill_map_for_principal,
 )
+from dazzle.http.runtime.next_record import stamp_queue_after_next
 from dazzle.http.runtime.workspace_card_data import (
     _build_cohort_cells,
     _build_day_timeline_slots,
@@ -729,6 +730,7 @@ def _build_list_adapter_ctx(
         # Prefer entity display_field; thread hub drill (not API plurals).
         _set_display_key(adapter_ctx, inputs, ctx)
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
+        stamp_queue_after_next(adapter_ctx, ctx)
     elif display_upper == "TIMELINE":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

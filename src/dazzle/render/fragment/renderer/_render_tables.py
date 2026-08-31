@@ -995,13 +995,19 @@ class _RenderTablesMixin:
         applicable = [t for t in q.transitions if t.to_state != row.current_status]
         if not (applicable and q.queue_status_field and q.queue_api_endpoint):
             return ""
+        extra = ""
+        if q.after_workspace and q.after_region:
+            extra = (
+                f', "_from_workspace": "{ctx.escape_attr(q.after_workspace)}", '
+                f'"_from_region": "{ctx.escape_attr(q.after_region)}"'
+            )
         buttons = "".join(
             f'<button type="button" '
             f'class="dz-queue-action" '
             f'hx-put="{ctx.escape_attr(q.queue_api_endpoint)}/'
             f'{ctx.escape_attr(row.row_id)}" '
             f'hx-vals=\'{{"{q.queue_status_field}": '
-            f'"{t.to_state}"}}\' '
+            f'"{t.to_state}"{extra}}}\' '
             f'hx-target="closest [data-dz-region]" '
             f'hx-swap="innerHTML">'
             f"{ctx.escape(t.label)}"

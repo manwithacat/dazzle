@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.113.10] - 2026-08-31
+
+### Added
+- **Queue `after: next` (#1664)** — opt-in next-record landing after a
+  job stamp. Successful SM PUT with `_from_workspace` / `_from_region`
+  HX-Redirects to the next id in that region's filter+sort, or the
+  workspace if none remain. Peek and `drill: none` do not invent a
+  detail hop. Leftover origin tokens keep pile-return. invoice_ops
+  `approval_desk.awaiting_approval` and `pay_desk` ready/past-due
+  dogfood. Not `stack:`.
+
 ## [0.113.9] - 2026-08-31
 
 ### Added

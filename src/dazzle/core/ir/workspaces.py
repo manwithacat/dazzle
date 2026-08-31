@@ -1156,6 +1156,11 @@ class WorkspaceRegion(BaseModel):
     # inline PUT (cards drill; stamp lives on the record). "inline" =
     # explicit form of the default. Does not touch `row_action:`.
     transitions: str | None = None
+    # #1664: after a successful SM stamp, land on the next matching
+    # record (same region filter+sort, skip the row just left) or the
+    # workspace empty. None = unset (pile-return). ``next`` = opt-in.
+    # Not ``stack:``. Peek and ``drill: none`` do not invent a detail hop.
+    after: str | None = None
     # v0.61.63 (#903): explicit region title override. When set, replaces
     # the auto-derived title from the region key (e.g. `hero_marked` →
     # "Hero Marked"). Empty string is treated as None — the runtime

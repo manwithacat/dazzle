@@ -429,10 +429,20 @@ def _build_dispatch_ctx(
         request = getattr(render_ctx, "request", None)
         qparams = getattr(request, "query_params", None)
         requested_tab = ""
+        from_ws = ""
+        from_rg = ""
         if qparams is not None:
             getter = getattr(qparams, "get", None)
-            requested_tab = str(getter("tab") or "") if getter is not None else ""
-        return _dispatch_ctx_from_detail(
+            if getter is not None:
+                requested_tab = str(getter("tab") or "")
+                from_ws = str(getter("from_ws") or "")
+                from_rg = str(getter("from_rg") or "")
+        detail_ctx = _dispatch_ctx_from_detail(
             detail, surface, services=services, requested_tab=requested_tab
         )
+        if from_ws:
+            detail_ctx["from_ws"] = from_ws
+        if from_rg:
+            detail_ctx["from_rg"] = from_rg
+        return detail_ctx
     return {}

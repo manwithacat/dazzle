@@ -731,6 +731,12 @@ class FragmentSurfaceAdapter:
             # ADR-0049 Phase 2: transitions are hx-PUT with the status field →
             # target state in hx-vals (the legacy semantics); the prior hx-post
             # without vals never told the endpoint which state to move to.
+            vals: dict[str, str] = {status_field: to_state}
+            from_ws = str(ctx.get("from_ws") or "")
+            from_rg = str(ctx.get("from_rg") or "")
+            if from_ws and from_rg:
+                vals["_from_workspace"] = from_ws
+                vals["_from_region"] = from_rg
             actions.append(
                 Button(
                     label=str(label),
@@ -738,7 +744,7 @@ class FragmentSurfaceAdapter:
                     hx_put=URL(str(api_url)),
                     hx_target=TargetSelector("body"),
                     hx_swap="innerHTML",
-                    hx_vals=json.dumps({status_field: to_state}),
+                    hx_vals=json.dumps(vals),
                     data_action=f"{entity_name}.transition.{to_state}",
                 )
             )

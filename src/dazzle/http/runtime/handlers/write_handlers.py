@@ -36,6 +36,7 @@ from dazzle.http.runtime.document_routes import verify_file_triple
 from dazzle.http.runtime.htmx import is_peek_request
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.http.runtime.next_record import resolve_after_next_url
 from dazzle.http.runtime.repository import ConstraintViolationError
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -516,6 +517,8 @@ def create_update_handler(
                             },
                         ) from _exc
 
+        from_workspace = body.pop("_from_workspace", None)
+        from_region = body.pop("_from_region", None)
         data = input_schema.model_validate(body)
 
         # #1312 (ADR-0028): scope: update: DESTINATION enforcement. The
@@ -555,6 +558,19 @@ def create_update_handler(
         peek = is_peek_request(request)
         detail_url = f"/app/{entity_slug}/{id}" if entity_slug else None
         redirect_url = None if peek else _htmx_current_url(request)
+        # #1664: opt-in next-record landing (region ``after: next``).
+        if not peek:
+            nxt = await resolve_after_next_url(
+                service=service,
+                appspec=getattr(request.app.state, "appspec", None),
+                workspace=str(from_workspace or ""),
+                region=str(from_region or ""),
+                skip_id=str(id),
+                entity_slug=entity_slug,
+                auth_ctx=_extra.get("auth_context"),
+            )
+            if nxt:
+                redirect_url = nxt
         return _with_htmx_triggers(
             request,
             result,

@@ -1797,6 +1797,7 @@
             'action': None,
             'action_cards': list([
             ]),
+            'after': None,
             'aggregates': dict({
             }),
             'avatar_field': None,
@@ -1883,6 +1884,7 @@
             'action': None,
             'action_cards': list([
             ]),
+            'after': None,
             'aggregates': dict({
             }),
             'avatar_field': None,
@@ -1969,6 +1971,7 @@
             'action': None,
             'action_cards': list([
             ]),
+            'after': None,
             'aggregates': dict({
             }),
             'avatar_field': None,

@@ -2884,6 +2884,7 @@ class _WorkspaceRegionState:
     row_action: ir.RowActionSpec | None = None  # #1148
     drill: str | None = None  # #1303 — per-row drill-to-detail (detail|none)
     transitions: str | None = None  # #1663 — queue inline SM (none|inline)
+    after: str | None = None  # #1664 — next-record landing (next)
     refresh_interval: int | None = None  # #1391 — `refresh: every Ns` poll seconds
     rank_by: str | None = None  # #1470 — comparison metric (aggregate key | numeric field)
     order: str = "desc"  # #1470 — comparison sort direction
@@ -3352,6 +3353,27 @@ def _kw_row_action(parser: Any, state: _WorkspaceRegionState) -> None:
     parser.expect(TokenType.DEDENT)
 
 
+def _kw_region_after(parser: Any, state: _WorkspaceRegionState) -> None:
+    """#1664: ``after: next`` — land on the next matching record after a stamp.
+
+    Unset → pile-return. ``next`` → HX-Redirect to the next id in this
+    region's filter+sort (or the workspace if none remain).
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    value_tok = parser.expect_identifier_or_keyword()
+    value = str(value_tok.value)
+    if value != "next":
+        raise make_parse_error(
+            f"Unknown after value {value!r}. Expected 'next'.",
+            parser.file,
+            value_tok.line,
+            value_tok.column,
+        )
+    state.after = value
+    parser.skip_newlines()
+
+
 def _kw_region_transitions(parser: Any, state: _WorkspaceRegionState) -> None:
     """#1663: ``transitions: none | inline`` — queue inspect-before-stamp.
 
@@ -3753,6 +3775,7 @@ _WORKSPACE_REGION_KEYWORDS: dict[TokenType, KeywordParser[_WorkspaceRegionState]
     TokenType.SHOW_OUTLIERS: _kw_show_outliers,
     TokenType.BINS: _kw_bins,
     TokenType.TRANSITIONS: _kw_region_transitions,  # #1663
+    TokenType.AFTER: _kw_region_after,  # #1664
 }
 
 
@@ -3903,6 +3926,7 @@ def _build_workspace_region(
         row_action=state.row_action,
         drill=state.drill,  # #1303
         transitions=state.transitions,  # #1663
+        after=state.after,  # #1664
         refresh_interval=state.refresh_interval,  # #1391
         rank_by=state.rank_by,  # #1470
         outlier_on=state.outlier_on,  # #1470

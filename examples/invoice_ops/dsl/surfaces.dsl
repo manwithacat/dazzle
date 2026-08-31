@@ -1143,6 +1143,7 @@ workspace approval_desk "Approval Desk":
     display: queue
     action: invoice_detail
     transitions: none
+    after: next
     empty: "Nothing awaiting approval"
 
   # display: conversation → Message/Bubble chrome (not queue meta of note rows).
@@ -1530,6 +1531,7 @@ workspace pay_desk "Pay Desk":
     limit: 3
     display: queue
     action: invoice_detail
+    after: next
     empty: "Nothing on-time and ready to pay"
 
   past_due:
@@ -1539,6 +1541,7 @@ workspace pay_desk "Pay Desk":
     limit: 3
     display: queue
     action: invoice_detail
+    after: next
     empty: "No past-due approved invoices"
 
   disputed_queue:
