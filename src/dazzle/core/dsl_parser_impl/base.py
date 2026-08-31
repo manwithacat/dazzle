@@ -302,6 +302,7 @@ class BaseParser:
         # Map DSL token types to text representation
         _OP_TEXT = {
             TokenType.DOUBLE_EQUALS: "==",
+            TokenType.EQUALS: "==",
             TokenType.NOT_EQUALS: "!=",
             TokenType.GREATER_THAN: ">",
             TokenType.LESS_THAN: "<",

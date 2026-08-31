@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.113.14] - 2026-08-31
+
+### Added
+- **Computed aggregate `where` (#1665)** — `sum(rel.field where status ==
+  "succeeded")` / `count(...)` reuse the expression-lang predicate
+  (`==` / `!=` field-literal). Failed rows do not reduce the sitting
+  number. Unfiltered `sum(line_items.amount)` unchanged. Uncompilable
+  `where` fails closed (None). Remainder dogfood waits on a remittance
+  amount on PaymentAttempt.
+
 ## [0.113.13] - 2026-08-31
 
 ### Changed

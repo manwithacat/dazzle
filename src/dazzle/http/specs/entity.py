@@ -480,6 +480,12 @@ class ComputedExprSpec(BaseModel):
     right: ComputedExprSpec | None = Field(default=None, description="Right operand")
     # For literal: value
     value: int | float | None = Field(default=None, description="Literal value")
+    # #1665: compiled row filter for aggregate calls (field/op/value).
+    where_field: str | None = Field(default=None, description="Aggregate where field")
+    where_op: str | None = Field(default=None, description="Aggregate where operator")
+    where_value: str | int | float | bool | None = Field(
+        default=None, description="Aggregate where literal"
+    )
 
     model_config = ConfigDict(frozen=True)
 

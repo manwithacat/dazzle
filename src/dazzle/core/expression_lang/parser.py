@@ -16,7 +16,7 @@ Grammar (precedence low to high):
     primary     → literal | duration | func_call | field_ref | "(" expr ")" | list_literal
     literal     → INT | FLOAT | STRING | "true" | "false" | "null"
     duration    → DURATION
-    func_call   → IDENT "(" (expr ("," expr)*)? ")"
+    func_call   → IDENT "(" (expr ("," expr)*)? ("where" expr)? ")"
     field_ref   → IDENT (("." | "->") IDENT)*
     list_literal → "[" (expr ("," expr)*)? "]"
 """
@@ -282,8 +282,12 @@ class _Parser:
             while self.match(TokenKind.COMMA):
                 args.append(self.parse_expr())
 
+        where: Expr | None = None
+        if self.current.kind == TokenKind.WHERE:
+            self.advance()
+            where = self.parse_expr()
         self.expect(TokenKind.RPAREN)
-        return FuncCall(name=name_tok.value, args=args)
+        return FuncCall(name=name_tok.value, args=args, where=where)
 
     def _parse_field_ref(self) -> FieldRef:
         """IDENT (('.' | '->') IDENT)*"""

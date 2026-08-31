@@ -119,13 +119,34 @@ def _evaluate_aggregate(
         # Aggregate on own field (e.g., count(items) where items is a relation)
         relation_name = path[0]
         items = related_data.get(relation_name, [])
+        items = _filter_aggregate_items(items, expr)
         return _aggregate_values(func, items, None)
     else:
         # Aggregate on related field (e.g., sum(line_items.amount))
         relation_name = path[0]
         field_name = path[-1]
         items = related_data.get(relation_name, [])
+        items = _filter_aggregate_items(items, expr)
         return _aggregate_values(func, items, field_name)
+
+
+def _filter_aggregate_items(
+    items: list[dict[str, Any]], expr: ComputedExprSpec
+) -> list[dict[str, Any]]:
+    """#1665: apply compiled where field/op/value; unanchored stays empty."""
+    field = expr.where_field
+    op = expr.where_op
+    if not field or not op:
+        return items
+    expected = expr.where_value
+    out: list[dict[str, Any]] = []
+    for item in items:
+        actual = item.get(field)
+        if op == "==" and actual == expected:
+            out.append(item)
+        elif op == "!=" and actual != expected:
+            out.append(item)
+    return out
 
 
 def _evaluate_date_function(

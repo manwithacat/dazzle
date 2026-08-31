@@ -345,7 +345,7 @@ field_path    ::= IDENT ("." IDENT)* ;
 AGGREGATE_FN  ::= "count" | "sum" | "avg" | "max" | "min"
                 | "days_until" | "days_since" ;
 
-aggregate_call ::= AGGREGATE_FN "(" field_path ")" ;
+aggregate_call ::= AGGREGATE_FN "(" field_path ("where" condition_expr)? ")" ;
 
 (* =============================================================================
    State Machines

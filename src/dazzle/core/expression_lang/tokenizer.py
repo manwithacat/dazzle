@@ -29,6 +29,7 @@ class TokenKind(StrEnum):
     IF = auto()
     ELIF = auto()
     ELSE = auto()
+    WHERE = auto()
 
     # Operators
     PLUS = auto()
@@ -86,6 +87,7 @@ _KEYWORDS: dict[str, TokenKind] = {
     "if": TokenKind.IF,
     "elif": TokenKind.ELIF,
     "else": TokenKind.ELSE,
+    "where": TokenKind.WHERE,
 }
 
 _DURATION_UNITS = frozenset({"d", "h", "m", "y", "w", "min"})

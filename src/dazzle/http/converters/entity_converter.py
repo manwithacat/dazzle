@@ -386,6 +386,24 @@ def _convert_arithmetic_operator(op: ir.ArithmeticOperator) -> ArithmeticOperato
     return mapping[op]
 
 
+def _compile_aggregate_where(
+    where: Any,
+) -> tuple[str | None, str | None, str | int | float | bool | None]:
+    """#1665: compile `where field == literal` (or leftover-honest None)."""
+    if where is None:
+        return None, None, None
+    if not isinstance(where, BinaryExpr) or where.op not in (BinaryOp.EQ, BinaryOp.NE):
+        return None, None, None
+    if not isinstance(where.left, FieldRef) or len(where.left.path) != 1:
+        return None, None, None
+    if not isinstance(where.right, Literal):
+        return None, None, None
+    value = where.right.value
+    if not isinstance(value, str | int | float | bool):
+        return None, None, None
+    return where.left.path[0], where.op.value, value
+
+
 def _convert_computed_expr(expr: ir.ComputedExpr) -> ComputedExprSpec:
     """Convert IR ComputedExpr to BackendSpec ComputedExprSpec."""
     if isinstance(expr, ir.FieldReference):
@@ -435,7 +453,18 @@ def _convert_unified_expr_to_computed(expr: Any) -> ComputedExprSpec:
         func = func_map.get(expr.name)
         if func and expr.args:
             field_spec = _convert_unified_expr_to_computed(expr.args[0])
-            return ComputedExprSpec(kind="aggregate", function=func, field=field_spec)
+            where = getattr(expr, "where", None)
+            wf, wo, wv = _compile_aggregate_where(where)
+            if where is not None and wf is None:
+                return ComputedExprSpec(kind="literal", value=None)
+            return ComputedExprSpec(
+                kind="aggregate",
+                function=func,
+                field=field_spec,
+                where_field=wf,
+                where_op=wo,
+                where_value=wv,
+            )
         return ComputedExprSpec(kind="literal", value=None)
     elif isinstance(expr, BinaryExpr):
         op_map = {

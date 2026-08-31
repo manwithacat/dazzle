@@ -180,11 +180,15 @@ class FuncCall(BaseModel):
 
     name: str = Field(description="Function name")
     args: list[Expr] = Field(default_factory=list, description="Arguments")
+    # #1665: optional row filter on aggregate calls (same algebra as metrics).
+    where: Expr | None = None
 
     model_config = ConfigDict(frozen=True)
 
     def __str__(self) -> str:
         args_str = ", ".join(str(a) for a in self.args)
+        if self.where is not None:
+            return f"{self.name}({args_str} where {self.where})"
         return f"{self.name}({args_str})"
 
 
