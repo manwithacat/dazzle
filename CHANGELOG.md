@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.113.11] - 2026-08-31
+
+### Changed
+- **Create lands on the new record (#1667)** — HTMX create with a VIEW
+  already HX-Redirects to `/app/{slug}/{id}`. Peek (`?peek=1`) stays
+  put with a View toast. Nested create from another entity's hub
+  (LineItem on an Invoice) stays on the parent. Workspace desks still
+  open the new record. Leftover hub tokens are not a hub.
+
 ## [0.113.10] - 2026-08-31
 
 ### Added

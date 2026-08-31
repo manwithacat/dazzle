@@ -26,6 +26,7 @@ globs that pattern and this module defines no routes.
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException, Request
@@ -36,7 +37,7 @@ from dazzle.http.runtime.document_routes import verify_file_triple
 from dazzle.http.runtime.htmx import is_peek_request
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
-from dazzle.http.runtime.next_record import resolve_after_next_url
+from dazzle.http.runtime.next_record import leftover_honest_origin, resolve_after_next_url
 from dazzle.http.runtime.repository import ConstraintViolationError
 
 # Shared CRUD route-dispatch surface — from the route_support LEAF (smells round
@@ -50,6 +51,42 @@ from dazzle.http.runtime.route_support import (
     _set_handler_annotations,
 )
 from dazzle.http.runtime.scope_filters import _enforce_create_scope, _enforce_update_scope
+
+
+def _create_detail_url(entity_slug: str, result: Any) -> str | None:
+    if not entity_slug:
+        return None
+    result_id = _extract_result_id(result)
+    if result_id:
+        return f"/app/{entity_slug}/{result_id}"
+    return None
+
+
+def _nested_on_other_hub(current_url: str | None, entity_slug: str) -> bool:
+    """True when create ran from another entity's hub (stay put).
+
+    ``/app/workspaces/{name}`` is a job desk, not a hub — land on the new
+    record. Leftover path tokens are not a hub either.
+    """
+    if not current_url or not entity_slug:
+        return False
+    parts = [p for p in urlparse(current_url).path.rstrip("/").split("/") if p]
+    if len(parts) != 3 or parts[0] != "app":
+        return False
+    slug = leftover_honest_origin(parts[1])
+    if not slug or slug == "workspaces":
+        return False
+    return slug != entity_slug
+
+
+def _create_settle_urls(
+    request: Any, entity_slug: str, result: Any
+) -> tuple[str | None, str | None]:
+    """#1667: land on the new record, unless peek or nested-on-other-hub."""
+    detail = _create_detail_url(entity_slug, result)
+    if is_peek_request(request) or _nested_on_other_hub(_htmx_current_url(request), entity_slug):
+        return None, detail
+    return detail, detail
 
 
 async def _parse_request_body(request: Any) -> dict[str, Any]:
@@ -255,14 +292,6 @@ def create_create_handler(
     audit_logger = spec.handler.audit_logger
     cedar_access_spec = spec.handler.cedar_access_spec
 
-    def _build_redirect_url(result: Any) -> str | None:
-        if not entity_slug:
-            return None
-        result_id = _extract_result_id(result)
-        if result_id:
-            return f"/app/{entity_slug}/{result_id}"
-        return None
-
     async def _core(
         _id: Any,
         request: Request,
@@ -398,14 +427,14 @@ def create_create_handler(
                 return {"status": "duplicate", "message": "Already submitted"}
             raise
 
-        detail_url = _build_redirect_url(result)
+        redirect_url, view_url = _create_settle_urls(request, entity_slug, result)
         return _with_htmx_triggers(
             request,
             result,
             entity_name,
             "created",
-            redirect_url=detail_url,
-            view_url=detail_url,
+            redirect_url=redirect_url,
+            view_url=view_url,
         )
 
     return _wrap_with_auth(
