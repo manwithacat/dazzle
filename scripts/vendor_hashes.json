@@ -9,7 +9,7 @@
     "hx-optimistic.min.js": "sha256:695061ea0909c856ca0c5c40efefef8c504fdc81dd34e0a1d2f2c6e609c1c24d",
     "hx-preload.min.js": "sha256:7b08d98f0e2c6981293fc219c68f634caad230dec99dc43c1c74bf1d91534dc5",
     "hx-upsert.min.js": "sha256:9e516c6608f765b568559a4caed3c3121eff2702fb7ce012f21775639d2699c3",
-    "lucide.min.js": "sha256:a7c24b4408e0e0f94a2a37f26c827ae5f57cdd5cacac3a48adb8e4c4d2cf0b7c",
+    "lucide.min.js": "sha256:07701c0cd450725829d26b9b4c5d95fe08077795a5e0372cc92be2234c7c3f2b",
     "pdfjs/pdf.min.mjs": "sha256:44ec6f011027ee77791386b66c14876a5fc29e20bf0433c07c6726fff7212b72",
     "pdfjs/pdf.worker.min.mjs": "sha256:bd88805178a26c729db8c0107a5b630cb900ec070f4d8c7529a3e45530afd41d"
   }
