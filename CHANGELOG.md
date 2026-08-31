@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.113.4] - 2026-08-31
+
+### Removed
+- **Claude Code GitHub Action** — deleted `.github/workflows/claude.yml`
+  (`@claude` comments) and `claude-code-review.yml`. This repo's agent
+  surface is Grok. Closed Dependabot #1660 rather than bumping
+  `anthropics/claude-code-action`. The Python `[llm]` extra still
+  offers `anthropic` for app authors who opt into that API.
+
+### Changed
+- **Docs extras** — `pygments>=2.21.0` (closes #1654; folded here because
+  it conflicted with #1661 on `requirements-docs.txt`).
+
 ## [0.113.3] - 2026-08-31
 
 ### Fixed
