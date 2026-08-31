@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.113.5] - 2026-08-31
+
+### Security
+- **`h2` 4.3.0 → 4.4.1** (Dependabot #23 / CVE-2026-71554). Transitive
+  via `firebase-admin` → `httpx[http2]` (`[push]` extra only). Lockfile
+  only — Dazzle does not serve HTTP/2; uvicorn stays the origin.
+  `hpack` 4.1.0 → 4.2.0 came with the bump.
+
 ## [0.113.4] - 2026-08-31
 
 ### Removed
