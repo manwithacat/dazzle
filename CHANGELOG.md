@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.113.8] - 2026-08-31
+
+### Added
+- **invoice_ops AP money theory (#1669)** — stem `ap-domain-theory`:
+  settle is finance remittance (requester attests/submits); dispute
+  stays approved|rejected (no CreditNote); retryable NSF keeps Invoice
+  approved; `po_match: not_applicable` is a kind. Leftover: copy/guards
+  are #1668.
+
 ## [0.113.7] - 2026-08-31
 
 ### Added

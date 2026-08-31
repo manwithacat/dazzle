@@ -38,3 +38,4 @@ not one shared mega-list plus warehouse CRUD.
 
 - `dsl/` workspaces + personas; `docs/guides/story-to-composition.md`
 - Product maturity: job workspaces lower warehouse density vs 9 list surfaces
+- Money words (settle vs attest, NSF, `not_applicable`): `ap-domain-theory.md`
