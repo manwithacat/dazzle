@@ -67,6 +67,7 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
         module="src/dazzle/http/runtime/rls_schema.py",
         tests=(
             "tests/unit/test_rls_schema.py",
+            "tests/unit/test_signing_lookup_ddl.py",
             "tests/integration/test_rls_enforcement_pg.py",
             "tests/integration/test_rls_scope_enforcement_pg.py",
             "tests/integration/test_rls_apply_and_drift_pg.py",

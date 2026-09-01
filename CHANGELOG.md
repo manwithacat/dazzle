@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [0.113.16] - 2026-09-01
+
+### Fixed
+- **Mutation nightly #1659** — `rls_schema.py` kill-rate fell to 83%
+  (floor 90%) after ADR-0055 added `build_signing_lookup_ddl`. The
+  four survivors (`or []` → `and []` on entities/fields, default
+  `signable` False→True, partition_key `or "tenant_id"` → `and`) were
+  unmeasured: `tests/unit/test_signing_lookup_ddl.py` was not in the
+  security-suite target list. Register it and pin leftover names,
+  custom partition key, and the empty-entities default. Sidecar
+  `FATAL: database "dazzle" does not exist` is not the gate failure.
+
 ## [0.113.15] - 2026-09-01
 
 ### Fixed
