@@ -33,6 +33,12 @@ from fastapi.responses import HTMLResponse
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind
 from dazzle.http.runtime.http_errors import require_found
+from dazzle.render.breadcrumbs import (
+    clerk_empty_search_title,
+    clerk_search_results_label,
+    entity_path_labels_from_spec,
+)
+from dazzle.render.filters import clerk_fts_snippet_field_label
 from dazzle.render.open_discovery import search_open_attr_suffix
 
 logger = logging.getLogger(__name__)
@@ -106,7 +112,12 @@ def create_fts_routes(
             scope_predicate=scope_pred,
         )
         if html:
-            return _render_results_html(entity, q, result)
+            return _render_results_html(
+                entity,
+                q,
+                result,
+                catalog=entity_path_labels_from_spec(appspec),
+            )
         return {
             "entity": entity,
             "query": q,
@@ -116,7 +127,12 @@ def create_fts_routes(
     return router
 
 
-def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLResponse:
+def _render_results_html(
+    entity: str,
+    q: str,
+    result: dict[str, Any],
+    catalog: dict[str, str] | None = None,
+) -> HTMLResponse:
     """Render the htmx fragment for the search_box region (#954 cycle 4).
 
     Used when the request carries `?html=1` (the search_box region's
@@ -135,14 +151,12 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
     """
     import html
 
-    from dazzle.render.filters import _gettext, clerk_fts_snippet_field_label
-
     items = result.get("items", []) or []
     snippet_fields = result.get("snippet_fields", []) or []
     total = result.get("total", 0) or 0
 
     if total == 0:
-        no_results = html.escape(_gettext("No results for"), quote=True)
+        no_results = html.escape(clerk_empty_search_title(entity, catalog), quote=True)
         q_html = html.escape(str(q), quote=True)
         body = (
             f'<div class="dz-search-box-empty dz-search-box-empty--no-results">'
@@ -150,10 +164,9 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
         )
         return HTMLResponse(body)  # nosemgrep: direct-use-of-jinja2
 
-    label_text = _gettext("result") if total == 1 else _gettext("results")
+    noun = clerk_search_results_label(entity, catalog, total=total)
     count_html = (
-        f'<div class="dz-search-box-result-count">'
-        f"{total} {html.escape(label_text, quote=True)}</div>"
+        f'<div class="dz-search-box-result-count">{total} {html.escape(noun, quote=True)}</div>'
     )
 
     rows: list[str] = []

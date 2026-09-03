@@ -50,6 +50,6 @@ def test_render_results_html_stamps_open_discovery() -> None:
 
 def test_render_results_html_empty_unstamped() -> None:
     body = _render_results_html("Contact", "zzz", {"items": [], "total": 0}).body.decode()
-    assert "No results" in body
+    assert "No contacts match" in body
     assert "data-dz-search-drill" not in body
     assert "data-dz-open-" not in body

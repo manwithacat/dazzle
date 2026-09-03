@@ -343,6 +343,45 @@ def clerk_empty_chart_title(
     )
 
 
+def clerk_empty_search_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing FTS empty title (oral #221).
+
+    ``No results for`` dumped generic chrome while empty lists already
+    say ``No contacts found``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No results",
+        found="No {noun}s match",
+    )
+
+
+def clerk_search_results_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    total: int = 0,
+) -> str:
+    """Clerk-facing FTS result-count noun (oral #221).
+
+    ``42 results`` dumped generic chrome while pagination already says
+    ``42 contacts``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    return _clerk_count_noun(
+        name,
+        catalog,
+        vacant_one="result",
+        vacant_many="results",
+        count=total,
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

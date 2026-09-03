@@ -2284,6 +2284,18 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #208), or leftover-token stay-put. Standing refusals
     apply.
 
+221. **FTS empty dumps generic No results.** Cycle 2389: search_box
+    HTML said ``No results for zzz`` and counted ``2 results`` while
+    empty lists already say ``No contacts found`` and pagination
+    already says ``2 contacts``. Lookup speech is not list-empty
+    titles and not bulk-confirm items (oral #220). Helper:
+    ``clerk_empty_search_title`` / ``clerk_search_results_label``.
+    Leftover junk invents no collection. Live contact_manager
+    Contact ``find_contact``. One-ship close of FTS empty + result
+    count. Do not restyle remaining search-select / command-palette
+    ``No results``, remaining ``Add one`` empty CTAs, remaining
+    ``Select all N results`` (oral #220). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2571,6 +2583,7 @@ how the handbook was learned.
 | One fetch-error empty collection theater after clerk_empty_loading_title exists | Call clerk_empty_loading_title / clerk_list_empty_kind(fetch_errored=) on remaining loading empty hosts in one ship, then STOP (oral #218). Do not restyle remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One chart empty generic No data after clerk_empty_chart_title exists | Call clerk_empty_chart_title on remaining radar / box-plot / time-series / bar-track / comparison / bar-chart / pivot EmptyState titles in one ship, then STOP (oral #219). Do not restyle remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One bulk confirm generic items after clerk_bulk_selection_noun exists | Call clerk_bulk_selection_noun on remaining bulk delete confirm / Delete N stem / named-transition confirm in one ship, then STOP (oral #220). Do not restyle remaining ``Add one`` empty CTAs, remaining ``Select all N results``, remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One FTS empty generic No results after clerk_empty_search_title exists | Call clerk_empty_search_title / clerk_search_results_label on remaining FTS empty + result-count hosts in one ship, then STOP (oral #221). Do not restyle remaining search-select / command-palette ``No results``, remaining ``Add one`` empty CTAs, remaining ``Select all N results``, remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

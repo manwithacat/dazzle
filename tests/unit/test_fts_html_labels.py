@@ -35,5 +35,6 @@ def test_falls_back_to_email_when_no_name() -> None:
 
 def test_empty_query_shows_no_results() -> None:
     body = _render_results_html("Contact", "zzz", {"items": [], "total": 0}).body.decode()
-    assert "No results" in body
+    assert "No contacts match" in body
     assert "zzz" in body
+    assert "No results" not in body

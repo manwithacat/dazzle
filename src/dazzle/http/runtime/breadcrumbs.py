@@ -17,6 +17,7 @@ from dazzle.render.breadcrumbs import (
     clerk_empty_collection_title,
     clerk_empty_filtered_title,
     clerk_empty_loading_title,
+    clerk_empty_search_title,
     clerk_entity_confirm_noun,
     clerk_entity_download_stem,
     clerk_entity_noun,
@@ -26,6 +27,7 @@ from dazzle.render.breadcrumbs import (
     clerk_pagination_rows_label,
     clerk_related_create_noun,
     clerk_related_empty_title,
+    clerk_search_results_label,
     crumbs_to_breadcrumb,
     entity_path_labels_from_spec,
 )
@@ -39,6 +41,7 @@ __all__ = [
     "clerk_empty_collection_title",
     "clerk_empty_filtered_title",
     "clerk_empty_loading_title",
+    "clerk_empty_search_title",
     "clerk_entity_confirm_noun",
     "clerk_entity_download_stem",
     "clerk_entity_noun",
@@ -48,6 +51,7 @@ __all__ = [
     "clerk_pagination_rows_label",
     "clerk_related_create_noun",
     "clerk_related_empty_title",
+    "clerk_search_results_label",
     "crumbs_to_breadcrumb",
     "entity_path_labels_from_spec",
 ]

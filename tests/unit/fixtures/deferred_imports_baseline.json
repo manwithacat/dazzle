@@ -165,7 +165,7 @@
   "src/dazzle/http/runtime/exception_handlers.py": 11,
   "src/dazzle/http/runtime/experience_routes.py": 15,
   "src/dazzle/http/runtime/fts_manager.py": 1,
-  "src/dazzle/http/runtime/fts_routes.py": 2,
+  "src/dazzle/http/runtime/fts_routes.py": 1,
   "src/dazzle/http/runtime/grant_routes.py": 4,
   "src/dazzle/http/runtime/graph_routes.py": 2,
   "src/dazzle/http/runtime/handlers/graph_handlers.py": 14,
