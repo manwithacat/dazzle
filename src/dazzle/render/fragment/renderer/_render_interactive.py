@@ -35,7 +35,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from dazzle.render.breadcrumbs import clerk_pagination_rows_label
+from dazzle.render.breadcrumbs import clerk_bulk_selection_noun, clerk_pagination_rows_label
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.ingest import DateRange as DateRangeSeam
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
@@ -397,6 +397,12 @@ class _RenderInteractiveMixin:
         """Render the bulk toolbar on the HM grid controller's seams
         (convergence C1.1) — see the primitive's docstring for the contract."""
         endpoint = ctx.escape_attr(b.endpoint)
+        entity_name = str(getattr(b, "entity_name", "") or "")
+        entity_title = str(getattr(b, "entity_title", "") or "")
+        catalog = {entity_name: entity_title} if entity_name and entity_title else None
+        many = clerk_bulk_selection_noun(entity_name, catalog, plural=True)
+        stem = clerk_bulk_selection_noun(entity_name, catalog, plural=False)
+        stem_esc = ctx.escape(stem)
         parts: list[str] = [
             '<div class="dz-bulk-actions">',
             '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching '
@@ -414,7 +420,7 @@ class _RenderInteractiveMixin:
             name_attr = ctx.escape_attr(name)
             label = (raw_label or "").strip() or name.replace("_", " ").title()
             label_esc = ctx.escape(label)
-            confirm = ctx.escape_attr(f"Apply “{label}” to the selected items?")
+            confirm = ctx.escape_attr(f"Apply “{label}” to the selected {many}?")
             parts.append(
                 f'<button type="button" class="dz-bulk-action" '
                 f'data-dz-grid-bulk-action="{name_attr}" data-dz-grid-bulk-refresh '
@@ -427,15 +433,16 @@ class _RenderInteractiveMixin:
         if b.include_delete:
             # hx-swap=none: the two-request pattern swaps NOTHING on the POST
             # (without it htmx-4 swaps the JSON response into the button).
+            delete_confirm = ctx.escape_attr(f"Delete the selected {many}? This cannot be undone.")
             parts.append(
                 '<button type="button" class="dz-bulk-delete" '
                 'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
                 'hx-swap="none" '
                 f'hx-post="{endpoint}/bulk" '
-                'hx-confirm="Delete the selected items? This cannot be undone.">'
+                f'hx-confirm="{delete_confirm}">'
                 f"{_BULK_DELETE_SVG}"
                 "<span>Delete <span data-dz-bulk-count-target>0</span> "
-                'item<span class="dz-bulk-plural">s</span></span>'
+                f'{stem_esc}<span class="dz-bulk-plural">s</span></span>'
                 "</button>"
             )
         parts.append(

@@ -541,6 +541,17 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   (oral #215), remaining empty-list titles (oral #213),
   remaining peek/slide-over headings (oral #192), remaining
   422-speech (oral #208), or leftover-token stay-put.
+- **Bulk confirm dumps generic items** closed cycle 2388
+  (oral #220). Helper: ``clerk_bulk_selection_noun``. Leftover
+  ``zzz`` invents no collection. Do **not** restyle remaining
+  ``Add one`` empty CTAs, remaining ``Select all N results``,
+  remaining chart EmptyState titles (oral #219), remaining
+  detail ``No data``, remaining loading empty (oral #218),
+  remaining related empty (oral #217), remaining pagination
+  footers (oral #216), remaining empty-kind hosts (oral #215),
+  remaining empty-list titles (oral #213), remaining
+  peek/slide-over headings (oral #192), remaining 422-speech
+  (oral #208), or leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

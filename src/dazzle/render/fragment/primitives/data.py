@@ -2088,6 +2088,9 @@ class BulkActionToolbar:
     # Ordered (name, label) pairs from surface ux.bulk_actions.
     actions: tuple[tuple[str, str], ...] = ()
     include_delete: bool = True
+    # Oral #220: clerk-facing noun for bulk confirm / Delete N. Empty → "items".
+    entity_name: str = ""
+    entity_title: str = ""
 
 
 @dataclass(frozen=True, slots=True)

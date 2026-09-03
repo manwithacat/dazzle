@@ -268,6 +268,25 @@ def clerk_empty_loading_title(
     return f"Couldn't load {text}s"
 
 
+def _clerk_count_noun(
+    name: str,
+    catalog: dict[str, str] | None,
+    *,
+    vacant_one: str,
+    vacant_many: str,
+    count: int = 0,
+) -> str:
+    """Singular/plural clerk noun; leftover junk keeps the vacant chrome."""
+    noun = clerk_entity_confirm_noun(name, catalog)
+    text = str(noun or "").strip()
+    n = int(count or 0)
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return vacant_one if n == 1 else vacant_many
+    if n == 1:
+        return text
+    return f"{text}s"
+
+
 def clerk_pagination_rows_label(
     name: str,
     catalog: dict[str, str] | None = None,
@@ -281,14 +300,29 @@ def clerk_pagination_rows_label(
     ``clerk_entity_confirm_noun``, then the adapter's naive ``s`` plural.
     Leftover junk invents no collection.
     """
-    noun = clerk_entity_confirm_noun(name, catalog)
-    text = str(noun or "").strip()
-    count = int(total or 0)
-    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
-        return "row" if count == 1 else "rows"
-    if count == 1:
-        return text
-    return f"{text}s"
+    return _clerk_count_noun(name, catalog, vacant_one="row", vacant_many="rows", count=total)
+
+
+def clerk_bulk_selection_noun(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    plural: bool = True,
+) -> str:
+    """Clerk-facing bulk selection noun (oral #220).
+
+    ``Delete the selected items?`` dumped generic chrome while row
+    delete already says ``Delete this invoice?``. Catalog /
+    PascalCase-split via ``clerk_entity_confirm_noun``. Leftover junk
+    invents no collection.
+    """
+    return _clerk_count_noun(
+        name,
+        catalog,
+        vacant_one="item",
+        vacant_many="items",
+        count=2 if plural else 1,
+    )
 
 
 def clerk_empty_chart_title(

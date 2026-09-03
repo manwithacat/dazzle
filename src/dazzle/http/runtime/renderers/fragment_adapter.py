@@ -368,6 +368,8 @@ class FragmentSurfaceAdapter:
                     endpoint=f"/api/{to_api_plural(entity_name)}",
                     actions=named,
                     include_delete=bulk_include_delete,
+                    entity_name=entity_name,
+                    entity_title=entity_title,
                 )
             )
         body_children.extend(toolbar)
