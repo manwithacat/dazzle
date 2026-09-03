@@ -313,6 +313,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_empty_map_entity_dump.py",
     # cycle 2397: carousel empty must not dump generic No slides (oral #229)
     "tests/unit/test_empty_carousel_entity_dump.py",
+    # cycle 2398: pivot empty must not dump generic No data to pivot (oral #230)
+    "tests/unit/test_empty_pivot_entity_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

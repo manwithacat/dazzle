@@ -533,6 +533,25 @@ def clerk_empty_carousel_title(
     )
 
 
+def clerk_empty_pivot_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing pivot empty speech (oral #230).
+
+    ``No data to pivot.`` dumped generic chrome while empty lists already
+    say ``No alerts found``. Host is the production PivotTableRegion
+    seam, not chart EmptyState titles (oral #219) or remaining
+    accordion ``No panels.``. Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No data to pivot.",
+        found="No {noun}s to pivot.",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

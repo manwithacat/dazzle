@@ -66,6 +66,7 @@ from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _chart_empty_title,
     _minor_currency_code,
+    _pivot_empty_message,
     _queue_empty_message,
     _region_title,
     _render_typed_value,
@@ -978,11 +979,7 @@ class _BuildersTablesMixin:
 
         rows_norm = tuple(b for b in raw_buckets if isinstance(b, dict))
 
-        empty_msg = (
-            ctx.get("empty_message")
-            or getattr(region, "empty_message", None)
-            or "No data to pivot."
-        )
+        empty_msg = _pivot_empty_message(region, ctx)
         body = PivotTableRegion(
             dim_specs=tuple(dim_specs),
             measure_keys=tuple(measure_keys),

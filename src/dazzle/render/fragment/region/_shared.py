@@ -29,6 +29,7 @@ from dazzle.render.breadcrumbs import (
     clerk_empty_cohort_title,
     clerk_empty_kanban_lane,
     clerk_empty_map_title,
+    clerk_empty_pivot_title,
     clerk_empty_profile_title,
     clerk_empty_queue_title,
     clerk_empty_timeline_title,
@@ -279,6 +280,16 @@ def _carousel_empty_message(region: Any, ctx: Any) -> str:
     junk invents no collection.
     """
     return _authored_or_clerk_empty(region, ctx, clerk_empty_carousel_title)
+
+
+def _pivot_empty_message(region: Any, ctx: Any) -> str:
+    """Clerk-facing empty speech for vacant pivots (oral #230).
+
+    Generic ``No data to pivot.`` hid the entity noun while empty lists
+    already say ``No alerts found``. Authored ``empty:`` still wins.
+    Leftover junk invents no collection.
+    """
+    return _authored_or_clerk_empty(region, ctx, clerk_empty_pivot_title)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:
