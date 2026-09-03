@@ -438,6 +438,25 @@ def clerk_empty_tree_title(
     return clerk_empty_kanban_lane(name, catalog)
 
 
+def clerk_empty_queue_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing queue empty speech (oral #225).
+
+    ``Queue is empty.`` dumped generic chrome while empty lists already
+    say ``No projects found``. Host is the review-queue EmptyState, not
+    a related-tab empty (oral #217) or a kanban lane (oral #223).
+    Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="Queue is empty.",
+        found="No {noun}s in this queue.",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

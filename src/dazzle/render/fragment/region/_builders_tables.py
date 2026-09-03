@@ -66,6 +66,7 @@ from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _chart_empty_title,
     _minor_currency_code,
+    _queue_empty_message,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -886,9 +887,7 @@ class _BuildersTablesMixin:
                 )
             )
 
-        empty_msg = (
-            ctx.get("empty_message") or getattr(region, "empty_message", None) or "Queue is empty."
-        )
+        empty_msg = _queue_empty_message(region, ctx)
         body: Fragment = QueueRegion(
             rows=tuple(rows),
             total=total,

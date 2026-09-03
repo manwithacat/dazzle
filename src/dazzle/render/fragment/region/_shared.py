@@ -25,6 +25,7 @@ from typing import Any
 from dazzle.render.breadcrumbs import (
     clerk_empty_chart_title,
     clerk_empty_kanban_lane,
+    clerk_empty_queue_title,
     clerk_empty_timeline_title,
     clerk_empty_tree_title,
 )
@@ -221,6 +222,25 @@ def _tree_empty_title(region: Any, ctx: Any) -> str:
     """
     name, catalog = _region_entity_catalog(region, ctx)
     return clerk_empty_tree_title(name, catalog)
+
+
+def _queue_empty_message(region: Any, ctx: Any) -> str:
+    """Clerk-facing empty speech for vacant queues (oral #225).
+
+    Generic ``Queue is empty.`` hid the entity noun while empty lists
+    already say ``No projects found``. Authored ``empty:`` still wins.
+    Leftover junk invents no collection.
+    """
+    getter = getattr(ctx, "get", None)
+    authored = ""
+    if callable(getter):
+        authored = str(getter("empty_message") or "").strip()
+    if not authored:
+        authored = str(getattr(region, "empty_message", None) or "").strip()
+    if authored:
+        return authored
+    name, catalog = _region_entity_catalog(region, ctx)
+    return clerk_empty_queue_title(name, catalog)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:
