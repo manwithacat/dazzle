@@ -827,6 +827,9 @@ class KanbanRegion:
     rank_field: str = ""
     include_closed: str = ""
     as_of: str = ""
+    # Vacant-lane speech (oral #223). Whole-board ``empty_message`` is
+    # authored collection-empty; leftover junk keeps ``No items``.
+    lane_empty_message: str = "No items"
 
 
 @dataclass(frozen=True, slots=True)

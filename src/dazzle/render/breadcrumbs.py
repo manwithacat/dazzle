@@ -411,6 +411,19 @@ def clerk_empty_activity_title(
     return clerk_empty_timeline_title(name, catalog, vacant="No activity yet")
 
 
+def clerk_empty_kanban_lane(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing kanban lane empty speech (oral #223).
+
+    ``No items`` dumped generic chrome while empty lists already say
+    ``No tasks found``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(name, catalog, vacant="No items", found="No {noun}s")
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

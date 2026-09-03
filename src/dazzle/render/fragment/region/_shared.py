@@ -22,7 +22,11 @@ from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
-from dazzle.render.breadcrumbs import clerk_empty_chart_title, clerk_empty_timeline_title
+from dazzle.render.breadcrumbs import (
+    clerk_empty_chart_title,
+    clerk_empty_kanban_lane,
+    clerk_empty_timeline_title,
+)
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
@@ -176,6 +180,27 @@ def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
     if not name:
         name = str(getattr(region, "source", None) or "")
     return clerk_empty_timeline_title(name, catalog, vacant=vacant)
+
+
+def _kanban_lane_empty_message(region: Any, ctx: Any) -> str:
+    """Clerk-facing empty speech for vacant kanban lanes (oral #223).
+
+    Generic ``No items`` hid the entity noun while empty lists already
+    say ``No tasks found``. Leftover junk invents no collection.
+    """
+    name = ""
+    catalog: dict[str, str] | None = None
+    getter = getattr(ctx, "get", None)
+    if callable(getter):
+        name = str(getter("source_entity") or getter("entity_name") or "")
+        entity_title = str(getter("entity_title") or "")
+        if name and entity_title:
+            catalog = {name: entity_title}
+    if not name:
+        name = str(getattr(region, "source", None) or "")
+    if name.strip().lower() == "item":
+        name = str(getattr(region, "source", None) or "")
+    return clerk_empty_kanban_lane(name, catalog)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:

@@ -638,7 +638,8 @@ class _RenderChartsMixin:
         total_cards = 0
         for col in k.columns:
             cards_html = [self._emit_kanban_card_html(card, ctx) for card in col.cards]
-            stack_inner = "".join(cards_html) or '<p class="dz-kanban-empty">No items</p>'
+            lane_empty = ctx.escape(getattr(k, "lane_empty_message", None) or "No items")
+            stack_inner = "".join(cards_html) or f'<p class="dz-kanban-empty">{lane_empty}</p>'
             badge_html = _render_status_badge_html(col.label)
             if rearrange == "status":
                 stack_attrs = (

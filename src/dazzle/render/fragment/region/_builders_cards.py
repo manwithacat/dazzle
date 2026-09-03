@@ -44,6 +44,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
+    _kanban_lane_empty_message,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -205,6 +206,7 @@ class _BuildersCardsMixin:
                 ),
                 include_closed=include_closed,
                 as_of=as_of,
+                lane_empty_message=_kanban_lane_empty_message(region, ctx),
             )
             return _wrap_surface(title, "kanban", body)
 
@@ -321,6 +323,7 @@ class _BuildersCardsMixin:
             rank_field=rank_field if rearrange == "status" else "",
             include_closed=include_closed,
             as_of=as_of,
+            lane_empty_message=_kanban_lane_empty_message(region, ctx),
         )
         return _wrap_surface(title, "kanban", body)
 
