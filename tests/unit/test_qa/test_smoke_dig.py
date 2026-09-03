@@ -8,6 +8,7 @@ from pathlib import Path
 from dazzle.qa.smoke_dig import (
     SHOWCASE,
     _report_counts,
+    ensure_running,
     repo_root,
     showcase_apps,
 )
@@ -49,3 +50,21 @@ def test_report_counts_dead_crawl(tmp_path: Path) -> None:
     assert _report_counts(live) == {"ok": 21, "fail": 0}
     assert _report_counts(None) is None
     assert _report_counts(tmp_path / "missing.json") is None
+
+
+def test_ensure_running_always_posts_hub_start(monkeypatch) -> None:
+    """Open port is not enough — hub start reaps leftover listeners (cycle 2377)."""
+    posts: list[str] = []
+
+    def fake_hub_start(app: str, *, hub_api: str = "") -> bool:
+        posts.append(app)
+        return True
+
+    monkeypatch.setattr("dazzle.qa.smoke_dig.hub_start_app", fake_hub_start)
+    monkeypatch.setattr(
+        "dazzle.qa.smoke_dig.port_open", lambda port, host="127.0.0.1", timeout=0.4: True
+    )
+    monkeypatch.setattr("dazzle.qa.smoke_dig.wait_health", lambda base_url, *, timeout_s=20.0: True)
+    monkeypatch.setattr("dazzle.qa.smoke_dig.port_for_app", lambda app, root=None: 9107)
+    assert ensure_running("hr_records", "http://127.0.0.1:9107") is True
+    assert posts == ["hr_records"]

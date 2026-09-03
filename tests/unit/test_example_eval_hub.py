@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -63,3 +64,81 @@ class TestDiscover:
         apps = registry.discover_apps(showcase_only=True)
         st = next(a for a in apps if a.name == "simple_task")
         assert st.host == "simple_task.dazzle.local"
+
+
+@pytest.fixture(scope="module")
+def supervisor_mod():
+    return _load("supervisor")
+
+
+class TestSupervisorOurs:
+    """Open port ≠ current-tree serve (cycle 2377 stale 13-day listeners)."""
+
+    def test_is_ours_false_when_pidfile_dead(self, supervisor_mod, tmp_path: Path) -> None:
+        from pathlib import Path as P
+
+        ExampleApp = _load("registry").ExampleApp
+        app = ExampleApp(
+            name="simple_task",
+            path=P("/tmp/simple_task"),
+            title="t",
+            has_spec=True,
+            has_trial=True,
+            has_stories=True,
+            port=19107,
+        )
+        sup = supervisor_mod.Supervisor(root=tmp_path)
+        sup.pid_path(app.name).parent.mkdir(parents=True, exist_ok=True)
+        sup.pid_path(app.name).write_text("99999999\n", encoding="utf-8")
+        assert sup.is_ours(app) is False
+        assert sup.is_running(app) is False
+
+    def test_is_ours_false_when_listener_pid_mismatch(
+        self, supervisor_mod, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ExampleApp = _load("registry").ExampleApp
+        app = ExampleApp(
+            name="simple_task",
+            path=tmp_path / "simple_task",
+            title="t",
+            has_spec=True,
+            has_trial=True,
+            has_stories=True,
+            port=19107,
+        )
+        sup = supervisor_mod.Supervisor(root=tmp_path)
+        live_pid = os.getpid()
+        sup.pid_path(app.name).parent.mkdir(parents=True, exist_ok=True)
+        sup.pid_path(app.name).write_text(f"{live_pid}\n", encoding="utf-8")
+        monkeypatch.setattr(sup, "_listener_pid", lambda port: live_pid + 1)
+        assert sup.is_ours(app) is False
+
+    def test_reap_stale_only_kills_dazzle_serve(
+        self, supervisor_mod, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ExampleApp = _load("registry").ExampleApp
+        app = ExampleApp(
+            name="hr_records",
+            path=tmp_path / "hr_records",
+            title="t",
+            has_spec=True,
+            has_trial=True,
+            has_stories=True,
+            port=19107,
+        )
+        sup = supervisor_mod.Supervisor(root=tmp_path)
+        killed: list[int] = []
+        monkeypatch.setattr(sup, "_listener_pid", lambda port: 4242)
+        monkeypatch.setattr(sup, "_cmdline", lambda pid: "nginx -g daemon")
+        monkeypatch.setattr(supervisor_mod.os, "kill", lambda pid, sig: killed.append(pid))
+        sup._reap_stale(app)
+        assert killed == []
+
+        monkeypatch.setattr(
+            sup,
+            "_cmdline",
+            lambda pid: "/venv/bin/dazzle serve --host 127.0.0.1 --port 19107 --test-mode",
+        )
+        monkeypatch.setattr(sup, "is_port_open", lambda port: False)
+        sup._reap_stale(app)
+        assert killed == [4242]

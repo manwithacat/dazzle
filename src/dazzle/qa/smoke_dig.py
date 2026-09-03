@@ -230,10 +230,12 @@ def ensure_running(
     hub_api: str = HUB_API,
 ) -> bool:
     port = int(urlparse_port(base_url) or 0)
+    # Always POST hub start: supervisor.start reaps leftover listeners
+    # (open port ≠ current-tree serve). If the hub is down, fall through
+    # to wait_health on whatever is already bound.
+    hub_start_app(app, hub_api=hub_api)
     if port and port_open(port):
         return wait_health(base_url, timeout_s=min(8.0, timeout_s))
-    hub_start_app(app, hub_api=hub_api)
-    # Also try direct serve if hub didn't bring it up (caller may have started it).
     return wait_health(base_url, timeout_s=timeout_s)
 
 

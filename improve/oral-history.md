@@ -2171,6 +2171,15 @@ dialect formed — and where it started to Goodhart itself — is
     part's linux+darwin PNGs in the same commit. Do not wait for the
     next cimonitor cycle. Standing refusals apply.
 
+211. **Open port ≠ current-tree serve.** Cycle 2377 smoke-dig found
+    `hr_records` / `fieldtest_hub` HTML-403 → 500 auto_seed. Direct
+    JSON 403 was fine; `Accept: text/html` 500'd because the
+    listeners were 13-day-old processes still bound to 9107/9108.
+    Hub `is_running` treated port-open as healthy; `ensure_running`
+    skipped `/_hub/start`. Reap leftover `dazzle serve` (live
+    pidfile + matching listener) before crawl. Do not file those
+    500s as product. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2182,6 +2191,7 @@ the end of every new oral *is* expensive — point here instead.
 | Goal B coat | Add example-app density recipes (rails, chips, stills) to look busy | 2109; Goal C distill |
 | Yield capability-sweep to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap does not skip cadence | #207 |
 | Yield semgrep hygiene to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap does not skip cadence | #209 |
+| Open port as current-tree serve | Treat a listening 910x port as healthy without a live pidfile; skip hub start when the occupant may be leftover | #211 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |

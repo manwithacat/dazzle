@@ -61,23 +61,105 @@ class Supervisor:
         except OSError:
             return False
 
-    def is_running(self, app: ExampleApp) -> bool:
+    def _read_pidfile(self, app: str) -> int | None:
+        path = self.pid_path(app)
+        if not path.is_file():
+            return None
+        try:
+            pid = int(path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+        return pid if pid > 0 else None
+
+    @staticmethod
+    def _pid_alive(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+    def _listener_pid(self, port: int) -> int | None:
+        """PID listening on ``port``, or None if unknown."""
+        try:
+            out = subprocess.check_output(
+                ["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"],
+                text=True,
+                timeout=2,
+                stderr=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        for line in out.splitlines():
+            line = line.strip()
+            if line.isdigit():
+                return int(line)
+        return None
+
+    @staticmethod
+    def _cmdline(pid: int) -> str:
+        try:
+            out = subprocess.check_output(
+                ["ps", "-p", str(pid), "-o", "command="],
+                text=True,
+                timeout=2,
+                stderr=subprocess.DEVNULL,
+            )
+            return out.strip()
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    def is_ours(self, app: ExampleApp) -> bool:
+        """True only when this supervisor's pidfile process still owns the port.
+
+        A listening port alone is not enough: leftover ``dazzle serve`` from
+        another week (cycle 2377: 13-day hr_records/fieldtest_hub) 500'd HTML
+        403s and auto-seeded false product bugs.
+        """
         if app.name in self._procs:
             proc = self._procs[app.name]
             if proc.poll() is None:
                 return True
             del self._procs[app.name]
-        if self.is_port_open(app.port):
+        pid = self._read_pidfile(app.name)
+        if pid is None or not self._pid_alive(pid):
+            return False
+        listener = self._listener_pid(app.port)
+        if listener is not None and listener != pid:
+            return False
+        return True
+
+    def is_running(self, app: ExampleApp) -> bool:
+        if self.is_ours(app):
             return True
         pid_file = self.pid_path(app.name)
-        if pid_file.is_file():
-            try:
-                pid = int(pid_file.read_text(encoding="utf-8").strip())
-                os.kill(pid, 0)
-                return True
-            except (OSError, ValueError):
-                pid_file.unlink(missing_ok=True)
+        pid = self._read_pidfile(app.name)
+        if pid is not None and not self._pid_alive(pid):
+            pid_file.unlink(missing_ok=True)
         return False
+
+    def _reap_stale(self, app: ExampleApp) -> None:
+        """SIGTERM a leftover ``dazzle serve`` occupying ``app.port``."""
+        listener = self._listener_pid(app.port)
+        if listener is None:
+            self.pid_path(app.name).unlink(missing_ok=True)
+            return
+        cmd = self._cmdline(listener)
+        if "dazzle" in cmd and "serve" in cmd and str(app.port) in cmd:
+            logger.warning(
+                "reaping stale %s listener pid=%s cmd=%s",
+                app.name,
+                listener,
+                cmd[:160],
+            )
+            try:
+                os.kill(listener, signal.SIGTERM)
+            except OSError:
+                logger.debug("reap kill failed", exc_info=True)
+            deadline = time.time() + 5.0
+            while time.time() < deadline and self.is_port_open(app.port):
+                time.sleep(0.1)
+        self.pid_path(app.name).unlink(missing_ok=True)
 
     def status(self, app: ExampleApp) -> ProcState:
         running = self.is_running(app)
@@ -98,8 +180,10 @@ class Supervisor:
         )
 
     def start(self, app: ExampleApp, *, wait: bool = True) -> ProcState:
-        if self.is_running(app):
+        if self.is_ours(app):
             return self.status(app)
+        if self.is_port_open(app.port):
+            self._reap_stale(app)
 
         log = self.log_path(app.name)
         cmd = [
