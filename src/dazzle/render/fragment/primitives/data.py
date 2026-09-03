@@ -273,7 +273,9 @@ class RelatedTab:
     date/currency/bool/enum) into plain value strings (the renderer escapes
     them), so the primitive stays fully typed-simple. `row_drill` is parallel
     to `rows` (per-row detail URL, "" = not clickable). The create affordance
-    is the pre-built `+ New {create_label}` link with its RBAC anchor."""
+    is the pre-built `+ New {create_label}` link with its RBAC anchor.
+    ``create_label`` is the singular entity noun (oral #214), never the
+    FK-disambiguated tab label."""
 
     tab_id: str
     label: str

@@ -18,6 +18,7 @@ from dazzle.render.breadcrumbs import (
     clerk_entity_noun,
     clerk_entity_path_label,
     clerk_entity_title,
+    clerk_related_create_noun,
     crumbs_to_breadcrumb,
     entity_path_labels_from_spec,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "clerk_entity_noun",
     "clerk_entity_path_label",
     "clerk_entity_title",
+    "clerk_related_create_noun",
     "crumbs_to_breadcrumb",
     "entity_path_labels_from_spec",
 ]

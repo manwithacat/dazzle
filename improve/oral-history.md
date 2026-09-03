@@ -2198,6 +2198,18 @@ dialect formed — and where it started to Goodhart itself — is
     422-speech siblings (oral #208), or leftover-token stay-put.
     Standing refusals apply.
 
+214. **Related-tab create CTA dumps the FK-disambiguated tab label.**
+    Cycle 2380: simple_task User detail dual-FK Task tabs are
+    ``Task · Assigned To`` / ``Task · Created By`` (oral #183
+    clerked the tab strip). The ``+ New`` row reused ``tab.label``,
+    so the clerk saw ``+ New Task · Assigned To`` while the list
+    CTA already says ``New Task``. Create speech is not empty-list
+    titles and not tab labels. Helper: ``clerk_related_create_noun``.
+    Leftover ``zzz`` invents no entity. Live simple_task User
+    related Task. Do not restyle remaining related empty
+    ``No {tab.label} found`` siblings (oral #213 collection
+    titles). Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2212,6 +2224,7 @@ the end of every new oral *is* expensive — point here instead.
 | Open port as current-tree serve | Treat a listening 910x port as healthy without a live pidfile; skip hub start when the occupant may be leftover | #211 |
 | Hub registry as HM registry | Bind `scripts/example_hub/registry.py` as top-level `registry` (collides with HM site under xdist) | #212 |
 | Empty-state entity dump | Walk another empty-list collection title after `clerk_empty_collection_title` exists | #213 |
+| Related-tab create FK-tab CTA | Walk another related ``+ New`` host after `clerk_related_create_noun` exists | #214 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2470,6 +2483,7 @@ how the handbook was learned.
 | One decimal scale 422 schema dump after clerk_pydantic_constraint_speech covers decimal digits | Call clerk_pydantic_constraint_speech on remaining HTMX decimal_max_places / max_digits hosts in one ship, then STOP (oral #206). Do not restyle remaining length/pattern 422 speech siblings, remaining pydantic type 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One 422-speech dump per cycle after clerk_* speech helpers exist | STOP; remaining form-error / transition / unique / invariant / enum / type / length / decimal 422 siblings closed (oral #198–#206). New invent class (oral #208) |
 | One empty-list entity dump after clerk_empty_collection_title exists | Call clerk_empty_collection_title on remaining empty-list titles in one ship, then STOP (oral #213). Do not restyle remaining peek/slide-over heading siblings, remaining 422-speech, remaining toast/breadcrumb/confirm, or leftover-token stay-put |
+| One related-tab create FK-tab dump after clerk_related_create_noun exists | Call clerk_related_create_noun on remaining related ``+ New`` hosts in one ship, then STOP (oral #214). Do not restyle remaining related empty ``No {tab.label} found`` siblings, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

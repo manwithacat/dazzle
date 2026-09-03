@@ -292,6 +292,7 @@ def _related_groups_from_detail(detail: Any, requested_tab: str = "") -> list[di
                     "tab_id": getattr(tab, "tab_id", "") or "",
                     "label": getattr(tab, "label", "") or "",
                     "entity_name": getattr(tab, "entity_name", "") or "",
+                    "entity_title": getattr(tab, "entity_title", "") or "",
                     "columns": cols_out,
                     "rows": list(getattr(tab, "rows", []) or []),
                     "total": int(getattr(tab, "total", 0) or 0),

@@ -118,7 +118,8 @@ class TestTableMode:
     def test_create_row_anchor(self) -> None:
         html = _render(self._g())
         assert 'data-dazzle-action="Task.create"' in html
-        assert "New Tasks" in html
+        assert "New Task" in html
+        assert "New Tasks" not in html
         # the create href carries the parent filter
         assert "project=p1" in html
 

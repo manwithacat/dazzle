@@ -507,6 +507,14 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   invents no collection. Do **not** restyle remaining
   peek/slide-over ``.title()`` headings (oral #192), remaining
   422-speech siblings (oral #208), or leftover-token stay-put.
+- **Related-tab create CTA dumps FK-disambiguated tab label**
+  closed cycle 2380 (oral #214). Helper:
+  ``clerk_related_create_noun``. Leftover ``zzz`` invents no
+  entity. Do **not** restyle remaining related empty
+  ``No {tab.label} found`` siblings, remaining peek/slide-over
+  headings (oral #192), remaining empty-list titles (oral
+  #213), remaining 422-speech (oral #208), or leftover-token
+  stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

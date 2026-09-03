@@ -167,6 +167,23 @@ def clerk_empty_collection_title(
     return f"No {text}s found"
 
 
+def clerk_related_create_noun(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Singular entity noun for related-tab ``+ New`` CTAs (oral #214).
+
+    ``+ New Task · Assigned To`` dumped the FK-disambiguated tab label
+    while the list CTA already says ``New Task``. Catalog / PascalCase-split
+    via ``clerk_entity_noun``. Leftover junk invents no entity.
+    """
+    noun = clerk_entity_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return "item"
+    return text
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

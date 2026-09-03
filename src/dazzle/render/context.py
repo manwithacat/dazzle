@@ -289,6 +289,7 @@ class RelatedTabContext(BaseModel):
     tab_id: str  # Unique DOM id for tab switching
     label: str  # Display label (e.g. "Contacts")
     entity_name: str  # Related entity name
+    entity_title: str = ""  # DSL title for related create CTA (oral #214)
     api_endpoint: str  # Backend API endpoint for fetching
     filter_field: str  # FK field name to filter by (e.g. "company")
     columns: list[ColumnContext]

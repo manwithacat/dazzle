@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.render.breadcrumbs import clerk_related_create_noun
 from dazzle.render.cell_chrome import (
     related_queue_columns_omit_identity,
     related_queue_identity_from_record,
@@ -60,7 +61,10 @@ def related_create_affordance(tab: dict[str, Any], item_id: str) -> tuple[str, s
     if ftf:
         href += f"&{ftf}={tab.get('filter_type_value', '') or ''}"
     action = f"{tab.get('entity_name', '') or ''}.create"
-    return href, action, str(tab.get("label", "") or "")
+    name = str(tab.get("entity_name", "") or "")
+    title = str(tab.get("entity_title", "") or "")
+    catalog = {name: title} if name and title else None
+    return href, action, clerk_related_create_noun(name, catalog)
 
 
 def related_tab_from_ctx(tab: dict[str, Any], item_id: str, *, display: str) -> RelatedTab:
