@@ -495,6 +495,25 @@ def clerk_empty_profile_title(
     )
 
 
+def clerk_empty_map_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing map empty speech (oral #228).
+
+    ``No locations.`` dumped generic chrome while empty lists already
+    say ``No devices found``. Host is the plan-board empty line, not a
+    profile identity panel (oral #227) or remaining conversation /
+    day-timeline empty (oral #222). Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No locations.",
+        found="No {noun}s on this map.",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

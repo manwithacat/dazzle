@@ -53,6 +53,7 @@ from dazzle.render.fragment.region._progress_bar import (
     progress_bars_from_items,
 )
 from dazzle.render.fragment.region._shared import (
+    _map_empty_message,
     _region_title,
     _wrap_surface,
 )
@@ -540,9 +541,7 @@ class _BuildersMetricsMixin:
         markers = _map_markers_from_items(list(ctx.get("items") or []))
         if not markers:
             markers = _map_markers_from_entries(list(ctx.get("status_entries") or []))
-        empty_msg = (
-            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No locations."
-        )
+        empty_msg = _map_empty_message(region, ctx)
         label = title or str(getattr(region, "name", None) or "Map")
         body_frag: Fragment = MapBoard(
             markers=tuple(markers),

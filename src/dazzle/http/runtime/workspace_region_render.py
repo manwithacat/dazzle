@@ -792,12 +792,13 @@ def _apply_conversation_list_ctx(
     one ship after MAP's helper existed.
     Extracted so ``_build_list_adapter_ctx`` stays under the complexity ratchet.
     """
-    empty_default = {
-        "MAP": "No locations.",
+    empty_defaults = {
         "ACCORDION": "No panels.",
         "CAROUSEL": "No slides.",
         "PROGRESS_BAR": "No progress.",
-    }.get(display_upper, "No conversation yet.")
+        "CONVERSATION": "No conversation yet.",
+    }
+    empty_default = empty_defaults.get(display_upper, "")
     adapter_ctx["items"] = inputs.items
     adapter_ctx["status_entries"] = getattr(ctx_region, "status_entries", []) or []
     adapter_ctx["empty_message"] = (
@@ -805,6 +806,10 @@ def _apply_conversation_list_ctx(
         or getattr(ctx_region, "empty_message", None)
         or empty_default
     )
+    if display_upper == "MAP":
+        # Builder clerks vacant maps (oral #228); do not inject generic
+        # ``No locations.`` as authored empty.
+        adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
     _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
 
 
