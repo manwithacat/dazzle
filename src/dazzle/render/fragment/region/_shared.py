@@ -26,6 +26,7 @@ from dazzle.render.breadcrumbs import (
     clerk_empty_chart_title,
     clerk_empty_kanban_lane,
     clerk_empty_timeline_title,
+    clerk_empty_tree_title,
 )
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
@@ -182,11 +183,10 @@ def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
     return clerk_empty_timeline_title(name, catalog, vacant=vacant)
 
 
-def _kanban_lane_empty_message(region: Any, ctx: Any) -> str:
-    """Clerk-facing empty speech for vacant kanban lanes (oral #223).
+def _region_entity_catalog(region: Any, ctx: Any) -> tuple[str, dict[str, str] | None]:
+    """Entity name + optional title catalog from region ctx (oral #223/#224).
 
-    Generic ``No items`` hid the entity noun while empty lists already
-    say ``No tasks found``. Leftover junk invents no collection.
+    ``entity_name=Item`` is a card-title fallback, not a collection noun.
     """
     name = ""
     catalog: dict[str, str] | None = None
@@ -200,7 +200,27 @@ def _kanban_lane_empty_message(region: Any, ctx: Any) -> str:
         name = str(getattr(region, "source", None) or "")
     if name.strip().lower() == "item":
         name = str(getattr(region, "source", None) or "")
+    return name, catalog
+
+
+def _kanban_lane_empty_message(region: Any, ctx: Any) -> str:
+    """Clerk-facing empty speech for vacant kanban lanes (oral #223).
+
+    Generic ``No items`` hid the entity noun while empty lists already
+    say ``No tasks found``. Leftover junk invents no collection.
+    """
+    name, catalog = _region_entity_catalog(region, ctx)
     return clerk_empty_kanban_lane(name, catalog)
+
+
+def _tree_empty_title(region: Any, ctx: Any) -> str:
+    """Clerk-facing EmptyState title for vacant trees (oral #224).
+
+    Generic ``No items`` hid the entity noun while empty lists already
+    say ``No devices found``. Leftover junk invents no collection.
+    """
+    name, catalog = _region_entity_catalog(region, ctx)
+    return clerk_empty_tree_title(name, catalog)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:

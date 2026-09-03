@@ -301,6 +301,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_empty_timeline_entity_dump.py",
     # cycle 2391: kanban lane empty must not dump generic No items (oral #223)
     "tests/unit/test_empty_kanban_lane_dump.py",
+    # cycle 2392: tree empty must not dump generic No items (oral #224)
+    "tests/unit/test_empty_tree_entity_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

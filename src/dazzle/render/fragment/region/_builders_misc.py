@@ -38,6 +38,7 @@ from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
+    _tree_empty_title,
     _wrap_surface,
 )
 
@@ -281,7 +282,7 @@ class _BuildersMiscMixin:
         body: Fragment
         if not nodes:
             body = EmptyState(
-                title="No items",
+                title=_tree_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None) or "No data in this region.",
             )
         else:

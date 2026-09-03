@@ -424,6 +424,20 @@ def clerk_empty_kanban_lane(
     return _clerk_empty_title(name, catalog, vacant="No items", found="No {noun}s")
 
 
+def clerk_empty_tree_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing tree empty speech (oral #224).
+
+    ``No items`` dumped generic chrome while empty lists already say
+    ``No devices found``. Same vacant/found as kanban lanes (oral #223);
+    host is the hierarchy EmptyState, not a lane. Leftover junk invents
+    no collection.
+    """
+    return clerk_empty_kanban_lane(name, catalog)
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()
