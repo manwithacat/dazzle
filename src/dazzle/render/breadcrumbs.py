@@ -382,6 +382,35 @@ def clerk_search_results_label(
     )
 
 
+def clerk_empty_timeline_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    vacant: str = "No events yet.",
+) -> str:
+    """Clerk-facing timeline empty speech (oral #222).
+
+    ``No events yet.`` dumped generic chrome while empty lists already
+    say ``No tasks found``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    found = "No {noun}s yet." if vacant.endswith(".") else "No {noun}s yet"
+    return _clerk_empty_title(name, catalog, vacant=vacant, found=found)
+
+
+def clerk_empty_activity_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing activity-feed empty speech (oral #222).
+
+    ``No activity yet`` dumped generic chrome while empty lists already
+    say ``No comments found``. Catalog / PascalCase-split via
+    ``clerk_empty_timeline_title``. Leftover junk invents no collection.
+    """
+    return clerk_empty_timeline_title(name, catalog, vacant="No activity yet")
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

@@ -2296,6 +2296,20 @@ dialect formed — and where it started to Goodhart itself — is
     ``No results``, remaining ``Add one`` empty CTAs, remaining
     ``Select all N results`` (oral #220). Standing refusals apply.
 
+222. **Timeline empty dumps generic No events.** Cycle 2390: vacant
+    ``display: timeline`` said ``No events yet.`` and vacant
+    ``activity_feed`` said ``No activity yet`` while empty lists
+    already say ``No tasks found``. Chronology speech is not FTS
+    lookup (oral #221) and not chart EmptyState titles (oral #219).
+    Helper: ``clerk_empty_timeline_title`` /
+    ``clerk_empty_activity_title``. Leftover junk invents no
+    collection. Live simple_task Task ``upcoming_due``. One-ship
+    close of remaining timeline + activity_feed hosts. Do not
+    restyle remaining conversation ``No conversation yet``,
+    remaining day-timeline slots, remaining search-select /
+    command-palette ``No results`` (oral #221). Standing refusals
+    apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2317,6 +2331,8 @@ the end of every new oral *is* expensive — point here instead.
 | Fetch-error empty invents collection-empty | Walk another loading empty host after `clerk_empty_loading_title` exists | #218 |
 | Chart empty dumps generic No data | Walk another chart EmptyState title after `clerk_empty_chart_title` exists | #219 |
 | Bulk confirm dumps generic items | Walk another bulk toolbar host after `clerk_bulk_selection_noun` exists | #220 |
+| FTS empty dumps generic No results | Walk remaining search-select / command-palette ``No results`` after `clerk_empty_search_title` exists | #221 |
+| Timeline empty dumps generic No events | Walk remaining conversation / day-timeline empty after `clerk_empty_timeline_title` exists | #222 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2447,6 +2463,8 @@ the end of every new oral *is* expensive — point here instead.
 | Schema-token chrome dump cadence | Walk another audit-history / FTS / conversation / find-by / related-tab / carousel / chart-axis / breadcrumb / toast dump after helpers exist (oral #179–#192) | #193 |
 | Destructive-confirm concatenated slug | Dump ``issuereport`` on ``hx-confirm`` after ``clerk_entity_confirm_noun`` exists; clone leftover-token stay-put or remaining toast / breadcrumb siblings | #194 |
 | Bulk confirm generic items | Dump ``selected items`` on bulk ``hx-confirm`` after ``clerk_bulk_selection_noun`` exists; clone leftover-token stay-put or remaining row-confirm slug siblings | #220 |
+| FTS empty generic No results | Dump ``No results`` / ``N results`` on FTS empty after ``clerk_empty_search_title`` exists; clone leftover-token stay-put or remaining search-select / command-palette ``No results`` | #221 |
+| Timeline empty generic No events | Dump ``No events yet.`` / ``No activity yet`` on vacant timeline / activity_feed after ``clerk_empty_timeline_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline empty | #222 |
 | Download PascalCase filename | Dump ``EngagementLetter-{uuid}.pdf`` after ``clerk_entity_download_stem`` exists; clone leftover-token stay-put or remaining toast / confirm / breadcrumb siblings | #195 |
 | Signing ceremony entity-type principal | Dump ``Sign EngagementLetter`` / ``on behalf of EngagementLetter`` after ``clerk_signing_heading`` exists; clone leftover-token stay-put or remaining download / CSV filename siblings | #196 |
 | 403 permission-speech PascalCase entity | Dump ``create EngagementLetter`` / ``Entity: EngagementLetter`` after clerk nouns exist; clone leftover-token stay-put or remaining signing ceremony siblings | #197 |
@@ -2584,6 +2602,7 @@ how the handbook was learned.
 | One chart empty generic No data after clerk_empty_chart_title exists | Call clerk_empty_chart_title on remaining radar / box-plot / time-series / bar-track / comparison / bar-chart / pivot EmptyState titles in one ship, then STOP (oral #219). Do not restyle remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One bulk confirm generic items after clerk_bulk_selection_noun exists | Call clerk_bulk_selection_noun on remaining bulk delete confirm / Delete N stem / named-transition confirm in one ship, then STOP (oral #220). Do not restyle remaining ``Add one`` empty CTAs, remaining ``Select all N results``, remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One FTS empty generic No results after clerk_empty_search_title exists | Call clerk_empty_search_title / clerk_search_results_label on remaining FTS empty + result-count hosts in one ship, then STOP (oral #221). Do not restyle remaining search-select / command-palette ``No results``, remaining ``Add one`` empty CTAs, remaining ``Select all N results``, remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One timeline empty generic No events after clerk_empty_timeline_title exists | Call clerk_empty_timeline_title / clerk_empty_activity_title on remaining timeline + activity_feed hosts in one ship, then STOP (oral #222). Do not restyle remaining conversation ``No conversation yet``, remaining day-timeline slots, remaining search-select / command-palette ``No results`` (oral #221), remaining ``Add one`` empty CTAs, remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

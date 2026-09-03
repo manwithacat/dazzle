@@ -38,6 +38,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
+    _chrono_empty_message,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -147,9 +148,7 @@ def _activity_actor_html(item: dict[str, Any]) -> str:
 
 
 def _activity_empty_message(region: Any, ctx: RegionContext) -> str:
-    return str(
-        ctx.get("empty_message") or getattr(region, "empty_message", None) or "No activity yet"
-    )
+    return _chrono_empty_message(region, ctx, vacant="No activity yet")
 
 
 def _conversation_orientation(item: dict[str, Any]) -> str:
@@ -412,9 +411,7 @@ class _BuildersTimelineMixin:
                 )
             )
 
-        empty_msg = (
-            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No events yet."
-        )
+        empty_msg = _chrono_empty_message(region, ctx, vacant="No events yet.")
         body: Fragment = Timeline(events=tuple(events), total=total, empty_message=str(empty_msg))
         return _wrap_surface(title, "report", body)
 

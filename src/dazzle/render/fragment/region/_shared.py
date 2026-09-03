@@ -22,7 +22,7 @@ from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
-from dazzle.render.breadcrumbs import clerk_empty_chart_title
+from dazzle.render.breadcrumbs import clerk_empty_chart_title, clerk_empty_timeline_title
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
@@ -149,6 +149,33 @@ def _chart_empty_title(region: Any, ctx: Any) -> str:
     if not name:
         name = str(getattr(region, "source", None) or "")
     return clerk_empty_chart_title(name, catalog)
+
+
+def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
+    """Clerk-facing empty speech for vacant timeline / activity (oral #222).
+
+    Generic ``No events yet.`` / ``No activity yet`` hid the entity noun
+    while empty lists already say ``No tasks found``. Authored ``empty:``
+    still wins. Leftover junk invents no collection.
+    """
+    getter = getattr(ctx, "get", None)
+    authored = ""
+    if callable(getter):
+        authored = str(getter("empty_message") or "").strip()
+    if not authored:
+        authored = str(getattr(region, "empty_message", None) or "").strip()
+    if authored:
+        return authored
+    name = ""
+    catalog: dict[str, str] | None = None
+    if callable(getter):
+        name = str(getter("source_entity") or getter("entity_name") or "")
+        entity_title = str(getter("entity_title") or "")
+        if name and entity_title:
+            catalog = {name: entity_title}
+    if not name:
+        name = str(getattr(region, "source", None) or "")
+    return clerk_empty_timeline_title(name, catalog, vacant=vacant)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:
