@@ -285,6 +285,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_related_create_cta_dump.py",
     # cycle 2382: filtered HTMX empty must not invent collection-empty (oral #215)
     "tests/unit/test_empty_filtered_entity_dump.py",
+    # cycle 2383: pagination footer must not dump generic rows (oral #216)
+    "tests/unit/test_pagination_rows_label_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

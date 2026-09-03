@@ -38,7 +38,11 @@ from dazzle.http.runtime.route_support import (
     _is_htmx_request,
     _wants_html,
 )
-from dazzle.render.breadcrumbs import clerk_empty_filtered_title, clerk_entity_noun
+from dazzle.render.breadcrumbs import (
+    clerk_empty_filtered_title,
+    clerk_entity_noun,
+    clerk_pagination_rows_label,
+)
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
 from dazzle.render.fragment.ingest import render_pagination
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
@@ -96,7 +100,10 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
         return ""
     total_pages = (total + page_size - 1) // page_size
     current_page = int(table.get("page", 1) or 1)
-    rows_label = "row" if total == 1 else "rows"
+    entity_name = str(table.get("entity_name") or "")
+    entity_title = str(table.get("entity_title") or "")
+    catalog = {entity_name: entity_title} if entity_name and entity_title else None
+    rows_label = clerk_pagination_rows_label(entity_name, catalog, total=total)
 
     # Convergence C1.1: page buttons are the HM grid controller's seam —
     # `data-dz-grid-goto` clicks compose ONE query from the DOM (sort +

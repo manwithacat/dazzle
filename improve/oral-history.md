@@ -2223,6 +2223,12 @@ dialect formed — and where it started to Goodhart itself — is
     (oral #192), remaining 422-speech (oral #208), or
     leftover-token stay-put. Standing refusals apply.
 
+216. **Pagination footer dumps generic rows.** Cycle 2383: HTMX list
+    hydrate summarized ``42 rows`` while empty lists already say
+    ``No issue reports found``. Helper: ``clerk_pagination_rows_label``.
+    Leftover junk invents no collection. Live fieldtest_hub
+    IssueReport list. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2239,6 +2245,7 @@ the end of every new oral *is* expensive — point here instead.
 | Empty-state entity dump | Walk another empty-list collection title after `clerk_empty_collection_title` exists | #213 |
 | Related-tab create FK-tab CTA | Walk another related ``+ New`` host after `clerk_related_create_noun` exists | #214 |
 | Filtered HTMX empty invents collection-empty | Walk another empty-kind host after `clerk_list_empty_kind` / `clerk_empty_filtered_title` exist | #215 |
+| Pagination rows-noun dump | Walk another pagination footer after `clerk_pagination_rows_label` exists | #216 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2499,6 +2506,7 @@ how the handbook was learned.
 | One empty-list entity dump after clerk_empty_collection_title exists | Call clerk_empty_collection_title on remaining empty-list titles in one ship, then STOP (oral #213). Do not restyle remaining peek/slide-over heading siblings, remaining 422-speech, remaining toast/breadcrumb/confirm, or leftover-token stay-put |
 | One related-tab create FK-tab dump after clerk_related_create_noun exists | Call clerk_related_create_noun on remaining related ``+ New`` hosts in one ship, then STOP (oral #214). Do not restyle remaining related empty ``No {tab.label} found`` siblings, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One filtered-empty collection theater after clerk_empty_filtered_title exists | Call clerk_list_empty_kind + clerk_empty_filtered_title on remaining HTMX empty hosts in one ship, then STOP (oral #215). Do not restyle remaining related empty ``No {tab.label} found``, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One pagination rows-noun dump after clerk_pagination_rows_label exists | Call clerk_pagination_rows_label on remaining pagination footers in one ship, then STOP (oral #216). Do not restyle remaining related empty ``No {tab.label} found``, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

@@ -35,6 +35,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from dazzle.render.breadcrumbs import clerk_pagination_rows_label
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.ingest import DateRange as DateRangeSeam
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
@@ -490,7 +491,10 @@ class _RenderInteractiveMixin:
                 f"{entry}"
                 f"</button>"
             )
-        rows_label = "row" if p.total == 1 else "rows"
+        name = str(getattr(p, "entity_name", "") or "")
+        title = str(getattr(p, "entity_title", "") or "")
+        catalog = {name: title} if name and title else None
+        rows_label = clerk_pagination_rows_label(name, catalog, total=p.total)
         return render_pagination(
             PaginationSeam(
                 total=p.total,

@@ -2127,7 +2127,7 @@ class Pagination:
 
     Issue #1029 phase 2 — appended below the LIST adapter's Table when
     `total > page_size`. Renders the legacy `_table_pagination.html`
-    contract: a left summary (`<total> rows`) + right page-button row
+    contract: a left summary (`<total> {entity noun}`) + right page-button row
     with bounded width via ellipsis (`pagination_pages` helper, max
     ~9 entries regardless of total page count, see #984).
 
@@ -2153,6 +2153,9 @@ class Pagination:
     extra_query: str = ""
     include_closed: str = ""
     as_of: str = ""
+    # Oral #216: clerk-facing noun for "{total} {rows_label}". Empty → "rows".
+    entity_name: str = ""
+    entity_title: str = ""
 
     def __post_init__(self) -> None:
         if not self.region_name:

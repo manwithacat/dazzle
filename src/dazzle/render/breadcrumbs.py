@@ -227,6 +227,29 @@ def clerk_list_empty_kind(
     return "collection"
 
 
+def clerk_pagination_rows_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    total: int = 0,
+) -> str:
+    """Clerk-facing pagination noun (oral #216).
+
+    ``47 rows`` dumped generic chrome while empty lists already say
+    ``No issue reports found``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``, then the adapter's naive ``s`` plural.
+    Leftover junk invents no collection.
+    """
+    noun = clerk_entity_confirm_noun(name, catalog)
+    text = str(noun or "").strip()
+    count = int(total or 0)
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return "row" if count == 1 else "rows"
+    if count == 1:
+        return text
+    return f"{text}s"
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

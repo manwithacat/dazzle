@@ -916,6 +916,7 @@ async def _list_handler_body(
                 "detail_url_fallback_template": _resolved_fallback,
                 "peek_mode": _resolved_peek,
                 "entity_name": _entity_label,
+                "entity_title": str(getattr(_entity_spec, "title", "") or ""),
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,
                 # #1558 3c: per-row state-gated transition affordances.
