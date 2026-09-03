@@ -62,6 +62,7 @@ from dazzle.render.fragment import (
 )
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._shared import (
+    _chart_empty_title,
     _region_title,
     _wrap_surface,
 )
@@ -292,7 +293,7 @@ class _BuildersChartsMixin:
         # Adapter degrades to EmptyState rather than crashing.
         if len(axes) < 3:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None)
                 or "Radar requires at least 3 axes.",
             )
@@ -361,7 +362,7 @@ class _BuildersChartsMixin:
         body: Fragment
         if not groups:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None)
                 or "No box-plot groups to render.",
             )
@@ -440,7 +441,7 @@ class _BuildersChartsMixin:
 
         if not points:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None) or "No points to plot.",
             )
             return _wrap_surface(title, "report", body)
@@ -574,7 +575,7 @@ class _BuildersChartsMixin:
         body: Fragment
         if not rows:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None) or "No data available.",
             )
         else:
@@ -617,7 +618,7 @@ class _BuildersChartsMixin:
         body: Fragment
         if not rows:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None) or "No data available.",
             )
         else:
@@ -945,7 +946,7 @@ class _BuildersChartsMixin:
         body: Fragment
         if not buckets:
             body = EmptyState(
-                title="No data",
+                title=_chart_empty_title(region, ctx),
                 description=getattr(region, "empty_message", None) or "No buckets to chart.",
             )
         else:

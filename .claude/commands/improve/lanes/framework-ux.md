@@ -532,6 +532,15 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   empty-kind hosts (oral #215), remaining empty-list titles
   (oral #213), remaining peek/slide-over headings (oral #192),
   remaining 422-speech (oral #208), or leftover-token stay-put.
+- **Chart empty dumps generic No data** closed cycle 2386
+  (oral #219). Helper: ``clerk_empty_chart_title``. Leftover
+  ``zzz`` invents no collection. Do **not** restyle remaining
+  detail ``No data`` hosts, remaining loading empty (oral
+  #218), remaining related empty (oral #217), remaining
+  pagination footers (oral #216), remaining empty-kind hosts
+  (oral #215), remaining empty-list titles (oral #213),
+  remaining peek/slide-over headings (oral #192), remaining
+  422-speech (oral #208), or leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

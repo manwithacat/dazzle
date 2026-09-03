@@ -22,6 +22,7 @@ from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
+from dazzle.render.breadcrumbs import clerk_empty_chart_title
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
     _render_media_thumb_html,
@@ -129,6 +130,25 @@ def _region_title(region: Any) -> str:
     if title:
         return str(title)
     return getattr(region, "name", "").replace("_", " ").title()
+
+
+def _chart_empty_title(region: Any, ctx: Any) -> str:
+    """Clerk-facing EmptyState title for vacant charts (oral #219).
+
+    Generic ``No data`` hid the entity noun while empty lists already
+    say ``No issue reports found``. Leftover junk invents no collection.
+    """
+    name = ""
+    catalog: dict[str, str] | None = None
+    getter = getattr(ctx, "get", None)
+    if callable(getter):
+        name = str(getter("source_entity") or getter("entity_name") or "")
+        entity_title = str(getter("entity_title") or "")
+        if name and entity_title:
+            catalog = {name: entity_title}
+    if not name:
+        name = str(getattr(region, "source", None) or "")
+    return clerk_empty_chart_title(name, catalog)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:

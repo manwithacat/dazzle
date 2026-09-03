@@ -64,6 +64,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
+    _chart_empty_title,
     _minor_currency_code,
     _region_title,
     _render_typed_value,
@@ -946,7 +947,7 @@ class _BuildersTablesMixin:
                 )
             else:
                 body = EmptyState(
-                    title="No data",
+                    title=_chart_empty_title(region, ctx),
                     description=getattr(region, "empty_message", None)
                     or "No row or column dimensions to pivot.",
                 )

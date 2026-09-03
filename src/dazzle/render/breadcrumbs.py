@@ -291,6 +291,24 @@ def clerk_pagination_rows_label(
     return f"{text}s"
 
 
+def clerk_empty_chart_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing chart empty title (oral #219).
+
+    ``No data`` dumped generic chrome while empty lists already say
+    ``No issue reports found``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No data",
+        found="No {noun}s to chart",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()
