@@ -667,6 +667,9 @@ SHIP_TESTS: tuple[str, ...] = (
     # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
     # previously green while main matrix red)
     "tests/unit/test_acme_billing_reference_drift.py",
+    # cycle 2378 cimonitor: example_hub supervisor `from registry` shadowed
+    # by packages/hatchi-maxchi/site/registry.py under pytest-xdist
+    "tests/unit/test_example_eval_hub.py::TestSupervisorOurs::test_load_survives_hm_registry_shadow",
 )
 
 REMEDIATION = """

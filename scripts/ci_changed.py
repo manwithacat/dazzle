@@ -240,6 +240,17 @@ def select_packs(paths: list[str]) -> list[Pack]:
             )
         )
 
+    if any_prefix("scripts/example_hub/") or any(
+        p.endswith("test_example_eval_hub.py") for p in paths
+    ):
+        packs.append(
+            Pack(
+                name="example-eval-hub",
+                reason="example eval hub / registry name collision",
+                pytest=["tests/unit/test_example_eval_hub.py"],
+            )
+        )
+
     if any_prefix("src/dazzle/spec_narrative/") or any(
         "spec_brief_simple_task" in p for p in paths
     ):

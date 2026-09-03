@@ -142,3 +142,19 @@ class TestSupervisorOurs:
         monkeypatch.setattr(sup, "is_port_open", lambda port: False)
         sup._reap_stale(app)
         assert killed == [4242]
+
+    def test_load_survives_hm_registry_shadow(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """HM site/registry.py must not steal hub ExampleApp (cycle 2378)."""
+        import importlib
+
+        site = Path(__file__).resolve().parents[2] / "packages" / "hatchi-maxchi" / "site"
+        monkeypatch.syspath_prepend(str(site))
+        monkeypatch.delitem(sys.modules, "registry", raising=False)
+        monkeypatch.delitem(sys.modules, "example_hub_supervisor", raising=False)
+        monkeypatch.delitem(sys.modules, "example_hub.supervisor", raising=False)
+        monkeypatch.delitem(sys.modules, "example_hub.registry", raising=False)
+        hm = importlib.import_module("registry")
+        assert not hasattr(hm, "ExampleApp")
+        mod = _load("supervisor")
+        assert hasattr(mod, "Supervisor")
+        assert hasattr(mod, "ExampleApp")

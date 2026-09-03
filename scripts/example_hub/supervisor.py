@@ -2,16 +2,42 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import os
 import signal
 import socket
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from registry import ExampleApp, repo_root
+
+def _hub_registry():
+    """Load sibling registry under a unique name.
+
+    The HM gallery ``site/registry.py`` also binds as ``registry``.
+    Pytest xdist workers that already imported that module fail
+    ``from registry import ExampleApp`` (cycle 2378 CI red on py3.12/3.13).
+    """
+    name = "example_hub.registry"
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
+    path = Path(__file__).resolve().parent / "registry.py"
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load hub registry from {path}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_reg = _hub_registry()
+ExampleApp = _reg.ExampleApp
+repo_root = _reg.repo_root
 
 logger = logging.getLogger(__name__)
 

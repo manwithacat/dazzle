@@ -2180,6 +2180,14 @@ dialect formed — and where it started to Goodhart itself — is
     pidfile + matching listener) before crawl. Do not file those
     500s as product. Standing refusals apply.
 
+212. **Hub ``registry`` is not HM ``registry``.** Cycle 2378: py3.12/3.13
+    CI red on ``from registry import ExampleApp`` in
+    ``scripts/example_hub/supervisor.py`` after xdist workers had
+    already imported ``packages/hatchi-maxchi/site/registry.py``.
+    py3.14 passed (order). Load the hub sibling under
+    ``example_hub.registry``. Do not share the top-level name.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2192,6 +2200,7 @@ the end of every new oral *is* expensive — point here instead.
 | Yield capability-sweep to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap does not skip cadence | #207 |
 | Yield semgrep hygiene to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap does not skip cadence | #209 |
 | Open port as current-tree serve | Treat a listening 910x port as healthy without a live pidfile; skip hub start when the occupant may be leftover | #211 |
+| Hub registry as HM registry | Bind `scripts/example_hub/registry.py` as top-level `registry` (collides with HM site under xdist) | #212 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
