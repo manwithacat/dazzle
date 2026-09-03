@@ -38,7 +38,7 @@ from dazzle.http.runtime.route_support import (
     _is_htmx_request,
     _wants_html,
 )
-from dazzle.render.breadcrumbs import clerk_entity_noun
+from dazzle.render.breadcrumbs import clerk_empty_filtered_title, clerk_entity_noun
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
 from dazzle.render.fragment.ingest import render_pagination
 from dazzle.render.fragment.renderer._render_interactive import leftover_honest_temporal_query
@@ -156,7 +156,9 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
     endpoint_attr = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
 
     if kind == "filtered":
-        msg = str(table.get("empty_filtered") or f"No {entity_lower} match the current filters.")
+        entity_title = str(table.get("entity_title") or "")
+        catalog = {entity_name: entity_title} if entity_name and entity_title else None
+        msg = str(table.get("empty_filtered") or clerk_empty_filtered_title(entity_name, catalog))
         msg_html = _html_mod.escape(msg, quote=False)
         clear_link = ""
         if table.get("filter_values") and request is not None:

@@ -147,6 +147,21 @@ def clerk_entity_download_stem(
     return kebab or text
 
 
+def _clerk_empty_title(
+    name: str,
+    catalog: dict[str, str] | None,
+    *,
+    vacant: str,
+    found: str,
+) -> str:
+    """Shared empty-list / filtered-empty speech (oral #213 / #215)."""
+    noun = clerk_entity_confirm_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return vacant
+    return found.format(noun=text)
+
+
 def clerk_empty_collection_title(
     name: str,
     catalog: dict[str, str] | None = None,
@@ -158,13 +173,7 @@ def clerk_empty_collection_title(
     ``clerk_entity_confirm_noun``, then the adapter's naive ``s`` plural.
     Leftover junk invents no collection.
     """
-    noun = clerk_entity_confirm_noun(name, catalog)
-    text = str(noun or "").strip()
-    if not text:
-        return "No items yet"
-    if text.lower() in _LEFTOVER_PATH_TOKENS:
-        return "No items yet"
-    return f"No {text}s found"
+    return _clerk_empty_title(name, catalog, vacant="No items yet", found="No {noun}s found")
 
 
 def clerk_related_create_noun(
@@ -182,6 +191,40 @@ def clerk_related_create_noun(
     if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
         return "item"
     return text
+
+
+def clerk_empty_filtered_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing filtered-empty title (oral #215).
+
+    HTMX list hydrate omitted ``empty_kind``, so a zero-row filter invented
+    collection-empty (``No items found`` + Add one) and ``No issuereport
+    match the current filters``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No items match the current filters.",
+        found="No {noun}s match the current filters.",
+    )
+
+
+def clerk_list_empty_kind(
+    *,
+    filters: Any = None,
+    search: str | None = None,
+) -> str:
+    """Which empty speech a list hydrate should use (oral #215).
+
+    Filters or a search with zero rows are filtered-empty, not a vacant
+    collection. Leftover filter keys are already omitted upstream.
+    """
+    if filters or str(search or "").strip():
+        return "filtered"
+    return "collection"
 
 
 def clerk_entity_title(entity: Any) -> str:

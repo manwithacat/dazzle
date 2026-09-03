@@ -59,6 +59,7 @@ from dazzle.http.runtime.workspace_csv import list_export_kind, render_entity_li
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy_by_usage
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.breadcrumbs import clerk_list_empty_kind
 from dazzle.render.context import TransitionContext
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
@@ -938,6 +939,7 @@ async def _list_handler_body(
                 # load-more does not invent open-only / current.
                 "include_closed": request.query_params.get("include_closed", "") or "",
                 "as_of": request.query_params.get("as_of", "") or (_as_of_raw or ""),
+                "empty_kind": clerk_list_empty_kind(filters=filters, search=search),
                 "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
             }
 

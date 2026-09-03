@@ -515,6 +515,14 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   headings (oral #192), remaining empty-list titles (oral
   #213), remaining 422-speech (oral #208), or leftover-token
   stay-put.
+- **Filtered HTMX empty invents collection-empty theater**
+  closed cycle 2382 (oral #215). Helper:
+  ``clerk_empty_filtered_title`` / ``clerk_list_empty_kind``.
+  Leftover ``zzz`` invents no collection. Do **not** restyle
+  remaining related empty ``No {tab.label} found``, remaining
+  empty-list titles (oral #213), remaining peek/slide-over
+  headings (oral #192), remaining 422-speech (oral #208), or
+  leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
