@@ -53,6 +53,7 @@ from dazzle.render.fragment.region._progress_bar import (
     progress_bars_from_items,
 )
 from dazzle.render.fragment.region._shared import (
+    _carousel_empty_message,
     _map_empty_message,
     _region_title,
     _wrap_surface,
@@ -517,9 +518,7 @@ class _BuildersMetricsMixin:
         slides = _carousel_slides_from_items(list(ctx.get("items") or []))
         if not slides:
             slides = _carousel_slides_from_entries(list(ctx.get("status_entries") or []))
-        empty_msg = (
-            ctx.get("empty_message") or getattr(region, "empty_message", None) or "No slides."
-        )
+        empty_msg = _carousel_empty_message(region, ctx)
         label = title or str(getattr(region, "name", None) or "Gallery")
         body_frag: Fragment = Carousel(
             slides=tuple(slides),

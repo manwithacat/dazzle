@@ -514,6 +514,25 @@ def clerk_empty_map_title(
     )
 
 
+def clerk_empty_carousel_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing carousel empty speech (oral #229).
+
+    ``No slides.`` dumped generic chrome while empty lists already say
+    ``No assets found``. Host is the media-stage empty line, not a
+    plan-board (oral #228) or remaining accordion ``No panels.``.
+    Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No slides.",
+        found="No {noun}s in this gallery.",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

@@ -794,7 +794,6 @@ def _apply_conversation_list_ctx(
     """
     empty_defaults = {
         "ACCORDION": "No panels.",
-        "CAROUSEL": "No slides.",
         "PROGRESS_BAR": "No progress.",
         "CONVERSATION": "No conversation yet.",
     }
@@ -806,9 +805,10 @@ def _apply_conversation_list_ctx(
         or getattr(ctx_region, "empty_message", None)
         or empty_default
     )
-    if display_upper == "MAP":
-        # Builder clerks vacant maps (oral #228); do not inject generic
-        # ``No locations.`` as authored empty.
+    if display_upper in ("MAP", "CAROUSEL"):
+        # Builder clerks vacant maps (oral #228) / carousels (oral #229);
+        # do not inject generic ``No locations.`` / ``No slides.`` as
+        # authored empty.
         adapter_ctx["source_entity"] = getattr(ctx, "source", "") or ""
     _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
 
