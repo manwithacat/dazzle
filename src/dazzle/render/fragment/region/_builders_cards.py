@@ -46,6 +46,7 @@ from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _cohort_empty_message,
     _kanban_lane_empty_message,
+    _profile_empty_message,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -364,9 +365,11 @@ class _BuildersCardsMixin:
 
         body: Fragment
         if not (primary or avatar_url or initials):
+            empty_title = _profile_empty_message(region, ctx)
+            description = "No profile data available." if empty_title == "No profile data" else ""
             body = EmptyState(
-                title="No profile data",
-                description=getattr(region, "empty_message", None) or "No profile data available.",
+                title=empty_title,
+                description=description,
             )
             return _wrap_surface(title, "dashboard", body)
 

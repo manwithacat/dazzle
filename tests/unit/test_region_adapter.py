@@ -1902,7 +1902,9 @@ def test_profile_card_empty_data_renders_empty_state() -> None:
 def test_profile_card_no_data_uses_default_empty_message() -> None:
     adapter = WorkspaceRegionAdapter()
     fragment = adapter.build(_FakeRegion("p", display="profile_card"), {})
-    assert "No profile data available." in _render(fragment)
+    html = _render(fragment)
+    assert "dz-empty-state__title" in html
+    assert "No profile data" in html
 
 
 def test_progress_renders_typed_stage_bar_with_progress_element() -> None:

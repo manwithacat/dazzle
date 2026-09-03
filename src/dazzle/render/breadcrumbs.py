@@ -476,6 +476,25 @@ def clerk_empty_cohort_title(
     )
 
 
+def clerk_empty_profile_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing profile-card empty speech (oral #227).
+
+    ``No profile data`` dumped generic chrome while empty lists already
+    say ``No systems found``. Host is the identity-panel EmptyState, not
+    a detail ``No item`` (skip remaining detail No data) or a member-skim
+    (oral #226). Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No profile data",
+        found="No {noun} profile",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()
