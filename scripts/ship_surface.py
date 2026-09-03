@@ -287,6 +287,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_empty_filtered_entity_dump.py",
     # cycle 2383: pagination footer must not dump generic rows (oral #216)
     "tests/unit/test_pagination_rows_label_dump.py",
+    # cycle 2384: related empty must not dump Task · Assigned To (oral #217)
+    "tests/unit/test_related_empty_fk_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

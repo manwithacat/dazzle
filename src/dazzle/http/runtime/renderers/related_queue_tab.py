@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.render.breadcrumbs import clerk_related_create_noun
+from dazzle.render.breadcrumbs import clerk_related_create_noun, clerk_related_empty_title
 from dazzle.render.cell_chrome import (
     related_queue_columns_omit_identity,
     related_queue_identity_from_record,
@@ -67,6 +67,14 @@ def related_create_affordance(tab: dict[str, Any], item_id: str) -> tuple[str, s
     return href, action, clerk_related_create_noun(name, catalog)
 
 
+def related_empty_speech(tab: dict[str, Any]) -> str:
+    """Entity-noun empty copy; leftover junk invents no collection (oral #217)."""
+    name = str(tab.get("entity_name", "") or "")
+    title = str(tab.get("entity_title", "") or "")
+    catalog = {name: title} if name and title else None
+    return clerk_related_empty_title(name, catalog)
+
+
 def related_tab_from_ctx(tab: dict[str, Any], item_id: str, *, display: str) -> RelatedTab:
     """One related tab: formatted cells + optional queue identity title."""
     cols = tab.get("columns", []) or []
@@ -90,5 +98,6 @@ def related_tab_from_ctx(tab: dict[str, Any], item_id: str, *, display: str) -> 
         create_href=create_href,
         create_action=create_action,
         create_label=create_label,
+        empty_message=related_empty_speech(tab),
         total=total,
     )

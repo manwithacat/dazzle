@@ -275,7 +275,8 @@ class RelatedTab:
     to `rows` (per-row detail URL, "" = not clickable). The create affordance
     is the pre-built `+ New {create_label}` link with its RBAC anchor.
     ``create_label`` is the singular entity noun (oral #214), never the
-    FK-disambiguated tab label."""
+    FK-disambiguated tab label. ``empty_message`` is entity-noun empty
+    speech (oral #217), never ``No {label.lower()} found``."""
 
     tab_id: str
     label: str
@@ -285,6 +286,7 @@ class RelatedTab:
     create_href: str = ""
     create_action: str = ""
     create_label: str = ""
+    empty_message: str = ""
     # Full related count when fetch is limited (workspace-queue parity overflow).
     total: int = 0
 

@@ -193,6 +193,25 @@ def clerk_related_create_noun(
     return text
 
 
+def clerk_related_empty_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing related-tab empty speech (oral #217).
+
+    ``No task · assigned to found`` dumped the FK-disambiguated tab label
+    while the create CTA already says ``+ New Task``. Catalog /
+    PascalCase-split via ``clerk_entity_confirm_noun``. Leftover junk
+    invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No items found.",
+        found="No {noun}s found.",
+    )
+
+
 def clerk_empty_filtered_title(
     name: str,
     catalog: dict[str, str] | None = None,

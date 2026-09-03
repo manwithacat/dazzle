@@ -452,7 +452,7 @@ class _RenderTablesMixin:
         """Create-row + MessageScroller for one related conversation tab."""
         parts = [self._related_create_row(t, ctx)]
         messages = related_conversation_messages(t)
-        empty = f"No {t.label.lower()} found." if t.label else "No conversation yet."
+        empty = self._related_empty_copy(t, conversation=True)
         scroller = MessageScroller(
             messages=messages,
             label=t.label or "Discussion",
@@ -536,6 +536,14 @@ class _RenderTablesMixin:
         return f'<p class="{css_class}">Showing {len(t.rows)} of {count}</p>'
 
     @staticmethod
+    def _related_empty_copy(t: RelatedTab, *, conversation: bool = False) -> str:
+        """Related empty speech is the entity noun, never the FK tab label (oral #217)."""
+        msg = str(getattr(t, "empty_message", "") or "").strip()
+        if msg:
+            return msg
+        return "No conversation yet." if conversation else "No items found."
+
+    @staticmethod
     def _related_create_row(t: RelatedTab, ctx: RenderContext) -> str:
         if not t.create_href:
             return ""
@@ -614,7 +622,8 @@ class _RenderTablesMixin:
             else:
                 body = (
                     f'<tr><td colspan="{max(1, len(t.headers))}" '
-                    f'class="dz-related-table-empty-cell">No {ctx.escape(t.label.lower())} found.'
+                    f'class="dz-related-table-empty-cell">'
+                    f"{ctx.escape(self._related_empty_copy(t))}"
                     "</td></tr>"
                 )
             overflow = self._related_overflow_html(t, ctx, css_class="dz-related-overflow")
@@ -671,7 +680,9 @@ class _RenderTablesMixin:
             parts.append(f'<div class="{wrap}">{"".join(items)}</div>')
             parts.append(self._related_overflow_html(t, ctx, css_class="dz-related-overflow"))
         else:
-            parts.append(f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>')
+            parts.append(
+                f'<p class="dz-related-empty">{ctx.escape(self._related_empty_copy(t))}</p>'
+            )
         return "".join(parts)
 
     def _emit_related_cards_or_files(
@@ -715,7 +726,7 @@ class _RenderTablesMixin:
             parts.append(
                 f'<div class="dz-queue-region">'
                 f'<p class="dz-empty-dense dz-queue-empty" role="status">'
-                f"No {ctx.escape(t.label.lower())} found.</p></div>"
+                f"{ctx.escape(self._related_empty_copy(t))}</p></div>"
             )
             return "".join(parts)
         rows_html: list[str] = []
