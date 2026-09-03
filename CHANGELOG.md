@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Fixed
+- **HM grid visual baselines stale after native-select CSS (cycle 2376)** —
+  linux/darwin `part-grid-{light,dark}` still showed July 29 native-select
+  chrome after `97bd226b3` (`appearance:none`, pinned height, chevron).
+  HM visual red'd main via the standalone mirror (1.86% > 1%). Refresh
+  those four PNGs only.
+
 ## [0.113.16] - 2026-09-01
 
 ### Fixed

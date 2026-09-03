@@ -2163,6 +2163,14 @@ dialect formed — and where it started to Goodhart itself — is
     JWT unverified-decode / write_handler SQL (already classified).
     Standing refusals apply.
 
+210. **Native-select CSS is a visual ship.** Oral #33 named gallery
+    markup/copy; rest-state CSS is the same class. `97bd226b3` pinned
+    `select.dz-filter-select` (`appearance:none`, height, chevron) and
+    left linux `part-grid-*` on July 29 chrome (1.86% > 1%). HM visual
+    red → Dazzle badge red via `hm_standalone_ci_status`. Refresh that
+    part's linux+darwin PNGs in the same commit. Do not wait for the
+    next cimonitor cycle. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2314,6 +2322,7 @@ the end of every new oral *is* expensive — point here instead.
 | Pydantic type 422 schema dump | Dump ``integer`` / ``UUID`` / ``date or datetime`` on type 422 after ``clerk_pydantic_type_speech`` exists; clone leftover-token stay-put or remaining enum 422 siblings | #204 |
 | Length/pattern 422 schema dump | Dump ``String should have at most`` / ``slug must`` / regex on length/pattern 422 after ``clerk_pydantic_constraint_speech`` exists; clone leftover-token stay-put or remaining type 422 siblings | #205 |
 | Decimal scale 422 schema dump | Dump ``Decimal input should have no more than`` on decimal_max_places / max_digits 422 after clerk_pydantic_constraint_speech covers decimal scale; clone leftover-token stay-put or remaining length/pattern 422 siblings | #206 |
+| Native-select CSS without grid visual | Restyle `select.dz-filter-select` / queue filter selects without refreshing linux+darwin `part-grid-*` (or the part whose rest-state chrome moved) in the same ship | #210 |
 | Edit-form time-travel | Put `as_of` / `include_closed` on the edit form | #50 |
 
 **How to write the next oral.** Name the hole in one paragraph.
