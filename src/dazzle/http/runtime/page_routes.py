@@ -63,7 +63,7 @@ from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by
 from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
-from dazzle.render.breadcrumbs import entity_path_labels_from_spec
+from dazzle.render.breadcrumbs import clerk_list_empty_kind, entity_path_labels_from_spec
 from dazzle.render.context import CustomRenderCtx, TransitionContext
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.display_names import _inject_display_names
@@ -2717,12 +2717,11 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     # actually empty (rows empty); a populated table doesn't show the
     # empty state at all.
     if not getattr(req_table, "rows", None):
-        if _fetch_errored:
-            req_table.empty_kind = "loading"
-        elif _has_filter or _has_search:
-            req_table.empty_kind = "filtered"
-        else:
-            req_table.empty_kind = "collection"
+        req_table.empty_kind = clerk_list_empty_kind(
+            filters=_list_filters if _has_filter else None,
+            search=_list_search if _has_search else None,
+            fetch_errored=_fetch_errored,
+        )
 
     prc.ctx_overrides["table"] = req_table
 

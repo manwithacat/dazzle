@@ -235,15 +235,37 @@ def clerk_list_empty_kind(
     *,
     filters: Any = None,
     search: str | None = None,
+    fetch_errored: bool = False,
 ) -> str:
-    """Which empty speech a list hydrate should use (oral #215).
+    """Which empty speech a list hydrate should use (oral #215 / #218).
 
-    Filters or a search with zero rows are filtered-empty, not a vacant
-    collection. Leftover filter keys are already omitted upstream.
+    Fetch errors are loading-empty, not a vacant collection. Filters or a
+    search with zero rows are filtered-empty. Leftover filter keys are
+    already omitted upstream.
     """
+    if fetch_errored:
+        return "loading"
     if filters or str(search or "").strip():
         return "filtered"
     return "collection"
+
+
+def clerk_empty_loading_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing list fetch-error title (oral #218).
+
+    ``Couldn't load issuereport`` dumped concatenated schema while empty
+    lists already say ``No issue reports found``, and the fragment shell
+    invented collection-empty + Add one. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``. Leftover junk invents no collection.
+    """
+    noun = clerk_entity_confirm_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return "Couldn't load items"
+    return f"Couldn't load {text}s"
 
 
 def clerk_pagination_rows_label(

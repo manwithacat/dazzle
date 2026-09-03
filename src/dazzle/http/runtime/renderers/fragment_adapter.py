@@ -20,6 +20,7 @@ from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.breadcrumbs import (
     clerk_empty_collection_title,
+    clerk_empty_loading_title,
     clerk_entity_confirm_noun,
 )
 from dazzle.render.channel_cell import email_field_name, phone_field_name
@@ -1014,6 +1015,11 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     entity_name = str(ctx.get("entity_name", "") or "").strip()
     entity_title = str(ctx.get("entity_title", "") or "").strip()
     catalog = {entity_name: entity_title} if entity_name and entity_title else None
+    if kind == "loading":
+        typed = str(ctx.get("empty_loading", "") or "").strip()
+        return clerk_empty_loading_title(
+            entity_name or entity_title, catalog
+        ), typed or "Try reloading."
     collection_title = clerk_empty_collection_title(entity_name or entity_title, catalog)
     typed_keys = {
         "collection": ("empty_collection", collection_title),

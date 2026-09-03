@@ -40,6 +40,7 @@ from dazzle.http.runtime.route_support import (
 )
 from dazzle.render.breadcrumbs import (
     clerk_empty_filtered_title,
+    clerk_empty_loading_title,
     clerk_entity_noun,
     clerk_pagination_rows_label,
 )
@@ -153,8 +154,8 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
             f"{msg}</td></tr>"
         )
 
-    entity_name = str(table.get("entity_name") or "items")
-    entity_lower = entity_name.lower()
+    entity_name = str(table.get("entity_name") or "")
+    entity_lower = (entity_name or "items").lower()
     columns = table.get("columns") or []
     colspan = len(columns) + (2 if table.get("bulk_actions") else 1)
     kind = str(table.get("empty_kind") or "collection")
@@ -183,10 +184,13 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
             )
         inner = f"{msg_html}{clear_link}"
     elif kind == "loading":
-        inner = _html_mod.escape(
-            f"Couldn't load {entity_lower}. Try reloading.",
-            quote=False,
+        entity_title = str(table.get("entity_title") or "")
+        catalog = {entity_name: entity_title} if entity_name and entity_title else None
+        msg = str(
+            table.get("empty_loading")
+            or f"{clerk_empty_loading_title(entity_name, catalog)}. Try reloading."
         )
+        inner = _html_mod.escape(msg, quote=False)
     elif kind == "forbidden" and table.get("empty_forbidden"):
         inner = _html_mod.escape(str(table["empty_forbidden"]), quote=False)
     else:

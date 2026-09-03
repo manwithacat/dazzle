@@ -144,9 +144,9 @@ def test_pick_empty_state_falls_back_to_framework_default() -> None:
 
 
 def test_pick_empty_state_unknown_kind_treated_as_collection() -> None:
-    """Defensive: unknown `empty_kind` value (e.g. typo, future
-    extension) treated as collection — same default title."""
-    ctx = {"empty_kind": "loading", "empty_collection": "still loading…"}
+    """Defensive: unknown `empty_kind` value (e.g. typo) treated as
+    collection — same default title. ``loading`` is a real kind (oral #218)."""
+    ctx = {"empty_kind": "not_a_kind", "empty_collection": "still loading…"}
     title, description = _pick_empty_state(ctx)
     assert title == "No items yet"
 

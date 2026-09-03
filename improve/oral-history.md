@@ -2239,6 +2239,15 @@ dialect formed — and where it started to Goodhart itself — is
     collection. Live simple_task User related Task. Standing
     refusals apply.
 
+218. **Fetch-error empty invents collection-empty theater.** Cycle
+    2385: in-process list failure set ``empty_kind=loading``, but
+    ``_pick_empty_state`` treated it as unknown → ``No items yet`` +
+    Add one, and HTMX dumped ``Couldn't load issuereport``. Empty
+    lists already say ``No issue reports found``. Helper:
+    ``clerk_empty_loading_title`` / ``clerk_list_empty_kind(fetch_errored=)``.
+    Leftover junk invents no collection. Live fieldtest_hub
+    IssueReport list. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2257,6 +2266,7 @@ the end of every new oral *is* expensive — point here instead.
 | Filtered HTMX empty invents collection-empty | Walk another empty-kind host after `clerk_list_empty_kind` / `clerk_empty_filtered_title` exist | #215 |
 | Pagination rows-noun dump | Walk another pagination footer after `clerk_pagination_rows_label` exists | #216 |
 | Related-tab empty FK-tab dump | Walk another related empty host after `clerk_related_empty_title` exists | #217 |
+| Fetch-error empty invents collection-empty | Walk another loading empty host after `clerk_empty_loading_title` exists | #218 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2519,6 +2529,7 @@ how the handbook was learned.
 | One filtered-empty collection theater after clerk_empty_filtered_title exists | Call clerk_list_empty_kind + clerk_empty_filtered_title on remaining HTMX empty hosts in one ship, then STOP (oral #215). Do not restyle remaining related empty ``No {tab.label} found``, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One pagination rows-noun dump after clerk_pagination_rows_label exists | Call clerk_pagination_rows_label on remaining pagination footers in one ship, then STOP (oral #216). Do not restyle remaining related empty ``No {tab.label} found``, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One related-tab empty FK-tab dump after clerk_related_empty_title exists | Call clerk_related_empty_title on remaining related empty hosts in one ship, then STOP (oral #217). Do not restyle remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One fetch-error empty collection theater after clerk_empty_loading_title exists | Call clerk_empty_loading_title / clerk_list_empty_kind(fetch_errored=) on remaining loading empty hosts in one ship, then STOP (oral #218). Do not restyle remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
