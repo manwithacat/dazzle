@@ -70,6 +70,7 @@ def _dispatch_ctx_from_table(
         "empty_kind": getattr(table, "empty_kind", "") or "collection",
         "create_url": getattr(table, "create_url", "") or "",
         "create_label": getattr(table, "create_label", "") or "",
+        "entity_name": getattr(table, "entity_name", "") or "",
         "entity_title": getattr(table, "entity_title", "") or "",
         "detail_url_template": getattr(table, "detail_url_template", "") or "",
         "detail_url_candidates": list(getattr(table, "detail_url_candidates", None) or []),

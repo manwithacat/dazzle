@@ -502,6 +502,11 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   remaining sales-region acronym siblings (oral #187), remaining
   compact level-acronym siblings (oral #186), or remaining
   bar-chart bool buckets (oral #185).
+- **Empty-list entity dump** closed cycle 2379 (oral #213).
+  Helper: ``clerk_empty_collection_title``. Leftover ``zzz``
+  invents no collection. Do **not** restyle remaining
+  peek/slide-over ``.title()`` headings (oral #192), remaining
+  422-speech siblings (oral #208), or leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

@@ -147,6 +147,26 @@ def clerk_entity_download_stem(
     return kebab or text
 
 
+def clerk_empty_collection_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing empty-list title (oral #213).
+
+    ``No issuereports found`` dumped concatenated schema while toast already
+    says ``Issue Report was created``. Catalog / PascalCase-split via
+    ``clerk_entity_confirm_noun``, then the adapter's naive ``s`` plural.
+    Leftover junk invents no collection.
+    """
+    noun = clerk_entity_confirm_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text:
+        return "No items yet"
+    if text.lower() in _LEFTOVER_PATH_TOKENS:
+        return "No items yet"
+    return f"No {text}s found"
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()

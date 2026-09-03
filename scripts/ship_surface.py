@@ -279,6 +279,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_string_constraint_speech_dump.py",
     # cycle 2340: decimal scale 422 must not dump Decimal input should (oral #206)
     "tests/unit/test_decimal_constraint_speech_dump.py",
+    # cycle 2379: empty-list title must not dump issuereports (oral #213)
+    "tests/unit/test_empty_collection_entity_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

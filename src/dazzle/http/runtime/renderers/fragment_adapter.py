@@ -18,7 +18,10 @@ from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
 from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
-from dazzle.render.breadcrumbs import clerk_entity_confirm_noun
+from dazzle.render.breadcrumbs import (
+    clerk_empty_collection_title,
+    clerk_entity_confirm_noun,
+)
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.fragment import (
     URL,
@@ -285,7 +288,12 @@ class FragmentSurfaceAdapter:
             sort_dir=sort_dir,
         )
 
-        empty_title, empty_description = _pick_empty_state(ctx)
+        empty_ctx = dict(ctx)
+        if entity_name and not str(empty_ctx.get("entity_name") or "").strip():
+            empty_ctx["entity_name"] = entity_name
+        if entity_title and not str(empty_ctx.get("entity_title") or "").strip():
+            empty_ctx["entity_title"] = entity_title
+        empty_title, empty_description = _pick_empty_state(empty_ctx)
         # #1626 P0-2 / #1487: singular entity language — never list/board titles.
         create_label = human_create_cta_label(
             explicit=create_label,
@@ -1001,13 +1009,12 @@ def _pick_empty_state(ctx: dict[str, Any]) -> tuple[str, str]:
     kind = str(ctx.get("empty_kind", "") or "collection").lower()
     # ADR-0049 Task 5: entity-specific collection title ("No tasks found"),
     # matching the legacy renderer, when the entity label is known.
-    entity_label = (
-        str(ctx.get("entity_title", "") or ctx.get("entity_name", "") or "")
-        .replace("_", " ")
-        .strip()
-        .lower()
-    )
-    collection_title = f"No {entity_label}s found" if entity_label else "No items yet"
+    # Oral #213: PascalCase names dump "No issuereports found" via .lower();
+    # clerk_empty_collection_title splits via clerk_entity_confirm_noun.
+    entity_name = str(ctx.get("entity_name", "") or "").strip()
+    entity_title = str(ctx.get("entity_title", "") or "").strip()
+    catalog = {entity_name: entity_title} if entity_name and entity_title else None
+    collection_title = clerk_empty_collection_title(entity_name or entity_title, catalog)
     typed_keys = {
         "collection": ("empty_collection", collection_title),
         "filtered": ("empty_filtered", "No matches"),

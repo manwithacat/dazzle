@@ -2188,6 +2188,16 @@ dialect formed — and where it started to Goodhart itself — is
     ``example_hub.registry``. Do not share the top-level name.
     Standing refusals apply.
 
+213. **Empty-list title is not concatenated schema.** Cycle 2379:
+    empty IssueReport lists titled ``No issuereports found``
+    (``.replace("_"," ").lower()`` on PascalCase) while toast already
+    says ``Issue Report was created``. Helper:
+    ``clerk_empty_collection_title``. Leftover junk invents no
+    collection. Do not restyle remaining peek/slide-over
+    ``.title()`` headings (oral #192 fallback detail), remaining
+    422-speech siblings (oral #208), or leftover-token stay-put.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2201,6 +2211,7 @@ the end of every new oral *is* expensive — point here instead.
 | Yield semgrep hygiene to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap does not skip cadence | #209 |
 | Open port as current-tree serve | Treat a listening 910x port as healthy without a live pidfile; skip hub start when the occupant may be leftover | #211 |
 | Hub registry as HM registry | Bind `scripts/example_hub/registry.py` as top-level `registry` (collides with HM site under xdist) | #212 |
+| Empty-state entity dump | Walk another empty-list collection title after `clerk_empty_collection_title` exists | #213 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2458,6 +2469,7 @@ how the handbook was learned.
 | One length/pattern 422 schema dump after clerk_pydantic_constraint_speech exists | Call clerk_pydantic_constraint_speech on remaining HTMX string_too_long / too_short / pattern / slug-must hosts in one ship, then STOP (oral #205). Do not restyle remaining pydantic type 422 speech siblings, remaining enum 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One decimal scale 422 schema dump after clerk_pydantic_constraint_speech covers decimal digits | Call clerk_pydantic_constraint_speech on remaining HTMX decimal_max_places / max_digits hosts in one ship, then STOP (oral #206). Do not restyle remaining length/pattern 422 speech siblings, remaining pydantic type 422 speech siblings, JSON API type/loc/msg, or leftover-token stay-put |
 | One 422-speech dump per cycle after clerk_* speech helpers exist | STOP; remaining form-error / transition / unique / invariant / enum / type / length / decimal 422 siblings closed (oral #198–#206). New invent class (oral #208) |
+| One empty-list entity dump after clerk_empty_collection_title exists | Call clerk_empty_collection_title on remaining empty-list titles in one ship, then STOP (oral #213). Do not restyle remaining peek/slide-over heading siblings, remaining 422-speech, remaining toast/breadcrumb/confirm, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |
