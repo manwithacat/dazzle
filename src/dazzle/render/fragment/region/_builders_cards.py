@@ -44,6 +44,7 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.region._context import RegionContext
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
+    _cohort_empty_message,
     _kanban_lane_empty_message,
     _region_title,
     _render_typed_value,
@@ -553,7 +554,7 @@ class _BuildersCardsMixin:
             )
 
         endpoint_str = str(ctx.get("cohort_endpoint") or ctx.get("region_url") or "")
-        empty_msg = getattr(region, "empty_message", None) or "No members in this view."
+        empty_msg = _cohort_empty_message(region, ctx)
         # Leftover-honest temporal (cycle 2182). Extract before lens
         # chrome so a lens change shares the raw pair with list /
         # FilterBar / DateRangePicker / kanban Load all. Valid true /

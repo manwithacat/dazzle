@@ -18,12 +18,14 @@ See issue #1065 for the full decomposition plan.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
 from dazzle.render.breadcrumbs import (
     clerk_empty_chart_title,
+    clerk_empty_cohort_title,
     clerk_empty_kanban_lane,
     clerk_empty_queue_title,
     clerk_empty_timeline_title,
@@ -157,13 +159,13 @@ def _chart_empty_title(region: Any, ctx: Any) -> str:
     return clerk_empty_chart_title(name, catalog)
 
 
-def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
-    """Clerk-facing empty speech for vacant timeline / activity (oral #222).
-
-    Generic ``No events yet.`` / ``No activity yet`` hid the entity noun
-    while empty lists already say ``No tasks found``. Authored ``empty:``
-    still wins. Leftover junk invents no collection.
-    """
+def _authored_or_clerk_empty(
+    region: Any,
+    ctx: Any,
+    clerk: Callable[..., str],
+    **clerk_kw: Any,
+) -> str:
+    """Authored ``empty:`` wins; else clerk speech from the region entity."""
     getter = getattr(ctx, "get", None)
     authored = ""
     if callable(getter):
@@ -172,16 +174,18 @@ def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
         authored = str(getattr(region, "empty_message", None) or "").strip()
     if authored:
         return authored
-    name = ""
-    catalog: dict[str, str] | None = None
-    if callable(getter):
-        name = str(getter("source_entity") or getter("entity_name") or "")
-        entity_title = str(getter("entity_title") or "")
-        if name and entity_title:
-            catalog = {name: entity_title}
-    if not name:
-        name = str(getattr(region, "source", None) or "")
-    return clerk_empty_timeline_title(name, catalog, vacant=vacant)
+    name, catalog = _region_entity_catalog(region, ctx)
+    return clerk(name, catalog, **clerk_kw)
+
+
+def _chrono_empty_message(region: Any, ctx: Any, *, vacant: str) -> str:
+    """Clerk-facing empty speech for vacant timeline / activity (oral #222).
+
+    Generic ``No events yet.`` / ``No activity yet`` hid the entity noun
+    while empty lists already say ``No tasks found``. Authored ``empty:``
+    still wins. Leftover junk invents no collection.
+    """
+    return _authored_or_clerk_empty(region, ctx, clerk_empty_timeline_title, vacant=vacant)
 
 
 def _region_entity_catalog(region: Any, ctx: Any) -> tuple[str, dict[str, str] | None]:
@@ -231,16 +235,17 @@ def _queue_empty_message(region: Any, ctx: Any) -> str:
     already say ``No projects found``. Authored ``empty:`` still wins.
     Leftover junk invents no collection.
     """
-    getter = getattr(ctx, "get", None)
-    authored = ""
-    if callable(getter):
-        authored = str(getter("empty_message") or "").strip()
-    if not authored:
-        authored = str(getattr(region, "empty_message", None) or "").strip()
-    if authored:
-        return authored
-    name, catalog = _region_entity_catalog(region, ctx)
-    return clerk_empty_queue_title(name, catalog)
+    return _authored_or_clerk_empty(region, ctx, clerk_empty_queue_title)
+
+
+def _cohort_empty_message(region: Any, ctx: Any) -> str:
+    """Clerk-facing empty speech for vacant cohort strips (oral #226).
+
+    Generic ``No members in this view.`` hid the entity noun while empty
+    lists already say ``No systems found``. Authored ``empty:`` still
+    wins. Leftover junk invents no collection.
+    """
+    return _authored_or_clerk_empty(region, ctx, clerk_empty_cohort_title)
 
 
 def _wrap_surface(title: str, kind: str, body: Fragment) -> Surface:

@@ -457,6 +457,25 @@ def clerk_empty_queue_title(
     )
 
 
+def clerk_empty_cohort_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing cohort-strip empty speech (oral #226).
+
+    ``No members in this view.`` dumped generic chrome while empty lists
+    already say ``No systems found``. Host is the member-skim EmptyState,
+    not a review-queue (oral #225) or list collection-empty (oral #213).
+    Leftover junk invents no collection.
+    """
+    return _clerk_empty_title(
+        name,
+        catalog,
+        vacant="No members in this view.",
+        found="No {noun}s in this view.",
+    )
+
+
 def clerk_entity_title(entity: Any) -> str:
     """Clerk-facing entity name: DSL ``title``, else PascalCase split."""
     title = str(getattr(entity, "title", None) or "").strip()
