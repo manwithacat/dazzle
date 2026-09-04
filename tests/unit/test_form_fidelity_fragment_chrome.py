@@ -142,7 +142,7 @@ def _submit_buttons(html: str) -> list[str]:
 
 
 def test_default_path_create_form_has_submit_button() -> None:
-    """A create FormContext renders exactly one submit button labelled 'Create'."""
+    """A create FormContext renders exactly one submit button labelled 'Create Widget'."""
     form = FormContext(
         entity_name="Widget",
         title="Create Widget",
@@ -154,11 +154,11 @@ def test_default_path_create_form_has_submit_button() -> None:
     html = _render_substrate_form(form, _create_surface())
     assert 'type="submit"' in html
     assert 'class="dz-submit dz-submit--variant-primary"' in html
-    assert _submit_buttons(html) == ["Create"]
+    assert _submit_buttons(html) == ["Create Widget"]
 
 
 def test_default_path_edit_form_has_submit_button() -> None:
-    """An edit FormContext renders exactly one submit button labelled 'Save'."""
+    """An edit FormContext renders exactly one submit button labelled 'Save Widget'."""
     form = FormContext(
         entity_name="Widget",
         title="Edit Widget",
@@ -168,7 +168,7 @@ def test_default_path_edit_form_has_submit_button() -> None:
         mode="edit",
     )
     html = _render_substrate_form(form, _edit_surface())
-    assert _submit_buttons(html) == ["Save"]
+    assert _submit_buttons(html) == ["Save Widget"]
     # Edit forms post via hx-put; the submit lives inside the <form>.
     assert html.index('type="submit"') > html.index("<form ")
     assert 'hx-put="/api/widgets/123"' in html

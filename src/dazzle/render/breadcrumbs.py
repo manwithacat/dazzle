@@ -354,6 +354,27 @@ def clerk_empty_create_cta(
     return f"New {text}"
 
 
+def clerk_form_submit_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    edit: bool = False,
+) -> str:
+    """Clerk-facing form submit (oral #234).
+
+    ``Create`` dumped generic chrome while hops already say
+    ``Create Task`` and the empty-list CTA says ``New Task``.
+    Catalog / PascalCase-split via ``clerk_related_create_noun``.
+    Leftover junk invents no entity.
+    """
+    vacant = "Save" if edit else "Create"
+    noun = clerk_related_create_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() == "item":
+        return vacant
+    return f"{vacant} {text}"
+
+
 def clerk_empty_chart_title(
     name: str,
     catalog: dict[str, str] | None = None,

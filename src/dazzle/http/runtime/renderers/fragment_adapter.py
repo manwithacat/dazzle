@@ -22,6 +22,7 @@ from dazzle.render.breadcrumbs import (
     clerk_empty_collection_title,
     clerk_empty_loading_title,
     clerk_entity_confirm_noun,
+    clerk_form_submit_label,
 )
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.fragment import (
@@ -827,9 +828,12 @@ class FragmentSurfaceAdapter:
         fields_in: list[dict[str, Any]] = ctx.get("fields", [])
         action = ctx.get("action", "") or "/"
         method = ctx.get("method", "POST")
-        submit_label = ctx.get(
-            "submit_label",
-            "Save" if mode == SurfaceMode.EDIT else "Create",
+        # RBAC contract attrs threaded onto the <form>.
+        form_entity_name = (getattr(surface, "entity_ref", "") or "").strip()
+        form_mode = "edit" if mode == SurfaceMode.EDIT else "create"
+        submit_label = ctx.get("submit_label") or clerk_form_submit_label(
+            form_entity_name,
+            edit=(mode == SurfaceMode.EDIT),
         )
 
         body: Fragment
@@ -838,9 +842,6 @@ class FragmentSurfaceAdapter:
         # forms emit hx-put per the legacy form contract.
         method_upper = str(method).upper() if method else "POST"
         method_lit = method_upper if method_upper in ("GET", "POST", "PUT") else "POST"
-        # RBAC contract attrs threaded onto the <form>.
-        form_entity_name = (getattr(surface, "entity_ref", "") or "").strip()
-        form_mode = "edit" if mode == SurfaceMode.EDIT else "create"
         # #1494 (2c, Slice 2 — inline save-and-stay): when this form is fetched
         # into a list-row peek panel (`?peek=1`) AND we have a panel target +
         # read-only view URL to return to, wire the FormStack to commit and swap

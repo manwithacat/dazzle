@@ -12,6 +12,7 @@ from typing import Any
 
 from dazzle.core import ir
 from dazzle.page.app_paths import detail_path, entity_slug
+from dazzle.render.breadcrumbs import clerk_form_submit_label
 from dazzle.render.fragment.form_field import field_context_to_dict
 
 
@@ -120,7 +121,10 @@ def _dispatch_ctx_from_form(form: Any) -> dict[str, Any]:
         "fields": fields_out,
         "action": getattr(form, "action_url", "") or "",
         "method": str(getattr(form, "method", "POST") or "POST").upper(),
-        "submit_label": "Save" if is_edit else "Create",
+        "submit_label": clerk_form_submit_label(
+            str(getattr(form, "entity_name", "") or ""),
+            edit=is_edit,
+        ),
         "cancel_url": getattr(form, "cancel_url", "") or "",
         "item_id": str((getattr(form, "initial_values", {}) or {}).get("id", "") or ""),
     }

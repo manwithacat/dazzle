@@ -29,6 +29,7 @@ from dazzle.page.specs import (
     StateSpec,
     TextNode,
 )
+from dazzle.render.breadcrumbs import clerk_form_submit_label
 
 # =============================================================================
 # Component Type Inference
@@ -490,7 +491,12 @@ def _generate_form_actions(
             props={
                 "variant": LiteralBinding(value="primary"),
                 "type": LiteralBinding(value="submit"),
-                "label": LiteralBinding(value="Save" if mode == "update" else "Create"),
+                "label": LiteralBinding(
+                    value=clerk_form_submit_label(
+                        entity_name or "",
+                        edit=(mode == "update"),
+                    )
+                ),
                 "dazzle": LiteralBinding(
                     value={
                         "action": action_name,
