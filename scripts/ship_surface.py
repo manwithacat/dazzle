@@ -331,6 +331,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_back_label_dump.py",
     # cycle 2408: detail edit must not dump generic Edit (oral #238)
     "tests/unit/test_edit_label_dump.py",
+    # cycle 2409: mutation toast title must not dump generic Created/Saved/Deleted (oral #239)
+    "tests/unit/test_mutation_toast_title_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

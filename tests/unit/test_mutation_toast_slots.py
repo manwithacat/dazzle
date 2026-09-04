@@ -32,7 +32,7 @@ class TestHtmxTriggerHeadersSlots:
     def test_created_has_title_and_body(self) -> None:
         headers = htmx_trigger_headers("Ticket", "created")
         toast = _trigger_payload(headers)["showToast"]
-        assert toast["title"] == "Created"
+        assert toast["title"] == "Created Ticket"
         assert toast["type"] == "success"
         assert "Ticket" in toast["message"]
         assert "created" in toast["message"].lower()
@@ -40,11 +40,11 @@ class TestHtmxTriggerHeadersSlots:
 
     def test_updated_title_is_saved(self) -> None:
         toast = _trigger_payload(htmx_trigger_headers("Ticket", "updated"))["showToast"]
-        assert toast["title"] == "Saved"
+        assert toast["title"] == "Saved Ticket"
 
     def test_deleted_title(self) -> None:
         toast = _trigger_payload(htmx_trigger_headers("Ticket", "deleted"))["showToast"]
-        assert toast["title"] == "Deleted"
+        assert toast["title"] == "Deleted Ticket"
 
     def test_view_action_when_view_url_set(self) -> None:
         toast = _trigger_payload(
@@ -75,7 +75,7 @@ class TestWithHtmxTriggersViewAction:
             view_url=detail,
         )
         toast = _trigger_payload(dict(resp.headers))["showToast"]
-        assert toast["title"] == "Created"
+        assert toast["title"] == "Created Ticket"
         assert "actions" not in toast
         assert resp.headers.get("HX-Redirect") == detail
 
@@ -91,7 +91,7 @@ class TestWithHtmxTriggersViewAction:
             view_url=detail,
         )
         toast = _trigger_payload(dict(resp.headers))["showToast"]
-        assert toast["title"] == "Saved"
+        assert toast["title"] == "Saved Ticket"
         assert toast["actions"] == [{"label": "View", "href": detail}]
         assert "HX-Redirect" not in resp.headers
 
@@ -130,4 +130,4 @@ class TestUuidSerializeUnchanged:
         body = json.loads(resp.body)
         assert body["id"] == str(uid)
         toast = _trigger_payload(dict(resp.headers))["showToast"]
-        assert toast["title"] == "Saved"
+        assert toast["title"] == "Saved Task"

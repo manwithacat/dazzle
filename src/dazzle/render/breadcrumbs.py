@@ -425,6 +425,35 @@ def clerk_edit_label(
     return _clerk_entity_chrome_label(name, catalog, vacant="Edit", found="Edit {noun}")
 
 
+_MUTATION_TOAST_TITLE_VACANT: dict[str, str] = {
+    "created": "Created",
+    "updated": "Saved",
+    "deleted": "Deleted",
+}
+
+
+def clerk_mutation_toast_title(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    action: str = "created",
+    authored: str = "",
+) -> str:
+    """Clerk-facing mutation toast title (oral #239).
+
+    ``Created`` / ``Saved`` / ``Deleted`` dumped generic chrome while
+    the toast body already says ``Task was created``. Catalog /
+    PascalCase-split via ``clerk_related_create_noun``. Authored
+    title still wins. Leftover junk invents no entity.
+    """
+    verb = str(action or "").strip().lower()
+    vacant = _MUTATION_TOAST_TITLE_VACANT.get(verb, (verb or "created").capitalize())
+    raw = str(authored or "").strip()
+    if raw and raw != vacant:
+        return raw
+    return _clerk_entity_chrome_label(name, catalog, vacant=vacant, found=f"{vacant} {{noun}}")
+
+
 def clerk_csv_export_label(
     name: str,
     catalog: dict[str, str] | None = None,

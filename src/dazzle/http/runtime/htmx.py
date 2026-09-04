@@ -17,7 +17,7 @@ from typing import Any
 
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from dazzle.render.breadcrumbs import clerk_entity_noun
+from dazzle.render.breadcrumbs import clerk_entity_noun, clerk_mutation_toast_title
 from dazzle.render.filters import clerk_form_error_field_label
 
 _ERROR_LOC_ENVELOPES = frozenset({"body", "query", "path", "header", "cookie"})
@@ -115,12 +115,8 @@ def htmx_response(
     return HTMLResponse(content=content, status_code=status_code, headers=headers)
 
 
-# Mutation toast titles / default body copy (showToast detail → dz-toast host).
-_MUTATION_TOAST_TITLE: dict[str, str] = {
-    "created": "Created",
-    "updated": "Saved",
-    "deleted": "Deleted",
-}
+# Mutation toast default body copy (showToast detail → dz-toast host).
+# Titles use clerk_mutation_toast_title (oral #239).
 _MUTATION_TOAST_MESSAGE: dict[str, str] = {
     "created": "{entity} was created",
     "updated": "{entity} was updated",
@@ -157,7 +153,9 @@ def htmx_trigger_headers(
     """
     event_name = f"entity{action.capitalize()}"
     noun = clerk_entity_noun(entity_name, entity_labels)
-    toast_title = title or _MUTATION_TOAST_TITLE.get(action, action.capitalize())
+    toast_title = clerk_mutation_toast_title(
+        entity_name, entity_labels, action=action, authored=title or ""
+    )
     toast_message = message or _MUTATION_TOAST_MESSAGE.get(
         action, f"{noun} {action} successfully"
     ).format(entity=noun)

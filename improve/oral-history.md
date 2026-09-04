@@ -2523,6 +2523,25 @@ dialect formed — and where it started to Goodhart itself — is
     ``No panels.``, remaining dual-pane ``Select an item``.
     Standing refusals apply.
 
+239. **Mutation toast title dumps generic Created/Saved/Deleted.**
+    Cycle 2409: create/save/delete toasts titled ``Created`` /
+    ``Saved`` / ``Deleted`` while the body already says
+    ``Task was created`` and form submit already says
+    ``Create Task``. Title speech is not remaining detail Edit
+    (oral #238), not remaining toast ``View`` action, and not
+    remaining empty-title hosts (oral #213–#230). Helper:
+    ``clerk_mutation_toast_title`` reuses
+    ``clerk_related_create_noun``. Authored title still wins.
+    Leftover junk invents no entity. Live simple_task Task
+    create. One-ship close of remaining mutation toast titles.
+    Do not restyle remaining toast ``View``, remaining
+    list-row trash aria, remaining experience ``Submit``,
+    remaining error-page ``Back to List``, remaining PDF
+    viewer Back, remaining Search… placeholders, remaining
+    Showing N of M overflow, remaining Select all N results,
+    remaining accordion ``No panels.``, remaining dual-pane
+    ``Select an item``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2562,6 +2581,7 @@ the end of every new oral *is* expensive — point here instead.
 | CSV export dumps generic Export CSV | Walk remaining HM gallery Export CSV exemplars / Search… placeholders / Showing N of M overflow / Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_csv_export_label` exists | #236 |
 | Detail back dumps generic ← Back | Walk remaining error-page Back to List / PDF viewer Back / Search… placeholders / Showing N of M overflow / Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_back_label` exists | #237 |
 | Detail edit dumps generic Edit | Walk remaining list-row trash aria / experience Submit / error-page Back to List / PDF viewer Back / Search… placeholders / Showing N of M overflow / Select all N results / accordion No panels / dual-pane Select an item after `clerk_edit_label` exists | #238 |
+| Mutation toast title dumps generic Created/Saved/Deleted | Walk remaining toast View / list-row trash aria / experience Submit / error-page Back to List / PDF viewer Back / Search… placeholders / Showing N of M overflow / Select all N results / accordion No panels / dual-pane Select an item after `clerk_mutation_toast_title` exists | #239 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
