@@ -2505,6 +2505,24 @@ dialect formed — and where it started to Goodhart itself — is
     results, remaining accordion ``No panels.``, remaining
     dual-pane ``Select an item``. Standing refusals apply.
 
+238. **Detail edit dumps generic Edit.** Cycle 2408:
+    VIEW edit said ``Edit`` while delete already says
+    ``Delete Task`` and back already says ``← Back to Tasks``.
+    Edit speech is not remaining detail Back (oral #237),
+    not remaining detail Delete (oral #235), and not remaining
+    empty-title hosts (oral #213–#230). Helper:
+    ``clerk_edit_label`` reuses ``clerk_related_create_noun``.
+    Authored persona ``edit_label`` still wins (EX-048).
+    Leftover junk invents no entity. Live simple_task Task
+    ``task_detail``. One-ship close of remaining detail Edit
+    hosts. Do not restyle remaining list-row trash aria,
+    remaining experience ``Submit``, remaining error-page
+    ``Back to List``, remaining PDF viewer Back, remaining
+    Search… placeholders, remaining Showing N of M overflow,
+    remaining Select all N results, remaining accordion
+    ``No panels.``, remaining dual-pane ``Select an item``.
+    Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2543,6 +2561,7 @@ the end of every new oral *is* expensive — point here instead.
 | Detail delete dumps generic Delete | Walk remaining Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_delete_label` exists | #235 |
 | CSV export dumps generic Export CSV | Walk remaining HM gallery Export CSV exemplars / Search… placeholders / Showing N of M overflow / Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_csv_export_label` exists | #236 |
 | Detail back dumps generic ← Back | Walk remaining error-page Back to List / PDF viewer Back / Search… placeholders / Showing N of M overflow / Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_back_label` exists | #237 |
+| Detail edit dumps generic Edit | Walk remaining list-row trash aria / experience Submit / error-page Back to List / PDF viewer Back / Search… placeholders / Showing N of M overflow / Select all N results / accordion No panels / dual-pane Select an item after `clerk_edit_label` exists | #238 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2688,6 +2707,7 @@ the end of every new oral *is* expensive — point here instead.
 | Detail delete dumps generic Delete | Dump ``Delete`` on VIEW after ``clerk_delete_label`` exists; clone leftover-token stay-put, remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining hop phrase dumps, or remaining empty-title hosts | #235 |
 | CSV export dumps generic Export CSV | Dump ``Export CSV`` on list CSV after ``clerk_csv_export_label`` exists; clone leftover-token stay-put, remaining HM gallery Export CSV exemplars, remaining Search… placeholders, remaining Showing N of M overflow, remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining hop phrase dumps, or remaining empty-title hosts | #236 |
 | Detail back dumps generic ← Back | Dump ``← Back`` on VIEW after ``clerk_back_label`` exists; clone leftover-token stay-put, remaining error-page Back to List, remaining PDF viewer Back, remaining Search… placeholders, remaining Showing N of M overflow, remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining hop phrase dumps, or remaining empty-title hosts | #237 |
+| Detail edit dumps generic Edit | Dump ``Edit`` on VIEW after ``clerk_edit_label`` exists; clone leftover-token stay-put, remaining list-row trash aria, remaining experience Submit, remaining error-page Back to List, remaining PDF viewer Back, remaining Search… placeholders, remaining Showing N of M overflow, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining hop phrase dumps, or remaining empty-title hosts | #238 |
 | FTS empty generic No results | Dump ``No results`` / ``N results`` on FTS empty after ``clerk_empty_search_title`` exists; clone leftover-token stay-put or remaining search-select / command-palette ``No results`` | #221 |
 | Timeline empty generic No events | Dump ``No events yet.`` / ``No activity yet`` on vacant timeline / activity_feed after ``clerk_empty_timeline_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline empty | #222 |
 | Download PascalCase filename | Dump ``EngagementLetter-{uuid}.pdf`` after ``clerk_entity_download_stem`` exists; clone leftover-token stay-put or remaining toast / confirm / breadcrumb siblings | #195 |
@@ -2843,6 +2863,7 @@ how the handbook was learned.
 | One detail generic Delete after clerk_delete_label exists | Call clerk_delete_label on remaining detail Delete hosts in one ship, then STOP (oral #235). Do not restyle remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining workspace-context / task-inbox All, remaining hop phrase dumps, remaining empty-title hosts, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One list generic Export CSV after clerk_csv_export_label exists | Call clerk_csv_export_label on remaining list-region + CsvExportButton hosts in one ship, then STOP (oral #236). Do not restyle remaining HM gallery Export CSV exemplars, remaining Search… placeholders, remaining Showing N of M overflow, remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining workspace-context / task-inbox All, remaining hop phrase dumps, remaining empty-title hosts, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One detail generic ← Back after clerk_back_label exists | Call clerk_back_label on remaining detail Back hosts in one ship, then STOP (oral #237). Do not restyle remaining error-page Back to List, remaining PDF viewer Back, remaining Search… placeholders, remaining Showing N of M overflow, remaining Edit, remaining list-row trash aria, remaining experience Submit, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining workspace-context / task-inbox All, remaining hop phrase dumps, remaining empty-title hosts, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One detail generic Edit after clerk_edit_label exists | Call clerk_edit_label on remaining detail Edit hosts in one ship, then STOP (oral #238). Do not restyle remaining list-row trash aria, remaining experience Submit, remaining error-page Back to List, remaining PDF viewer Back, remaining Search… placeholders, remaining Showing N of M overflow, remaining Select all N results, remaining accordion No panels, remaining dual-pane Select an item, remaining workspace-context / task-inbox All, remaining hop phrase dumps, remaining empty-title hosts, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

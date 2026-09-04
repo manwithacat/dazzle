@@ -113,7 +113,7 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1417 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 2407 | USED |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 2408 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |

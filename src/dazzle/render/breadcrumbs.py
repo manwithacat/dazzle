@@ -405,6 +405,26 @@ def clerk_delete_label(
     return _clerk_entity_chrome_label(name, catalog, vacant="Delete", found="Delete {noun}")
 
 
+def clerk_edit_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+    *,
+    authored: str = "",
+) -> str:
+    """Clerk-facing detail edit (oral #238).
+
+    ``Edit`` dumped generic chrome while delete already says
+    ``Delete Task`` and back already says ``← Back to Tasks``.
+    Catalog / PascalCase-split via ``clerk_related_create_noun``.
+    Authored persona ``edit_label`` still wins. Leftover junk
+    invents no entity.
+    """
+    raw = str(authored or "").strip()
+    if raw and raw != "Edit":
+        return raw
+    return _clerk_entity_chrome_label(name, catalog, vacant="Edit", found="Edit {noun}")
+
+
 def clerk_csv_export_label(
     name: str,
     catalog: dict[str, str] | None = None,

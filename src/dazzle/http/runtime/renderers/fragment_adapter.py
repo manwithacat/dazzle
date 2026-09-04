@@ -21,6 +21,7 @@ from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.breadcrumbs import (
     clerk_back_label,
     clerk_delete_label,
+    clerk_edit_label,
     clerk_empty_collection_title,
     clerk_empty_loading_title,
     clerk_entity_confirm_noun,
@@ -717,7 +718,11 @@ class FragmentSurfaceAdapter:
             # set, which the detail builder already gates on update permission).
             # EX-048: persona action_primary may swap label/route (CREATE CTA
             # on VIEW); peek in-place only applies to same-record EDIT.
-            edit_label = str(ctx.get("edit_label") or "Edit") or "Edit"
+            edit_label = clerk_edit_label(
+                str(entity_name),
+                _confirm_catalog,
+                authored=str(ctx.get("edit_label") or ""),
+            )
             primary_kind = str(ctx.get("primary_action_kind") or "edit")
             item_id = str(ctx.get("item_id", "") or "")
             if peek and item_id and primary_kind == "edit":

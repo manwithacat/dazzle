@@ -697,6 +697,15 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   ``Submit``, remaining Select all N results, remaining
   accordion ``No panels.``, remaining dual-pane ``Select an
   item``.
+- **Detail edit dumps generic Edit** closed cycle 2408
+  (oral #238). Helper: ``clerk_edit_label``. Authored persona
+  ``edit_label`` still wins. Leftover ``zzz`` invents no
+  entity. Do **not** restyle remaining list-row trash aria,
+  remaining experience ``Submit``, remaining error-page
+  ``Back to List``, remaining PDF viewer Back, remaining
+  Search… placeholders, remaining Showing N of M overflow,
+  remaining Select all N results, remaining accordion
+  ``No panels.``, remaining dual-pane ``Select an item``.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.
