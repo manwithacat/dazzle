@@ -19,6 +19,7 @@ from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.breadcrumbs import (
+    clerk_back_label,
     clerk_delete_label,
     clerk_empty_collection_title,
     clerk_empty_loading_title,
@@ -557,9 +558,7 @@ class FragmentSurfaceAdapter:
 
         # Issue #1030: action toolbar — Back / Edit / Delete / transitions /
         # integration / external-link actions.
-        back_url = str(ctx.get("back_url", "") or "").strip()
-        back = (Link(label="← Back", href=URL(back_url)),) if (back_url and not peek) else ()
-        actions = back + self._build_detail_actions(ctx)
+        actions = self._build_detail_actions(ctx)
         if actions:
             detail_body = Stack(
                 children=(Row(children=actions, align="start"), detail_body),
@@ -684,9 +683,10 @@ class FragmentSurfaceAdapter:
     def _build_detail_actions(self, ctx: dict[str, Any]) -> tuple[Fragment, ...]:
         """Issue #1030: build the per-record action row from ctx.
 
-        Order: Edit Link (primary) → state-machine transitions →
-        integration actions → external links → Delete Button (danger,
-        confirm-gated). Empty tuple when no actions are configured."""
+        Order: Back (non-peek) → Edit Link (primary) → state-machine
+        transitions → integration actions → external links → Delete
+        Button (danger, confirm-gated). Empty tuple when no actions
+        are configured."""
         actions: list[Fragment] = []
         edit_url = ctx.get("edit_url") or ""
         delete_url = ctx.get("delete_url") or ""
@@ -699,6 +699,16 @@ class FragmentSurfaceAdapter:
         integration_actions = ctx.get("integration_actions") or []
         external_links = ctx.get("external_link_actions") or []
 
+        peek = bool(ctx.get("peek"))
+        back_url = str(ctx.get("back_url", "") or "").strip()
+        if back_url and not peek:
+            actions.append(
+                Link(
+                    label=clerk_back_label(str(entity_name), _confirm_catalog),
+                    href=URL(back_url),
+                )
+            )
+
         if edit_url:
             # #1494 (2c, Slice 2): in a peek panel the Edit affordance toggles the
             # edit form *in place* — hx-get the content-only form into the same
@@ -709,7 +719,6 @@ class FragmentSurfaceAdapter:
             # on VIEW); peek in-place only applies to same-record EDIT.
             edit_label = str(ctx.get("edit_label") or "Edit") or "Edit"
             primary_kind = str(ctx.get("primary_action_kind") or "edit")
-            peek = bool(ctx.get("peek"))
             item_id = str(ctx.get("item_id", "") or "")
             if peek and item_id and primary_kind == "edit":
                 actions.append(

@@ -327,6 +327,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_delete_label_dump.py",
     # cycle 2406: CSV export must not dump generic Export CSV (oral #236)
     "tests/unit/test_csv_export_label_dump.py",
+    # cycle 2407: detail back must not dump generic ← Back (oral #237)
+    "tests/unit/test_back_label_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

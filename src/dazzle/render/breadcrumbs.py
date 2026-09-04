@@ -337,6 +337,22 @@ def clerk_filter_all_label(label: Any) -> str:
     return f"All {text}"
 
 
+def _clerk_entity_chrome_label(
+    name: str,
+    catalog: dict[str, str] | None,
+    *,
+    vacant: str,
+    found: str,
+    vacant_nouns: frozenset[str] = frozenset({"item", "record"}),
+) -> str:
+    """Shared entity-noun chrome; leftover junk keeps *vacant*."""
+    noun = clerk_related_create_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() in vacant_nouns:
+        return vacant
+    return found.format(noun=text)
+
+
 def clerk_empty_create_cta(
     name: str,
     catalog: dict[str, str] | None = None,
@@ -347,11 +363,9 @@ def clerk_empty_create_cta(
     says ``New Task``. Catalog / PascalCase-split via
     ``clerk_related_create_noun``. Leftover junk invents no entity.
     """
-    noun = clerk_related_create_noun(name, catalog)
-    text = str(noun or "").strip()
-    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() == "item":
-        return "Add one"
-    return f"New {text}"
+    return _clerk_entity_chrome_label(
+        name, catalog, vacant="Add one", found="New {noun}", vacant_nouns=frozenset({"item"})
+    )
 
 
 def clerk_form_submit_label(
@@ -368,11 +382,13 @@ def clerk_form_submit_label(
     Leftover junk invents no entity.
     """
     vacant = "Save" if edit else "Create"
-    noun = clerk_related_create_noun(name, catalog)
-    text = str(noun or "").strip()
-    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() == "item":
-        return vacant
-    return f"{vacant} {text}"
+    return _clerk_entity_chrome_label(
+        name,
+        catalog,
+        vacant=vacant,
+        found=f"{vacant} {{noun}}",
+        vacant_nouns=frozenset({"item"}),
+    )
 
 
 def clerk_delete_label(
@@ -386,11 +402,7 @@ def clerk_delete_label(
     Catalog / PascalCase-split via ``clerk_related_create_noun``.
     Leftover junk invents no entity.
     """
-    noun = clerk_related_create_noun(name, catalog)
-    text = str(noun or "").strip()
-    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() in {"item", "record"}:
-        return "Delete"
-    return f"Delete {text}"
+    return _clerk_entity_chrome_label(name, catalog, vacant="Delete", found="Delete {noun}")
 
 
 def clerk_csv_export_label(
@@ -404,11 +416,21 @@ def clerk_csv_export_label(
     Catalog / PascalCase-split via ``clerk_related_create_noun``.
     Leftover junk invents no entity.
     """
-    noun = clerk_related_create_noun(name, catalog)
-    text = str(noun or "").strip()
-    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() in {"item", "record"}:
-        return "Export CSV"
-    return f"Export {text} CSV"
+    return _clerk_entity_chrome_label(name, catalog, vacant="Export CSV", found="Export {noun} CSV")
+
+
+def clerk_back_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing detail back (oral #237).
+
+    ``← Back`` dumped generic chrome while delete already says
+    ``Delete Task`` and the list is ``Tasks``. Catalog /
+    PascalCase-split via ``clerk_related_create_noun``. Leftover
+    junk invents no collection.
+    """
+    return _clerk_entity_chrome_label(name, catalog, vacant="← Back", found="← Back to {noun}s")
 
 
 def clerk_empty_chart_title(
