@@ -654,6 +654,15 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   remaining empty-title hosts (oral #213–#230), remaining
   peek/slide-over headings (oral #192), remaining 422-speech
   (oral #208), or leftover-token stay-put.
+- **List FilterBar All dumps generic All** closed cycle 2400
+  (oral #232). Helper: ``clerk_filter_all_label``. Leftover
+  ``zzz`` invents no field. Do **not** restyle remaining
+  workspace-context ``All``, remaining task-inbox ``All``,
+  remaining queue FilterBar leftover hosts, remaining
+  empty-title hosts (oral #213–#230), remaining hop phrase
+  dumps (oral #231), remaining peek/slide-over headings
+  (oral #192), remaining 422-speech (oral #208), or
+  leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

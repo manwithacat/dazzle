@@ -325,6 +325,18 @@ def clerk_bulk_selection_noun(
     )
 
 
+def clerk_filter_all_label(label: Any) -> str:
+    """Clerk-facing list FilterBar empty option (oral #232).
+
+    ``All`` dumped generic chrome while queue filters already say
+    ``All Status``. Leftover junk invents no field.
+    """
+    text = str(label or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS:
+        return "All"
+    return f"All {text}"
+
+
 def clerk_empty_chart_title(
     name: str,
     catalog: dict[str, str] | None = None,

@@ -248,7 +248,7 @@ class TestListFilterBar:
 
     def test_select_renders_options_and_all(self) -> None:
         html = _render(self._bar((self._select_col(selected="done"),)))
-        assert '<option value="">All</option>' in html
+        assert '<option value="">All Status</option>' in html
         assert '<option value="open">Open</option>' in html
         assert '<option value="done" selected>Done</option>' in html
 

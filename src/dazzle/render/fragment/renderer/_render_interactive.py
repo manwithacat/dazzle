@@ -35,7 +35,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from dazzle.render.breadcrumbs import clerk_bulk_selection_noun, clerk_pagination_rows_label
+from dazzle.render.breadcrumbs import (
+    clerk_bulk_selection_noun,
+    clerk_filter_all_label,
+    clerk_pagination_rows_label,
+)
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.ingest import DateRange as DateRangeSeam
 from dazzle.render.fragment.ingest import Pagination as PaginationSeam
@@ -749,6 +753,7 @@ class _RenderInteractiveMixin:
         def _control(col: FilterColumn) -> str:
             name = f"filter[{ctx.escape_attr(col.key)}]"
             sel = ctx.escape_attr(col.selected)
+            all_opt = f'<option value="">{ctx.escape(clerk_filter_all_label(col.label))}</option>'
             if col.filter_type == "text":
                 placeholder = ctx.escape_attr(f"Filter {col.label.lower()}…")
                 return (
@@ -764,9 +769,9 @@ class _RenderInteractiveMixin:
                     f'data-selected-value="{sel}" '
                     # auto-mounted by dz-utils.js off data-ref-api
                     ">"
-                    '<option value="">All</option></select>'
+                    f"{all_opt}</select>"
                 )
-            options_html = '<option value="">All</option>'
+            options_html = all_opt
             for value, display in col.options:
                 selected_attr = " selected" if value == col.selected else ""
                 options_html += (
