@@ -19,6 +19,7 @@ class RegionContext(TypedDict, total=False):
 
     # --- identity / wiring (shared across modes) ---
     entity_name: str
+    entity_title: str
     region_name: str
     region_url: str
     endpoint: str

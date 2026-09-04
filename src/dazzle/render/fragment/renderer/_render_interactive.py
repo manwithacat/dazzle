@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.render.breadcrumbs import (
     clerk_bulk_selection_noun,
+    clerk_csv_export_label,
     clerk_filter_all_label,
     clerk_pagination_rows_label,
 )
@@ -77,6 +78,43 @@ from dazzle.render.open_discovery import (
 
 if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
+
+
+def _csv_export_aria(c: CsvExportButton) -> str:
+    """Clerk CSV title/aria (oral #236). Vacant entity keeps authored/default."""
+    name = str(getattr(c, "entity_name", "") or "")
+    title = str(getattr(c, "entity_title", "") or "")
+    if name:
+        catalog = {name: title} if title else None
+        return clerk_csv_export_label(name, catalog)
+    return str(c.label or "").strip() or "Export CSV"
+
+
+def _list_csv_button_html(lst: Any, ctx: RenderContext) -> str:
+    """In-card ListRegion CSV button with clerk aria (oral #236)."""
+    csv_endpoint = _with_leftover_honest_temporal(
+        ctx.escape_attr(lst.csv_endpoint),
+        getattr(lst, "include_closed", ""),
+        getattr(lst, "as_of", ""),
+        escape_attr=ctx.escape_attr,
+    )
+    name = str(getattr(lst, "entity_name", "") or "")
+    title = str(getattr(lst, "entity_title", "") or "")
+    catalog = {name: title} if name and title else None
+    csv_label = ctx.escape_attr(clerk_csv_export_label(name, catalog))
+    return (
+        f'<button type="button" '
+        f'data-dz-csv-endpoint="{csv_endpoint}" '
+        f'data-dz-csv-filename="{ctx.escape_attr(lst.csv_filename)}" '
+        f'onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)" '
+        f'class="dz-list-csv-button" title="{csv_label}" aria-label="{csv_label}">'
+        f'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">'
+        f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" '
+        f'd="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 '
+        f'01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'
+        f"</svg>"
+        f"</button>"
+    )
 
 
 def leftover_honest_entity_id(raw: Any) -> str:
@@ -857,7 +895,7 @@ class _RenderInteractiveMixin:
             escape_attr=ctx.escape_attr,
         )
         filename = ctx.escape_attr(c.filename)
-        label = ctx.escape_attr(c.label)
+        label = ctx.escape_attr(_csv_export_aria(c))
         return (
             f'<button type="button" '
             f'data-dz-csv-endpoint="{endpoint}" '

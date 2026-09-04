@@ -641,6 +641,15 @@ def _apply_list_search_chrome(adapter_ctx: dict[str, Any], ctx: Any, request: An
     adapter_ctx["active_search"] = _active_list_search(request)
 
 
+def _stamp_list_entity_catalog(adapter_ctx: dict[str, Any], ctx: Any) -> None:
+    """Thread source entity + title for clerk CSV aria (oral #236)."""
+    adapter_ctx["entity_name"] = ctx.source
+    adapter_ctx["source_entity"] = ctx.source
+    title = str(getattr(getattr(ctx, "entity_spec", None), "title", "") or "")
+    if title:
+        adapter_ctx["entity_title"] = title
+
+
 def _build_list_adapter_ctx(
     display_upper: str,
     env: RenderEnv,
@@ -675,6 +684,7 @@ def _build_list_adapter_ctx(
             env.request.query_params.get("date_to", "")
         )
         adapter_ctx["csv_export"] = getattr(ctx_region, "csv_export", False)
+        _stamp_list_entity_catalog(adapter_ctx, ctx)
         # Leftover-honest temporal (cycle 2174) so CSV endpoint echoes
         # include_closed / as_of already on the region URL.
         adapter_ctx["include_closed"] = env.request.query_params.get("include_closed", "")

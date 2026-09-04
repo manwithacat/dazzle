@@ -679,6 +679,15 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   ``Submit``, remaining Select all N results, remaining
   accordion ``No panels.``, remaining dual-pane ``Select an
   item``.
+- **CSV export dumps generic Export CSV** closed cycle 2406
+  (oral #236). Helper: ``clerk_csv_export_label``. Leftover
+  ``zzz`` invents no entity. Do **not** restyle remaining HM
+  gallery Export CSV exemplars, remaining Search…
+  placeholders, remaining Showing N of M overflow, remaining
+  Edit, remaining list-row trash aria, remaining experience
+  ``Submit``, remaining Select all N results, remaining
+  accordion ``No panels.``, remaining dual-pane ``Select an
+  item``.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

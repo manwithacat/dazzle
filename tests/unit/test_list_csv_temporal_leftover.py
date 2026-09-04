@@ -30,15 +30,6 @@ _EMIT = (
     / "renderer"
     / "_render_interactive.py"
 )
-_TABLES = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "render"
-    / "fragment"
-    / "renderer"
-    / "_render_tables.py"
-)
 _FETCH = (
     Path(__file__).resolve().parents[2]
     / "src"
@@ -192,8 +183,8 @@ def test_emit_csv_source_pins_leftover_honest_echo() -> None:
     assert "as_of=" in src
     assert "cycle 2174" in src
     assert "must not invent" in src or "invented open-only" in src
-    tables = _TABLES.read_text(encoding="utf-8")
-    assert "_with_leftover_honest_temporal" in tables
+    assert "_list_csv_button_html" in src
+    assert "_with_leftover_honest_temporal" in src
     fetch = _FETCH.read_text(encoding="utf-8")
     assert "_apply_leftover_honest_temporal" in fetch
     assert "cycle 2174" in fetch

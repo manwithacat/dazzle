@@ -68,6 +68,7 @@ from dazzle.render.fragment.region._shared import (
     _minor_currency_code,
     _pivot_empty_message,
     _queue_empty_message,
+    _region_entity_catalog,
     _region_title,
     _render_typed_value,
     _wrap_surface,
@@ -426,6 +427,8 @@ class _BuildersTablesMixin:
         # leftover junk omits.
         include_closed = str(ctx.get("include_closed") or "")
         as_of = str(ctx.get("as_of") or "")
+        entity_name, entity_catalog = _region_entity_catalog(region, ctx)
+        entity_title = (entity_catalog or {}).get(entity_name, "")
 
         # Build chrome elements in declared order.
         chrome_parts: list[Fragment] = []
@@ -565,6 +568,8 @@ class _BuildersTablesMixin:
                     filename=str(ctx.get("csv_filename") or f"{region_name}.csv"),
                     include_closed=include_closed,
                     as_of=as_of,
+                    entity_name=entity_name,
+                    entity_title=entity_title,
                 )
             )
 
@@ -698,6 +703,8 @@ class _BuildersTablesMixin:
             csv_filename=f"{region_name}.csv",
             include_closed=include_closed,
             as_of=as_of,
+            entity_name=entity_name,
+            entity_title=entity_title,
             total=total,
             empty_message=str(empty_msg),
             row_action_label=row_action_label,

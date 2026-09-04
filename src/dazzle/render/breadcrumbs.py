@@ -393,6 +393,24 @@ def clerk_delete_label(
     return f"Delete {text}"
 
 
+def clerk_csv_export_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing CSV export (oral #236).
+
+    ``Export CSV`` dumped generic chrome while the download stem
+    already says ``tasks.csv`` and pagination already says ``N tasks``.
+    Catalog / PascalCase-split via ``clerk_related_create_noun``.
+    Leftover junk invents no entity.
+    """
+    noun = clerk_related_create_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() in {"item", "record"}:
+        return "Export CSV"
+    return f"Export {text} CSV"
+
+
 def clerk_empty_chart_title(
     name: str,
     catalog: dict[str, str] | None = None,

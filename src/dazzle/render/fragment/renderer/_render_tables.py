@@ -111,7 +111,7 @@ from dazzle.render.fragment.renderer._related_conversation import (
     related_conversation_messages,
 )
 from dazzle.render.fragment.renderer._render_interactive import (
-    _with_leftover_honest_temporal,
+    _list_csv_button_html,
     leftover_honest_catalog_id,
 )
 from dazzle.render.open_discovery import create_cta_open_attr_suffix
@@ -1184,24 +1184,7 @@ class _RenderTablesMixin:
         """
         # Action row — CSV button always rendered (legacy behaviour).
         # Leftover-honest temporal (cycle 2174) ride data-dz-csv-endpoint.
-        csv_endpoint = _with_leftover_honest_temporal(
-            ctx.escape_attr(lst.csv_endpoint),
-            getattr(lst, "include_closed", ""),
-            getattr(lst, "as_of", ""),
-            escape_attr=ctx.escape_attr,
-        )
-        csv_button = (
-            f'<button type="button" '
-            f'data-dz-csv-endpoint="{csv_endpoint}" '
-            f'data-dz-csv-filename="{ctx.escape_attr(lst.csv_filename)}" '
-            f'onclick="window.dz.downloadCsv(this.dataset.dzCsvEndpoint, this.dataset.dzCsvFilename)" '
-            f'class="dz-list-csv-button" title="Export CSV" aria-label="Export CSV">'
-            f'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">'
-            f'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" '
-            f'd="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>'
-            f"</svg>"
-            f"</button>"
-        )
+        csv_button = _list_csv_button_html(lst, ctx)
         actions_row = (
             f'<div class="dz-list-actions">'
             f'<div class="dz-list-action-group">{csv_button}</div>'

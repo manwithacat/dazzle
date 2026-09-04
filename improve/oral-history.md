@@ -2474,6 +2474,21 @@ dialect formed — and where it started to Goodhart itself — is
     remaining Select all N results, remaining accordion ``No panels.``,
     remaining dual-pane ``Select an item``. Standing refusals apply.
 
+236. **CSV export dumps generic Export CSV.** Cycle 2406:
+    list CSV aria said ``Export CSV`` while the download stem already
+    says ``tasks.csv`` and pagination already says ``N tasks``.
+    Export speech is not remaining detail Delete (oral #235),
+    not remaining form Create/Save (oral #234), and not remaining
+    empty-title hosts (oral #213–#230). Helper: ``clerk_csv_export_label``
+    reuses ``clerk_related_create_noun``. Leftover junk invents no
+    entity. Live simple_task Task ``task_list``. One-ship close of
+    remaining list-region + CsvExportButton hosts. Do not restyle
+    remaining HM gallery Export CSV exemplars, remaining Search…
+    placeholders, remaining Showing N of M overflow, remaining Edit,
+    remaining list-row trash aria, remaining experience ``Submit``,
+    remaining Select all N results, remaining accordion ``No panels.``,
+    remaining dual-pane ``Select an item``. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2510,6 +2525,7 @@ the end of every new oral *is* expensive — point here instead.
 | Empty-list create CTA dumps generic Add one | Walk remaining Select all N results / accordion No panels / dual-pane Select an item after `clerk_empty_create_cta` exists | #233 |
 | Form submit dumps generic Create/Save | Walk remaining experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_form_submit_label` exists | #234 |
 | Detail delete dumps generic Delete | Walk remaining Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_delete_label` exists | #235 |
+| CSV export dumps generic Export CSV | Walk remaining HM gallery Export CSV exemplars / Search… placeholders / Showing N of M overflow / Edit / list-row trash aria / experience Submit / Select all N results / accordion No panels / dual-pane Select an item after `clerk_csv_export_label` exists | #236 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |

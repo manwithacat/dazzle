@@ -627,6 +627,9 @@ class ListRegion:
     # Leftover-honest temporal (cycle 2174) ride the in-card CSV button.
     include_closed: str = ""
     as_of: str = ""
+    # Clerk CSV aria (oral #236). Vacant entity keeps ``Export CSV``.
+    entity_name: str = ""
+    entity_title: str = ""
     total: int = 0
     empty_message: str = ""
     # #1148: optional per-row action column. When ``row_actions`` is
@@ -1546,6 +1549,9 @@ class CsvExportButton:
     label: str = "Export CSV"
     include_closed: str = ""
     as_of: str = ""
+    # Clerk CSV aria (oral #236). Vacant entity keeps ``Export CSV``.
+    entity_name: str = ""
+    entity_title: str = ""
 
     def __post_init__(self) -> None:
         if not self.filename:
