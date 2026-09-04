@@ -69,11 +69,11 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2400 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 2401 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1951 | STALE |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 2377 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 2377 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 2377 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 2377 | STALE |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 2377 | STALE |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI | **example-apps** + trials | 2377 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 2184 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1997 | STALE |
@@ -98,9 +98,9 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 2370 | USED |
-| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 2370 | USED |
-| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2370 | USED |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 2370 | STALE |
+| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | 2370 | STALE |
+| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | 2370 | STALE |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1645 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 2273 | STALE |
@@ -123,8 +123,8 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1615 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2400 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2400 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 2401 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 2401 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT |
@@ -137,4 +137,4 @@ Capability-sweep may replace the short “Last sweep” one-liner below (≤3 li
 
 ## Last sweep (≤5 one-liners — overwrite, do not accumulate)
 
-> **Cycle 2381 (2026-09-03).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=28 HYGIENE_STALE_eff=37; USED→STALE=0. Stamp probes/CodeQL/inbox @2381. Smoke trio USED@2377. Goal B saturated; residual=0; densify_allowed=0; dual_lock=0 coherence=0. Next → campaign **framework-ux** (explore 3/100). Top COGNITION if campaign yields: MCP `demo_world` / `qa trial` / domain (not metered vision, not WI densify). Semgrep USED@2370 next~2390. self-audit@2372 next~2387.
+> **Cycle 2401 (2026-09-04).** capability-sweep: UNOWNED=0 COGNITION_STALE_eff=31 HYGIENE_STALE_eff=39; USED→STALE=6 (smoke trio@2377 lag 24; semgrep trio@2370 lag 31). Stamp probes/CodeQL/inbox @2401. fragment-audit USED@2398. Goal B saturated; residual=0; densify_allowed=0; dual_lock=0 coherence=0. Next → **self-audit** (2387+15=2402). Then campaign **framework-ux** (explore 22/100). Top COGNITION if campaign yields: MCP `demo_world` / `qa trial` / domain (not metered vision, not WI densify). Semgrep STALE@2370 overdue (next was ~2390).
