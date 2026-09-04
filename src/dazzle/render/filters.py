@@ -637,8 +637,8 @@ def clerk_related_tab_fk_label(field_key: Any) -> str:
 
     Dual-FK related tabs dumped ``assigned to`` while forms already
     say ``Assigned To``. Leftover junk stays put. Empty invents no
-    suffix. Do not restyle remaining open-via hop labels or remaining
-    list find-by chrome siblings.
+    suffix. Open-via hop phrases closed oral #231. Do not restyle
+    remaining list find-by chrome siblings.
     """
     return clerk_entity_card_field_label(field_key)
 
@@ -648,8 +648,8 @@ def clerk_carousel_chip_label(value: Any) -> str:
 
     ``display: carousel`` dumped ``icon_glyph`` on the media chip while
     the asset catalog already says ``Icon Glyph``. Leftover junk stays
-    put. Empty invents no chip. Do not restyle remaining open-via hop
-    labels or remaining related-tab FK siblings.
+    put. Empty invents no chip. Open-via hop phrases closed oral #231.
+    Do not restyle remaining related-tab FK siblings.
     """
     return clerk_stage_label(value)
 

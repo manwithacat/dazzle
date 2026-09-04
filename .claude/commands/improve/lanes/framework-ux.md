@@ -647,6 +647,13 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   #215), remaining empty-list titles (oral #213), remaining
   peek/slide-over headings (oral #192), remaining 422-speech
   (oral #208), or leftover-token stay-put.
+- **Open-via hop phrases dump lowercase schema keys** closed cycle
+  2399 (oral #231). Helper: ``open_hop_label`` /
+  ``clerk_entity_card_field_label``. Leftover ``zzz`` stays put.
+  ``data-dz-open-via`` stays the schema token. Do **not** restyle
+  remaining empty-title hosts (oral #213–#230), remaining
+  peek/slide-over headings (oral #192), remaining 422-speech
+  (oral #208), or leftover-token stay-put.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

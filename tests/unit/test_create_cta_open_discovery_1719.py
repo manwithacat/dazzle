@@ -13,7 +13,7 @@ def test_open_hop_label_create_via() -> None:
     assert open_hop_label("Ticket", "create") == "Create Ticket"
     assert open_hop_label("User", "new") == "Create User"
     assert open_hop_label("Task", "id") == "Open Task"
-    assert open_hop_label("User", "assigned_to") == "Open User via assigned to"
+    assert open_hop_label("User", "assigned_to") == "Open User via Assigned To"
 
 
 def test_create_cta_open_attrs_app_create_path() -> None:

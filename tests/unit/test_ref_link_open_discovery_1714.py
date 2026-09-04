@@ -16,7 +16,7 @@ def test_hub_open_via_param_on_drill_attrs() -> None:
     assert 'data-dz-open-via="assigned_to"' in attrs
     assert 'data-dz-open-entity="User"' in attrs
     assert 'data-dz-open-chain="/app/user/u-9"' in attrs
-    assert "Open User via assigned to" in attrs
+    assert "Open User via Assigned To" in attrs
     assert 'data-dz-open-chain-via="assigned_to"' in attrs
 
 
@@ -32,7 +32,7 @@ def test_person_chip_link_stamps_open_discovery() -> None:
     assert 'data-dz-open-entity="User"' in html
     assert 'data-dz-open-via="assigned_to"' in html
     assert 'data-dz-open-chain="/app/user/u-1"' in html
-    assert "Open User via assigned to" in html
+    assert "Open User via Assigned To" in html
     assert 'href="/app/user/u-1"' in html
 
 

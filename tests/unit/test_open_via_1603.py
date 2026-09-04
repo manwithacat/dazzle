@@ -693,8 +693,8 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'data-dz-open-context="/app/user/u-abc"' in html
     # Cycle 1577: via-field relation labels + open-chain discovery
     assert 'data-dz-open-via="assigned_to"' in html
-    assert 'title="Open User via assigned to"' in html
-    assert 'aria-label="Open User via assigned to for Ship dual-open"' in html
+    assert 'title="Open User via Assigned To"' in html
+    assert 'aria-label="Open User via Assigned To for Ship dual-open"' in html
     assert 'data-dz-open-chain="/app/task/t1 /app/user/u-abc"' in html
     # Cycle 1583: chain-via + primary hop parity
     assert 'data-dz-open-chain-via="id assigned_to"' in html
@@ -709,8 +709,8 @@ def test_data_row_dual_open_emits_secondary_context_hop() -> None:
     assert 'data-dz-open-hops="2"' in html
     # Cycle 1594: hop phrases as data attrs (attr-first agents)
     assert 'data-dz-open-label="Open Task"' in html
-    assert 'data-dz-open-label="Open User via assigned to"' in html
-    assert 'data-dz-open-chain-label="Open Task | Open User via assigned to"' in html
+    assert 'data-dz-open-label="Open User via Assigned To"' in html
+    assert 'data-dz-open-chain-label="Open Task | Open User via Assigned To"' in html
     # Cycle 1599: ordered entity display names on the row
     assert 'data-dz-open-chain-entity="Task | User"' in html
 
@@ -729,8 +729,8 @@ def test_entity_label_from_detail_url() -> None:
     assert entity_label_from_detail_url("") == "Related"
     assert via_field_from_template("/app/user/{assigned_to}") == "assigned_to"
     assert via_field_from_template("/app/task/{id}") == "id"
-    assert field_label_from_via("assigned_to") == "Assigned to"
-    assert open_hop_label("User", "assigned_to") == "Open User via assigned to"
+    assert field_label_from_via("assigned_to") == "Assigned To"
+    assert open_hop_label("User", "assigned_to") == "Open User via Assigned To"
     assert open_hop_label("Task", "id") == "Open Task"
     assert open_hop_label("Company", "company") == "Open Company"
 

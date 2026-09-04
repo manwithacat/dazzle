@@ -2413,6 +2413,17 @@ dialect formed — and where it started to Goodhart itself — is
     ``alert_pivot``. One-ship close of remaining pivot empty hosts.
     Standing refusals apply.
 
+231. **Open-via hop phrases dump lowercase schema keys.** Cycle 2399:
+    dual-open context hops said ``Open User via assigned to`` while
+    forms and related tabs already say ``Assigned To``. Relation
+    speech is not empty-title hosts (oral #213–#230) and not
+    remaining leftover-token stay-put. Helper:
+    ``open_hop_label`` reuses ``clerk_entity_card_field_label``.
+    ``data-dz-open-via`` stays the schema token. Leftover junk
+    stays put. Live simple_task Task ``task_list``
+    ``User via assigned_to``. One-ship close of remaining hop
+    phrase dumps. Standing refusals apply.
+
 ## Standing refusals (apprentice handbook)
 
 This table is how a human apprentice is briefed on what **not**
@@ -2444,6 +2455,7 @@ the end of every new oral *is* expensive — point here instead.
 | Map empty dumps generic No locations | Walk remaining map empty after `clerk_empty_map_title` exists | #228 |
 | Carousel empty dumps generic No slides | Walk remaining carousel empty after `clerk_empty_carousel_title` exists | #229 |
 | Pivot empty dumps generic No data to pivot | Walk remaining pivot empty after `clerk_empty_pivot_title` exists | #230 |
+| Open-via hop phrases dump lowercase schema keys | Walk remaining hop title / aria / open-label dumps after `open_hop_label` reuses `clerk_entity_card_field_label` | #231 |
 | 422-speech dump cadence | Walk another form-error / transition / unique / invariant / enum / type / length / decimal 422 dump after clerk_* speech helpers exist (oral #198–#206) | #208 |
 | Parse-invent | Clone another `parseInt` / companion leftover onto a sibling widget | #42 |
 | Person-as-text | Mint an Avatar from a bare string; clone another `present()` host wire | #43–#45, #47 |
@@ -2582,6 +2594,7 @@ the end of every new oral *is* expensive — point here instead.
 | Map empty generic No locations | Dump ``No locations.`` on vacant maps after ``clerk_empty_map_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline / carousel empty | #228 |
 | Carousel empty generic No slides | Dump ``No slides.`` on vacant carousels after ``clerk_empty_carousel_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline / accordion empty | #229 |
 | Pivot empty generic No data to pivot | Dump ``No data to pivot.`` on vacant pivots after ``clerk_empty_pivot_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline / accordion empty | #230 |
+| Open-via hop phrases dump lowercase schema keys | Dump ``Open User via assigned to`` after ``open_hop_label`` reuses ``clerk_entity_card_field_label``; clone leftover-token stay-put or remaining empty-title hosts | #231 |
 | FTS empty generic No results | Dump ``No results`` / ``N results`` on FTS empty after ``clerk_empty_search_title`` exists; clone leftover-token stay-put or remaining search-select / command-palette ``No results`` | #221 |
 | Timeline empty generic No events | Dump ``No events yet.`` / ``No activity yet`` on vacant timeline / activity_feed after ``clerk_empty_timeline_title`` exists; clone leftover-token stay-put or remaining conversation / day-timeline empty | #222 |
 | Download PascalCase filename | Dump ``EngagementLetter-{uuid}.pdf`` after ``clerk_entity_download_stem`` exists; clone leftover-token stay-put or remaining toast / confirm / breadcrumb siblings | #195 |
@@ -2730,6 +2743,7 @@ how the handbook was learned.
 | One map empty generic No locations after clerk_empty_map_title exists | Call clerk_empty_map_title on remaining map empty hosts in one ship, then STOP (oral #228). Do not restyle remaining conversation ``No conversation yet``, remaining day-timeline slots, remaining search-select / command-palette ``No results`` (oral #221), remaining ``Add one`` empty CTAs, remaining carousel ``No slides.``, remaining accordion ``No panels.``, remaining profile empty hosts (oral #227), remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One carousel empty generic No slides after clerk_empty_carousel_title exists | Call clerk_empty_carousel_title on remaining carousel empty hosts in one ship, then STOP (oral #229). Do not restyle remaining conversation ``No conversation yet``, remaining day-timeline slots, remaining search-select / command-palette ``No results`` (oral #221), remaining ``Add one`` empty CTAs, remaining accordion ``No panels.``, remaining map empty hosts (oral #228), remaining profile empty hosts (oral #227), remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles, remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | One pivot empty generic No data to pivot after clerk_empty_pivot_title exists | Call clerk_empty_pivot_title on remaining pivot empty hosts in one ship, then STOP (oral #230). Do not restyle remaining conversation ``No conversation yet``, remaining day-timeline slots, remaining search-select / command-palette ``No results`` (oral #221), remaining ``Add one`` empty CTAs, remaining accordion ``No panels.``, remaining carousel empty hosts (oral #229), remaining map empty hosts (oral #228), remaining profile empty hosts (oral #227), remaining bulk toolbar hosts (oral #220), remaining chart EmptyState titles (oral #219), remaining detail ``No data``, remaining loading empty, remaining related empty, remaining pagination footers, remaining empty-kind hosts, remaining empty-list titles, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
+| One open-via hop phrase dump after clerk_entity_card_field_label exists | Call clerk_entity_card_field_label from open_hop_label on remaining hop title / aria / open-label hosts in one ship, then STOP (oral #231). Do not restyle remaining empty-title hosts, remaining peek/slide-over headings, remaining 422-speech, or leftover-token stay-put |
 | Yield capability-sweep cadence to campaign mutation when ≥20 overdue | Run the sweep this cycle (`budget_consumed: 0`); explore-cap / require_mutation do not skip cadence (oral #207) |
 | Yield semgrep hygiene cadence to explore-cap idle when ≥20 overdue | Run `semgrep_hygiene` this cycle (`budget_consumed: 0` unless a TP ships); explore-cap / require_mutation do not skip cadence (oral #209) |
 | One audit-history dump after clerk_audit_* exists | Call clerk_audit_* on remaining history hosts in one ship, then STOP (oral #179). Do not join remaining actor UUIDs or restyle remaining money/IBAN before/after, remaining group_by/list-cell dumps, or leftover-token stay-put |

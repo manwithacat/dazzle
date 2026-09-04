@@ -9,6 +9,7 @@ ADR-0038 so the standalone list path (``back``) and the workspace region path
 from typing import Any
 from uuid import UUID
 
+from dazzle.render.filters import clerk_entity_card_field_label
 from dazzle.render.open_discovery import (
     entity_label_from_detail_url,
     open_hop_label,
@@ -150,15 +151,12 @@ def via_field_from_template(tmpl: str) -> str:
 
 
 def field_label_from_via(via: str) -> str:
-    """Humanize an open-via field name: ``assigned_to`` → ``Assigned to``."""
-    if not via:
-        return ""
-    words = [w for w in str(via).replace("-", "_").split("_") if w]
-    if not words:
-        return ""
-    # Sentence case: first word capital, rest lower (relation phrases).
-    head, *rest = words
-    return " ".join([head[:1].upper() + head[1:].lower(), *[w.lower() for w in rest]])
+    """Humanize an open-via field name: ``assigned_to`` → ``Assigned To``.
+
+    Oral #231 — same clerk speech as related-tab FK labels. Leftover junk
+    stays put. Empty invents no via.
+    """
+    return clerk_entity_card_field_label(via)
 
 
 def _resolve_row_open_chain(

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import html as _html
 
+from dazzle.render.filters import clerk_entity_card_field_label
+
 
 def entity_label_from_detail_url(url: str) -> str:
     """Human label for a resolved app path (detail or list).
@@ -52,7 +54,7 @@ _OPEN_HOP_VIA_VERB: dict[str, str] = {
 
 
 def open_hop_label(entity_label: str, via_field: str = "") -> str:
-    """User-facing hop phrase: ``Open Task`` / ``Open User via assigned to``.
+    """User-facing hop phrase: ``Open Task`` / ``Open User via Assigned To``.
 
     Cycle 1719 — ``via=create`` / ``via=new`` yields ``Create {Entity}`` for
     list/empty/related create CTAs (same attr grammar as VIEW hops).
@@ -61,6 +63,11 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
 
     Cycle 1805 — ``via=confirm`` / ``via=revoke`` / ``via=re-enable`` for
     ConfirmGate primary / revoke / re-enable action anchors.
+
+    Cycle 2399 / oral #231 — relation hops reuse
+    ``clerk_entity_card_field_label`` so ``assigned_to`` is ``Assigned To``
+    (same speech as related-tab FK labels). Leftover junk stays put.
+    ``data-dz-open-via`` stays the schema token.
     """
     ent = (entity_label or "Related").strip() or "Related"
     via = (via_field or "").strip()
@@ -69,10 +76,9 @@ def open_hop_label(entity_label: str, via_field: str = "") -> str:
     verb = _OPEN_HOP_VIA_VERB.get(via.casefold())
     if verb is not None:
         return f"{verb} {ent}"
-    words = [w for w in via.replace("-", "_").split("_") if w]
-    if not words:
+    field_phrase = clerk_entity_card_field_label(via)
+    if not field_phrase:
         return f"Open {ent}"
-    field_phrase = " ".join(w.lower() for w in words)
     if field_phrase.casefold() == ent.casefold():
         return f"Open {ent}"
     return f"Open {ent} via {field_phrase}"
