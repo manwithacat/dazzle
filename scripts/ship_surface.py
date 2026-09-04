@@ -319,6 +319,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_open_hop_via_label_dump.py",
     # cycle 2400: list FilterBar All must not dump generic All (oral #232)
     "tests/unit/test_list_filter_all_dump.py",
+    # cycle 2403: empty-list create CTA must not dump generic Add one (oral #233)
+    "tests/unit/test_empty_create_cta_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

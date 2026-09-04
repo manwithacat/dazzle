@@ -39,6 +39,7 @@ from dazzle.http.runtime.route_support import (
     _wants_html,
 )
 from dazzle.render.breadcrumbs import (
+    clerk_empty_create_cta,
     clerk_empty_filtered_title,
     clerk_empty_loading_title,
     clerk_entity_noun,
@@ -138,7 +139,7 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
     """Inline mirror of `fragments/table_rows.html`'s empty-state branch
     (v0.67.67). Picks the per-kind message + affordance:
 
-        collection → "No X yet." + link to the create surface
+        collection → "No X yet." + "New {entity}" link to the create surface
         filtered   → "No X match the current filters." + clear-filters link
         forbidden  → custom `empty_forbidden` copy
         loading    → "Couldn't load X. Try reloading."
@@ -194,6 +195,8 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
     elif kind == "forbidden" and table.get("empty_forbidden"):
         inner = _html_mod.escape(str(table["empty_forbidden"]), quote=False)
     else:
+        entity_title = str(table.get("entity_title") or "")
+        catalog = {entity_name: entity_title} if entity_name and entity_title else None
         msg = str(
             table.get("empty_collection")
             or table.get("empty_message")
@@ -206,8 +209,9 @@ def _render_table_empty(table: dict[str, Any], request: Any) -> str:
                 str(table["create_url"]),
                 quote=True,
             )
+            cta = _html_mod.escape(clerk_empty_create_cta(entity_name, catalog), quote=False)
             create_link = (
-                f'<a href="{create_url_attr}" class="dz-tr-empty-link">Add one</a>'  # nosemgrep
+                f'<a href="{create_url_attr}" class="dz-tr-empty-link">{cta}</a>'  # nosemgrep
             )
         inner = f"{msg_html}{create_link}"
 

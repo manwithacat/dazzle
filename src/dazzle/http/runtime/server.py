@@ -108,6 +108,7 @@ from dazzle.http.runtime.workspace_handlers import (  # noqa: F401
 )
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler  # noqa: F401
 from dazzle.http.runtime.workspace_route_builder import WorkspaceRouteBuilder
+from dazzle.page.app_paths import create_path
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.page.runtime.theme import install_theme_middleware
 from dazzle.perf.bootstrap import maybe_configure_tracer
@@ -1813,6 +1814,11 @@ class DazzleBackendApp:
 
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
+        _create_entities = frozenset(
+            str(_surf.entity_ref)
+            for _surf in self._appspec.surfaces
+            if _surf.entity_ref and str(_surf.mode or "").lower() == "create"
+        )
         for entity in self._entities:
             slug = _entity_slug(entity.name)
             _ls = _entity_list_surfaces.get(entity.name)
@@ -1882,6 +1888,12 @@ class DazzleBackendApp:
                 "detail_url_fallback": _same_entity,
                 "detail_url_fallback_by_table_id": detail_url_fallback_by_table_id,
                 "entity_name": entity.name,
+                # Oral #233: empty-row hydrate must keep the list create CTA
+                # (first-paint overlay already says ``New Task``). No CREATE
+                # surface → omit so we do not link a 404.
+                "create_url": (
+                    create_path(app_prefix, slug) if entity.name in _create_entities else ""
+                ),
                 # #1494 (2c): resolved `peek:` mode for the (first) list surface.
                 # Unset → "off" (Slice-1 default, byte-stable); `peek: expand` opts
                 # the entity-list rows into the inline detail-panel chevron.

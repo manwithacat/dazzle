@@ -337,6 +337,23 @@ def clerk_filter_all_label(label: Any) -> str:
     return f"All {text}"
 
 
+def clerk_empty_create_cta(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing empty-list create CTA (oral #233).
+
+    ``Add one`` dumped generic chrome while the list header already
+    says ``New Task``. Catalog / PascalCase-split via
+    ``clerk_related_create_noun``. Leftover junk invents no entity.
+    """
+    noun = clerk_related_create_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() == "item":
+        return "Add one"
+    return f"New {text}"
+
+
 def clerk_empty_chart_title(
     name: str,
     catalog: dict[str, str] | None = None,

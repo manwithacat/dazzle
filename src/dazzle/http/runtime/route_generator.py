@@ -537,6 +537,7 @@ class RouteGenerator:
                 htmx_peek_by_table_id=_htmx.get("peek_by_table_id"),
                 htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),
                 htmx_empty_message=_htmx.get("empty_message", "No items found."),
+                htmx_create_url=_htmx.get("create_url", "") or "",
                 search_fields=_search_fields,
                 filter_fields=_filter_fields,
                 htmx_bulk_actions=bool(_htmx.get("bulk_actions")),

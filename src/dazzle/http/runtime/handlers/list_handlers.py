@@ -327,6 +327,7 @@ def create_list_handler(
     htmx_peek_by_table_id: dict[str, str] | None = None,
     htmx_entity_name: str | None = None,
     htmx_empty_message: str = "No items found.",
+    htmx_create_url: str | None = None,
     htmx_bulk_actions: bool = False,
     htmx_inline_editable: list[str] | None = None,
     search_fields: list[str] | None = None,
@@ -405,6 +406,7 @@ def create_list_handler(
             request.state.htmx_peek_by_table_id = htmx_peek_by_table_id
         request.state.htmx_entity_name = htmx_entity_name
         request.state.htmx_empty_message = htmx_empty_message
+        request.state.htmx_create_url = htmx_create_url or ""
         # Convergence C1.1: the row-hydrate path renders bulk-select checkbox
         # cells iff the entity's list surface declares `ux: bulk_actions:`.
         # (Never threaded before — API-hydrated rows NEVER had checkboxes, one
@@ -893,6 +895,12 @@ async def _list_handler_body(
                 auth_context,
                 entity_name=entity_name or _entity_label,
             )
+            _can_create = _principal_can_op(
+                cedar_access_spec,
+                AccessOperationKind.CREATE,
+                auth_context,
+                entity_name=entity_name or _entity_label,
+            )
             # No update → no SM chips / edit; no delete → no trash.
             # Bulk checkboxes: match page_routes shell gate (cycle 1391) —
             # keep select column when UPDATE (DSL field transitions) OR
@@ -942,6 +950,9 @@ async def _list_handler_body(
                 "as_of": request.query_params.get("as_of", "") or (_as_of_raw or ""),
                 "empty_kind": clerk_list_empty_kind(filters=filters, search=search),
                 "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
+                "create_url": (
+                    str(getattr(request.state, "htmx_create_url", "") or "") if _can_create else ""
+                ),
             }
 
             # Phase 4 (v0.67.68): full inline-render — both the empty
