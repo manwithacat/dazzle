@@ -663,6 +663,22 @@ clerk-visible lie, not `leftover-honest <param>`. Body has `Before:` /
   dumps (oral #231), remaining peek/slide-over headings
   (oral #192), remaining 422-speech (oral #208), or
   leftover-token stay-put.
+- **Empty-list create CTA dumps generic Add one** closed cycle
+  2403 (oral #233). Helper: ``clerk_empty_create_cta``. Leftover
+  ``zzz`` invents no entity. Do **not** restyle remaining
+  ``Select all N results``, remaining accordion ``No panels.``,
+  remaining dual-pane ``Select an item``.
+- **Form submit dumps generic Create/Save** closed cycle 2404
+  (oral #234). Helper: ``clerk_form_submit_label``. Leftover
+  ``zzz`` invents no entity. Do **not** restyle remaining
+  experience ``Submit``.
+- **Detail delete dumps generic Delete** closed cycle 2405
+  (oral #235). Helper: ``clerk_delete_label``. Leftover ``zzz``
+  invents no entity. Do **not** restyle remaining Edit,
+  remaining list-row trash aria, remaining experience
+  ``Submit``, remaining Select all N results, remaining
+  accordion ``No panels.``, remaining dual-pane ``Select an
+  item``.
 - Presentation MCP STALE (1554) is still a valid mutation.
   Not Goal B coat.
 - Field note: `improve/leftover-honesty-ethnography.md`.

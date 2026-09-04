@@ -19,6 +19,7 @@ from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.renderers.related_queue_tab import related_tab_from_ctx
 from dazzle.http.runtime.workspace_columns import _media_col_type_for_field_name
 from dazzle.render.breadcrumbs import (
+    clerk_delete_label,
     clerk_empty_collection_title,
     clerk_empty_loading_title,
     clerk_entity_confirm_noun,
@@ -797,7 +798,7 @@ class FragmentSurfaceAdapter:
         if delete_url:
             actions.append(
                 Button(
-                    label="Delete",
+                    label=clerk_delete_label(entity_name, _confirm_catalog),
                     variant="danger",
                     hx_delete=URL(str(delete_url)),
                     hx_target=TargetSelector("body"),

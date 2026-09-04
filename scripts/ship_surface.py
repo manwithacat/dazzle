@@ -323,6 +323,8 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_empty_create_cta_dump.py",
     # cycle 2404: form submit must not dump generic Create/Save (oral #234)
     "tests/unit/test_form_submit_label_dump.py",
+    # cycle 2405: detail delete must not dump generic Delete (oral #235)
+    "tests/unit/test_delete_label_dump.py",
     # cycle 2336: unauthored qty invariant still asserted schema/generic
     "tests/unit/test_invariant_evaluator.py::TestViolationError::test_check_update_threads_entity",
     # cycle 2334 cimonitor: all_true checklist 422 still pinned snake_case keys

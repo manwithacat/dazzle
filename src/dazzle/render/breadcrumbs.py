@@ -375,6 +375,24 @@ def clerk_form_submit_label(
     return f"{vacant} {text}"
 
 
+def clerk_delete_label(
+    name: str,
+    catalog: dict[str, str] | None = None,
+) -> str:
+    """Clerk-facing detail delete (oral #235).
+
+    ``Delete`` dumped generic chrome while confirm already says
+    ``Delete this task?`` and form submit already says ``Create Task``.
+    Catalog / PascalCase-split via ``clerk_related_create_noun``.
+    Leftover junk invents no entity.
+    """
+    noun = clerk_related_create_noun(name, catalog)
+    text = str(noun or "").strip()
+    if not text or text.lower() in _LEFTOVER_PATH_TOKENS or text.lower() in {"item", "record"}:
+        return "Delete"
+    return f"Delete {text}"
+
+
 def clerk_empty_chart_title(
     name: str,
     catalog: dict[str, str] | None = None,

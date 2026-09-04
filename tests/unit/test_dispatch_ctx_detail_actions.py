@@ -121,6 +121,8 @@ def test_view_renders_delete_button_with_hx_delete_and_confirm() -> None:
     html = _render_view(_detail_with_all_actions())
     assert 'hx-delete="/_dazzle/tasks/abc"' in html
     assert 'hx-confirm="Delete this task?"' in html
+    assert ">Delete Task</button>" in html
+    assert ">Delete</button>" not in html
     assert 'hx-target="body"' in html
 
 
