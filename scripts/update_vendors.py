@@ -11,10 +11,10 @@ This script handles lucide (auto-update) and the **manually-pinned** htmx 4
 set — the core (``update_htmx``) plus the three vendored htmx-4 extensions
 (``update_htmx_extensions``: ``hx-preload`` / ``hx-optimistic`` / ``hx-upsert``),
 all locked to ``HTMX_PINNED_VERSION``. Bump that constant and re-run this
-script to track successive 4.x betas until GA (#1409); the cron must **not**
-auto-advance the pin. Other vendored files (flatpickr, pdfjs, etc.) are
-vendored manually — use ``scripts/update_vendor_hashes.py`` after replacing
-them by hand.
+script to pick up a new 4.x stable (currently GA ``4.0.0``, #1409); the cron
+must **not** auto-advance the pin. Other vendored files (flatpickr, pdfjs,
+etc.) are vendored manually — use ``scripts/update_vendor_hashes.py`` after
+replacing them by hand.
 """
 
 from __future__ import annotations
@@ -171,10 +171,12 @@ def _read_head(path: Path, lines: int = 5) -> str:
     return "\n".join(text.splitlines()[:lines])
 
 
-# htmx is manually pinned to a 4.x beta (shipped v0.83.0 → beta4, #1405).
-# Track successive betas by bumping this constant + re-running update_vendors
-# until GA (#1409). Cron must never auto-advance the pin (only re-syncs it).
-HTMX_PINNED_VERSION = "4.0.0-beta5"
+# htmx is manually pinned (shipped v0.83.0 → 4.0.0-beta4, #1405; GA 4.0.0
+# in #1409). Do not use npm `latest` or GitHub /releases/latest:
+# - npm `latest` is still 2.x until early 2027 (4.0 lives on `next`)
+# - GitHub has marked some 4.x betas as prerelease=false
+# Cron only re-syncs this pin; bump the constant to take a new 4.x.
+HTMX_PINNED_VERSION = "4.0.0"
 
 
 def _detect_lucide_version() -> str | None:
@@ -198,12 +200,12 @@ def _tag_version(tag: str) -> str:
 def update_htmx(*, check_only: bool) -> None:
     """Vendor the pinned htmx 4.x core from the jsdelivr CDN.
 
-    Pin is deliberate (``HTMX_PINNED_VERSION``) — we track successive 4.x
-    betas until GA (#1409). Cron must **not** auto-advance to a newer beta:
+    Pin is deliberate (``HTMX_PINNED_VERSION``). Cron must **not** auto-advance:
 
-    - ``_latest_stable_release`` skips pre-releases, so it cannot track v4
-      betas — and must never be pointed at ``v2.`` (would downgrade the
-      vendored beta back to htmx 2.x).
+    - npm ``latest`` is still htmx 2.x (4.0 is ``next`` until early 2027).
+    - GitHub ``/releases/latest`` has been unreliable on this line (4.x
+      betas marked prerelease=false; 2.x patches still publish).
+    - Never point ``_latest_stable_release`` at ``v2.`` (would downgrade).
     - Bumping the pin is an operator decision; this function only re-syncs
       the bytes for whatever pin is currently set.
     - All htmx-2 extension files were dropped in the migration (native morph /
@@ -224,10 +226,16 @@ def update_htmx(*, check_only: bool) -> None:
 # 2b, optimistic peek 2c, live upsert). htmx 4 dropped the `hx-ext` attribute —
 # extensions activate simply by being included as `<script>` tags after the core,
 # and a `<meta name="htmx-config" content='{"extensions": "..."}'>` can restrict
-# which load. Pinned to HTMX_PINNED_VERSION (the same manually-vendored beta as the
-# core) so the pair never drifts; re-fetching at the pin is idempotent. Bump these
-# together with the core when advancing the pin (betas until GA, #1409).
+# which load. Pinned to HTMX_PINNED_VERSION (same pin as the core) so the pair
+# never drifts; re-fetching at the pin is idempotent. Bump these together
+# with the core when advancing the pin (#1409).
 HTMX_EXTENSIONS = ("hx-preload", "hx-optimistic", "hx-upsert")
+# 4.0.0 GA published dist/ext/hx-optimistic.min.js.map but omitted the JS
+# (npm @4.0.0 and GitHub tag v4.0.0). Last complete file is 4.0.0-beta6.
+# Unused in the app chrome today (#1409); still vendored for a later fit.
+HTMX_EXTENSION_PIN_OVERRIDE = {
+    "hx-optimistic": "4.0.0-beta6",
+}
 
 
 def update_htmx_extensions(*, check_only: bool) -> None:
@@ -238,21 +246,21 @@ def update_htmx_extensions(*, check_only: bool) -> None:
     ``_save_vendor`` records each SHA-256 in the manifest + strips the trailing
     sourceMappingURL comment (#860), so the drift gate accepts the new files.
     """
-    print(f"htmx extensions: pinned to {HTMX_PINNED_VERSION} ({', '.join(HTMX_EXTENSIONS)})")
+    print(f"htmx extensions: core pin {HTMX_PINNED_VERSION} ({', '.join(HTMX_EXTENSIONS)})")
     if check_only:
         return
     for name in HTMX_EXTENSIONS:
-        cdn_url = (
-            f"https://cdn.jsdelivr.net/npm/htmx.org@{HTMX_PINNED_VERSION}/dist/ext/{name}.min.js"
-        )
+        pin = HTMX_EXTENSION_PIN_OVERRIDE.get(name, HTMX_PINNED_VERSION)
+        cdn_url = f"https://cdn.jsdelivr.net/npm/htmx.org@{pin}/dist/ext/{name}.min.js"
         data = _download(cdn_url)
         _save_vendor(f"{name}.min.js", data)
-        print(f"  downloaded {name}.min.js ({len(data)} bytes) from {cdn_url}")
+        note = f" (override pin {pin})" if pin != HTMX_PINNED_VERSION else ""
+        print(f"  downloaded {name}.min.js ({len(data)} bytes){note} from {cdn_url}")
 
 
 # update_idiomorph removed in the htmx 4 migration (#1405): idiomorph-ext.min.js
 # was dropped in favour of htmx 4's native innerMorph/outerMorph. The cron used
-# to re-vendor it, which would resurrect the deleted file. (GA follow-up: #1409.)
+# to re-vendor it, which would resurrect the deleted file.
 
 
 def update_lucide(*, check_only: bool) -> None:

@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Changed
+- **htmx 4.0.0 GA (#1409).** Vendored core + `hx-preload` / `hx-upsert`
+  from npm `htmx.org@4.0.0` (jsDelivr). Pin is still manual:
+  npm `latest` remains 2.x until early 2027 (`next` is 4.0.0), and
+  GitHub marked some 4.x betas as non-prerelease, so we do not follow
+  `/releases/latest`. `hx-optimistic.min.js` is missing from the 4.0.0
+  tarball (only a leftover `.map` shipped); last complete file is
+  `4.0.0-beta6` and stays on that override until upstream republishes
+  it. Unused in app chrome today. Dropped “beta” qualifiers in ADR-0011
+  and the htmx4 evaluation banner.
+
 ### Fixed
 - **HM grid visual baselines stale after native-select CSS (cycle 2376)** —
   linux/darwin `part-grid-{light,dark}` still showed July 29 native-select

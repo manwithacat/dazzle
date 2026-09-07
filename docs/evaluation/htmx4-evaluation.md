@@ -3,8 +3,8 @@
 > **✅ SHIPPED 2026-06-17 — htmx 2.0.9 → 4.0.0-beta4 merged to `main` as v0.83.0** (PR #1405,
 > squash commit `d316e22f8`), bundled with the ADR-0038 rendering-layer-boundary refactor. Verified
 > regression-free by the browser oracle (`dazzle ux verify --interactions`) on ops_dashboard /
-> support_tickets / design_studio + full non-e2e suite green. **Pin now 4.0.0-beta5**
-> (`HTMX_PINNED_VERSION`); we continue tracking successive 4.x betas until GA (#1409). The
+> support_tickets / design_studio + full non-e2e suite green. **Pin now 4.0.0 GA**
+> (`HTMX_PINNED_VERSION`, #1409). The
 > verdict/tiers below are the **pre-migration** assessment — see the **Outcome** section at the
 > end for what actually happened (far under estimate).
 

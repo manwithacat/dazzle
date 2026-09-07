@@ -123,7 +123,7 @@ _HM_REPO = "https://github.com/manwithacat/hatchi-maxchi"
 _HM_PAGES = "https://manwithacat.github.io/hatchi-maxchi"
 _HM_MONOREPO = "https://github.com/manwithacat/dazzle/tree/main/packages/hatchi-maxchi"
 # Fallback when the monorepo vendor pin file is not present (standalone tree).
-_HTMX_PIN_FALLBACK = "4.0.0-beta5"
+_HTMX_PIN_FALLBACK = "4.0.0"
 
 # Cycle 2140: search-select leftover name=q uses form="hm-detached-q".
 # Empty form="" fails Nu ("An ID must not be the empty string"). The
