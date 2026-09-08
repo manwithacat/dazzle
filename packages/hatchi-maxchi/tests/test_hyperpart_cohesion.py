@@ -151,6 +151,9 @@ _LINEAR_MD_HEADINGS = (
 
 def test_every_part_page_has_linear_skeleton() -> None:
     """hyperparts/<id>.html always exposes the dual-audience section spine."""
+    from build_site import _htmx_pinned_version
+
+    pin = _htmx_pinned_version()
     for h in HYPERPARTS:
         html = (PKG / "site" / "hyperparts" / f"{h.id}.html").read_text(encoding="utf-8")
         for sid in _LINEAR_SECTION_IDS:
@@ -171,8 +174,9 @@ def test_every_part_page_has_linear_skeleton() -> None:
         assert "hm-dogfood" in html, f"{h.id}: missing dogfood meta item"
         assert "Markup dialect" in html, f"{h.id}: missing dialect meta item"
         assert "Source repository" in html, f"{h.id}: missing repo link in meta footer"
-        assert "htmx" in html.lower() and "4.0.0" in html, (
-            f"{h.id}: meta footer must surface the pinned htmx version"
+        assert f"htmx.org/v/{pin}" in html, (
+            f"{h.id}: meta footer must link npm htmx.org/v/{pin} "
+            f"(substring '4.0.0' also matches 4.0.0-beta*). Rebuild gallery."
         )
         assert f"agents/{h.id}.md" in html, f"{h.id}: missing agent-pack link"
         spine_pos = html.find('id="copy"')

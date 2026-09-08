@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -359,7 +360,31 @@ def main() -> None:
     if _CHANGES:
         write_manifest(_MANIFEST)
     _print_hash_diff()
+    _rebuild_hm_gallery()
     print("\nDone.")
+
+
+def _rebuild_hm_gallery() -> None:
+    """Regenerate gallery HTML so part-page footers match ``HTMX_PINNED_VERSION``.
+
+    The htmx 4.0.0 GA vendor (#1409) updated ``htmx.min.js`` but left committed
+    ``packages/hatchi-maxchi/site/hyperparts/*.html`` on ``4.0.0-beta5``. That
+    red'd Dazzle ``test_hm_non_browser_suite_is_green`` and standalone HM
+    ``test_gallery_regenerates_byte_identically``. Rebuild is ~2s and is the
+    only way the byte-identity gate stays honest after a pin bump.
+    """
+    script = (
+        Path(__file__).resolve().parent.parent
+        / "packages"
+        / "hatchi-maxchi"
+        / "site"
+        / "build_site.py"
+    )
+    if not script.is_file():
+        print("HM gallery rebuild skipped (packages/hatchi-maxchi not present).")
+        return
+    print("Rebuilding HaTchi-MaXchi gallery (htmx pin in page footers)...")
+    subprocess.run([sys.executable, str(script)], check=True)
 
 
 if __name__ == "__main__":

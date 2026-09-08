@@ -74,6 +74,11 @@ SANCTIONED = {
     # governance docs in REMEDIATION string — not runtime consumption).
     # CI red 2026-07-28 after cycle 1411 promoted the CONTRACT_SURFACE gate.
     "scripts/ship_surface.py",
+    # Vendor cron rebuilds packages/hatchi-maxchi/site/hyperparts/*.html after
+    # an htmx pin bump so gallery footers match HTMX_PINNED_VERSION. Governance
+    # (subprocess to site/build_site.py) — not runtime HM consumption.
+    # CI red 2026-09-07 after htmx 4.0.0 GA (#1409) shipped without the rebuild.
+    "scripts/update_vendors.py",
     # Path-aware CI packs for packages/hatchi-maxchi/** (hm-surface) — governance
     # selector only; does not import HM at runtime (24h CI autopsy 2026-07-28).
     "scripts/ci_changed.py",

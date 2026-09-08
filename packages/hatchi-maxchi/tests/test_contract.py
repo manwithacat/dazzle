@@ -293,6 +293,29 @@ def test_kanban_declares_rearrange_exchanges() -> None:
     assert "data-dz-kanban-src" in kanban.partial
 
 
+def test_gallery_html_embeds_current_htmx_pin() -> None:
+    """Committed gallery footers must match ``HTMX_PINNED_VERSION``.
+
+    Weaker ``"4.0.0" in html`` checks pass on ``4.0.0-beta5``. The byte-identity
+    gate then fails with a 90-file unified diff. This test names the pin.
+    """
+    from build_site import _htmx_pinned_version
+
+    pin = _htmx_pinned_version()
+    needle = f"htmx.org/v/{pin}"
+    stale = [
+        h.id
+        for h in HYPERPARTS
+        if needle not in (PKG / "site" / "hyperparts" / f"{h.id}.html").read_text(encoding="utf-8")
+    ]
+    assert not stale, (
+        f"{len(stale)} part page(s) missing htmx pin {pin!r} — "
+        "run `python packages/hatchi-maxchi/site/build_site.py` "
+        f"(or `scripts/update_vendors.py`, which rebuilds the gallery). "
+        f"First: {stale[:5]}"
+    )
+
+
 def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore[no-untyped-def]
     """The committed gallery must equal a fresh standalone rebuild — the
     boundary acceptance test (Phase 3): the split repo regenerates its own

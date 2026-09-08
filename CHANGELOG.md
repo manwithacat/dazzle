@@ -12,6 +12,13 @@
   and the htmx4 evaluation banner.
 
 ### Fixed
+- **HaTchi-MaXchi gallery stale after htmx 4.0.0 GA.** Vendor bump #1409
+  updated `htmx.min.js` but left committed `site/hyperparts/*.html` on
+  `4.0.0-beta5`. `test_gallery_regenerates_byte_identically` then red'd
+  Dazzle python-tests and standalone HM CI. Rebuild the gallery; pin
+  `scripts/update_vendors.py` to rebuild it on every vendor run; cohesion
+  test requires the exact `htmx.org/v/{pin}` URL (substring `4.0.0` also
+  matched `-beta5`).
 - **HM grid visual baselines stale after native-select CSS (cycle 2376)** —
   linux/darwin `part-grid-{light,dark}` still showed July 29 native-select
   chrome after `97bd226b3` (`appearance:none`, pinned height, chevron).
