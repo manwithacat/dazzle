@@ -94,3 +94,35 @@ class WorkspaceRegionContext:
     # oral #166 — precomputed Mermaid ER for ``display: diagram``. Empty
     # dumps "No entity relationships" even when Device/Tester refs exist.
     diagram_data: str = ""
+
+
+def register_workspace_region_ctxs(
+    app: Any, ws_name: str, ctxs: list[WorkspaceRegionContext]
+) -> None:
+    """Stash region contexts on ``app.state`` for command_center SSR (#1677)."""
+    if app is None:
+        return
+    state = getattr(app, "state", None)
+    if state is None:
+        return
+    registry = getattr(state, "workspace_region_ctxs", None)
+    if registry is None:
+        registry = {}
+        state.workspace_region_ctxs = registry
+    registry[ws_name] = list(ctxs)
+
+
+def region_ctxs_for_names(app: Any, ws_name: str, names: list[str]) -> list[WorkspaceRegionContext]:
+    """Primary region ctx per name, in ``names`` order."""
+    if app is None:
+        return []
+    state = getattr(app, "state", None)
+    registry = getattr(state, "workspace_region_ctxs", None) if state is not None else None
+    if not registry:
+        return []
+    by_name: dict[str, WorkspaceRegionContext] = {}
+    for ctx in registry.get(ws_name, []):
+        name = getattr(getattr(ctx, "ctx_region", None), "name", "") or ""
+        if name and name not in by_name:
+            by_name[name] = ctx
+    return [by_name[n] for n in names if n in by_name]

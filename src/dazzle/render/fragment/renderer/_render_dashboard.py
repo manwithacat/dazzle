@@ -51,6 +51,26 @@ if TYPE_CHECKING:
     from dazzle.render.fragment.primitives import Fragment
 
 
+_SSE_EVENTS = "sse:entity.created, sse:entity.updated, sse:entity.deleted"
+
+
+def _dashboard_card_hx_trigger(c: DashboardCard, *, ssr_html: str) -> str:
+    """HTMX trigger list for a dashboard card body (#1677).
+
+    SSR first-paint skips ``load`` so the inlined body is not immediately
+    refetched. SSE / poll remain as refresh.
+    """
+    extras: list[str] = []
+    if c.sse_enabled:
+        extras.append(_SSE_EVENTS)
+    if c.refresh_interval:
+        extras.append(f"every {c.refresh_interval}s")
+    if ssr_html:
+        return ", ".join(extras)
+    base = "load" if c.eager else "intersect once"
+    return ", ".join([base, *extras])
+
+
 class _RenderDashboardMixin:
     """Mixin adding the 6 dashboard-family `_emit_*` methods to
     `FragmentRenderer`. Same pattern as `_RenderLayoutMixin`.
@@ -180,15 +200,8 @@ class _RenderDashboardMixin:
                 f"</div>"
             )
 
-        # ── HTMX trigger: 'load' (eager) or 'intersect once' (lazy),
-        #    plus three SSE entity events when sse_enabled.
-        trigger = "load" if c.eager else "intersect once"
-        if c.sse_enabled:
-            trigger += ", sse:entity.created, sse:entity.updated, sse:entity.deleted"
-        # #1391: declarative live-refresh — append a polling clause so HTMX
-        # re-fetches the region body every N seconds. Parser floors this at 5s.
-        if c.refresh_interval:
-            trigger += f", every {c.refresh_interval}s"
+        ssr_html = getattr(c, "ssr_html", "") or ""
+        trigger = _dashboard_card_hx_trigger(c, ssr_html=ssr_html)
 
         # Leftover-honest temporal (cycle 2183). Bare
         # hx-get="{c.hx_endpoint}" used to drop include_closed /
@@ -206,19 +219,27 @@ class _RenderDashboardMixin:
         # data-dz-region on the body slot: HTMX region fetches return typed
         # body only (no nested chrome), so this is the stable JS / closest
         # filter handle. Unique id remains region-{name}-{card_id}.
+        hx_trigger_attr = f' hx-trigger="{ctx.escape_attr(trigger)}"' if trigger else ""
+        inner = (
+            ssr_html
+            if ssr_html
+            else (
+                '<div class="dz-card-skeleton">'
+                '<div class="dz-card-skeleton-line w-3-4"></div>'
+                '<div class="dz-card-skeleton-line is-thin"></div>'
+                '<div class="dz-card-skeleton-line is-thin w-5-6"></div>'
+                "</div>"
+            )
+        )
         body_html = (
             f'<div class="dz-card-body" '
             f'id="region-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
             f'data-dz-region data-dz-region-name="{ctx.escape_attr(c.name)}" '
             f'data-display="{ctx.escape_attr(c.display.lower())}" '
-            f'hx-get="{hx_get}" '
-            f'hx-trigger="{ctx.escape_attr(trigger)}" '
+            f'hx-get="{hx_get}"'
+            f"{hx_trigger_attr} "
             f'hx-swap="innerHTML">'
-            f'<div class="dz-card-skeleton">'
-            f'<div class="dz-card-skeleton-line w-3-4"></div>'
-            f'<div class="dz-card-skeleton-line is-thin"></div>'
-            f'<div class="dz-card-skeleton-line is-thin w-5-6"></div>'
-            f"</div>"
+            f"{inner}"
             f"</div>"
         )
 

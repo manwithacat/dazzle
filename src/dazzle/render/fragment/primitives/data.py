@@ -2027,6 +2027,10 @@ class DashboardCard:
     # leaves these empty (oral #33).
     include_closed: str = ""
     as_of: str = ""
+    # #1677: trusted region-body HTML for command_center first paint.
+    # When set, the card body is this markup (not a skeleton) and
+    # ``hx-trigger="load"`` is omitted so first paint is not refetched.
+    ssr_html: str = ""
 
     def __post_init__(self) -> None:
         if not self.card_id:

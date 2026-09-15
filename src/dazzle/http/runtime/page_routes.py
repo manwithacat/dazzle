@@ -42,6 +42,7 @@ from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_FIELD,
     read_usage_counts_for_request,
 )
+from dazzle.http.runtime.workspace_context import region_ctxs_for_names
 from dazzle.page import app_paths
 from dazzle.page.command_index import (
     build_command_index,
@@ -3544,6 +3545,23 @@ async def _workspace_handler(
     # the existing `is_superuser` check resolved above; non-superusers see
     # the dashboard without the leak that two qa-trial personas flagged as
     # workspace noise (ops_dashboard cycle 120, contact_manager cycle 151).
+    ssr_bodies: dict[str, str] = {}
+    if str(getattr(render_ws_ctx, "stage", "") or "") == "command_center" and fold_count > 0:
+        try:
+            from dazzle.http.runtime.workspace_region_handler import ssr_fold_bodies
+
+            fold_names = [r.name for r in render_ws_ctx.regions[:fold_count]]
+            app = getattr(request, "app", None)
+            ctxs = region_ctxs_for_names(app, render_ws_ctx.name, fold_names)
+            if ctxs:
+                ssr_bodies = await ssr_fold_bodies(request, ctxs)
+        except Exception:
+            logger.warning(
+                "command_center SSR fold failed workspace=%s",
+                getattr(render_ws_ctx, "name", ""),
+                exc_info=True,
+            )
+
     workspace_inner = render_workspace_content_typed(
         workspace=render_ws_ctx,
         catalog=catalog,
@@ -3556,6 +3574,7 @@ async def _workspace_handler(
         # on SSE / poll / lazy-load. Leftover junk omits.
         include_closed=request.query_params.get("include_closed", ""),
         as_of=request.query_params.get("as_of", ""),
+        ssr_bodies=ssr_bodies or None,
     )
 
     # Fragment targeting: return only the workspace content.

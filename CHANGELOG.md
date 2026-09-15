@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.4] - 2026-09-15
+
+### Added
+- **Command-center first paint SSRs the fold (#1677).** `stage: command_center` renders the first `fold_count` region bodies (default 3) into the workspace HTML — metric numbers and queues are in the document with JS off. Those cards keep `hx-get` for SSE/poll refresh but drop `hx-trigger="load"`. Below-the-fold cards stay skeleton + `intersect once`.
+
 ## [0.114.3] - 2026-09-15
 
 ### Changed

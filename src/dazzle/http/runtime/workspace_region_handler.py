@@ -22,6 +22,7 @@ sibling module; every boundary is a named dataclass — grep
 ``RegionItemsResult`` / ``RegionRenderInputs`` to find every reader.
 """
 
+import asyncio
 import html as _html_mod
 import logging
 from typing import Any
@@ -140,6 +141,58 @@ def _build_region_response(
         )
         return HTMLResponse(content=replacement, headers={"HX-Reswap": "outerHTML"})
     return HTMLResponse(content=html_body)
+
+
+async def render_region_body_html(
+    request: Any,
+    ctx: WorkspaceRegionContext,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    sort: str | None = None,
+    dir: str = "asc",
+) -> str:
+    """Six-phase region body HTML without wrapping an HTTP response (#1677)."""
+    user_ctx = await resolve_request_user_context(request, ctx)
+    fetched = await fetch_region_items(request, ctx, user_ctx, sort, dir, page, page_size)
+    if ctx.precomputed_columns:
+        columns = compute_columns_for_persona(
+            ctx.precomputed_columns,
+            list(user_ctx.auth_ctx_for_filters.roles) if user_ctx.auth_ctx_for_filters else [],
+        )
+    elif fetched.items:
+        columns = [
+            {
+                "key": k,
+                "label": k.replace("_", " ").title(),
+                "type": "text",
+                "sortable": True,
+            }
+            for k in fetched.items[0].keys()
+            if k != "id"
+        ]
+    else:
+        columns = []
+    render_inputs = await compute_region_render_inputs(request, ctx, user_ctx, fetched, columns)
+    return await render_region_html(request, ctx, user_ctx, render_inputs, sort, dir)
+
+
+async def ssr_fold_bodies(request: Any, ctxs: list[WorkspaceRegionContext]) -> dict[str, str]:
+    """Render fold region bodies concurrently; a failed region stays a skeleton."""
+
+    async def _one(ctx: WorkspaceRegionContext) -> tuple[str, str]:
+        name = getattr(getattr(ctx, "ctx_region", None), "name", "") or ""
+        try:
+            html = await render_region_body_html(request, ctx)
+            return name, html
+        except Exception:
+            logger.warning("command_center SSR failed for region %s", name, exc_info=True)
+            return name, ""
+
+    if not ctxs:
+        return {}
+    pairs = await asyncio.gather(*(_one(c) for c in ctxs))
+    return {name: html for name, html in pairs if name and html}
 
 
 async def _workspace_region_handler(

@@ -377,12 +377,9 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     # primary signals), rest intersect-once — same thrash class as
     # command_center@1424 / dual_pane@1427.
     "monitor_wall": 4,
-    # command_center: keep eager fold small. Six concurrent region
-    # GETs on load + row hx-preload on multi-queue boards storms
-    # Chromium under nested Playwright (manager_ops trial thrash:
-    # ERR_INSUFFICIENT_RESOURCES / htmx Failed to fetch ×thousands).
-    # First three cards = metrics/strip + primary queues; rest
-    # intersect-once as the operator scrolls.
+    # command_center: keep eager fold small. #1677 SSRs those first
+    # N region bodies into the page HTML (no hx-trigger=load). Rest
+    # stay skeleton + intersect-once as the operator scrolls.
     "command_center": 3,
     # pair_strip: consent / dual-column stories. Four concurrent eager
     # region GETs on first paint still storms nested Playwright under
@@ -876,6 +873,7 @@ def render_workspace_content_typed(
     can_edit_layout: bool = False,
     include_closed: str = "",
     as_of: str = "",
+    ssr_bodies: dict[str, str] | None = None,
 ) -> str:
     """Render the workspace content via the typed-Fragment substrate.
 
@@ -982,6 +980,7 @@ def render_workspace_content_typed(
                 edit_enabled=can_edit_layout,
                 include_closed=include_closed,
                 as_of=as_of,
+                ssr_html=(ssr_bodies or {}).get(r.name, ""),
             )
         )
 

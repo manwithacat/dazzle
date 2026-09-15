@@ -24,7 +24,10 @@ from dazzle.http.runtime.workspace_columns import (
 from dazzle.http.runtime.workspace_columns import (
     build_surface_columns as _build_surface_columns,
 )
-from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
+from dazzle.http.runtime.workspace_context import (
+    WorkspaceRegionContext,
+    register_workspace_region_ctxs,
+)
 from dazzle.http.runtime.workspace_handlers import (
     _workspace_batch_handler,
     _workspace_stats_handler,
@@ -535,6 +538,8 @@ class WorkspaceRouteBuilder:
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
                         tags=["Workspaces"],
                     )(_make_region_route(_region_ctx))
+
+                register_workspace_region_ctxs(app, ws_name, _ws_region_ctxs)
 
                 # dual_pane_flow → master-detail: list rows target the DETAIL
                 # region fragment (?id=) instead of full-page entity drill.
