@@ -41,6 +41,8 @@ from dazzle.core.ir import AggregateRef, BucketRef, ConditionExpr, ConditionValu
 from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
 from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
+from dazzle.http.runtime.aggregate import Dimension, MeasureWindow, resolve_fk_display_field
+from dazzle.http.runtime.aggregate_expression import compile_aggregate_expression
 from dazzle.http.runtime.predicate_compiler import (
     CurrentTenantRef,
     CurrentUserRef,
@@ -379,10 +381,6 @@ async def _fetch_scalar_metric(
         measures: dict[str, str] = {metric_name: ""}
         measure_expressions: dict[str, tuple[str, list[Any]]] | None = None
         if expression is not None:
-            from dazzle.http.runtime.aggregate_expression import (
-                compile_aggregate_expression,
-            )
-
             expr_sql, expr_params = compile_aggregate_expression(
                 expression,
                 placeholder=agg_repo.db.placeholder,
@@ -405,6 +403,83 @@ async def _fetch_scalar_metric(
     except Exception:
         logger.warning("Failed to compute aggregate metric %s", metric_name, exc_info=True)
     return metric_name, 0
+
+
+def _window_group_key(ref: AggregateRef, agg_entity: str) -> tuple[str, str, str]:
+    """Group windowed metrics that can share one CTE + SELECT (#1674)."""
+    assert ref.window is not None
+    if ref.where is None:
+        where_key = ""
+    elif isinstance(ref.where, ConditionExpr):
+        where_key = ref.where.model_dump_json()
+    else:
+        where_key = str(ref.where)
+    return (agg_entity, ref.window.on, where_key)
+
+
+async def _fetch_windowed_metric_group(
+    items: list[tuple[str, AggregateRef]],
+    agg_repo: Any,
+    scope_filters: dict[str, Any] | None,
+    *,
+    source_entity: str,
+) -> dict[str, Any]:
+    """Fetch every windowed metric in ``items`` in one ``Repository.aggregate`` call.
+
+    ``items`` share entity + window ``on`` + where (see ``_window_group_key``).
+    The CTE ``MAX(on)`` and every measure then share the same scope predicate.
+    """
+    if not items:
+        return {}
+    _, first_ref = items[0]
+    assert first_ref.window is not None
+    entity_spec = getattr(agg_repo, "entity_spec", None)
+    bucket_cast = _resolve_bucket_cast(entity_spec, first_ref.window.on)
+    measures: dict[str, str] = {}
+    measure_windows: dict[str, MeasureWindow] = {}
+    measure_expressions: dict[str, tuple[str, list[Any]]] | None = None
+    for metric_name, ref in items:
+        assert ref.window is not None
+        measure_windows[metric_name] = MeasureWindow(
+            kind=ref.window.kind,
+            on=ref.window.on,
+            bucket_cast=bucket_cast,
+        )
+        if ref.expression is not None:
+            expr_sql, expr_params = compile_aggregate_expression(
+                ref.expression,
+                placeholder=agg_repo.db.placeholder,
+                table_alias=ref.entity,
+            )
+            measures[metric_name] = ref.func
+            if measure_expressions is None:
+                measure_expressions = {}
+            measure_expressions[metric_name] = (expr_sql, expr_params)
+        elif ref.func == "count":
+            measures[metric_name] = "count"
+        else:
+            measures[metric_name] = f"{ref.func}:{ref.column}"
+    try:
+        agg_filters = _build_aggregate_filters(
+            first_ref.where, scope_filters, agg_repo, source_entity
+        )
+        buckets = await agg_repo.aggregate(
+            dimensions=[],
+            measures=measures,
+            filters=agg_filters,
+            limit=1,
+            measure_expressions=measure_expressions,
+            measure_windows=measure_windows,
+        )
+        if buckets:
+            return {name: buckets[0].measures.get(name, 0) for name, _ in items}
+    except Exception:
+        logger.warning(
+            "Failed to compute windowed aggregate metrics %s",
+            [n for n, _ in items],
+            exc_info=True,
+        )
+    return {name: 0 for name, _ in items}
 
 
 def _resolve_fk_target_spec(
@@ -477,8 +552,6 @@ async def _compute_pivot_buckets(
     """
     if not aggregates or not repositories or not source_entity:
         return [], []
-
-    from dazzle.http.runtime.aggregate import Dimension, resolve_fk_display_field
 
     # Only the simple case (count(<source_entity>) with no current_bucket)
     # routes through the pivot fast path. Other shapes fall through.
@@ -628,8 +701,6 @@ async def _aggregate_via_groupby(
     ``value`` (first measure, legacy alias) plus ``metrics: {<name>:
     <value>, ...}`` for templates that want all of them.
     """
-    from dazzle.http.runtime.aggregate import Dimension, resolve_fk_display_field
-
     if not measures:
         return []
 
@@ -1453,11 +1524,31 @@ async def _compute_aggregate_metrics(
     async_tasks: list[tuple[str, Any]] = []
     sync_results: dict[str, Any] = {}
     metric_order: list[str] = []
+    windowed_groups: dict[tuple[str, str, str], list[tuple[str, AggregateRef]]] = {}
+    windowed_group_meta: dict[tuple[str, str, str], tuple[Any, dict[str, Any] | None, str]] = {}
 
     for metric_name, ref in aggregates.items():
         metric_order.append(metric_name)
         if not isinstance(ref, AggregateRef):
             sync_results[metric_name] = 0
+            continue
+        if ref.window is not None:
+            agg_entity = ref.entity if ref.entity is not None else source_entity
+            if agg_entity is None:
+                sync_results[metric_name] = 0
+                continue
+            agg_repo = repositories.get(agg_entity) if repositories else None
+            if agg_repo is None:
+                sync_results[metric_name] = 0
+                continue
+            metric_scope = _scope_filters_for_aggregate(
+                scope_filters,
+                region_source=source_entity,
+                aggregate_entity=agg_entity,
+            )
+            key = _window_group_key(ref, agg_entity)
+            windowed_groups.setdefault(key, []).append((metric_name, ref))
+            windowed_group_meta[key] = (agg_repo, metric_scope, agg_entity)
             continue
         if ref.func == "count":
             entity_name = ref.entity or ""
@@ -1522,7 +1613,27 @@ async def _compute_aggregate_metrics(
                 )
             )
 
-    # Fire all async queries concurrently
+    # Fire all async queries concurrently. Windowed groups (#1674) share one
+    # CTE + SELECT per (entity, on, where); leftover metrics stay one-per-call.
+    if windowed_groups:
+        grouped = await asyncio.gather(
+            *(
+                _fetch_windowed_metric_group(
+                    items,
+                    windowed_group_meta[key][0],
+                    windowed_group_meta[key][1],
+                    source_entity=windowed_group_meta[key][2],
+                )
+                for key, items in windowed_groups.items()
+            ),
+            return_exceptions=True,
+        )
+        for result in grouped:
+            if isinstance(result, dict):
+                sync_results.update(result)
+            elif isinstance(result, BaseException):
+                logger.warning("Windowed aggregate metric query failed: %s", result)
+
     if async_tasks:
         results = await asyncio.gather(*(coro for _, coro in async_tasks), return_exceptions=True)
         for result in results:

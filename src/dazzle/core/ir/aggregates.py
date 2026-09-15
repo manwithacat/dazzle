@@ -36,6 +36,12 @@ from .conditions import ConditionExpr
 
 AggregateFunc = Literal["count", "sum", "avg", "min", "max"]
 
+# Named last-reading-relative windows for scalar KPIs (#1674).
+# Bounds are computed from ``max(<on>)`` in the same scope-filtered
+# query — never from ``now()``. ``week_from_monday`` is the UK
+# production week (ISO Monday), not locale.week_start.
+AggregateWindowKind = Literal["last_complete_day", "week_from_monday", "previous_week"]
+
 # Whitelisted cast targets. The runtime compiler emits these verbatim into
 # the SQL, so the set is closed (Postgres types only). Adding a new entry
 # is a deliberate ADR-class decision — not a parser ergonomics tweak.
@@ -184,6 +190,29 @@ class AggregateExpr(BaseModel):
         return self.function_name is not None
 
 
+class AggregateWindow(BaseModel):
+    """A last-reading-relative time window on an aggregate call (#1674).
+
+    ``kind`` selects the bound; ``on`` is the timestamp/date column whose
+    ``max()`` is the as-of instant. Compiled to a CTE + per-measure
+    ``CASE WHEN`` inside :func:`dazzle.http.runtime.aggregate.build_aggregate_sql`
+    so several windowed metrics still share one scope-safe round-trip.
+    """
+
+    kind: AggregateWindowKind
+    on: str
+
+    model_config = ConfigDict(frozen=True)
+
+    @model_validator(mode="after")
+    def _check_on_field(self) -> AggregateWindow:
+        if "." in self.on:
+            raise ValueError(
+                f"window on= must be a single field name, not a dotted path: {self.on!r}"
+            )
+        return self
+
+
 class AggregateRef(BaseModel):
     """A single aggregate computation.
 
@@ -216,6 +245,11 @@ class AggregateRef(BaseModel):
     ``parse_aggregate_where`` indirection retires once every consumer reads
     typed ``where``.
 
+    ``window`` (#1674) is an optional last-reading-relative bound
+    (``week_from_monday`` / ``previous_week`` / ``last_complete_day``)
+    against ``max(<on>)`` in the same scope. Compiled by
+    :class:`dazzle.http.runtime.aggregate.MeasureWindow`.
+
     Invariants enforced by Pydantic at construction:
 
     - ``count`` requires either ``entity`` or no positional argument
@@ -233,6 +267,7 @@ class AggregateRef(BaseModel):
     column: str | None = None
     expression: AggregateExpr | None = None
     where: ConditionExpr | None = None
+    window: AggregateWindow | None = None
 
     model_config = ConfigDict(frozen=True)
 

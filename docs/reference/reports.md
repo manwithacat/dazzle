@@ -109,6 +109,7 @@ No gap-filling in v0.60.0 — days with zero rows don't appear in the result. Li
 | `avg:<col>` | `AVG("col")` | |
 | `min:<col>` | `MIN("col")` | |
 | `max:<col>` | `MAX("col")` | |
+| `ratio:<num>:<den>` | `SUM(num) / NULLIF(SUM(den), 0)` | Elapsed-hours kW (#1674); prefer derived `kwh / hours` in DSL |
 
 Correlated subqueries like `count(Child where parent = current_bucket)` go through a **slow path** (per-bucket queries) and are subject to N+1 cost. Prefer same-entity measures when you can.
 
@@ -139,6 +140,32 @@ aggregate:
 Operators `+ - * /`, parentheses, number literals, and the functions `round`, `abs`, `nullif`, `coalesce`. References resolve strictly to *earlier* names in the block (forward references are a parse error naming what *is* declared); a derived metric may reference another derived metric. Evaluation happens **in Python after the scope-filtered aggregate queries return** — zero extra queries, so the scope-safety contract above is untouched. Division by zero yields 0 (a ratio over an empty set reads as 0%, not an error).
 
 Derived metrics work on KPI tiles (`display: metrics`/`summary`) **and** per bucket in grouped charts (`group_by:` + `display: bar_chart` etc.) — each bucket's derived values compute over that bucket's own metric values. `dazzle db explain-aggregate` shows derived expressions as the Python post-aggregation step (pass them in `--measures`, e.g. `-m 'total=count,done=count,rate=done/total*100'`).
+
+## Last-reading windows (#1674)
+
+Meter-book boards (BioChart `daily_board`) need numeric KPIs relative to **the last reading**, not `now()`, and a UK production week that starts Monday.
+
+```dsl
+week_energy:
+  source: Reading
+  display: metrics
+  aggregate:
+    kwh: sum(Reading.value_delta window week_from_monday on taken_at)
+    elapsed_h: sum(Reading.elapsed_hours window week_from_monday on taken_at)
+    avg_kw: kwh / elapsed_h
+    last_week_kwh: sum(Reading.value_delta window previous_week on taken_at)
+    last_day_kwh: sum(Reading.value_delta window last_complete_day on taken_at)
+```
+
+| Kind | Bounds (as-of = `max(<on>)` in the same scope) |
+|---|---|
+| `last_complete_day` | Calendar day of the last reading (the last day in the book, not wall-clock yesterday) |
+| `week_from_monday` | Monday 00:00 of that week → last reading (partial week, inclusive) |
+| `previous_week` | Previous Monday 00:00 → this week's Monday 00:00 (complete Mon–Sun) |
+
+Windows compile to one `WITH _anchor AS (SELECT MAX(<on>) …)` CTE plus per-measure `CASE WHEN` so this-week kWh, elapsed hours, and last-week kWh still share a single scope-safe round-trip. Average kW is `sum(value_delta) / sum(elapsed_hours)` via a derived metric — not `avg(value_delta)` and not `/ 24`. `date_trunc('week')` is ISO Monday (Postgres); this does **not** follow `locale.week_start`.
+
+`where` still works inside the same call (`sum(Reading.value_delta where meter_kind = export window week_from_monday on taken_at)`). Metrics that share entity + `on` + `where` batch; a different `where` is a second query.
 
 ## Scope
 

@@ -17,6 +17,8 @@ from .aggregates import (
     AggregateExpr,
     AggregateFunc,
     AggregateRef,
+    AggregateWindow,
+    AggregateWindowKind,
     DerivedMetric,
     DerivedMetricExpr,
 )
@@ -874,6 +876,8 @@ __all__ = [
     "AggregateExpr",
     "AggregateFunc",
     "AggregateRef",
+    "AggregateWindow",
+    "AggregateWindowKind",
     "DerivedMetric",
     "DerivedMetricExpr",
     # Fidelity Scoring

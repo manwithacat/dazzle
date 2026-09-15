@@ -13,6 +13,9 @@ matching the call shapes:
   (#1152). Examples:
       ``avg(score::float / max_score)``
       ``avg(MarkingResult.score::float / nullif(MarkingResult.max_score, 0))``
+- ``sum(column window week_from_monday on taken_at)`` — last-reading-relative
+  window (#1674). ``where`` and ``window`` compose:
+      ``sum(Reading.value_delta where meter_kind = export window previous_week on taken_at)``
 
 Same shapes also apply to ``sum`` / ``min`` / ``max``. ``count`` rejects
 both column and expression forms (caught by :class:`AggregateRef`'s
@@ -27,10 +30,16 @@ from typing import TYPE_CHECKING, Any, cast
 
 from .. import ir
 from ..errors import make_parse_error
-from ..ir.aggregates import AggregateBinaryOp, DerivedFunctionName
+from ..ir.aggregates import AggregateBinaryOp, AggregateWindowKind, DerivedFunctionName
 from ..lexer import TokenType
 
 _AGGREGATE_FUNCS: frozenset[str] = frozenset({"count", "sum", "avg", "min", "max"})
+
+# Last-reading-relative window kinds (#1674). Mirrors
+# :data:`dazzle.core.ir.aggregates.AggregateWindowKind`.
+_WINDOW_KINDS: frozenset[str] = frozenset(
+    {"last_complete_day", "week_from_monday", "previous_week"}
+)
 
 # Aggregate function names are reserved keywords in the lexer; each has its
 # own TokenType. The helpers below accept either the dedicated token type
@@ -104,6 +113,7 @@ class AggregateParserMixin:
         column: str | None = None
         expression: ir.AggregateExpr | None = None
         where: ir.ConditionExpr | None = None
+        window: ir.AggregateWindow | None = None
 
         if self.match(TokenType.RPAREN):
             tok = self.current_token()
@@ -150,6 +160,37 @@ class AggregateParserMixin:
             self.advance()  # consume `where`
             where = self.parse_condition_expr()
 
+        # Optional `window <kind> on <field>` (#1674) — last-reading-relative
+        # KPI window. Kind is a closed set; `on` is the timestamp/date column
+        # whose max() is the as-of instant.
+        if self.match(TokenType.WINDOW):
+            window_tok = self.current_token()
+            self.advance()
+            kind_tok = self.expect_identifier_or_keyword()
+            kind = kind_tok.value
+            if kind not in _WINDOW_KINDS:
+                raise make_parse_error(
+                    f"unknown aggregate window {kind!r}; expected one of "
+                    f"{', '.join(sorted(_WINDOW_KINDS))}",
+                    self.file,
+                    kind_tok.line,
+                    kind_tok.column,
+                )
+            if not self.match(TokenType.ON):
+                raise make_parse_error(
+                    "expected 'on <field>' after window kind "
+                    "(e.g. window week_from_monday on taken_at)",
+                    self.file,
+                    window_tok.line,
+                    window_tok.column,
+                )
+            self.advance()  # consume `on`
+            on_tok = self.expect_identifier_or_keyword()
+            window = ir.AggregateWindow(
+                kind=cast(AggregateWindowKind, kind),
+                on=on_tok.value,
+            )
+
         self.expect(TokenType.RPAREN)
 
         return ir.AggregateRef(
@@ -158,6 +199,7 @@ class AggregateParserMixin:
             column=column,
             expression=expression,
             where=where,
+            window=window,
         )
 
     def peek_is_aggregate_call(self) -> bool:

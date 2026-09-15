@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 373 BaseModels, 151 Enums, 23 other (functions / typealiases / constants)
+# Counts: 374 BaseModels, 151 Enums, 24 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -80,6 +80,13 @@ ir_class: AggregateRef
     - entity: str | None = None
     - expression: AggregateExpr | None = None
     - where: ConditionExpr | None = None
+    - window: AggregateWindow | None = None
+
+ir_class: AggregateWindow
+  required:
+    - kind: Literal[last_complete_day, week_from_monday, previous_week]
+    - on: str
+  optional: (none)
 
 ir_class: AnalyticsConsentSpec
   required: (none)
@@ -4725,6 +4732,7 @@ category: constant
 
 category: function
   - AggregateFunc (callable, type=_LiteralGenericAlias)
+  - AggregateWindowKind (callable, type=_LiteralGenericAlias)
   - AtomicFlowStep (callable, type=_AnnotatedAlias)
   - DateExpr (callable, type=_AnnotatedAlias)
   - ScopePredicate (callable, type=_AnnotatedAlias)

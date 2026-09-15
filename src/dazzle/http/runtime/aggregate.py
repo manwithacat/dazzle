@@ -50,6 +50,13 @@ _NULLARY_MEASURES: dict[str, str] = {"count": "COUNT(*)"}
 # Aggregate measures of the form `<op>:<column>`.
 _UNARY_MEASURES: frozenset[str] = frozenset({"sum", "avg", "min", "max"})
 
+# Last-reading-relative window kinds (#1674). Closed set — never interpolate
+# a user string into the SQL bound expressions.
+WindowKind = Literal["last_complete_day", "week_from_monday", "previous_week"]
+_VALID_WINDOW_KINDS: frozenset[str] = frozenset(
+    {"last_complete_day", "week_from_monday", "previous_week"}
+)
+
 # Time-bucket granularities. Whitelist — NEVER interpolate user input into
 # the date_trunc unit string; PostgreSQL treats the unit as a literal but
 # the typing below also blocks any other value reaching build_aggregate_sql.
@@ -124,6 +131,33 @@ class Dimension:
         return self.truncate is not None
 
 
+@dataclass(frozen=True)
+class MeasureWindow:
+    """Last-reading-relative window applied to one measure (#1674).
+
+    Bounds are computed from ``MAX(<on>)`` in a CTE that shares the
+    query's scope predicate. ``bucket_cast`` is the same TEXT-storage
+    cast Dimension uses for ``date_trunc`` (#1514).
+    """
+
+    kind: WindowKind
+    on: str
+    bucket_cast: str | None = "timestamptz"
+
+    def __post_init__(self) -> None:
+        if self.kind not in _VALID_WINDOW_KINDS:
+            raise ValueError(
+                f"Invalid window kind {self.kind!r}; expected one of {sorted(_VALID_WINDOW_KINDS)}"
+            )
+        if self.bucket_cast is not None and self.bucket_cast not in _VALID_BUCKET_CASTS:
+            raise ValueError(
+                f"Invalid bucket cast {self.bucket_cast!r}; "
+                f"expected one of {sorted(_VALID_BUCKET_CASTS)}"
+            )
+        if "." in self.on:
+            raise ValueError(f"window on= must be a single field name, not {self.on!r}")
+
+
 @dataclass
 class AggregateBucket:
     """One row of an aggregate result.
@@ -162,15 +196,91 @@ def measure_to_sql(measure: str) -> str | None:
         ``"count"`` → ``"COUNT(*)"``
         ``"sum:score"`` → ``"SUM(\"score\")"``
         ``"avg:total_minor"`` → ``"AVG(\"total_minor\")"``
+        ``"ratio:kwh:hours"`` → ``"(SUM(\"kwh\") / NULLIF(SUM(\"hours\"), 0))"``
         ``"distinct_count:foo"`` → ``None``  (not supported in v2)
     """
     if measure in _NULLARY_MEASURES:
         return _NULLARY_MEASURES[measure]
     if ":" in measure:
-        op, _, col = measure.partition(":")
-        if op in _UNARY_MEASURES and col:
-            return f"{op.upper()}({quote_identifier(col)})"
+        op, _, rest = measure.partition(":")
+        if op == "ratio":
+            num, _, den = rest.partition(":")
+            if num and den and ":" not in num and ":" not in den:
+                return f"(SUM({quote_identifier(num)}) / NULLIF(SUM({quote_identifier(den)}), 0))"
+        if op in _UNARY_MEASURES and rest:
+            return f"{op.upper()}({quote_identifier(rest)})"
     return None
+
+
+def _window_predicate_sql(src: str, window: MeasureWindow) -> str:
+    """SQL boolean for one last-reading-relative window vs ``_anchor.last_at``.
+
+    ``date_trunc('week', ...)`` is ISO Monday (Postgres). Casts are
+    whitelist-validated on :class:`MeasureWindow` construction.
+    """
+    col_q = quote_identifier(window.on)
+    cast_suffix = f"::{window.bucket_cast}" if window.bucket_cast else ""
+    src_col = f"{src}.{col_q}{cast_suffix}"
+    last = "_anchor.last_at"
+    if window.kind == "last_complete_day":
+        return f"date_trunc('day', {src_col}) = date_trunc('day', {last})"
+    if window.kind == "week_from_monday":
+        return f"{src_col} >= date_trunc('week', {last}) AND {src_col} <= {last}"
+    # previous_week — previous ISO Mon–Sun, exclusive of this week's Monday.
+    return (
+        f"{src_col} >= date_trunc('week', {last}) - interval '7 days' "
+        f"AND {src_col} < date_trunc('week', {last})"
+    )
+
+
+def _windowed_measure_sql(expr: str, pred: str) -> str | None:
+    """Wrap a measure spec so it only counts rows matching ``pred``."""
+    if expr.startswith("ratio:"):
+        _, _, rest = expr.partition(":")
+        num, _, den = rest.partition(":")
+        if not (num and den) or ":" in num or ":" in den:
+            return None
+        n = quote_identifier(num)
+        d = quote_identifier(den)
+        return (
+            f"(SUM(CASE WHEN {pred} THEN {n} END) / NULLIF(SUM(CASE WHEN {pred} THEN {d} END), 0))"
+        )
+    sql = measure_to_sql(expr)
+    if sql is None:
+        return None
+    func, _, rest = sql.partition("(")
+    inner = rest[:-1] if rest.endswith(")") else rest
+    if inner == "*":
+        return f"SUM(CASE WHEN {pred} THEN 1 ELSE 0 END)"
+    return f"{func}(CASE WHEN {pred} THEN {inner} END)"
+
+
+def _anchor_cte_sql(
+    *,
+    src: str,
+    measure_windows: dict[str, MeasureWindow],
+    where_sql: str,
+    where_params: list[Any],
+) -> tuple[str, list[Any]]:
+    """``WITH _anchor AS (SELECT MAX(on) ...)`` or empty when no windows.
+
+    Every window in the query must share the same ``on`` column — the
+    caller groups metrics by ``(entity, on)`` before calling.
+    """
+    if not measure_windows:
+        return "", []
+    ons = {w.on for w in measure_windows.values()}
+    if len(ons) != 1:
+        raise ValueError(
+            f"build_aggregate_sql measure_windows must share one `on` field; got {sorted(ons)}"
+        )
+    window = next(iter(measure_windows.values()))
+    col_q = quote_identifier(window.on)
+    cast_suffix = f"::{window.bucket_cast}" if window.bucket_cast else ""
+    inner = f"SELECT MAX({src}.{col_q}{cast_suffix}) AS last_at FROM {src}"
+    if where_sql:
+        inner = f"{inner} {where_sql}"
+    return f"WITH _anchor AS ({inner})", list(where_params)
 
 
 def build_aggregate_sql(
@@ -182,6 +292,7 @@ def build_aggregate_sql(
     filters: dict[str, Any] | None,
     limit: int = 200,
     measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
+    measure_windows: dict[str, MeasureWindow] | None = None,
 ) -> tuple[str, list[Any]]:
     """Compose the multi-dimension GROUP BY SELECT statement.
 
@@ -229,6 +340,7 @@ def build_aggregate_sql(
             filters=filters,
             limit=limit,
             measure_expressions=measure_expressions,
+            measure_windows=measure_windows,
         )
 
 
@@ -241,6 +353,7 @@ def _build_aggregate_sql_impl(
     filters: dict[str, Any] | None,
     limit: int = 200,
     measure_expressions: dict[str, tuple[str, list[Any]]] | None = None,
+    measure_windows: dict[str, MeasureWindow] | None = None,
 ) -> tuple[str, list[Any]]:
     src = quote_identifier(table_name)
 
@@ -256,7 +369,12 @@ def _build_aggregate_sql_impl(
     measure_sql_parts: list[str] = []
     measure_params: list[Any] = []
     measure_expressions = measure_expressions or {}
+    measure_windows = measure_windows or {}
+    window_preds: dict[str, str] = {}
+    for metric_name, window in measure_windows.items():
+        window_preds[metric_name] = _window_predicate_sql(src, window)
     for metric_name, expr in measures.items():
+        pred = window_preds.get(metric_name)
         if metric_name in measure_expressions:
             # L3: outer function name + precompiled inner SQL fragment.
             # ``expr`` here carries the aggregate function (``avg`` /
@@ -265,6 +383,8 @@ def _build_aggregate_sql_impl(
             func = expr.lower()
             if func in _UNARY_MEASURES:
                 inner_sql, inner_params = measure_expressions[metric_name]
+                if pred is not None:
+                    inner_sql = f"CASE WHEN {pred} THEN {inner_sql} END"
                 measure_sql_parts.append(
                     f"{func.upper()}({inner_sql}) AS {quote_identifier(metric_name)}"
                 )
@@ -273,24 +393,39 @@ def _build_aggregate_sql_impl(
             # Fall through — unrecognised L3 outer func is silently dropped,
             # mirroring the legacy measure_to_sql behaviour.
             continue
-        sql = measure_to_sql(expr)
+        sql = _windowed_measure_sql(expr, pred) if pred is not None else measure_to_sql(expr)
         if sql is None:
             continue
         measure_sql_parts.append(f"{sql} AS {quote_identifier(metric_name)}")
     if not measure_sql_parts:
         return "", []
 
+    cte_sql, cte_params = _anchor_cte_sql(
+        src=src,
+        measure_windows=measure_windows,
+        where_sql=where_sql,
+        where_params=where_params,
+    )
+    from_src = f"{src}, _anchor" if cte_sql else src
+    # CTE already bound the WHERE params; the outer WHERE reuses the same
+    # clause so we append them again after measure params.
+    trailing_where_params = list(where_params)
+    leading_params = list(cte_params) + measure_params
+
     # Scalar aggregate path — no dimensions, no GROUP BY (#904). One
     # row containing the measure values for the whole filtered table.
     if not dimensions:
         sql_parts = [
             f"SELECT {', '.join(measure_sql_parts)}",
-            f"FROM {src}",
+            f"FROM {from_src}",
         ]
         if where_sql:
             sql_parts.append(where_sql)
         sql_parts.append(f"LIMIT {int(limit)}")
-        return " ".join(sql_parts), measure_params + where_params
+        sql = " ".join(sql_parts)
+        if cte_sql:
+            sql = f"{cte_sql} {sql}"
+        return sql, leading_params + trailing_where_params
 
     # Per-dimension SELECT + GROUP BY + ORDER BY parts. Indexed aliases
     # for FK joins guard against duplicate-target collisions.
@@ -334,7 +469,7 @@ def _build_aggregate_sql_impl(
 
     select_parts.extend(measure_sql_parts)
 
-    from_clause = f"FROM {src}"
+    from_clause = f"FROM {from_src}"
     if join_parts:
         from_clause += " " + " ".join(join_parts)
 
@@ -345,7 +480,10 @@ def _build_aggregate_sql_impl(
     sql_parts.append("ORDER BY " + ", ".join(order_parts))
     sql_parts.append(f"LIMIT {int(limit)}")
 
-    return " ".join(sql_parts), measure_params + where_params
+    sql = " ".join(sql_parts)
+    if cte_sql:
+        sql = f"{cte_sql} {sql}"
+    return sql, leading_params + trailing_where_params
 
 
 def rows_to_buckets(

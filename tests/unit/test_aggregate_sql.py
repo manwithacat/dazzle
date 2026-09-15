@@ -25,6 +25,7 @@ import pytest
 from dazzle.http.runtime.aggregate import (
     AggregateBucket,
     Dimension,
+    MeasureWindow,
     build_aggregate_sql,
     measure_to_sql,
     resolve_fk_display_field,
@@ -49,6 +50,9 @@ def test_measure_to_sql_combined() -> None:
     assert measure_to_sql("avg:score") == 'AVG("score")'
     assert measure_to_sql("min:score") == 'MIN("score")'
     assert measure_to_sql("max:score") == 'MAX("score")'
+    assert measure_to_sql("ratio:value_delta:elapsed_hours") == (
+        '(SUM("value_delta") / NULLIF(SUM("elapsed_hours"), 0))'
+    )
     # Unsupported/malformed
     assert measure_to_sql("median:score") is None
     assert measure_to_sql("count:score") is None  # count takes no arg
@@ -761,3 +765,131 @@ class TestBuildAggregateSQLTimeBucket:
         assert '"Alert"."tenant_id" = %s' in sql
         assert params == ["t-1"]
         assert "date_trunc('day'," in sql
+
+
+# ---------------------------------------------------------------------------
+# #1674 last-reading windows + ratio-of-sums
+# ---------------------------------------------------------------------------
+
+
+class TestWindowedMeasures1674:
+    def test_week_from_monday_emits_iso_week_trunc_and_anchor_cte(self) -> None:
+        sql, params = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"kwh": "sum:value_delta"},
+            filters={"__scope_predicate": ('"Reading"."tenant_id" = %s', ["t-1"])},
+            measure_windows={
+                "kwh": MeasureWindow(kind="week_from_monday", on="taken_at"),
+            },
+        )
+        assert sql.startswith(
+            'WITH _anchor AS (SELECT MAX("Reading"."taken_at"::timestamptz) AS last_at'
+        )
+        assert 'FROM "Reading", _anchor' in sql
+        assert "date_trunc('week', _anchor.last_at)" in sql
+        assert '"Reading"."taken_at"::timestamptz >= date_trunc(\'week\', _anchor.last_at)' in sql
+        assert '"Reading"."taken_at"::timestamptz <= _anchor.last_at' in sql
+        assert "SUM(CASE WHEN" in sql
+        assert 'THEN "value_delta" END) AS "kwh"' in sql
+        # CTE WHERE + outer WHERE share the same scope bind.
+        assert params == ["t-1", "t-1"]
+        assert '"Reading"."tenant_id" = %s' in sql
+
+    def test_previous_week_is_exclusive_of_this_monday(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"kwh": "sum:value_delta"},
+            filters=None,
+            measure_windows={
+                "kwh": MeasureWindow(kind="previous_week", on="taken_at"),
+            },
+        )
+        assert "interval '7 days'" in sql
+        assert '"Reading"."taken_at"::timestamptz < date_trunc(\'week\', _anchor.last_at)' in sql
+
+    def test_last_complete_day_matches_calendar_day_of_max(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"kwh": "sum:value_delta"},
+            filters=None,
+            measure_windows={
+                "kwh": MeasureWindow(kind="last_complete_day", on="taken_at"),
+            },
+        )
+        assert 'date_trunc(\'day\', "Reading"."taken_at"::timestamptz)' in sql
+        assert "= date_trunc('day', _anchor.last_at)" in sql
+
+    def test_ratio_of_sums_in_one_select(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"avg_kw": "ratio:value_delta:elapsed_hours"},
+            filters=None,
+        )
+        assert ('(SUM("value_delta") / NULLIF(SUM("elapsed_hours"), 0)) AS "avg_kw"') in sql
+        assert "WITH _anchor" not in sql
+
+    def test_windowed_ratio_wraps_both_sums(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={"avg_kw": "ratio:value_delta:elapsed_hours"},
+            filters=None,
+            measure_windows={
+                "avg_kw": MeasureWindow(kind="week_from_monday", on="taken_at"),
+            },
+        )
+        assert "SUM(CASE WHEN" in sql
+        assert 'THEN "value_delta" END)' in sql
+        assert 'THEN "elapsed_hours" END)' in sql
+        assert "NULLIF" in sql
+        assert "date_trunc('week'" in sql
+
+    def test_this_week_and_last_week_share_one_cte(self) -> None:
+        sql, _ = build_aggregate_sql(
+            table_name="Reading",
+            placeholder_style="%s",
+            dimensions=[],
+            measures={
+                "this_week": "sum:value_delta",
+                "last_week": "sum:value_delta",
+                "hours": "sum:elapsed_hours",
+            },
+            filters=None,
+            measure_windows={
+                "this_week": MeasureWindow(kind="week_from_monday", on="taken_at"),
+                "last_week": MeasureWindow(kind="previous_week", on="taken_at"),
+                "hours": MeasureWindow(kind="week_from_monday", on="taken_at"),
+            },
+        )
+        assert sql.count("WITH _anchor") == 1
+        assert sql.count("date_trunc('week'") >= 2
+        assert 'AS "this_week"' in sql
+        assert 'AS "last_week"' in sql
+        assert 'AS "hours"' in sql
+
+    def test_mixed_on_fields_rejected(self) -> None:
+        with pytest.raises(ValueError, match="share one `on` field"):
+            build_aggregate_sql(
+                table_name="Reading",
+                placeholder_style="%s",
+                dimensions=[],
+                measures={"a": "sum:value_delta", "b": "sum:value_delta"},
+                filters=None,
+                measure_windows={
+                    "a": MeasureWindow(kind="week_from_monday", on="taken_at"),
+                    "b": MeasureWindow(kind="week_from_monday", on="created_at"),
+                },
+            )
+
+    def test_invalid_window_kind_rejected(self) -> None:
+        with pytest.raises(ValueError, match="Invalid window kind"):
+            MeasureWindow(kind="iso_week", on="taken_at")  # type: ignore[arg-type]

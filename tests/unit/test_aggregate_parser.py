@@ -79,6 +79,48 @@ def test_avg_cross_entity_with_where() -> None:
     assert r.where is not None
 
 
+def test_sum_window_week_from_monday() -> None:
+    """#1674: `window <kind> on <field>` after the column (no where)."""
+    r = _parse("sum(value_delta window week_from_monday on taken_at)")
+    assert r.func == "sum"
+    assert r.column == "value_delta"
+    assert r.where is None
+    assert r.window is not None
+    assert r.window.kind == "week_from_monday"
+    assert r.window.on == "taken_at"
+
+
+def test_sum_where_then_window() -> None:
+    """#1674: where and window compose inside the same call."""
+    r = _parse(
+        "sum(Reading.value_delta where meter_kind = export window previous_week on taken_at)"
+    )
+    assert r.entity == "Reading"
+    assert r.column == "value_delta"
+    assert r.where is not None
+    assert r.window is not None
+    assert r.window.kind == "previous_week"
+    assert r.window.on == "taken_at"
+
+
+def test_count_last_complete_day_window() -> None:
+    r = _parse("count(Reading window last_complete_day on taken_at)")
+    assert r.func == "count"
+    assert r.entity == "Reading"
+    assert r.window is not None
+    assert r.window.kind == "last_complete_day"
+
+
+def test_unknown_window_kind_is_parse_error() -> None:
+    with pytest.raises(ParseError, match="unknown aggregate window"):
+        _parse("sum(value_delta window iso_week on taken_at)")
+
+
+def test_window_requires_on_field() -> None:
+    with pytest.raises(ParseError, match="expected 'on <field>'"):
+        _parse("sum(value_delta window week_from_monday)")
+
+
 def test_sum_column() -> None:
     r = _parse("sum(amount)")
     assert r.func == "sum"

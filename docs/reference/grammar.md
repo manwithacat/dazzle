@@ -345,7 +345,9 @@ field_path    ::= IDENT ("." IDENT)* ;
 AGGREGATE_FN  ::= "count" | "sum" | "avg" | "max" | "min"
                 | "days_until" | "days_since" ;
 
-aggregate_call ::= AGGREGATE_FN "(" field_path ("where" condition_expr)? ")" ;
+aggregate_call ::= AGGREGATE_FN "(" field_path ("where" condition_expr)? ("window" window_kind "on" IDENT)? ")" ;
+
+window_kind   ::= "last_complete_day" | "week_from_monday" | "previous_week" ;
 
 (* =============================================================================
    State Machines

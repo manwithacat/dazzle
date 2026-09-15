@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.0] - 2026-09-15
+
+### Added
+- **Windowed numeric KPIs (#1674).** `sum(Reading.value_delta window week_from_monday on taken_at)` (also `previous_week`, `last_complete_day`) bounds scalar metrics from `max(<on>)` in the same scope, not `now()`. Monday is ISO `date_trunc('week')`. Average kW is `kwh / elapsed_h` (derived) or `ratio:num:den` in `Repository.aggregate` — not `avg(value_delta)` and not `/ 24`. Same-entity windows share one CTE round-trip. Docs: `docs/reference/reports.md`.
+
 ### Changed
 - **htmx 4.0.0 GA (#1409).** Vendored core + `hx-preload` / `hx-upsert`
   from npm `htmx.org@4.0.0` (jsDelivr). Pin is still manual:

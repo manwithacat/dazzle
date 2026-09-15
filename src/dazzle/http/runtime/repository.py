@@ -1362,6 +1362,7 @@ class Repository[T: BaseModel]:
         filters: dict[str, Any] | None = None,
         limit: int = 200,
         measure_expressions: dict[str, tuple[str, _list[Any]]] | None = None,
+        measure_windows: dict[str, Any] | None = None,
     ) -> _list[Any]:
         """Run a single multi-dimension GROUP BY aggregation against this entity.
 
@@ -1444,6 +1445,7 @@ class Repository[T: BaseModel]:
                 filters=effective_filters or None,
                 limit=limit,
                 measure_expressions=measure_expressions,
+                measure_windows=measure_windows,
             )
             if not sql:
                 return []
@@ -1475,6 +1477,8 @@ class Repository[T: BaseModel]:
         measures: dict[str, str],
         filters: dict[str, Any] | None = None,
         limit: int = 200,
+        measure_expressions: dict[str, tuple[str, _list[Any]]] | None = None,
+        measure_windows: dict[str, Any] | None = None,
     ) -> tuple[str, _list[Any]]:
         """Return the ``(sql, params)`` ``aggregate(...)`` would execute.
 
@@ -1504,6 +1508,8 @@ class Repository[T: BaseModel]:
             measures=measures,
             filters=filters,
             limit=limit,
+            measure_expressions=measure_expressions,
+            measure_windows=measure_windows,
         )
 
     def _convert_row_dict(

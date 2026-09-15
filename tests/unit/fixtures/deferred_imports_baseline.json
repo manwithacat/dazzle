@@ -213,7 +213,7 @@
   "src/dazzle/http/runtime/tenant/middleware.py": 1,
   "src/dazzle/http/runtime/tenant_middleware.py": 1,
   "src/dazzle/http/runtime/tenant_render_context.py": 1,
-  "src/dazzle/http/runtime/workspace_aggregation.py": 4,
+  "src/dazzle/http/runtime/workspace_aggregation.py": 1,
   "src/dazzle/http/runtime/workspace_card_data.py": 2,
   "src/dazzle/http/runtime/workspace_card_fetchers.py": 2,
   "src/dazzle/http/runtime/workspace_handlers.py": 3,
