@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.2] - 2026-09-15
+
+### Fixed
+- **Parser-corpus IR snapshots for `legal_entity` (#1675).** EntitySpec gained a default `legal_entity: False`; valid AppSpec corpus snapshots were not updated in 0.114.1, so python-tests red'd on main.
+
 ## [0.114.1] - 2026-09-15
 
 ### Added
