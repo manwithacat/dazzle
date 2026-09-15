@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.3] - 2026-09-15
+
+### Changed
+- **Metrics comparison is opt-in (#1678).** Unset `display: metrics` tiles are value+tone only — no inferred `↑ +N vs prior 30 days`. Authors who want a trend declare `delta:` (#884). Empty prior (`prior_val == 0`) omits the arrow even when `delta:` is set. UX-maturity 1c L4 → L2. JSON region fetch now threads `delta:` so `GET /api/workspaces/.../regions/...` matches HTML.
+
 ## [0.114.2] - 2026-09-15
 
 ### Fixed

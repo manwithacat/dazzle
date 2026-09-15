@@ -1510,13 +1510,11 @@ async def _compute_aggregate_metrics(
     (up|down|flat), ``delta_sentiment`` (positive_up|positive_down|neutral),
     and ``delta_period_label`` keys.
 
-    1c default-flip (#1491): when no explicit author ``delta:`` was declared,
-    ``resolve_comparison`` infers a default 30-day period-over-period
-    ``DeltaSpec`` for a ``count()`` tile whose source entity has ``created_at``,
-    so a scalar metric shows comparison context by default instead of a lone
-    KPI. An explicit ``delta:`` always wins (it arrives non-None). Applied at
-    this single shared seam so both the server-render and htmx lazy-fetch paths
-    light up.
+    #1678: comparison is opt-in. ``resolve_comparison`` no longer synthesises
+    a 30-day spark for an unset tile (that lied on ops boards whose book is
+    shorter than the window). An explicit ``delta:`` still wins. Applied at
+    this single shared seam so both the server-render and htmx JSON paths
+    stay in lockstep.
     """
     if delta is None:
         delta = resolve_comparison(aggregates, repositories, source_entity=source_entity)
@@ -1709,6 +1707,10 @@ async def _compute_aggregate_metrics(
                 current_val = float(m["value"])
                 prior_val = float(prior_map[metric_name])
             except (TypeError, ValueError):
+                continue
+            # #1678: never paint ↑ +N vs an empty prior (BioChart 14-day book
+            # vs "prior 30 days" was a vanity spark, not an ops signal).
+            if prior_val == 0:
                 continue
             delta_val = current_val - prior_val
             pct = (delta_val / prior_val * 100.0) if prior_val else 0.0

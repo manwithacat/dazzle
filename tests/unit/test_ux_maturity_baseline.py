@@ -55,9 +55,10 @@ def test_backlog_is_amber_or_red_only_and_leverage_ordered() -> None:
     # (#1491 resolve_comparison → level 3); 3a left when heading action prominence
     # became inferred (#1491 resolve_action_prominence → level 3); 2d left when
     # auto-derived columns began inferring field economy (#1491
-    # resolve_column_economy → level 3). **MILESTONE: with 2d gone the backlog is
-    # EMPTY — every one of the 13 criteria now clears the L3 bar.**
-    assert backlog == [], f"expected an empty backlog (all criteria >= L3), got {backlog}"
+    # resolve_column_economy → level 3). **#1678 returned 1c to L2** — inferred
+    # 30-day sparks lied on ops boards (BioChart week_energy vs empty prior).
+    ids = [b["criterion"] for b in backlog]
+    assert ids == ["1c"], f"expected only 1c in the backlog, got {backlog}"
 
 
 def test_criteria_count_and_ids() -> None:

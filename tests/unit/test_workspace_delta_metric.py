@@ -270,12 +270,12 @@ class TestComputeAggregateMetricsDelta:
         assert m["delta_direction"] == "flat"
         assert m["delta_pct"] == 0.0
 
-    def test_prior_zero_pct_is_zero_not_div_zero(self) -> None:
-        """When prior is 0, pct is set to 0 rather than raising ZeroDivisionError."""
+    def test_prior_zero_omits_arrow_1678(self) -> None:
+        """#1678: empty prior must not paint ↑ +N vs zero."""
         m = self._run(current=5, prior=0)
-        assert m["delta"] == 5
-        assert m["delta_pct"] == 0.0
-        assert m["delta_direction"] == "up"
+        assert "delta" not in m
+        assert "delta_direction" not in m
+        assert "delta_pct" not in m
 
     def test_absurd_pct_omitted_for_demo_seed_noise_1626(self) -> None:
         """#1626 R6/S2: stock vs thin prior must not paint 150–800% theater."""

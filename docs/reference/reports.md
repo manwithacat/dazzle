@@ -141,6 +141,18 @@ Operators `+ - * /`, parentheses, number literals, and the functions `round`, `a
 
 Derived metrics work on KPI tiles (`display: metrics`/`summary`) **and** per bucket in grouped charts (`group_by:` + `display: bar_chart` etc.) — each bucket's derived values compute over that bucket's own metric values. `dazzle db explain-aggregate` shows derived expressions as the Python post-aggregation step (pass them in `--measures`, e.g. `-m 'total=count,done=count,rate=done/total*100'`).
 
+Period-over-period arrows are **opt-in** (#1678). An unset metrics tile is the number and its tone — never `↑ +N vs prior 30 days`. Declare `delta:` when the comparison is real:
+
+```dsl
+aggregate:
+  open: count(Finding where status = open)
+delta:
+  period: 30 days
+  sentiment: warning
+```
+
+If the prior window is empty, the arrow is omitted even with `delta:` set.
+
 ## Last-reading windows (#1674)
 
 Meter-book boards (BioChart `daily_board`) need numeric KPIs relative to **the last reading**, not `now()`, and a UK production week that starts Monday.

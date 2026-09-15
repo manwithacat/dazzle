@@ -168,6 +168,7 @@ async def _fetch_region_json(
             total,
             items,
             scope_filters=_scope_only_filters_batch,
+            delta=getattr(ctx.ctx_region, "delta", None),
             source_entity=ctx.source,  # #888 Phase 1
             tones=getattr(ctx.ctx_region, "tones", None),  # v0.61.65
         )

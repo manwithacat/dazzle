@@ -96,14 +96,12 @@ surfaces/displays/visibility (see "Revisions", below).
   state — a graph sink — is inferred a `success` end-state). Precedence:
   declared > name-guess > SM-terminal > neutral.**
 - **1c — comparison context.** Are lone scalars avoided — is a number shown with
-  trend / rank / distribution / outlier by default? **Level 4 (#1491): an unset
-  `metrics`/`summary` tile infers a 30-day period-over-period delta by default,
-  and the inference **adapts to the aggregate grain** — `count` AND scalar
-  `sum`/`avg`/`min`/`max` (`resolve_comparison` + `_prior_period_task` at the
-  `_compute_aggregate_metrics` seam) — so a revenue-sum or rating-avg tile gets a
-  trend too, not just count tiles. Inferred deltas are `neutral`-sentiment —
-  magnitude/direction without asserting good/bad; declared `semantic:` (1b) owns
-  tone. An explicit `delta:` wins; no `created_at` stays a lone KPI.**
+  trend / rank / distribution / outlier by default? **Level 2 (#1678): comparison
+  is opt-in.** An unset `metrics`/`summary` tile is value+tone only. Authors who
+  want a trend declare `delta:` (#884). #1491 inferred a 30-day spark by default;
+  that lied on ops boards whose book is shorter than the window. Empty prior
+  omits the arrow even when `delta:` is set. The #1470 comparison family remains
+  for richer opt-in forms.
 - **1d — raw-data honesty.** Are UUID / FK / ISO / float / JSON / bool
   unrenderable raw by default (resolved / rounded / humanised)? **Level 4 (#1491):
   the shared cell core humanises every type, list AND detail — `datetime` (date+
