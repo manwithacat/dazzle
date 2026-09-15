@@ -35,6 +35,8 @@ class _EntityParseContext:
     archetype_kind: ir.ArchetypeKind | None = None
     # Soft delete and bulk config (v0.34.0)
     soft_delete: bool = False
+    # #1675 reporting grain
+    legal_entity: bool = False
     # Native document signing primitive (v0.79.7, #1283 phase 3)
     signable: bool = False
     signing_validator: str | None = None
@@ -1320,6 +1322,7 @@ class EntityParserMixin:
             access=access,
             audit=ctx.audit_config,
             soft_delete=ctx.soft_delete,
+            legal_entity=ctx.legal_entity,
             signable=ctx.signable,
             signing_validator=ctx.signing_validator,
             signing_template=ctx.signing_template,
@@ -3093,6 +3096,11 @@ def _kw_soft_delete(p: Any, s: _EntityParseContext) -> None:
     s.soft_delete = True
 
 
+def _kw_legal_entity(p: Any, s: _EntityParseContext) -> None:
+    p.advance()
+    s.legal_entity = True
+
+
 def _kw_signable(p: Any, s: _EntityParseContext) -> None:
     s.signable = p._parse_entity_signable()
 
@@ -3195,6 +3203,7 @@ _ENTITY_KEYWORDS: dict[TokenType, KeywordParser[_EntityParseContext]] = {
     TokenType.SCOPE: _kw_scope,
     TokenType.AUDIT: _kw_audit,
     TokenType.SOFT_DELETE: _kw_soft_delete,
+    TokenType.LEGAL_ENTITY: _kw_legal_entity,
     TokenType.SIGNABLE: _kw_signable,
     TokenType.SIGNING_VALIDATOR: _kw_signing_validator,
     TokenType.SIGNING_TEMPLATE: _kw_signing_template,

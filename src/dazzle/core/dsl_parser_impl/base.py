@@ -878,6 +878,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.TRIGGER,
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
+    TokenType.LEGAL_ENTITY,
     TokenType.TEMPORAL,
     # #1333 lifecycle-ownership marker (can also be a field name)
     TokenType.MANAGED_BY,

@@ -308,7 +308,8 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
                   | "subtype_of" ":" IDENT NEWLINE
                   | "was" ":" IDENT NEWLINE        (* #1431 rename hint *)
-                  | "archetype" ":" IDENT NEWLINE ;
+                  | "archetype" ":" IDENT NEWLINE
+                  | "legal_entity" NEWLINE ;        (* #1675 reporting grain *)
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
 

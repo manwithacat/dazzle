@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.114.1] - 2026-09-15
+
+### Added
+- **Legal-entity reporting grain (#1675).** `legal_entity` on an entity (typically Site) makes unpinned `sum`/`avg` of `money` fields that can span those rows a `dazzle validate` error. Pin with `group_by:` the FK, a `where` equality, or a workspace `context_selector` on that entity. Ungrouped numeric plant totals stay legal. Docs: `docs/reference/reports.md`.
+
+### Security
+- **httpx2 ≥ 2.12.0** — pip-audit CVEs PYSEC-2026-3845/3846/3847/3848/3849 (SOCKS `wss` TLS, decompression bomb, SSE quadratic, multipart CRLF, dual framing). Unrelated to #1674; unblocks Security Tests on main.
+
 ## [0.114.0] - 2026-09-15
 
 ### Added

@@ -795,6 +795,7 @@ ir_class: EntitySpec
     - is_profile: bool = False
     - is_singleton: bool = False
     - is_tenant_root: bool = False
+    - legal_entity: bool = False
     - lifecycle: LifecycleSpec | None = None
     - managed_by: ManagedBy | None = None
     - membership: MembershipSpec | None = None

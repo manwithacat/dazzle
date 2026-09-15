@@ -18,6 +18,7 @@ from .validator import (
     validate_insight_summaries,
     validate_integrations,
     validate_ledgers,
+    validate_legal_entity_money_span,
     validate_lifecycles,
     validate_list_without_read_scope,
     validate_llm_subject_surface,
@@ -176,6 +177,11 @@ def lint_appspec(
 
     # Money field validation (FACT/INTENT streams must use Money type)
     errors, warnings = validate_money_fields(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1675: money aggregates must not span a legal_entity grain
+    errors, warnings = validate_legal_entity_money_span(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

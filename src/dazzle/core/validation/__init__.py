@@ -80,6 +80,7 @@ from .financial import (
     _validate_account_codes,
     _validate_transaction_transfers,
     validate_ledgers,
+    validate_legal_entity_money_span,
     validate_money_fields,
 )
 from .flows import (
@@ -219,6 +220,7 @@ __all__ = [
     "validate_ledgers",
     "validate_lifecycles",
     "validate_comparison_regions",
+    "validate_legal_entity_money_span",
     "validate_money_fields",
     "validate_insight_summaries",
     "validate_outlier_decorators",

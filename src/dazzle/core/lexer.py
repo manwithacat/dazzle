@@ -180,6 +180,8 @@ class TokenType(Enum):
 
     # v0.34.0 Platform Capability Keywords
     SOFT_DELETE = "soft_delete"
+    # #1675: reporting grain — money aggregates must not span this entity
+    LEGAL_ENTITY = "legal_entity"
     # v0.79.7 (#1283 phase 3): native document signing primitive
     SIGNABLE = "signable"
     SIGNING_VALIDATOR = "signing_validator"

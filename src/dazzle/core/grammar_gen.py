@@ -443,7 +443,8 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "patterns" ":" IDENT ("," IDENT)* NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
                   | "subtype_of" ":" IDENT NEWLINE
-                  | "archetype" ":" IDENT NEWLINE ;
+                  | "archetype" ":" IDENT NEWLINE
+                  | "legal_entity" NEWLINE ;
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
 

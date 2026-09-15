@@ -167,6 +167,23 @@ Windows compile to one `WITH _anchor AS (SELECT MAX(<on>) …)` CTE plus per-mea
 
 `where` still works inside the same call (`sum(Reading.value_delta where meter_kind = export window week_from_monday on taken_at)`). Metrics that share entity + `on` + `where` batch; a different `where` is a second query.
 
+## Plant-total vs legal-entity (#1675)
+
+Two Sites can share an ops board and still be separate legal entities (two Xero orgs, never one blended P&L). Tag the grain:
+
+```dsl
+entity Site "Site":
+  legal_entity
+  name: text
+```
+
+Then:
+
+- **Plant total** — ungrouped numeric `sum(Reading.value_delta)` on a `command_center` is allowed. kW is not money.
+- **Books** — ungrouped `sum(Invoice.amount)` where `Invoice` refs a `legal_entity` Site is a `dazzle validate` error. Pin it: `group_by: site`, `where site = current_context`, or a workspace `context_selector` on Site.
+
+`dazzle validate` looks at `FieldTypeKind.MONEY`, not field names. A decimal kWh field is never fenced. This is a reporting grain, not tenancy — do not model Site as `archetype: tenant` just to split P&L.
+
 ## Scope
 
 **Scope always applies, pre-aggregation.** The runtime threads the user's `__scope_predicate` into the query's `WHERE` before `GROUP BY` runs. A persona who can only see rows from their own department will see counts that reflect exactly those rows — never a leak via a "total" metric or an "Other (N)" bucket.

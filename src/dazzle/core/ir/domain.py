@@ -481,6 +481,10 @@ class EntitySpec(BaseModel):
     audit: AuditConfig | None = None
     # v0.34.0: Soft delete — archive instead of hard delete
     soft_delete: bool = False
+    # #1675: reporting grain. Money sum/avg that can span rows of this
+    # entity must be pinned (group_by / where / context_selector) or
+    # dazzle validate errors. Not tenancy — ops totals may still cross it.
+    legal_entity: bool = False
     # v0.71.161 (#1223 Phase 3a.i): effective-dated / temporal entity
     # declaration. When set, the framework will (in subsequent slices)
     # auto-filter read paths to currently-active rows and thread
