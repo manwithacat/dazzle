@@ -628,6 +628,11 @@ exclude = [
     "src/pylab.py",
 ]
 
+# ruff 0.16+ formats Markdown (fenced-code quote style). Keep README /
+# docs examples author-owned; the CI format gate is for Python.
+[tool.ruff.format]
+exclude = ["**/*.md"]
+
 [tool.ruff.lint]
 select = [
     "E",    # pycodestyle errors
