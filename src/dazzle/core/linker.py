@@ -308,6 +308,7 @@ def build_appspec(
         policies=merged_fragment.policies,
         projections=merged_fragment.projections,
         streams=merged_fragment.streams,
+        ingests=merged_fragment.ingests,
         subscriptions=merged_fragment.subscriptions,
         templates=merged_fragment.templates,
         foreign_models=merged_fragment.foreign_models,

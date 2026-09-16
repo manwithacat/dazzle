@@ -322,6 +322,12 @@ from .hless_validator import (
     validate_streams_with_cross_references,
 )
 
+# File/IoT ingest (#1676)
+from .ingest import (
+    IngestProtectSpec,
+    IngestSpec,
+)
+
 # Integrations
 from .integrations import (
     AuthSpec,
@@ -1420,6 +1426,8 @@ __all__ = [
     "WebhookPayloadSpec",
     "WebhookRetrySpec",
     "WebhookSpec",
+    "IngestSpec",
+    "IngestProtectSpec",
     # Approvals (v0.25.0)
     "ApprovalEscalationSpec",
     "ApprovalOutcomeSpec",

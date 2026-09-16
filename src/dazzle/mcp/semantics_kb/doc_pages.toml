@@ -1440,6 +1440,13 @@ order = 100
 handwritten = true
 intro = "The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live."
 
+[pages.ingest]
+title = "Ingest"
+slug = "ingest"
+order = 99
+handwritten = true
+intro = "Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676)."
+
 [pages.grammar]
 title = "DSL Grammar Specification"
 slug = "grammar"

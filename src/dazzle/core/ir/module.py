@@ -37,6 +37,7 @@ from .hless import (
     HLESSPragma,
     StreamSpec,
 )
+from .ingest import IngestSpec
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
 from .jobs import JobSpec
@@ -174,6 +175,8 @@ class ModuleFragment(BaseModel):
     # Publish directives are stored on entities, not here
     # HLESS - High-Level Event Semantics (v0.19.0)
     streams: list[StreamSpec] = Field(default_factory=list)
+    # File/IoT ingest (#1676)
+    ingests: list[IngestSpec] = Field(default_factory=list)
     hless_pragma: HLESSPragma | None = None
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
     policies: PoliciesSpec | None = None

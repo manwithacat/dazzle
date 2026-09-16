@@ -193,6 +193,12 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         boot_entry=None,
         notes="orchestrator-only; composing host aliases (ADR-0055 PR4)",
     ),
+    _fw(
+        "_dazzle_ingest_fingerprint",
+        "dazzle.http.runtime.ingest_engine.ensure_ingest_fingerprint_table",
+        boot_entry=None,
+        notes="orchestrator-only; ingest OBSERVATION content-hash idempotency (#1676)",
+    ),
     # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
     *[
         Artifact(

@@ -34,6 +34,7 @@ from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .grant import GrantParserMixin
 from .hless import HLESSParserMixin
+from .ingest import IngestParserMixin
 from .integration import IntegrationParserMixin
 from .island import IslandParserMixin
 from .job import JobParserMixin
@@ -85,6 +86,7 @@ class Parser(
     MessagingParserMixin,
     EventingParserMixin,
     HLESSParserMixin,
+    IngestParserMixin,
     GovernanceParserMixin,
     LLMParserMixin,
     ProcessParserMixin,
@@ -523,6 +525,15 @@ class Parser(
             }
         )
 
+    def _dispatch_ingest(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        ingest_spec = self.parse_ingest()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "ingests": [*fragment.ingests, ingest_spec],
+            }
+        )
+
     def _dispatch_webhook(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         webhook_spec = self.parse_webhook()
         return ir.ModuleFragment(
@@ -723,6 +734,7 @@ class Parser(
             TokenType.TRANSACTION: self._dispatch_transaction,
             TokenType.ENUM: self._dispatch_enum,
             TokenType.WEBHOOK: self._dispatch_webhook,
+            TokenType.INGEST: self._dispatch_ingest,
             TokenType.NAV: self._dispatch_nav,
             TokenType.APPROVAL: self._dispatch_approval,
             TokenType.SLA: self._dispatch_sla,
@@ -832,6 +844,7 @@ __all__ = [
     "MessagingParserMixin",
     "EventingParserMixin",
     "HLESSParserMixin",
+    "IngestParserMixin",
     "ProcessParserMixin",
     "LedgerParserMixin",
     "EnumParserMixin",

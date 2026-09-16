@@ -82,6 +82,8 @@ event UserActivityLogged
 event HealthCheckCompleted
 ```
 
+File/IoT **ingest** (`ingest name:` / #1676) is this kind. A collector POST or file drop is a report, not irreversible domain truth. The completed batch is published as `ingest:batch_applied` with `record_kind=observation`, `t_log` = ingest time, and `t_event` from the earliest timestamp-like key in the batch. Idempotency is content-hash of the published bytes. Do not classify an ingest batch as FACT. See [Ingest](../reference/ingest.md).
+
 ### DERIVATION
 
 A computed or derived fact based on other records.

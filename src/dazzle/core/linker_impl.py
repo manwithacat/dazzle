@@ -1569,6 +1569,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         projections=_flatten_list("projections"),
         rules=_flatten_list("rules"),
         streams=_flatten_list("streams"),
+        ingests=_flatten_list("ingests"),
         subscriptions=_flatten_list("subscriptions"),
         templates=_flatten_list("templates"),
         event_model=_first_scalar("event_model"),

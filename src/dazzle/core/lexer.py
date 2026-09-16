@@ -56,6 +56,8 @@ class TokenType(Enum):
     AUTH_PROFILE = "auth_profile"
     OWNER = "owner"
     KEY = "key"
+    INGEST = "ingest"
+    PROTECT = "protect"
     CONSTRAINT = "constraint"
     UNIQUE = "unique"
     INDEX = "index"

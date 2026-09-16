@@ -78,6 +78,15 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.25.0 Top-Level Construct Keywords**: `enum`, `webhook`, `approval`, `sla`, `island`
 
+**#1676 Ingest Keywords**: `ingest`, `protect`
+
+```
+ingest_decl = "ingest", identifier, ":", NEWLINE, INDENT, ingest_body, DEDENT ;
+ingest_body = "entity", ":", identifier, NEWLINE,
+              "key", ":", "[", identifier_list, "]", NEWLINE,
+              ["protect", ":", identifier, "=", identifier, NEWLINE] ;
+```
+
 **v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
 
 **v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `effects`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`

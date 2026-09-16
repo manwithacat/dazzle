@@ -15,6 +15,7 @@ from .validator import (
     validate_foreign_models,
     validate_governance_policies,
     validate_graph_declarations,
+    validate_ingests,
     validate_insight_summaries,
     validate_integrations,
     validate_ledgers,
@@ -182,6 +183,11 @@ def lint_appspec(
 
     # #1675: money aggregates must not span a legal_entity grain
     errors, warnings = validate_legal_entity_money_span(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1676: ingest key/protect must resolve on the target entity
+    errors, warnings = validate_ingests(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

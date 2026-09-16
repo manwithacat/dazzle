@@ -196,6 +196,21 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         },
         "uniques": [],
     },
+    "_dazzle_ingest_fingerprint": {
+        "columns": {
+            "ingest_name": {"default": None, "nullable": False, "pk": True, "type": "text"},
+            "seen_at": {
+                "default": "now()",
+                "nullable": False,
+                "pk": False,
+                "type": "timestamptz",
+            },
+            "sha256": {"default": None, "nullable": False, "pk": True, "type": "text"},
+        },
+        "fks": {},
+        "indexes": {},
+        "uniques": [],
+    },
     "_dazzle_otp_codes": {
         "columns": {
             "attempts": {"default": "0", "nullable": True, "pk": False, "type": "integer"},

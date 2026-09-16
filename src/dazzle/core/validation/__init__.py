@@ -105,6 +105,7 @@ from .graphs import (
     validate_lifecycles,
     validate_storage_refs,
 )
+from .ingest import validate_ingests
 from .integrations import (
     validate_foreign_models,
     validate_integrations,
@@ -216,6 +217,7 @@ __all__ = [
     "validate_governance_policies",
     "validate_llm_subject_surface",
     "validate_graph_declarations",
+    "validate_ingests",
     "validate_integrations",
     "validate_ledgers",
     "validate_lifecycles",

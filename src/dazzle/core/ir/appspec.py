@@ -39,6 +39,7 @@ from .hless import (
     HLESSPragma,
     StreamSpec,
 )
+from .ingest import IngestSpec
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
 from .jobs import JobSpec
@@ -161,6 +162,7 @@ class AppSpec(BaseModel):
     projections: list[ProjectionSpec] = Field(default_factory=list)
     # HLESS - High-Level Event Semantics (v0.19.0)
     streams: list[StreamSpec] = Field(default_factory=list)
+    ingests: list[IngestSpec] = Field(default_factory=list)
     hless_mode: HLESSMode = Field(default=HLESSMode.STRICT)
     hless_pragma: HLESSPragma | None = None
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)

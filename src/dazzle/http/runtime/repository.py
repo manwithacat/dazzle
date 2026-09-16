@@ -15,7 +15,7 @@ import time
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ValidationError
 
@@ -819,6 +819,56 @@ class Repository[T: BaseModel]:
             # Seed/test fixtures may omit optional fields that Pydantic requires;
             # the DB insert succeeded, so return with model_construct (no validation).
             return self.model_class.model_construct(**data)
+
+    async def upsert(
+        self,
+        data: dict[str, Any],
+        *,
+        key_fields: tuple[str, ...] | list[str],
+        protect_field: str | None = None,
+        protect_value: str | None = None,
+    ) -> tuple[Any, str]:
+        """Insert or update on natural keys; skip when protect matches (#1676).
+
+        Returns ``(row, outcome)`` where outcome is ``inserted``, ``updated``,
+        ``unchanged``, or ``protected``.
+        """
+        keys = list(key_fields)
+        missing = [k for k in keys if k not in data]
+        if missing:
+            raise ValueError(f"{self.table_name}: upsert missing key field(s) {missing}")
+        found = await self.list(filters={k: data[k] for k in keys}, page=1, page_size=1)
+        items = found.get("items") or []
+        existing = items[0] if items else None
+        if existing is None:
+            payload = dict(data)
+            if "id" not in payload:
+                payload["id"] = uuid4()
+            return await self.create(payload), "inserted"
+        return await self._upsert_existing(existing, data, protect_field, protect_value)
+
+    async def _upsert_existing(
+        self,
+        existing: Any,
+        data: dict[str, Any],
+        protect_field: str | None,
+        protect_value: str | None,
+    ) -> tuple[Any, str]:
+        existing_dict = existing if isinstance(existing, dict) else existing.model_dump()
+        if (
+            protect_field
+            and protect_value is not None
+            and str(existing_dict.get(protect_field)) == str(protect_value)
+        ):
+            return existing, "protected"
+        comparable = {k: v for k, v in data.items() if k != "id"}
+        if all(existing_dict.get(k) == v for k, v in comparable.items()):
+            return existing, "unchanged"
+        eid = existing_dict.get("id")
+        if eid is None:
+            raise RuntimeError(f"{self.table_name}: upsert found a row without id")
+        updated = await self.update(UUID(str(eid)), {k: v for k, v in data.items() if k != "id"})
+        return updated if updated is not None else existing, "updated"
 
     async def read(
         self,

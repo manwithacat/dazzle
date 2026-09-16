@@ -10,10 +10,9 @@ Revises:     0019_process_runtime_tables
 
 from __future__ import annotations
 
-from typing import Any
-
 from alembic import op
 
+from dazzle.http.alembic.cursor_ddl import apply_ensure_on_alembic_cursor
 from dazzle.http.runtime.tenant.aliases import ensure_tenant_host_aliases_table
 
 revision = "0020_tenant_host_aliases"
@@ -23,13 +22,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    raw_conn: Any = bind.connection
-    cur = raw_conn.cursor()
-    try:
-        ensure_tenant_host_aliases_table(cur)
-    finally:
-        cur.close()
+    apply_ensure_on_alembic_cursor(ensure_tenant_host_aliases_table)
 
 
 def downgrade() -> None:

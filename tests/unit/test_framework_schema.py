@@ -57,6 +57,7 @@ IN_SCOPE_TABLES: list[str] = [
     "_dazzle_event_inbox",
     "_dazzle_event_outbox",
     "tenant_host_aliases",
+    "_dazzle_ingest_fingerprint",
 ]
 
 

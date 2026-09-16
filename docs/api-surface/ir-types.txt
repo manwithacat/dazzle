@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 374 BaseModels, 151 Enums, 24 other (functions / typealiases / constants)
+# Counts: 376 BaseModels, 151 Enums, 24 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -154,6 +154,7 @@ ir_class: AppSpec
     - guides: list[GuideSpec] = []
     - hless_mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
     - hless_pragma: HLESSPragma | None = None
+    - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
     - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []
@@ -1369,6 +1370,21 @@ ir_class: ImageryVocabulary
     - mood_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
     - style_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
 
+ir_class: IngestProtectSpec
+  required:
+    - field: str
+    - value: str
+  optional: (none)
+
+ir_class: IngestSpec
+  required:
+    - entity: str
+    - key: tuple[str, Ellipsis]
+    - name: str
+  optional:
+    - protect: IngestProtectSpec | None = None
+    - record_kind: str = 'observation'
+
 ir_class: InputMapping
   required:
     - source: str
@@ -1863,6 +1879,7 @@ ir_class: ModuleFragment
     - grant_schemas: list[GrantSchemaSpec] = []
     - guides: list[GuideSpec] = []
     - hless_pragma: HLESSPragma | None = None
+    - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
     - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []

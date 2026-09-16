@@ -93,6 +93,10 @@ construct: hless
   fragment_fields: hless_pragma
   ir_classes: HLESSPragma
 
+construct: ingest
+  fragment_fields: ingests
+  ir_classes: IngestSpec
+
 construct: integration
   fragment_fields: integrations
   ir_classes: IntegrationSpec

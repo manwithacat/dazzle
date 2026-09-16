@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.7] - 2026-09-16
+
+### Added
+- **File/IoT ingest (`ingest:`) (#1676).** Declare `entity`, natural `key`, and optional `protect:` (e.g. `source_kind = manual`). `POST /api/ingest/{name}` accepts JSON rows or multipart JSON/JSONL/CSV. Identical bytes are a no-op (content-hash fingerprint on `_dazzle_ingest_fingerprint`). A completed batch is a HLESS **OBSERVATION** (`ingest:batch_applied`), not a FACT — `t_log` is ingest time, `t_event` is the earliest timestamp-like key in the batch. Row upserts are derived state. Auth: `DAZZLE_INGEST_TOKEN` or a session. Docs: `docs/reference/ingest.md`.
+
 ## [0.114.6] - 2026-09-16
 
 ### Security

@@ -40,6 +40,7 @@ from dazzle.http.runtime.document_routes import create_document_routes
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import FileService
+from dazzle.http.runtime.ingest_routes import create_ingest_routes
 from dazzle.http.runtime.integration_manager import IntegrationManager, _convert_channels
 from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry, register_lifespan_hook
 from dazzle.http.runtime.migrations import MigrationPlan
@@ -2148,6 +2149,7 @@ class DazzleBackendApp:
         self._mount_audit_history_routes(auth_dep)
         self._mount_locale_routes()
         self._mount_file_routes(optional_auth_dep)
+        self._mount_ingest_routes(optional_auth_dep)
         self._mount_document_routes(
             cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas
         )
@@ -2362,6 +2364,26 @@ class DazzleBackendApp:
                 optional_auth_dep=optional_auth_dep,
                 require_auth_by_default=_files_auth_posture,
             )
+
+    def _mount_ingest_routes(self, optional_auth_dep: Any = None) -> None:
+        """POST /api/ingest/{name} for declared ingest: blocks (#1676)."""
+        assert self._app is not None
+        ingests = getattr(self._appspec, "ingests", None) or []
+        if not ingests or not self._repositories:
+            return
+
+        bus = None
+        services = getattr(self._app.state, "services", None)
+        if services is not None:
+            bus = getattr(services, "event_bus", None)
+        self._app.include_router(
+            create_ingest_routes(
+                ingests=list(ingests),
+                repositories=self._repositories,
+                event_bus=bus,
+                optional_auth_dep=optional_auth_dep,
+            )
+        )
 
     def _mount_search_routes(self) -> None:
         assert self._app is not None

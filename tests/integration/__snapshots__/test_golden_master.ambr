@@ -1126,6 +1126,8 @@
     ]),
     'hless_mode': <HLESSMode.STRICT: 'strict'>,
     'hless_pragma': None,
+    'ingests': list([
+    ]),
     'integrations': list([
     ]),
     'interfaces': None,

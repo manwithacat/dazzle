@@ -31,6 +31,8 @@ class EntityEventType(StrEnum):
     UPDATED = "entity:updated"
     DELETED = "entity:deleted"
     FILE_UPLOADED = "entity:file_uploaded"
+    # HLESS OBSERVATION of a declared ingest: batch (not a FACT; not CRUD).
+    INGEST_BATCH_APPLIED = "ingest:batch_applied"
 
 
 class LLMEventType(StrEnum):

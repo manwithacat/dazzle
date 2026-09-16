@@ -86,6 +86,8 @@ TemperatureIs25Degrees     (invalid - asserts correctness)
 
 **Key property**: Truth is "this was observed", not "this is correct". May be duplicated, late, or out of order.
 
+File/IoT **ingest** (`ingest name:` / #1676) is this kind. A collector POST or file drop is a report, not irreversible domain truth: the same bytes may arrive twice, late, or out of order. The batch is an OBSERVATION (`ingest:batch_applied` on the entity bus) with `t_log` = ingest time and optional `t_event` = earliest timestamp-like key in the batch (domain time). Idempotency is content-hash of the published bytes. Row upserts are derived current state, not FACT records. Do not classify an ingest batch as FACT.
+
 ### DERIVATION
 
 A fact that a value was **computed** from other records.

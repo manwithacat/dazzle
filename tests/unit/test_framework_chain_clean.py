@@ -39,6 +39,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0020_tenant_host_aliases": (
         "non-destructive additive — composing host aliases (ADR-0055 PR4)"
     ),
+    "0021_ingest_fingerprint": (
+        "non-destructive additive — ingest OBSERVATION content-hash (#1676)"
+    ),
 }
 
 
