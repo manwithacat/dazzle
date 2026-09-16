@@ -321,10 +321,13 @@ def _print_hash_diff() -> None:
     print("\n=== VENDOR_HASH_DIFF ===")
     print("## Vendor hash changes\n")
     print(
-        "Each entry below is a SHA-256 of the downloaded bytes vs the "
-        "previously-pinned hash. Verify each `new` against an independent "
-        "source (the upstream release page, a separate download, npm "
-        "provenance, etc.) before merging.\n"
+        "Each entry below is a SHA-256 of the **bytes we commit**, not the "
+        "raw CDN download. `_save_vendor` strips a trailing "
+        "`//# sourceMappingURL=...` comment (#860) because we do not ship "
+        "the `.map`. To verify independently: download the same npm path "
+        "(for lucide, `dist/umd/lucide.min.js` from the versioned tarball), "
+        "strip that comment, then SHA-256. Raw jsdelivr/unpkg/npm hashes "
+        "will not match.\n"
     )
     print("| File | old sha256 | new sha256 |")
     print("|------|------------|------------|")

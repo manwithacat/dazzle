@@ -72,10 +72,13 @@ jobs:
 
           ## Reviewer checklist
 
-          1. **Verify each new SHA-256** in the table above against an
-             independent source — the upstream release page, a separate
-             download, npm provenance, or a checksum file (where the
-             publisher provides one).
+          1. **Verify each new SHA-256** in the table above. Those hashes
+             are of the **committed bytes**, after
+             `_save_vendor` strips a trailing
+             `//# sourceMappingURL=...` comment (#860 — we do not ship
+             `.map` files). Raw jsdelivr / unpkg / npm-tarball hashes
+             will not match. Independent check: download the same npm
+             path, strip that comment, then SHA-256.
           2. Run `python scripts/build_dist.py` locally and smoke-test
              at least one example app.
           3. The CI drift gate `tests/unit/test_vendor_hash_drift.py` accepts
