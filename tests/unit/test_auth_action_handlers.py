@@ -40,6 +40,9 @@ class _MockCookies:
     def get(self, key: str, default: str | None = None) -> str | None:
         return self._data.get(key, default)
 
+    def items(self) -> object:
+        return self._data.items()
+
     def __contains__(self, key: object) -> bool:
         return key in self._data
 
@@ -207,6 +210,20 @@ class TestAssertCookieSetAction:
         runner.client.client.cookies.get.return_value = "session-val"
         context = {"last_response": resp}
 
+        result = runner.execute_step(
+            {
+                "action": "assert_cookie_set",
+                "target": "last_response",
+                "data": {"cookie": "dazzle_session"},
+            },
+            design={},
+            context=context,
+        )
+        assert result.result == TestResult.PASSED
+
+    def test_host_session_satisfies_dazzle_session_alias(self, runner: TestRunner) -> None:
+        resp = _make_response(cookies={"__Host-cyfuture_portal_session": "tok"})
+        context = {"last_response": resp}
         result = runner.execute_step(
             {
                 "action": "assert_cookie_set",

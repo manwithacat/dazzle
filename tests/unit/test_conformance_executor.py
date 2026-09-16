@@ -210,6 +210,37 @@ class TestRunCase:
         assert result.passed
         assert result.actual_status == 200
         assert result.actual_rows == 4
+        client.get.assert_awaited()
+        sent = client.get.await_args.kwargs.get("headers") or {}
+        assert sent.get("Cookie") == "dazzle_session=tok"
+
+    @pytest.mark.asyncio
+    async def test_list_uses_issued_host_session_cookie(self) -> None:
+        from dazzle.conformance.http_runner import run_case
+
+        case = ConformanceCase(
+            entity="Task",
+            persona="viewer",
+            operation="list",
+            expected_status=200,
+            expected_rows=1,
+            scope_type=ScopeOutcome.ALL,
+        )
+        client = AsyncMock()
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"items": [1], "total": 1}
+        client.get = AsyncMock(return_value=resp)
+        result = await run_case(
+            client,
+            case,
+            {"viewer": "tok"},
+            ConformanceFixtures(),
+            {"viewer": "__Host-cyfuture_portal_session"},
+        )
+        assert result.passed
+        sent = client.get.await_args.kwargs.get("headers") or {}
+        assert sent.get("Cookie") == "__Host-cyfuture_portal_session=tok"
 
     @pytest.mark.asyncio
     async def test_list_wrong_status(self) -> None:

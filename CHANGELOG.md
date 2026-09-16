@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.8] - 2026-09-16
+
+### Fixed
+- **dsl-run AUTH treats the issued session cookie as the session (#1687).** Generated `cookie: dazzle_session` assertions match `__Host-<app>_session` / `__Secure-*_admin` on `tenant_host:` apps. `DazzleClient.authenticate` and conformance HTTP plant the `Set-Cookie` name login actually issued, so later calls are not anonymous.
+
 ## [0.114.7] - 2026-09-16
 
 ### Added

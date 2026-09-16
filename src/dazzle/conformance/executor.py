@@ -17,6 +17,7 @@ import os
 from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.testing.session_manager import session_cookie_from_login_response
 
 from .models import ConformanceCase, ConformanceFixtures
 
@@ -50,6 +51,7 @@ class ConformanceExecutor:
         self._client: Any | None = None
         self._app: Any | None = None
         self._auth_tokens: dict[str, str] = {}
+        self._auth_cookie_names: dict[str, str] = {}
 
     async def setup(self) -> None:
         """Boot the app, create tables, seed fixtures, acquire auth tokens."""
@@ -132,8 +134,10 @@ class ConformanceExecutor:
                 json={"username": persona, "password": f"conformance_{persona}", "role": persona},
             )
             if resp.status_code == 200:
-                token = resp.json().get("session_token", "")
+                name, cookie_token = session_cookie_from_login_response(resp)
+                token = cookie_token or resp.json().get("session_token", "")
                 self._auth_tokens[persona] = token
+                self._auth_cookie_names[persona] = name or "dazzle_session"
                 logger.debug("Acquired token for persona %s", persona)
             else:
                 logger.warning(
@@ -151,7 +155,9 @@ class ConformanceExecutor:
 
         results: list[CaseResult] = []
         for case in self.cases:
-            result = await run_case(self._client, case, self._auth_tokens, self.fixtures)
+            result = await run_case(
+                self._client, case, self._auth_tokens, self.fixtures, self._auth_cookie_names
+            )
             results.append(result)
 
         return results

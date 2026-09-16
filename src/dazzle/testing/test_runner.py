@@ -37,6 +37,7 @@ from dazzle.testing.http_policies import (
     inject_csrf_headers,
     prime_csrf_cookie_sync,
 )
+from dazzle.testing.session_manager import plant_session_cookie
 
 logger = logging.getLogger(__name__)
 
@@ -384,10 +385,9 @@ class DazzleClient:
                 if resp.status_code == 200:
                     self._test_routes_available = True
                     data = resp.json()
-                    token = data.get("token") or data.get("session_token")
-                    self._auth_token = token
-                    if token:
-                        self.client.cookies.set("dazzle_session", token)
+                    token = data.get("token") or data.get("session_token") or ""
+                    _name, planted = plant_session_cookie(self.client.cookies, resp, token)
+                    self._auth_token = planted or token
                     return True
                 if resp.status_code == 404:
                     self._test_routes_available = False
@@ -440,12 +440,10 @@ class DazzleClient:
                 json={"email": email, "password": password},
             )
             if resp.status_code == 200:
-                # Session cookie is auto-captured by httpx from Set-Cookie
                 data = resp.json()
-                token = data.get("token") or data.get("session_token")
-                self._auth_token = token
-                if token:
-                    self.client.cookies.set("dazzle_session", token)
+                token = data.get("token") or data.get("session_token") or ""
+                _name, planted = plant_session_cookie(self.client.cookies, resp, token)
+                self._auth_token = planted or token
                 return True
             return False
         except Exception:

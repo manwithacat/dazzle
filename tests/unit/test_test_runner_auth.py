@@ -112,6 +112,27 @@ class TestLoginWithCredentials:
         call_json = runner.client.request.call_args.kwargs.get("json")
         assert call_json["email"] == "top@test"
 
+    def test_login_plants_issued_host_session_cookie(
+        self, runner: DazzleClient, tmp_path: Path
+    ) -> None:
+        creds = {"email": "top@test", "password": "tpw"}
+        creds_path = tmp_path / ".dazzle" / "test_credentials.json"
+        creds_path.parent.mkdir(parents=True)
+        creds_path.write_text(json.dumps(creds))
+        resp = MagicMock(status_code=200)
+        resp.json.return_value = {"token": "json-tok"}
+        resp.headers.get_list.return_value = [
+            "__Host-cyfuture_portal_session=abc; Path=/; Secure; HttpOnly"
+        ]
+        resp.cookies = {}
+        runner.client.request = MagicMock(return_value=resp)
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("dazzle.testing.test_runner.Path", return_value=creds_path),
+        ):
+            assert runner._login_with_credentials("admin") is True
+        runner.client.cookies.set.assert_called_with("__Host-cyfuture_portal_session", "abc")
+
     def test_non_admin_no_top_level_fallback(self, runner: DazzleClient, tmp_path: Path) -> None:
         """Non-admin personas should NOT fall back to top-level credentials."""
         creds = {"email": "top@test", "password": "tpw", "personas": {}}

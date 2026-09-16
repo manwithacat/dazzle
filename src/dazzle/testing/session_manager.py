@@ -19,6 +19,7 @@ import logging
 import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -85,16 +86,16 @@ def _jar_pairs(resp: Any) -> list[tuple[str, str]]:
         return []
     if isinstance(cookies, dict):
         return [(str(k), str(v)) for k, v in cookies.items()]
-    if type(cookies).__name__ != "Cookies":
+    if type(cookies).__name__ in {"MagicMock", "Mock"}:
         return []
     items = getattr(cookies, "items", None)
-    if not callable(items):
-        return []
-    try:
-        return [(str(k), str(v)) for k, v in items()]
-    except (TypeError, ValueError, AttributeError):
-        logger.debug("ignored exception in session_manager.py:jar", exc_info=True)
-        return []
+    if callable(items):
+        try:
+            return [(str(k), str(v)) for k, v in items()]
+        except (TypeError, ValueError, AttributeError):
+            logger.debug("ignored exception in session_manager.py:jar", exc_info=True)
+            return []
+    return []
 
 
 def session_cookie_from_login_response(resp: Any) -> tuple[str, str]:
@@ -132,6 +133,83 @@ def session_token_from_login_response(resp: Any) -> str:
     """Token half of ``session_cookie_from_login_response``."""
     _name, token = session_cookie_from_login_response(resp)
     return token
+
+
+def session_cookie_alias(requested: str) -> bool:
+    """Generated AUTH YAML still says ``dazzle_session`` (#1687)."""
+    return requested == _LEGACY_SESSION_COOKIE
+
+
+def find_session_cookie(resp: Any | None = None, jar: Any | None = None) -> tuple[str, str]:
+    """Issued session cookie on a login response or a client jar."""
+    if resp is not None:
+        name, token = session_cookie_from_login_response(resp)
+        if name and token:
+            return name, token
+    if jar is not None:
+        name, token = session_cookie_from_login_response(SimpleNamespace(headers=None, cookies=jar))
+        if name and token:
+            return name, token
+    return "", ""
+
+
+def has_session_cookie(
+    requested: str,
+    resp: Any | None = None,
+    jar: Any | None = None,
+) -> bool:
+    """True if *requested* is set, or (legacy alias) any recognised session cookie is."""
+    cookies = getattr(resp, "cookies", None) if resp is not None else None
+    if cookies is not None and requested in cookies:
+        val = cookies.get(requested) if hasattr(cookies, "get") else None
+        if val:
+            return True
+    getter = getattr(jar, "get", None) if jar is not None else None
+    if callable(getter):
+        val = getter(requested)
+        if val:
+            return True
+    if not session_cookie_alias(requested):
+        return False
+    name, token = find_session_cookie(resp, jar)
+    return bool(name and token)
+
+
+def session_cookie_cleared(
+    requested: str,
+    resp: Any | None = None,
+    jar: Any | None = None,
+) -> bool:
+    """True if *requested* (or any issued session cookie, for the legacy alias) is gone."""
+    if resp is not None:
+        headers = getattr(resp, "headers", None)
+        hdr = ""
+        if headers is not None and hasattr(headers, "get"):
+            hdr = str(headers.get("set-cookie") or headers.get("Set-Cookie") or "")
+        if "Max-Age=0" in hdr:
+            if requested in hdr:
+                return True
+            if session_cookie_alias(requested):
+                for header in _set_cookie_headers(resp):
+                    name, _ = _first_cookie_pair(header)
+                    if _session_cookie_rank(name) is not None:
+                        return True
+        cookies = getattr(resp, "cookies", None)
+        if cookies is not None and hasattr(cookies, "get"):
+            val = cookies.get(requested)
+            if val is not None and val in ("", '""'):
+                return True
+    return not has_session_cookie(requested, resp, jar)
+
+
+def plant_session_cookie(jar: Any, resp: Any, json_token: str = "") -> tuple[str, str]:
+    """Write the issued session cookie name onto *jar* (#1685/#1687)."""
+    name, token = session_cookie_from_login_response(resp)
+    token = token or json_token
+    name = name or _LEGACY_SESSION_COOKIE
+    if token and jar is not None and hasattr(jar, "set"):
+        jar.set(name, token)
+    return name, token
 
 
 # =============================================================================

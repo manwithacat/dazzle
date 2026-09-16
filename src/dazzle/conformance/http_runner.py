@@ -17,6 +17,7 @@ async def run_case(
     case: ConformanceCase,
     auth_tokens: dict[str, str],
     fixtures: ConformanceFixtures,
+    auth_cookie_names: dict[str, str] | None = None,
 ) -> Any:
     """Execute a single conformance case and return a CaseResult.
 
@@ -25,6 +26,7 @@ async def run_case(
         case: The conformance case to execute
         auth_tokens: Mapping of persona name → session token
         fixtures: Fixture data (for row IDs needed by read/update/delete)
+        auth_cookie_names: Issued cookie name per persona (#1687)
 
     Returns:
         CaseResult with pass/fail status and actual values
@@ -32,7 +34,7 @@ async def run_case(
     from .executor import CaseResult
 
     entity_slug = case.entity.lower()
-    headers = _build_headers(case.persona, auth_tokens)
+    headers = _build_headers(case.persona, auth_tokens, auth_cookie_names)
 
     try:
         if case.operation == "list":
@@ -57,12 +59,17 @@ async def run_case(
         )
 
 
-def _build_headers(persona: str, auth_tokens: dict[str, str]) -> dict[str, str]:
+def _build_headers(
+    persona: str,
+    auth_tokens: dict[str, str],
+    auth_cookie_names: dict[str, str] | None = None,
+) -> dict[str, str]:
     """Build request headers including auth cookie if available."""
     headers: dict[str, str] = {"Accept": "application/json"}
     token = auth_tokens.get(persona)
     if token:
-        headers["Cookie"] = f"dazzle_session={token}"
+        name = (auth_cookie_names or {}).get(persona) or "dazzle_session"
+        headers["Cookie"] = f"{name}={token}"
     return headers
 
 

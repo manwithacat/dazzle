@@ -24,6 +24,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
 from dazzle.core.strings import entity_slug
 from dazzle.testing.data_generator import DataGenerator
+from dazzle.testing.session_manager import has_session_cookie, session_cookie_cleared
 from dazzle.testing.test_runner import StepResult, TestResult
 
 if TYPE_CHECKING:
@@ -313,8 +314,8 @@ class StepExecutor:
         hint = ""
         if not result.ok:
             had_navigate = check_url is not None
-            had_login = self.client._auth_token is not None or bool(
-                self.client.client.cookies.get("dazzle_session")
+            had_login = self.client._auth_token is not None or has_session_cookie(
+                "dazzle_session", jar=self.client.client.cookies
             )
             hints: list[str] = []
             if result.status in (301, 302, 303, 307, 308) and not had_login:
@@ -714,14 +715,13 @@ class StepExecutor:
         assert self.client is not None
         last_resp = context.get("last_response")
         cookie_name = resolved_data.get("cookie", "dazzle_session")
-        has_cookie = (last_resp is not None and cookie_name in last_resp.cookies) or bool(
-            self.client.client.cookies.get(cookie_name)
-        )
+        has_cookie = has_session_cookie(cookie_name, resp=last_resp, jar=self.client.client.cookies)
+        shown = cookie_name
         return StepResult(
             action=action,
             target=target,
             result=TestResult.PASSED if has_cookie else TestResult.FAILED,
-            message=f"Cookie '{cookie_name}' {'present' if has_cookie else 'missing'}",
+            message=f"Cookie '{shown}' {'present' if has_cookie else 'missing'}",
             duration_ms=(time.time() - start_time) * 1000,
         )
 
@@ -737,12 +737,7 @@ class StepExecutor:
     ) -> StepResult:
         last_resp = context.get("last_response")
         cookie_name = resolved_data.get("cookie", "dazzle_session")
-        has_cookie = False
-        if last_resp is not None and cookie_name in last_resp.cookies:
-            cookie_val = last_resp.cookies.get(cookie_name)
-            # Empty value or Max-Age=0 means the server is clearing, not setting
-            if cookie_val and cookie_val != "":
-                has_cookie = True
+        has_cookie = has_session_cookie(cookie_name, resp=last_resp)
         return StepResult(
             action=action,
             target=target,
@@ -764,18 +759,9 @@ class StepExecutor:
         assert self.client is not None
         last_resp = context.get("last_response")
         cookie_name = resolved_data.get("cookie", "dazzle_session")
-        cleared = False
-        if last_resp is not None:
-            set_cookie_hdr = last_resp.headers.get("set-cookie", "")
-            if cookie_name in set_cookie_hdr and "Max-Age=0" in set_cookie_hdr:
-                cleared = True
-            cookie_val = last_resp.cookies.get(cookie_name)
-            if cookie_val is not None and (cookie_val == "" or cookie_val == '""'):
-                cleared = True
-        if not cleared:
-            jar_val = self.client.client.cookies.get(cookie_name)
-            if not jar_val or jar_val == "":
-                cleared = True
+        cleared = session_cookie_cleared(
+            cookie_name, resp=last_resp, jar=self.client.client.cookies
+        )
         return StepResult(
             action=action,
             target=target,
