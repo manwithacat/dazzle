@@ -1,9 +1,57 @@
 # Dependabot configuration file
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Split of Python ecosystems (do not collapse these):
+#   uv  — uv.lock pins (the graph Dependabot alerts actually fire on).
+#         pip cannot rewrite this file; that is why weasyprint 69.0 sat
+#         as an open alert with no PR while pyproject still said >=60.0.
+#   pip — PEP 621 ranges in pyproject.toml plus requirements-docs.txt.
+#         Poetry/pipenv share the "pip" YAML value; uv does not.
+#
+# npm covers package-lock.json (eslint + transitives such as @humanfs/node).
+# Vendored CDN JS (lucide, htmx, …) stays on update-vendors.yml, not npm.
+# Python Playwright is the [e2e] extra in pyproject.toml / uv.lock; it is
+# not an npm dependency today. The npm ecosystem is here so a future
+# @playwright/test pin, and the current eslint lockfile, get PRs.
 
 version: 2
 updates:
-  # Python dependencies (pip)
+  # Python lockfile (uv.lock + matching pyproject.toml pins)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+    open-pull-requests-limit: 5
+    groups:
+      security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "hypothesis"
+        update-types:
+          - "minor"
+          - "patch"
+      fastapi:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "starlette"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Python manifests pip still owns (requirements-docs.txt, pyproject ranges)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -30,6 +78,32 @@ updates:
           - "fastapi"
           - "uvicorn"
           - "starlette"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # npm lockfile (eslint toolchain; transitive security updates)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "javascript"
+    open-pull-requests-limit: 3
+    groups:
+      security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@eslint*"
+          - "@eslint-community*"
         update-types:
           - "minor"
           - "patch"
