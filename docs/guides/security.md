@@ -151,8 +151,11 @@ defaults (read directly from `src/dazzle/http/runtime/csrf.py`):
   per-provider signature verification.
 - `/__test__/` — pytest harness routes (only mounted when test mode is on).
 - `/dazzle/dev/` — dev control plane (gated by `enable_dev_mode`).
-- `/auth/` — login/logout/register; CSRF is not the right primitive here
-  (sessions don't exist yet at login time).
+- `/auth/` — login/signup/register (pre-session cookie-setters). CSRF is
+  not the right primitive before a session exists. Authenticated
+  mutations under the same prefix (`/auth/logout`, `/auth/select-org`,
+  `/auth/switch-org`, invites, member admin, connections) are on
+  `CSRFConfig.protected_paths` and run the origin-primary gate (#1686).
 - `/feedbackreports/`.
 - `/qa/` — QA magic-link generator (#768), triple-gated by env flags +
   mount-time + request-time checks.

@@ -113,6 +113,21 @@ class TestProtectedPathOverrides:
         d = csrf_disposition("POST", "/auth/select-org", _h(), CFG)
         assert d is Disposition.PROTECTED_SESSION
 
+    def test_logout_is_protected_session(self) -> None:
+        """#1686: logout is an authenticated session-destroy, not NA_PREAUTH."""
+        d = csrf_disposition("POST", "/auth/logout", _h(), CFG)
+        assert d is Disposition.PROTECTED_SESSION
+
+    def test_logout_same_origin_post_admitted_without_token(self) -> None:
+        headers = _h(origin="https://victim.app", host="victim.app")
+        assert csrf_admits(Disposition.PROTECTED_SESSION, headers, "victim.app", None, CFG) is True
+
+    def test_logout_cross_origin_post_rejected(self) -> None:
+        headers = _h(origin="https://evil.example", host="victim.app")
+        assert (
+            csrf_admits(Disposition.PROTECTED_SESSION, headers, "victim.app", "tok", CFG) is False
+        )
+
     def test_other_auth_paths_stay_na_preauth(self) -> None:
         # The override is exact-match — the rest of /auth/ keeps its exemption.
         d = csrf_disposition("POST", "/auth/login/password", _h(), CFG)

@@ -124,6 +124,13 @@ class CSRFConfig:
         default_factory=lambda: [
             "/auth/select-org",
             "/auth/switch-org",
+            # #1686 / CyFuture PT-004: logout is authenticated and destroys
+            # the session. The /auth/ prefix is NA_PREAUTH for pre-session
+            # cookie-setters (login, signup); logout is the opposite. Exact
+            # match so login/signup stay exempt. Same-origin form POSTs
+            # (account-chrome) still pass the origin-primary gate without a
+            # hidden token; TestClient/API callers send Origin or X-CSRF-Token.
+            "/auth/logout",
             # auth Plan 3a: authenticated org-member-management POSTs under /auth/
             # must run the CSRF gate (else swept into NA_PREAUTH by the /auth/ prefix).
             "/auth/invite",

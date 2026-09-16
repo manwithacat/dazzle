@@ -7,6 +7,7 @@ Provides test infrastructure for Dazzle-based applications.
 import logging
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -224,8 +225,9 @@ class DazzleAdapter(BaseAdapter):
     async def logout(self) -> None:
         """Log out via Dazzle auth endpoint."""
         client = await self._get_client()
-
-        await client.post(f"{self.api_url}/auth/logout")
+        parsed = urlparse(self.api_url)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        await client.post(f"{self.api_url}/auth/logout", headers={"Origin": origin})
 
     async def get_current_user(self) -> dict[str, Any] | None:
         """

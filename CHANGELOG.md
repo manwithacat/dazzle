@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.114.5] - 2026-09-16
+
+### Security
+- **Logout is CSRF-protected (#1686).** `POST /auth/logout` is on
+  `CSRFConfig.protected_paths` — it no longer inherits NA_PREAUTH from
+  the `/auth/` prefix. Same-origin account-chrome forms still pass the
+  origin-primary gate; cross-site logout CSRF is rejected.
+
 ## [0.114.4] - 2026-09-15
 
 ### Added
