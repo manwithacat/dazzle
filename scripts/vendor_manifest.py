@@ -33,7 +33,27 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
+
+# Trailing `//# sourceMappingURL=...` / `/*# sourceMappingURL=... */` (#860).
+# Applied when assembling *served* dist bundles, not when ingesting vendor/.
+# vendor/ stores published npm/CDN bytes so vendor_hashes.json matches
+# the upstream SHA-256. Dist is what the browser loads.
+_SOURCEMAP_RE = re.compile(
+    rb"\n?[ \t]*(?://# sourceMappingURL=\S+|/\*# sourceMappingURL=\S+ \*/)[ \t]*\n?\s*$"
+)
+
+
+def strip_sourcemap_comment(data: bytes) -> bytes:
+    """Remove a trailing sourceMappingURL comment (served artifacts only)."""
+    return _SOURCEMAP_RE.sub(b"", data)
+
+
+def strip_sourcemap_text(text: str) -> str:
+    """Text form of ``strip_sourcemap_comment`` for dist concatenation."""
+    return strip_sourcemap_comment(text.encode("utf-8")).decode("utf-8")
+
 
 # Resolves the repo root regardless of where this module is imported from.
 REPO_ROOT = Path(__file__).resolve().parent.parent

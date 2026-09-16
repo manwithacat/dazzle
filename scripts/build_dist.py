@@ -11,7 +11,11 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from vendor_manifest import strip_sourcemap_text  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
 # #950: bundle outputs live UNDER the framework's static tree so the
 # wheel ships them automatically (MANIFEST.in's static/*.{js,css} rule)
 # and the existing `/static/` FastAPI mount serves them at
@@ -206,11 +210,16 @@ def strip_js_comments(text: str) -> str:
 
 
 def process_js(path: Path) -> str:
-    """Read a JS file, stripping comments if it's a framework file."""
+    """Read a JS file, stripping comments if it's a framework file.
+
+    Vendor inputs keep published sourceMappingURL comments on disk
+    (so vendor_hashes.json matches npm). Strip them here — dist is
+    what the browser loads (#860).
+    """
     content = path.read_text()
     if path.name in FRAMEWORK_JS:
-        return strip_js_comments(content)
-    return content
+        content = strip_js_comments(content)
+    return strip_sourcemap_text(content)
 
 
 def gzip_size(data: bytes) -> int:
@@ -317,7 +326,7 @@ def build() -> None:
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
-        icons_parts.append(src.read_text())
+        icons_parts.append(strip_sourcemap_text(src.read_text()))
     icons_combined = hdr + "\n".join(icons_parts)
     icons_out = DIST_DIR / "dazzle-icons.min.js"
     icons_out.write_text(icons_combined)

@@ -1,14 +1,12 @@
-"""Regression test: vendored libraries must not reference missing source maps (#860).
+"""Served bundles must not reference missing source maps (#860).
 
-Minified vendor bundles shipped with Dazzle intentionally omit the `.map`
-companion files. If the minified source carries a trailing
-`//# sourceMappingURL=...` or `/*# sourceMappingURL=... */` comment, any
-browser with DevTools open fires a 404 for the map — noisy in logs and
-distracting for developers.
+``vendor/`` stores published npm/CDN bytes, which often end with
+``//# sourceMappingURL=....map``. We do not ship those ``.map`` files.
+``scripts/build_dist.py`` strips the comment when assembling ``dist/``,
+which is what the browser loads (``/static/dist/dazzle*.min.js``).
 
-Fix: strip those comments from the vendored source. This test catches
-the regression when a vendor file is re-fetched from upstream without
-running the strip step.
+This gate watches the served tree, not the ingest tree — so a vendor
+update can keep the published SHA-256.
 """
 
 from __future__ import annotations
@@ -17,48 +15,19 @@ from pathlib import Path
 
 import pytest
 
-VENDOR_DIR = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "page"
-    / "runtime"
-    / "static"
-    / "vendor"
-)
+pytestmark = pytest.mark.gate
 
-# Every vendored file whose map we know is not shipped. Add to this list
-# when pulling in a new vendor that strip_sourcemap would have touched.
-_FILES_WITHOUT_SHIPPED_MAPS = [
-    # tom-select.min.js / tom-select.css removed in HMC-018 slice 3.
-    # quill.min.js / quill.snow.css removed in #977 cycle 4.
-    "pickr.min.js",
-]
+REPO = Path(__file__).resolve().parents[2]
+DIST_DIR = REPO / "src" / "dazzle" / "page" / "runtime" / "static" / "dist"
+VENDOR_DIR = REPO / "src" / "dazzle" / "page" / "runtime" / "static" / "vendor"
 
 
-@pytest.mark.parametrize("name", _FILES_WITHOUT_SHIPPED_MAPS)
-def test_vendor_file_has_no_sourcemap_reference(name: str) -> None:
-    path = VENDOR_DIR / name
-    if not path.exists():
-        pytest.skip(f"{name} no longer vendored — update the list.")
-
-    content = path.read_text()
-    assert "sourceMappingURL" not in content, (
-        f"{name} references a source-map file that is not shipped in "
-        f"the vendor directory — browsers will fire 404s for it. "
-        f"Strip the trailing `sourceMappingURL=` comment (or commit the "
-        f"matching .map file alongside the bundle)."
-    )
-
-
-def test_no_new_vendor_files_with_unshipped_maps() -> None:
-    """Scan the whole vendor dir for any minified file that still
-    references a missing .map companion."""
+def _unshipped_map_refs(root: Path) -> list[tuple[str, str]]:
     offending: list[tuple[str, str]] = []
-    for path in VENDOR_DIR.iterdir():
-        if not path.is_file():
-            continue
-        if path.suffix not in {".js", ".css"}:
+    if not root.exists():
+        return offending
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix not in {".js", ".css", ".mjs"}:
             continue
         try:
             content = path.read_text()
@@ -66,7 +35,6 @@ def test_no_new_vendor_files_with_unshipped_maps() -> None:
             continue
         if "sourceMappingURL" not in content:
             continue
-        # Extract the referenced map name and check whether it's shipped.
         marker_start = content.find("sourceMappingURL=")
         marker_tail = content[marker_start + len("sourceMappingURL=") :]
         map_ref = ""
@@ -76,13 +44,34 @@ def test_no_new_vendor_files_with_unshipped_maps() -> None:
             map_ref += ch
         if not map_ref:
             continue
-        map_path = VENDOR_DIR / map_ref
+        map_path = path.parent / map_ref
         if not map_path.exists():
-            offending.append((path.name, map_ref))
+            offending.append((str(path.relative_to(root)), map_ref))
+    return offending
 
+
+def test_dist_bundles_have_no_unshipped_sourcemaps() -> None:
+    """Browsers load dist/; a leftover map comment is a DevTools 404."""
+    assert DIST_DIR.is_dir(), "run scripts/build_dist.py"
+    offending = _unshipped_map_refs(DIST_DIR)
     assert not offending, (
-        "Vendor file(s) reference a source-map that isn't shipped:\n"
+        "dist bundle(s) reference a source-map that isn't shipped:\n"
         + "\n".join(f"  {f} → {m}" for f, m in offending)
-        + "\n\nEither strip the sourceMappingURL comment or commit the "
-        "matching .map alongside the bundle."
+        + "\n\nStrip in scripts/build_dist.py (strip_sourcemap_text), "
+        "not by rewriting vendor/ ingest bytes."
     )
+
+
+def test_vendor_lucide_keeps_published_sourcemap_comment() -> None:
+    """Ingest is byte-exact: lucide's UMD ships a sourceMappingURL line.
+
+    If this fails, someone stripped vendor/lucide.min.js again and the
+    committed hash will no longer match npm/jsdelivr.
+    """
+    lucide = VENDOR_DIR / "lucide.min.js"
+    assert lucide.is_file()
+    text = lucide.read_text()
+    assert "sourceMappingURL=lucide.min.js.map" in text
+    dist = DIST_DIR / "dazzle-icons.min.js"
+    assert dist.is_file()
+    assert "sourceMappingURL" not in dist.read_text()

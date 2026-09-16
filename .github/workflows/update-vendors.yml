@@ -72,13 +72,11 @@ jobs:
 
           ## Reviewer checklist
 
-          1. **Verify each new SHA-256** in the table above. Those hashes
-             are of the **committed bytes**, after
-             `_save_vendor` strips a trailing
-             `//# sourceMappingURL=...` comment (#860 — we do not ship
-             `.map` files). Raw jsdelivr / unpkg / npm-tarball hashes
-             will not match. Independent check: download the same npm
-             path, strip that comment, then SHA-256.
+          1. **Verify each new SHA-256** in the table above against the
+             published npm/CDN file (same path the script downloaded).
+             `vendor/` is byte-exact ingest; `sourceMappingURL` is
+             stripped later in `scripts/build_dist.py` because browsers
+             load `dist/`, not `vendor/`.
           2. Run `python scripts/build_dist.py` locally and smoke-test
              at least one example app.
           3. The CI drift gate `tests/unit/test_vendor_hash_drift.py` accepts

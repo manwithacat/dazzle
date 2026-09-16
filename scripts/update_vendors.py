@@ -84,29 +84,14 @@ def _gh_request(url: str) -> bytes:
         return resp.read()
 
 
-# Trailing `//# sourceMappingURL=...` / `/*# sourceMappingURL=... */` comment (#860).
-# Vendored min bundles intentionally omit the .map, so the reference must be stripped
-# or DevTools fires a 404 for the missing map (gated by test_vendor_sourcemap_refs).
-_SOURCEMAP_RE = re.compile(
-    rb"\n?[ \t]*(?://# sourceMappingURL=\S+|/\*# sourceMappingURL=\S+ \*/)[ \t]*\n?\s*$"
-)
-
-
-def _strip_sourcemap(data: bytes) -> bytes:
-    """Remove a trailing sourceMappingURL comment from a vendored bundle (#860)."""
-    return _SOURCEMAP_RE.sub(b"", data)
-
-
 def _save_vendor(filename: str, data: bytes) -> None:
-    """Write *data* to VENDOR_DIR/*filename* and update the manifest.
+    """Write published *data* to VENDOR_DIR/*filename* and update the manifest.
 
-    Every vendored-file write goes through here so the manifest entry
-    is updated atomically with the bytes on disk, the sourcemap comment is
-    stripped (#860), and the diff is recorded for end-of-run reporting
-    (see _print_hash_diff).
+    Ingest is byte-exact: the manifest SHA-256 is the npm/CDN hash. Do not
+    strip sourceMappingURL here — ``scripts/build_dist.py`` strips when
+    assembling the served ``dist/`` bundles (#860).
     """
     assert _MANIFEST is not None, "_MANIFEST not initialised — call from main()"
-    data = _strip_sourcemap(data)
     new_hash = hash_bytes(data)
     old_hash = _MANIFEST.get(filename)
     (VENDOR_DIR / filename).write_bytes(data)
@@ -244,8 +229,7 @@ def update_htmx_extensions(*, check_only: bool) -> None:
 
     Fetched at ``HTMX_PINNED_VERSION`` (not ``latest``) so they stay locked to
     the vendored core; a re-run downloads the same bytes → no manifest churn.
-    ``_save_vendor`` records each SHA-256 in the manifest + strips the trailing
-    sourceMappingURL comment (#860), so the drift gate accepts the new files.
+    ``_save_vendor`` records each SHA-256 of the published bytes.
     """
     print(f"htmx extensions: core pin {HTMX_PINNED_VERSION} ({', '.join(HTMX_EXTENSIONS)})")
     if check_only:
@@ -321,13 +305,11 @@ def _print_hash_diff() -> None:
     print("\n=== VENDOR_HASH_DIFF ===")
     print("## Vendor hash changes\n")
     print(
-        "Each entry below is a SHA-256 of the **bytes we commit**, not the "
-        "raw CDN download. `_save_vendor` strips a trailing "
-        "`//# sourceMappingURL=...` comment (#860) because we do not ship "
-        "the `.map`. To verify independently: download the same npm path "
-        "(for lucide, `dist/umd/lucide.min.js` from the versioned tarball), "
-        "strip that comment, then SHA-256. Raw jsdelivr/unpkg/npm hashes "
-        "will not match.\n"
+        "Each entry below is a SHA-256 of the published npm/CDN bytes "
+        "(what we store under vendor/). Verify each `new` against the "
+        "upstream release, a separate download, or npm provenance. "
+        "sourceMappingURL comments are stripped later, in "
+        "scripts/build_dist.py, because browsers load dist/ not vendor/.\n"
     )
     print("| File | old sha256 | new sha256 |")
     print("|------|------------|------------|")
