@@ -134,13 +134,19 @@ def test_select_write_name_honours_custom_default():
 @pytest.mark.parametrize(
     ("cookies", "tenant", "expected"),
     [
-        # An app that adopts tenant_host: keeps serving legacy sessions
-        # until they expire — dazzle_session takes priority on read.
+        # #1685: leftover dazzle_session must not win over (or stand in for)
+        # the host-prefixed cookie tenant_host apps actually issue.
         pytest.param(
             {LEGACY_NAME: "legacy-sid", HOST_COOKIE: "new-sid"},
             True,
-            "legacy-sid",
-            id="legacy-cookie-preferred-during-rollout",
+            "new-sid",
+            id="host-cookie-wins-over-legacy",
+        ),
+        pytest.param(
+            {LEGACY_NAME: "stolen-or-leftover"},
+            True,
+            None,
+            id="legacy-name-rejected-on-tenant-host",
         ),
         pytest.param(
             {HOST_COOKIE: "sid-x"},
@@ -155,6 +161,12 @@ def test_select_write_name_honours_custom_default():
             id="falls-back-to-apex-cookie",
         ),
         pytest.param({}, True, None, id="no-cookie-returns-none"),
+        pytest.param(
+            {LEGACY_NAME: "sid"},
+            False,
+            "sid",
+            id="legacy-app-reads-dazzle-session",
+        ),
         # A legacy app must never honour a tenant-shaped cookie name.
         pytest.param(
             {HOST_COOKIE: "ignored"},

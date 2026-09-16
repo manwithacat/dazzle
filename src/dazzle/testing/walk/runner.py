@@ -106,17 +106,23 @@ class WalkRunner:
         if existing and existing.session_token:
             valid = await manager.validate_session(persona)
             if valid:
-                self._apply_session_cookie(existing.session_token)
+                self._apply_session_cookie(
+                    existing.session_token,
+                    getattr(existing, "cookie_name", None) or "dazzle_session",
+                )
                 await self._prime_csrf()
                 return
         session = await manager.create_session(persona)
-        self._apply_session_cookie(session.session_token)
+        self._apply_session_cookie(
+            session.session_token,
+            getattr(session, "cookie_name", None) or "dazzle_session",
+        )
         await self._prime_csrf()
 
-    def _apply_session_cookie(self, token: str) -> None:
-        self._cookies["dazzle_session"] = token
+    def _apply_session_cookie(self, token: str, name: str = "dazzle_session") -> None:
+        self._cookies[name] = token
         if self._client is not None:
-            self._client.cookies.set("dazzle_session", token)
+            self._client.cookies.set(name, token)
 
     async def _prime_csrf(self) -> None:
         """R1.2: GET /health if dazzle_csrf absent; sync jar into self._cookies."""
@@ -124,9 +130,8 @@ class WalkRunner:
         token = await prime_csrf_cookie(self._client, self.base_url)
         if token:
             self._cookies["dazzle_csrf"] = token
-        # Mirror any cookies httpx collected back into self._cookies for Playwright
-        for name in ("dazzle_session", "dazzle_csrf"):
-            val = self._client.cookies.get(name)
+        # Mirror jar cookies (including __Host- session names) for Playwright.
+        for name, val in self._client.cookies.items():
             if val:
                 self._cookies[name] = val
 

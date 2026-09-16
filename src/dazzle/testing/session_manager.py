@@ -97,15 +97,15 @@ def _jar_pairs(resp: Any) -> list[tuple[str, str]]:
         return []
 
 
-def session_token_from_login_response(resp: Any) -> str:
-    """Extract the walk/session token from a login ``Set-Cookie`` (#1652).
+def session_cookie_from_login_response(resp: Any) -> tuple[str, str]:
+    """Return ``(cookie_name, token)`` from a login ``Set-Cookie`` (#1652/#1685).
 
     Prefers host-bound ``__Host-*_session``, then apex ``__Secure-*_admin``,
-    then legacy ``dazzle_session``. Empty values and leftover cookie names
-    stay put. The stored token is still applied as ``dazzle_session`` —
-    runtime ``read_session_id`` accepts that fallback.
+    then legacy ``dazzle_session``. Testers must send the same name the
+    app issued — ``read_session_id`` no longer accepts ``dazzle_session``
+    on ``tenant_host:`` apps.
     """
-    found: dict[int, str] = {}
+    found: dict[int, tuple[str, str]] = {}
 
     def consider(name: str, value: str) -> None:
         rank = _session_cookie_rank(name)
@@ -114,7 +114,7 @@ def session_token_from_login_response(resp: Any) -> str:
         token = value.strip().strip('"')
         if not token:
             return
-        found.setdefault(rank, token)
+        found.setdefault(rank, (name, token))
 
     for header in _set_cookie_headers(resp):
         name, value = _first_cookie_pair(header)
@@ -122,10 +122,16 @@ def session_token_from_login_response(resp: Any) -> str:
     for name, value in _jar_pairs(resp):
         consider(name, value)
     for rank in (0, 1, 2):
-        token = found.get(rank)
-        if token:
-            return token
-    return ""
+        pair = found.get(rank)
+        if pair:
+            return pair
+    return "", ""
+
+
+def session_token_from_login_response(resp: Any) -> str:
+    """Token half of ``session_cookie_from_login_response``."""
+    _name, token = session_cookie_from_login_response(resp)
+    return token
 
 
 # =============================================================================
@@ -141,6 +147,7 @@ class PersonaSession(BaseModel):
     email: str
     role: str
     session_token: str
+    cookie_name: str = _LEGACY_SESSION_COOKIE
     created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     expires_at: str = ""
     base_url: str = ""
@@ -358,7 +365,7 @@ class SessionManager:
         """
         session = self.load_session(persona_id)
         if session and session.session_token:
-            return {"dazzle_session": session.session_token}
+            return {session.cookie_name or _LEGACY_SESSION_COOKIE: session.session_token}
         return {}
 
     def get_httpx_cookies(self, persona_id: str) -> httpx.Cookies:
@@ -366,7 +373,7 @@ class SessionManager:
         cookies = httpx.Cookies()
         session = self.load_session(persona_id)
         if session and session.session_token:
-            cookies.set("dazzle_session", session.session_token)
+            cookies.set(session.cookie_name or _LEGACY_SESSION_COOKIE, session.session_token)
         return cookies
 
     def list_sessions(self) -> list[str]:
@@ -407,7 +414,7 @@ class SessionManager:
         try:
             resp = await client.get(
                 f"{self.base_url}/auth/me",
-                cookies={"dazzle_session": session.session_token},
+                cookies={session.cookie_name or _LEGACY_SESSION_COOKIE: session.session_token},
             )
             return resp.status_code == 200
         except Exception:
@@ -505,12 +512,15 @@ class SessionManager:
             )
             if resp.status_code == 200:
                 data = resp.json()
+                cookie_name, cookie_token = session_cookie_from_login_response(resp)
+                token = cookie_token or data.get("session_token", data.get("token", ""))
                 return PersonaSession(
                     persona_id=persona_id,
                     user_id=data.get("user_id", ""),
                     email=f"{persona_id}@test.local",
                     role=role,
-                    session_token=data.get("session_token", data.get("token", "")),
+                    session_token=token,
+                    cookie_name=cookie_name or _LEGACY_SESSION_COOKIE,
                     base_url=self.base_url,
                 )
         except Exception as e:
@@ -570,8 +580,7 @@ class SessionManager:
                 json={"email": email, "password": password},
             )
             if resp.status_code == 200:
-                # Host-prefixed tenant cookies as well as dazzle_session (#1652).
-                session_token = session_token_from_login_response(resp)
+                cookie_name, session_token = session_cookie_from_login_response(resp)
 
                 data = resp.json()
                 user_data = data.get("user", {})
@@ -581,6 +590,7 @@ class SessionManager:
                     email=email,
                     role=role,
                     session_token=session_token,
+                    cookie_name=cookie_name or _LEGACY_SESSION_COOKIE,
                     base_url=self.base_url,
                 )
         except Exception as e:

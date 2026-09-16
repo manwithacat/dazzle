@@ -358,6 +358,7 @@ class TestSessionManagerAsync:
 
         session = await manager.create_session("admin", client=mock_client)
         assert session.session_token == "tok_host"
+        assert session.cookie_name == "__Host-cyfuture_session"
 
     @pytest.mark.asyncio()
     async def test_create_session_both_fail(self, tmp_project: Path) -> None:

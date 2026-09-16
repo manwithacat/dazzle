@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.6] - 2026-09-16
+
+### Security
+- **tenant_host session cookie is host-prefixed only (#1685).** `read_session_id` no longer accepts `dazzle_session` when `tenant_host:` is set. Testers and `/__test__/authenticate` send the name login `Set-Cookie`s. Leftover `dazzle_session` cookies are unauthenticated. Logout still clears every recognised name.
+
 ## [0.114.5] - 2026-09-16
 
 ### Security

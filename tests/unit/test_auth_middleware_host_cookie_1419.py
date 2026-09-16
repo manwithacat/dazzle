@@ -43,11 +43,19 @@ class TestGetAuthContextHostCookie:
         assert store.called_with == "SID123"
         assert ctx.roles == ["author"]
 
-    def test_legacy_cookie_still_resolved(self) -> None:
-        # Single-tenant / migration window: legacy dazzle_session still works.
+    def test_legacy_cookie_still_resolved_without_tenant_host(self) -> None:
         store = _Store()
-        AuthMiddleware(store).get_auth_context(_req({"dazzle_session": "LEG1"}, app_name="myapp"))
+        AuthMiddleware(store).get_auth_context(_req({"dazzle_session": "LEG1"}, app_name=None))
         assert store.called_with == "LEG1"
+
+    def test_legacy_cookie_ignored_under_tenant_host(self) -> None:
+        """#1685: a host-issued token replayed as dazzle_session is unauthenticated."""
+        store = _Store()
+        ctx = AuthMiddleware(store).get_auth_context(
+            _req({"dazzle_session": "LEG1"}, app_name="myapp")
+        )
+        assert store.called_with is None
+        assert not getattr(ctx, "roles", None)
 
     def test_no_session_cookie_returns_empty_context(self) -> None:
         store = _Store()

@@ -99,24 +99,18 @@ def select_write_name(
 
 
 def read_session_id(request: Any, *, default: str = LEGACY_NAME) -> str | None:
-    """Read the session-id value from whichever recognised session
-    cookie is present on the request, or ``None`` if none of them are.
+    """Read the session-id value from the cookie name this app issues.
 
-    Tries the legacy ``default`` name first so existing authenticated
-    sessions keep working across the rollout — an app that adopts
-    ``tenant_host:`` mid-flight still serves dazzle_session-bound
-    sessions until they expire. New logins after adoption issue
-    ``__Host-`` / ``__Secure-`` cookies; both old and new can coexist
-    during the migration window without forcing users to re-auth.
+    ``tenant_host:`` apps only accept ``__Host-<app>_session`` /
+    ``__Secure-<app>_session`` / ``__Secure-<app>_admin``. A token
+    presented as ``dazzle_session`` is unauthenticated (#1685 / PT-001).
+    Apps without ``tenant_host:`` still read ``default``.
     """
     cookies = getattr(request, "cookies", None) or {}
-    legacy = cookies.get(default)
-    if legacy:
-        return str(legacy)
-
     cfg = _tenant_cfg(request)
     if cfg is None:
-        return None
+        legacy = cookies.get(default)
+        return str(legacy) if legacy else None
 
     found = (
         cookies.get(host_cookie_name(cfg.app_name))

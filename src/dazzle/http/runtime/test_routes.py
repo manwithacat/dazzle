@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import re
+import secrets
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from dazzle.core import ir
+from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.repository import DatabaseManager, Repository
@@ -771,7 +773,9 @@ def _resolve_test_auth_role(deps: _TestDeps, request: AuthenticateRequest) -> tu
     return username, (enum_vals[0] if enum_vals else "user")
 
 
-async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest) -> Any:
+async def _authenticate_test_user(
+    deps: _TestDeps, request: AuthenticateRequest, http_request: Request
+) -> Any:
     """
     Create a test authentication session.
 
@@ -800,7 +804,8 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
         session_token = str(uuid.uuid4())
 
     # Return as JSON with Set-Cookie so both cookie-based and
-    # token-based clients can authenticate.
+    # token-based clients can authenticate. Cookie name follows
+    # tenant_host write policy (#1685) — testers must send that name.
     resp = JSONResponse(
         content={
             "user_id": user_id,
@@ -810,11 +815,13 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
             "token": session_token,
         }
     )
-    resp.set_cookie(
-        key="dazzle_session",
-        value=session_token,
-        httponly=True,
-        samesite="lax",
+    csrf_secret = getattr(session, "csrf_secret", None) if deps.auth_store is not None else None
+    set_session_cookies(
+        resp,
+        http_request,
+        session_id=session_token,
+        csrf_secret=csrf_secret or secrets.token_urlsafe(32),
+        user_roles=[role] if role else None,
     )
     return resp
 
@@ -963,8 +970,8 @@ def create_test_routes(
     async def snapshot() -> SnapshotResponse:
         return await _get_snapshot(deps)
 
-    async def authenticate(request: AuthenticateRequest) -> Any:
-        return await _authenticate_test_user(deps, request)
+    async def authenticate(payload: AuthenticateRequest, request: Request) -> Any:
+        return await _authenticate_test_user(deps, payload, request)
 
     async def entity_data(entity_name: str) -> list[dict[str, Any]]:
         return await _get_entity_data(deps, entity_name)
