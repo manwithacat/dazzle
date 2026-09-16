@@ -92,10 +92,12 @@ def test_example_walks_all_routes_with_zero_jinja(app_name: str) -> None:
 
     Failure mode is informative: lists which routes fired which
     templates so regressions are immediately diagnosable."""
+    from dazzle.http.runtime.route_validator import iter_http_route_contexts
+
     client, app = _client_for_example(app_name)
-    for route in app.routes:
-        path = getattr(route, "path", "") or ""
-        methods = getattr(route, "methods", None) or set()
+    for ctx in iter_http_route_contexts(app):
+        path = ctx.path or ""
+        methods = ctx.methods or set()
         if "GET" not in methods or path.startswith(("/openapi", "/docs", "/redoc")):
             continue
         url = _resolve(path)

@@ -441,7 +441,9 @@ class TestCreateMockServerFromPack:
 
     def test_sumsub_pack_has_routes(self) -> None:
         app = create_mock_server("sumsub_kyc", seed=1)
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(app)
         assert "/health" in route_paths
         # Should have applicant routes
         assert any("applicant" in p for p in route_paths)

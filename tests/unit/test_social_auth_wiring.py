@@ -85,7 +85,9 @@ class TestSocialAuthWiring:
         app = app_builder.build()
 
         # Check that /auth/social routes are NOT present
-        routes = [r.path for r in app.routes]
+        from dazzle.http.runtime.route_validator import route_paths
+
+        routes = route_paths(app)
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
@@ -115,7 +117,9 @@ class TestSocialAuthWiring:
         app = app_builder.build()
 
         # Check that /auth/social routes are NOT present
-        routes = [r.path for r in app.routes]
+        from dazzle.http.runtime.route_validator import route_paths
+
+        routes = route_paths(app)
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
@@ -155,7 +159,9 @@ class TestSocialAuthWiring:
             app = app_builder.build()
 
             # Check that /auth/social routes ARE present
-            routes = [r.path for r in app.routes]
+            from dazzle.http.runtime.route_validator import route_paths
+
+            routes = route_paths(app)
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
@@ -246,7 +252,9 @@ class TestSocialAuthWiring:
             app = app_builder.build()
 
             # Check social routes exist
-            routes = [r.path for r in app.routes]
+            from dazzle.http.runtime.route_validator import route_paths
+
+            routes = route_paths(app)
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
@@ -278,7 +286,9 @@ class TestSocialAuthWiring:
             app = app_builder.build()
 
             # Check that /auth/social routes are NOT present
-            routes = [r.path for r in app.routes]
+            from dazzle.http.runtime.route_validator import route_paths
+
+            routes = route_paths(app)
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) == 0, "Social routes should not be present"
 

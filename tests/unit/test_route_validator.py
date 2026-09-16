@@ -137,3 +137,41 @@ class TestValidateRoutes:
             validate_routes(app)
 
         assert any("Route conflict" in r.message for r in caplog.records)
+
+
+def test_route_paths_flattens_include_router() -> None:
+    """FastAPI >= 0.137 stores include_router as _IncludedRouter (no .path)."""
+    from fastapi import APIRouter
+
+    from dazzle.http.runtime.route_validator import route_paths, validate_routes
+
+    app = FastAPI()
+    sub = APIRouter()
+
+    @sub.get("/items")
+    def items() -> dict[str, str]:
+        return {}
+
+    app.include_router(sub, prefix="/v1")
+    assert "/v1/items" in route_paths(app)
+    assert validate_routes(app) == []
+
+
+def test_validate_routes_sees_conflicts_inside_included_router() -> None:
+    from fastapi import APIRouter
+
+    from dazzle.http.runtime.route_validator import validate_routes
+
+    app = FastAPI()
+    sub = APIRouter()
+
+    @sub.get("/dup")
+    def dup1() -> None: ...
+
+    @sub.get("/dup")
+    def dup2() -> None: ...
+
+    app.include_router(sub, prefix="/api")
+    conflicts = validate_routes(app)
+    assert len(conflicts) == 1
+    assert "GET /api/dup" in conflicts[0] or "/api/dup" in conflicts[0]

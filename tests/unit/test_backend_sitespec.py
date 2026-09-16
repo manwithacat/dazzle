@@ -120,10 +120,12 @@ class TestDazzleBackendAppSitespec:
         app = app_builder.build()
 
         # Check that site routes were registered
-        route_paths = [route.path for route in app.routes]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
 
-        assert "/_site/pages" in route_paths, "/_site/pages route should be registered"
-        assert "/_site/page/{route:path}" in route_paths, "/_site/page route should be registered"
+        paths = _route_paths(app)
+
+        assert "/_site/pages" in paths, "/_site/pages route should be registered"
+        assert "/_site/page/{route:path}" in paths, "/_site/page route should be registered"
 
     @patch("dazzle.http.runtime.pg_backend.PostgresBackend")
     def test_site_routes_not_registered_when_no_sitespec(self, mock_pg: MagicMock) -> None:
@@ -137,8 +139,8 @@ class TestDazzleBackendAppSitespec:
         app = app_builder.build()
 
         # Check that site routes were NOT registered
-        route_paths = [route.path for route in app.routes]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
 
-        assert "/_site/pages" not in route_paths, (
-            "/_site/pages should not be registered without sitespec"
-        )
+        paths = _route_paths(app)
+
+        assert "/_site/pages" not in paths, "/_site/pages should not be registered without sitespec"

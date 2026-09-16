@@ -51,7 +51,9 @@ def _build_app_and_init_routes(dsl_src: str, tmp_path):
 
 
 def _route_paths(app) -> list[str]:
-    return [getattr(r, "path", "") for r in app.routes]
+    from dazzle.http.runtime.route_validator import route_paths
+
+    return route_paths(app)
 
 
 # ───────────────────────── one test per bodyless display ──────────────────────────

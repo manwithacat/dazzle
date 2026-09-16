@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 from collections import defaultdict
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -23,11 +24,83 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def iter_http_route_contexts(app_or_router: Any) -> Iterator[Any]:
+    """Yield a RouteContext (or shim) for every leaf HTTP route.
+
+    FastAPI >= 0.137 stores ``include_router()`` as ``_IncludedRouter``
+    nodes that have no ``.path``. ``fastapi.routing.iter_route_contexts``
+    (0.137.2+) is the supported walk; older FastAPI is a flat ``.path`` scan.
+    """
+    routes = getattr(app_or_router, "routes", app_or_router)
+    try:
+        from fastapi.routing import iter_route_contexts
+    except ImportError:  # pragma: no cover — FastAPI < 0.137.2
+        for route in routes:
+            path = getattr(route, "path", None)
+            if path is None:
+                continue
+            yield _ShimRouteContext(route, path)
+        return
+    yield from iter_route_contexts(routes)
+
+
+class _ShimRouteContext:
+    """Pre-0.137 stand-in so callers can use ``ctx.path`` / ``ctx.route``."""
+
+    __slots__ = ("path", "route")
+
+    def __init__(self, route: Any, path: str) -> None:
+        self.route = route
+        self.path = path
+
+    @property
+    def methods(self) -> Any:
+        return getattr(self.route, "methods", None)
+
+    @property
+    def name(self) -> Any:
+        return getattr(self.route, "name", None)
+
+    @property
+    def endpoint(self) -> Any:
+        return getattr(self.route, "endpoint", None)
+
+
+def route_paths(app_or_router: Any) -> list[str]:
+    """Path templates of every leaf route, prefixes included."""
+    return [ctx.path for ctx in iter_http_route_contexts(app_or_router) if ctx.path]
+
+
+def _index_http_route(ctx: Any, seen: dict[str, dict[str, list[tuple[str, str]]]]) -> None:
+    """Record one leaf route into the conflict index; skip mounts."""
+    from starlette.routing import Mount
+
+    route = ctx.route
+    if isinstance(route, Mount):
+        return
+    methods = getattr(ctx, "methods", None) or getattr(route, "methods", None)
+    path = ctx.path
+    if not methods or not path:
+        return
+    name = (
+        getattr(ctx, "name", None)
+        or getattr(route, "name", None)
+        or str(getattr(route, "endpoint", "unknown"))
+    )
+    endpoint = getattr(ctx, "endpoint", None) or getattr(route, "endpoint", None)
+    module = getattr(endpoint, "__module__", "?")
+    qualname = getattr(endpoint, "__qualname__", getattr(endpoint, "__name__", "?"))
+    provenance = f"{module}.{qualname}"
+    for method in methods:
+        seen[path][method].append((name, provenance))
+
+
 def validate_routes(app: FastAPI, *, strict: bool = False) -> list[str]:
     """Check for duplicate route registrations and log warnings.
 
-    Iterates ``app.routes``, groups ``APIRoute`` entries by path pattern,
-    and flags paths where the same HTTP method is registered more than once.
+    Walks the FastAPI 0.137+ route tree (``iter_http_route_contexts``),
+    groups leaf ``APIRoute`` entries by path pattern, and flags paths
+    where the same HTTP method is registered more than once.
 
     Non-API routes (mounts, static files, websockets) are ignored.
 
@@ -39,8 +112,6 @@ def validate_routes(app: FastAPI, *, strict: bool = False) -> list[str]:
     Returns:
         List of human-readable conflict descriptions (empty means clean).
     """
-    from starlette.routing import Mount
-
     # #1140: both `server._setup_routes` (post-build, line ~1505) and
     # `app_factory.assemble_post_build_routes` (#1140 follow-up) call
     # `validate_routes` on the same app — guard with a state flag so
@@ -57,21 +128,8 @@ def validate_routes(app: FastAPI, *, strict: bool = False) -> list[str]:
     # the same provenance).
     seen: dict[str, dict[str, list[tuple[str, str]]]] = defaultdict(lambda: defaultdict(list))
 
-    for route in app.routes:
-        if isinstance(route, Mount):
-            continue
-        methods = getattr(route, "methods", None)
-        path = getattr(route, "path", None)
-        if not methods or not path:
-            continue
-
-        name = getattr(route, "name", None) or str(getattr(route, "endpoint", "unknown"))
-        endpoint = getattr(route, "endpoint", None)
-        module = getattr(endpoint, "__module__", "?")
-        qualname = getattr(endpoint, "__qualname__", getattr(endpoint, "__name__", "?"))
-        provenance = f"{module}.{qualname}"
-        for method in methods:
-            seen[path][method].append((name, provenance))
+    for ctx in iter_http_route_contexts(app):
+        _index_http_route(ctx, seen)
 
     conflicts: list[str] = []
     for path, methods in sorted(seen.items()):
@@ -134,9 +192,9 @@ def _mounted_get_paths(app: FastAPI) -> set[str]:
     ``/app/user/{id:uuid}`` satisfies an advertised ``/app/user/{id}`` link.
     """
     mounted: set[str] = set()
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
+    for ctx in iter_http_route_contexts(app):
+        path = ctx.path
+        methods = getattr(ctx, "methods", None)
         if path and methods and "GET" in methods:
             mounted.add(path)
             normalized = _normalize_path_template(path)

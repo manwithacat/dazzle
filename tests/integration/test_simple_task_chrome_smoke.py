@@ -60,10 +60,12 @@ def _resolve_route(template: str) -> str:
 def _enumerate_get_routes(app: FastAPI) -> list[str]:
     """Every GET route registered by simple_task's page mounting,
     excluding FastAPI internals."""
+    from dazzle.http.runtime.route_validator import iter_http_route_contexts
+
     out: list[str] = []
-    for r in app.routes:
-        methods = getattr(r, "methods", None) or set()
-        path = getattr(r, "path", None) or ""
+    for ctx in iter_http_route_contexts(app):
+        methods = ctx.methods or set()
+        path = ctx.path or ""
         if "GET" not in methods:
             continue
         # Skip FastAPI's auto-generated routes

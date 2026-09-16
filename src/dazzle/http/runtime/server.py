@@ -58,7 +58,7 @@ from dazzle.http.runtime.renderers.init import register_default_renderers
 from dazzle.http.runtime.repository import RepositoryFactory
 from dazzle.http.runtime.rls_schema import build_all_rls_ddl, physical_cast_overrides
 from dazzle.http.runtime.route_generator import RouteGenerator
-from dazzle.http.runtime.route_validator import validate_routes
+from dazzle.http.runtime.route_validator import route_paths, validate_routes
 from dazzle.http.runtime.sa_schema import (
     build_metadata,
     ensure_missing_entity_columns,
@@ -1434,7 +1434,7 @@ class DazzleBackendApp:
         # Defensive: never double-mount the SSE router (e.g. if a future ops
         # dashboard also mounts /_ops/sse). validate_routes() would reject the
         # collision otherwise.
-        if any(getattr(r, "path", "") == "/_ops/sse/events" for r in self._app.routes):
+        if "/_ops/sse/events" in route_paths(self._app):
             logger.info("SSE routes already mounted; skipping live-push mount.")
             return
         lazy_bus = LazyFrameworkBus(framework)

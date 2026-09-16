@@ -120,10 +120,12 @@ class TestRouterFromAppSpec:
 
         app = FastAPI()
         app.include_router(router)
+        from dazzle.http.runtime.route_validator import iter_http_route_contexts
+
         paths = {
-            (route.path, tuple(sorted(route.methods)))
-            for route in app.routes
-            if hasattr(route, "methods")
+            (ctx.path, tuple(sorted(ctx.methods or ())))
+            for ctx in iter_http_route_contexts(app)
+            if ctx.methods
         }
         assert ("/sign/{entity_name}/{record_id}", ("GET",)) in paths
         assert ("/api/sign/{entity_name}/{record_id}", ("POST",)) in paths

@@ -114,10 +114,12 @@ def test_app_with_override_emits_zero_conflicts() -> None:
         path="/things",
     )
 
+    from dazzle.http.runtime.route_validator import iter_http_route_contexts
+
     claimed: set[tuple[str, str]] = set()
-    for route in app.routes:
-        for method in getattr(route, "methods", None) or ():
-            claimed.add((method, getattr(route, "path", "")))
+    for ctx in iter_http_route_contexts(app):
+        for method in ctx.methods or ():
+            claimed.add((method, ctx.path or ""))
 
     router = generator.generate_all_routes([crud], service_specs={}, claimed_routes=claimed)
     app.include_router(router)

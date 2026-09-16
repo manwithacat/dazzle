@@ -159,19 +159,25 @@ class TestAssembleRoutesBehavior:
         assemble_post_build_routes(
             app, _appspec(), _mock_builder(), bundled_css="body { color: red; }"
         )
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(app)
         assert "/static/css/dazzle-bundle.css" in route_paths
 
     def test_no_bundled_css_route_when_empty(self) -> None:
         app = FastAPI()
         assemble_post_build_routes(app, _appspec(), _mock_builder(), bundled_css="")
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(app)
         assert "/static/css/dazzle-bundle.css" not in route_paths
 
     def test_mounts_app_pages_at_app_prefix(self) -> None:
         app = FastAPI()
         assemble_post_build_routes(app, _appspec(), _mock_builder())
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(app)
         app_routes = [p for p in route_paths if p.startswith("/app/")]
         assert app_routes, "No /app/* routes found"
 

@@ -103,10 +103,12 @@ def test_simple_task_chrome_zero_jinja_across_every_route() -> None:
     Pins the Jinja-decommissioning state so any regression that
     re-introduces a Jinja fallback fires a clear test failure.
     """
+    from dazzle.http.runtime.route_validator import iter_http_route_contexts
+
     client, app = _client_chrome_on()
-    for route in app.routes:
-        path = getattr(route, "path", "") or ""
-        methods = getattr(route, "methods", None) or set()
+    for ctx in iter_http_route_contexts(app):
+        path = ctx.path or ""
+        methods = ctx.methods or set()
         if "GET" not in methods or path.startswith(("/openapi", "/docs", "/redoc")):
             continue
         url = _resolve(path)

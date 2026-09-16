@@ -67,7 +67,9 @@ workspace dash "Dash":
 
 
 def _route_paths(app) -> list[str]:
-    return [getattr(r, "path", "") for r in app.routes]
+    from dazzle.http.runtime.route_validator import route_paths
+
+    return route_paths(app)
 
 
 def test_multisource_base_endpoint_registered(tmp_path) -> None:

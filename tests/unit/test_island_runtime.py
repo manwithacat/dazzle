@@ -176,7 +176,9 @@ class TestIslandRoutes:
         island = IslandSpec(name="task_chart", entity="Task")
         router = create_island_routes(islands=[island], services={"Task": object()})
         # Should have sub-routes for the island
-        route_paths = [r.path for r in router.routes]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(router)
         assert any("task_chart" in p for p in route_paths)
 
     def test_create_routes_skips_no_entity(self):
@@ -186,7 +188,9 @@ class TestIslandRoutes:
         island = IslandSpec(name="confetti")
         router = create_island_routes(islands=[island], services={})
         # No sub-routes should be created
-        route_paths = [r.path for r in router.routes]
+        from dazzle.http.runtime.route_validator import route_paths as _route_paths
+
+        route_paths = _route_paths(router)
         assert not any("confetti" in p for p in route_paths)
 
     def test_auth_dependency_applied(self):

@@ -58,7 +58,9 @@ def test_jwt_routes_build_and_mount() -> None:
     app = FastAPI()
     app.include_router(router)
 
-    paths = {getattr(route, "path", None) for route in app.routes}
+    from dazzle.http.runtime.route_validator import route_paths
+
+    paths = set(route_paths(app))
     assert {"/auth/token", "/auth/token/refresh", "/auth/token/revoke"} <= paths
 
 

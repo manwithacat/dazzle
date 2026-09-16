@@ -394,7 +394,9 @@ class TestFastAPIRuntime:
         """Test that routes are registered."""
         app = create_app(simple_appspec, database_url=os.environ["DATABASE_URL"])
 
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        from dazzle.http.runtime.route_validator import route_paths
+
+        routes = route_paths(app)
         assert len(routes) > 0
 
 
