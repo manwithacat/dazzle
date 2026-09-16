@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.9] - 2026-09-16
+
+### Fixed
+- **Unauthenticated GET `/app` redirects to `/login?next=` (#1688).** When auth is wired, anonymous requests no longer fall through to `workspaces[0]` (often a super-admin desk) and 403. Dev setups with no auth callable still use the workspace fallback.
+
 ## [0.114.8] - 2026-09-16
 
 ### Fixed

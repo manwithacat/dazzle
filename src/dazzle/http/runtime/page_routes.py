@@ -20,6 +20,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -3656,6 +3657,12 @@ def _make_root_redirect_handler(
     return handler
 
 
+def _login_next_redirect(request: Request) -> RedirectResponse:
+    """Send anonymous `/app` to login with `next=` (#1688)."""
+    path = getattr(getattr(request, "url", None), "path", None) or "/app"
+    return RedirectResponse(url=f"/login?next={quote(path, safe='/')}", status_code=302)
+
+
 async def _root_redirect(
     deps: _PageRouterConfig,
     persona_ws_routes: dict[str, str],
@@ -3667,7 +3674,9 @@ async def _root_redirect(
         try:
             # #1128: await coroutine when get_auth_context is async.
             auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
-            if auth_ctx and auth_ctx.is_authenticated and auth_ctx.roles:
+            if not auth_ctx or not auth_ctx.is_authenticated:
+                return _login_next_redirect(request)
+            if auth_ctx.roles:
                 for role in auth_ctx.roles:
                     route = persona_ws_routes.get(role)
                     if route:
@@ -3677,6 +3686,7 @@ async def _root_redirect(
                 "Failed to resolve user persona for workspace redirect",
                 exc_info=True,
             )
+            return _login_next_redirect(request)
     return RedirectResponse(url=fallback_ws_route, status_code=302)
 
 
