@@ -415,7 +415,7 @@ def _get_heads(cfg: object) -> list[str]:
     return list(ScriptDirectory.from_config(cfg).get_heads())  # type: ignore[arg-type]
 
 
-def _guard_single_head(cfg: object, target: str) -> None:
+def _guard_single_head(cfg: object, target: str) -> str:
     """Refuse an ambiguous ``upgrade head`` when multiple heads exist (#1309).
 
     Shipping the framework baseline migrations (v0.80.59, #1308) added a second
@@ -425,12 +425,23 @@ def _guard_single_head(cfg: object, target: str) -> None:
     guidance: run ``dazzle db reconcile-baseline`` (generates a project-side
     merge migration → single head). Only guards the literal ``head`` target;
     an explicit ``heads`` or a specific revision is left untouched.
+
+    #1689: after a project has already merged the framework chain, a new
+    framework file (0021 off 0020) re-forks a head whose *parent* is in the
+    project merge ancestry. That is not a parallel-root problem — apply
+    ``heads`` so the increment lands without another merge file.
     """
     if target != "head":
-        return
+        return target
     heads = _get_heads(cfg)
     if len(heads) <= 1:
-        return
+        return target
+    if _framework_increment_parent_already_merged(cfg, heads):
+        console.print(
+            "[dim]#1689: extra framework head's parent is already in the project "
+            "merge; applying `heads` (no new merge file).[/dim]"
+        )
+        return "heads"
     has_framework_root = _FRAMEWORK_BASELINE_ROOT in heads or any(
         _revision_traces_to_framework_root(cfg, h) for h in heads
     )
@@ -444,6 +455,53 @@ def _guard_single_head(cfg: object, target: str) -> None:
         f"that unifies them into a single head, commit it, then re-run "
         f"`dazzle db upgrade head`. See #1309."
     )
+
+
+def _down_revisions(script: Any, rev_id: str) -> tuple[str, ...]:
+    """Parent revision ids of *rev_id* (empty for a root)."""
+    rev = script.get_revision(rev_id)
+    down = getattr(rev, "down_revision", None)
+    if down is None:
+        return ()
+    if isinstance(down, (tuple, list)):
+        return tuple(str(x) for x in down if x)
+    return (str(down),)
+
+
+def _ancestry_ids(script: Any, head: str) -> set[str]:
+    from alembic.util.exc import CommandError
+
+    ids: set[str] = set()
+    try:
+        for rev in script.iterate_revisions(head, "base"):
+            ids.add(rev.revision)
+    except CommandError:
+        logger.warning("Could not walk ancestry for %s", head, exc_info=True)
+    return ids
+
+
+def _framework_increment_parent_already_merged(cfg: object, heads: list[str]) -> bool:
+    """True when the extra head is a framework increment off an already-merged parent (#1689).
+
+    Both heads often trace to ``0019`` (the project merge already includes
+    ``0020``). Identify the increment as the single-parent framework rev
+    whose parent sits in the other head's ancestry.
+    """
+    if len(heads) != 2:
+        return False
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(cfg)  # type: ignore[arg-type]
+    a, b = heads[0], heads[1]
+    for extra, base in ((a, b), (b, a)):
+        parents = _down_revisions(script, extra)
+        if len(parents) != 1:
+            continue
+        if not _revision_traces_to_framework_root(cfg, extra):
+            continue
+        if parents[0] in _ancestry_ids(script, base):
+            return True
+    return False
 
 
 def _revision_traces_to_framework_root(cfg: object, head: str) -> bool:
@@ -603,7 +661,7 @@ def upgrade_command(
     console.print(f"[dim]Target database: {_redact_url(target)}[/dim]")
 
     try:
-        _guard_single_head(cfg, revision)  # #1309: actionable error on parallel heads
+        revision = _guard_single_head(cfg, revision) or revision
         _validate_revision_widths(cfg, revision)
         before = _safe_current_revision(cfg)
         command.upgrade(cfg, revision)

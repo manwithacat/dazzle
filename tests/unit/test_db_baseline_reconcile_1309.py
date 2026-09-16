@@ -125,6 +125,32 @@ class TestHeadGuards1309:
         cfg, _ = _two_root_cfg(tmp_path)
         _guard_single_head(cfg, "heads")  # must not raise
 
+    def test_guard_rewrites_head_when_framework_increment_parent_merged(
+        self, tmp_path: Path
+    ) -> None:
+        """#1689: 0021 off 0020, project already merged 0020 → apply heads."""
+        from alembic.config import Config
+
+        from dazzle.cli.db import _get_heads, _guard_single_head
+
+        script_loc = tmp_path / "alembic"
+        script_loc.mkdir()
+        shutil.copy(_FRAMEWORK_ALEMBIC / "script.py.mako", script_loc / "script.py.mako")
+        fw = tmp_path / "fw"
+        fw.mkdir()
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        _write_rev(fw, "0019_process_runtime_tables", None)
+        _write_rev(fw, "0020_tenant_host_aliases", "0019_process_runtime_tables")
+        _write_rev(fw, "0021_ingest_fingerprint", "0020_tenant_host_aliases")
+        _write_rev(proj, "proj_base", None)
+        _write_rev(proj, "0db665512971", ("0020_tenant_host_aliases", "proj_base"))
+        cfg = Config()
+        cfg.set_main_option("script_location", str(script_loc))
+        cfg.set_main_option("version_locations", f"{fw} {proj}")
+        assert set(_get_heads(cfg)) == {"0021_ingest_fingerprint", "0db665512971"}
+        assert _guard_single_head(cfg, "head") == "heads"
+
     def test_guard_noop_on_single_head(self, tmp_path: Path) -> None:
         from alembic.config import Config
 

@@ -701,6 +701,12 @@ no `stamp` is needed.)
    dazzle db upgrade head
    ```
 
+   After that first merge, a **new** framework file (e.g. `0021_ingest_fingerprint`
+   off `0020`) re-forks a head whose parent is already in the merge ancestry.
+   `dazzle db upgrade` then applies `heads` (no new merge file) so the increment
+   lands on the next release (#1689). Two parallel *roots* still need
+   `reconcile-baseline`.
+
 5. **Commit** the rewritten mergepoint files + the new merge migration, then
    deploy. Your `release:` phase `dazzle db upgrade` will now succeed.
 

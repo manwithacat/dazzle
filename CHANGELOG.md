@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.114.10] - 2026-09-16
+
+### Fixed
+- **Framework Alembic increments after a #1309 merge no longer block `upgrade head` (#1689).** When the extra head is a framework revision whose parent is already in the project merge ancestry (e.g. `0021_ingest_fingerprint` off `0020` after CyFuture merged `0020`), `dazzle db upgrade` applies `heads` instead of demanding another `reconcile-baseline`. Two parallel *roots* still need a merge.
+
 ## [0.114.9] - 2026-09-16
 
 ### Fixed
