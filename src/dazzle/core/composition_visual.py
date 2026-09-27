@@ -15,7 +15,7 @@ import logging
 import traceback
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .model_defaults import DEFAULT_JUDGMENT_MODEL
 from .taste_rubric import TASTE_DIMENSIONS as _TASTE_DIMENSIONS
@@ -390,7 +390,7 @@ def _call_vision_api(
         max_tokens=max_tokens,
         temperature=0.0,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": content}],
+        messages=[{"role": "user", "content": cast(Any, content)}],
     )
 
     text = response.content[0].text if hasattr(response.content[0], "text") else ""

@@ -8,7 +8,7 @@ import logging
 import secrets
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -122,7 +122,7 @@ async def verify_google_token(id_token: str, client_id: str) -> SocialProfile:
 
     try:
         # Verify the token (google-auth stubs omit verify_oauth2_token typing)
-        idinfo = google_id_token.verify_oauth2_token(
+        idinfo = cast(Any, google_id_token.verify_oauth2_token)(
             id_token,
             requests.Request(),
             client_id,

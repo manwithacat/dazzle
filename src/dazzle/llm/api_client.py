@@ -657,19 +657,16 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             raise RuntimeError("Vertex client not initialized")
 
         try:
-            from google.genai import types
-        except ImportError:
-            types = None
-
-        try:
             config: dict[str, Any] = {
                 "temperature": self.temperature,
                 "max_output_tokens": self.max_tokens,
                 "system_instruction": system_prompt,
             }
-            if types is not None:
-                gen_config = types.GenerateContentConfig(**config)
-            else:
+            try:
+                from google.genai import types
+
+                gen_config: Any = types.GenerateContentConfig(**config)
+            except ImportError:
                 gen_config = config
 
             response = self._vertex_client.models.generate_content(

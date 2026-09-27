@@ -7,12 +7,17 @@ the near-miss error distribution we want to test against.
 
 from __future__ import annotations
 
+from typing import Any
+
 from dazzle.core.model_defaults import DEFAULT_MECHANICAL_MODEL
 
+anthropic: Any
 try:
-    import anthropic
+    import anthropic as anthropic_package
 except ImportError:
     anthropic = None
+else:
+    anthropic = anthropic_package
 
 GRAMMAR_SUMMARY = """DAZZLE DSL Grammar Summary:
 
