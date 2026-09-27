@@ -1007,9 +1007,10 @@ workspace staff_directory "Staff Directory":
   # Cycle 2092 directory_work_first (empty_region_honesty): BambooHR / Workday
   # people directory leads with the roster you act on, not a 2-thumb photo
   # theater + 8-tile wall. Media shelf stays filled below fold (limit 8).
-  purpose: "Multi-panel staff home — current roster + starters, status mix, documents, then people notes"
+  purpose: "Staff directory — current roster, status mix, documents, then people notes"
 
-  # Dual attention FIRST — active roster + onboarding starters (work queues).
+  # Current roster first. New Starters owns the onboarding queue; repeating it
+  # here shows the same people twice when every seeded person is active.
   current_staff:
     source: Person
     filter: ended_at = null
@@ -1020,18 +1021,6 @@ workspace staff_directory "Staff Directory":
     empty: "No active people on record"
     # TODO(#hr-temporal): entity default_scope for ended_at = null would
     # make this region-level filter redundant; kept explicit for fold proof.
-
-  # Work-surface utility: recent joiners are an onboarding pull queue, not inventory.
-  recent_starters:
-    source: Person
-    sort: started_at desc
-    display: queue
-    limit: 4
-    action: person_detail
-    empty: "No recent joiners listed"
-    # TODO(#hr-temporal): "filter: started_at > today - 90d" — date
-    # arithmetic in filters isn't first-class for list region filters
-    # outside aggregate where clauses.
 
   # Job strip — headcount + assignment status mix (acceptance criteria:
   # active / on leave / terminated visible without hunting employment rows).
@@ -1055,7 +1044,7 @@ workspace staff_directory "Staff Directory":
       documents: accent
       conversation: accent
 
-  # Goal B document composition AFTER dual attention — named offer/policy
+  # Goal B document composition AFTER roster + status mix — named offer/policy
   # headlines (display_field: headline) before the notes trail.
   composition:
     source: HrDocument
@@ -1065,7 +1054,7 @@ workspace staff_directory "Staff Directory":
     action: hr_document_detail
     empty: "No documents yet — attach an offer or policy letter on a person"
 
-  # Conversation trail after dual attention + documents — domain-true
+  # Conversation trail after roster + documents — domain-true
   # people prose (display_field: body). Cap so pressure + docs keep fold share.
   live_conversation:
     source: PersonNote
@@ -1091,17 +1080,17 @@ workspace staff_directory "Staff Directory":
     # to fetch). Cycle 2092: work queues + status mix + letters eager;
     # media shelf + notes remain on the desk, intersect-once after scroll.
     as hr_admin:
-      purpose: "Multi-panel staff — roster, starters, status mix, documents before notes"
-      focus: current_staff, recent_starters, headcount, composition
+      purpose: "Staff roster, status mix, documents before notes; onboarding in New Starters"
+      focus: current_staff, headcount, composition
     as manager:
-      purpose: "Multi-panel team view — roster, starters, status mix, documents before notes"
-      focus: current_staff, recent_starters, headcount, composition
+      purpose: "Staff roster, status mix, documents before notes"
+      focus: current_staff, headcount, composition
     as finance:
-      purpose: "Roster + starters + headcount + documents before compensation hop"
-      focus: current_staff, recent_starters, headcount, composition
+      purpose: "Roster + headcount + documents before compensation hop"
+      focus: current_staff, headcount, composition
     as employee:
-      purpose: "Directory roster, starters, status mix, and documents before notes"
-      focus: current_staff, recent_starters, headcount, composition
+      purpose: "Directory roster, status mix, and documents before notes"
+      focus: current_staff, headcount, composition
 
   # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:

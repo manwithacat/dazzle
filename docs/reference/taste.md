@@ -25,7 +25,7 @@ Two playbooks — both bill cognition to the **host harness subscription**
 
 | Scope | Capture | Judge | Strategy / CLI |
 |-------|---------|-------|----------------|
-| Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.claude/commands/improve/strategies/visual_tier2_subagent.md` |
+| Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.agents/skills/improve/strategies/visual_tier2_subagent.md` |
 | HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Subagent **Reads** PNG → taste dimension scores | `scripts/hm_subscription_vision.py` |
 | HM GitHub Pages gallery (curated) | `scripts/hm_pages_vision.py --capture` | Subagent **Reads** PNGs → findings + scores | `scripts/hm_pages_vision.py` |
 | **All Hyperparts (~90) coherence** | `hm_pages_vision.py --capture --all-hyperparts` | Subagent **Reads** PNGs → coherent? + score + issues | `improve/strategies/hyperpart_coherence.md` |
@@ -228,9 +228,10 @@ dazzle qa taste-panel --manifest fleet-merged.json --judges 3 --noise-runs 2
 ```
 
 The panel top-crops every image to the reference frame
-(`normalize_pool_frames`), interleaves sources blindly, and applies
-per-dimension margins locked by the 2026-07-02 baseline:
-`margin = max(0.5, 2 × judge noise SD)` —
+(`normalize_pool_frames`) and interleaves sources blindly. It recomputes
+per-dimension margins from judge noise on each run using
+`margin = max(0.5, 2 × judge noise SD)`. The following values describe the
+2026-07-02 baseline; they are historical calibration, not fixed thresholds:
 
 | Dimension | Locked margin | Baseline gap |
 |---|---|---|
@@ -241,7 +242,24 @@ per-dimension margins locked by the 2026-07-02 baseline:
 | typographic_hierarchy | 1.15 | 2.44 |
 | dark_mode_integrity | 1.15 | 1.97 |
 
-Phases 2–4 (foundations → component pass → example convergence) end when
-the fleet clears every margin. Protocol invariants for re-judging: same
-frame, same rubric, unseeded apps, persona-matched workspace sampling
-(fixing the `_platform_admin` over-selection noted in the baseline).
+The July baseline used unseeded pages and a mixed reference pool. It cannot
+serve as a before/after score for a particular example app. Any fleet rerun
+must report its sampling and reference eligibility alongside the scores.
+
+### Measuring a change to an example app
+
+For a visual improvement, compare the **same seeded persona and job** before
+and after the change at the same viewport, theme, URL, and browser state. Capture
+the 1440×900 first viewport and a full page; include a dark capture when the
+change affects shared styling. `dazzle qa capture --persona <role> --workspace
+<desk> --above-fold` selects a single scene without walking every workspace.
+
+Use the six taste dimensions above for visual craft. Record job clarity
+separately: whether the next relevant item, its status, and its available
+action are visible and understandable in the first viewport. Report each
+scene's paired delta and the worst scene, then an equal-scene app summary.
+Do not average all screens from different apps or roles into a claimed app
+improvement. A valid shadcn reference is an analogous job scene with its
+primary heading and content intact in the frame; a 404, blank, clipped, or
+documentation-heavy capture is ineligible. Reference pixels are a quality
+comparison, not a requirement to copy their layout or implementation.

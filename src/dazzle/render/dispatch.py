@@ -271,78 +271,15 @@ def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
 
 
 def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
-    """Translate PageContext nav data into a typed Sidebar primitive.
-
-    #1324 slice 3b: when the precomputed per-persona/anon `NavModel` is set on
-    the context (`ctx.nav_model`), build the sidebar from it via
-    `_sidebar_from_nav_model`. The legacy `nav_items`/`nav_groups` logic below
-    stays as a fallback for any render path that hasn't set `nav_model` yet
-    (its removal is a later task once every path sets nav_model).
-
-    `nav_items` (flat) and `nav_groups` (collapsible) both flow through;
-    the Sidebar header carries the app name. Active state mirrors
-    `current_route` against each item's route.
-    """
-    model = getattr(ctx, "nav_model", None)
-    if model is not None:
-        return _sidebar_from_nav_model(model, ctx)
-
-    current = (getattr(ctx, "current_route", "") or "").rstrip("/")
-
-    flat_items: list[NavItem] = []
-    for item in getattr(ctx, "nav_items", []) or []:
-        href = _safe_url(getattr(item, "route", "") or "")
-        if href is None:
-            continue
-        flat_items.append(
-            NavItem(
-                label=getattr(item, "label", "") or "",
-                href=href,
-                active=(href.value.rstrip("/") == current),
-            )
+    """Render the app sidebar from its single navigation model."""
+    if ctx.nav_model is None:
+        return Sidebar(
+            items=(),
+            groups=(),
+            header=Text((ctx.app_name or "Dazzle").strip()),
+            show_sidebar_toggle=True,
         )
-
-    groups: list[NavGroup] = []
-    for raw_group in getattr(ctx, "nav_groups", []) or []:
-        # Each entry is a dict {label, icon, collapsed, children}
-        children = raw_group.get("children", []) if isinstance(raw_group, dict) else []
-        group_items: list[NavItem] = []
-        for child in children:
-            child_route = (
-                child.get("route", "") if isinstance(child, dict) else getattr(child, "route", "")
-            )
-            href = _safe_url(child_route or "")
-            if href is None:
-                continue
-            child_label = (
-                child.get("label", "") if isinstance(child, dict) else getattr(child, "label", "")
-            )
-            group_items.append(
-                NavItem(
-                    label=child_label or "",
-                    href=href,
-                    active=(href.value.rstrip("/") == current),
-                )
-            )
-        if not group_items:
-            continue  # NavGroup requires at least one item
-        groups.append(
-            NavGroup(
-                label=(raw_group.get("label") if isinstance(raw_group, dict) else "") or "Group",
-                items=tuple(group_items),
-                collapsed=bool(
-                    raw_group.get("collapsed") if isinstance(raw_group, dict) else False
-                ),
-            )
-        )
-
-    app_name = (ctx.app_name or "Dazzle").strip()
-    return Sidebar(
-        items=tuple(flat_items),
-        groups=tuple(groups),
-        header=Text(app_name),
-        show_sidebar_toggle=True,
-    )
+    return _sidebar_from_nav_model(ctx.nav_model, ctx)
 
 
 def _account_identity_label(ctx: PageContext) -> str:

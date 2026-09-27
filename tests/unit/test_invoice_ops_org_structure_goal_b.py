@@ -6,6 +6,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
 SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
 ENTITIES = ROOT / "examples/invoice_ops/dsl/entities.dsl"
@@ -14,17 +16,11 @@ SUPPLIER_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Supplier.jsonl
 
 
 def _team_desk_block() -> str:
-    text = SURFACES.read_text()
-    start = text.index('workspace team_desk "Team":')
-    end = text.index('workspace payments_trail "Payments":', start)
-    return text[start:end]
+    return declaration_block("invoice_ops", "workspace", "team_desk")
 
 
 def _suppliers_desk_block() -> str:
-    text = SURFACES.read_text()
-    start = text.index('workspace suppliers_desk "Suppliers":')
-    end = text.index('workspace team_desk "Team":', start)
-    return text[start:end]
+    return declaration_block("invoice_ops", "workspace", "suppliers_desk")
 
 
 def test_user_entity_declares_department_and_job_title() -> None:

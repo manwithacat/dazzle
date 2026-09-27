@@ -48,10 +48,10 @@ def test_hero_desks_declare_composition_queue() -> None:
     assert "composition:" in staff
     assert "source: HrDocument" in staff
     assert "documents: count(HrDocument)" in staff
-    assert staff.index("recent_starters:") < staff.index("composition:")
+    assert staff.index("headcount:") < staff.index("composition:")
     assert staff.index("composition:") < staff.index("live_conversation:")
-    # Cycle 2092: composition is focus-eager after roster/starters/status mix.
-    assert "focus: current_staff, recent_starters, headcount, composition" in staff
+    # Composition is focus-eager after roster and status mix.
+    assert "focus: current_staff, headcount, composition" in staff
 
     team = _workspace_block("my_team")
     assert "composition:" in team

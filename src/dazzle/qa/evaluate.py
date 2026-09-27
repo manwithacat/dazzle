@@ -1,18 +1,19 @@
 """Prompt builder + response parser for the Dazzle visual QA toolkit.
 
 The visual-QA loop captures screenshots via :mod:`dazzle.qa.capture`,
-then dispatches a Claude Code Task subagent to evaluate them against the
-categories in :mod:`dazzle.qa.categories`. The subagent reads each
-screenshot via the standard Read tool and writes a JSON findings file.
+then asks an agent to evaluate them against the categories in
+:mod:`dazzle.qa.categories`. The agent opens each screenshot using its
+host's image-viewing capability and writes a JSON findings file.
 
 This module provides:
 
 - :func:`build_subagent_prompt` — multi-screen mission prompt for the
-  subagent dispatch (see ``.claude/commands/improve/strategies/visual_tier2_subagent.md``).
+  acting agent or a dispatched reviewer (see
+  ``.agents/skills/improve/strategies/visual_tier2_subagent.md``).
 - :func:`parse_findings` — parser for the JSON the subagent writes back.
 
-The previous Anthropic-API-bound evaluator was removed when ``dazzle qa
-visual`` was removed in favour of the CC-subagent substrate.
+The previous API-bound evaluator was removed when ``dazzle qa visual`` was
+removed in favour of host-provided image inspection.
 """
 
 from __future__ import annotations
@@ -32,11 +33,11 @@ def build_subagent_prompt(
     findings_path: str,
     categories: list[str] | None = None,
 ) -> str:
-    """Build a multi-screen mission prompt for a CC Task subagent.
+    """Build a multi-screen mission prompt for a host agent.
 
-    The subagent receives a list of screenshots (with persona / workspace
+    The agent receives a list of screenshots (with persona / workspace
     / URL context for each), the QA category definitions, and an output
-    path. It is expected to Read every screenshot, evaluate it against
+    path. It is expected to inspect every screenshot, evaluate it against
     the categories, and write a JSON array of findings to *findings_path*.
 
     Args:
@@ -88,7 +89,7 @@ Your task: evaluate {total_screens} screenshots across {len(manifest.get("apps",
 
 {screens_block}
 
-Use the Read tool on each screenshot path (Read supports PNG natively). Inspect each image and assess it against the categories.
+Open each screenshot using your host's image-viewing capability. Inspect each image and assess it against the categories.
 
 ## Evaluation categories
 
@@ -114,7 +115,7 @@ Write a JSON array of findings to `{findings_path}`. Each finding must have thes
 - `description`: concise description of the problem
 - `suggestion`: brief, actionable suggestion to fix it
 
-Use Write to create `{findings_path}` containing the JSON array. Return the array contents in your final message as well.
+Create `{findings_path}` containing the JSON array using your host's file-writing capability. Return the array contents in your final message as well.
 
 If all screenshots look genuinely good, write `[]` to the file and report that.
 

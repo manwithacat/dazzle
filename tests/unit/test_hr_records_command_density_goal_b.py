@@ -19,24 +19,23 @@ def _workspace_block(name: str) -> str:
     return text[start : start + 1 + nxt]
 
 
-def test_staff_directory_dual_attention_before_conversation() -> None:
-    """Peer HR dens put active roster + starters above people-notes trail.
+def test_staff_directory_roster_before_conversation() -> None:
+    """Peer HR dens put active roster and status mix above people-notes trail.
 
-    Order: current_staff → recent_starters → headcount → composition → live_conversation.
+    Order: current_staff → headcount → composition → live_conversation.
     """
     block = _workspace_block("staff_directory")
     assert "headcount:" in block
     assert "current_staff:" in block
-    assert "recent_starters:" in block
+    assert "recent_starters:" not in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    assert block.index("current_staff:") < block.index("recent_starters:")
-    assert block.index("recent_starters:") < block.index("headcount:")
+    assert block.index("current_staff:") < block.index("headcount:")
     assert block.index("headcount:") < block.index("composition:")
     assert block.index("composition:") < block.index("live_conversation:")
-    assert "Multi-panel" in block or "multi-panel" in block.lower()
-    # Cycle 2092: work-first focus ≤4; dual attention still before docs/notes.
-    assert "focus: current_staff, recent_starters, headcount, composition" in block
+    assert "Staff directory" in block
+    # Work-first focus stays capped; roster and status precede docs/notes.
+    assert "focus: current_staff, headcount, composition" in block
 
 
 def test_my_team_dual_attention_before_conversation() -> None:

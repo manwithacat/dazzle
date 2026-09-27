@@ -102,7 +102,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   transition: background var(--duration-fast) var(--ease-out);
 }

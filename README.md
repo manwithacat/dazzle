@@ -360,7 +360,7 @@ Dazzle ships as both a runtime and an AI development environment. The intent is 
 
 **Before inventing structure**, agents should reconstruct from the epistemic hierarchy: [`stems/INDEX.md`](stems/INDEX.md) → matching stem → [`AGENTS.md`](AGENTS.md) → ADR/DD as needed → local code. Package work (e.g. HaTchi-MaXchi) also reads that package’s `stems/` and agent curriculum. Parked residual work lives in [`docs/decisions/`](docs/decisions/INDEX.md)—do not speculative-build a PARKED DD.
 
-When used with Claude Code (via MCP), you get access to a growing set of tools that span the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. As of the latest doc regen: **34 tools, 156 operations**. Broad lifecycle coverage:
+When connected to an agent host through MCP, you get tools across the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. Broad lifecycle coverage:
 
 | Stage | What the tools do |
 |-------|------------------|
@@ -384,21 +384,23 @@ Dazzle’s own development loop (`/improve`) is a **control plane** around agent
 | **[Operator field guide](docs/harness/operator-field-guide.md)** | Operators — status, rearm, force a dig, read the log |
 | **[Strategy catalog](docs/harness/strategy-catalog.md)** | Both — one-line map of playbooks |
 | **[Autonomous Harness](docs/autonomous-harness.md)** | Fleet overview of slash commands |
-| **Runtime runbook** (`.claude/commands/improve.md`) | Executing agents — not a substitute for the exemplar |
+| **Runtime runbook** (`.agents/skills/improve/SKILL.md`) | Executing agents — not a substitute for the exemplar |
 
 Hub: [docs/harness/](docs/harness/index.md) · published docs nav section **Harness**.
 
-### Claude Code integration
+### Agent integration
 
 ```bash
-# Homebrew: MCP server auto-registered during installation
+# Install Dazzle
 brew install manwithacat/tap/dazzle
 
-# PyPI: Register manually
-pip install dazzle-dsl
-dazzle mcp setup
+# Point your agent host at a project-scoped MCP process
+dazzle mcp run --working-dir /absolute/path/to/project
 
-# Verify
+# Optional Claude Code registration
+dazzle mcp setup --working-dir /absolute/path/to/project
+
+# Check the registration and session state
 dazzle mcp check
 ```
 

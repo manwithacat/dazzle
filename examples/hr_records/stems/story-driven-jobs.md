@@ -6,8 +6,9 @@ HR homes open with headcount/compensation metrics before dense directories.
 
 ## Reconstruct
 
-- staff_directory: staff/starter queues first, then headcount + documents +
-  people notes (no 2-thumb media theater — Goal B `directory_work_first`).
+- staff_directory: current staff first, then headcount + documents +
+  people notes (no duplicate starter queue or 2-thumb media theater).
+  New Starters owns the onboarding queue.
   Assignment lifecycle status lives on employment list/detail for ST-001/ST-005.
 - compensation_review: compensation metrics then salary list.
 - employment_list + person hub related employment show status alongside dates.

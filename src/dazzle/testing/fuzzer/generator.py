@@ -12,7 +12,7 @@ from dazzle.core.model_defaults import DEFAULT_MECHANICAL_MODEL
 try:
     import anthropic
 except ImportError:
-    anthropic = None  # type: ignore[assignment]
+    anthropic = None
 
 GRAMMAR_SUMMARY = """DAZZLE DSL Grammar Summary:
 

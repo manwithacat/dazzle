@@ -31,11 +31,11 @@ stem was wrong** — restore as a stem/counter-prior/gate, not as oral dump.
 
 | Surface | Before | After |
 |---------|--------|--------|
-| `.claude/commands/improve/capability-map.md` | ~1700 lines (cycle digests) | ~150 lines: vocab + registry + ≤5 sweep one-liners |
+| `.agents/skills/improve/capability-map.md` | ~1700 lines (cycle digests) | ~150 lines: vocab + registry + ≤5 sweep one-liners |
 | `docs/reference/antagonist-report-post-5-8.md` | Second full doctrine | Short pointer to interesting-saas-context |
 | `docs/adr/INDEX.md` | Flat must-scan ledger | **Active** table + historical full list |
 | `improve.md` stamp rule | Implied narrative stamps | Explicit: table only; lore → oral-history |
-| Path honesty | Mixed `improve/capability-map.md` | Canonical `.claude/commands/improve/…` |
+| Path honesty | Mixed `improve/capability-map.md` | Canonical `.agents/skills/improve/…` |
 | MCP boundary (AGENTS) | Session-era freeze language | Stateless protocol + CLI for long work |
 
 Not bulk-deleted (still high signal): stems, counter-priors, dig contracts,

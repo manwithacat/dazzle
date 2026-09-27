@@ -2,8 +2,10 @@
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
-from dazzle.qa.capture import VIEWPORTS, write_manifest
+from dazzle.cli.qa import _plan_qa_capture
+from dazzle.qa.capture import VIEWPORTS, CaptureTarget, write_manifest
 from dazzle.qa.models import CapturedScreen
 
 
@@ -37,3 +39,21 @@ def test_write_manifest_includes_theme(tmp_path: Path) -> None:
     data = json.loads(manifest.read_text())
     (app,) = data["apps"]
     assert app["screens"][0]["theme"] == "dark"
+
+
+def test_capture_plan_can_select_one_persona_workspace(monkeypatch, tmp_path: Path) -> None:
+    app = SimpleNamespace(name="studio")
+    monkeypatch.setattr("dazzle.cli.utils.load_project_appspec", lambda _path: app)
+    monkeypatch.setattr(
+        "dazzle.cli.qa.build_capture_plan",
+        lambda _app, include_denied: [
+            CaptureTarget("designer", "studio_dashboard", "/app/workspaces/studio_dashboard"),
+            CaptureTarget("designer", "asset_catalog", "/app/workspaces/asset_catalog"),
+            CaptureTarget("reviewer", "studio_dashboard", "/app/workspaces/studio_dashboard"),
+        ],
+    )
+
+    loaded, targets = _plan_qa_capture(tmp_path, "designer", workspace="asset_catalog")
+
+    assert loaded is app
+    assert [(t.persona, t.workspace) for t in targets] == [("designer", "asset_catalog")]

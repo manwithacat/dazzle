@@ -29,8 +29,8 @@ OUT_DIR = Path(".dazzle/composition/references/taste")
 # flips them. scroll_to (optional CSS selector) aligns the demo UI to the
 # top of the 1440x900 frame so judges score the app surface, not the
 # marketing hero above it. Selectors are utility-class based and may rot
-# when the sites redeploy — a failed selector logs and falls back to the
-# unscrolled fold, it never aborts the capture.
+# when the sites redeploy. A missing demo is a failed reference, rather than
+# an unrelated page silently entering the taste panel.
 _DEMO = "div.rounded-lg.border.bg-background"  # shadcn /examples demo container
 TARGETS: list[tuple[str, str, list[str], str | None]] = [
     ("shadcn_dashboard", "https://ui.shadcn.com/examples/dashboard", ["light", "dark"], _DEMO),
@@ -61,18 +61,17 @@ def capture(only: str | None) -> int:
                 try:
                     context = browser.new_context(viewport=VIEWPORT, color_scheme=theme)
                     page = context.new_page()
-                    page.goto(url, wait_until="networkidle", timeout=45_000)
+                    response = page.goto(url, wait_until="networkidle", timeout=45_000)
+                    if response is None or not response.ok:
+                        status = response.status if response is not None else "no response"
+                        raise ValueError(f"reference page returned {status}")
                     page.wait_for_timeout(1_500)  # settle fonts/animations
                     if scroll_to:
-                        try:
-                            page.eval_on_selector(scroll_to, "el => el.scrollIntoView(true)")
-                            page.wait_for_timeout(300)
-                        except Exception as exc:  # noqa: BLE001
-                            print(
-                                f"  note: scroll_to '{scroll_to}' failed for {name} "
-                                f"({exc.__class__.__name__}) — capturing unscrolled fold",
-                                file=sys.stderr,
-                            )
+                        demo = page.locator(scroll_to).first
+                        if demo.count() == 0:
+                            raise ValueError(f"reference demo selector missing: {scroll_to}")
+                        demo.scroll_into_view_if_needed()
+                        page.wait_for_timeout(300)
                     # Fixed-frame capture: the panel judges a 1440x900 frame
                     # for every image, Dazzle and reference alike.
                     page.screenshot(path=str(out), full_page=False)
@@ -95,7 +94,7 @@ def capture(only: str | None) -> int:
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     print(f"{len(entries)} captured, {failures} failed → {OUT_DIR}")
-    return 1 if failures and not entries else 0
+    return 1 if failures else 0
 
 
 def main() -> int:

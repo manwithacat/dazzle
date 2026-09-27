@@ -87,7 +87,7 @@ SETTLED_STATUSES = frozenset(
 PROMPT = (
     "/improve\n\n"
     "Dazzle self-chained cycle. Run **one** improve cycle end-to-end per "
-    "`.claude/commands/improve.md` (lock → preflight → CI/CodeQL → signals → "
+    "`.agents/skills/improve/SKILL.md` (lock → preflight → CI/CodeQL → signals → "
     "lane pick → playbook → log → unlock). Prefer `make` / `uv run` (uv-only "
     "toolchain; primary Python from `.python-version`).\n\n"
     "OBSERVE first: `uv run python scripts/improve_example_probes.py --status`. "

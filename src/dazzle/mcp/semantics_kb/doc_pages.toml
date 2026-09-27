@@ -1447,6 +1447,13 @@ order = 99
 handwritten = true
 intro = "Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676)."
 
+[pages.page-inspection]
+title = "Page URL Inspection"
+slug = "page-inspection"
+order = 98
+handwritten = true
+intro = "Trace an app URL to its owning DSL declaration and read the running page's HTML without a maintained preview artifact."
+
 [pages.grammar]
 title = "DSL Grammar Specification"
 slug = "grammar"

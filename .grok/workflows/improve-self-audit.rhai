@@ -1,7 +1,7 @@
 // Improve multi-agent strategy: self-audit
 // Sample recent improve: commits → parallel adversarial reviewers → structured findings.
 // Driver still owns: lock, REGRESSION/AUD row writes, improve-log, self-schedule.
-// Playbook source: .claude/commands/improve/strategies/self_audit.md
+// Playbook source: .agents/skills/improve/strategies/self_audit.md
 
 let meta = #{
     name: "improve-self-audit",

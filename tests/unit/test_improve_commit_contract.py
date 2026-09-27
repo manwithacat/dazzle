@@ -111,7 +111,7 @@ def test_harness_only_self_audit_passes() -> None:
         live="n/a",
     )
     result = mod.check_message(
-        text, [".claude/commands/improve/capability-map.md", "improve/oral-history.md"]
+        text, [".agents/skills/improve/capability-map.md", "improve/oral-history.md"]
     )
     assert result.ok, result.errors
 

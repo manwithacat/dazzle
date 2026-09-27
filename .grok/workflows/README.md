@@ -46,7 +46,7 @@ Default run cap is 128; these are well under it.
 ## What stays a single-agent playbook
 
 Product digs (`product_maturity`, `cimonitor`, `consumer-issues`, …) remain
-markdown strategies under `.claude/commands/improve/` — sequential judgment +
+markdown strategies under `.agents/skills/improve/` — sequential judgment +
 ship, not multi-agent fan-out.
 
 ## Smoke-check (authoring)

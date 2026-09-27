@@ -386,6 +386,7 @@ def _render_typed_value(
     badge_size: str = "md",
     badge_bordered: bool = False,
     host: str = "list_cell",
+    image_card: bool = False,
 ) -> Fragment:
     """Render a single field value as a typed Fragment based on `col["type"]`.
 
@@ -472,7 +473,11 @@ def _render_typed_value(
     if col_type == "image":
         # Goal B media — logo/preview thumbs on grids/queues.
         return RawHTML(
-            _render_media_thumb_html(value, alt=str(col.get("label") or col.get("key") or ""))
+            _render_media_thumb_html(
+                value,
+                alt=str(col.get("label") or col.get("key") or ""),
+                card=image_card,
+            )
         )
 
     if col_type == "tags":

@@ -290,7 +290,7 @@
   "src/dazzle/mcp/server/state.py": 12,
   "src/dazzle/mcp/server/tool_handlers.py": 7,
   "src/dazzle/mcp/setup.py": 1,
-  "src/dazzle/page/converters/template_compiler.py": 4,
+  "src/dazzle/page/converters/template_compiler.py": 3,
   "src/dazzle/page/field_source_alias.py": 1,
   "src/dazzle/page/runtime/app_chrome.py": 1,
   "src/dazzle/page/runtime/hot_reload.py": 3,

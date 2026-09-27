@@ -2,7 +2,7 @@
 // Assumes capture already produced a manifest (dazzle qa capture).
 // Parallel per-app reviewers → structured findings for visual_tier2_ingest.
 // Driver still owns: capture/boot, ingest, backlog, explore budget (+5), log.
-// Playbook: .claude/commands/improve/strategies/visual_tier2_subagent.md
+// Playbook: .agents/skills/improve/strategies/visual_tier2_subagent.md
 
 let meta = #{
     name: "improve-visual-review",

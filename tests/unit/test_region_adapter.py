@@ -2227,6 +2227,21 @@ def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
     assert "Showing 1 of 100" in html  # overflow line
 
 
+def test_queue_omits_redundant_count_when_all_rows_are_visible() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"id": 1, "title": "First"}, {"id": 2, "title": "Second"}],
+        "endpoint": "/api/regions/r",
+        "region_name": "r",
+        "total": 2,
+        "columns": [{"key": "title", "label": "Title", "type": "text"}],
+        "display_key": "title",
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
+    assert "dz-queue-count-row" not in html
+    assert "First" in html and "Second" in html
+
+
 def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:
     """Transition rendering requires queue_status_field + queue_api_endpoint
     + an item.id. Missing any of these silently skips transition

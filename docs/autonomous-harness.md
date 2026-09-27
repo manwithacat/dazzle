@@ -15,10 +15,10 @@ compose, and recovery habits. It is **not** the deep package for “how does
 | **Human-intelligible structure of `/improve`** (portable exemplar) | [Harness: Improve exemplar](harness/improve-exemplar.md) |
 | **Operator status / rearm / force** | [Harness: Operator field guide](harness/operator-field-guide.md) |
 | **Strategy one-liners** | [Harness: Strategy catalog](harness/strategy-catalog.md) |
-| **Executable cycle for agents** | `.claude/commands/improve.md` |
+| **Executable cycle for agents** | `.agents/skills/improve/SKILL.md` |
 
-- **What it is:** slash commands under `.claude/commands/` and skills under
-  `.agents/skills/`, host-agnostic in intent, exercised on Dazzle + examples.
+- **What it is:** portable skills under `.agents/skills/`, with thin host
+  discovery shims where required, exercised on Dazzle + examples.
 - **What it is not:** a general-purpose agent framework. Scoped to Dazzle
   framework + consumer-app development cycles.
 
@@ -35,7 +35,7 @@ but never push”). **Current `/improve` behaviour** includes:
 - **Machine residual** (`improve_example_probes.py`) and **policy force**
   (`improve_policy.py`), including post-5.8 Goal B when residual is clear
 
-When this page and the runtime runbook disagree, **`.claude/commands/improve.md`
+When this page and the runtime runbook disagree, **`.agents/skills/improve/SKILL.md`
 wins for execution**. Prefer the [exemplar](harness/improve-exemplar.md) for
 structure aimed at humans.
 
@@ -119,9 +119,8 @@ top-level agent synthesises their reports. This pattern is used by
 `/check`, `/smells`, `/xproject`, and by `/issues` when there are 2+
 open issues.
 
-Subagents run `model: "sonnet"` (when judgment is needed) or
-`model: "haiku"` (for mechanical checks). The main thread stays on the
-session's current model.
+Judgment work inherits the session model; mechanical checks may use a cheaper
+host tier when one is available. The main thread stays on its current model.
 
 ### 1.6 Self-observation: the loop tracks its own activity
 
@@ -150,7 +149,7 @@ label, and the next loop cycle picks it up.
 Commands that advance state and may commit.
 
 #### `/improve [lane] [strategy]`
-**Source:** `.claude/commands/improve.md`
+**Source:** `.agents/skills/improve/SKILL.md`
 **Human map:** [Harness exemplar](harness/improve-exemplar.md) · [Operator guide](harness/operator-field-guide.md) · [Strategy catalog](harness/strategy-catalog.md)
 
 Single agent-first entrypoint for autonomous investigation, improvement,
@@ -162,7 +161,7 @@ red) → **CodeQL** (remediate if high/error) → **GitHub inbox** → signals �
 policy/probes → pick lane → playbook → log → release lock → **self-schedule**
 next one-shot.
 
-Lanes (`.claude/commands/improve/lanes/*.md`):
+Lanes (`.agents/skills/improve/lanes/*.md`):
 
 | Lane | Targets | Cycle action |
 |------|---------|--------------|
@@ -190,7 +189,7 @@ may auto-merge (`github_prs`). Quiet product still re-arms ~15–30m so inbox is
 not left multi-hour cold.
 
 #### `/issues`
-**Source:** `.claude/commands/issues.md`
+**Source:** `.agents/skills/issues/SKILL.md`
 
 Iterative GitHub-issue resolver. Triage → parallel-investigate → pick →
 implement → test → commit → push → close → repeat. Author-routed:
@@ -255,7 +254,7 @@ Does not fix anything. A separate `/improve` or `/issues` cycle acts
 on the findings.
 
 #### `/xproject [name]`
-**Source:** `.claude/commands/xproject.md`
+**Source:** `.agents/skills/xproject/SKILL.md`
 
 Cross-project quality scan across every sibling app in
 `/Volumes/SSD/*/dazzle.toml`. One sonnet subagent per project runs

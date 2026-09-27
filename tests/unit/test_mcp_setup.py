@@ -135,6 +135,50 @@ class TestRegisterMcpServer:
         assert config["mcpServers"]["dazzle"]["args"] == ["-m", "dazzle.mcp"]
         assert config["mcpServers"]["dazzle"]["autoStart"] is True
 
+    def test_scoped_servers_pin_distinct_project_roots(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        projects = [tmp_path / "one" / "app", tmp_path / "two" / "app"]
+        for project in projects:
+            project.mkdir(parents=True)
+            (project / "dazzle.toml").write_text("[project]\nname = 'app'\n")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            for project in projects:
+                assert _setup_module.register_mcp_server(working_dir=project)
+
+        servers = json.loads(config_path.read_text())["mcpServers"]
+        assert len(servers) == 2
+        assert {tuple(server["args"][-2:]) for server in servers.values()} == {
+            ("--working-dir", str(project)) for project in projects
+        }
+
+    def test_scoped_server_accepts_framework_checkout(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        (tmp_path / "src" / "dazzle").mkdir(parents=True)
+        (tmp_path / "examples").mkdir()
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=tmp_path)
+
+        server = next(iter(json.loads(config_path.read_text())["mcpServers"].values()))
+        assert server["args"][-2:] == ["--working-dir", str(tmp_path)]
+
+    def test_scoped_server_can_replace_global_entry(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        config_path.write_text(
+            json.dumps({"mcpServers": {"dazzle": {"command": "old-python", "args": []}}})
+        )
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("[project]\nname = 'project'\n")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=project, name="dazzle", force=True)
+
+        servers = json.loads(config_path.read_text())["mcpServers"]
+        assert list(servers) == ["dazzle"]
+        assert servers["dazzle"]["args"][-2:] == ["--working-dir", str(project)]
+
     def test_merges_with_existing_config(self, tmp_path):
         """Test merging with existing MCP server config."""
         config_path = tmp_path / ".claude" / "mcp_servers.json"

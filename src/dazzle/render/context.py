@@ -14,14 +14,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class NavItemContext(BaseModel):
-    """Navigation item for sidebar/header."""
-
-    label: str
-    route: str
-    active: bool = False
-
-
 class ColumnContext(BaseModel):
     """Column definition for table rendering."""
 
@@ -476,37 +468,8 @@ class PageContext(BaseModel):
     app_name: str = "Dazzle"
     layout: str = "app_shell"  # app_shell or single_column
     template: str = "components/filterable_table.html"
-    nav_items: list[NavItemContext] = Field(default_factory=list)
-    nav_by_persona: dict[str, list[NavItemContext]] = Field(default_factory=dict)
-    # #1127: anon-safe variants. Items whose underlying workspace declared
-    # ``access: None`` (no persona gate). When the request has no auth
-    # context or the user matches no persona, ``_inject_auth_context``
-    # swaps ``nav_items``/``nav_groups`` for these so anon visitors never
-    # see persona-gated workspaces in the sidebar.
-    nav_items_anon: list[NavItemContext] = Field(default_factory=list)
-    nav_groups_anon: list[dict[str, Any]] = Field(default_factory=list)
-    # v0.61.5 (#863): collapsible workspace-declared nav groups. Entity-list
-    # pages (/app/<entity>) now populate this the same way workspace pages do,
-    # so the sidebar stays continuous as the user navigates between them.
-    # Each entry is a dict shaped {label, icon, collapsed, children: [NavItemContext-like]}.
-    nav_groups: list[dict[str, Any]] = Field(default_factory=list)
-    nav_groups_by_persona: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
-    # #1324 slice 3b: the precomputed per-persona (or anon) NavModel. When set
-    # at request time, the sidebar renderer (`_build_sidebar_from_ctx`) builds
-    # the sidebar from this instead of the legacy `nav_items`/`nav_groups`
-    # producers (which stay as dead-code fallback until removed in a later
-    # task). Typed `Any` (carries a frozen `NavModel` dataclass — see
-    # `dazzle.page.converters.nav_builder`) to avoid a render→ui import cycle:
-    # `nav_builder` transitively imports back into `dazzle.render.context`.
-    #
-    # MUST stay `Any` — NOT a TYPE_CHECKING string forward-ref. Pydantic
-    # resolves field annotations at runtime even under `from __future__ import
-    # annotations`; a `"NavModel | None"` ref that's only imported under
-    # TYPE_CHECKING leaves the model "not fully defined" (every `PageContext()`
-    # raises PydanticUserError) unless `NavModel` is in scope + `model_rebuild()`
-    # is called — and PageContext has no `arbitrary_types_allowed`, so Pydantic
-    # couldn't validate the frozen dataclass anyway. Verified: the typed variant
-    # breaks construction (#1324). Keep `Any`.
+    # The app sidebar has one input. Kept as Any to avoid a render/page import
+    # cycle and Pydantic forward-reference validation of the frozen dataclass.
     nav_model: Any = None
     current_route: str = "/"
     design_tokens: dict[str, str] = Field(default_factory=dict)

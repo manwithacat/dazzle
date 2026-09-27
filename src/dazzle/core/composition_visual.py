@@ -390,7 +390,7 @@ def _call_vision_api(
         max_tokens=max_tokens,
         temperature=0.0,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": content}],  # type: ignore[typeddict-item]
+        messages=[{"role": "user", "content": content}],
     )
 
     text = response.content[0].text if hasattr(response.content[0], "text") else ""

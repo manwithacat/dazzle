@@ -13,8 +13,9 @@ compensation, and who they report to. Because each fact carries the period it
 was true for, the system can answer not only "who works here today?" but "what
 did the organisation look like on any given date?"
 
-Staff desks are multi-panel command dens: dual attention pressure (active roster
-+ recent starters on Staff Directory (work-first roster, then status mix — cycle 2092 `directory_work_first`); level + department + **work-location** boards on My Team (IC vs manager career-track density — cycle 2065)) and
+Staff desks put the current roster and status mix first on Staff Directory;
+the dedicated New Starters desk owns onboarding. Level, department, and
+**work-location** boards on My Team show IC and manager career-track density. These desks also put
 **named employment documents** (HrDocument composition with display_field
 headline — offer / policy / promo / contract letters) sit above a **people notes**
 trail (PersonNote with display_field body) — not only directory metrics or
@@ -74,9 +75,8 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — multi-panel staff home (command_density + document):
-  work-first dual attention (active roster + recent starters above fold —
-  cycle 2092 `directory_work_first`, not a 2-thumb headshot theater), then
+- **Staff Directory** — staff home (command_density + document):
+  current roster first, with onboarding in the dedicated New Starters desk, then
   headcount status mix, **document composition** (named HR letters), then
   people-notes trail and a filled media shelf below fold, plus department/role
   context hubs (no under-fold status/dept bar theater). Employment history
@@ -150,4 +150,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **HR Document lifecycle.** HR Documents move draft → issued → signed → archived (hr_admin/manager issue and record signature; hr_admin archives).
 
-<!-- dazzle-spec-brief: sha256:62ad22cea5f0cd3ffcdd9868b664cf05bbe9b46332de73a0b086ee2aa2468634 -->
+<!-- dazzle-spec-brief: sha256:21dcd30ab5afea361afcb15f7942aab18b5c9038610e54c34e4b93f36a98a93e -->

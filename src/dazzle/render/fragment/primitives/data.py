@@ -675,14 +675,13 @@ class ListRegion:
 class GridCell:
     """Single cell in a `GridRegion` — title + optional secondary fields.
 
-    Mirrors the legacy `workspace/regions/grid.html` per-cell structure:
-    a primary title (display_key value) and zero-or-more secondary
-    fields rendered as `<p class="dz-grid-cell-field">` lines under
-    the title.
+    A primary title (display_key value) and zero-or-more secondary fields
+    rendered under the title. Fields may carry block markup and links.
 
-    ``drill_url`` (#1303 / qa-trial): when set, the cell wraps in an
-    ``<a href>`` to the entity VIEW hub (``/app/<slug>/{id}``). Empty
-    means a non-interactive card (no invented API paths).
+    ``drill_url`` (#1303 / qa-trial): when set, the cell or its title links
+    to the entity VIEW hub (``/app/<slug>/{id}``). The title alone links
+    when fields contain interactive elements, avoiding nested anchors.
+    Empty means a non-interactive card (no invented API paths).
     """
 
     title: str

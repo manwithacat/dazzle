@@ -37,9 +37,9 @@ def test_no_workspace_named_person_detail_shadowing_surface() -> None:
 
 def test_staff_directory_person_actions_target_person_detail() -> None:
     block = _workspace_block("staff_directory")
-    for region in ("media_shelf:", "current_staff:", "recent_starters:"):
+    for region in ("media_shelf:", "current_staff:"):
         assert region in block
-    assert block.count("action: person_detail") >= 3
+    assert block.count("action: person_detail") >= 2
 
 
 def test_region_action_person_detail_resolves_to_entity_hub() -> None:
@@ -93,7 +93,7 @@ def test_staff_directory_persona_focus_capped_for_trial_fold() -> None:
     """Cycle 1950: staff_directory focus ≤4 so fold expand avoids thrash.
 
     Six focus names + _MAX_FOCUS_FOLD storm nested Playwright (htmx
-    ERR_INSUFFICIENT_RESOURCES). Cycle 2092: roster + starters + status
+    ERR_INSUFFICIENT_RESOURCES). Cycle 2092: roster + status
     mix + letters eager; media shelf stays on desk, not fold-eager.
     """
     block = _workspace_block("staff_directory")
@@ -106,6 +106,6 @@ def test_staff_directory_persona_focus_capped_for_trial_fold() -> None:
         names = [p.strip() for p in stripped.removeprefix("focus:").split(",") if p.strip()]
         assert 1 <= len(names) <= 4, names
         assert "current_staff" in names
-        assert "recent_starters" in names
+        assert "recent_starters" not in names
         assert "headcount" in names
         assert "media_shelf" not in names

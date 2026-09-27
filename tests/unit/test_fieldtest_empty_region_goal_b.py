@@ -2,25 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-APP = ROOT / "examples/fieldtest_hub/dsl/app.dsl"
+from tests.unit.dsl_source_lookup import declaration_block
 
 
 def _workspace_block(name: str) -> str:
-    text = APP.read_text()
-    marker = f'workspace {name} "'
-    start = text.index(marker)
-    rest = text[start + 1 :]
-    nxt = rest.find("\nworkspace ")
-    if nxt == -1:
-        for alt in ("\nsurface ", "\nentity ", "\naction ", "\nledger "):
-            a = rest.find(alt)
-            if a != -1:
-                return text[start : start + 1 + a]
-        return text[start:]
-    return text[start : start + 1 + nxt]
+    return declaration_block("fieldtest_hub", "workspace", name)
 
 
 def test_issue_triage_omits_critical_trail() -> None:

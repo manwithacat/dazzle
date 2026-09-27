@@ -9,7 +9,9 @@ a shared asset warehouse.
 
 - designer default: `studio_dashboard` = media home (preview thumbs) + compact load + critique.
 - designer also has `brand_desk` (brand-first path).
-- reviewer default: `review_desk` = review-load + awaiting-review queue.
+- reviewer default: `review_desk` = one row of in-review creative previews,
+  then approved previews in the first desktop viewport; load and pull queues
+  follow. Cap each preview wall to one row so the comparison remains visible.
 - `asset_catalog` is the media shelf (preview thumbs first, then brand palette)
   for all product personas — pixels above brand meta (Goal B media).
 - Brand hub related **assets** and **campaigns** are **pull queues**

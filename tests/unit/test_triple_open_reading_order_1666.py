@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
-SURFACES = (ROOT / "examples/invoice_ops/dsl/surfaces.dsl").read_text()
 STEM = (ROOT / "examples/invoice_ops/stems/story-driven-jobs.md").read_text()
 CAP = (ROOT / "docs/reference/runtime-capabilities.md").read_text()
 
 
 def test_attempt_detail_carbon_order() -> None:
-    hub = SURFACES.split("surface payment_attempt_detail", 1)[1].split("surface ", 1)[0]
+    hub = declaration_block("invoice_ops", "surface", "payment_attempt_detail")
     assert hub.index("field attempt_number") < hub.index('field invoice "Invoice"')
     assert hub.index('field invoice "Invoice"') < hub.index("field tenant_id")
     assert "related" not in hub

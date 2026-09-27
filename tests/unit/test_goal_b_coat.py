@@ -373,6 +373,30 @@ def test_directory_work_first_empty_rejects_media_first(tmp_path: Path) -> None:
     assert directory_work_first_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is False
 
 
+def test_directory_work_first_accepts_status_and_documents_without_duplicate_starters(
+    tmp_path: Path,
+) -> None:
+    dsl = tmp_path / "dsl"
+    dsl.mkdir()
+    (dsl / "app.dsl").write_text(
+        "workspace staff_directory:\n"
+        "  current_staff:\n"
+        "    source: Person\n"
+        "    display: queue\n"
+        "  headcount:\n"
+        "    source: Person\n"
+        "    display: metrics\n"
+        "  composition:\n"
+        "    source: HrDocument\n"
+        "    display: queue\n"
+        "  media_shelf:\n"
+        "    source: Person\n"
+        "    display: grid\n",
+        encoding="utf-8",
+    )
+    assert directory_work_first_empty((dsl / "app.dsl").read_text(encoding="utf-8"))
+
+
 def test_hr_records_directory_work_first_saturates_empty_region() -> None:
     sat = live_saturated_cells(["hr_records", "acme_billing"])
     assert ("hr_records", "empty_region_honesty") in sat

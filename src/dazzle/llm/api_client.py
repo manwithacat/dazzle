@@ -659,7 +659,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         try:
             from google.genai import types
         except ImportError:
-            types = None  # type: ignore[assignment]
+            types = None
 
         try:
             config: dict[str, Any] = {

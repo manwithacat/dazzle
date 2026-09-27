@@ -35,7 +35,6 @@ from dazzle.render.context import (
     DetailContext,
     FieldContext,
     FormContext,
-    NavItemContext,
     PageContext,
     PdfViewerContext,
     TableContext,
@@ -55,7 +54,6 @@ __all__ = [
     "PdfViewerContext",
     "ColumnContext",
     "FieldContext",
-    "NavItemContext",
     # Development server
     "DazzleDevServer",
     "run_dev_server",

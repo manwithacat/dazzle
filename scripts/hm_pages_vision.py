@@ -26,8 +26,8 @@ Usage (monorepo root)::
     python scripts/hm_pages_vision.py --capture --all-hyperparts
 
 See also: ``scripts/hm_subscription_vision.py`` (dual-lock smoke),
-``.claude/commands/improve/strategies/hyperpart_coherence.md``,
-``.claude/commands/improve/strategies/visual_tier2_subagent.md``.
+``.agents/skills/improve/strategies/hyperpart_coherence.md``,
+``.agents/skills/improve/strategies/visual_tier2_subagent.md``.
 """
 
 from __future__ import annotations

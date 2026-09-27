@@ -1,7 +1,7 @@
 # Improve — operator field guide
 
 One page for humans who run or babysit the loop. Does not replace the agent
-runbook (`.claude/commands/improve.md`).
+runbook (`.agents/skills/improve/SKILL.md`).
 
 For structure and portable design, see [Improve as harness exemplar](improve-exemplar.md).
 
@@ -69,7 +69,7 @@ when you want the next dig soon). Log a one-liner in `dev_docs/improve-log.md`.
 /improve codeql
 ```
 
-Full force table: `.claude/commands/improve.md` (ARGUMENTS).
+Full force table: `.agents/skills/improve/SKILL.md` (ARGUMENTS).
 
 ---
 

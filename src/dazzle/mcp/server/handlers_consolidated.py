@@ -13,6 +13,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.mcp_session import mcp_kg_db_path
+
 from .state import get_available_projects, get_project_root, is_dev_mode, resolve_project_path
 
 logger = logging.getLogger(__name__)
@@ -1064,11 +1066,19 @@ def _handle_graph_topology(arguments: dict[str, Any]) -> str:
 
 def handle_graph(arguments: dict[str, Any]) -> str:
     """Handle knowledge graph operations."""
-    from .state import get_knowledge_graph, refresh_knowledge_graph
+    from .state import get_graph_db_path, get_knowledge_graph, refresh_knowledge_graph
 
     graph = get_knowledge_graph()
     if graph is None:
         return error_response("Knowledge graph not initialized")
+
+    resolved_path = arguments.get("_resolved_project_path")
+    if isinstance(resolved_path, Path) and get_graph_db_path() != mcp_kg_db_path(resolved_path):
+        return error_response(
+            "Knowledge graph belongs to a different project. "
+            "Start an MCP server with --working-dir for this project, "
+            "or select it before calling graph."
+        )
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 

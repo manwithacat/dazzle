@@ -1,8 +1,8 @@
 # Improve strategy catalog
 
-One-line map of playbooks under `.claude/commands/improve/strategies/`.
+One-line map of playbooks under `.agents/skills/improve/strategies/`.
 **Executable detail stays in those files** — this index is for humans scanning
-structure. Driver + force table: `.claude/commands/improve.md`.
+structure. Driver + force table: `.agents/skills/improve/SKILL.md`.
 
 Lanes: `framework-ux` · `example-apps` · `trials` · `ux-converge` · `test-suite` ·
 `hm-convergence` (see `improve/lanes/`).
@@ -36,6 +36,7 @@ Lanes: `framework-ux` · `example-apps` · `trials` · `ux-converge` · `test-su
 | `distill` | First screen a filter wall? | Goal C — `goal_b_coat` residual; subtract |
 | `hyperpart_presentation` | Presentation residual (OCR smells)? | `presentation` / demo quality |
 | `visual_tier2_subagent` | Visual judgment on capture set? | after `dazzle qa capture` |
+| `job_screen_review` | Does a seeded job screen support the decision and action? | fixed panel, paired capture, live journey |
 
 ---
 
@@ -46,7 +47,7 @@ Lanes: `framework-ux` · `example-apps` · `trials` · `ux-converge` · `test-su
 | `dual_lock_expand` | Dual-lock / open-via expansion? | framework-ux / hm |
 | `hyperpart_coherence` | Hyperpart coherence queue? | hm-convergence |
 | `gallery_probes` | Gallery visual probes? | metered |
-| `shadcn_parity` | Shadcn parity debt? | framework |
+| `shadcn_parity` | Component catalogue coverage gap? | HM catalogue map; separate from visual quality |
 | `api_surface_audit` | API surface drift? | |
 | `explore-subagent` | Explore phase fan-out? | budgeted |
 | `owned_idle_exercise` | Exercise owned-but-idle tools? | capability map |
@@ -77,4 +78,4 @@ Driver still owns lock, gates, pick, ship, schedule. See `.grok/workflows/README
 
 ## Related
 
-- [Exemplar](improve-exemplar.md) · [Operator field guide](operator-field-guide.md) · Runtime: `.claude/commands/improve.md`
+- [Exemplar](improve-exemplar.md) · [Operator field guide](operator-field-guide.md) · Runtime: `.agents/skills/improve/SKILL.md`

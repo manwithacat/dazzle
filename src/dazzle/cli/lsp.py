@@ -4,9 +4,14 @@ LSP (Language Server Protocol) CLI commands.
 Commands for running the DAZZLE LSP server and querying LSP resources.
 """
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import typer
+
+_INSTALL_HINT = (
+    "Install with: uv sync --extra lsp (source checkout) or pip install 'dazzle-dsl[lsp]'"
+)
 
 lsp_app = typer.Typer(
     help="Language Server Protocol (LSP) commands.",
@@ -46,8 +51,7 @@ def lsp_run(
             server.start_tcp("127.0.0.1", port)
         except ImportError as e:
             typer.echo(
-                f"Error: LSP dependencies not installed: {e}\n"
-                "Install with: pip install dazzle[lsp]",
+                f"Error: LSP dependencies not installed: {e}\n{_INSTALL_HINT}",
                 err=True,
             )
             raise typer.Exit(code=1)
@@ -61,8 +65,7 @@ def lsp_run(
             start_server()
         except ImportError as e:
             typer.echo(
-                f"Error: LSP dependencies not installed: {e}\n"
-                "Install with: pip install dazzle[lsp]",
+                f"Error: LSP dependencies not installed: {e}\n{_INSTALL_HINT}",
                 err=True,
             )
             raise typer.Exit(code=1)
@@ -81,24 +84,24 @@ def lsp_check() -> None:
     errors = []
 
     try:
-        import pygls
+        import pygls  # noqa: F401
 
-        pygls_version = getattr(pygls, "__version__", "unknown")
+        pygls_version = version("pygls")
         typer.echo(f"pygls:        {pygls_version}")
-    except ImportError:
+    except (ImportError, PackageNotFoundError):
         errors.append("pygls")
 
     try:
-        import lsprotocol
+        import lsprotocol  # noqa: F401
 
-        lsprotocol_version = getattr(lsprotocol, "__version__", "unknown")
+        lsprotocol_version = version("lsprotocol")
         typer.echo(f"lsprotocol:   {lsprotocol_version}")
-    except ImportError:
+    except (ImportError, PackageNotFoundError):
         errors.append("lsprotocol")
 
     if errors:
         typer.echo(
-            f"\nMissing dependencies: {', '.join(errors)}\nInstall with: pip install dazzle[lsp]",
+            f"\nMissing dependencies: {', '.join(errors)}\n{_INSTALL_HINT}",
             err=True,
         )
         raise typer.Exit(code=1)

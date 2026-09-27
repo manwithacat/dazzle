@@ -36,6 +36,9 @@ Every one of these seven kinds of record can be browsed, inspected in detail, cr
   `protocol_acceptance_split`; mixed composition below fold), dual attention
   (non-active devices + open triage pressure), test-document composition with
   domain-true headlines, then live triage notes and secondary views.
+- **Engineering Focus** — an alternative engineer/manager desk for deciding
+  which field issue needs attention and opening its evidence. It shows fleet
+  pressure, open reports, non-active devices, and run protocols in four regions.
 - **Manager Ops** — manager home multi-panel command density + document: quality
   pulse (open / critical / sessions / documents), dual attention (critical
   issues + non-active devices), test-document composition, then triage notes —
@@ -106,4 +109,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Test Document lifecycle.** Test Documents move draft → published → archived (engineer/manager publish; admin may archive or return published to draft).
 
-<!-- dazzle-spec-brief: sha256:d9cbbfa3e64f4f218f4e0b8951ee436daf13c610c574079e217beee6f70f66ca -->
+<!-- dazzle-spec-brief: sha256:1a392943a01d975b0c6fb5676598b04bcc1ba5e6bb3d2fd0e3fb0c1566d5ae7a -->

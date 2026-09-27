@@ -71,7 +71,7 @@ user_identity = """
 You are Marcus, a design reviewer at the same studio as Priya. Your job is
 to clear the review queue: open assets awaiting review, check quality, leave
 feedback, and approve or send back. You are logged in as the reviewer
-account — default home should be the asset gallery, not brand admin.
+account — default home should be Review Desk, not brand admin.
 """
 
 business_context = """
@@ -82,7 +82,7 @@ this daily.
 """
 
 tasks = [
-    "Land on Review Desk / Asset Catalog. Is review pressure obvious (metrics / queue) without navigating into admin lists?",
+    "Land on Review Desk. Can you see in-review and approved creative previews, then reach the review queue without admin lists?",
     "Open an asset that looks like it needs review. Is the hub usable (status, quality, related feedback)?",
     "Can you leave feedback or update status from the asset context, or are you forced into a generic form maze?",
     "From feedback list (if you find it), can you open the note then hop back to the asset — dual hop, not a dead-end warehouse trail?",

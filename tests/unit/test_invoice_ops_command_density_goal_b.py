@@ -5,22 +5,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
-SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
 INVOICE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Invoice.jsonl"
 
 PAY_FOCUS = (
-    "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, document_pulse, "
-    "draft_packets, settle_rail, match_evidence, compliance_drafts, composition, "
-    "ready_to_pay, past_due"
+    "focus: settle_metrics, past_due, ready_to_pay, draft_invoice_queue, "
+    "awaiting_approval_queue, document_pulse, draft_packets, settle_rail, "
+    "match_evidence, compliance_drafts, composition"
 )
 
 
 def _pay_desk_block() -> str:
-    text = SURFACES.read_text()
-    start = text.index('workspace pay_desk "Pay Desk":')
-    end = text.index('workspace audit_review "Audit Review":', start)
-    return text[start:end]
+    return declaration_block("invoice_ops", "workspace", "pay_desk")
 
 
 def test_pay_desk_declares_dual_attention_before_conversation() -> None:
@@ -36,18 +34,18 @@ def test_pay_desk_declares_dual_attention_before_conversation() -> None:
     assert "disputed_queue:" in block
     assert "composition:" in block
     assert "live_conversation:" in block
-    # Order: metrics → document pulse → intake stages → packets → composition → soft ready → hard past-due → disputes → conversation.
+    # The settlement decisions lead; intake, evidence, and conversation follow.
     # Use region markers so metric aggregate lines (past_due: count(...)) do not win index().
     assert "draft_invoice_queue:" in block
     assert "awaiting_approval_queue:" in block
-    assert block.index("\n  settle_metrics:\n") < block.index("\n  draft_invoice_queue:\n")
+    assert block.index("\n  settle_metrics:\n") < block.index("\n  past_due:\n")
+    assert block.index("\n  past_due:\n") < block.index("\n  ready_to_pay:\n")
+    assert block.index("\n  ready_to_pay:\n") < block.index("\n  draft_invoice_queue:\n")
     assert block.index("\n  draft_invoice_queue:\n") < block.index("\n  awaiting_approval_queue:\n")
     assert block.index("\n  awaiting_approval_queue:\n") < block.index("\n  document_pulse:\n")
     assert block.index("\n  document_pulse:\n") < block.index("\n  draft_packets:\n")
     assert block.index("\n  draft_packets:\n") < block.index("\n  composition:\n")
-    assert block.index("\n  composition:\n") < block.index("\n  ready_to_pay:\n")
-    assert block.index("\n  ready_to_pay:\n") < block.index("\n  past_due:\n")
-    assert block.index("\n  past_due:\n") < block.index("\n  disputed_queue:\n")
+    assert block.index("\n  composition:\n") < block.index("\n  disputed_queue:\n")
     assert block.index("\n  disputed_queue:\n") < block.index("\n  live_conversation:\n")
 
 
@@ -66,33 +64,37 @@ def test_pay_desk_caps_attention_for_fold_share() -> None:
     )
 
 
-def test_pay_desk_metrics_count_ready_disputed_and_conversation() -> None:
+def test_pay_desk_metrics_focus_on_settlement() -> None:
     block = _pay_desk_block()
     assert "ready: count(Invoice where status = approved)" in block
     assert "on_time: count(Invoice where status = approved and due_date >= today)" in block
     assert "past_due: count(Invoice where status = approved and due_date < today)" in block
-    assert "invoice_draft: count(Invoice where status = draft)" in block
-    assert "awaiting_approval: count(Invoice where status = submitted)" in block
     assert "disputed: count(Invoice where status = disputed)" in block
-    assert "conversation: count(InvoiceNote)" in block
+    metrics = block.split("\n  settle_metrics:\n", 1)[1].split("\n  past_due:\n", 1)[0]
+    assert "invoice_draft: count(" not in metrics
+    assert "awaiting_approval: count(" not in metrics
+    assert "conversation: count(" not in metrics
+    assert metrics.count("count(") == 4
     assert "documents: count(InvoiceDocument)" in block
 
 
 def test_due_stage_density_queues_filter_soft_and_hard() -> None:
     """Cycle 2055 recipe due_stage_density — soft on-time vs hard past-due approved dual queues."""
     block = _pay_desk_block()
-    soft = block.split("\n  ready_to_pay:\n", 1)[1].split("\n  past_due:", 1)[0]
-    hard = block.split("\n  past_due:\n", 1)[1].split("\n  disputed_queue:", 1)[0]
+    hard = block.split("\n  past_due:\n", 1)[1].split("\n  ready_to_pay:", 1)[0]
+    soft = block.split("\n  ready_to_pay:\n", 1)[1].split("\n  draft_invoice_queue:", 1)[0]
     assert "source: Invoice" in soft
     assert "status = approved" in soft
     assert "due_date >= today" in soft
     assert "display: queue" in soft
     assert "limit: 3" in soft
+    assert "transitions: none" in soft
     assert "source: Invoice" in hard
     assert "status = approved" in hard
     assert "due_date < today" in hard
     assert "display: queue" in hard
     assert "limit: 3" in hard
+    assert "transitions: none" in hard
     # Soft and hard are exclusive stage filters (not OR-combined ready list).
     assert "due_date < today" not in soft
     assert "due_date >= today" not in hard

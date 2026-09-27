@@ -55,3 +55,42 @@ stop_when = """
 Stop when you can score adoption_criteria. Call submit_verdict with
 recommend=yes|no|conditional and criteria_scores.
 """
+
+
+[[scenario]]
+name = "finance_pay_desk"
+login_persona = "finance"
+time_budget_seconds = 500
+max_steps = 35
+starting_url = "/app/workspaces/pay_desk"
+
+user_identity = """
+You are the finance operator responsible for settling approved supplier
+invoices. You need to identify overdue work and decide which payment or
+dispute action applies without losing the invoice context.
+"""
+
+business_context = """
+Several invoices are ready, overdue, or disputed. Amount and currency must
+agree between the queue and the invoice detail. The first screen should lead
+you to settlement work rather than unrelated document creation.
+"""
+
+tasks = [
+    "On Pay Desk, find an overdue invoice and understand the queue's amount and status.",
+    "Open it. Does the detail show the same amount and currency and expose the payment or dispute decision?",
+    "Can you return to the desk and locate ready and disputed work without using an entity warehouse?",
+]
+
+adoption_criteria = [
+    "Overdue work is visible and reachable from the first screen",
+    "Queue and detail agree on amount and currency",
+    "Payment and dispute actions are discoverable in the invoice context",
+    "The desk's strongest action matches settlement work",
+]
+
+stop_when = """
+Stop after opening an overdue invoice, checking the settlement decision, and
+scoring the four adoption criteria. Report any incorrect amount or blocked
+action as a task failure even if the screen looks polished.
+"""

@@ -229,7 +229,7 @@ entity Invoice "Invoice":
   # Goal B document peer-pack (cycle 1921): Bill.com / Melio / Tipalti put
   # dispute reason prose on disputed work rows — not status-only queue meta.
   fitness:
-    repr_fields: [invoice_number, supplier, amount, due_date, status, dispute_reason]
+    repr_fields: [invoice_number, supplier, amount, currency, due_date, status, dispute_reason]
 
   audit: all
 
@@ -396,49 +396,5 @@ entity InvoiceDocument "Invoice Document":
 
   fitness:
     repr_fields: [invoice, headline, doc_kind, status, author, preview_url]
-
-  audit: all
-
-# =============================================================================
-# PAYMENT ATTEMPT — one attempt to settle an approved invoice.
-# =============================================================================
-
-entity PaymentAttempt "Payment Attempt":
-  intent: "One attempt to settle an approved invoice via the payment provider"
-
-  id: uuid pk
-  tenant_id: ref Tenant required
-  invoice: ref Invoice required
-  attempt_number: int=1
-  status: enum[pending,succeeded,failed]=pending
-  provider_reference: str(80) optional
-  failure_reason: text optional
-  created_at: datetime auto_add
-
-  # Settlement attempt SM (domain residual status∄transitions).
-  # Provider outcomes are terminal; finance may re-open failed for retry.
-  transitions:
-    pending -> succeeded: role(finance) or role(finance_admin)
-    pending -> failed: role(finance) or role(finance_admin)
-    failed -> pending: role(finance) or role(finance_admin)
-
-  permit:
-    create: role(finance) or role(finance_admin)
-    read: role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
-    update: role(finance) or role(finance_admin)
-    delete: role(tenant_admin)
-    list: role(approver) or role(finance) or role(finance_admin) or role(auditor) or role(tenant_admin)
-
-  scope:
-    create: tenant_id = current_user.tenant_id
-      as: finance, finance_admin
-    read: tenant_id = current_user.tenant_id
-      as: approver, finance, finance_admin, auditor, tenant_admin
-    update: tenant_id = current_user.tenant_id
-      as: finance, finance_admin
-    delete: tenant_id = current_user.tenant_id
-      as: tenant_admin
-    list: tenant_id = current_user.tenant_id
-      as: approver, finance, finance_admin, auditor, tenant_admin
 
   audit: all

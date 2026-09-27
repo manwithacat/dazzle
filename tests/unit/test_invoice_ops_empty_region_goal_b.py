@@ -4,19 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
 SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
 
 
 def _workspace_block(name: str) -> str:
-    text = SURFACES.read_text()
-    marker = f'workspace {name} "'
-    start = text.index(marker)
-    rest = text[start + 1 :]
-    nxt = rest.find("\nworkspace ")
-    if nxt == -1:
-        return text[start:]
-    return text[start : start + 1 + nxt]
+    return declaration_block("invoice_ops", "workspace", name)
 
 
 def test_finance_ops_omits_funnel_bar_and_paid_timeline() -> None:
@@ -74,8 +69,8 @@ def test_approval_desk_omits_decision_timeline() -> None:
     assert "recently_decided:" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
-        "awaiting_approval, live_conversation" in block
+        "focus: approval_load, awaiting_approval, document_pulse, match_evidence, "
+        "goods_receipts, po_packets, composition, live_conversation" in block
     )
 
 
@@ -93,9 +88,9 @@ def test_pay_desk_omits_payment_health_and_dispute_trail() -> None:
     assert "display: bar_chart" not in block
     assert "display: timeline" not in block
     assert (
-        "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, "
-        "document_pulse, draft_packets, settle_rail, match_evidence, "
-        "compliance_drafts, composition, ready_to_pay, past_due" in block
+        "focus: settle_metrics, past_due, ready_to_pay, draft_invoice_queue, "
+        "awaiting_approval_queue, document_pulse, draft_packets, settle_rail, "
+        "match_evidence, compliance_drafts, composition" in block
     )
 
 

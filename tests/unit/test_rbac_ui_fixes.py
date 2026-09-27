@@ -35,7 +35,6 @@ def _make_deps(
     entity_cedar_specs: dict[str, Any] | None = None,
     surface_entity: dict[str, str] | None = None,
     surface_mode: dict[str, str] | None = None,
-    route_entity: dict[str, str] | None = None,
 ) -> Any:
     from dazzle.http.runtime.page_routes import _PageRouterConfig
 
@@ -48,7 +47,6 @@ def _make_deps(
         entity_cedar_specs=entity_cedar_specs or {},
         surface_entity=surface_entity or {},
         surface_mode=surface_mode or {},
-        route_entity=route_entity or {},
     )
 
 
@@ -806,121 +804,6 @@ class TestEditPathRowDrillGate:
 
         assert gate_edit_path_drill_map_for_principal(None, {}, None) == {}
         assert gate_edit_path_drill_map_for_principal({}, {}, None) == {}
-
-
-# ---------------------------------------------------------------------------
-# #583 — Sidebar nav filtering by entity access
-# ---------------------------------------------------------------------------
-class TestNavEntityFiltering:
-    """Sidebar nav items filtered by entity permit rules (#583)."""
-
-    def test_denied_entity_removed_from_nav(self) -> None:
-        from dazzle.http.runtime.page_routes import _filter_nav_by_entity_access
-
-        pytest.importorskip("dazzle.render.access_evaluator")
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        cedar = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["admin"],
-                ),
-            ],
-        )
-        deps = _make_deps(
-            _make_appspec(),
-            entity_cedar_specs={"Task": cedar},
-            route_entity={"/app/task": "Task"},
-        )
-        nav_items = [
-            SimpleNamespace(label="Dashboard", route="/app/workspaces/main"),
-            SimpleNamespace(label="Tasks", route="/app/task"),
-        ]
-        auth_ctx = _make_auth_ctx(["role_viewer"])
-        filtered = _filter_nav_by_entity_access(nav_items, deps, auth_ctx)
-        # Workspace link kept, entity link removed
-        assert len(filtered) == 1
-        assert filtered[0].label == "Dashboard"
-
-    def test_permitted_entity_kept_in_nav(self) -> None:
-        from dazzle.http.runtime.page_routes import _filter_nav_by_entity_access
-
-        pytest.importorskip("dazzle.render.access_evaluator")
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        cedar = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["admin"],
-                ),
-            ],
-        )
-        deps = _make_deps(
-            _make_appspec(),
-            entity_cedar_specs={"Task": cedar},
-            route_entity={"/app/task": "Task"},
-        )
-        nav_items = [
-            SimpleNamespace(label="Tasks", route="/app/task"),
-        ]
-        auth_ctx = _make_auth_ctx(["role_admin"])
-        filtered = _filter_nav_by_entity_access(nav_items, deps, auth_ctx)
-        assert len(filtered) == 1
-
-    def test_superuser_bypasses_nav_filter(self) -> None:
-        from dazzle.http.runtime.page_routes import _filter_nav_by_entity_access
-
-        pytest.importorskip("dazzle.render.access_evaluator")
-        from dazzle.http.specs.auth import (
-            AccessOperationKind,
-            EntityAccessSpec,
-            PermissionRuleSpec,
-        )
-
-        cedar = EntityAccessSpec(
-            permissions=[
-                PermissionRuleSpec(
-                    operation=AccessOperationKind.LIST,
-                    personas=["admin"],
-                ),
-            ],
-        )
-        deps = _make_deps(
-            _make_appspec(),
-            entity_cedar_specs={"Task": cedar},
-            route_entity={"/app/task": "Task"},
-        )
-        nav_items = [
-            SimpleNamespace(label="Tasks", route="/app/task"),
-        ]
-        auth_ctx = _make_auth_ctx(["role_viewer"], is_superuser=True)
-        filtered = _filter_nav_by_entity_access(nav_items, deps, auth_ctx)
-        assert len(filtered) == 1
-
-    def test_entity_without_cedar_spec_kept(self) -> None:
-        from dazzle.http.runtime.page_routes import _filter_nav_by_entity_access
-
-        deps = _make_deps(
-            _make_appspec(),
-            entity_cedar_specs={},
-            route_entity={"/app/task": "Task"},
-        )
-        nav_items = [
-            SimpleNamespace(label="Tasks", route="/app/task"),
-        ]
-        auth_ctx = _make_auth_ctx(["role_viewer"])
-        filtered = _filter_nav_by_entity_access(nav_items, deps, auth_ctx)
-        assert len(filtered) == 1
 
 
 # ---------------------------------------------------------------------------

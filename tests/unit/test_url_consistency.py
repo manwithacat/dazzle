@@ -214,11 +214,12 @@ class TestUrlPrefixConsistency:
         assert not view_ctx.detail.delete_url.startswith("/app")
 
     def test_workspace_nav_items_use_prefix(self) -> None:
-        contexts = compile_appspec_to_templates(_make_appspec(), app_prefix="/app")
-        # Check any non-root context has nav items with prefix
-        list_ctx = contexts["/app/task"]
-        assert list_ctx.nav_items
-        assert list_ctx.nav_items[0].route == "/app/workspaces/main"
+        from dazzle.http.runtime.page_routes import _reconcile_nav_model
+        from dazzle.page.converters.nav_builder import build_unrestricted_nav
+
+        spec = _make_appspec()
+        model = _reconcile_nav_model(spec, "/app", build_unrestricted_nav(spec))
+        assert model.groups[0].links[0].route == "/app/workspaces/main"
 
     def test_root_route_skipped_when_workspaces_exist(self) -> None:
         """When workspaces exist, "/" is not registered as a fallback surface."""

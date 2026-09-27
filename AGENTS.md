@@ -182,7 +182,7 @@ Dazzle has a single agent-first entrypoint for autonomous investigation, improve
 | `test-suite` | Test-suite redundancy-cluster collapse (#1530). One cluster family per cycle; parametrize-collapse with the nightly mutation floors as backstop |
 | `hm-convergence` | HM design ownership (drain complete 2026-07). Permanent floors: `test_hm_delegation_proof` + `test_hm_tailwind_reservoir` zero-floor; dual-locks / taste / vision tooling. Not a Tailwind drain lane anymore |
 
-The driver also maintains `.claude/commands/improve/capability-map.md` — a registry mapping every
+The driver also maintains `.agents/skills/improve/capability-map.md` — a registry mapping every
 `dazzle` CLI/MCP/skill/loop capability to an owning lane + staleness, so the loop
 polices its own coverage (capability-coverage rule + capability-sweep cadence).
 
@@ -192,10 +192,11 @@ polices its own coverage (capability-coverage rule + capability-sweep cadence).
 - `.dazzle/improve.lock`, `.dazzle/improve-explore-count` — driver state (cap 100, shared across lanes)
 - `.dazzle/signals/` — cross-loop signal bus (`ux_cycle_signals`); lanes emit `ux-component-shipped`, `trial-friction`, `convergence-clean` etc.
 
-**Files:** driver at `.claude/commands/improve.md`; lanes at `.claude/commands/improve/lanes/*.md`; sub-strategies at `.claude/commands/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`. Human map (structure / portable design, not a substitute for the driver): `docs/harness/improve-exemplar.md`, operator rearm `docs/harness/operator-field-guide.md`.
+**Files:** driver at `.agents/skills/improve/SKILL.md`; lanes at `.agents/skills/improve/lanes/*.md`; sub-strategies at `.agents/skills/improve/strategies/*.md`. Design doc at `dev_docs/2026-04-25-improve-consolidation-design.md`. Human map (structure / portable design, not a substitute for the driver): `docs/harness/improve-exemplar.md`, operator rearm `docs/harness/operator-field-guide.md`.
 
-Operator loop playbooks live in `.claude/commands/` (they are followable by any capable
-harness — see Capability mapping). ANY agent that pushes to `main` must honour the shared
+Operator loop playbooks live in `.agents/skills/`; `.claude/commands/` contains
+discovery shims only. Invoke the skill directly on hosts without slash commands.
+ANY agent that pushes to `main` must honour the shared
 mutation lock `.dazzle/improve.lock` (`PID ISO-timestamp`, 15-min TTL: fresh lock = defer;
 stale = remove) and the Ship Discipline section below.
 
@@ -203,7 +204,7 @@ stale = remove) and the Ship Discipline section below.
 
 Complementary to the improve loop. Catches integration regressions that `dazzle validate` doesn't see — duplicate route registration, FTS-shape mismatches, template-undefined-var errors, etc. — by scraping **boot stderr** of every example + fixture in parallel. Files real bugs as GitHub issues and hands off to the issues loop.
 
-**Files:** `.claude/commands/fuzz.md`. Pattern was extracted from the v0.64.5–v0.64.7 sweep (3 real bugs caught, 2 false positives correctly demoted) — see that section's CHANGELOG for the canonical example.
+**Files:** `.agents/skills/fuzz/SKILL.md`. Pattern was extracted from the v0.64.5–v0.64.7 sweep (3 real bugs caught, 2 false positives correctly demoted) — see that section's CHANGELOG for the canonical example.
 
 Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.agents/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
 
@@ -247,6 +248,7 @@ dazzle inspect api runtime-urls          # AST walk of *_routes.py
 - `dazzle inspect renderers` — `[renderers] extra` in dazzle.toml + framework defaults
 - `dazzle inspect primitives` — @primitive registry (manifest-only is empty; use `--runtime`)
 - `dazzle inspect routes` — `[extensions] routers` + mounted route paths (`--runtime`, bucketed by workspace/surface/auth/api/docs/internal)
+- `dazzle inspect page <URL>` — URL → owning surface/workspace DSL source + direct references; `--html` reads the running app's response (see `docs/reference/page-inspection.md`)
 - `dazzle inspect oauth-providers` — `[[auth.oauth_providers]]` entries
 
 Each subcommand defaults to manifest-only (~50ms); pass `--runtime` to boot the
@@ -264,7 +266,16 @@ Both lists are drift-gated against the directory trees by `tests/unit/test_docs_
 
 **Story-driven homes (not list-first CRUD):** map persona jobs → workspace Hyperparts via `docs/guides/story-to-composition.md`. Lifted apps carry `examples/<app>/stems/story-driven-jobs.md`. Prefer `display: queue` / `metrics` / `status_list` for open work; keep kanban/map/tree as secondary density, not the default landing.
 
-**Project hooks (agent harness):** `.claude/hooks/README.md` — PreToolUse exit codes, `run_hook.sh`, harness payload shapes; regression tests in `tests/unit/test_claude_pretool_hooks.py`.
+**Examples as framework probes:** read `stems/example-apps-as-probes.md` before
+changing an example's job screen. Use the portable
+`.agents/skills/improve/strategies/job_screen_review.md` protocol to compare a
+fixed seeded scene, trace URL → DSL/AppSpec → HTML, verify the user action, and
+classify the owner of any finding. Visual craft and job clarity are separate
+results; a local improvement is not a fleet parity claim.
+
+**Optional host hooks:** `.claude/hooks/README.md` documents one host's
+PreToolUse adapter; shared repository rules and quality gates above apply to
+every agent. Hook regression tests live in `tests/unit/test_claude_pretool_hooks.py`.
 
 ## LSP Server
 
@@ -474,6 +485,11 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
 - **stems** — Reconstruct framework/package/app judgement from `stems/` before inventing structure
 - **blue-sky** — Orthogonal prototype from an example's DSL; critique for framework gaps (not a second CRUD admin)
+- **improve** — Autonomous improvement driver, lanes, strategies, and capability map
+- **issues** — Issue triage and resolution loop
+- **fuzz** — Cross-app boot and integration fuzz sweep
+- **xproject** — Read-only cross-project quality scan
+- **phase-contract** — Gate-driven multi-phase execution when the user grants advance authority
 
 ## Capability Mapping
 
@@ -490,13 +506,14 @@ the degradation in your report.
 | parallel-investigation | run independent investigations concurrently | background Agent tool | *degrade* (sequential) | subagents |
 | scheduled-loop | re-run a playbook on a cadence | /loop + session cron | external scheduler (CI cron) | headless CI mode |
 | web-search | consult current docs when knowledge may be stale | WebSearch tool | built-in browse | built-in search |
-| model-tiering | mechanical work → cheapest tier; judgment work → session tier | pins in .claude/CLAUDE.md | single model — n/a | per-subagent model field |
+| model-tiering | mechanical work → cheapest tier; judgment work → session tier | host model selection | single model — n/a | per-subagent model field |
 | commit-trailer | `Co-Authored-By` for the acting harness only; human stays Author | `Co-Authored-By: Claude <noreply@anthropic.com>` | (none standard) | `Co-Authored-By: Grok Build <grok@x.ai>` |
 
 Model policy: mechanical work (lint, fixed-signature scrapes, format churn) runs on the
 cheapest available tier; judgment work (root-cause, design, review) runs at the session
 tier. Never pin judgment work below the session tier — pins freeze quality as models
-advance. Concrete per-harness pins live in the harness adapters.
+advance. Host model settings may optimize mechanical work; portable playbooks
+never require a named model.
 
 ## Onboarding Guides
 

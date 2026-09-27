@@ -33,6 +33,7 @@
 |------|-------------|
 | [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
 | [HM Design Context](hm-design-context.md) | The unified standard for HM design quality — the three rubrics (hygiene / vision / taste) on one surface × method matrix plus a concept map, the entry-point when customising HM for a new property. |
+| [Page URL Inspection](page-inspection.md) | Trace an app URL to its owning DSL declaration and read the running page's HTML without a maintained preview artifact. |
 | [Ingest](ingest.md) | Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676). |
 | [Project Layout](project-layout.md) | The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live. |
 | [DSL Grammar Specification](grammar.md) | The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`. |

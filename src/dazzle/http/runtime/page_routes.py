@@ -57,6 +57,8 @@ from dazzle.page.converters.nav_builder import (
     NavModel,
     build_all_persona_navs,
     build_anon_nav,
+    build_role_nav,
+    build_unrestricted_nav,
 )
 from dazzle.page.runtime.action_prominence_resolver import (
     resolve_action_prominence_by_usage,
@@ -1437,58 +1439,6 @@ def _apply_persona_form_overrides(
     return False
 
 
-def _filter_nav_by_entity_access(
-    nav_items: list[Any],
-    deps: "_PageRouterConfig",
-    auth_ctx: Any,
-) -> list[Any]:
-    """Remove nav items whose entity denies the user's role for LIST (#583)."""
-    if auth_ctx is None or not auth_ctx.is_authenticated:
-        return nav_items
-
-    _user = auth_ctx.user
-    _raw_roles = list(getattr(_user, "roles", [])) if _user else []
-    _runtime_ctx = AccessRuntimeContext(
-        user_id=str(_user.id) if _user else None,
-        roles=[r.removeprefix("role_") for r in _raw_roles],
-        is_superuser=getattr(_user, "is_superuser", False) if _user else False,
-    )
-    if _runtime_ctx.is_superuser:
-        return nav_items
-
-    filtered: list[Any] = []
-    for item in nav_items:
-        entity_name = deps.route_entity.get(item.route)
-        if entity_name is None:
-            # Not an entity route (e.g. workspace link) — keep it
-            filtered.append(item)
-            continue
-        cedar_spec = deps.entity_cedar_specs.get(entity_name)
-        if cedar_spec is None:
-            # No access rules — keep it
-            filtered.append(item)
-            continue
-        _op_rules = [r for r in cedar_spec.permissions if r.operation == AccessOperationKind.LIST]
-        _has_scopes = bool(getattr(cedar_spec, "scopes", None))
-        _has_field_conditions = (
-            False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
-        )
-        if not _op_rules or _has_field_conditions:
-            # No rules or needs record context — keep the item visible
-            filtered.append(item)
-            continue
-        _decision = evaluate_permission(
-            cedar_spec,
-            AccessOperationKind.LIST,
-            None,
-            _runtime_ctx,
-            entity_name=entity_name,
-        )
-        if _decision.allowed:
-            filtered.append(item)
-    return filtered
-
-
 # =============================================================================
 # Dependencies Container
 # =============================================================================
@@ -1526,14 +1476,14 @@ class _PageRouterConfig:
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
     surface_workspace: dict[str, str] = field(default_factory=dict)
-    # Route path → entity name — for filtering sidebar nav items by entity permit (#583)
-    route_entity: dict[str, str] = field(default_factory=dict)
     # #1324 slice 3b: precomputed per-persona navs (keyed by persona id) +
     # the anon-visitor nav, built once at boot from the RBAC matrix. Every
     # page render sets `ctx.nav_model` from these so the sidebar can no
     # longer drift between the workspace-page and entity-page paths.
     persona_navs: dict[str, NavModel] = field(default_factory=dict)
     anon_nav: NavModel | None = None
+    unrestricted_nav: NavModel | None = None
+    unmatched_role_navs: dict[str, NavModel] = field(default_factory=dict)
     # #1539: the app's auth posture (enable_auth and not test_mode — the
     # same expression the /files + document routes use). When set, the
     # command palette denies anonymous requests instead of serving the
@@ -1573,7 +1523,7 @@ def _reconcile_nav_route(appspec: ir.AppSpec, app_prefix: str, link: NavLink) ->
     to the renderer (see ``nav_builder._route_for``). The runtime registers
     workspace pages at ``<app_prefix>/workspaces/<name>`` and entity-list pages
     at ``<app_prefix>/<entity-slug>`` (slug = ``name.lower().replace("_","-")``,
-    matching ``route_entity`` construction below). Reconcile by the link's
+    matching entity list route construction below). Reconcile by the link's
     ``entity`` target so active-state highlighting (current_route == href) works
     and the hrefs point at live routes. Falls back to the placeholder route if
     the target can't be classified."""
@@ -1616,36 +1566,18 @@ def _reconcile_nav_model(appspec: ir.AppSpec, app_prefix: str, model: NavModel) 
 
 def _resolve_nav_model(
     deps: _PageRouterConfig, roles: list[str] | None, *, authenticated: bool
-) -> NavModel | None:
-    """#1324: pick the precomputed NavModel for the current request.
-
-    The fallback semantics distinguish unauthenticated from authenticated-but-
-    no-persona-match (the #1324 slice-3b regression fixed here):
-
-    - **Unauthenticated** (no session) → the anon nav. This is the only case
-      where anon reach is correct; an unauthenticated request must never see
-      the full nav.
-    - **Authenticated, a role matches a persona** → that persona's NavModel.
-    - **Authenticated, NO role matches a persona** → ``None``. The caller
-      leaves the legacy ``nav_items``/``nav_groups`` path to build the sidebar.
-      This is the critical case: ``admin``/``super_admin`` are role NAMES, not
-      entries in ``appspec.personas``, so ``persona_navs`` has no key for them.
-      Slice 3b wrongly returned the anon nav here, collapsing the admin platform
-      workspace's curated ``nav_groups`` to the anonymous-visitor nav. Falling
-      through to the legacy path renders the workspace's own curated nav.
-    - **anon nav not precomputed** (older config) → ``None`` (legacy path).
-    """
+) -> NavModel:
+    """Pick the single sidebar model for an authenticated or anonymous request."""
     for role in roles or []:
         nav = deps.persona_navs.get(role.removeprefix("role_"))
         if nav is not None:
             return nav
-    if not authenticated:
-        # Genuinely-unauthenticated request: the anon-safe subset (never the
-        # full nav). Returns None when no anon nav was precomputed.
-        return deps.anon_nav
-    # Authenticated but no role matched a persona (e.g. admin/super_admin):
-    # fall through to the legacy curated nav rather than the anon subset.
-    return None
+    if authenticated:
+        for role in roles or []:
+            nav = deps.unmatched_role_navs.get(role.removeprefix("role_"))
+            if nav is not None:
+                return nav
+    return deps.anon_nav or NavModel(groups=(), auto_discovered=True)
 
 
 @dataclass(frozen=True)
@@ -1688,13 +1620,10 @@ async def build_app_page_context(
 
     Resolves auth/persona from the request (mirroring `_page_handler`), picks the
     precomputed `NavModel` via `_resolve_nav_model`, and stamps `current_route`.
-    `nav_items`/`nav_groups` are left empty — the modern sidebar is driven by `nav_model`.
+    The sidebar is driven by `nav_model`.
 
-    When `deps is None` (the route-override path, which has no page-router deps), the
-    appspec is read from `request.app.state.appspec` and `nav_model` is None — the
-    override renders in the app **shell frame** (topbar + chrome), the item-2 guarantee.
-    A fully persona-populated sidebar for overrides (needs the precomputed navs threaded
-    from `create_page_routes`) is a deliberate v1 follow-on.
+    When `deps is None` (the route-override path), the app shell receives an
+    explicit empty model because that wrapper has no page-router dependencies.
     """
     from dazzle.render.context import PageContext
 
@@ -1710,8 +1639,8 @@ async def build_app_page_context(
     nav_model = (
         _resolve_nav_model(deps, user_roles, authenticated=is_authenticated)
         if deps is not None and get_auth_context is not None
-        else None
-    )
+        else (deps.unrestricted_nav if deps is not None else None)
+    ) or NavModel(groups=(), auto_discovered=True)
     appspec = (
         deps.appspec
         if deps is not None
@@ -1721,8 +1650,6 @@ async def build_app_page_context(
     page_ctx = PageContext(
         page_title=_app_title,
         app_name=_app_title,
-        nav_items=[],
-        nav_groups=[],
         current_route=current_route,
         entity_path_labels=entity_path_labels_from_spec(appspec),
         nav_model=nav_model,
@@ -1732,35 +1659,8 @@ async def build_app_page_context(
     return page_ctx, _resolve_chrome_assets(request.app.state)
 
 
-def _apply_anon_nav(prc: _PageRequestContext) -> None:
-    """#1127: swap the sidebar to the anon-safe variants.
-
-    Compile-time builds two parallel nav lists per page: ``nav_items``
-    (everything) and ``nav_items_anon`` (only items from workspaces
-    that declared no persona gate). This helper switches to the anon
-    variants whenever the request has no auth, no user, or no role
-    that matches any persona — closing the leak where anon visitors
-    were seeing more workspaces than authenticated users.
-    """
-    prc.ctx.nav_items = list(prc.ctx.nav_items_anon)
-    prc.ctx.nav_groups = list(prc.ctx.nav_groups_anon)
-
-
 async def _inject_auth_context(prc: _PageRequestContext) -> None:
-    """Resolve auth context from request and inject into page context.
-
-    Anon nav contract (#1127): when no auth context is configured, the
-    request has no user, or the user matches no compiled persona, the
-    sidebar collapses to ``nav_items_anon`` — items whose underlying
-    workspace declared no persona gate. Workspaces with
-    ``access: persona(...)`` are never exposed in the anon sidebar.
-
-    Async (#1128): ``get_auth_context`` may be either sync or async.
-    The resolver call goes through ``_resolve_auth_context`` which
-    awaits the returned coroutine when the project wires up an
-    ``async def`` auth dependency (FastAPI-idiomatic). Pre-async
-    sync callables continue to work unchanged.
-    """
+    """Resolve request auth and select its precomputed sidebar model."""
     # #1324 FR-4: expose per-tenant config to render-time nav ``when`` eval.
     # Set unconditionally (independent of auth wiring) so ``tenant_config.<key>``
     # references resolve on every render path. ``{}`` when the app has no
@@ -1769,97 +1669,23 @@ async def _inject_auth_context(prc: _PageRequestContext) -> None:
     prc.ctx.tenant_config = getattr(getattr(prc.request, "state", None), "tenant_config", {}) or {}
 
     if prc.deps.get_auth_context is None:
-        # No auth wiring at all — the app has opted out of access
-        # control. Persona gates have no enforcement layer in this
-        # mode, so leave the compile-time nav as declared rather
-        # than collapsing the sidebar to nothing. The anon-leak path
-        # closed by #1127 is the production shape: auth IS configured,
-        # but the request has no session yet (handled below).
-        #
-        # #1324 slice 3b: leave ``nav_model`` unset here so the sidebar seam
-        # falls back to the legacy full declared nav. This branch is the
-        # "developer opted out of access control" mode — there are no persona
-        # gates to enforce and no session to resolve a persona from, so
-        # collapsing to the anon nav (a strict subset) would wrongly hide
-        # workspaces. The anon nav is for the production shape (auth IS
-        # configured, request has no session) handled in the else-branch below.
+        prc.ctx.nav_model = prc.deps.unrestricted_nav or NavModel((), False)
         return
     try:
         prc.auth_ctx = await _resolve_auth_context(prc.deps.get_auth_context, prc.request)
         prc.ctx.is_authenticated = bool(prc.auth_ctx and prc.auth_ctx.is_authenticated)
-        if prc.auth_ctx and prc.auth_ctx.user:
+        if prc.auth_ctx and prc.auth_ctx.is_authenticated and prc.auth_ctx.user:
             prc.ctx.user_email = prc.auth_ctx.user.email or ""
             prc.ctx.user_name = prc.auth_ctx.user.username or ""
             prc.ctx.user_preferences = prc.auth_ctx.preferences or {}
-            # Persona-aware nav filtering: match user roles against
-            # per-persona nav variants compiled from workspace access.
             roles = getattr(prc.auth_ctx.user, "roles", None) or []
             prc.ctx.user_roles = list(roles)
-            # #1324: the sidebar now renders from the precomputed per-persona
-            # NavModel. This branch is the AUTHENTICATED path (auth_ctx.user is
-            # set), so pass authenticated=True: a role matching a persona picks
-            # that persona's nav; a role matching NONE (e.g. role_admin, which
-            # is a role name not a persona) returns None so the legacy curated
-            # nav_groups below render — NOT the anon nav (the slice-3b regression).
             prc.ctx.nav_model = _resolve_nav_model(prc.deps, list(roles), authenticated=True)
-            matched_persona = False
-            if prc.ctx.nav_by_persona and roles:
-                for role in roles:
-                    # Roles use "role_" prefix; persona IDs don't
-                    persona_nav = prc.ctx.nav_by_persona.get(role.removeprefix("role_"))
-                    if persona_nav is not None:
-                        prc.ctx.nav_items = persona_nav
-                        matched_persona = True
-                        break
-
-            # v0.61.5 (#863): mirror the per-persona resolution for nav_groups
-            # so entity-list pages show the same collapsible groups workspace
-            # pages show, filtered to the user's persona.
-            if getattr(prc.ctx, "nav_groups_by_persona", None) and roles:
-                for role in roles:
-                    persona_groups = prc.ctx.nav_groups_by_persona.get(role.removeprefix("role_"))
-                    if persona_groups is not None:
-                        prc.ctx.nav_groups = persona_groups
-                        break
-
-            # #1127: authenticated but no persona match → anon-safe view.
-            # An authed user with a role the app doesn't recognise has
-            # the same nav reach as an anon visitor; without this they'd
-            # see the unfiltered flat nav and leak persona-gated entries.
-            if prc.ctx.nav_by_persona and not matched_persona:
-                _apply_anon_nav(prc)
-
-            # Filter out nav items for entities the user cannot LIST (#583).
-            # This catches entities that appear in an allowed workspace but
-            # whose permit: rules deny the user's role.
-            if prc.ctx.nav_items and prc.deps.entity_cedar_specs and prc.deps.route_entity:
-                prc.ctx.nav_items = _filter_nav_by_entity_access(
-                    prc.ctx.nav_items, prc.deps, prc.auth_ctx
-                )
-
-            # Deduplicate flat nav_items against nav_groups children (#874).
-            # Workspace pages already filter via _build_visible_nav, but
-            # entity-list pages render ctx.nav_items + ctx.nav_groups raw.
-            # Drop any flat item whose route also appears as a nav_group
-            # child so users don't see "Recommendations" twice (once flat,
-            # once under "Insights").
-            if prc.ctx.nav_items and prc.ctx.nav_groups:
-                prc.ctx.nav_items = _dedupe_nav_items_against_groups(
-                    prc.ctx.nav_items, prc.ctx.nav_groups
-                )
         else:
-            # #1127: auth wiring present but request is anon (no user or
-            # not authenticated) — apply the anon-safe nav.
-            _apply_anon_nav(prc)
-            # #1324 slice 3b: drive the sidebar from the precomputed anon nav.
-            prc.ctx.nav_model = prc.deps.anon_nav
+            prc.ctx.nav_model = _resolve_nav_model(prc.deps, [], authenticated=False)
     except Exception:
         logger.warning("Failed to resolve auth context for page", exc_info=True)
-        # Fail closed: an exception while resolving auth must not leave
-        # the full unfiltered nav exposed (#1127).
-        _apply_anon_nav(prc)
-        # #1324 slice 3b: fail closed for the NavModel path too.
-        prc.ctx.nav_model = prc.deps.anon_nav
+        prc.ctx.nav_model = _resolve_nav_model(prc.deps, [], authenticated=False)
 
 
 def _inject_onboarding_step(prc: _PageRequestContext) -> None:
@@ -1885,7 +1711,7 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     # can't create Devices. That tripped ``rbac:Device:{tester,manager}:create``
     # under ``--managed`` (which renders multiple personas in one server
     # lifetime) while single-persona local repros passed. Reset every request
-    # — the same discipline ``_apply_anon_nav`` uses for ``nav_items`` — so
+    # so
     # only the matching persona's overlay (re)populates it below.
     prc.ctx.active_guide_html = ""
 
@@ -2046,58 +1872,25 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     )
 
 
-def _dedupe_nav_items_against_groups(
-    nav_items: list[Any], nav_groups: list[dict[str, Any]]
-) -> list[Any]:
-    """Drop flat nav items whose route also appears as a nav_group child.
-
-    Entity-list pages render ``ctx.nav_items`` and ``ctx.nav_groups``
-    side-by-side (#863). When the same route exists in both — e.g. an
-    entity that's auto-discovered as a flat item AND placed in a
-    nav_group — users see it twice. Workspace pages already do this
-    filter via ``_build_visible_nav``; this helper is the entity-page
-    parallel (#874).
-    """
-    grouped_routes = {
-        child.get("route")
-        for group in nav_groups
-        for child in group.get("children", [])
-        if child.get("route")
-    }
-    if not grouped_routes:
-        return nav_items
-    return [item for item in nav_items if getattr(item, "route", None) not in grouped_routes]
-
-
-# Compile-time nav-visibility mirror in
-# src/dazzle/page/converters/template_compiler.py — keep both in sync when
-# changing access-check semantics.
 def _check_surface_access(prc: _PageRequestContext) -> Response | None:
-    """Enforce surface-level access control. Returns a Response to abort, or None."""
-    from dazzle.render.surface_access import (
-        SurfaceAccessDenied,
-        check_surface_access,
-    )
+    """Enforce surface-level access control before rendering."""
+    from dazzle.render.surface_access import SurfaceAccessDenied, check_surface_access
 
     if not prc.surface_name or prc.surface_name not in prc.deps.access_configs:
         return None
-
     ac = prc.deps.access_configs[prc.surface_name]
     user = None
     user_personas: list[str] | None = None
     if prc.auth_ctx and prc.auth_ctx.is_authenticated and prc.auth_ctx.user:
         user = {"id": getattr(prc.auth_ctx.user, "id", None)}
-        _raw = list(getattr(prc.auth_ctx.user, "roles", []))
-        user_personas = [r.removeprefix("role_") for r in _raw]
+        raw_roles = list(getattr(prc.auth_ctx.user, "roles", []))
+        user_personas = [role.removeprefix("role_") for role in raw_roles]
     try:
         check_surface_access(ac, user, user_personas=user_personas, is_api_request=False)
-    except SurfaceAccessDenied as e:
-        if e.is_auth_required and e.redirect_url:
-            return RedirectResponse(url=e.redirect_url, status_code=302)
-        return JSONResponse(
-            status_code=403,
-            content={"detail": e.reason},
-        )
+    except SurfaceAccessDenied as error:
+        if error.is_auth_required and error.redirect_url:
+            return RedirectResponse(url=error.redirect_url, status_code=302)
+        return JSONResponse(status_code=403, content={"detail": error.reason})
     return None
 
 
@@ -3139,9 +2932,6 @@ def _make_workspace_handler(
     ws_ctx: Any,
     ws_route: str,
     ws_allowed_personas: list[str],
-    ws_nav_items: list[dict[str, Any]],
-    ws_entity_items: list[dict[str, Any]],
-    ws_nav_groups: list[dict[str, Any]],
     ws_app_name: str,
     primary_action_candidates: list[dict[str, str]],
     authored_actions: list[dict[str, str]],
@@ -3158,9 +2948,6 @@ def _make_workspace_handler(
             ws_ctx,
             ws_route,
             ws_allowed_personas,
-            ws_nav_items,
-            ws_entity_items,
-            ws_nav_groups,
             ws_app_name,
             primary_action_candidates,
             authored_actions,
@@ -3220,6 +3007,26 @@ def _entity_title_for_create_cta(
     return entity_ref.replace("_", " ").title()
 
 
+def _workspace_region_sources(region: ir.WorkspaceRegion) -> list[str]:
+    sources = [region.source] if region.source else []
+    return sources + list(getattr(region, "sources", []) or [])
+
+
+def _is_contextual_workspace_source(
+    entity_spec: ir.EntitySpec | None, source: str, workspace_sources: set[str]
+) -> bool:
+    if entity_spec is None:
+        return False
+    peers = workspace_sources - {source}
+    return any(
+        field.is_required
+        and field.name != "tenant_id"
+        and field.type.kind in {ir.FieldTypeKind.REF, ir.FieldTypeKind.BELONGS_TO}
+        and field.type.ref_entity in peers
+        for field in entity_spec.fields
+    )
+
+
 def _build_workspace_primary_action_candidates(
     workspace: ir.WorkspaceSpec,
     *,
@@ -3227,6 +3034,7 @@ def _build_workspace_primary_action_candidates(
     create_surfaces_by_entity: dict[str, Any],
     list_surfaces_by_entity: dict[str, Any],
     entity_titles: dict[str, str] | None = None,
+    entities_by_name: dict[str, ir.EntitySpec] | None = None,
 ) -> list[dict[str, str]]:
     """Collect "New X" primary-action candidates for a workspace header.
 
@@ -3241,18 +3049,20 @@ def _build_workspace_primary_action_candidates(
     "Contact List" produced the wrong CTA "New Contact List").
 
     Child entities (comments, line items, …) are omitted so desks keep a
-    single commercial primary (#1626).
+    single commercial primary (#1626). A source with a required reference to
+    another source in the same workspace is also contextual, not a competing
+    heading action (for example InvoiceDocument alongside Invoice).
     """
     _ = list_surfaces_by_entity  # reserved; labels must not use list surface title
     titles = entity_titles or {}
+    entity_specs = entities_by_name or {}
+    workspace_sources = {
+        source for region in workspace.regions for source in _workspace_region_sources(region)
+    }
     seen: set[str] = set()
     actions: list[dict[str, str]] = []
     for region in workspace.regions:
-        region_sources: list[str] = []
-        if region.source:
-            region_sources.append(region.source)
-        region_sources.extend(getattr(region, "sources", []) or [])
-        for src in region_sources:
+        for src in _workspace_region_sources(region):
             if src in seen:
                 continue
             seen.add(src)
@@ -3261,6 +3071,8 @@ def _build_workspace_primary_action_candidates(
                 continue
             ent_title = _entity_title_for_create_cta(src, create_surface, titles)
             if _is_child_entity_cta(src, ent_title):
+                continue
+            if _is_contextual_workspace_source(entity_specs.get(src), src, workspace_sources):
                 continue
             actions.append(
                 {
@@ -3372,9 +3184,6 @@ async def _workspace_handler(
     ws_context: Any,
     ws_route: str,
     ws_allowed_personas: list[str],
-    ws_nav_items: list[dict[str, Any]],
-    ws_entity_items: list[dict[str, Any]],
-    ws_groups: list[dict[str, Any]],
     ws_app_name: str,
     primary_action_candidates: list[dict[str, str]],
     authored_actions: list[dict[str, str]],
@@ -3382,17 +3191,6 @@ async def _workspace_handler(
 ) -> Response:
     """Handle a workspace page route."""
 
-    # Inject auth context if available
-    # Unauthenticated default: only public workspaces are visible.
-    # Entity items (entity surface links) have no access_level, so
-    # they are treated as authenticated-only and hidden until login.
-    # Exclude routes already covered by nav_groups to avoid duplication (#661).
-    _grouped_routes = {child["route"] for g in ws_groups for child in g.get("children", [])}
-    visible_nav = [
-        {"label": item["label"], "route": item["route"]}
-        for item in ws_nav_items + ws_entity_items
-        if item["route"] not in _grouped_routes and item.get("access_level") == "public"
-    ]
     is_authenticated = False
     user_email = ""
     user_name = ""
@@ -3415,22 +3213,6 @@ async def _workspace_handler(
                 )
                 user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
                 user_preferences = auth_ctx.preferences or {}
-                # Filter nav by persona access.
-                # Roles use "role_" prefix; persona IDs don't.
-                normalized_roles = [r.removeprefix("role_") for r in user_roles]
-                # Exclude entity routes that are already in nav_groups
-                grouped_routes = {
-                    child["route"] for g in ws_groups for child in g.get("children", [])
-                }
-                visible_nav = [
-                    {"label": item["label"], "route": item["route"]}
-                    for item in ws_nav_items + ws_entity_items
-                    if item["route"] not in grouped_routes
-                    and (
-                        not item.get("allow_personas")
-                        or any(r in item["allow_personas"] for r in normalized_roles)
-                    )
-                ]
         except Exception:
             logger.warning("Failed to resolve auth for workspace nav", exc_info=True)
 
@@ -3538,7 +3320,7 @@ async def _workspace_handler(
     from dazzle.page.runtime.workspace_renderer import (
         render_workspace_content_typed,
     )
-    from dazzle.render.context import NavItemContext, PageContext
+    from dazzle.render.context import PageContext
     from dazzle.render.dispatch import dispatch_render_page
 
     # #1204: edit-mode chrome (Remove-card × button on every dashboard card,
@@ -3583,29 +3365,14 @@ async def _workspace_handler(
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=workspace_inner, headers=headers)  # nosemgrep
 
-    # #1324: render the sidebar from the precomputed per-persona (or anon)
-    # NavModel — the same source the entity-page path uses — so the two paths
-    # can no longer drift. Only when auth is wired: with no auth context
-    # (developer opted out of access control) there's no persona/session to
-    # resolve, so leave nav_model unset and fall back to the legacy full
-    # declared nav, mirroring _inject_auth_context's no-auth branch.
-    #
-    # ``is_authenticated`` is the resolved auth state (True only when the
-    # request carried a valid session; user_roles is populated only then).
-    # Passing it through is what fixes the slice-3b admin regression: an
-    # authenticated admin (role_admin, which matches no persona) now resolves to
-    # None and falls through to the workspace's curated nav_groups, while a
-    # genuinely-anonymous request (no session) still gets the anon nav.
     _nav_model = (
         _resolve_nav_model(deps, user_roles, authenticated=is_authenticated)
         if deps.get_auth_context is not None
-        else None
+        else deps.unrestricted_nav or NavModel((), False)
     )
     page_ctx = PageContext(
         page_title=ws_title,
         app_name=ws_app_name,
-        nav_items=[NavItemContext(label=n["label"], route=n["route"]) for n in visible_nav],
-        nav_groups=ws_groups,
         current_route=effective_route,
         entity_path_labels=entity_path_labels_from_spec(getattr(deps, "appspec", None)),
         nav_model=_nav_model,
@@ -3795,13 +3562,6 @@ def create_page_routes(
     for ctx in page_contexts.values():
         ctx.theme_css = theme_css
 
-    # Build route → entity name mapping for sidebar nav filtering (#583).
-    # Entity list routes use the pattern /{app_prefix}/{entity-slug}.
-    route_entity: dict[str, str] = {}
-    for _entity in appspec.domain.entities:
-        _slug = app_paths.entity_slug(_entity.name)
-        route_entity[app_paths.list_path(app_prefix, _slug)] = _entity.name
-
     # #1324 slice 3b: precompute the per-persona + anon NavModels once at boot.
     # The RBAC matrix is a pure function of the appspec; the runtime did not
     # previously materialise it, so we build it here and feed the nav builder.
@@ -3811,6 +3571,11 @@ def create_page_routes(
         for pid, nav in build_all_persona_navs(appspec, _nav_matrix).items()
     }
     anon_nav = _reconcile_nav_model(appspec, app_prefix, build_anon_nav(appspec, _nav_matrix))
+    unrestricted_nav = _reconcile_nav_model(appspec, app_prefix, build_unrestricted_nav(appspec))
+    unmatched_role_navs = {
+        role: _reconcile_nav_model(appspec, app_prefix, build_role_nav(appspec, role, _nav_matrix))
+        for role in ("admin", "super_admin")
+    }
 
     # #1422: scope/permit inputs for in-process reads. fk_graph + admin_personas
     # are pure functions of the appspec (the same values server.py's RouteGenerator
@@ -3846,9 +3611,10 @@ def create_page_routes(
         surface_entity=surface_entity,
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,
-        route_entity=route_entity,
         persona_navs=persona_navs,
         anon_nav=anon_nav,
+        unrestricted_nav=unrestricted_nav,
+        unmatched_role_navs=unmatched_role_navs,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific
@@ -3935,39 +3701,8 @@ def create_page_routes(
     # surface page template, so they get separate handlers.
     workspaces = getattr(appspec, "workspaces", []) or []
     if workspaces:
-        # Build nav items for workspace pages: workspace links + entity surface links.
-        # Entity surfaces are derived from workspace regions' source entities.
-        # Delegate workspace-access resolution to the shared helper so sidebar
-        # nav visibility matches the enforcement path AND template_compiler's
-        # nav_by_persona. EX-028 (cycle 221) + cycle 226 root-cause: the v0.55.34
-        # #775 fix unified template_compiler.py and _workspace_handler access
-        # enforcement via workspace_allowed_personas, but this second
-        # ws_nav_items builder was never migrated. It pulled allow_personas
-        # directly from raw ws_access, which returned [] for workspaces with no
-        # explicit DSL access declaration — and the downstream filter at
-        # line 860 treats an empty list as "no restriction", so implicitly-gated
-        # workspaces leaked into every persona's sidebar. Calling the helper
-        # here restores single-source-of-truth.
         from dazzle.page.converters.workspace_converter import workspace_allowed_personas
         from dazzle.page.runtime.workspace_renderer import build_workspace_context
-
-        _personas_list = list(getattr(appspec, "personas", []) or [])
-        ws_nav_items: list[dict[str, Any]] = []
-        for ws in workspaces:
-            ws_access = getattr(ws, "access", None)
-            _allowed = workspace_allowed_personas(ws, _personas_list)
-            # None means "no filter" (visible to every authenticated user);
-            # preserve the existing convention that empty list in the item
-            # dict means "no restriction" by flattening None → [].
-            _allow_for_item = [] if _allowed is None else list(_allowed)
-            ws_nav_items.append(
-                {
-                    "label": ws.title or ws.name.replace("_", " ").title(),
-                    "route": f"{app_prefix}/workspaces/{ws.name}",
-                    "allow_personas": _allow_for_item,
-                    "access_level": ws_access.level if ws_access else "authenticated",
-                }
-            )
 
         # Add entity surface links from each workspace's regions
         surfaces = getattr(appspec, "surfaces", []) or []
@@ -3978,51 +3713,6 @@ def create_page_routes(
                 _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
             elif surface.mode.value == "create" and surface.entity_ref:
                 _create_surfaces_by_entity.setdefault(surface.entity_ref, surface)
-
-        # Collect entities claimed by nav_groups per workspace (for #430 dedup)
-        ws_grouped_entities: dict[str, set[str]] = {}
-        for ws in workspaces:
-            grouped: set[str] = set()
-            for ng in getattr(ws, "nav_groups", []) or []:
-                for item in ng.items:
-                    grouped.add(item.entity)
-            ws_grouped_entities[ws.name] = grouped
-
-        # Per-workspace nav: workspace links + entity surfaces from regions.
-        # When the author declared at least one nav_group, skip auto-discovery
-        # of region sources entirely — nav_group is an explicit signal that
-        # the author has curated the entity nav by hand and doesn't want
-        # admin-shaped junctions (e.g. ClassEnrolment, QuestionTopic) leaking
-        # in via region source: lines (#873). Zero-config workspaces (no
-        # nav_groups) keep auto-discovery as before.
-        ws_entity_nav: dict[str, list[dict[str, Any]]] = {}
-        for ws in workspaces:
-            entity_items: list[dict[str, Any]] = []
-            grouped = ws_grouped_entities.get(ws.name, set())
-            if grouped:
-                ws_entity_nav[ws.name] = entity_items
-                continue
-            seen_entities: set[str] = set()
-            for region in ws.regions:
-                # Collect all source entities (single + multi-source)
-                region_sources: list[str] = []
-                if region.source:
-                    region_sources.append(region.source)
-                region_sources.extend(getattr(region, "sources", []) or [])
-                for src in region_sources:
-                    if src not in seen_entities:
-                        seen_entities.add(src)
-                        list_surface = _list_surfaces_by_entity.get(src)
-                        if list_surface:
-                            entity_slug = app_paths.entity_slug(src)
-                            entity_items.append(
-                                {
-                                    "label": list_surface.title or src.replace("_", " ").title(),
-                                    "route": app_paths.list_path(app_prefix, entity_slug),
-                                    "allow_personas": [],
-                                }
-                            )
-            ws_entity_nav[ws.name] = entity_items
 
         # Per-workspace primary actions: "Create X" buttons derived from
         # regions that reference an entity with a CREATE surface. Closes #827
@@ -4044,6 +3734,7 @@ def create_page_routes(
                 create_surfaces_by_entity=_create_surfaces_by_entity,
                 list_surfaces_by_entity=_list_surfaces_by_entity,
                 entity_titles=_entity_titles,
+                entities_by_name={ent.name: ent for ent in appspec.domain.entities},
             )
             for ws in workspaces
         }
@@ -4064,46 +3755,6 @@ def create_page_routes(
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
-        # Build nav groups per workspace from nav_group declarations (v0.38.0).
-        # Children are gated on list-surface existence (#1005) — mirrors
-        # template_compiler.py. The auto-injected platform-admin Management
-        # group references User/Tenant which have no admin list surface, so
-        # those children would 404; same applies to any author-declared
-        # nav_group pointing at a surfaceless entity.
-        ws_nav_group_map: dict[str, list[dict[str, Any]]] = {}
-        for ws in workspaces:
-            groups: list[dict[str, Any]] = []
-            for ng in getattr(ws, "nav_groups", []) or []:
-                children: list[dict[str, Any]] = []
-                for item in ng.items:
-                    if item.entity not in _list_surfaces_by_entity:
-                        continue
-                    surface = _list_surfaces_by_entity[item.entity]
-                    children.append(
-                        {
-                            "label": (surface.title or item.entity.replace("_", " ").title()),
-                            "route": app_paths.list_path(
-                                app_prefix, app_paths.entity_slug(item.entity)
-                            ),
-                            "icon": item.icon,
-                        }
-                    )
-                if not children:
-                    continue
-                groups.append(
-                    {
-                        "label": ng.label,
-                        "icon": ng.icon,
-                        "collapsed": ng.collapsed,
-                        "children": children,
-                    }
-                )
-            ws_nav_group_map[ws.name] = groups
-
-        # workspace_allowed_personas is already imported above (ws_nav_items
-        # build). Both call sites now consult the same helper, so sidebar,
-        # enforcement, and template_compiler nav_by_persona all agree.
-
         for workspace in workspaces:
             ws_ctx = build_workspace_context(workspace, appspec)
             _ws_route = f"{app_prefix}/workspaces/{workspace.name}"
@@ -4113,8 +3764,6 @@ def create_page_routes(
             # non-empty lists into either "empty list = no restriction" or
             # "non-empty list = restrict to these personas".
             _ws_allowed = [] if _allowed is None else list(_allowed)
-            _ws_entity_items = ws_entity_nav.get(workspace.name, [])
-            _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
             _ws_primary = ws_primary_actions.get(workspace.name, [])
             _ws_authored = ws_authored_actions.get(workspace.name, [])
 
@@ -4144,9 +3793,6 @@ def create_page_routes(
                 ws_ctx=ws_ctx,
                 ws_route=_ws_route,
                 ws_allowed_personas=_ws_allowed,
-                ws_nav_items=ws_nav_items,
-                ws_entity_items=_ws_entity_items,
-                ws_nav_groups=_ws_nav_groups,
                 ws_app_name=ws_app_name,
                 primary_action_candidates=_ws_primary,
                 authored_actions=_ws_authored,

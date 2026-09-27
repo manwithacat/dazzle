@@ -42,6 +42,11 @@ class ResolvedFormat:
     arg: str | None = None
 
 
+def record_currency_code(item: dict[str, Any], field_key: str, default: str = "") -> str:
+    """Resolve a row's currency, preferring the field-specific companion."""
+    return str(item.get(f"{field_key}_currency") or item.get("currency") or default)
+
+
 def _title_case(token: str) -> str:
     return token.replace("_", " ").replace("-", " ").strip().title()
 

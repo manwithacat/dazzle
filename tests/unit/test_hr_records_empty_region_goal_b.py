@@ -20,12 +20,12 @@ def _workspace_block(name: str) -> str:
 
 
 def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
-    """Peer HR homes: dual attention + notes — not twin people cards or status bar charts."""
+    """Peer HR homes: roster + notes, without duplicate people or status charts."""
     block = _workspace_block("staff_directory")
     assert "live_conversation:" in block
     assert "headcount:" in block
     assert "current_staff:" in block
-    assert "recent_starters:" in block
+    assert "recent_starters:" not in block
     assert "department_context:" in block
     assert "role_context:" in block
     assert "directory_readiness:" in block
@@ -33,12 +33,12 @@ def test_staff_directory_omits_chart_and_dup_card_theater() -> None:
     assert "dept_mix:" not in block
     assert "assignment_status_mix:" not in block
     assert "display: bar_chart" not in block
-    # Cycle 2092 directory_work_first: roster + starters lead; media not fold-eager.
-    assert "focus: current_staff, recent_starters, headcount, composition" in block
+    # Current roster leads; onboarding belongs to the New Starters workspace.
+    assert "focus: current_staff, headcount, composition" in block
     assert "composition:" in block
     assert "directory_work_first" in block
     assert block.index("current_staff:") < block.index("media_shelf:")
-    assert block.index("recent_starters:") < block.index("headcount:")
+    assert block.index("current_staff:") < block.index("headcount:")
 
 
 def test_my_team_omits_redundant_org_bar_charts() -> None:

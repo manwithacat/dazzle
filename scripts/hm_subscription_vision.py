@@ -20,7 +20,7 @@ Usage (monorepo root)::
     python scripts/hm_subscription_vision.py --ingest .dazzle/hm-visual-scores-raw.json
 
     # Fleet path (existing): see
-    #   .claude/commands/improve/strategies/visual_tier2_subagent.md
+    #   .agents/skills/improve/strategies/visual_tier2_subagent.md
 """
 
 from __future__ import annotations
@@ -198,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  2. Subagent Writes scores JSON to {scores_raw}")
             print(f"  3. python scripts/hm_subscription_vision.py --ingest {scores_raw}")
             print()
-            print("Fleet alternative: .claude/commands/improve/strategies/visual_tier2_subagent.md")
+            print("Fleet alternative: .agents/skills/improve/strategies/visual_tier2_subagent.md")
         return 0
 
     if args.json:

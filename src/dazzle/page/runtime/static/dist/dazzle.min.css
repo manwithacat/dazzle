@@ -6475,7 +6475,8 @@ gap: var(--space-sm);
 display: flex;
 align-items: center;
 gap: var(--space-md);
-padding: var(--space-md);
+padding-block: var(--space-sm);
+padding-inline: var(--space-md);
 border-radius: var(--radius-sm);
 transition: background var(--duration-fast) var(--ease-out);
 }
@@ -7920,6 +7921,18 @@ border-radius: var(--radius-sm, 4px);
 border: 1px solid var(--colour-border, #e5e7eb);
 background: var(--colour-surface-muted, #f3f4f6);
 margin-block: 0.15rem 0.35rem;
+}
+.dz-grid-cell-field .dz-aspect-ratio[data-dz-media-size="card"] {
+width: 100%;
+margin-block: 0.5rem;
+}
+.dz-grid-cell-field .dz-aspect-ratio[data-dz-media-size="card"] .dz-media-thumb {
+width: 100%;
+max-width: none;
+height: 100%;
+margin: 0;
+border: 0;
+border-radius: inherit;
 }
 .dz-grid-cell-field-label {
 font-size: var(--text-xs);
@@ -11372,6 +11385,9 @@ min-height: 96px;
 .dz-card-body[data-display="metrics"],
 .dz-card-body[data-display="metric"] {
 min-height: 140px;
+}
+.dz-card-body[data-display="queue"] {
+padding-block-start: var(--space-sm);
 }
 .dz-card-body[data-display="bar_chart"],
 .dz-card-body[data-display="chart"],

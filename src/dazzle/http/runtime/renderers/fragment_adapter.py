@@ -195,6 +195,8 @@ def _detail_field_value(f: dict[str, Any]) -> Fragment:
         "filter_ref_entity": str(f.get("ref_entity", "") or ""),
         "ref_route": str(f.get("ref_route", "") or ""),
         "currency_code": str(f.get("currency_code", "") or ""),
+        "format_kind": str(f.get("format_kind", "") or ""),
+        "format_arg": str(f.get("format_arg", "") or ""),
         "semantic_map": dict(f.get("semantic_map", {}) or {}),
     }
     # #1533: detail pages show the full value — only list cells truncate.

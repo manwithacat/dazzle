@@ -1,0 +1,12 @@
+[
+  {
+    "id": "invoice-pay-desk-vs-shadcn-tasks-light-craft",
+    "persona": "finance",
+    "job": "Review the visual craft of a populated work queue; do not score task completion across these different domains",
+    "state": "seeded, light, 1440x900, craft-only comparison",
+    "screens": {
+      "dazzle": "../../examples/invoice_ops/.dazzle/qa/screenshots/pay_desk_finance_desktop_light.png",
+      "shadcn": "../../.dazzle/composition/references/taste/shadcn_tasks_light.png"
+    }
+  }
+]
