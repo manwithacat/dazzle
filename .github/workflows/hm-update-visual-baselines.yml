@@ -32,6 +32,8 @@ jobs:
           -c /dev/null
           --rootdir=.
           -p no:cacheprovider
+      - name: Record capture manifest
+        run: python packages/hatchi-maxchi/tools/visual_baseline_manifest.py --platform linux
       # Main is PR-protected; bot push is rejected. Upload for local commit/push.
       - uses: actions/upload-artifact@v7
         with:

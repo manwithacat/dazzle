@@ -11,6 +11,7 @@ runs compare against your platform's set (and skip-write it if absent).
 
 Update baselines after an INTENDED visual change:
     HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py   # yours
+    python tools/visual_baseline_manifest.py                        # yours
     gh workflow run update-baselines.yml                          # linux set
 and commit the PNGs (review the diff images first).
 """

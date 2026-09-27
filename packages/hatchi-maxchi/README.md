@@ -297,8 +297,11 @@ python build.py && python -m pytest tests/
 ```
 
 Visual baselines: after an intended visual change,
-`HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py` and commit
-the PNGs.
+run `HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py`, then
+`python tools/visual_baseline_manifest.py` for the local platform. Capture
+Linux through `update-baselines.yml` and commit both image sets and their
+`capture.json` manifests. The manifests prove that unchanged PNGs were
+recaptured against the current gallery assets.
 
 ### Touch input — every Hyperpart, by construction
 
