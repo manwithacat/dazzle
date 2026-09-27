@@ -1,17 +1,17 @@
 """
 Breadcrumb trail derivation from URL paths.
 
-Compatibility facade — implementation lives in pure ``dazzle.render.breadcrumbs``
-so app chrome can mount the HM Breadcrumb fragment without crossing the
-render ↛ http layer boundary.
+Compatibility facade — URL and clerk labels live in pure
+``dazzle.render.breadcrumbs``; the Fragment bridge lives in
+``dazzle.render.breadcrumb_fragment``.
 """
 
 from __future__ import annotations
 
+from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb, crumbs_to_breadcrumb
 from dazzle.render.breadcrumbs import (
     Crumb,
     build_breadcrumb_trail,
-    build_shell_breadcrumb,
     clerk_bulk_selection_noun,
     clerk_empty_activity_title,
     clerk_empty_carousel_title,
@@ -38,7 +38,6 @@ from dazzle.render.breadcrumbs import (
     clerk_related_create_noun,
     clerk_related_empty_title,
     clerk_search_results_label,
-    crumbs_to_breadcrumb,
     entity_path_labels_from_spec,
 )
 

@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.renderer_registry import default_renderer_names
-from dazzle.render.breadcrumbs import build_shell_breadcrumb
+from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb
 from dazzle.render.fragment import (
     URL,
     AppShell,
