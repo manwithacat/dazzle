@@ -691,8 +691,11 @@ def _resolve_scope_filters(
         dict of SQL filters — if a scope rule matches with a field condition.
             May contain the special key ``__scope_predicate`` with a
             ``(sql, params)`` tuple when the predicate pipeline is active.
-        {} (empty dict) — if scope is 'all' (no filter needed)
-        None — if no scope rule matches (default-deny: empty result set)
+        {} (empty dict) — only when scope is 'all' or the entity declares no
+            scope rules at all. Callers read this as "no filter needed", so it
+            is never an error path.
+        None — default-deny: no scope rule matched, or a matched rule failed to
+            resolve to a filter. Both mean "no rows".
     """
     import logging
 
@@ -788,7 +791,19 @@ def _resolve_scope_filters(
                 )
                 return None
 
-    return {}  # Matched but no resolvable condition — treat as no filter
+    # Fall-through: a rule matched but produced no resolvable filter — e.g. a
+    # predicate with no fk_graph, so neither the predicate-compiler path nor the
+    # legacy condition-tree path can run. This is a resolution failure, not
+    # `scope: all`: the two legitimate `{}` returns are handled earlier in this
+    # function (no scopes at all, and the explicit scope-all bypass). Callers
+    # read `{}` as "no filter, unscoped read", so returning it here silently
+    # escalated an unresolvable rule into unrestricted row access. Deny, which
+    # is what every adjacent failure path in this function already does (#617).
+    logging.getLogger(__name__).warning(
+        "Scope rule matched for %s but produced no resolvable filter — denying",
+        entity_name,
+    )
+    return None
 
 
 async def _execute_read_as_of(service: Any, entity_id: Any, as_of: Any) -> Any:
