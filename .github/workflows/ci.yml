@@ -123,7 +123,7 @@ jobs:
     - name: Upload coverage to Codecov
       # Coverage is measured on the 3.12 cell only (see pytest split above).
       if: matrix.python-version == '3.12'
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v6
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
       with:
         files: ./coverage.xml
         flags: unittests
@@ -415,7 +415,7 @@ jobs:
       # serve-boot orchestration + route handlers the unit job never
       # reaches. Uploaded under its own `integration` flag — Codecov
       # merges flagged reports into the project total.
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v6
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
       with:
         files: ./coverage.xml
         flags: integration
@@ -522,7 +522,7 @@ jobs:
       # #1169: the postgres-marked tests exercise real-DB code paths
       # (migrations, scope SQL, repository internals) invisible to the
       # SQLite-free unit job. Uploaded under the `postgres` flag.
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v6
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
       with:
         files: ./coverage.xml
         flags: postgres
