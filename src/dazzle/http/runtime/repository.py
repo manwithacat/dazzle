@@ -168,10 +168,22 @@ def _resolve_latest_one_fields(
                 cursor.execute(sql, params)  # nosemgrep
                 fetched = cursor.fetchall()
                 target_rows = [dict(r) if hasattr(r, "keys") else dict(r) for r in fetched]
-            except Exception:
+            except Exception as first_exc:
                 # Likely a column-name mismatch (target uses effective_to,
                 # not end_date). Try the alternate. Belt-and-suspenders
                 # until the appspec-plumbing TODO above lands.
+                #
+                # The rollback is load-bearing, not hygiene. `db.connection()`
+                # does not set autocommit (nothing in pg_backend.py passes
+                # `autocommit=`), so PostgreSQL marks the transaction ABORTED
+                # the moment the first statement errors, and every later
+                # statement on this connection fails with
+                # InFailedSqlTransaction until a rollback. Without it the
+                # retry below always raised that instead, making this
+                # fallback unreachable and turning a soft column-name
+                # mismatch into a hard 500. The enclosing block contains only
+                # these SELECTs, so the rollback discards nothing else.
+                conn.rollback()
                 end_field = end_field_candidates[1]
                 if as_of is not None:
                     sql = (
@@ -188,7 +200,19 @@ def _resolve_latest_one_fields(
                         f'AND "{end_field}" IS NULL'
                     )
                     params = list(source_ids)
-                cursor.execute(sql, params)  # nosemgrep
+                try:
+                    cursor.execute(sql, params)  # nosemgrep
+                except Exception as second_exc:
+                    # Neither candidate column exists. Name both so the
+                    # operator sees the actual schema rather than a raw
+                    # driver error, and restore the failed first statement's
+                    # transaction state for the caller's error handling.
+                    conn.rollback()
+                    raise RuntimeError(
+                        f"temporal lookup on {target_table!r} failed for both "
+                        f"candidate end columns {end_field_candidates!r}: "
+                        f"{first_exc} / {second_exc}"
+                    ) from second_exc
                 fetched = cursor.fetchall()
                 target_rows = [dict(r) if hasattr(r, "keys") else dict(r) for r in fetched]
 
