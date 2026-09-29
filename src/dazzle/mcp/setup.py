@@ -134,14 +134,20 @@ def register_mcp_server(
         return False
 
 
-def check_mcp_server() -> dict[str, Any]:
+def check_mcp_server(working_dir: Path | None = None, name: str | None = None) -> dict[str, Any]:
     """
     Check MCP server registration and availability.
+
+    Args:
+        working_dir: Project root whose scoped registration should be resolved.
+            When omitted, only the global ``dazzle`` entry is recognised.
+        name: Explicit registration name to look for, overriding ``working_dir``.
 
     Returns:
         Dictionary with status information:
         - status: "not_registered" | "registered" | "error"
         - registered: bool
+        - server_name: str | None (matched MCP entry name)
         - config_path: str | None
         - server_command: str | None
         - tools: list[str] (if available)
@@ -152,6 +158,7 @@ def check_mcp_server() -> dict[str, Any]:
         "status": "not_registered",
         "registered": False,
         "config_path": str(config_path) if config_path else None,
+        "server_name": None,
         "server_command": None,
         "tools": [],
     }
@@ -166,13 +173,28 @@ def check_mcp_server() -> dict[str, Any]:
         status["error"] = "Invalid JSON in config file"
         return status
 
-    # Check if DAZZLE server is registered
+    # Check if DAZZLE server is registered. A project-scoped registration is
+    # stored under ``dazzle-<project>-<hash>``, so resolve the scoped entry for
+    # the requested working directory first and retain global-name support.
     mcp_servers = config.get("mcpServers", {})
-    if "dazzle" in mcp_servers:
+    candidates: list[str] = []
+    if name is not None:
+        candidates.append(name)
+    elif working_dir is not None:
+        scoped = _registration_server_name(working_dir.resolve(), None)
+        if scoped is not None:
+            candidates.append(scoped)
+        candidates.append("dazzle")
+    else:
+        candidates.append("dazzle")
+
+    matched = next((candidate for candidate in candidates if candidate in mcp_servers), None)
+    if matched is not None:
         status["registered"] = True
         status["status"] = "registered"
+        status["server_name"] = matched
 
-        server_config = mcp_servers["dazzle"]
+        server_config = mcp_servers[matched]
         command = server_config.get("command", "")
         args = server_config.get("args", [])
         status["server_command"] = f"{command} {' '.join(args)}"

@@ -359,3 +359,91 @@ class TestCheckMcpServer:
         assert "dsl" in status["tools"]
         assert "story" in status["tools"]
         assert "status" in status["tools"]
+
+    def test_scoped_registration_resolves_for_working_dir(self, tmp_path):
+        """Scoped `dazzle setup --working-dir` must be found by `mcp check`.
+
+        Registration writes a project-scoped ``dazzle-<project>-<hash>`` entry;
+        the checker has to resolve that same name for the requested root.
+        """
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        scoped = _setup_module._registration_server_name(project.resolve(), None)
+        assert scoped is not None
+        assert scoped != "dazzle"
+
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {scoped: {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert status["status"] == "registered"
+        assert status["server_name"] == scoped
+
+    def test_bare_check_does_not_match_scoped_entry(self, tmp_path):
+        """Without a working dir only the global ``dazzle`` key is recognised."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        scoped = _setup_module._registration_server_name(project.resolve(), None)
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {scoped: {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
+
+        assert status["registered"] is False
+
+    def test_global_entry_still_found_with_working_dir(self, tmp_path):
+        """A global registration remains visible when a working dir is given."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {"dazzle": {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert status["server_name"] == "dazzle"
+
+    def test_register_then_check_round_trip(self, tmp_path):
+        """End-to-end: the documented setup -> check sequence reports registered."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=project) is True
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert str(project.resolve()) in status["server_command"]

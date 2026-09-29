@@ -51,7 +51,7 @@ from dazzle.render.fragment import (
     Region,
     Surface,
 )
-from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell, record_currency_code
 from dazzle.render.iban_cell import clerk_iban_cell_html
 from dazzle.render.rating_cell import clerk_rating_cell_html
 from dazzle.render.tags_cell import clerk_tags_cell_html
@@ -436,12 +436,18 @@ def _render_typed_value(
     # Explicit surface `format:` override when threaded onto workspace columns.
     format_kind = str(col.get("format_kind") or "")
     if format_kind:
+        # Resolve the row's companion currency so a workspace cell agrees with
+        # the entity-table cell for the same record. An explicit `format:`
+        # argument (e.g. ``currency(USD)``) still wins.
+        currency_code = str(col.get("currency_code") or "")
+        if format_kind == "currency" and not col.get("format_arg"):
+            currency_code = record_currency_code(item, key, currency_code)
         return RawHTML(
             _html_escape(
                 format_cell(
                     value,
                     col_type or "text",
-                    currency_code=str(col.get("currency_code") or ""),
+                    currency_code=currency_code,
                     override=ResolvedFormat(format_kind, col.get("format_arg") or None),
                 )
             )
@@ -458,7 +464,13 @@ def _render_typed_value(
     if col_type == "currency":
         from dazzle.render.filters import _currency_filter
 
-        return RawHTML(_currency_filter(value))
+        # Per-record currency, else the column default, else GBP — keeps
+        # workspace regions from disagreeing with entity tables on EUR/USD rows.
+        return RawHTML(
+            _currency_filter(
+                value, record_currency_code(item, key, str(col.get("currency_code") or "GBP"))
+            )
+        )
 
     if col_type == "bytes":
         return RawHTML(_html_escape(format_cell(value, "bytes")))

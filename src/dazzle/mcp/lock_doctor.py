@@ -206,7 +206,7 @@ def _summarize_command(cfg: dict[str, Any]) -> str:
 def build_check_payload(project_root: Path, *, clear_stale: bool = False) -> dict[str, Any]:
     """Assemble registration + lock + dual-reg payload for ``dazzle mcp check``."""
     root = project_root.resolve()
-    status = check_mcp_server()
+    status = check_mcp_server(working_dir=root)
     lock_info = diagnose_project_mcp(root)
     dual = detect_dual_registration()
     clear_messages: list[str] = []

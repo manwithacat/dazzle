@@ -1156,6 +1156,43 @@ def test_detail_type_aware_currency_formats_minor_units() -> None:
     assert "£123.45" in html
 
 
+def test_currency_column_uses_record_companion_currency() -> None:
+    """A `type: currency` cell resolves the row's companion `_currency`
+    field, so workspace regions agree with entity tables."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "price_currency": "USD"},
+        "fields": [{"key": "price", "type": "currency"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "$123.45" in html
+
+
+def test_currency_column_falls_back_to_row_level_currency() -> None:
+    """A row-level `currency` field applies when there is no
+    field-specific companion."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "currency": "EUR"},
+        "fields": [{"key": "price", "type": "currency"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "123.45" in html
+    assert "€" in html
+
+
+def test_currency_column_record_beats_column_default() -> None:
+    """Precedence matches the entity-table path — the row's companion
+    currency wins, with the column `currency_code` acting as the fallback."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "price_currency": "USD"},
+        "fields": [{"key": "price", "type": "currency", "currency_code": "GBP"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "$123.45" in html
+
+
 def test_detail_type_aware_ref_renders_link_with_display() -> None:
     """`type: ref` columns produce a Link primitive when ref_route is
     set; the link text uses `<key>_display` from the item dict."""

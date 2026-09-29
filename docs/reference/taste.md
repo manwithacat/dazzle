@@ -23,12 +23,20 @@ Two playbooks — both bill cognition to the **host harness subscription**
 (Claude Code Task / Grok Build Read / similar). Neither calls
 `anthropic.Anthropic().messages.create`.
 
+**Who reads the image.** The acting host agent inspects the PNGs itself, in
+session, using its own image-reading path. Dispatching a reviewer subagent or
+workflow is an *optional* extra pass for an independent second opinion, not a
+required step — see `.agents/skills/improve/strategies/job_screen_review.md`,
+which states that "shell, Dazzle CLI, image inspection, and an agent's own
+judgement are enough." Any host that cannot read images in session should
+dispatch a reviewer rather than silently downgrading to a text-only review.
+
 | Scope | Capture | Judge | Strategy / CLI |
 |-------|---------|-------|----------------|
-| Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.agents/skills/improve/strategies/visual_tier2_subagent.md` |
-| HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Subagent **Reads** PNG → taste dimension scores | `scripts/hm_subscription_vision.py` |
-| HM GitHub Pages gallery (curated) | `scripts/hm_pages_vision.py --capture` | Subagent **Reads** PNGs → findings + scores | `scripts/hm_pages_vision.py` |
-| **All Hyperparts (~90) coherence** | `hm_pages_vision.py --capture --all-hyperparts` | Subagent **Reads** PNGs → coherent? + score + issues | `improve/strategies/hyperpart_coherence.md` |
+| Example-app fleet | `dazzle qa capture` | Host agent inspects PNGs → findings JSON (optional reviewer dispatch) | `.agents/skills/improve/strategies/visual_tier2_subagent.md` |
+| HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Host agent inspects PNG → taste dimension scores (optional reviewer dispatch) | `scripts/hm_subscription_vision.py` |
+| HM GitHub Pages gallery (curated) | `scripts/hm_pages_vision.py --capture` | Host agent inspects PNGs → findings + scores (optional reviewer dispatch) | `scripts/hm_pages_vision.py` |
+| **All Hyperparts (~90) coherence** | `hm_pages_vision.py --capture --all-hyperparts` | Host agent inspects PNGs → coherent? + score + issues | `improve/strategies/hyperpart_coherence.md` |
 | **Coherence drain queue** | (uses last sweep) | Rank + backlog seed `coherence_drain <stem>` | `scripts/hm_coherence_queue.py` + HMC rows |
 
 `/improve` **hm-convergence** pick order (floors green): **drain** if
