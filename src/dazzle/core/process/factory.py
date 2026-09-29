@@ -188,7 +188,7 @@ def _create_temporal_adapter(config: ProcessConfig) -> ProcessAdapter:
     except ImportError as e:
         raise ValueError(
             "Temporal backend requested but temporalio not installed. "
-            "Install with: pip install dazzle[temporal]"
+            "Install with: pip install dazzle-dsl[temporal]"
         ) from e
 
     if not _temporal_available(config.temporal):

@@ -4,7 +4,7 @@ TigerBeetle client wrapper for PRA stress testing.
 Provides connection management, account creation, and transfer operations
 with metrics collection and error handling.
 
-Requires: pip install dazzle[tigerbeetle]
+Requires: pip install dazzle-dsl[tigerbeetle]
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def _get_tb() -> Any:
         return tb
     except ImportError as e:
         raise ImportError(
-            "TigerBeetle client not installed. Install with: pip install dazzle[tigerbeetle]"
+            "TigerBeetle client not installed. Install with: pip install dazzle-dsl[tigerbeetle]"
         ) from e
 
 

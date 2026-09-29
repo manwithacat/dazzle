@@ -191,7 +191,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
     if not _check_pptx_available():
         return GeneratorResult(
             success=False,
-            error="python-pptx is not installed. Install with: pip install 'dazzle[pitch]'",
+            error="python-pptx is not installed. Install with: pip install 'dazzle-dsl[pitch]'",
         )
 
     try:

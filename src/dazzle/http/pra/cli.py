@@ -500,7 +500,7 @@ def tb_list_cmd() -> None:
         from .tigerbeetle_scenarios import list_tb_scenarios
     except ImportError:
         click.echo(
-            "TigerBeetle not installed. Install with: pip install dazzle[tigerbeetle]", err=True
+            "TigerBeetle not installed. Install with: pip install dazzle-dsl[tigerbeetle]", err=True
         )
         sys.exit(1)
 
@@ -582,7 +582,7 @@ def tb_run_cmd(
         from .tigerbeetle_scenarios import TBScenarioType
     except ImportError:
         click.echo(
-            "TigerBeetle not installed. Install with: pip install dazzle[tigerbeetle]", err=True
+            "TigerBeetle not installed. Install with: pip install dazzle-dsl[tigerbeetle]", err=True
         )
         sys.exit(1)
 
@@ -683,7 +683,7 @@ def tb_check_cmd(address: str, cluster_id: int) -> None:
         from .tigerbeetle_client import TigerBeetleConfig, check_tigerbeetle_available
     except ImportError:
         click.echo("❌ TigerBeetle client not installed")
-        click.echo("   Install with: pip install dazzle[tigerbeetle]")
+        click.echo("   Install with: pip install dazzle-dsl[tigerbeetle]")
         sys.exit(1)
 
     click.echo(f"Checking TigerBeetle at {address} (cluster {cluster_id})...")

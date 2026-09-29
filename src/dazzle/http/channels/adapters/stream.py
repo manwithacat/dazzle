@@ -66,7 +66,7 @@ class RedisStreamAdapter(StreamAdapter):
         except ImportError:
             raise ImportError(
                 "redis is required for Redis Streams support. "
-                "Install it with: pip install 'dazzle[redis]'"
+                "Install it with: pip install 'dazzle-dsl[redis]'"
             )
         except Exception as e:
             logger.error("Failed to connect to Redis: %s", e)
@@ -295,7 +295,7 @@ class KafkaAdapter(StreamAdapter):
         except ImportError:
             raise ImportError(
                 "aiokafka is required for Kafka support. "
-                "Install it with: pip install 'dazzle[kafka]'"
+                "Install it with: pip install 'dazzle-dsl[kafka]'"
             )
         except Exception as e:
             logger.error("Failed to connect to Kafka: %s", e)
@@ -446,7 +446,7 @@ class KafkaAdapter(StreamAdapter):
         except ImportError:
             raise ImportError(
                 "aiokafka is required for Kafka support. "
-                "Install it with: pip install 'dazzle[kafka]'"
+                "Install it with: pip install 'dazzle-dsl[kafka]'"
             )
 
     async def unsubscribe(self) -> None:

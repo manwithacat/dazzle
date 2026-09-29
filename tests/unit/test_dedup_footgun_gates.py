@@ -195,3 +195,96 @@ def test_no_inline_currency_minor_unit_scale() -> None:
         "`10 ** get_currency_scale(code)` (dazzle.core.ir.money) and take the format "
         "precision from the same table, or use `_currency_filter`:\n  " + "\n  ".join(hits)
     )
+
+
+# The distribution is `dazzle-dsl`. `dazzle` is a DIFFERENT, unrelated package
+# on PyPI — PEP 503 normalises only the *import* name, which stays `dazzle`.
+# So `pip install dazzle[...]` resolves to a third party's project, not this
+# one, and `dazzle[temporal]` fails with "no such extra" or installs the wrong
+# thing entirely. The template requirements.txt was the worst case: it is copied
+# into every scaffolded project and its own header tells the user to run
+# `uv pip install -r requirements.txt`.
+_WRONG_DIST = re.compile(r"\bdazzle\[")
+_EXTRA_NAMES = (
+    "temporal|redis|kafka|rabbitmq|llm|pitch|tigerbeetle|aws|aws-test|i18n|serve|"
+    "sendgrid|sso|proof|graphql|compliance|events|signing|mobile|mobile_full|"
+    "viewport|social_auth|postgres|test|test-full|dev"
+)
+
+
+def _wrong_distribution_sites() -> list[str]:
+    """Every tracked file that tells a user to install the wrong distribution."""
+    repo = _SRC.parent.parent
+    roots = [
+        _SRC,
+        repo / "templates",
+        repo / "examples",
+        repo / "fixtures",
+        repo / "scripts",
+    ]
+    scan_suffixes = {".py", ".txt", ".md", ".toml", ".sh", ".cfg"}
+    # Runtime state and generated logs are gitignored and contain historical
+    # error strings; they are not install hints anyone reads.
+    skip_parts = {"__pycache__", "node_modules", ".dazzle", ".venv", "site", "dist"}
+    hits: list[str] = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path.suffix not in scan_suffixes:
+                continue
+            if any(part in skip_parts for part in path.parts):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if _WRONG_DIST.search(line):
+                    hits.append(f"{path.relative_to(repo)}:{lineno}")
+    return hits
+
+
+def test_no_wrong_distribution_name_in_install_hints() -> None:
+    """`dazzle[...]` -> `dazzle-dsl[...]`; requirements pin `dazzle-dsl~={{framework_minor}}`.
+
+    The PyPI distribution is `dazzle-dsl`; `dazzle` is an unrelated package.
+    Twenty-one runtime error messages across the process, channels, events, PRA
+    and pitch subsystems told users to install the wrong project, and
+    `templates/blank/requirements.txt` shipped `dazzle>=0.9.4` into every
+    scaffolded app.
+    """
+    hits = _wrong_distribution_sites()
+    assert not hits, (
+        "Install hints name the wrong PyPI distribution. `dazzle` is a different, "
+        "unrelated package; the distribution is `dazzle-dsl` (the import name and "
+        "`dazzle` console command are unchanged — PEP 503 only normalises the import "
+        "name). Use `dazzle-dsl[<extra>]`, and in generated requirements.txt use "
+        "`dazzle-dsl~={{framework_minor}}` so the pin tracks the installed framework:\n  "
+        + "\n  ".join(hits)
+    )
+
+
+def test_generated_requirements_pins_track_framework_minor() -> None:
+    """The blank template must not carry a hand-maintained version floor.
+
+    It was pinned at `dazzle>=0.9.4` while the framework was at 0.114.x — ten
+    majors of drift that no gate caught, because nothing compared the template
+    against the installed version. `{{framework_minor}}` is substituted by
+    `copy_template` from `_installed_framework_minor()` (#1630), so the pin can
+    no longer rot.
+    """
+    template = _SRC / "templates" / "blank" / "requirements.txt"
+    assert template.is_file(), "blank template requirements.txt is the init scaffold"
+    text = template.read_text(encoding="utf-8")
+    assert "dazzle-dsl" in text, "template must pin the real distribution"
+    assert "{{framework_minor}}" in text, (
+        "template must pin via {{framework_minor}} so the floor tracks the "
+        "installed framework instead of being hand-maintained"
+    )
+    for match in re.finditer(r"^dazzle-dsl\s*([<>=!~][^\s#]*)", text, re.MULTILINE):
+        assert match.group(1).startswith("~"), (
+            "generated requirements must use a compatible-release pin "
+            "(~major.minor) so `dazzle init` cannot scaffold a project the "
+            "framework will not run"
+        )
