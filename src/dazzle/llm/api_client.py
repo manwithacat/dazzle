@@ -574,12 +574,20 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         client = cast("Anthropic", self.client)
 
         try:
+            # anthropic 1.x removed `temperature` from `Messages.create()` —
+            # passing it raises `TypeError: Messages.create() got an unexpected
+            # keyword argument 'temperature'`. Sampling temperature is still a
+            # Messages API parameter on the wire, so it is forwarded through
+            # `extra_body`, the SDK's documented escape hatch for parameters the
+            # typed surface does not yet model. This preserves the
+            # `temperature=0.0` determinism the constructor documents, and stays
+            # a no-op passthrough if a future 1.x restores the typed argument.
             response = client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
-                temperature=self.temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
+                extra_body={"temperature": self.temperature},
             )
 
             # Extract text from response (first block is always a TextBlock for completions)

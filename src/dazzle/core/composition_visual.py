@@ -388,9 +388,13 @@ def _call_vision_api(
     response = client.messages.create(
         model=model,
         max_tokens=max_tokens,
-        temperature=0.0,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": cast(Any, content)}],
+        # anthropic 1.x dropped `temperature` from the typed `create()` surface;
+        # it is still a valid Messages parameter, so forward it via `extra_body`
+        # to keep the deterministic (0.0) sampling this call depends on. See
+        # `dazzle.llm.api_client._call_anthropic` for the longer note.
+        extra_body={"temperature": 0.0},
     )
 
     text = response.content[0].text if hasattr(response.content[0], "text") else ""
