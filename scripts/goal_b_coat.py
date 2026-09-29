@@ -402,18 +402,27 @@ def identity_chip_empty(text: str) -> bool:
 
 
 def directory_work_first_empty(text: str) -> bool:
-    """Roster + starters lead before media shelf (oral #10)."""
+    """A useful roster and work context lead before the media shelf (oral #10)."""
     by_ws: dict[str, list[tuple[str, str]]] = {}
     for ws, name, body in _workspace_region_windows(text):
         by_ws.setdefault(ws, []).append((name, body))
     for _ws, regions in by_ws.items():
         bodies = dict(regions)
         names = [n for n, _ in regions]
-        if "current_staff" not in bodies or "recent_starters" not in bodies:
+        if "current_staff" not in bodies:
             continue
         if not re.search(r"display:\s*queue", bodies["current_staff"]):
             continue
-        if not re.search(r"display:\s*queue", bodies["recent_starters"]):
+        has_starters = "recent_starters" in bodies and bool(
+            re.search(r"display:\s*queue", bodies["recent_starters"])
+        )
+        has_status_and_docs = (
+            "headcount" in bodies
+            and bool(re.search(r"display:\s*metrics", bodies["headcount"]))
+            and "composition" in bodies
+            and bool(re.search(r"display:\s*queue", bodies["composition"]))
+        )
+        if not (has_starters or has_status_and_docs):
             continue
         if "media_shelf" in names:
             return names.index("current_staff") < names.index("media_shelf")

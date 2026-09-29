@@ -10,6 +10,8 @@ missing ctx fields (type/currency_code/semantic_map + ref `_display`).
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
@@ -62,6 +64,38 @@ def test_currency_field_renders_formatted() -> None:
     # 12345 minor units → $123.45 (not the raw integer)
     assert "123.45" in html
     assert "12345" not in html.split("Amount")[-1][:200]
+
+
+def test_explicit_currency_format_keeps_decimal_major_units() -> None:
+    html = _render(
+        [
+            FieldContext(
+                name="amount",
+                label="Amount",
+                type="number",
+                extra={"format_kind": "currency", "format_arg": "GBP"},
+            )
+        ],
+        {"id": "a", "amount": Decimal("6750.00")},
+    )
+    assert "£6,750.00" in html
+    assert "£67.50" not in html
+
+
+def test_explicit_currency_format_uses_record_currency() -> None:
+    html = _render(
+        [
+            FieldContext(
+                name="amount",
+                label="Amount",
+                type="number",
+                extra={"format_kind": "currency"},
+            )
+        ],
+        {"id": "a", "amount": Decimal("15400.00"), "currency": "EUR"},
+    )
+    assert "€15,400.00" in html
+    assert "£15,400.00" not in html
 
 
 def test_bool_field_renders_icon_not_text() -> None:

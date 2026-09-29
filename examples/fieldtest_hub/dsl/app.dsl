@@ -8,6 +8,8 @@
 
 module fieldtest_hub.core
 
+use fieldtest_hub.firmware
+
 app fieldtest_hub "FieldTest Hub":
   security_profile: basic
 
@@ -403,54 +405,6 @@ entity TestSession "Test Session":
 
   fitness:
     repr_fields: [notes, device_id, tester_id, environment, duration_minutes, logged_at]
-
-# Entity: FirmwareRelease
-entity FirmwareRelease "Firmware Release":
-  intent: "A versioned firmware build that can be rolled out to a Device batch and transitions from draft to released to deprecated"
-  domain: hardware
-  patterns: lifecycle, versioning, audit_trail
-  id: uuid pk
-  version: str(50) required unique
-  release_notes: text
-  release_date: datetime required
-  status: enum[draft,released,deprecated]=draft
-  applies_to_batch: str(100)
-  created_at: datetime auto_add
-  updated_at: datetime auto_update
-
-  # State machine: firmware lifecycle
-  transitions:
-    draft -> released: requires release_notes
-    released -> deprecated
-    deprecated -> draft: role(engineer)
-
-  # Invariant: released firmware must have release notes
-  invariant: status != released or release_notes != null
-
-  permit:
-    list: role(engineer) or role(manager) or role(tester)
-    read: role(engineer) or role(manager) or role(tester)
-    create: role(engineer)
-    update: role(engineer)
-    delete: role(engineer)
-  scope:
-    list: all
-      as: engineer, manager, tester
-    read: all
-      as: engineer, manager, tester
-    # v0.71.19 (#1123): firmware management is engineer-only.
-    create: all
-      as: engineer
-    update: all
-      as: engineer
-    delete: all
-      as: engineer
-
-  index status
-  index version
-
-  fitness:
-    repr_fields: [version, status, release_date, applies_to_batch]
 
 # Entity: Task
 entity Task "Task":
@@ -1058,102 +1012,6 @@ surface test_session_edit "Edit Test Session":
   ux:
     purpose: "Update test session details after testing"
 
-# Surface: Firmware Release Timeline
-surface firmware_release_list "Firmware Releases":
-  uses entity FirmwareRelease
-  mode: list
-  render: fragment
-  open: FirmwareRelease via id
-
-  section main "Firmware Releases":
-    field version "Version"
-    field status "Status"
-    field release_date "Release Date"
-    field applies_to_batch "Applies to Batch"
-
-  ux:
-    purpose: "Track firmware versions — open a row for the release hub"
-    sort: release_date desc
-    filter: status, applies_to_batch
-    search: version, release_notes
-    empty: "No firmware releases yet."
-
-    attention warning:
-      when: status = deprecated
-      message: "Deprecated firmware - upgrade recommended"
-      action: firmware_release_detail
-
-    as engineer:
-      scope: all
-      action_primary: firmware_release_create
-
-# Surface: Firmware Release Detail
-surface firmware_release_detail "Firmware Detail":
-  uses entity FirmwareRelease
-  mode: view
-  render: fragment
-
-  section main "Firmware Information":
-    field version "Version"
-    field release_notes "Release Notes"
-    field release_date "Release Date"
-    field status "Status"
-    field applies_to_batch "Applies to Batch"
-
-  ux:
-    purpose: "View firmware release details"
-
-    as engineer:
-      scope: all
-      action_primary: firmware_release_edit
-
-# Surface: Firmware Release Create
-surface firmware_release_create "Create Firmware Release":
-  uses entity FirmwareRelease
-  mode: create
-  render: fragment
-
-  section identity "Release":
-    field version "Version"
-    field release_date "Release Date"
-
-  section notes "Release Notes":
-    field release_notes "Release Notes"
-
-  section rollout "Rollout":
-    field status "Status"
-    field applies_to_batch "Applies to Batch"
-
-  ux:
-    purpose: "Create a new firmware release"
-
-    as engineer:
-      defaults:
-        status: draft
-
-# Surface: Firmware Release Edit
-surface firmware_release_edit "Edit Firmware Release":
-  uses entity FirmwareRelease
-  mode: edit
-  render: fragment
-
-  section identity "Release":
-    field version "Version"
-    field release_date "Release Date"
-
-  section notes "Release Notes":
-    field release_notes "Release Notes"
-
-  section rollout "Rollout":
-    field status "Status"
-    field applies_to_batch "Applies to Batch"
-
-  ux:
-    purpose: "Update firmware release"
-
-    as engineer:
-      scope: all
-
 # Surface: Task List
 surface task_list "Tasks":
   uses entity Task
@@ -1585,6 +1443,55 @@ workspace engineering_dashboard "Engineering Dashboard":
       # TR-17/TR-35 + Goal B document cycle 2088 protocol_acceptance_split.
       purpose: "Fleet overview, run protocols vs ship-gate acceptance, then notes"
       focus: fleet_overview, protocols, acceptance_packets, live_conversation
+
+# Focused engineering desk experiment. Direct URL only while paired with the
+# current engineering_dashboard; no persona default or curated nav changes.
+workspace engineering_focus "Engineering Focus":
+  purpose: "Decide what field issue needs attention, then open the evidence"
+  stage: "command_center"
+  access: persona(engineer, manager)
+
+  fleet_pressure:
+    source: Device
+    display: metrics
+    aggregate:
+      active_devices: count(Device where status = active)
+      recalled_devices: count(Device where status = recalled)
+      open_reports: count(IssueReport where status = open)
+    tones:
+      active_devices: positive
+      recalled_devices: destructive
+      open_reports: warning
+
+  triage_pressure:
+    source: IssueReport
+    filter: status = open
+    sort: severity desc, reported_at desc
+    limit: 4
+    display: queue
+    width: 12
+    action: issue_report_edit
+    empty: "No open reports to triage"
+
+  device_attention:
+    source: Device
+    filter: status != active
+    sort: status asc, name asc
+    limit: 4
+    display: queue
+    width: 6
+    action: device_detail
+    empty: "All registered devices are active"
+
+  protocols:
+    source: TestDocument
+    filter: doc_kind = protocol and status != archived
+    sort: created_at desc
+    limit: 3
+    display: queue
+    width: 6
+    action: test_document_detail
+    empty: "No run protocols — attach a protocol on a device hub"
 
 # Workspace: Tester Dashboard
 # ST-042–044: personal metrics + assigned devices + open issues/tasks as queues
@@ -2157,33 +2064,6 @@ workspace device_fleet "Device Fleet":
     as manager:
       purpose: "Unit photos first — fleet shape after hardware identity"
       focus: fleet_metrics, hardware_identity, by_status, by_model
-
-workspace draft_releases "Draft Releases":
-  # Goal B empty_region_honesty (cycle 1855): one draft queue + pulse — not twin
-  # draft queues, draft trail, and status bar theater.
-  purpose: "Draft firmware pressure — unshipped builds without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  draft_metrics:
-    source: FirmwareRelease
-    display: metrics
-    aggregate:
-      drafts: count(FirmwareRelease where status = draft)
-      released: count(FirmwareRelease where status = released)
-      deprecated: count(FirmwareRelease where status = deprecated)
-    tones:
-      drafts: warning
-      released: positive
-      deprecated: accent
-
-  draft_queue:
-    source: FirmwareRelease
-    filter: status = draft
-    sort: release_date desc
-    limit: 20
-    display: queue
-    action: firmware_release_edit
-    empty: "No draft firmware releases"
 
 ledger DeviceCost "Device Cost Account":
   intent: "Accrue repair and replacement expenses against the fleet of field devices"

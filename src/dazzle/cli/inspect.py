@@ -36,7 +36,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlsplit
 
+import httpx
 import typer
 
 from dazzle.api_surface import (
@@ -51,6 +53,12 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.renderer_registry import _DEFAULT_RENDERERS
 from dazzle.db.artifact_registry import DB_ARTIFACTS
 from dazzle.http.runtime.tenant.audit import render_tenancy_planes
+from dazzle.page.inspection import (
+    PageExplanation,
+    PageRegionTrace,
+    explain_page,
+    explain_workspace_region,
+)
 
 # =============================================================================
 # Group: dazzle inspect <ext-point>
@@ -59,7 +67,7 @@ from dazzle.http.runtime.tenant.audit import render_tenancy_planes
 inspect_app = typer.Typer(
     help=(
         "Introspect framework extension points (renderers, primitives, "
-        "routes, oauth-providers) and the public API surface (api). "
+        "routes, oauth-providers), app pages (page), and the public API surface (api). "
         "Defaults to a manifest-only view; pass --runtime to boot the "
         "app and cross-reference what's registered at request time."
     ),
@@ -316,6 +324,185 @@ def primitives_command(
 # =============================================================================
 # inspect routes
 # =============================================================================
+
+
+def _page_headers(headers_file: Path | None) -> dict[str, str]:
+    if headers_file is None:
+        return {}
+    data = json.loads(headers_file.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in data.items()
+    ):
+        raise ValueError("--headers-file must contain a JSON object of string headers")
+    return data
+
+
+def _live_page_html(
+    requested_url: str, *, origin: str, headers_file: Path | None
+) -> tuple[str, str]:
+    """Read one live HTML response without writing or caching an artifact."""
+    parsed = urlsplit(requested_url)
+    target = (
+        requested_url
+        if parsed.scheme
+        else urljoin(origin.rstrip("/") + "/", requested_url.lstrip("/"))
+    )
+    if urlsplit(target).scheme not in {"http", "https"} or not urlsplit(target).netloc:
+        raise ValueError("HTML source must use http or https")
+    headers = _page_headers(headers_file)
+    try:
+        with httpx.stream(
+            "GET", target, headers=headers, follow_redirects=False, timeout=10.0
+        ) as response:
+            if response.is_redirect:
+                raise ValueError(
+                    "page redirected; supply the page's session headers if authentication is required"
+                )
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "").split(";", 1)[0].strip()
+            if content_type != "text/html":
+                raise ValueError(f"response is {content_type}, not text/html")
+            chunks: list[bytes] = []
+            size = 0
+            for chunk in response.iter_bytes():
+                size += len(chunk)
+                if size > 5_000_000:
+                    raise ValueError("HTML response exceeds 5 MB")
+                chunks.append(chunk)
+            return b"".join(chunks).decode(response.encoding or "utf-8"), str(response.url)
+    except httpx.HTTPStatusError as error:
+        raise ValueError(f"page returned HTTP {error.response.status_code}") from error
+    except httpx.RequestError as error:
+        raise ValueError(f"could not fetch page: {error}") from error
+
+
+def _print_region_trace(region: PageRegionTrace) -> None:
+    typer.echo(f"Region: {region.name} ({region.display})")
+    typer.echo(f"Fragment GET: {region.endpoint}")
+    typer.echo(
+        f"Data: {region.source_name or '(authored content)'} "
+        f"({region.source_declaration or 'no declaration'})"
+    )
+    typer.echo(
+        f"Access: {region.workspace_access}"
+        + (f" as {', '.join(region.allowed_personas)}" if region.allowed_personas else "")
+    )
+    typer.echo(
+        f"Entity list policy: {len(region.list_permission_ir)} permission rule(s), "
+        f"{len(region.list_scope_ir)} scope rule(s) (full IR: --json)"
+    )
+    if region.filter_ir:
+        typer.echo(f"Filter IR: {json.dumps(region.filter_ir, sort_keys=True)}")
+    if region.sort_ir:
+        typer.echo(f"Sort IR: {json.dumps(region.sort_ir, sort_keys=True)}")
+    if region.limit:
+        typer.echo(f"Limit: {region.limit}")
+    if region.action_surface:
+        typer.echo(
+            f"Action: {region.action_surface} "
+            f"({region.action_declaration or 'no declaration'}) "
+            f"→ {region.action_route or 'no page route'}"
+        )
+    if region.mutation_method and region.mutation_endpoint:
+        typer.echo(f"Form submission: {region.mutation_method} {region.mutation_endpoint}")
+
+
+def _print_page_explanation(explanation: PageExplanation) -> None:
+    typer.echo(f"URL: {explanation.requested_url}")
+    typer.echo(f"Route: {explanation.route_pattern}")
+    typer.echo(f"AppSpec owner: {explanation.kind} {explanation.name} ({explanation.title})")
+    typer.echo(f"DSL: {explanation.source or '(framework-generated)'}")
+    if explanation.module:
+        typer.echo(f"Module: {explanation.module}")
+    if explanation.entity:
+        typer.echo(f"Entity: {explanation.entity}")
+    if explanation.mode:
+        typer.echo(f"Mode: {explanation.mode}")
+    if explanation.dependencies:
+        typer.echo("Direct references:")
+        for dependency in explanation.dependencies:
+            typer.echo(
+                f"  {dependency.kind} {dependency.name}: {dependency.source or '(generated)'}"
+            )
+    if explanation.region:
+        _print_region_trace(explanation.region)
+    typer.echo(
+        "HTML: use --html to read the running app's response. "
+        "A custom route can override this AppSpec page."
+    )
+
+
+@inspect_app.command("page")
+def page_command(
+    url: str = typer.Argument(..., help="Page URL or path to explain"),
+    project: Path | None = typer.Option(None, "--project", "-p", help="Project root"),
+    output_json: bool = typer.Option(False, "--json", help="Emit JSON"),
+    app_prefix: str = typer.Option("/app", "--app-prefix", help="Mounted page prefix"),
+    html: bool = typer.Option(False, "--html", help="Include the running app's HTML response"),
+    region: str | None = typer.Option(None, "--region", help="Trace one workspace region"),
+    origin: str = typer.Option(
+        "http://localhost:3000", "--origin", help="Origin for a relative URL with --html"
+    ),
+    headers_file: Path | None = typer.Option(
+        None, "--headers-file", help="JSON request headers for an authenticated HTML fetch"
+    ),
+) -> None:
+    """Trace a URL to its DSL owner and optionally show live rendered HTML.
+
+    The lookup is computed from AppSpec and the page-route compiler. No HTML
+    copy or provenance manifest is created. --html performs a read-only GET
+    against the running app, so its response reflects the supplied request
+    headers and current data rather than synthetic sample records.
+    """
+    project_root = _resolve_project_root(project)
+    appspec = _load_appspec(project_root)
+    explanation = explain_page(appspec, url, project_root, app_prefix=app_prefix)
+    if explanation is None:
+        typer.echo(f"No AppSpec page route matches {url!r}.", err=True)
+        raise typer.Exit(2)
+    if region:
+        explanation.region = explain_workspace_region(
+            appspec, explanation, region, project_root, app_prefix=app_prefix
+        )
+        if explanation.region is None:
+            typer.echo(f"No region {region!r} belongs to this workspace page.", err=True)
+            raise typer.Exit(2)
+    rendered_html: str | None = None
+    fetched_url: str | None = None
+    fragment_html: str | None = None
+    fragment_url: str | None = None
+    if html:
+        try:
+            rendered_html, fetched_url = _live_page_html(
+                url, origin=origin, headers_file=headers_file
+            )
+            if explanation.region:
+                parsed = urlsplit(url)
+                region_origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else origin
+                fragment_html, fragment_url = _live_page_html(
+                    explanation.region.endpoint,
+                    origin=region_origin,
+                    headers_file=headers_file,
+                )
+        except (OSError, ValueError, UnicodeError, json.JSONDecodeError) as error:
+            typer.echo(f"Could not read live HTML: {error}", err=True)
+            raise typer.Exit(1) from error
+    if output_json:
+        payload = explanation.model_dump(mode="json")
+        if rendered_html is not None:
+            payload["html"] = rendered_html
+            payload["html_url"] = fetched_url
+        if fragment_html is not None:
+            payload["region_html"] = fragment_html
+            payload["region_html_url"] = fragment_url
+        typer.echo(json.dumps(payload, indent=2))
+    else:
+        _print_page_explanation(explanation)
+        if rendered_html is not None:
+            typer.echo(f"\nLive HTML from {fetched_url}:\n{rendered_html}")
+        if fragment_html is not None:
+            typer.echo(f"\nLive region HTML from {fragment_url}:\n{fragment_html}")
+
 
 # Exact paths and prefixes used to bucket a live route. Buckets exist so an
 # agent scanning the --runtime output can tell a traceable page route apart

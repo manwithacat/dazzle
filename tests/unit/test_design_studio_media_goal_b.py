@@ -233,7 +233,7 @@ def test_review_desk_review_pixels_wall_first() -> None:
     assert "source: Asset" in region
     assert "filter: status = review" in region
     assert "display: grid" in region
-    assert "limit: 4" in region
+    assert "limit: 3" in region
     assert "action: asset_detail" in region
     assert block.index("\n  review_pixels:\n") < block.index("\n  approved_pixels:\n")
     assert block.index("\n  approved_pixels:\n") < block.index("\n  review_load:\n")
@@ -258,7 +258,7 @@ def test_review_desk_approved_stamp_wall() -> None:
     assert "source: Asset" in region
     assert "filter: status = approved" in region
     assert "display: grid" in region
-    assert "limit: 4" in region
+    assert "limit: 3" in region
     assert "action: asset_detail" in region
     assert "approved_stamp_wall" in block
     assert "focus: review_pixels, approved_pixels, awaiting_review, draft_queue" in block

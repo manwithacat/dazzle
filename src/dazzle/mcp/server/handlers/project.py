@@ -6,6 +6,7 @@ Handles project listing, selection, validation, and dev mode operations.
 
 import json
 import logging
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -152,6 +153,11 @@ def select_project(args: dict[str, Any]) -> str:
         if candidate.is_absolute() and (candidate / "dazzle.toml").is_file():
             # Register the external project so it persists for the session
             resolved_name = candidate.name
+            if (
+                resolved_name in available_projects
+                and available_projects[resolved_name] != candidate
+            ):
+                resolved_name += f"-{sha256(str(candidate).encode()).hexdigest()[:8]}"
             available_projects[resolved_name] = candidate
             project_name = resolved_name
         else:
@@ -162,16 +168,25 @@ def select_project(args: dict[str, Any]) -> str:
                 }
             )
 
-    set_active_project(project_name)
     project_path = available_projects[project_name]
 
-    # Re-initialize knowledge graph for the new project (isolation fix)
+    # A failed switch must not leave the selected project pointing at the old graph.
     try:
-        from ..state import reinit_knowledge_graph
+        from ..state import init_activity_store, reinit_knowledge_graph
 
         reinit_knowledge_graph(project_path)
+        init_activity_store(project_path)
     except Exception as e:
-        logger.warning("Failed to reinit knowledge graph for %s: %s", project_name, e)
+        logger.exception("Failed to initialize project state for %s", project_name)
+        state = get_state()
+        state.active_project = None
+        state.knowledge_graph = None
+        state.graph_db_path = None
+        state.activity_store = None
+        state.appspec_data = None
+        return error_response(f"Could not select project '{project_name}': {e}")
+
+    set_active_project(project_name)
 
     # Return info about the selected project
     result: dict[str, Any] = {
@@ -188,6 +203,7 @@ def select_project(args: dict[str, Any]) -> str:
         result["warning"] = f"Could not load manifest: {e}"
 
     # Auto-load AppSpec for the Dazzle runtime tools
+    get_state().appspec_data = None
     appspec_loaded = load_appspec_for_project(project_path)
     if appspec_loaded:
         result["appspec"] = "loaded"

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import project_dsl_text
+
 ROOT = Path(__file__).resolve().parents[2]
 STEMS = ROOT / "examples/invoice_ops/stems"
 INDEX = (STEMS / "INDEX.md").read_text()
 THEORY = (STEMS / "ap-domain-theory.md").read_text()
-ENTITIES = (ROOT / "examples/invoice_ops/dsl/entities.dsl").read_text()
+ENTITIES = project_dsl_text("invoice_ops")
 
 
 def test_index_lists_ap_domain_theory() -> None:

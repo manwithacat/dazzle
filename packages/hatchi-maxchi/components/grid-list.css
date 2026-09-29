@@ -67,6 +67,21 @@
   margin-block: 0.15rem 0.35rem;
 }
 
+/* A creative preview is the content of a grid card, not a queue avatar. */
+.dz-grid-cell-field .dz-aspect-ratio[data-dz-media-size="card"] {
+  width: 100%;
+  margin-block: 0.5rem;
+}
+
+.dz-grid-cell-field .dz-aspect-ratio[data-dz-media-size="card"] .dz-media-thumb {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
+}
+
 .dz-grid-cell-field-label {
   font-size: var(--text-xs);
 }

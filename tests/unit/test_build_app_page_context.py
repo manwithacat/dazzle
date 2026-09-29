@@ -43,6 +43,7 @@ def _deps() -> Any:
     return SimpleNamespace(
         get_auth_context=None,
         appspec=SimpleNamespace(app_title="My App", name="myapp"),
+        unrestricted_nav=None,
     )
 
 
@@ -56,5 +57,6 @@ def test_build_app_page_context_anon() -> None:
     )
     assert ctx.current_route == "/app/board"
     assert ctx.app_name == "My App"
-    assert ctx.nav_model is None  # no auth context → anon/no-nav-model path
+    assert ctx.nav_model.groups == ()  # no auth context → explicit empty model
+    assert ctx.nav_model.auto_discovered
     assert assets.css_links == ("/x.css",)

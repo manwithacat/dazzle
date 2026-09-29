@@ -98,7 +98,7 @@ let inv_prompt = "";
 inv_prompt += "You are the INVENTORY stage of Dazzle /improve capability-sweep.\n";
 inv_prompt += "Repo root is the current workspace. Use execute tools. Prefer read-only except updating\n";
 inv_prompt += "nothing yet (apply is a later optional step).\n\n";
-inv_prompt += "1. Read .claude/commands/improve/capability-map.md (registry table + Class vocabulary).\n";
+inv_prompt += "1. Read .agents/skills/improve/capability-map.md (registry table + Class vocabulary).\n";
 inv_prompt += "2. Re-derive inventory surfaces:\n";
 inv_prompt += "   - dazzle --help (and notable subcommands: qa, demo, domain, fitness, validate, …)\n";
 inv_prompt += "   - MCP tool table in .claude/CLAUDE.md if present\n";
@@ -274,7 +274,7 @@ log(summary);
 
 if args != () && args.apply == true {
     let apply_p = "";
-    apply_p += "Update .claude/commands/improve/capability-map.md from this inventory if needed:\n";
+    apply_p += "Update .agents/skills/improve/capability-map.md from this inventory if needed:\n";
     apply_p += "- Add new_surfaces as UNOWNED rows with best-guess Class and owning lane.\n";
     apply_p += "- Flip Status labels that inventory shows are wrong (do not invent last-exercised).\n";
     apply_p += "Append improve-log.md entry lane: capability-sweep with counts. Do not commit unless args.commit.\n";

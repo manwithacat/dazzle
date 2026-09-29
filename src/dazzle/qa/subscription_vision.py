@@ -6,7 +6,7 @@ to the harness subscription (Claude Code / Grok Build / similar), never to
 ``anthropic.Anthropic().messages.create`` (the metered path used by
 :func:`dazzle.qa.taste_panel.score_image`).
 
-Same substrate as ``.claude/commands/improve/strategies/visual_tier2_subagent.md``
+Same substrate as ``.agents/skills/improve/strategies/visual_tier2_subagent.md``
 and ``scripts/hm_visual_smoke.py``. Scores are **advisory** — never a CI ship
 gate (see ``docs/reference/taste.md``).
 

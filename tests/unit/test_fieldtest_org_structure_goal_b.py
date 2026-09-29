@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "examples/fieldtest_hub/dsl/app.dsl"
 TESTER_SEEDS = ROOT / "examples/fieldtest_hub/dsl/seeds/demo_data/Tester.jsonl"
@@ -57,10 +59,7 @@ def test_tester_seeds_span_skills_and_locations() -> None:
 
 
 def _device_fleet_block() -> str:
-    text = APP.read_text()
-    start = text.index('workspace device_fleet "Device Fleet":')
-    end = text.index('workspace draft_releases "Draft Releases":', start)
-    return text[start:end]
+    return declaration_block("fieldtest_hub", "workspace", "device_fleet")
 
 
 def test_device_fleet_declares_model_and_lifecycle_before_queues() -> None:

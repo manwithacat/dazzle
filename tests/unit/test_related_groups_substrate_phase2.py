@@ -356,6 +356,18 @@ def test_queue_mode_overflow_when_total_exceeds_rows() -> None:
     assert "dz-queue-overflow" in html
 
 
+def test_related_queue_omits_redundant_count_when_complete() -> None:
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Tasks",
+        display="queue",
+        tabs=[_tab()],
+    )
+    html = _render(g)
+    assert "dz-queue-count-row" not in html
+    assert "Design" in html and "Build" in html
+
+
 def test_related_tab_count_uses_total_when_capped() -> None:
     """Cycle 1524 — multi-tab badges show full total, not only fetched rows."""
     g = RelatedGroupContext(

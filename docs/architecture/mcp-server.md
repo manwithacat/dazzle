@@ -5,12 +5,17 @@ Dazzle includes a built-in Model Context Protocol (MCP) server for seamless inte
 ## Setup
 
 ```bash
-# Homebrew (auto-registered on install)
+# Homebrew
 brew install manwithacat/tap/dazzle
 
-# PyPI (manual registration)
-pip install dazzle-dsl
-dazzle mcp setup
+# PyPI
+pip install 'dazzle-dsl[mcp]'
+
+# Start a project-scoped stdio server for any MCP host
+dazzle mcp run --working-dir /absolute/path/to/project
+
+# Optional Claude Code registration
+dazzle mcp setup --working-dir /absolute/path/to/project
 
 # Verify
 dazzle mcp check
@@ -358,20 +363,24 @@ Claude: [Uses process tool with operation=diagram]
 
 ## Configuration
 
-The MCP server is registered at `~/.claude/settings.json` (Claude Code) or `~/.config/claude/claude_desktop_config.json` (Claude Desktop):
+`dazzle mcp setup` writes to the first available Claude Code MCP config path
+(`~/.config/claude-code/mcp_servers.json`, `~/.claude/mcp_servers.json`, or
+`~/Library/Application Support/Claude Code/mcp_servers.json`). For example:
 
 ```json
 {
   "mcpServers": {
     "dazzle": {
-      "command": "dazzle",
-      "args": ["mcp", "run"]
+      "command": "/path/to/python",
+      "args": ["-m", "dazzle.mcp"]
     }
   }
 }
 ```
 
-For Homebrew installations, this is configured automatically via `dazzle mcp setup`.
+MCP registration is explicit for every host. `dazzle mcp setup` writes a
+Claude Code entry; other hosts can launch `dazzle mcp run --working-dir` using
+their own MCP configuration format.
 
 ### Per-project vs. global configuration
 
@@ -398,19 +407,30 @@ project, two silent traps follow (#1374):
   knowledge graph and an unexpectedly-old `dazzle` version, so e.g. `dsl
   validate` may reject newer grammar your project legitimately uses.
 
-The fix is to give **each project its own MCP entry** pointed at that project,
-using the project's own interpreter:
+Give **each project its own MCP entry** pointed at that project. Run the setup
+command from that project's Python environment:
+
+```bash
+uv run dazzle mcp setup --working-dir /absolute/path/to/MyProject
+```
+
+The generated entry uses the current Python interpreter, appends a short path
+hash to the project name to avoid collisions, and pins `--working-dir`:
 
 ```json
 {
   "mcpServers": {
-    "dazzle-myproject": {
+    "dazzle-MyProject-xxxxxxxx": {
       "command": "/path/to/MyProject/.venv/bin/python",
       "args": ["-m", "dazzle.mcp", "--working-dir", "/path/to/MyProject"]
     }
   }
 }
 ```
+
+To replace an existing global `dazzle` entry with a pinned one, run
+`dazzle mcp setup --working-dir /absolute/path/to/project --name dazzle --force`
+from the desired environment. Restart the MCP host afterward.
 
 Each project-scoped entry gets its own session state (or shared lock when
 `DAZZLE_MCP_SHARED=1`), its own knowledge graph, and the `dazzle` version

@@ -109,6 +109,26 @@ def test_entity_list_csv_format_currency_does_not_invent_bare_amount() -> None:
     assert rows[1][0] != "1250.00"
 
 
+def test_entity_list_currency_uses_each_record_code_in_grid_and_csv() -> None:
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [
+        {"key": "amount", "label": "Amount", "type": "number", "format_kind": "currency"},
+    ]
+    gbp = {"id": "gbp", "amount": "6750.00", "currency": "GBP"}
+    eur = {"id": "eur", "amount": "15400.00", "currency": "EUR"}
+    gbp_html = render_data_row(tuple(columns), gbp, RowCapabilities())
+    eur_html = render_data_row(tuple(columns), eur, RowCapabilities())
+    assert "£6,750.00" in gbp_html
+    assert "€15,400.00" in eur_html
+
+    resp = render_entity_list_csv([gbp, eur], columns, "Invoice")
+    rows = _parse_csv(_get_body(resp))
+    assert rows[1] == ["£6,750.00"]
+    assert rows[2] == ["€15,400.00"]
+
+
 _CONTACT_LABEL_DSL = """
 module m
 app a "A"

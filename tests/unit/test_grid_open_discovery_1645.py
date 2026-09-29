@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dazzle.render.fragment.htmx import URL
 from dazzle.render.fragment.ingest.emit import drill_anchor_open_attrs
 from dazzle.render.fragment.primitives.data import GridCell, GridRegion
+from dazzle.render.fragment.primitives.interactive import Link
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 
@@ -53,3 +55,22 @@ def test_grid_list_path_entity_label() -> None:
     )
     assert 'data-dz-open-entity="Invoice"' in html
     assert 'data-dz-open-chain="/app/invoice?status=overdue"' in html
+
+
+def test_grid_cell_with_related_link_keeps_one_grid_child_and_valid_links() -> None:
+    html = FragmentRenderer().render(
+        GridRegion(
+            cells=(
+                GridCell(
+                    title="Primary logo",
+                    fields=(("Brand", Link(label="Northwind", href=URL("/app/brand/b-1"))),),
+                    drill_url="/app/asset/a-1",
+                ),
+            )
+        )
+    )
+    assert '<div class="dz-grid-cell">' in html
+    assert '<h4 class="dz-grid-cell-title"><a href="/app/asset/a-1"' in html
+    assert 'href="/app/brand/b-1"' in html
+    assert '<a class="dz-grid-cell"' not in html
+    assert '<div class="dz-grid-cell-field">' in html

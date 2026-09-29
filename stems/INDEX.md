@@ -4,6 +4,7 @@
 |------|----------|
 | [dsl-first](dsl-first.md) | The DSL (and frozen AppSpec IR) is the maintained artefact; runtime projects it |
 | [agent-first](agent-first.md) | Agents primarily author; humans review; precision beats ergonomic ambiguity |
+| [example-apps-as-probes](example-apps-as-probes.md) | Seeded persona jobs expose framework limits; paired scenes test improvements |
 | [hypermedia-ssr](hypermedia-ssr.md) | Server owns HTML; HTMX swaps fragments; no SPA client state graph |
 | [four-layer-stack](four-layer-stack.md) | `http → page → render → core` — dependencies only downward |
 | [authoring-boundary](authoring-boundary.md) | Structural Dazzle authoring stays in-session; APIs get data, not DSL writes |

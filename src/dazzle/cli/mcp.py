@@ -56,12 +56,22 @@ def mcp_setup(
         "--force",
         help="Overwrite existing MCP server config",
     ),
+    working_dir: Path | None = typer.Option(
+        None,
+        "--working-dir",
+        help="Pin a separate MCP server to this project or framework checkout",
+    ),
+    name: str | None = typer.Option(
+        None,
+        "--name",
+        help="MCP entry name (for replacing an existing registration)",
+    ),
 ) -> None:
     """
     Register DAZZLE MCP server with Claude Code.
 
-    This command registers the MCP server in your Claude Code configuration
-    so that DAZZLE tools are automatically available in all projects.
+    This command registers the MCP server in your Claude Code configuration.
+    Use --working-dir to register a separate server for one project.
     """
     from dazzle.mcp.setup import get_claude_config_path, register_mcp_server
 
@@ -72,7 +82,7 @@ def mcp_setup(
 
     typer.echo(f"Registering MCP server at: {config_path}")
 
-    if register_mcp_server(force=force):
+    if register_mcp_server(force=force, working_dir=working_dir, name=name):
         typer.echo("✅ DAZZLE MCP server registered successfully")
         typer.echo("")
         typer.echo("Next steps:")

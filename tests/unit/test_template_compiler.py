@@ -282,6 +282,43 @@ class TestFormFieldSectionOverEntityFallback:
         assert [f.name for f in fields] == ["owner", "trading_name", "utr"]
         assert [f.label for f in fields] == ["Owner", "Trading Name", "UTR"]
 
+    def test_explicit_field_format_reaches_detail_context(self):
+        entity = ir.EntitySpec(
+            name="Invoice",
+            title="Invoice",
+            fields=[
+                ir.FieldSpec(
+                    name="amount",
+                    type=ir.FieldType(kind=FieldTypeKind.DECIMAL),
+                )
+            ],
+        )
+        surface = ir.SurfaceSpec(
+            name="invoice_detail",
+            title="Invoice",
+            entity_ref="Invoice",
+            mode=SurfaceMode.VIEW,
+            sections=[
+                ir.SurfaceSection(
+                    name="summary",
+                    title="Summary",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name="amount",
+                            label="Amount",
+                            format=ir.FieldFormatSpec(kind="currency"),
+                        )
+                    ],
+                )
+            ],
+        )
+
+        fields = _build_form_fields(surface, entity)
+
+        assert len(fields) == 1
+        assert fields[0].extra["format_kind"] == "currency"
+        assert fields[0].extra["format_arg"] is None
+
     def test_surface_without_sections_falls_back_to_entity_fields(self):
         """Surface without sections produces all non-PK entity fields."""
         entity = _sole_trader_entity()

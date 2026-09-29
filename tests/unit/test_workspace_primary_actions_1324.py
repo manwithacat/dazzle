@@ -200,7 +200,6 @@ class TestGateAuthoredPrimaryActions:
                 "list_invoice": "Invoice",
             },
             surface_mode={},
-            route_entity={},
         )
 
     def _auth(self, roles: list[str]) -> object:

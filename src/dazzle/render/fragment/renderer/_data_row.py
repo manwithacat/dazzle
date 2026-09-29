@@ -35,7 +35,7 @@ from dazzle.render.filters import (
     clerk_percent_points_display,
     resolve_status_tone,
 )
-from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell, record_currency_code
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
@@ -711,6 +711,14 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         col_key = str(col.get("key", ""))
         col_key_attr = _html_mod.escape(col_key, quote=True)
         col_type = str(col.get("type", "") or "")
+        display_col = col
+        if col.get("format_kind") == "currency" and not col.get("format_arg"):
+            display_col = {
+                **col,
+                "currency_code": record_currency_code(
+                    item, col_key, str(col.get("currency_code") or "")
+                ),
+            }
         cell_classes = "dz-tr-cell"
         if col_type in ("currency", "percentage"):
             cell_classes += " is-numeric"
@@ -744,11 +752,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 display_html = _html_mod.escape(str(explicit), quote=False)
             else:
                 display_html = _render_cell_display(
-                    col, cell_value, entity_name=entity_name, record_id=item_id
+                    display_col, cell_value, entity_name=entity_name, record_id=item_id
                 )
         else:
             display_html = _render_cell_display(
-                col, cell_value, entity_name=entity_name, record_id=item_id
+                display_col, cell_value, entity_name=entity_name, record_id=item_id
             )
 
         if col_key in inline_editable:

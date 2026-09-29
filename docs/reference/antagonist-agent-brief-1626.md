@@ -7,7 +7,7 @@
 
 Tracking: GitHub **#1626**. Product-maturity overview:
 [`product-maturity.md`](./product-maturity.md) (Antagonist demo bar). Strategy:
-`.claude/commands/improve/strategies/demo_fleet.md`.
+`.agents/skills/improve/strategies/demo_fleet.md`.
 
 ---
 

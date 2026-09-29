@@ -23,6 +23,7 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from dazzle.render.cell_chrome import (
@@ -765,11 +766,14 @@ class _RenderTablesMixin:
         # Prefer full related total when fetch is capped (parity workspace queues).
         count = self._related_tab_count(t)
         overflow_html = self._related_overflow_html(t, ctx, css_class="dz-queue-overflow")
+        count_row = (
+            f'<div class="dz-queue-count-row"><span class="dz-queue-count">{count}</span></div>'
+            if count > len(t.rows)
+            else ""
+        )
         parts.append(
             f'<div class="dz-queue-region">'
-            f'<div class="dz-queue-count-row">'
-            f'<span class="dz-queue-count">{count}</span>'
-            f"</div>"
+            f"{count_row}"
             f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
             f"{overflow_html}"
             f"</div>"
@@ -1048,7 +1052,7 @@ class _RenderTablesMixin:
             )
 
         count_row = ""
-        if q.total > 0:
+        if q.total > len(q.rows):
             count_row = (
                 f'<div class="dz-queue-count-row">'
                 f'<span class="dz-queue-count">{q.total}</span>'
@@ -1290,12 +1294,11 @@ class _RenderTablesMixin:
         return render_list_region(ListRegionSeam(body_html=f"{actions_row}{table}{overflow_html}"))
 
     def _emit_grid_region(self, g: GridRegion, ctx: RenderContext) -> str:
-        """Render a GridRegion matching legacy
-        `workspace/regions/grid.html` byte-for-byte: outer
-        `dz-grid-region`, `<div class="dz-grid-list">` with per-cell
-        `<div class="dz-grid-cell">` containing `<h4>` title +
-        per-field `<p class="dz-grid-cell-field">` lines. Empty path
-        renders the legacy empty-state fragment shape.
+        """Render valid grid cards, including fields with their own links.
+
+        A linked field cannot sit inside a whole-card anchor: browsers split
+        the card into extra grid children when repairing nested anchors.
+        Field values can also contain block HTML, so use div field wrappers.
         """
         if not g.cells:
             # Empty state matches `fragments/empty_state.html` —
@@ -1325,31 +1328,30 @@ class _RenderTablesMixin:
                 # (cycle 1925 agency_lead / Goal B media cards).
                 if label:
                     fields_html += (
-                        f'<p class="dz-grid-cell-field">'
+                        f'<div class="dz-grid-cell-field">'
                         f'<span class="dz-grid-cell-field-label">{ctx.escape(label)}:</span> '
                         f"{value_html}"
-                        f"</p>"
+                        f"</div>"
                     )
                 else:
-                    fields_html += f'<p class="dz-grid-cell-field">{value_html}</p>'
-            # Trailing space inside `class="dz-grid-cell "` matches the
-            # legacy `class="dz-grid-cell {{ attention_classes(...) }}"`
-            # rendering when attention is empty — Jinja interpolates ""
-            # leaving the space. Preserve it for byte-equivalence.
+                    fields_html += f'<div class="dz-grid-cell-field">{value_html}</div>'
             title_html = f'<h4 class="dz-grid-cell-title">{ctx.escape(cell.title)}</h4>'
             if getattr(cell, "drill_url", ""):
                 href = ctx.escape_attr(cell.drill_url)
-                # Whole card is the drill target so title + fields open the hub.
-                # Cycle 1645: stamp data-dz-open-* (action-card / dashboard parity).
                 open_attrs = drill_anchor_open_attrs(str(cell.drill_url), kind="grid")
-                cells_html.append(
-                    f'<a class="dz-grid-cell " href="{href}" {open_attrs}>'
-                    f"{title_html}"
-                    f"{fields_html}"
-                    f"</a>"
-                )
+                if re.search(r"<(?:a|button|input|select|textarea)(?:\s|>)", fields_html):
+                    title_html = (
+                        f'<h4 class="dz-grid-cell-title"><a href="{href}" {open_attrs}>'
+                        f"{ctx.escape(cell.title)}</a></h4>"
+                    )
+                    cells_html.append(f'<div class="dz-grid-cell">{title_html}{fields_html}</div>')
+                else:
+                    cells_html.append(
+                        f'<a class="dz-grid-cell" href="{href}" {open_attrs}>'
+                        f"{title_html}{fields_html}</a>"
+                    )
             else:
-                cells_html.append(f'<div class="dz-grid-cell ">{title_html}{fields_html}</div>')
+                cells_html.append(f'<div class="dz-grid-cell">{title_html}{fields_html}</div>')
 
         return render_grid_region(
             GridRegionSeam(body_html=f'<div class="dz-grid-list">{"".join(cells_html)}</div>')

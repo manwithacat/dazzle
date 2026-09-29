@@ -1,9 +1,7 @@
-"""Unified per-persona navigation builder (#1324).
+"""Build one app-sidebar representation for each request state.
 
-Navigation is a pure function of (persona, appspec, rbac_matrix) — all static.
-This module is the single source of a persona's sidebar: every page renders the
-same precomputed NavModel for the current persona, so the three legacy builders
-(workspace-page, entity-page, persona-union) can no longer drift.
+Models are pure functions of the AppSpec, request identity category, and RBAC
+matrix. Surface, workspace, and experience pages all render ``NavModel``.
 """
 
 from __future__ import annotations
@@ -231,6 +229,19 @@ def _try_nav_link(appspec: AppSpec, target: str, *, seen: set[str]) -> NavLink |
     return NavLink(label=_label_for(appspec, target), route=route, entity=target)
 
 
+def _curated_link(appspec: AppSpec, item: Any, *, seen: set[str]) -> NavLink | None:
+    link = _try_nav_link(appspec, item.entity, seen=seen)
+    if link is None:
+        return None
+    return NavLink(
+        label=link.label,
+        route=link.route,
+        icon=item.icon,
+        entity=link.entity,
+        when=item.when.model_dump() if item.when else None,
+    )
+
+
 def _region_sources(region: object) -> list[str]:
     primary = getattr(region, "source", None)
     extras = list(getattr(region, "sources", None) or [])
@@ -351,6 +362,9 @@ def build_anon_nav(appspec: AppSpec, matrix: AccessMatrix) -> NavModel:
         # #1127: anon-safe iff the workspace declared no persona gate.
         if workspace_allowed_personas(ws, personas) is not None:
             continue
+        ws_link = _try_nav_link(appspec, ws.name, seen=seen)
+        if ws_link is not None:
+            links.append(ws_link)
         for region in ws.regions:
             region_sources = ([region.source] if region.source else []) + list(
                 getattr(region, "sources", []) or []
@@ -365,3 +379,110 @@ def build_anon_nav(appspec: AppSpec, matrix: AccessMatrix) -> NavModel:
                 links.append(NavLink(label=_label_for(appspec, src), route=route, entity=src))
     groups = [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
     return NavModel(groups=tuple(groups), auto_discovered=True)
+
+
+def build_unrestricted_nav(appspec: AppSpec) -> NavModel:
+    """Navigation for an app that has no authentication wiring.
+
+    Preserve authored workspace groups, then expose ungrouped workspace and
+    list destinations. This is a presentation model; route access remains the
+    responsibility of the page router.
+    """
+    groups: list[NavGroup] = []
+    seen: set[str] = set()
+    flat: list[NavLink] = []
+    for ws in appspec.workspaces or []:
+        link = _try_nav_link(appspec, ws.name, seen=seen)
+        if link is not None:
+            flat.append(link)
+        if ws.nav_groups:
+            for group in ws.nav_groups:
+                links = tuple(
+                    link
+                    for item in group.items
+                    if (link := _curated_link(appspec, item, seen=seen)) is not None
+                )
+                if links:
+                    groups.append(
+                        NavGroup(
+                            group.label,
+                            group.icon,
+                            group.collapsed,
+                            links,
+                            when=group.when.model_dump() if group.when else None,
+                        )
+                    )
+        else:
+            for region in ws.regions or []:
+                for source in _region_sources(region):
+                    link = _try_nav_link(appspec, source, seen=seen)
+                    if link is not None:
+                        flat.append(link)
+    if flat:
+        groups.insert(0, NavGroup("", None, False, tuple(flat)))
+    return NavModel(groups=tuple(groups), auto_discovered=False)
+
+
+def _role_curated_groups(
+    appspec: AppSpec, ws: WorkspaceSpec, role: str, matrix: AccessMatrix, seen: set[str]
+) -> list[NavGroup]:
+    groups: list[NavGroup] = []
+    for group in ws.nav_groups:
+        links = tuple(
+            link
+            for item in group.items
+            if _is_platform_nav_target(appspec, item.entity)
+            or _persona_can_list(matrix, role, item.entity)
+            if (link := _curated_link(appspec, item, seen=seen)) is not None
+        )
+        if links:
+            groups.append(
+                NavGroup(
+                    group.label,
+                    group.icon,
+                    group.collapsed,
+                    links,
+                    when=group.when.model_dump() if group.when else None,
+                )
+            )
+    return groups
+
+
+def _role_region_links(
+    appspec: AppSpec, ws: WorkspaceSpec, role: str, matrix: AccessMatrix, seen: set[str]
+) -> list[NavLink]:
+    links: list[NavLink] = []
+    for region in ws.regions or []:
+        for source in _region_sources(region):
+            if not _is_platform_nav_target(appspec, source) and not _persona_can_list(
+                matrix, role, source
+            ):
+                continue
+            link = _try_nav_link(appspec, source, seen=seen)
+            if link is not None:
+                links.append(link)
+    return links
+
+
+def build_role_nav(appspec: AppSpec, role: str, matrix: AccessMatrix) -> NavModel:
+    """Sidebar for unmatched roles; only admin roles inherit admin workspaces."""
+    normalized = role.removeprefix("role_")
+    if normalized not in {"admin", "super_admin"}:
+        return build_anon_nav(appspec, matrix)
+    groups: list[NavGroup] = []
+    seen: set[str] = set()
+    flat: list[NavLink] = []
+    for ws in appspec.workspaces or []:
+        allowed = workspace_allowed_personas(ws, list(appspec.personas or []))
+        if allowed is not None and normalized not in allowed:
+            continue
+        link = _try_nav_link(appspec, ws.name, seen=seen)
+        if link is not None:
+            flat.append(link)
+        if ws.nav_groups:
+            groups.extend(_role_curated_groups(appspec, ws, role, matrix, seen))
+        else:
+            flat.extend(_role_region_links(appspec, ws, role, matrix, seen))
+    if flat:
+        groups.insert(0, NavGroup("", None, False, tuple(flat)))
+    return NavModel(groups=tuple(groups), auto_discovered=False)

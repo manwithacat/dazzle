@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
 SURFACES = (ROOT / "examples/invoice_ops/dsl/surfaces.dsl").read_text()
 ENTITIES = (ROOT / "examples/invoice_ops/dsl/entities.dsl").read_text()
@@ -12,8 +14,7 @@ STEM = (ROOT / "examples/invoice_ops/stems/story-driven-jobs.md").read_text()
 
 
 def _ws(name: str) -> str:
-    marker = f'workspace {name} "'
-    return SURFACES[SURFACES.index(marker) :]
+    return declaration_block("invoice_ops", "workspace", name)
 
 
 def test_approve_requires_spoken_exception() -> None:

@@ -135,6 +135,50 @@ class TestRegisterMcpServer:
         assert config["mcpServers"]["dazzle"]["args"] == ["-m", "dazzle.mcp"]
         assert config["mcpServers"]["dazzle"]["autoStart"] is True
 
+    def test_scoped_servers_pin_distinct_project_roots(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        projects = [tmp_path / "one" / "app", tmp_path / "two" / "app"]
+        for project in projects:
+            project.mkdir(parents=True)
+            (project / "dazzle.toml").write_text("[project]\nname = 'app'\n")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            for project in projects:
+                assert _setup_module.register_mcp_server(working_dir=project)
+
+        servers = json.loads(config_path.read_text())["mcpServers"]
+        assert len(servers) == 2
+        assert {tuple(server["args"][-2:]) for server in servers.values()} == {
+            ("--working-dir", str(project)) for project in projects
+        }
+
+    def test_scoped_server_accepts_framework_checkout(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        (tmp_path / "src" / "dazzle").mkdir(parents=True)
+        (tmp_path / "examples").mkdir()
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=tmp_path)
+
+        server = next(iter(json.loads(config_path.read_text())["mcpServers"].values()))
+        assert server["args"][-2:] == ["--working-dir", str(tmp_path)]
+
+    def test_scoped_server_can_replace_global_entry(self, tmp_path):
+        config_path = tmp_path / "mcp_servers.json"
+        config_path.write_text(
+            json.dumps({"mcpServers": {"dazzle": {"command": "old-python", "args": []}}})
+        )
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("[project]\nname = 'project'\n")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=project, name="dazzle", force=True)
+
+        servers = json.loads(config_path.read_text())["mcpServers"]
+        assert list(servers) == ["dazzle"]
+        assert servers["dazzle"]["args"][-2:] == ["--working-dir", str(project)]
+
     def test_merges_with_existing_config(self, tmp_path):
         """Test merging with existing MCP server config."""
         config_path = tmp_path / ".claude" / "mcp_servers.json"
@@ -315,3 +359,91 @@ class TestCheckMcpServer:
         assert "dsl" in status["tools"]
         assert "story" in status["tools"]
         assert "status" in status["tools"]
+
+    def test_scoped_registration_resolves_for_working_dir(self, tmp_path):
+        """Scoped `dazzle setup --working-dir` must be found by `mcp check`.
+
+        Registration writes a project-scoped ``dazzle-<project>-<hash>`` entry;
+        the checker has to resolve that same name for the requested root.
+        """
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        scoped = _setup_module._registration_server_name(project.resolve(), None)
+        assert scoped is not None
+        assert scoped != "dazzle"
+
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {scoped: {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert status["status"] == "registered"
+        assert status["server_name"] == scoped
+
+    def test_bare_check_does_not_match_scoped_entry(self, tmp_path):
+        """Without a working dir only the global ``dazzle`` key is recognised."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        scoped = _setup_module._registration_server_name(project.resolve(), None)
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {scoped: {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
+
+        assert status["registered"] is False
+
+    def test_global_entry_still_found_with_working_dir(self, tmp_path):
+        """A global registration remains visible when a working dir is given."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        config_path.write_text(
+            json.dumps(
+                {"mcpServers": {"dazzle": {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
+            )
+        )
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert status["server_name"] == "dazzle"
+
+    def test_register_then_check_round_trip(self, tmp_path):
+        """End-to-end: the documented setup -> check sequence reports registered."""
+        config_path = tmp_path / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True)
+
+        project = tmp_path / "my_app"
+        project.mkdir()
+        (project / "dazzle.toml").write_text("")
+
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            assert _setup_module.register_mcp_server(working_dir=project) is True
+            status = _setup_module.check_mcp_server(working_dir=project)
+
+        assert status["registered"] is True
+        assert str(project.resolve()) in status["server_command"]

@@ -41,6 +41,14 @@ Write a short table (region → display → story ids). Keep secondaries
 (kanban, timeline) **below** the job primary. Do not add regions “because
 they exist in the catalogue.”
 
+The first desktop viewport is a limited decision surface. Ask which item the
+persona needs next, what state or comparison makes that item understandable,
+and what action follows. Prefer enough of each to make the decision over a
+complete first region that pushes the related state away. A count is useful
+when it reveals hidden work; it can be redundant when every row is visible.
+Check the same seeded screenshot and task journey after changing a region's
+order, limit, or density. See `stems/example-apps-as-probes.md`.
+
 ### 4. Wire personas honestly
 
 - `default_workspace:` must be the composition that matches the persona’s
@@ -154,7 +162,8 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 **design_studio**:
 
 - Designer/admin → `studio_dashboard` = portfolio metrics + grids
-- Reviewer → `asset_gallery` = gallery metrics + **review queue** (`status = review`)
+- Reviewer → `review_desk` = in-review and approved creative previews, then
+  review load and **review queue** (`status = review`)
 
 **fieldtest_hub**:
 

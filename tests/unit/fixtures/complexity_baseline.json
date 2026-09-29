@@ -11264,7 +11264,7 @@
       "_related_groups_from_detail": 24,
       "_resolve_detail_money_value": 8
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/http/runtime/document_routes.py": {
     "functions": {
@@ -12601,7 +12601,7 @@
       "human_create_cta_label": 11,
       "render_generic_detail": 1
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/http/runtime/renderers/html_normalise.py": {
     "functions": {
@@ -19877,7 +19877,7 @@
       "_RenderTablesMixin._related_overflow_html": 2,
       "_RenderTablesMixin._related_tab_count": 3
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/render/fragment/state_affordance.py": {
     "functions": {

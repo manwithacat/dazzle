@@ -3,7 +3,7 @@
 **Audience:** humans who want to understand or adapt Dazzle’s autonomous
 `/improve` loop.
 **Not for:** the executing agent mid-cycle — that agent loads
-`.claude/commands/improve.md` and the lane/strategy playbooks.
+`.agents/skills/improve/SKILL.md` and the lane/strategy playbooks.
 
 **Scope:** this document explains *structure and portable design*. It does not
 change loop behaviour. Operational truth lives in the runtime runbook and
@@ -220,9 +220,9 @@ Operator rearm: [Operator field guide](operator-field-guide.md).
 |------|----------|-----|
 | Cycle log / backlog | `dev_docs/improve-log.md`, `improve-backlog.md` | typically local / gitignored ops state |
 | Lock, budget, schedule | `.dazzle/improve.lock`, `improve-explore-count`, `improve-schedule-state.json` | local |
-| Capability map | `.claude/commands/improve/capability-map.md` | often dirty until stamped in a ship |
+| Capability map | `.agents/skills/improve/capability-map.md` | often dirty until stamped in a ship |
 | Product proof | example stills under `.dazzle/qa/screenshots/` | gitignored; residual is the immune system |
-| Runtime runbooks | `.claude/commands/improve.md`, `lanes/`, `strategies/` | **in git** — agent source of truth |
+| Runtime runbooks | `.agents/skills/improve/SKILL.md`, `lanes/`, `strategies/` | **in git** — agent source of truth |
 | Sensors / schedulers | `scripts/improve_*.py` | **in git** |
 
 The human review surface after a multi-hour run is primarily **git history**
@@ -299,10 +299,10 @@ Reading a log entry: look for **lane**, **strategy**, **status**, **ci**,
 
 | Path | Role |
 |------|------|
-| `.claude/commands/improve.md` | Executable driver (agent) |
-| `.claude/commands/improve/lanes/*.md` | Lane playbooks |
-| `.claude/commands/improve/strategies/*.md` | Strategy playbooks |
-| `.claude/commands/improve/capability-map.md` | Capability inventory stamps |
+| `.agents/skills/improve/SKILL.md` | Executable driver (agent) |
+| `.agents/skills/improve/lanes/*.md` | Lane playbooks |
+| `.agents/skills/improve/strategies/*.md` | Strategy playbooks |
+| `.agents/skills/improve/capability-map.md` | Capability inventory stamps |
 | `scripts/improve_*.py` | Sensors, policy, schedule, compact, dig receipt |
 | `scripts/improve_watchdog_prompt.md` | Daily dead-man text |
 | `.grok/workflows/improve-*.rhai` | Parallel cognition panels |

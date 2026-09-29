@@ -1,7 +1,7 @@
 # Antagonist handoff — post-5.8 (short)
 
 **Canonical doctrine:** [`interesting-saas-context.md`](interesting-saas-context.md)
-**Playbook:** `.claude/commands/improve/strategies/interesting_product.md`
+**Playbook:** `.agents/skills/improve/strategies/interesting_product.md`
 **Portfolio:** `scripts/interesting_product_portfolio.py` · `improve/oral-history.md`
 
 Do **not** re-read multi-page investigation dumps for every Goal B cycle.

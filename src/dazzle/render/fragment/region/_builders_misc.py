@@ -407,7 +407,18 @@ class _BuildersMiscMixin:
                 # GRID renders badges with default size (md, no border)
                 # per legacy macro call (no kwargs). Person refs use
                 # present(person, card_meta) — not list_cell mislabel.
-                fields.append((label, _render_typed_value(item, col, host="card_meta")))
+                fields.append(
+                    (
+                        label,
+                        _render_typed_value(
+                            item,
+                            col,
+                            host="card_meta",
+                            image_card=col_type == "image"
+                            and key in {"preview_url", "image_url", "cover_url"},
+                        ),
+                    )
+                )
             drill = ""
             if link_idx < len(row_links) and row_links[link_idx]:
                 drill = str(row_links[link_idx])

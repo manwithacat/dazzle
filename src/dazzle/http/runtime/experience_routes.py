@@ -19,10 +19,17 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
-from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.htmx import HtmxDetails
-from dazzle.http.runtime.page_routes import _build_dispatch_ctx
+from dazzle.http.runtime.page_routes import _build_dispatch_ctx, _reconcile_nav_model
+from dazzle.page.converters.nav_builder import (
+    NavModel,
+    build_all_persona_navs,
+    build_anon_nav,
+    build_role_nav,
+    build_unrestricted_nav,
+)
 from dazzle.page.utils.expression_eval import evaluate_simple_condition
+from dazzle.rbac.matrix import generate_access_matrix
 from dazzle.render.dispatch import dispatch_render
 from dazzle.render.fragment.errors import FragmentError
 from dazzle.render.fragment.renderer._render_interactive import (
@@ -44,8 +51,10 @@ class _ExperienceDeps:
     get_auth_context: Callable[..., Any] | None
     app_prefix: str
     experiences_by_name: dict[str, ir.ExperienceSpec]
-    nav_items: list[dict[str, Any]] = field(default_factory=list)
-    nav_groups: list[dict[str, Any]] = field(default_factory=list)
+    persona_navs: dict[str, NavModel] = field(default_factory=dict)
+    anon_nav: NavModel = field(default_factory=lambda: NavModel((), True))
+    unrestricted_nav: NavModel = field(default_factory=lambda: NavModel((), False))
+    admin_navs: dict[str, NavModel] = field(default_factory=dict)
     app_name: str = ""
     progress_store: Any = None
 
@@ -419,27 +428,28 @@ async def _experience_step_get(
         # need its rich step-body logic) and wrap it in a typed
         # `Page` + `AppShell` via `dispatch_render_page` — same shape
         # used by the marketing-page + entity-surface routes.
-        from dazzle.render.context import NavItemContext, PageContext
+        from dazzle.render.context import PageContext
         from dazzle.render.dispatch import dispatch_render_page
 
         inner_html = render_experience_inner_html(exp_ctx, surface_step_html=surface_step_html)
-        nav_items_ctx = [
-            NavItemContext(
-                label=getattr(n, "label", None) or n.get("label", "")
-                if isinstance(n, dict)
-                else getattr(n, "label", ""),
-                route=getattr(n, "route", None) or n.get("route", "")
-                if isinstance(n, dict)
-                else getattr(n, "route", ""),
-            )
-            for n in (deps.nav_items or [])
-        ]
+        auth = _inject_auth(deps, request)
+        nav_model = deps.unrestricted_nav if deps.get_auth_context is None else deps.anon_nav
+        if auth["is_authenticated"]:
+            for role in auth["user_roles"]:
+                nav_model = (
+                    deps.persona_navs.get(role.removeprefix("role_"))
+                    or deps.admin_navs.get(role.removeprefix("role_"))
+                    or nav_model
+                )
+                if nav_model is not deps.anon_nav:
+                    break
         page_ctx = PageContext(
             page_title=exp_ctx.title or "",
             app_name=deps.app_name or "Dazzle",
             current_route=current_route,
-            nav_items=nav_items_ctx,
-            nav_groups=deps.nav_groups or [],
+            nav_model=nav_model,
+            user_roles=auth["user_roles"],
+            is_authenticated=auth["is_authenticated"],
         )
         app_state = request.app.state
         css_links = tuple(
@@ -750,52 +760,17 @@ def create_experience_routes(
         exp.name: exp for exp in appspec.experiences
     }
 
-    # Build nav items and groups for sidebar context
-    nav_items: list[dict[str, Any]] = []
-    nav_groups: list[dict[str, Any]] = []
-
-    # Build list-surface lookup for better nav_group labels
-    _list_surfaces_by_entity: dict[str, Any] = {}
-    for surface in getattr(appspec, "surfaces", []) or []:
-        if surface.mode.value == "list" and surface.entity_ref:
-            _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
-
-    # Collect nav_groups; track workspaces that have groups
-    workspaces_with_groups: set[str] = set()
-    for ws in appspec.workspaces:
-        if ws.nav_groups:
-            workspaces_with_groups.add(ws.name)
-        for ng in ws.nav_groups:
-            nav_groups.append(
-                {
-                    "label": ng.label,
-                    "icon": ng.icon,
-                    "collapsed": ng.collapsed,
-                    "children": [
-                        {
-                            "label": (
-                                _list_surfaces_by_entity[item.entity].title
-                                if item.entity in _list_surfaces_by_entity
-                                and _list_surfaces_by_entity[item.entity].title
-                                else item.entity.replace("_", " ").title()
-                            ),
-                            "route": f"{app_prefix}/{entity_slug(item.entity)}",
-                            "icon": item.icon,
-                        }
-                        for item in ng.items
-                    ],
-                }
-            )
-
-    # Ungrouped workspaces become flat nav items
-    for ws in appspec.workspaces:
-        if ws.name not in workspaces_with_groups:
-            nav_items.append(
-                {
-                    "label": ws.title or ws.name.replace("_", " ").title(),
-                    "route": f"{app_prefix}/workspaces/{ws.name}",
-                }
-            )
+    matrix = generate_access_matrix(appspec)
+    persona_navs = {
+        name: _reconcile_nav_model(appspec, app_prefix, nav)
+        for name, nav in build_all_persona_navs(appspec, matrix).items()
+    }
+    anon_nav = _reconcile_nav_model(appspec, app_prefix, build_anon_nav(appspec, matrix))
+    unrestricted_nav = _reconcile_nav_model(appspec, app_prefix, build_unrestricted_nav(appspec))
+    admin_navs = {
+        role: _reconcile_nav_model(appspec, app_prefix, build_role_nav(appspec, role, matrix))
+        for role in ("admin", "super_admin")
+    }
     app_name = appspec.title or appspec.name.replace("_", " ").title()
 
     deps = _ExperienceDeps(
@@ -804,8 +779,10 @@ def create_experience_routes(
         get_auth_context=get_auth_context,
         app_prefix=app_prefix,
         experiences_by_name=experiences_by_name,
-        nav_items=nav_items,
-        nav_groups=nav_groups,
+        persona_navs=persona_navs,
+        anon_nav=anon_nav,
+        unrestricted_nav=unrestricted_nav,
+        admin_navs=admin_navs,
         app_name=app_name,
         progress_store=progress_store,
     )

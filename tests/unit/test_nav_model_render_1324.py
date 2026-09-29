@@ -23,7 +23,7 @@ import pytest
 
 from dazzle.http.runtime.page_routes import _inject_auth_context, _resolve_nav_model
 from dazzle.page.converters.nav_builder import NavGroup, NavLink, NavModel
-from dazzle.render.context import NavItemContext, PageContext
+from dazzle.render.context import PageContext
 from dazzle.render.dispatch import _build_sidebar_from_ctx, _sidebar_from_nav_model
 
 # ---------------------------------------------------------------------------
@@ -123,33 +123,17 @@ def test_empty_nav_model_yields_empty_sidebar() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_nav_model_takes_precedence_over_legacy_nav_items() -> None:
-    """When nav_model is set, the legacy nav_items path is NOT consulted."""
-    ctx = PageContext(
-        page_title="x",
-        current_route="/list/Ticket",
-        # Legacy producers populated with DIFFERENT data — must be ignored.
-        nav_items=[NavItemContext(label="Legacy", route="/legacy")],
-        nav_model=_PERSONA_NAV,
-    )
+def test_sidebar_uses_nav_model() -> None:
+    ctx = PageContext(page_title="x", current_route="/list/Ticket", nav_model=_PERSONA_NAV)
     sidebar = _build_sidebar_from_ctx(ctx)
-    item_routes = {i.href.value for i in sidebar.items}
-    # Only the nav_model's flat link, never the legacy "/legacy".
-    assert "/legacy" not in item_routes
-    assert item_routes == {"/workspaces/home"}
+    assert {item.href.value for item in sidebar.items} == {"/workspaces/home"}
     assert sidebar.groups[0].label == "Operations"
 
 
-def test_legacy_path_used_when_nav_model_absent() -> None:
-    """No nav_model → fall back to the legacy nav_items producer (dead-code
-    fallback that stays until a later removal task)."""
-    ctx = PageContext(
-        page_title="x",
-        nav_items=[NavItemContext(label="Legacy", route="/legacy")],
-    )
-    assert ctx.nav_model is None
-    sidebar = _build_sidebar_from_ctx(ctx)
-    assert {i.href.value for i in sidebar.items} == {"/legacy"}
+def test_missing_nav_model_renders_empty_sidebar() -> None:
+    sidebar = _build_sidebar_from_ctx(PageContext(page_title="x"))
+    assert sidebar.items == ()
+    assert sidebar.groups == ()
 
 
 def test_workspace_and_entity_pages_render_identical_sidebar_from_same_nav_model() -> None:
@@ -173,9 +157,6 @@ def test_workspace_and_entity_pages_render_identical_sidebar_from_same_nav_model
         app_name="App",
         current_route="/list/Ticket",
         view_name="ticket_list",
-        # Legacy producers differ between the two paths historically — this is
-        # exactly the drift the cutover removes. nav_model is the shared source.
-        nav_items=[NavItemContext(label="Drifted", route="/drifted")],
         nav_model=_PERSONA_NAV,
     )
     ws_sidebar = _build_sidebar_from_ctx(workspace_ctx)
@@ -191,7 +172,12 @@ def test_workspace_and_entity_pages_render_identical_sidebar_from_same_nav_model
 
 
 def _deps(persona_navs: dict[str, NavModel], anon_nav: NavModel | None) -> SimpleNamespace:
-    return SimpleNamespace(persona_navs=persona_navs, anon_nav=anon_nav)
+    return SimpleNamespace(
+        persona_navs=persona_navs,
+        anon_nav=anon_nav,
+        unmatched_role_navs={"admin": _PERSONA_NAV},
+        unrestricted_nav=_PERSONA_NAV,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -245,15 +231,10 @@ def test_resolve_nav_model_matches_persona_by_role() -> None:
     assert _resolve_nav_model(deps, ["role_engineer"], authenticated=True) is _PERSONA_NAV
 
 
-def test_resolve_nav_model_authed_unmatched_role_returns_none() -> None:
-    """#1324 regression fix: an AUTHENTICATED user whose roles match no persona
-    must fall through to the legacy curated nav (return None), NOT collapse to
-    the anon nav. ``admin``/``super_admin`` are role NAMES, not persona entries,
-    so the admin platform workspace has no persona_navs key — pre-fix it got the
-    anon visitor's nav, hiding the curated admin nav_groups."""
+def test_resolve_nav_model_admin_uses_explicit_model_and_unknown_is_anon() -> None:
     deps = _deps({"engineer": _PERSONA_NAV}, _ANON_NAV)
-    assert _resolve_nav_model(deps, ["role_admin"], authenticated=True) is None
-    assert _resolve_nav_model(deps, ["role_unknown"], authenticated=True) is None
+    assert _resolve_nav_model(deps, ["role_admin"], authenticated=True) is _PERSONA_NAV
+    assert _resolve_nav_model(deps, ["role_unknown"], authenticated=True) is _ANON_NAV
 
 
 def test_resolve_nav_model_unauthenticated_falls_back_to_anon() -> None:
@@ -263,10 +244,9 @@ def test_resolve_nav_model_unauthenticated_falls_back_to_anon() -> None:
     assert _resolve_nav_model(deps, None, authenticated=False) is _ANON_NAV
 
 
-def test_resolve_nav_model_no_anon_precomputed_returns_none() -> None:
-    """Older config without a precomputed anon nav → None (legacy path builds it)."""
+def test_missing_anon_model_is_explicitly_empty() -> None:
     deps = _deps({"engineer": _PERSONA_NAV}, None)
-    assert _resolve_nav_model(deps, [], authenticated=False) is None
+    assert _resolve_nav_model(deps, [], authenticated=False).groups == ()
 
 
 def _make_prc(
@@ -282,6 +262,8 @@ def _make_prc(
         route_entity=None,
         persona_navs=persona_navs,
         anon_nav=anon_nav,
+        unrestricted_nav=_PERSONA_NAV,
+        unmatched_role_navs={"admin": _PERSONA_NAV},
     )
     return SimpleNamespace(ctx=ctx, deps=deps, request=MagicMock(), auth_ctx=None)
 
@@ -318,41 +300,23 @@ async def test_inject_unauthenticated_sets_anon_nav_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_inject_no_auth_wiring_leaves_nav_model_unset() -> None:
-    """No auth wiring = "developer opted out of access control". There's no
-    session to resolve a persona from and no gates to enforce, so the hook
-    leaves ``nav_model`` unset and the sidebar falls back to the full legacy
-    declared nav — NOT the anon nav (a strict subset that would wrongly hide
-    workspaces in an app with no auth fixture)."""
-    prc = _make_prc(
-        get_auth_context=None,
-        persona_navs={"engineer": _PERSONA_NAV},
-        anon_nav=_ANON_NAV,
-    )
+async def test_inject_no_auth_wiring_uses_unrestricted_nav() -> None:
+    prc = _make_prc(get_auth_context=None, persona_navs={}, anon_nav=_ANON_NAV)
     await _inject_auth_context(prc)
-    assert prc.ctx.nav_model is None
+    assert prc.ctx.nav_model is _PERSONA_NAV
 
 
 @pytest.mark.asyncio
-async def test_inject_authenticated_unmatched_role_falls_back_to_legacy_nav() -> None:
-    """#1324 regression fix (admin platform workspace): an AUTHENTICATED user
-    whose role matches no persona (e.g. ``role_admin``) must leave nav_model
-    unset (None) so the sidebar falls through to the legacy curated nav_groups
-    — NOT collapse to the anon visitor's nav. Pre-fix slice 3b returned the anon
-    nav here, collapsing the admin sidebar to the anonymous-visitor nav."""
+async def test_inject_authenticated_admin_uses_admin_nav() -> None:
     user = SimpleNamespace(email="u@x", username="u", roles=["role_admin"], is_superuser=False)
     auth_ctx = SimpleNamespace(is_authenticated=True, user=user, preferences={})
-
-    def _resolver(_req: object) -> SimpleNamespace:
-        return auth_ctx
-
     prc = _make_prc(
-        get_auth_context=_resolver,
+        get_auth_context=lambda _req: auth_ctx,
         persona_navs={"engineer": _PERSONA_NAV},
         anon_nav=_ANON_NAV,
     )
     await _inject_auth_context(prc)
-    assert prc.ctx.nav_model is None
+    assert prc.ctx.nav_model is _PERSONA_NAV
 
 
 # ---------------------------------------------------------------------------

@@ -9116,7 +9116,8 @@ a.action-card:hover {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
   transition: background var(--duration-fast) var(--ease-out);
 }
@@ -11120,6 +11121,21 @@ a.action-card:hover {
   border: 1px solid var(--colour-border, #e5e7eb);
   background: var(--colour-surface-muted, #f3f4f6);
   margin-block: 0.15rem 0.35rem;
+}
+
+/* A creative preview is the content of a grid card, not a queue avatar. */
+.grid-cell-field .aspect-ratio[data-media-size="card"] {
+  width: 100%;
+  margin-block: 0.5rem;
+}
+
+.grid-cell-field .aspect-ratio[data-media-size="card"] .media-thumb {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
 }
 
 .grid-cell-field-label {
@@ -16014,6 +16030,12 @@ onboarding-step {
 .card-body[data-display="metrics"],
 .card-body[data-display="metric"] {
   min-height: 140px;
+}
+
+/* Queue rows provide their own vertical padding; the generic card body's
+ * top padding otherwise creates an empty band below the workspace title. */
+.card-body[data-display="queue"] {
+  padding-block-start: var(--space-sm);
 }
 
 .card-body[data-display="bar_chart"],

@@ -590,14 +590,14 @@ workspace review_desk "Review Desk":
   purpose: "Multi-panel review — in-review vs approved stamp pixels, dual attention, design docs, then live critique trail"
   access: persona(admin, designer, reviewer)
 
-  # Review pixels FIRST — status=review Asset preview_url grid (cap 4 so the
-  # approved stamp wall shares the fold). Peer Frame.io review boards are
+  # Review pixels FIRST — status=review Asset preview_url grid (one desktop
+  # row so the approved stamp wall enters the first viewport). Peer review boards are
   # thumbs of work under critique, not metrics-only.
   review_pixels:
     source: Asset
     filter: status = review
     sort: updated_at asc
-    limit: 4
+    limit: 3
     display: grid
     action: asset_detail
     empty: "No creatives in review — nothing to critique yet"
@@ -609,7 +609,7 @@ workspace review_desk "Review Desk":
     source: Asset
     filter: status = approved
     sort: approved_at desc
-    limit: 4
+    limit: 3
     display: grid
     action: asset_detail
     empty: "No stamped approvals — approved creatives land here"

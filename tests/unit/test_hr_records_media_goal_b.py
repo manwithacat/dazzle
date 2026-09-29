@@ -46,11 +46,11 @@ def test_staff_directory_media_shelf_after_work() -> None:
     assert "source: Person" in block
     assert "display: grid" in block
     assert block.index("current_staff:") < block.index("media_shelf:")
-    assert block.index("recent_starters:") < block.index("media_shelf:")
+    assert "recent_starters:" not in block
     assert block.index("live_conversation:") < block.index("media_shelf:")
     # Filled shelf (not cap-2 theater). Focus is work-first; shelf not eager.
     assert "limit: 8" in block.split("media_shelf:", 1)[1].split("\n  ux:", 1)[0]
-    assert "focus: current_staff, recent_starters, headcount, composition" in block
+    assert "focus: current_staff, headcount, composition" in block
     assert "composition:" in block
     assert "live_conversation:" in block
 

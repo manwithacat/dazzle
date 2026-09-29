@@ -1156,6 +1156,43 @@ def test_detail_type_aware_currency_formats_minor_units() -> None:
     assert "£123.45" in html
 
 
+def test_currency_column_uses_record_companion_currency() -> None:
+    """A `type: currency` cell resolves the row's companion `_currency`
+    field, so workspace regions agree with entity tables."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "price_currency": "USD"},
+        "fields": [{"key": "price", "type": "currency"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "$123.45" in html
+
+
+def test_currency_column_falls_back_to_row_level_currency() -> None:
+    """A row-level `currency` field applies when there is no
+    field-specific companion."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "currency": "EUR"},
+        "fields": [{"key": "price", "type": "currency"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "123.45" in html
+    assert "€" in html
+
+
+def test_currency_column_record_beats_column_default() -> None:
+    """Precedence matches the entity-table path — the row's companion
+    currency wins, with the column `currency_code` acting as the fallback."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "item": {"price": 12345, "price_currency": "USD"},
+        "fields": [{"key": "price", "type": "currency", "currency_code": "GBP"}],
+    }
+    html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
+    assert "$123.45" in html
+
+
 def test_detail_type_aware_ref_renders_link_with_display() -> None:
     """`type: ref` columns produce a Link primitive when ref_route is
     set; the link text uses `<key>_display` from the item dict."""
@@ -2225,6 +2262,21 @@ def test_queue_count_metrics_overflow_render_via_dedicated_primitive() -> None:
     assert "100" in html  # total in count row
     assert "dz-queue-metric" in html  # metrics row
     assert "Showing 1 of 100" in html  # overflow line
+
+
+def test_queue_omits_redundant_count_when_all_rows_are_visible() -> None:
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"id": 1, "title": "First"}, {"id": 2, "title": "Second"}],
+        "endpoint": "/api/regions/r",
+        "region_name": "r",
+        "total": 2,
+        "columns": [{"key": "title", "label": "Title", "type": "text"}],
+        "display_key": "title",
+    }
+    html = _render(adapter.build(_FakeRegion("r", display="queue"), ctx))
+    assert "dz-queue-count-row" not in html
+    assert "First" in html and "Second" in html
 
 
 def test_queue_skips_transitions_when_required_ctx_keys_missing() -> None:

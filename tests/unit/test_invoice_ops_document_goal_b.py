@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tests.unit.dsl_source_lookup import declaration_block
+
 ROOT = Path(__file__).resolve().parents[2]
 ENTITIES = ROOT / "examples/invoice_ops/dsl/entities.dsl"
 SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
@@ -14,14 +16,7 @@ INVOICE_SEEDS = ROOT / "examples/invoice_ops/dsl/seeds/demo_data/Invoice.jsonl"
 
 
 def _workspace_block(name: str) -> str:
-    text = SURFACES.read_text()
-    marker = f'workspace {name} "'
-    start = text.index(marker)
-    rest = text[start + 1 :]
-    nxt = rest.find("\nworkspace ")
-    if nxt == -1:
-        return text[start:]
-    return text[start : start + 1 + nxt]
+    return declaration_block("invoice_ops", "workspace", name)
 
 
 def test_invoice_due_date_on_entity() -> None:
@@ -34,7 +29,8 @@ def test_invoice_due_date_on_entity() -> None:
     # Goal B document peer-pack (cycle 1921): dispute reason on work rows
     assert "dispute_reason: text optional" in inv
     assert (
-        "repr_fields: [invoice_number, supplier, amount, due_date, status, dispute_reason]" in inv
+        "repr_fields: [invoice_number, supplier, amount, currency, due_date, status, dispute_reason]"
+        in inv
     )
 
 
@@ -174,11 +170,11 @@ def test_pay_desk_draft_packet_release_gate() -> None:
     assert "draft: count(InvoiceDocument where status = draft)" in desk
     assert desk.index("document_pulse:") < desk.index("draft_packets:")
     assert desk.index("draft_packets:") < desk.index("composition:")
-    assert desk.index("draft_packets:") < desk.index("ready_to_pay:")
+    assert desk.index("ready_to_pay:") < desk.index("draft_packets:")
     assert (
-        "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, "
-        "document_pulse, draft_packets, settle_rail, match_evidence, "
-        "compliance_drafts, composition, ready_to_pay, past_due" in desk
+        "focus: settle_metrics, past_due, ready_to_pay, draft_invoice_queue, "
+        "awaiting_approval_queue, document_pulse, draft_packets, settle_rail, "
+        "match_evidence, compliance_drafts, composition" in desk
     )
 
 
@@ -990,8 +986,8 @@ def test_approval_desk_tax_certificate_watch() -> None:
     assert desk.index("po_packets:") < desk.index("tax_certificates:")
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert (
-        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
-        "awaiting_approval, live_conversation" in desk
+        "focus: approval_load, awaiting_approval, document_pulse, match_evidence, "
+        "goods_receipts, po_packets, composition, live_conversation" in desk
     )
 
 
@@ -1020,8 +1016,8 @@ def test_approval_and_ops_po_packet_watch() -> None:
     assert desk.index("tax_certificates:") < desk.index("composition:")
     assert desk.index("\n  goods_receipts:\n") < desk.index("po_packets:")
     assert (
-        "focus: approval_load, document_pulse, match_evidence, goods_receipts, po_packets, composition, "
-        "awaiting_approval, live_conversation" in desk
+        "focus: approval_load, awaiting_approval, document_pulse, match_evidence, "
+        "goods_receipts, po_packets, composition, live_conversation" in desk
     )
 
 
@@ -1038,7 +1034,7 @@ def test_pay_desk_payment_confirmation_trail() -> None:
     assert desk.index("payment_confirmations:") < desk.index("composition:")
     assert desk.index("\n  remittances:\n") < desk.index("\n  credit_memos:\n")
     assert (
-        "focus: settle_metrics, draft_invoice_queue, awaiting_approval_queue, "
-        "document_pulse, draft_packets, settle_rail, match_evidence, "
-        "compliance_drafts, composition, ready_to_pay, past_due" in desk
+        "focus: settle_metrics, past_due, ready_to_pay, draft_invoice_queue, "
+        "awaiting_approval_queue, document_pulse, draft_packets, settle_rail, "
+        "match_evidence, compliance_drafts, composition" in desk
     )

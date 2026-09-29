@@ -887,6 +887,34 @@ def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> li
                     if owner and owner != module.name:
                         used_modules.add(owner)
 
+        # A workspace composes entities and surfaces from other modules.
+        # Its region sources and actions are real dependencies even when the
+        # module has no entity or surface declaration of its own.
+        for workspace in module.fragment.workspaces:
+            for region in workspace.regions:
+                refs = (
+                    region.source,
+                    *region.sources,
+                    region.action,
+                    region.primary_action,
+                    region.secondary_action,
+                    region.revoke,
+                )
+                for ref in refs:
+                    if ref:
+                        owner = symbols.symbol_sources.get(ref)
+                        if owner and owner != module.name:
+                            used_modules.add(owner)
+            for group in workspace.nav_groups:
+                for item in group.items:
+                    owner = symbols.symbol_sources.get(item.entity)
+                    if owner and owner != module.name:
+                        used_modules.add(owner)
+            for primary_action in workspace.primary_actions:
+                owner = symbols.symbol_sources.get(primary_action.target)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+
         # Check experience step references
         for experience in module.fragment.experiences:
             for step in experience.steps:

@@ -1,0 +1,31 @@
+# Fixed jobs for portable example-app review. This selects evidence; it does
+# not define an app or duplicate its DSL. The trial scenario owns the persona
+# narrative, while the linked AppSpec owns routes and access.
+version = 1
+
+[[scene]]
+id = "invoice-pay-desk"
+app = "invoice_ops"
+trial_scenario = "finance_pay_desk"
+workspace = "pay_desk"
+viewport = "desktop"
+themes = ["light", "dark"]
+decision = "Find an overdue invoice, understand its amount and status, and reach the settlement decision."
+
+[[scene]]
+id = "design-review-desk"
+app = "design_studio"
+trial_scenario = "reviewer_queue"
+workspace = "review_desk"
+viewport = "desktop"
+themes = ["light", "dark"]
+decision = "Compare in-review creative work with approved work, then open an asset for critique."
+
+[[scene]]
+id = "hr-staff-directory"
+app = "hr_records"
+trial_scenario = "hr_admin_directory"
+workspace = "staff_directory"
+viewport = "desktop"
+themes = ["light", "dark"]
+decision = "Find a person, understand assignment status, and open the person hub."

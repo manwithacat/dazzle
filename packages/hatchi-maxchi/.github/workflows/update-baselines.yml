@@ -26,6 +26,8 @@ jobs:
         env:
           HM_UPDATE_BASELINES: "1"
         run: python -m pytest tests/test_visual.py -q
+      - name: Record capture manifest
+        run: python tools/visual_baseline_manifest.py --platform linux
       - uses: actions/upload-artifact@v4
         with:
           name: linux-baselines

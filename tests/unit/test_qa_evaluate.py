@@ -58,8 +58,8 @@ class TestBuildSubagentPrompt:
     def test_includes_findings_path_for_write(self) -> None:
         prompt = build_subagent_prompt(_make_manifest(), "/tmp/findings.json")
         assert "/tmp/findings.json" in prompt
-        # Must instruct the subagent to Write the JSON output.
-        assert "Write" in prompt
+        assert "file-writing capability" in prompt
+        assert "Read tool" not in prompt
 
     def test_output_schema_requires_screenshot_field(self) -> None:
         """Subagent must echo the screenshot path that triggered each finding —

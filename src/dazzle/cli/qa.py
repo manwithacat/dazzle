@@ -988,7 +988,11 @@ def _reset_db_for_trial(project_dir: Path) -> None:
 
 
 def _plan_qa_capture(
-    project_dir: Path, persona: str | None, *, include_denied: bool = False
+    project_dir: Path,
+    persona: str | None,
+    *,
+    workspace: str | None = None,
+    include_denied: bool = False,
 ) -> tuple[Any, list[Any]]:
     """Load the AppSpec and build the (optionally persona-filtered) capture plan.
 
@@ -1027,6 +1031,17 @@ def _plan_qa_capture(
             typer.echo(f"No targets found for persona '{persona}'.", err=True)
             raise typer.Exit(code=1)
 
+    if workspace:
+        targets = [t for t in targets if t.workspace == workspace]
+        if not targets:
+            typer.echo(
+                f"No targets found for workspace '{workspace}'"
+                + (f" and persona '{persona}'" if persona else "")
+                + ".",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
     return appspec, targets
 
 
@@ -1036,6 +1051,9 @@ def qa_capture(
     app: str | None = typer.Option(None, "--app", "-a", help="Example app name (e.g. simple_task)"),
     persona: str | None = typer.Option(
         None, "--persona", "-p", help="Restrict capture to a single persona"
+    ),
+    workspace: str | None = typer.Option(
+        None, "--workspace", "-w", help="Restrict capture to a single workspace"
     ),
     manifest: Path | None = typer.Option(
         None,
@@ -1064,7 +1082,9 @@ def qa_capture(
     from dazzle.qa.server import AppConnection, wait_for_ready
 
     project_dir = _resolve_project_dir(app)
-    appspec, targets = _plan_qa_capture(project_dir, persona, include_denied=include_denied)
+    appspec, targets = _plan_qa_capture(
+        project_dir, persona, workspace=workspace, include_denied=include_denied
+    )
 
     if url is None:
         typer.echo(

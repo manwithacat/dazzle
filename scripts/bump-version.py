@@ -12,7 +12,7 @@ Updates version in:
     - pyproject.toml (source of truth)
     - homebrew/dazzle.rb (Homebrew formula)
     - package.json (root)
-    - .claude/CLAUDE.md
+    - AGENTS.md (canonical agent instructions)
 """
 
 from __future__ import annotations
@@ -27,7 +27,6 @@ VERSION_FILES = [
     ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
     ("AGENTS.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
-    (".claude/CLAUDE.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
 ]
 
 # Files where version appears in URLs/comments (update tag references)

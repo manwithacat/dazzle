@@ -7,11 +7,10 @@ from pathlib import Path
 from dazzle.core.project import load_project
 from dazzle.core.strings import entity_slug
 from dazzle.page.converters.template_compiler import compile_appspec_to_templates
+from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb, crumbs_to_breadcrumb
 from dazzle.render.breadcrumbs import (
     build_breadcrumb_trail,
-    build_shell_breadcrumb,
     clerk_entity_path_label,
-    crumbs_to_breadcrumb,
     entity_path_labels_from_spec,
 )
 from dazzle.render.context import PageContext

@@ -14,6 +14,7 @@ from dazzle.core import ir
 from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.render.breadcrumbs import clerk_form_submit_label
 from dazzle.render.fragment.form_field import field_context_to_dict
+from dazzle.render.fragment.format_cell import record_currency_code
 
 
 def _ref_route_for_entity(ref_entity: str) -> str:
@@ -175,9 +176,24 @@ def _resolve_detail_money_value(
             value = minor
     currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
     if not currency_code:
-        currency_code = str(item.get(f"{field_name}_currency", "") or "")
+        currency_code = record_currency_code(item, field_name)
     if not currency_code:
         currency_code = "GBP"
+    return value, currency_code
+
+
+def _detail_value_and_currency(
+    field_name: str, kind: str, item: dict[str, Any], extra: dict[str, Any]
+) -> tuple[Any, str]:
+    """Resolve a detail cell without losing its record currency."""
+    value = item.get(field_name, "") if isinstance(item, dict) else ""
+    if kind == "ref" and isinstance(item, dict):
+        value = _detail_ref_value(field_name, item, value)
+    currency_code = str(extra.get("currency_code", "") or "")
+    if isinstance(item, dict) and not currency_code:
+        currency_code = record_currency_code(item, field_name)
+    if kind in ("money", "currency") and isinstance(item, dict):
+        value, currency_code = _resolve_detail_money_value(field_name, item, value, extra)
     return value, currency_code
 
 
@@ -185,16 +201,10 @@ def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
     """Map one FieldContext + item → flat detail field dict."""
     field_name = getattr(f, "name", "") or getattr(f, "key", "")
     kind = getattr(f, "type", "text") or "text"
-    value = item.get(field_name, "") if isinstance(item, dict) else ""
-    if kind == "ref" and isinstance(item, dict):
-        value = _detail_ref_value(field_name, item, value)
     extra = getattr(f, "extra", None) or {}
     if not isinstance(extra, dict):
         extra = {}
-    currency_code = str(extra.get("currency_code", "") or "")
-    # Money / currency kinds: prefer expanded _minor/_currency when bare empty (#1646).
-    if kind in ("money", "currency") and isinstance(item, dict):
-        value, currency_code = _resolve_detail_money_value(field_name, item, value, extra)
+    value, currency_code = _detail_value_and_currency(field_name, kind, item, extra)
     ref_entity, ref_route = _field_ref_route(f)
     return {
         "key": field_name,
@@ -204,6 +214,8 @@ def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
         # widget= from DSL (e.g. color) — detail display when form kind is text.
         "widget": str(getattr(f, "widget", None) or ""),
         "currency_code": currency_code,
+        "format_kind": str(extra.get("format_kind", "") or ""),
+        "format_arg": str(extra.get("format_arg", "") or ""),
         "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
         "ref_entity": ref_entity,
         "ref_route": ref_route,

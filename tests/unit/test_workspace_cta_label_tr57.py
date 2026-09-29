@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dazzle.core import ir
+from dazzle.core.ir.fields import FieldModifier
 from dazzle.http.runtime.page_routes import _build_workspace_primary_action_candidates
 
 
@@ -108,3 +109,85 @@ def test_child_comment_entity_not_workspace_primary_cta() -> None:
     labels = [a["label"] for a in actions]
     assert labels == ["New Task"]
     assert not any("Comment" in lbl for lbl in labels)
+
+
+def test_required_parent_record_suppresses_contextual_create_cta() -> None:
+    invoice = ir.EntitySpec(name="Invoice", title="Invoice", fields=[])
+    document = ir.EntitySpec(
+        name="InvoiceDocument",
+        title="Invoice Document",
+        fields=[
+            ir.FieldSpec(
+                name="invoice",
+                type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Invoice"),
+                modifiers=[FieldModifier.REQUIRED],
+            )
+        ],
+    )
+    create = {
+        name: ir.SurfaceSpec(
+            name=f"{name.lower()}_create", mode=ir.SurfaceMode.CREATE, entity_ref=name
+        )
+        for name in ("Invoice", "InvoiceDocument")
+    }
+    desk = ir.WorkspaceSpec(
+        name="pay_desk",
+        regions=[
+            ir.WorkspaceRegion(name="past_due", source="Invoice"),
+            ir.WorkspaceRegion(name="documents", source="InvoiceDocument"),
+        ],
+    )
+    actions = _build_workspace_primary_action_candidates(
+        desk,
+        app_prefix="/app",
+        create_surfaces_by_entity=create,
+        list_surfaces_by_entity={},
+        entities_by_name={"Invoice": invoice, "InvoiceDocument": document},
+    )
+    assert [action["entity"] for action in actions] == ["Invoice"]
+
+    document_desk = ir.WorkspaceSpec(
+        name="document_desk",
+        regions=[ir.WorkspaceRegion(name="documents", source="InvoiceDocument")],
+    )
+    standalone_actions = _build_workspace_primary_action_candidates(
+        document_desk,
+        app_prefix="/app",
+        create_surfaces_by_entity=create,
+        list_surfaces_by_entity={},
+        entities_by_name={"Invoice": invoice, "InvoiceDocument": document},
+    )
+    assert [action["entity"] for action in standalone_actions] == ["InvoiceDocument"]
+
+
+def test_tenant_reference_does_not_make_a_root_record_contextual() -> None:
+    invoice = ir.EntitySpec(
+        name="Invoice",
+        title="Invoice",
+        fields=[
+            ir.FieldSpec(
+                name="tenant_id",
+                type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Tenant"),
+                modifiers=[FieldModifier.REQUIRED],
+            )
+        ],
+    )
+    desk = ir.WorkspaceSpec(
+        name="billing",
+        regions=[
+            ir.WorkspaceRegion(name="tenant", source="Tenant"),
+            ir.WorkspaceRegion(name="invoices", source="Invoice"),
+        ],
+    )
+    actions = _build_workspace_primary_action_candidates(
+        desk,
+        app_prefix="/app",
+        create_surfaces_by_entity={
+            "Invoice": ir.SurfaceSpec(
+                name="invoice_create", mode=ir.SurfaceMode.CREATE, entity_ref="Invoice"
+            )
+        },
+        list_surfaces_by_entity={},
+        entities_by_name={"Invoice": invoice},
+    )
+    assert [action["entity"] for action in actions] == ["Invoice"]

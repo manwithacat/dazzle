@@ -78,7 +78,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   in-flight, rejected, disputed, approved-unsettled — plus pipeline metrics
   (lines stay on the invoice hub; no status bar-chart or twin timeline).
 - **Approval Desk** — approver home: inspect then stamp **released for
-  settlement**, not paid. A **three-way match evidence** pack
+  settlement**, not paid. The awaiting-approval queue is the first work
+  region after the load summary, so the invoice to inspect is visible on
+  arrival. A **three-way match evidence** pack
   (PO + goods receipt + packing slip — cycle 2002 peer-pack; not single-kind
   re-stack), a **goods receipt** three-way match watch
   (cycle 1967 peer-pack), a **tax certificate watch** of reverse-charge
@@ -88,7 +90,9 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   dispute packet) as document composition, live AP discussion as Message/Bubble
   conversation chrome, approval board, and supplier context grid (no decision-timeline dump).
 - **Pay Desk** — finance home (failed rail does not move the invoice; retry is
-  the same pad): metrics, a **draft packet
+  the same pad): past-due and then on-time approved invoice queues follow the
+  metrics, ahead of intake and document context. They open the invoice for
+  settlement review rather than exposing status shortcuts. A **draft packet
   release gate** of unpublished remittance/credit packets (cycle 1957 peer-pack —
   publish before the settle batch), a **compliance draft gate** of vendor
   onboarding packets still draft (W-9 / COI / tax / lien / ACH — cycle 2000 peer-pack;
@@ -244,4 +248,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:83b0eb90031dc3530cad0fd0b58b7b74cb3da920603bb2f3d8d27f1e25dbf2d6 -->
+<!-- dazzle-spec-brief: sha256:82e4fe7c7152b9d7c2848a9ae813d5e427d661af4c7875cd489f5f839a4c7363 -->

@@ -12,6 +12,7 @@ class _FakePageContext:
     def __init__(self, page_title: str = "Tasks", app_name: str = "Demo App") -> None:
         self.page_title = page_title
         self.app_name = app_name
+        self.nav_model = None
 
 
 # ───────────────── build_page ─────────────────────────────────────
@@ -117,8 +118,6 @@ def test_dispatch_render_page_threads_content_measure_to_main() -> None:
         def __init__(self, measure: str | None) -> None:
             super().__init__()
             self.content_measure = measure
-            self.nav_items = ()
-            self.nav_groups = ()
             self.view_name = "task_list"
             self.surface_name = ""
             self.workspace_name = ""
@@ -152,8 +151,6 @@ def test_dispatch_workspace_infers_app_measure_when_unset() -> None:
         def __init__(self) -> None:
             super().__init__()
             self.content_measure = None  # unset — must infer from workspace_name
-            self.nav_items = ()
-            self.nav_groups = ()
             self.view_name = ""
             self.surface_name = ""
             self.workspace_name = "ticket_queue"

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -17,9 +16,7 @@ from dazzle.http.runtime.next_record import (
     stamp_queue_after_next,
     workspace_from_region_endpoint,
 )
-
-ROOT = Path(__file__).resolve().parents[2]
-SURFACES = ROOT / "examples/invoice_ops/dsl/surfaces.dsl"
+from tests.unit.dsl_source_lookup import declaration_block
 
 _SRC = """module ops
 app t "T"
@@ -105,12 +102,11 @@ def test_workspace_from_region_endpoint() -> None:
 
 
 def test_invoice_ops_dogfoods_after_next() -> None:
-    text = SURFACES.read_text()
-    desk = text[text.index('workspace approval_desk "Approval Desk":') :]
+    desk = declaration_block("invoice_ops", "workspace", "approval_desk")
     awaiting = desk.split("\n  awaiting_approval:", 1)[1].split("\n  live_conversation:", 1)[0]
     assert "after: next" in awaiting
     assert "transitions: none" in awaiting
-    pay = text[text.index('workspace pay_desk "Pay Desk":') :]
+    pay = declaration_block("invoice_ops", "workspace", "pay_desk")
     assert "after: next" in pay.split("\n  ready_to_pay:", 1)[1].split("\n  past_due:", 1)[0]
     assert "after: next" in pay.split("\n  past_due:", 1)[1].split("\n  disputed_queue:", 1)[0]
 

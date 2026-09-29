@@ -63,13 +63,9 @@ from .state import (
     set_project_root,
 )
 from .tool_handlers import (
-    get_active_project_info,
     get_entities,
     get_surfaces,
     list_modules,
-    list_projects,
-    select_project,
-    validate_all_projects,
 )
 from .tools_consolidated import get_all_consolidated_tools
 
@@ -124,6 +120,13 @@ async def _execute_tool(
 
     # Dev mode `project` tool (consolidated in #1074)
     if name == "project":
+        from .handlers.project import (
+            get_active_project_info,
+            list_projects,
+            select_project,
+            validate_all_projects,
+        )
+
         op = (arguments or {}).get("operation", "")
         if op == "list":
             return list_projects()

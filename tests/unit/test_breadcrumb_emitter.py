@@ -7,11 +7,8 @@ Shell trail: ``current_route`` + ``page_title`` → ``Breadcrumb`` /
 from __future__ import annotations
 
 from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
-from dazzle.render.breadcrumbs import (
-    Crumb,
-    build_shell_breadcrumb,
-    crumbs_to_breadcrumb,
-)
+from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb, crumbs_to_breadcrumb
+from dazzle.render.breadcrumbs import Crumb
 from dazzle.render.context import PageContext
 from dazzle.render.dispatch import build_app_chrome_page
 from dazzle.render.fragment import Breadcrumb, BreadcrumbItem, FragmentRenderer

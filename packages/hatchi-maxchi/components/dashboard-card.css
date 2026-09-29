@@ -234,6 +234,12 @@
   min-height: 140px;
 }
 
+/* Queue rows provide their own vertical padding; the generic card body's
+ * top padding otherwise creates an empty band below the workspace title. */
+.dz-card-body[data-display="queue"] {
+  padding-block-start: var(--space-sm);
+}
+
 .dz-card-body[data-display="bar_chart"],
 .dz-card-body[data-display="chart"],
 .dz-card-body[data-display="line_chart"],

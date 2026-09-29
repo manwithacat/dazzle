@@ -111,7 +111,7 @@ def _sanitize_media_alt(alt: str) -> str:
     return a
 
 
-def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
+def _render_media_thumb_html(value: Any, *, alt: str = "", card: bool = False) -> str:
     """Post-5.8 media depth — compact image thumb for logo/preview URL cells.
 
     Mounts HM dual-lock ``.dz-aspect-ratio`` (1/1) so field/media compose
@@ -125,10 +125,14 @@ def _render_media_thumb_html(value: Any, *, alt: str = "") -> str:
         return _html_mod.escape(raw, quote=False)
     src = _html_mod.escape(url, quote=True)
     alt_esc = _html_mod.escape(_sanitize_media_alt(alt), quote=True)
-    # Square media frame: width 3rem; child fills via .dz-aspect-ratio > * CSS.
+    # Queue/list cells use a compact square; creative grid previews use a
+    # fluid 16:9 frame so the media can carry the card's visual hierarchy.
+    ratio = "16/9" if card else "1/1"
+    size_attr = ' data-dz-media-size="card"' if card else ""
+    width_style = "" if card else ' style="width: 3rem;"'
     return (
-        f'<div class="dz-aspect-ratio" data-dz-ratio="1/1" data-dz-media-frame '
-        f'style="width: 3rem;">'
+        f'<div class="dz-aspect-ratio" data-dz-ratio="{ratio}" data-dz-media-frame'
+        f"{size_attr}{width_style}>"
         f'<img class="dz-media-thumb" data-dz-media-thumb src="{src}" '
         f'alt="{alt_esc}" loading="lazy" decoding="async" />'
         f"</div>"

@@ -26,6 +26,7 @@ from dazzle.page.open_via import (
     resolve_list_detail_url_template,
     resolve_list_same_entity_detail_template,
 )
+from dazzle.page.route_owners import surface_route, surface_wins
 from dazzle.render.breadcrumbs import entity_path_labels_from_spec
 from dazzle.render.channel_cell import email_field_name, phone_field_name
 from dazzle.render.context import (
@@ -40,7 +41,6 @@ from dazzle.render.context import (
     FieldSourceContext,
     FormContext,
     FormSectionContext,
-    NavItemContext,
     PageContext,
     PdfViewerContext,
     RelatedGroupContext,
@@ -642,7 +642,15 @@ def _build_form_fields(
     fields: list[FieldContext] = []
 
     fields_to_process: list[
-        tuple[str, str | None, ir.FieldSpec | None, dict[str, Any], str, dict[str, Any] | None]
+        tuple[
+            str,
+            str | None,
+            ir.FieldSpec | None,
+            dict[str, Any],
+            str,
+            dict[str, Any] | None,
+            ir.FieldFormatSpec | None,
+        ]
     ] = []
 
     if surface.sections:
@@ -657,12 +665,20 @@ def _build_form_fields(
                 _el_vis = getattr(element, "visible", None)
                 vis = _el_vis.model_dump() if _el_vis else section_vis
                 fields_to_process.append(
-                    (element.field_name, element.label, field_spec, element.options, when_str, vis)
+                    (
+                        element.field_name,
+                        element.label,
+                        field_spec,
+                        element.options,
+                        when_str,
+                        vis,
+                        element.format,
+                    )
                 )
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
-                fields_to_process.append((field.name, None, field, {}, "", None))
+                fields_to_process.append((field.name, None, field, {}, "", None, None))
 
     for (
         field_name,
@@ -671,6 +687,7 @@ def _build_form_fields(
         element_options,
         when_expr_str,
         vis_cond,
+        element_format,
     ) in fields_to_process:
         # Money fields: single widget with major-unit display + hidden minor-unit value
         if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
@@ -725,6 +742,13 @@ def _build_form_fields(
             ref_api = f"/{to_api_plural(ref_entity_name)}"
 
         extra: dict[str, Any] = {}
+        # VIEW details reuse FieldContext, so keep the surface's explicit
+        # format separate from the inferred field kind. In particular a
+        # decimal amount is stored in major units; `format: currency:GBP`
+        # must not take the money/minor-units display path.
+        if element_format is not None:
+            extra["format_kind"] = element_format.kind
+            extra["format_arg"] = element_format.arg
         if form_type == "file" and field_spec and field_spec.type:
             accept_override = element_options.get("accept")
             extra["accept"] = accept_override if accept_override else _file_accept_attr(field_spec)
@@ -1727,51 +1751,6 @@ def compile_appspec_to_templates(
     contexts: dict[str, PageContext] = {}
     domain = appspec.domain
 
-    # Build nav items from workspaces — both a flat list (all workspaces)
-    # and per-persona variants using workspace access declarations.
-    nav_items: list[NavItemContext] = []
-    nav_by_persona: dict[str, list[NavItemContext]] = {}
-    # #1127: routes that are anon-safe (workspace declared ``access: None``).
-    # Used at runtime to swap the sidebar for unauthenticated visitors so
-    # ``access: persona(...)`` workspaces don't leak into the nav.
-    _anon_safe_routes: set[str] = set()
-    _anon_safe_ws_names: set[str] = set()
-    # Track which personas each workspace allows (for entity nav below)
-    _ws_personas: dict[str, list[str]] = {}
-    # Delegate workspace-access resolution to the shared helper so the sidebar
-    # nav and the server-side access enforcement agree on who sees what.
-    # Before manwithacat/dazzle#775 was fixed, this block had its own divergent rule and
-    # ghost nav links appeared in 4 example apps.
-    from dazzle.page.converters.workspace_converter import workspace_allowed_personas
-
-    _personas_list = list(getattr(appspec, "personas", []) or [])
-    _all_pids = [p.id for p in _personas_list if p.id]
-
-    for ws in appspec.workspaces:
-        route = f"{app_prefix}/workspaces/{ws.name}"
-        item = NavItemContext(
-            label=ws.title or ws.name.replace("_", " ").title(),
-            route=route,
-        )
-        nav_items.append(item)
-
-        allowed = workspace_allowed_personas(ws, _personas_list)
-        # None means "open to all authenticated" → add to every persona.
-        # Empty list means "no one" — leave out of every persona's nav.
-        # Non-empty list means "only these personas".
-        pids_for_this_ws = _all_pids if allowed is None else list(allowed)
-        _ws_personas[ws.name] = pids_for_this_ws
-        for pid in pids_for_this_ws:
-            nav_by_persona.setdefault(pid, []).append(item)
-        # #1127: anon-safe iff the workspace declared no persona gate
-        # (``allowed is None``). ``access: persona(...)`` workspaces are
-        # never anon-safe regardless of which personas they target.
-        if allowed is None:
-            _anon_safe_routes.add(route)
-            _anon_safe_ws_names.add(ws.name)
-
-    # Add entity surface links derived from workspace regions so that
-    # entity pages show the same nav items as workspace pages.
     _list_surfaces_by_entity: dict[str, Any] = {}
     # Track which entities have CREATE-mode surfaces — used to suppress
     # the "Create" button on list pages whose entity has no real
@@ -1786,103 +1765,6 @@ def compile_appspec_to_templates(
     for surface in appspec.surfaces:
         if surface.mode.value == "list" and surface.entity_ref:
             _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
-
-    _entity_nav_items: dict[str, Any] = {}  # entity name -> NavItemContext
-    for ws in appspec.workspaces:
-        # Skip auto-discovery for workspaces that declare nav_groups —
-        # the author has explicitly curated the entity nav and ungrouped
-        # region sources (e.g. ClassEnrolment, QuestionTopic) shouldn't
-        # leak in as flat nav items (#873). Mirror page_routes.py.
-        if getattr(ws, "nav_groups", None):
-            continue
-        ws_pids = _ws_personas.get(ws.name, [])
-        for region in getattr(ws, "regions", []) or []:
-            source = getattr(region, "source", None)
-            if not source:
-                continue
-            # Create nav item once per entity, reuse for additional personas
-            if source not in _entity_nav_items:
-                list_surface = _list_surfaces_by_entity.get(source)
-                if not list_surface:
-                    continue
-                entity_slug = app_paths.entity_slug(source)
-                entity_item = NavItemContext(
-                    label=list_surface.title or source.replace("_", " ").title(),
-                    route=app_paths.list_path(app_prefix, entity_slug),
-                )
-                _entity_nav_items[source] = entity_item
-                nav_items.append(entity_item)
-            # Always add to this workspace's personas
-            entity_item = _entity_nav_items[source]
-            for pid in ws_pids:
-                persona_nav = nav_by_persona.setdefault(pid, [])
-                if entity_item not in persona_nav:
-                    persona_nav.append(entity_item)
-            # #1127: entity nav inherits the workspace's anon visibility.
-            # Once any anon-safe workspace surfaces this entity, the link
-            # is anon-safe — gated workspaces can't retract it.
-            if ws.name in _anon_safe_ws_names:
-                _anon_safe_routes.add(entity_item.route)
-
-    # v0.61.5 (#863): build nav_groups from each workspace's nav_group
-    # declarations — mirrors the logic in page_routes.py line 1676. Entity-
-    # list pages (/app/<entity>) then inherit the same collapsible groups
-    # the workspace pages show, so the sidebar stays continuous as users
-    # navigate between the two page types.
-    nav_groups_all: list[dict[str, Any]] = []
-    nav_groups_by_persona: dict[str, list[dict[str, Any]]] = {}
-    # #1127: groups declared in anon-safe workspaces inherit anon visibility.
-    nav_groups_anon: list[dict[str, Any]] = []
-    _seen_group_labels: set[str] = set()
-    _seen_anon_group_labels: set[str] = set()
-    for ws in appspec.workspaces:
-        ws_pids = _ws_personas.get(ws.name, [])
-        for ng in getattr(ws, "nav_groups", None) or []:
-            # Gate children on list-surface existence (#1005). Without this
-            # the auto-injected platform-admin Management group emits
-            # `/app/user` and `/app/tenant` even though `_ADMIN_SURFACE_DEFS`
-            # only mounts list surfaces for 7 of the 10 platform entities —
-            # those routes 404. Mirrors the gate on the auto-discovery path
-            # 30 lines above. User-authored DSL nav_groups that point at
-            # entities without surfaces are also silently dropped, which
-            # is the right behaviour: a nav link to nowhere is a bug.
-            group_children: list[dict[str, Any]] = []
-            for item in ng.items:
-                if item.entity not in _list_surfaces_by_entity:
-                    continue
-                surface = _list_surfaces_by_entity[item.entity]
-                group_children.append(
-                    {
-                        "label": (surface.title or item.entity.replace("_", " ").title()),
-                        "route": app_paths.list_path(
-                            app_prefix, app_paths.entity_slug(item.entity)
-                        ),
-                        "icon": item.icon,
-                    }
-                )
-            if not group_children:
-                continue
-            group: dict[str, Any] = {
-                "label": ng.label,
-                "icon": ng.icon,
-                "collapsed": ng.collapsed,
-                "children": group_children,
-            }
-            # Dedup across workspaces by label: multiple workspaces declaring
-            # the same group ("Admin", say) should render once in the global
-            # nav (entity-list pages don't know which workspace the user came
-            # from — they show the union scoped by the persona-allow map).
-            if ng.label not in _seen_group_labels:
-                nav_groups_all.append(group)
-                _seen_group_labels.add(ng.label)
-            for pid in ws_pids:
-                persona_groups = nav_groups_by_persona.setdefault(pid, [])
-                if not any(g["label"] == ng.label for g in persona_groups):
-                    persona_groups.append(group)
-            # #1127: anon visitors only see groups from open workspaces.
-            if ws.name in _anon_safe_ws_names and ng.label not in _seen_anon_group_labels:
-                nav_groups_anon.append(group)
-                _seen_anon_group_labels.add(ng.label)
 
     # Build reverse-ref map: for each entity, find other entities that have
     # ref fields pointing to it.  Used to populate related-entity tabs on
@@ -1950,29 +1832,15 @@ def compile_appspec_to_templates(
             surfaces_by_name=_surfaces_by_name,
         )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
-        ctx.nav_items = nav_items
-        ctx.nav_by_persona = nav_by_persona
         # #1127: anon-safe variants — items from workspaces with no persona gate.
-        ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
-        ctx.nav_groups_anon = nav_groups_anon
         # v0.61.5 (#863): entity-list pages inherit workspace nav groups.
-        ctx.nav_groups = nav_groups_all
-        ctx.nav_groups_by_persona = nav_groups_by_persona
         ctx.view_name = surface.name
         ctx.entity_ref = surface.entity_ref or ""
         ctx.entity_path_labels = entity_path_labels_from_spec(appspec)
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")
-        entity_slug = app_paths.entity_slug(entity_name)
-
-        route_map = {
-            SurfaceMode.LIST: app_paths.list_path(app_prefix, entity_slug),
-            SurfaceMode.CREATE: app_paths.create_path(app_prefix, entity_slug),
-            SurfaceMode.EDIT: app_paths.edit_path(app_prefix, entity_slug),
-            SurfaceMode.VIEW: app_paths.detail_path(app_prefix, entity_slug),
-        }
-        route = route_map.get(surface.mode, f"/{surface.name}")
+        route = surface_route(surface, app_prefix, entity_name)
 
         if route in contexts:
             # Route collision: two surfaces produce the same default URL.
@@ -1983,10 +1851,8 @@ def compile_appspec_to_templates(
             # so a no-render surface declared first silently beat a later
             # `render:` surface — the custom detail viewer never dispatched.
             prev = _route_surfaces[route]
-            prev_score = (bool(prev.render), bool(prev.sections))
-            new_score = (bool(surface.render), bool(surface.sections))
-            winner, loser = (surface, prev) if new_score > prev_score else (prev, surface)
-            if new_score > prev_score:
+            winner, loser = (surface, prev) if surface_wins(surface, prev) else (prev, surface)
+            if surface_wins(surface, prev):
                 contexts[route] = ctx
                 _route_surfaces[route] = surface
             # Most default-route collisions are benign — the dropped surface
@@ -2028,13 +1894,7 @@ def compile_appspec_to_templates(
                 entities_with_create_surface=_entities_with_create_surface,
             )
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
-            root_ctx.nav_items = nav_items
-            root_ctx.nav_by_persona = nav_by_persona
             # #1127: anon-safe variants for the simple-app "/" fallback too.
-            root_ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
-            root_ctx.nav_groups_anon = nav_groups_anon
-            root_ctx.nav_groups = nav_groups_all
-            root_ctx.nav_groups_by_persona = nav_groups_by_persona
             root_ctx.view_name = first_list.name
             root_ctx.entity_ref = first_list.entity_ref or ""
             root_ctx.current_route = "/"
@@ -2077,12 +1937,6 @@ def compile_appspec_to_templates(
                 entities_with_create_surface=_entities_with_create_surface,
             )
             _ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
-            _ctx.nav_items = nav_items
-            _ctx.nav_by_persona = nav_by_persona
-            _ctx.nav_items_anon = [i for i in nav_items if i.route in _anon_safe_routes]
-            _ctx.nav_groups_anon = nav_groups_anon
-            _ctx.nav_groups = nav_groups_all
-            _ctx.nav_groups_by_persona = nav_groups_by_persona
             _ctx.view_name = _synthetic.name
             _ctx.entity_ref = _entity.name
             contexts[_detail_route] = _ctx

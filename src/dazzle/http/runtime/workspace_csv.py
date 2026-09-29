@@ -39,7 +39,7 @@ from dazzle.render.breadcrumbs import clerk_entity_download_stem
 from dazzle.render.channel_cell import clerk_email_display, clerk_phone_display
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.file_cell import clerk_file_cell_display
-from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell, record_currency_code
 from dazzle.render.fragment.renderer._render_interactive import (
     leftover_honest_catalog_option_values,
 )
@@ -137,7 +137,15 @@ def _csv_cell(item: dict[str, Any], column: dict[str, Any]) -> str:
         return ""
     if isinstance(raw, dict):
         return _resolve_display_name(raw)
-    return _csv_typed_cell(raw, column)
+    display_column = column
+    if column.get("format_kind") == "currency" and not column.get("format_arg"):
+        display_column = {
+            **column,
+            "currency_code": record_currency_code(
+                item, key, str(column.get("currency_code") or "")
+            ),
+        }
+    return _csv_typed_cell(raw, display_column)
 
 
 def _render_csv_response(

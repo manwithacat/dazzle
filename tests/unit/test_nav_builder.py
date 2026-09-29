@@ -9,8 +9,10 @@ from dazzle.page.converters.nav_builder import (
     build_all_persona_navs,
     build_anon_nav,
     build_persona_nav,
+    build_role_nav,
+    build_unrestricted_nav,
 )
-from dazzle.rbac.matrix import PolicyDecision
+from dazzle.rbac.matrix import PolicyDecision, generate_access_matrix
 
 
 def test_nav_model_is_frozen_and_holds_groups():
@@ -115,6 +117,36 @@ def test_access_filter_drops_denied_entity(tmp_path: Path):
     entities = {link.entity for group in model.groups for link in group.links}
     assert "Assignment" in entities
     assert "Secret" not in entities
+
+
+def test_unmatched_admin_keeps_curated_platform_group(tmp_path: Path) -> None:
+    dsl = (
+        _CURATED_DSL
+        + """
+workspace _platform_operations "Platform Operations":
+  access: persona(admin, super_admin)
+  nav_group "Management":
+    Assignment
+  assignments:
+    source: Assignment
+"""
+    )
+    spec = _appspec(dsl, tmp_path)
+    admin = build_role_nav(spec, "admin", _StubMatrix())
+    unknown = build_role_nav(spec, "unknown", _StubMatrix())
+    unrestricted = build_unrestricted_nav(spec)
+    assert any(group.label == "Management" for group in admin.groups)
+    assert all(group.label != "Management" for group in unknown.groups)
+    assert any(group.label == "Management" for group in unrestricted.groups)
+
+
+def test_generated_platform_admin_groups_reachable(tmp_path: Path) -> None:
+    spec = _appspec(_CURATED_DSL, tmp_path)
+    admin = build_role_nav(spec, "admin", generate_access_matrix(spec))
+    routes = {link.route for group in admin.groups for link in group.links}
+    assert "/workspaces/_platform_admin" in routes
+    assert "/list/SystemHealth" in routes
+    assert "/list/DeployHistory" in routes
 
 
 # ---------------------------------------------------------------------------

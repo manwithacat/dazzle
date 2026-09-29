@@ -3,6 +3,7 @@
 import json
 import logging
 import sys
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -41,12 +42,43 @@ def get_claude_config_path() -> Path | None:
     return default
 
 
-def register_mcp_server(force: bool = False) -> bool:
+def _valid_registration_root(project_root: Path | None) -> bool:
+    if project_root is None:
+        return True
+    is_project = (project_root / "dazzle.toml").is_file()
+    is_framework = (project_root / "src" / "dazzle").is_dir() and (
+        project_root / "examples"
+    ).is_dir()
+    if is_project or is_framework:
+        return True
+    logger.error("Not a Dazzle project or framework checkout: %s", project_root)
+    return False
+
+
+def _registration_server_name(project_root: Path | None, name: str | None) -> str | None:
+    if name is not None:
+        if not name or not all(c.isalnum() or c in "-_" for c in name):
+            logger.error("Invalid MCP server name: %r", name)
+            return None
+        return name
+    if project_root is None:
+        return "dazzle"
+    suffix = sha256(str(project_root).encode()).hexdigest()[:8]
+    return f"dazzle-{project_root.name}-{suffix}"
+
+
+def register_mcp_server(
+    force: bool = False,
+    working_dir: Path | None = None,
+    name: str | None = None,
+) -> bool:
     """
     Register DAZZLE MCP server in Claude Code config.
 
     Args:
         force: If True, overwrite existing DAZZLE server config
+        working_dir: Optional project root. Registers a distinct, pinned server.
+        name: Override the generated server name (for replacing an existing entry).
 
     Returns:
         True if registration successful, False otherwise
@@ -55,16 +87,25 @@ def register_mcp_server(force: bool = False) -> bool:
     if not config_path:
         return False
 
+    project_root = working_dir.resolve() if working_dir is not None else None
+    if not _valid_registration_root(project_root):
+        return False
+
     # Detect Python executable
     python_path = sys.executable
 
     # New MCP server config
-    dazzle_config = {
+    dazzle_config: dict[str, Any] = {
         "command": python_path,
         "args": ["-m", "dazzle.mcp"],
         "env": {},
         "autoStart": True,
     }
+    if project_root is not None:
+        dazzle_config["args"].extend(["--working-dir", str(project_root)])
+    server_name = _registration_server_name(project_root, name)
+    if server_name is None:
+        return False
 
     # Load existing config
     if config_path.exists():
@@ -74,15 +115,15 @@ def register_mcp_server(force: bool = False) -> bool:
             existing = {"mcpServers": {}}
 
         # Check if already registered
-        if "dazzle" in existing.get("mcpServers", {}) and not force:
-            print(f"DAZZLE MCP server already registered at {config_path}")
+        if server_name in existing.get("mcpServers", {}) and not force:
+            print(f"DAZZLE MCP server {server_name} already registered at {config_path}")
             print("Use --force to overwrite")
             return True
     else:
         existing = {"mcpServers": {}}
 
     # Add/update DAZZLE server
-    existing.setdefault("mcpServers", {})["dazzle"] = dazzle_config
+    existing.setdefault("mcpServers", {})[server_name] = dazzle_config
 
     # Write back
     try:
@@ -93,14 +134,20 @@ def register_mcp_server(force: bool = False) -> bool:
         return False
 
 
-def check_mcp_server() -> dict[str, Any]:
+def check_mcp_server(working_dir: Path | None = None, name: str | None = None) -> dict[str, Any]:
     """
     Check MCP server registration and availability.
+
+    Args:
+        working_dir: Project root whose scoped registration should be resolved.
+            When omitted, only the global ``dazzle`` entry is recognised.
+        name: Explicit registration name to look for, overriding ``working_dir``.
 
     Returns:
         Dictionary with status information:
         - status: "not_registered" | "registered" | "error"
         - registered: bool
+        - server_name: str | None (matched MCP entry name)
         - config_path: str | None
         - server_command: str | None
         - tools: list[str] (if available)
@@ -111,6 +158,7 @@ def check_mcp_server() -> dict[str, Any]:
         "status": "not_registered",
         "registered": False,
         "config_path": str(config_path) if config_path else None,
+        "server_name": None,
         "server_command": None,
         "tools": [],
     }
@@ -125,13 +173,28 @@ def check_mcp_server() -> dict[str, Any]:
         status["error"] = "Invalid JSON in config file"
         return status
 
-    # Check if DAZZLE server is registered
+    # Check if DAZZLE server is registered. A project-scoped registration is
+    # stored under ``dazzle-<project>-<hash>``, so resolve the scoped entry for
+    # the requested working directory first and retain global-name support.
     mcp_servers = config.get("mcpServers", {})
-    if "dazzle" in mcp_servers:
+    candidates: list[str] = []
+    if name is not None:
+        candidates.append(name)
+    elif working_dir is not None:
+        scoped = _registration_server_name(working_dir.resolve(), None)
+        if scoped is not None:
+            candidates.append(scoped)
+        candidates.append("dazzle")
+    else:
+        candidates.append("dazzle")
+
+    matched = next((candidate for candidate in candidates if candidate in mcp_servers), None)
+    if matched is not None:
         status["registered"] = True
         status["status"] = "registered"
+        status["server_name"] = matched
 
-        server_config = mcp_servers["dazzle"]
+        server_config = mcp_servers[matched]
         command = server_config.get("command", "")
         args = server_config.get("args", [])
         status["server_command"] = f"{command} {' '.join(args)}"

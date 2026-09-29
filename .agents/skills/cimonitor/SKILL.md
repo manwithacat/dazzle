@@ -5,7 +5,7 @@ description: Monitor CI pipeline status, diagnose failures, and drive the badge 
 
 Monitor CI/CD pipeline status. Checks both the current branch and the CI badge workflow on main.
 
-**Also wired into `/improve`:** every improve cycle runs Step 0c (see `.claude/commands/improve.md` and `improve/strategies/cimonitor.md`) — a cheap snapshot of the `main` badge. When the latest completed `ci.yml` run is red, that improve cycle becomes CI repair (this skill's body) and does not pick a product lane. When green / in progress / `gh` unavailable, improve logs one line and continues.
+**Also wired into `/improve`:** every improve cycle runs Step 0c (see `.agents/skills/improve/SKILL.md` and `improve/strategies/cimonitor.md`) — a cheap snapshot of the `main` badge. When the latest completed `ci.yml` run is red, that improve cycle becomes CI repair (this skill's body) and does not pick a product lane. When green / in progress / `gh` unavailable, improve logs one line and continues.
 
 **Local habits (pair with repair, do not replace the badge):**
 

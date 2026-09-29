@@ -131,16 +131,6 @@ class Dazzle < Formula
     bin.install_symlink libexec/"bin/dazzle"
   end
 
-  def post_install
-    # Register MCP server with Claude Code.
-    # Command shape is `dazzle mcp setup` (subcommand under `mcp`), not
-    # the old hyphenated `dazzle mcp-setup` which no longer exists.
-    system libexec/"bin/python", "-m", "dazzle.cli", "mcp", "setup"
-  rescue StandardError => e
-    opoo "Could not register MCP server: #{e.message}"
-    opoo "You can manually register later with: dazzle mcp setup"
-  end
-
   def caveats
     <<~EOS
       DAZZLE has been installed!
@@ -158,9 +148,11 @@ class Dazzle < Formula
         dazzle build      Build for production
         dazzle doctor     Check environment health
 
-      MCP Server (Claude Code):
-        The DAZZLE MCP server has been automatically registered.
-        Check status: dazzle mcp check
+      Agent tooling:
+        Repository instructions: AGENTS.md
+        Language server: dazzle lsp run
+        MCP server: dazzle mcp run --working-dir /path/to/project
+        Claude Code registration (optional): dazzle mcp setup --working-dir /path/to/project
 
       Documentation:
         https://github.com/manwithacat/dazzle

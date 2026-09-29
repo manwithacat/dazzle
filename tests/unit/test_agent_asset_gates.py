@@ -80,6 +80,23 @@ def test_agents_skills_have_shims_and_index() -> None:
         assert f"**{name}**" in agents_text, f"AGENTS.md Workflows index is missing `{name}`"
 
 
+def test_operator_playbooks_have_one_open_home() -> None:
+    """Host command discovery must point at a portable source, never duplicate it."""
+    operators = ("improve", "issues", "fuzz", "xproject")
+    for name in operators:
+        canonical = REPO_ROOT / ".agents" / "skills" / name / "SKILL.md"
+        shim = REPO_ROOT / ".claude" / "commands" / f"{name}.md"
+        assert canonical.read_text().startswith(f"---\nname: {name}\n")
+        shim_text = shim.read_text()
+        assert f".agents/skills/{name}/SKILL.md" in shim_text
+        assert len(shim_text.splitlines()) <= 5
+
+    improve = REPO_ROOT / ".agents" / "skills" / "improve"
+    assert (improve / "capability-map.md").is_file()
+    assert list((improve / "lanes").glob("*.md"))
+    assert list((improve / "strategies").glob("*.md"))
+
+
 _VENDOR_RE = re.compile(r"\b(Claude|Codex|Copilot|Cursor|Grok|Anthropic|OpenAI|xAI)\b")
 # Irreducible vendor mentions outside the Capability Mapping zone. Every entry
 # needs a justification comment. Expected to stay empty.
