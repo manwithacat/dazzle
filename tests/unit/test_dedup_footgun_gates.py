@@ -1,10 +1,11 @@
-"""Gates that keep three deduplicated footgun classes from creeping back (smells round 2026-06-19).
+"""Gates that keep deduplicated footgun classes from creeping back (smells round 2026-06-19).
 
 Each pattern was retired into a shared helper; these gates forbid the inline form from
 reappearing so the next copy-paste fails CI with a pointer to the helper. The helper-
 definition files are excluded (they legitimately contain the pattern body).
 """
 
+import ast
 import re
 from pathlib import Path
 
@@ -139,4 +140,58 @@ def test_region_builders_use_typed_context() -> None:
     assert not hits, (
         "Region builder(s) still take `ctx: dict[str, Any]` — use `ctx: RegionContext` "
         "(dazzle.render.fragment.region._context):\n  " + "\n  ".join(hits)
+    )
+
+
+# Inlined minor-unit divisors. Deliberately excludes 1000: ISO-4217 scale 3
+# would inline as 1000, but so does a K/M/B magnitude abbreviation
+# (pitch/_fmt_currency), so 1000 cannot be distinguished by shape. That case is
+# covered by the authoritative output check in test_money_scale_parity.py — this
+# gate is best-effort prevention for the unambiguous literals.
+_MINOR_UNIT_DIVISORS = {2, 10, 100}
+_CURRENCY_NAME = re.compile(r"(currency|money|minor|amount)", re.IGNORECASE)
+
+
+def _divides_minor_units_by_literal(path: Path) -> list[int]:
+    """Line numbers where a currency-ish function divides by a power-of-ten literal."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    found: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not _CURRENCY_NAME.search(node.name):
+            continue
+        for inner in ast.walk(node):
+            if (
+                isinstance(inner, ast.BinOp)
+                and isinstance(inner.op, ast.Div)
+                and isinstance(inner.right, ast.Constant)
+                and isinstance(inner.right.value, int)
+                and inner.right.value in _MINOR_UNIT_DIVISORS
+            ):
+                found.append(inner.lineno)
+    return found
+
+
+def test_no_inline_currency_minor_unit_scale() -> None:
+    """`Decimal(x) / 100` in a currency helper → `get_currency_scale(code)`.
+
+    ``format_cell._currency`` divided minor units by a hardcoded 100 and formatted
+    with a fixed ``,.2f``, so a JPY amount rendered 100x too small while
+    ``render/filters._currency_filter`` (which honours the table) rendered it
+    correctly — the same record disagreed between surfaces and CSV export.
+
+    The canonical scale table is ``dazzle.core.ir.money.CURRENCY_SCALES``, read
+    via ``get_currency_scale(code)``. This gate covers the unambiguous literals;
+    ``test_money_scale_parity.py`` is the authoritative check because it asserts
+    the rendered magnitude regardless of how the divisor was written.
+    """
+    hits: list[str] = []
+    for path in _src_files({"money.py", "money_migration.py"}):
+        for lineno in _divides_minor_units_by_literal(path):
+            hits.append(f"{path.relative_to(_SRC.parent.parent)}:{lineno}")
+    assert not hits, (
+        "Inline minor-unit currency divisor found — divide by "
+        "`10 ** get_currency_scale(code)` (dazzle.core.ir.money) and take the format "
+        "precision from the same table, or use `_currency_filter`:\n  " + "\n  ".join(hits)
     )
