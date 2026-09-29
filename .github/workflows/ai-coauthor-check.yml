@@ -4,9 +4,18 @@ on:
   pull_request:
     types: [opened, edited, synchronize]
 
-# Prevent concurrent runs on same PR
+# Prevent concurrent runs on the same head SHA.
+#
+# The group MUST include the head SHA. Keyed on PR number alone, a run for a new
+# head cancels the run for the previous head; because this workflow has a single
+# job, a run cancelled while still queued never creates a check-run at all, so
+# the required `Verify AI Co-Authorship` context is silently absent for that SHA
+# and branch protection blocks the PR permanently with no way to satisfy it.
+# That is what stranded #1693. Including the SHA keeps the intended dedupe
+# (repeat events for one head still collapse) while guaranteeing every head
+# reports.
 concurrency:
-  group: ai-coauthor-${{ github.event.pull_request.number }}
+  group: ai-coauthor-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 # Required permissions for posting comments and reading PR data
