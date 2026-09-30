@@ -140,3 +140,79 @@ def test_resolvable_condition_still_filters() -> None:
         "a resolvable condition must not degrade to an unscoped read; {} means "
         "'no row restriction' to every caller"
     )
+
+
+# --- #1712: an unrecognised condition shape is not "no restriction" --------
+
+
+def test_unrecognised_condition_shape_denies() -> None:
+    """The regression: a condition whose shape no branch recognises.
+
+    `_extract_condition_filters` mutates a dict and historically returned None,
+    so "shape not understood" and "recognised but legitimately emits nothing"
+    were indistinguishable. The resolver then returned that empty dict, which
+    every caller reads as `scope: all` — an unparseable scope rule silently
+    became unrestricted row access.
+    """
+    spec = _spec(_rule(condition=SimpleNamespace(kind="totally_unknown_shape")))
+    result = _resolve(spec)
+    assert result is None, (
+        f"unrecognised condition shape returned {result!r}; an empty filter dict "
+        "is read by callers as 'no row restriction'"
+    )
+
+
+def test_condition_with_no_recognised_attributes_denies() -> None:
+    """A bare namespace with no `kind` and no IR attributes is also unrecognised."""
+    spec = _spec(_rule(condition=SimpleNamespace()))
+    assert _resolve(spec) is None
+
+
+def test_logical_shape_is_still_recognised() -> None:
+    """Guard against over-correcting: `kind="logical"` is a recognised shape.
+
+    This is the branch whose `consumed` marker was briefly unreachable (dead
+    code after a `return`), which would have denied every logical scope rule.
+    An AND of two current_user comparisons must still produce filters.
+    """
+    leaf = SimpleNamespace(
+        kind="comparison", field="owner_id", value="current_user", comparison_op=None
+    )
+    logical = SimpleNamespace(
+        kind="logical",
+        logical_op="and",
+        logical_left=leaf,
+        logical_right=SimpleNamespace(
+            kind="comparison", field="tenant_id", value="current_user", comparison_op=None
+        ),
+    )
+    result = _resolve(_spec(_rule(condition=logical)))
+    assert result is not None, "a recognised logical shape must not be denied"
+    assert result != {}, "an AND of current_user comparisons must emit filters"
+
+
+def test_via_check_shape_is_still_recognised() -> None:
+    """`kind="via_check"` is likewise a recognised shape.
+
+    The other branch whose `consumed` marker was briefly unreachable. Uses a
+    real junction + bindings so the branch actually runs rather than falling
+    through to the IR path.
+    """
+    from unittest.mock import MagicMock
+
+    condition = MagicMock()
+    condition.kind = "via_check"
+    condition.via_junction_entity = "AgentAssignment"
+    condition.via_bindings = [
+        {"junction_field": "agent", "target": "current_user.contact", "operator": "="},
+        {"junction_field": "contact", "target": "id", "operator": "="},
+    ]
+    auth_context = MagicMock()
+    auth_context.user = MagicMock()
+    auth_context.user.contact = "user-contact-123"
+
+    result = _resolve(_spec(_rule(condition=condition)), auth_context=auth_context)
+    assert result is not None, "a recognised via_check shape must not be denied"
+    assert any(k.endswith("__in_subquery") for k in result), (
+        f"via_check should emit a subquery filter, got {result!r}"
+    )

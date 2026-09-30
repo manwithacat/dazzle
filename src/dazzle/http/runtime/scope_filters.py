@@ -343,7 +343,7 @@ def _extract_condition_filters(
     context_id: str | None = None,
     all_ref_targets: dict[str, dict[str, str]] | None = None,
     context_only: bool = False,
-) -> None:
+) -> bool:
     """Recursively extract SQL filters from a condition tree.
 
     Handles two condition formats:
@@ -376,8 +376,24 @@ def _extract_condition_filters(
     *without* re-mixing the row-level ``status`` predicate into the aggregate
     query (the #887 tenant-bounding contract). AND trees are still walked so a
     nested ``current_context`` comparison is found.
+
+    Returns:
+        bool — whether a recognised condition shape was interpreted. ``True``
+            with an unchanged ``filters`` is legitimate: a ``current_context``
+            condition with no active selection is a documented skip (#857), and
+            so is a via-check under ``context_only`` (#1305). ``False`` means
+            the shape was not recognised, so ``filters`` carries no information
+            and the caller must **not** treat an empty dict as "no row
+            restriction" — that reading turns an unparseable scope rule into
+            unrestricted access.
     """
     kind = getattr(condition, "kind", "")
+    # Whether a recognised condition shape was entered. The function mutates
+    # `filters` and historically returned None, so an unrecognised shape was
+    # indistinguishable from a recognised one that legitimately emits nothing
+    # (the `current_context` no-selection skip). Callers read an empty filter
+    # dict as "no row restriction", so that ambiguity was an implicit fail-open.
+    consumed = False
 
     # Helper: assign a filter, using subquery if field is a dotted FK path (#556)
     def _set_filter(fld: str, val: Any) -> None:
@@ -396,6 +412,7 @@ def _extract_condition_filters(
 
     # ---- AccessConditionSpec path (has explicit .kind) --------------------
     if kind == "comparison":
+        consumed = True
         field = getattr(condition, "field", None)
         value = getattr(condition, "value", None)
         op = getattr(condition, "comparison_op", None)
@@ -457,12 +474,13 @@ def _extract_condition_filters(
                 filters[f"{field}__lte"] = value
             elif op_val == "in":
                 filters[f"{field}__in"] = value
-        return
+        return consumed
 
     if kind == "logical":
+        consumed = True
         logical_op = getattr(condition, "logical_op", None)
         if logical_op is None:
-            return
+            return consumed
         logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
         if logical_op_val == "and":
             left = getattr(condition, "logical_left", None)
@@ -491,13 +509,14 @@ def _extract_condition_filters(
                     all_ref_targets,
                     context_only,
                 )
-        return
+        return consumed
 
     if kind == "via_check":
+        consumed = True
         # #1305: a junction (via) check is a scope/relationship predicate, not
         # the context-selector slice — skip it when isolating context filters.
         if context_only:
-            return
+            return consumed
         junction_entity = getattr(condition, "via_junction_entity", None)
         bindings = getattr(condition, "via_bindings", None)
         if junction_entity and bindings:
@@ -507,12 +526,13 @@ def _extract_condition_filters(
                 user_id=user_id,
                 auth_context=auth_context,
             )
-            filters[f"{entity_field}__in_subquery"] = (subquery_sql, subquery_params)
-        return
+        filters[f"{entity_field}__in_subquery"] = (subquery_sql, subquery_params)
+        return consumed
 
     # ---- IR ConditionExpr path (no .kind, uses .comparison/.operator) -----
     comp = getattr(condition, "comparison", None)
     if comp is not None:
+        consumed = True
         field = getattr(comp, "field", None)
         cond_value = getattr(comp, "value", None)
         op = getattr(comp, "operator", None)
@@ -586,11 +606,12 @@ def _extract_condition_filters(
                 filters[f"{field}__lte"] = raw_value
             elif op_val == "in":
                 filters[f"{field}__in"] = raw_value
-        return
+        return consumed
 
     # Compound ConditionExpr: .operator (AND/OR) with .left / .right
     logical_op = getattr(condition, "operator", None)
     if logical_op is not None:
+        consumed = True
         logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
         left = getattr(condition, "left", None)
         right = getattr(condition, "right", None)
@@ -620,7 +641,7 @@ def _extract_condition_filters(
                     all_ref_targets,
                     context_only,
                 )
-            return
+            return consumed
 
         if logical_op_val == "or" and not context_only:
             # #1630: same-field equality OR → field__in (status = a or status = b).
@@ -635,7 +656,7 @@ def _extract_condition_filters(
                         filters[f"{fld}__in"] = merged
                     else:
                         filters[f"{fld}__in"] = list(vals)
-                return
+                return consumed
             log = _logger if _logger is not None else logger
             log.warning(
                 "Workspace region filter uses OR that cannot be lowered to "
@@ -644,15 +665,17 @@ def _extract_condition_filters(
             )
             # Fail closed: empty result rather than silent full table
             filters["__or_unsupported__in_subquery"] = ("SELECT NULL WHERE FALSE", [])
-            return
+            return consumed
 
         # Other logical ops: no SQL push
-        return
+        return consumed
 
     # Via-check condition (IR path)
     # #1305: a junction (via) check is a scope/relationship predicate, not the
     # context-selector slice — skip it when isolating context filters.
     via_cond = getattr(condition, "via_condition", None)
+    if via_cond is not None:
+        consumed = True
     if via_cond is not None and not context_only:
         bindings_dicts = [
             {"junction_field": b.junction_field, "target": b.target, "operator": b.operator}
@@ -665,7 +688,11 @@ def _extract_condition_filters(
             auth_context=auth_context,
         )
         filters[f"{entity_field}__in_subquery"] = (subquery_sql, subquery_params)
-        return
+        return consumed
+
+    # Unrecognised shape: nothing was interpreted, so `filters` carries no
+    # information. Callers must not read an empty dict as "no restriction".
+    return consumed
 
 
 def _resolve_scope_filters(
@@ -774,7 +801,7 @@ def _resolve_scope_filters(
         if condition is not None:
             try:
                 filters: dict[str, Any] = {}
-                _extract_condition_filters(
+                recognised = _extract_condition_filters(
                     condition,
                     user_id,
                     filters,
@@ -782,6 +809,16 @@ def _resolve_scope_filters(
                     auth_context,
                     ref_targets,
                 )
+                if not recognised:
+                    # The condition shape is not one this resolver knows. An
+                    # empty `filters` here is not "no restriction" — it is "not
+                    # understood", and returning it would grant the unscoped
+                    # read that every `{}` return below is reserved for. Deny.
+                    logging.getLogger(__name__).warning(
+                        "Scope condition for %s has an unrecognised shape — denying",
+                        entity_name,
+                    )
+                    return None
                 return filters
             except Exception:
                 logging.getLogger(__name__).warning(
