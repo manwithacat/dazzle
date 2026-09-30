@@ -666,11 +666,24 @@ class TestTestModeDisabled:
 
     @pytest.fixture(scope="class")
     def database_url(self) -> str:
-        """Get PostgreSQL URL from environment."""
-        import os
+        """Test PostgreSQL URL, via the shared helper — or skip.
 
-        url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
-        return url
+        This used to read ``os.environ["DATABASE_URL"]`` with a hardcoded
+        ``postgresql://localhost:5432/dazzle_test`` fallback. That is what made
+        the suite flaky under xdist: ``load_project_dotenv`` assigns
+        ``os.environ`` directly, which monkeypatch cannot undo, so a leaked
+        ``DATABASE_URL`` from any earlier test in the same worker was picked up
+        here — pointing at a database that does not exist. It surfaced as an
+        ERROR at setup of whichever test happened to be scheduled first, roughly
+        one run in four, with a different test named each time (#1727).
+
+        The sibling class above already used ``pg_url_or_skip()``; this now does
+        too, so the two agree and the URL is resolved the same way CI resolves it
+        (per-worker provisioning, then skip when none is configured).
+        """
+        from tests.unit._auth_pg import pg_url_or_skip
+
+        return pg_url_or_skip()
 
     @pytest.fixture(scope="class")
     def appspec(self) -> AppSpec:

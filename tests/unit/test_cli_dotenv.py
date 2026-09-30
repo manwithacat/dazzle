@@ -9,12 +9,32 @@ import pytest
 
 from dazzle.cli.dotenv import load_project_dotenv
 
+_SCRUBBED = ("DATABASE_URL", "TEST_DATABASE_URL", "REDIS_URL", "TEST_KEY_814")
+
 
 @pytest.fixture
-def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Scrub test-affecting env vars so assertions are deterministic."""
-    for key in ("DATABASE_URL", "REDIS_URL", "TEST_KEY_814"):
+def clean_env(monkeypatch: pytest.MonkeyPatch):
+    """Scrub test-affecting env vars so assertions are deterministic.
+
+    ``load_project_dotenv`` assigns ``os.environ[key]`` directly, which
+    monkeypatch cannot track. A plain ``monkeypatch.delenv`` therefore records
+    whatever was *already* there and restores it at teardown — so once any value
+    leaked in, this fixture faithfully propagated it to every later test in the
+    same worker. That is how ``DATABASE_URL=postgresql://localhost:5432/test``
+    (a database that does not exist) reached
+    ``test_runtime_test_routes.TestTestModeDisabled``, whose fixture read
+    ``os.environ["DATABASE_URL"]`` with a hardcoded fallback. The result was a
+    full-suite failure roughly one run in four, naming a different test each
+    time (#1727).
+
+    The explicit teardown pop guarantees the keys are absent afterwards,
+    whatever the body wrote and whatever was there before.
+    """
+    for key in _SCRUBBED:
         monkeypatch.delenv(key, raising=False)
+    yield
+    for key in _SCRUBBED:
+        os.environ.pop(key, None)
 
 
 class TestLoadProjectDotenv:
