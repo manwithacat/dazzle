@@ -41,14 +41,61 @@ jobs:
       - name: Rebuild dist bundles
         if: steps.vendor_diff.outputs.changed == 'true'
         run: python scripts/build_dist.py
+      - name: Assert maintainer-owned token is present
+        # The PR author must equal the commit author, or branch protection's
+        # `require_extra_approval_for_unattributed_changes` can never be
+        # satisfied and the PR is stuck forever. `GITHUB_TOKEN` makes the PR
+        # author `app/github-actions` while the commit is authored by
+        # `github-actions[bot]` -- two different identities, so no approval can
+        # be granted. That blocked every vendor PR from 2026-09-21 until
+        # 2026-09-29 and recurs weekly (#1721).
+        #
+        # Fail loudly rather than falling back to GITHUB_TOKEN: a silent
+        # fallback recreates exactly the stuck-PR condition this guards.
+        if: steps.vendor_diff.outputs.changed == 'true'
+        env:
+          VENDOR_TOKEN: ${{ secrets.VENDOR_BOT_TOKEN }}
+          VENDOR_ACTOR_NAME: ${{ vars.VENDOR_ACTOR_NAME }}
+          VENDOR_ACTOR_EMAIL: ${{ vars.VENDOR_ACTOR_EMAIL }}
+        run: |
+          missing=""
+          [ -z "$VENDOR_TOKEN" ] && missing="${missing}secrets.VENDOR_BOT_TOKEN "
+          [ -z "$VENDOR_ACTOR_NAME" ] && missing="${missing}vars.VENDOR_ACTOR_NAME "
+          [ -z "$VENDOR_ACTOR_EMAIL" ] && missing="${missing}vars.VENDOR_ACTOR_EMAIL "
+          if [ -n "$missing" ]; then
+            echo "::error::vendor bot is not configured — missing: ${missing}"
+            echo ""
+            echo "The vendor update needs a maintainer-owned identity so that the"
+            echo "commit author and the PR author are the SAME identity. An App"
+            echo "installation token cannot report its own identity, so the commit"
+            echo "identity is declared explicitly."
+            echo ""
+            echo "Setup (one time, see docs/contributing/vendor-bot-token.md):"
+            echo "  1. Create a GitHub App owned by a maintainer with"
+            echo "     contents:write and pull-requests:write, or a PAT with the"
+            echo "     same scopes."
+            echo "  2. Store the token as secret VENDOR_BOT_TOKEN."
+            echo "  3. Store the App's login as variable VENDOR_ACTOR_NAME and its"
+            echo "     noreply email as VENDOR_ACTOR_EMAIL."
+            echo ""
+            echo "Failing here rather than falling back to GITHUB_TOKEN: the"
+            echo "fallback recreates the stuck-PR condition this guards."
+            exit 1
+          fi
       - name: Create PR
         if: steps.vendor_diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Maintainer-owned App/PAT token, NOT GITHUB_TOKEN -- see the step above.
+          GH_TOKEN: ${{ secrets.VENDOR_BOT_TOKEN }}
+          VENDOR_ACTOR_NAME: ${{ vars.VENDOR_ACTOR_NAME }}
+          VENDOR_ACTOR_EMAIL: ${{ vars.VENDOR_ACTOR_EMAIL }}
         run: |
           BRANCH="update-vendors"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Declared identity — asserted present by the previous step.
+          # This is what makes author == committer == PR author, which is the
+          # only way the required extra approval can be granted.
+          git config user.name "$VENDOR_ACTOR_NAME"
+          git config user.email "$VENDOR_ACTOR_EMAIL"
           git checkout -B "$BRANCH"
           git add -A
           git commit -m "Update vendor JS dependencies"
