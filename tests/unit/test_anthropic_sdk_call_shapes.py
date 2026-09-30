@@ -62,10 +62,20 @@ def _assert_reaches_api(call_kwargs: dict) -> None:
 
 
 def test_llm_api_client_call_shape_is_accepted() -> None:
-    """`LLMAPIClient._call_anthropic` forwards temperature via extra_body."""
+    """`LLMAPIClient._call_anthropic` forwards temperature via extra_body.
+
+    A dummy key is passed explicitly: the constructor raises when it cannot find
+    one, so depending on the ambient environment made this pass locally and fail
+    in CI with "API key not found for LLM client."
+    """
     from dazzle.llm.api_client import LLMAPIClient
 
-    client = LLMAPIClient(model="claude-sonnet-4-5", temperature=0.0, max_tokens=8)
+    client = LLMAPIClient(
+        model="claude-sonnet-4-5",
+        temperature=0.0,
+        max_tokens=8,
+        api_key="sk-ant-not-a-real-key",
+    )
     anthropic_client = _unauthed_client()
     client.client = anthropic_client
 
