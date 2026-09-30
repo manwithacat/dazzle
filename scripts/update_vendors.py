@@ -285,6 +285,64 @@ def update_lucide(*, check_only: bool) -> None:
     print(f"  downloaded lucide.min.js ({len(data)} bytes) from {cdn_url}")
 
 
+# The server-side inline-SVG registry is pinned to the same lucide version as
+# the client UMD bundle. `test_icon_registry_drift.py` asserts the two agree, so
+# a bundle bump that leaves the registry behind is guaranteed to red CI — which
+# is why the weekly cron produced an unmergeable PR on every lucide release.
+_GEN_REGISTRY = REPO_ROOT / "packages" / "hatchi-maxchi" / "icons" / "gen_registry.py"
+_PIN_RE = re.compile(r'^LUCIDE_VERSION = "\d+\.\d+\.\d+"', re.MULTILINE)
+
+
+def _sync_icon_registry(lucide_version: str) -> None:
+    """Re-pin and regenerate the server-side icon registry for ``lucide_version``.
+
+    Runs the generator rather than editing the AUTO-GENERATED outputs by hand:
+    the registry is ``lucide-static@<version>`` source data, and a new release
+    can legitimately change icon geometry. The generator is also what writes the
+    ``LUCIDE_VERSION`` constant both registries carry, so hand-editing them
+    would leave the icons describing an older lucide than the version claims.
+    """
+    if not _GEN_REGISTRY.is_file():
+        print("Icon registry sync skipped (gen_registry.py not present).")
+        return
+
+    pinned = _detect_registry_pin()
+    if pinned == lucide_version:
+        return
+
+    print(f"Syncing icon registry to lucide {pinned or 'unset'} -> {lucide_version}...")
+    original = _GEN_REGISTRY.read_text(encoding="utf-8")
+    # The pattern matches only the assignment, so the replacement must too —
+    # including the trailing comment here would duplicate it on every run.
+    updated, count = _PIN_RE.subn(f'LUCIDE_VERSION = "{lucide_version}"', original, count=1)
+    if count != 1:
+        print(
+            "  WARNING: could not find the LUCIDE_VERSION pin in gen_registry.py; "
+            "the icon registry drift gate will fail until it is bumped by hand."
+        )
+        return
+    _GEN_REGISTRY.write_text(updated, encoding="utf-8")
+
+    try:
+        subprocess.run([sys.executable, str(_GEN_REGISTRY)], check=True, capture_output=True)
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or b"").decode("utf-8", errors="replace").strip()
+        print(
+            "  WARNING: icon registry regeneration failed; run "
+            f"`python {_GEN_REGISTRY.relative_to(REPO_ROOT)}` by hand:\n{detail}"
+        )
+        return
+    print(f"  regenerated icon registry at lucide {lucide_version}")
+
+
+def _detect_registry_pin() -> str | None:
+    """The lucide version the icon generator is currently pinned to."""
+    if not _GEN_REGISTRY.is_file():
+        return None
+    m = _PIN_RE.search(_GEN_REGISTRY.read_text(encoding="utf-8"))
+    return m.group(0).split('"')[1] if m else None
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -339,6 +397,10 @@ def main() -> None:
         print("\nRun without --check to download updates.")
         return
 
+    # Keep the server-side icon registry on the same lucide version as the
+    # client bundle just written, so the registry drift gate is satisfied by the
+    # same commit rather than by a manual follow-up.
+    _sync_icon_registry(_detect_lucide_version() or "")
     # Atomic commit: vendored bytes are already on disk; persist the
     # manifest changes so the drift gate accepts the new state on the
     # very next test run.
