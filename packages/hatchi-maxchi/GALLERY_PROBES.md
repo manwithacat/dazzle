@@ -74,4 +74,3 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 
 - **exclusive** — menubar / nav / accordion: only one panel open
 - **multi_open** — tree forests: expanding siblings must *not* close peers
-
