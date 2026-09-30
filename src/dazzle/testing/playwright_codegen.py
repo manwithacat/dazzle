@@ -21,6 +21,7 @@ from dazzle.core.ir import (
     FlowStepKind,
 )
 from dazzle.core.manifest import load_manifest
+from dazzle.core.strings import entity_slug
 
 # =============================================================================
 # Selector Mapping
@@ -144,7 +145,7 @@ def _target_to_route(target: str) -> str:
         parts = target_name.split("_")
         if len(parts) >= 2:
             mode = parts[-1]
-            entity = "_".join(parts[:-1]).replace("_", "-")
+            entity = entity_slug("_".join(parts[:-1]))
 
             mode_routes = {
                 "list": f"/{entity}",

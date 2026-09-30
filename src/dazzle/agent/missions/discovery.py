@@ -19,6 +19,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.strings import entity_slug
+
 from ..core import AgentTool, Mission
 
 if TYPE_CHECKING:
@@ -171,7 +173,7 @@ def _make_list_surfaces_tool(
                     "title": surface.title or "",
                     "mode": mode,
                     "entity": entity_ref or "",
-                    "url_hint": f"/{surface.name.replace('_', '-')}",
+                    "url_hint": f"/{entity_slug(surface.name)}",
                 }
             )
         return {

@@ -11,7 +11,7 @@ from dazzle.core import ir
 # canonical implementation lives in dazzle.core.access (relocated in #1324
 # FR-6 follow-up so core can use it without depending on the ui layer).
 from dazzle.core.access import workspace_allowed_personas as workspace_allowed_personas
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import entity_slug, to_api_plural
 from dazzle.page.runtime.landing_resolver import infer_landing_route
 from dazzle.page.specs import (
     AppShellLayout,
@@ -229,7 +229,7 @@ def _generate_routes_from_surfaces(
     entities_seen = set()
 
     # Base path for routes - primary workspace gets "/", others get "/workspace-name"
-    workspace_prefix = "" if is_primary else f"/{workspace.name.replace('_', '-')}"
+    workspace_prefix = "" if is_primary else f"/{entity_slug(workspace.name)}"
 
     # Collect entities used in workspace regions
     workspace_entities = set()
