@@ -70,3 +70,48 @@ def test_preflight_list_exits_zero() -> None:
     assert proc.returncode == 0, proc.stderr
     listed = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
     assert listed == _surface_tests_from_script()
+
+
+def test_precommit_ruff_matches_the_locked_version() -> None:
+    """`ruff-pre-commit` must track the ruff version in `uv.lock` (#1719).
+
+    CI runs bare `ruff` from the committed lock (`uv sync --frozen`), while
+    pre-commit runs whatever `rev:` pins in an isolated env. When the two
+    disagree, pre-commit and CI apply different lint *and* format rules, and the
+    symptom is pre-commit rewriting files CI already accepted — or rejecting
+    files CI passed.
+
+    The measured harm at the time of the fix was zero: the tree sat in the
+    intersection of both versions, so both passed. That is exactly why it is
+    worth pinning rather than watching for — the divergence only shows up on the
+    next edit that the versions treat differently.
+    """
+    import re
+    import tomllib
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    config = (repo / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+
+    match = re.search(
+        r"repo:\s*https://github\.com/astral-sh/ruff-pre-commit\s*\n\s*rev:\s*v(\S+)",
+        config,
+    )
+    assert match, "ruff-pre-commit repo/rev not found in .pre-commit-config.yaml"
+    pinned = match.group(1).strip()
+
+    with (repo / "uv.lock").open("rb") as handle:
+        lock = tomllib.load(handle)
+
+    locked = next(
+        (p["version"] for p in lock.get("package", []) if p.get("name") == "ruff"),
+        None,
+    )
+    assert locked, "ruff is not present in uv.lock"
+
+    assert pinned == locked, (
+        f"pre-commit pins ruff {pinned} but uv.lock has {locked}. CI runs the "
+        "locked version, so pre-commit and CI would apply different lint and "
+        "format rules. Run `pre-commit autoupdate` (or `make update-deps`) and "
+        "commit the result."
+    )

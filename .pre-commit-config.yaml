@@ -9,7 +9,7 @@ default_language_version:
 repos:
   # General file cleanup
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         # Exclude human-edited release/governance docs — the trailing-space
@@ -40,7 +40,7 @@ repos:
 
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+    rev: v0.16.9
     hooks:
       # Run the linter
       - id: ruff
