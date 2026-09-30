@@ -8,7 +8,7 @@ CRUD operations based on surface modes.
 import logging
 
 from dazzle.core import ir
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import entity_slug, to_api_plural
 from dazzle.http.specs import (
     DomainOperation,
     EndpointSpec,
@@ -236,7 +236,7 @@ def convert_surface_to_endpoint(
     elif surface.mode in (ir.SurfaceMode.VIEW, ir.SurfaceMode.EDIT):
         path = f"/{plural}/{{id}}"
     else:
-        path = f"/{surface.name.replace('_', '-')}"
+        path = f"/{entity_slug(surface.name)}"
 
     # Propagate persona-based access control from DSL surface spec
     require_roles: list[str] = []

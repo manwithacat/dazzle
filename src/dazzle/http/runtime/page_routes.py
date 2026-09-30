@@ -3666,7 +3666,7 @@ def create_page_routes(
         if getattr(_entity, "domain", "") == "platform":
             continue
         singular_slug = app_paths.entity_slug(_entity.name)
-        plural_slug = to_api_plural(_entity.name).replace("_", "-")
+        plural_slug = app_paths.entity_slug(to_api_plural(_entity.name))
         if singular_slug == plural_slug:
             continue
         plural_reg_path = f"/{plural_slug}"
