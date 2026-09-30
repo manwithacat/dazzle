@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import HTTPException
 from fastapi import Request as FastAPIRequest
 
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.tenant_isolation import (
     get_current_tenant_schema,
     set_current_host_tenant_id,
@@ -226,7 +227,7 @@ def create_auth_dependency(
         # moment sessions activate a membership. The Cedar/permit: evaluation in
         # route_generator still sources user.roles — that switchover is Plan 1b.
         if require_roles:
-            user_roles = {r.removeprefix("role_") for r in auth_context.effective_roles}
+            user_roles = {normalize_role(r) for r in auth_context.effective_roles}
             required = set(require_roles)
 
             if not required.intersection(user_roles):
@@ -275,12 +276,17 @@ def create_deny_dependency(
 
         # Check deny roles (effective_roles — membership-aware; see get_current_user)
         if deny_roles:
-            user_roles = set(auth_context.effective_roles)
-            denied = set(deny_roles)
+            # Both sides normalise. Normalising only the user side (as the
+            # require: gate does) made the two gates disagree: a `role_`-prefixed
+            # user role never intersected a bare DSL persona name, so `deny:`
+            # silently stopped denying (#1713). DB roles may carry the prefix
+            # (route_support._normalize_role) and DSL personas are bare.
+            user_roles = {normalize_role(r) for r in auth_context.effective_roles}
+            denied = {normalize_role(r) for r in deny_roles}
             if user_roles.intersection(denied):
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Access denied for roles: {list(user_roles & denied)}",
+                    detail=f"Access denied for roles: {sorted(user_roles & denied)}",
                 )
 
         # Bind the RLS tenant id here too: if this deny-gate is ever used

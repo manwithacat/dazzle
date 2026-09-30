@@ -20,10 +20,10 @@ from uuid import UUID
 from fastapi import Request
 from pydantic import BaseModel
 
-from dazzle.http.runtime.auth import AuthContext
-
 # _forbidden_detail lives in render/ (#1094) so ui/ page handlers can build the same
 # 403 payload without crossing back↔ui. Re-exported here for back-internal call sites.
+from dazzle.core.strings import normalize_role
+from dazzle.http.runtime.auth import AuthContext
 from dazzle.render.access_messages import _forbidden_detail
 
 if TYPE_CHECKING:
@@ -169,10 +169,13 @@ def _htmx_parent_url(request: Any) -> str | None:
 def _normalize_role(role: str) -> str:
     """Normalize a database role name to match DSL role references.
 
-    Database roles may have a ``role_`` prefix (e.g. ``role_school_admin``)
-    while DSL access rules use bare names (e.g. ``role(school_admin)``).
+    Thin re-export of :func:`dazzle.core.strings.normalize_role` so the rule has
+    one home; the private name is kept for the callers that already use it. Lives
+    in ``core`` because ``auth/dependencies.py`` needs it too, and importing this
+    module from there would be circular (``route_support`` imports the ``auth``
+    package, whose ``__init__`` imports ``dependencies``).
     """
-    return role.removeprefix("role_")
+    return normalize_role(role)
 
 
 def _extract_result_id(result: Any) -> str | None:

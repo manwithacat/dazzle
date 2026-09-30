@@ -145,3 +145,20 @@ def entity_slug(entity_name: str) -> str:
     ``tests/unit/test_dedup_footgun_gates.py::test_no_inline_entity_slug``.
     """
     return entity_name.lower().replace("_", "-")
+
+
+def normalize_role(role: str) -> str:
+    """The canonical database-role → DSL-role name rule.
+
+    Database roles may carry a ``role_`` prefix (``role_school_admin``) while
+    DSL persona references are bare names (``role(school_admin)``). Every
+    comparison between the two must normalise *both* sides — normalising only
+    the user side made ``require:`` and ``deny:`` disagree, so a prefixed role
+    silently slipped past ``deny:`` (#1713).
+
+    Lives in ``core`` (the bottom layer) so every layer can share the one rule:
+    ``http.runtime.route_support`` re-exports it as ``_normalize_role`` for its
+    existing callers. Re-deriving ``removeprefix("role_")`` inline is gated by
+    ``tests/unit/test_dedup_footgun_gates.py::test_no_inline_role_normalization``.
+    """
+    return role.removeprefix("role_")

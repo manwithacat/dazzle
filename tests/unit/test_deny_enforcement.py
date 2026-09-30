@@ -140,3 +140,79 @@ class TestSurfaceDenyPropagation:
         assert "intern" in endpoint.deny_roles
         assert "admin" in endpoint.require_roles
         assert "editor" in endpoint.require_roles
+
+
+# =============================================================================
+# role_ prefix normalisation (#1713)
+# =============================================================================
+
+
+class TestDenyRolePrefixNormalization:
+    """`deny:` must normalise BOTH sides of the comparison.
+
+    Database roles may carry a `role_` prefix (`role_school_admin`) while DSL
+    persona references are bare (`role(school_admin)`). The `require:` gate
+    normalised the user side; `deny:` normalised neither, so the two disagreed
+    and a prefixed role silently slipped past `deny:`.
+
+    The pre-existing tests use unprefixed roles (`["intern"]`), which is exactly
+    why they could not see the asymmetry.
+    """
+
+    @pytest.mark.asyncio
+    async def test_denies_prefixed_user_role_against_bare_deny_role(self) -> None:
+        """The regression: `role_intern` must not bypass `deny: intern`."""
+        from fastapi import HTTPException
+
+        from dazzle.http.runtime.auth import AuthContext
+
+        auth_store = MagicMock()
+        auth_store.validate_session = MagicMock(
+            return_value=AuthContext(is_authenticated=True, roles=["role_intern"])
+        )
+
+        dep = create_deny_dependency(auth_store, deny_roles=["intern"])
+        request = MagicMock()
+        request.cookies = {"dazzle_session": "valid-session-id"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(request)
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_denies_bare_user_role_against_prefixed_deny_role(self) -> None:
+        """The other direction: `deny: role_intern` must still deny `intern`."""
+        from fastapi import HTTPException
+
+        from dazzle.http.runtime.auth import AuthContext
+
+        auth_store = MagicMock()
+        auth_store.validate_session = MagicMock(
+            return_value=AuthContext(is_authenticated=True, roles=["intern"])
+        )
+
+        dep = create_deny_dependency(auth_store, deny_roles=["role_intern"])
+        request = MagicMock()
+        request.cookies = {"dazzle_session": "valid-session-id"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(request)
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_still_allows_unrelated_prefixed_role(self) -> None:
+        """Normalising must not over-deny: `role_editor` is not `intern`."""
+        from dazzle.http.runtime.auth import AuthContext
+
+        auth_store = MagicMock()
+        auth_store.validate_session = MagicMock(
+            return_value=AuthContext(is_authenticated=True, roles=["role_editor"])
+        )
+
+        dep = create_deny_dependency(auth_store, deny_roles=["intern"])
+        request = MagicMock()
+        request.cookies = {"dazzle_session": "valid-session-id"}
+
+        result = await dep(request)
+        assert result is not None
+        assert result.is_authenticated
