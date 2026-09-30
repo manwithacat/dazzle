@@ -149,3 +149,107 @@ def test_no_db_retry_without_recovery() -> None:
         "unreachable. Add conn.rollback() (or conn.transaction() / re-acquire) "
         f"before the retry, or mark the handler `# {_MARKER} <reason>`:\n  " + "\n  ".join(hits)
     )
+
+
+# --- Detector self-tests -----------------------------------------------------
+#
+# A gate that passes for the wrong reason looks identical to one that passes for
+# the right reason. The first draft of this gate did exactly that: it walked the
+# whole handler for a recovery call and found one in a *sibling* `except`, so it
+# passed the un-fixed code. The gate below was only correct once it was made to
+# assert that its own detector fires.
+#
+# These tests run the detector over synthetic source, so the check is about the
+# check — independent of whether the current tree happens to be clean.
+
+
+def _detect(tmp_path, body: str) -> list[int]:
+    path = tmp_path / "sample_runtime.py"
+    path.write_text(body, encoding="utf-8")
+    return _handlers_retrying_without_recovery(path)
+
+
+def test_detector_flags_retry_without_recovery(tmp_path) -> None:
+    """The bug shape: execute, catch, re-execute on the same cursor."""
+    hits = _detect(
+        tmp_path,
+        "def f(db):\n"
+        "    conn = db.connection()\n"
+        "    cursor = conn.cursor()\n"
+        "    try:\n"
+        "        cursor.execute(sql, params)\n"
+        "    except Exception:\n"
+        "        cursor.execute(other_sql, params)\n",
+    )
+    assert hits == [6], f"expected the handler at line 6 flagged, got {hits}"
+
+
+def test_detector_accepts_rollback_before_the_retry(tmp_path) -> None:
+    """Recovery *before* the retry is the fix; the detector must accept it."""
+    assert (
+        _detect(
+            tmp_path,
+            "def f(db):\n"
+            "    conn = db.connection()\n"
+            "    cursor = conn.cursor()\n"
+            "    try:\n"
+            "        cursor.execute(sql, params)\n"
+            "    except Exception:\n"
+            "        conn.rollback()\n"
+            "        cursor.execute(other_sql, params)\n",
+        )
+        == []
+    )
+
+
+def test_detector_rejects_recovery_after_the_retry(tmp_path) -> None:
+    """A rollback that comes *after* the retry does not help the retry.
+
+    This is the exact hole in the first draft: the walk found the rollback in the
+    handler without regard to order, so the un-fixed code passed.
+    """
+    hits = _detect(
+        tmp_path,
+        "def f(db):\n"
+        "    conn = db.connection()\n"
+        "    cursor = conn.cursor()\n"
+        "    try:\n"
+        "        cursor.execute(sql, params)\n"
+        "    except Exception:\n"
+        "        try:\n"
+        "            cursor.execute(other_sql, params)\n"
+        "        finally:\n"
+        "            conn.rollback()\n",
+    )
+    assert hits == [6], f"recovery after the retry must not count, got {hits}"
+
+
+def test_detector_ignores_handlers_that_do_not_retry(tmp_path) -> None:
+    """A plain catch that re-raises is not in scope for this gate."""
+    assert (
+        _detect(
+            tmp_path,
+            "def f(db):\n"
+            "    try:\n"
+            "        risky()\n"
+            "    except Exception:\n"
+            "        logger.warning('nope')\n"
+            "        raise\n",
+        )
+        == []
+    )
+
+
+def test_detector_honours_the_escape_hatch(tmp_path) -> None:
+    """`# DZ-DB-NO-RETRY <reason>` suppresses the finding, as documented."""
+    assert (
+        _detect(
+            tmp_path,
+            "def f(db):\n"
+            "    try:\n"
+            "        cursor.execute(sql)\n"
+            "    except Exception:  # DZ-DB-NO-RETRY terminal, must propagate\n"
+            "        cursor.execute(other)\n",
+        )
+        == []
+    )

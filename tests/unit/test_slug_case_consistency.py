@@ -98,3 +98,72 @@ def test_url_sites_use_the_canonical_helper(rel: str) -> None:
     assert "entity_slug" in text, (
         f"{rel} no longer references entity_slug — confirm the #1717 fix is still needed"
     )
+
+
+# --- Detector self-tests -----------------------------------------------------
+#
+# A clean tree only proves nothing currently matches; it cannot prove the matcher
+# matches what it was written for. These pin the detector's real behaviour,
+# including its limits.
+#
+# The important finding from writing them: the *pattern* is deliberately
+# over-broad, and the safety comes entirely from the file scoping. `_PARTIAL_SLUG`
+# matches `--param-name` and `en-GB` just as readily as a URL slug. That is why
+# the broad version of this gate was abandoned — a repo-wide rule would fire on
+# every CLI flag and locale code in the tree.
+
+
+# Built by concatenation so the synthetic source lines contain the literal
+# characters the regex looks for, without this file being unreadable.
+_Q, _US, _DASH = chr(39), chr(95), chr(45)
+_REPLACE_2 = f".replace({_Q}{_US}{_Q}, {_Q}{_DASH}{_Q})"
+
+
+def _bare_replace_line(receiver: str) -> str:
+    """A source line with a bare underscore->dash replace and no `.lower()`."""
+    return f"        x = {receiver}{_REPLACE_2}"
+
+
+def test_pattern_matches_the_footgun() -> None:
+    """The exact form the three original sites used: a URL built from a bare
+    ``.replace`` with no ``.lower()``."""
+    assert _PARTIAL_SLUG.search(_bare_replace_line("surface.name")), (
+        "detector must match a bare slug re-derivation"
+    )
+
+
+def test_pattern_matches_the_plural_form() -> None:
+    """`page_routes.py` derived a plural slug the same way."""
+    assert _PARTIAL_SLUG.search(_bare_replace_line("to_api_plural(_entity.name)"))
+
+
+def test_pattern_is_intentionally_over_broad() -> None:
+    """Pins the known limitation, so nobody widens the pattern to "fix" it.
+
+    The pattern cannot tell a URL slug from a CLI flag or a locale code. All of
+    these match; the *file list* is what keeps the gate precise.
+    """
+    assert _PARTIAL_SLUG.search(_bare_replace_line("param_name")), "CLI flag"
+    assert _PARTIAL_SLUG.search(_bare_replace_line("en_GB")), "locale code"
+    canonical = f"    return entity_name.lower(){_REPLACE_2}"
+    assert _PARTIAL_SLUG.search(canonical), (
+        "the canonical formula also matches; the file list is what excludes it"
+    )
+
+
+def test_gate_scope_excludes_cli_flag_and_locale_files() -> None:
+    """The two files that would false-positive are deliberately not in scope.
+
+    If someone adds `mcp/cli_help.py` or `i18n/display_locale.py` to
+    `_URL_SLUG_SITES`, this fails — which is the guard rail against re-widening.
+    """
+    assert "mcp/cli_help.py" not in _URL_SLUG_SITES
+    assert "i18n/display_locale.py" not in _URL_SLUG_SITES
+    assert "core/docs_gen.py" not in _URL_SLUG_SITES
+
+
+def test_every_scoped_site_still_uses_the_canonical_helper() -> None:
+    """The scoping is only trustworthy if the five files really do use it."""
+    for rel in _URL_SLUG_SITES:
+        text = (_SRC / rel).read_text(encoding="utf-8")
+        assert "entity_slug" in text, f"{rel} does not reference entity_slug"
