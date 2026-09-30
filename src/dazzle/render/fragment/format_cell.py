@@ -23,6 +23,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from dazzle.core.ir.money import get_currency_scale
 from dazzle.i18n.display_locale import DisplayLocaleProfile, get_display_locale, relative_day_label
 from dazzle.render.cell_chrome import format_byte_size
 from dazzle.render.channel_cell import clerk_email_display, clerk_phone_display
@@ -52,15 +53,28 @@ def _title_case(token: str) -> str:
 
 
 def _currency_str(major: Decimal, code: str) -> str:
+    """Render a MAJOR-unit amount with the currency's own decimal precision.
+
+    The scale must come from the ISO-4217 table, not a literal: JPY/KRW/CLP have
+    0 decimals and BHD/KWD/OMR have 3, so a hardcoded ``,.2f`` misstates those
+    currencies even when the division below is correct.
+    """
+    scale = get_currency_scale(code)
     symbol = _CURRENCY_SYMBOLS.get(code.upper(), "")
-    return f"{symbol}{major:,.2f}" if symbol else f"{major:,.2f} {code}"
+    return f"{symbol}{major:,.{scale}f}" if symbol else f"{major:,.{scale}f} {code}"
 
 
 def _currency(minor: Any, code: str) -> str:
     """Format integer MINOR units (e.g. pence) as currency — the money-type
-    inference path (the money column stores minor units in ``<name>_minor``)."""
+    inference path (the money column stores minor units in ``<name>_minor``).
+
+    The divisor is ``10 ** get_currency_scale(code)``, matching
+    :func:`~dazzle.render.filters._currency_filter` and the ``Money`` value
+    object. A hardcoded ``/ 100`` understated zero-decimal currencies by 100x
+    (a JPY 1500 minor-unit amount rendered as "15.00 JPY").
+    """
     try:
-        major = Decimal(int(minor)) / 100
+        major = Decimal(int(minor)) / (10 ** get_currency_scale(code))
     except (TypeError, ValueError, InvalidOperation):
         return str(minor)
     return _currency_str(major, code)

@@ -206,7 +206,12 @@ def _add_speaker_notes(slide: Any, text: str) -> None:
 
 
 def _fmt_currency(amount: int, currency: str = "GBP") -> str:
-    """Format an amount as currency."""
+    """Format a MAJOR-unit amount as an abbreviated currency figure (K/M/B).
+
+    Takes major units, unlike the render-layer money path which takes minor
+    units — so no ISO-4217 rescale applies here. Abbreviating is a magnitude
+    transform, not a minor-unit conversion.
+    """
     symbols = {"GBP": "\u00a3", "USD": "$", "EUR": "\u20ac"}
     symbol = symbols.get(currency, currency + " ")
     if amount >= 1_000_000_000:
