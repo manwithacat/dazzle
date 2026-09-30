@@ -4,6 +4,7 @@ OAuth2 Social Login for mobile clients.
 Supports Google, Apple, and GitHub authentication via ID tokens or OAuth codes.
 """
 
+import asyncio
 import logging
 import secrets
 from dataclasses import dataclass
@@ -121,12 +122,19 @@ async def verify_google_token(id_token: str, client_id: str) -> SocialProfile:
         )
 
     try:
-        # Verify the token (google-auth stubs omit verify_oauth2_token typing)
-        idinfo = cast(Any, google_id_token.verify_oauth2_token)(
-            id_token,
-            requests.Request(),
-            client_id,
-        )
+        # Verify the token (google-auth stubs omit verify_oauth2_token typing).
+        # `verify_oauth2_token` does a synchronous round-trip to Google's
+        # tokeninfo endpoint, so it is dispatched to an executor — this coroutine
+        # runs on the event loop and would otherwise stall it for the full
+        # request/response on every Google mobile sign-in.
+        def _verify() -> Any:
+            return cast(Any, google_id_token.verify_oauth2_token)(
+                id_token,
+                requests.Request(),
+                client_id,
+            )
+
+        idinfo = await asyncio.get_running_loop().run_in_executor(None, _verify)
 
         # Extract profile
         return SocialProfile(

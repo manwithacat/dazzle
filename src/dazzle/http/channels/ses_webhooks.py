@@ -8,6 +8,7 @@ Handles:
 - SES Delivery notifications
 """
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -31,6 +32,12 @@ def _parse_sns_message(body: bytes) -> dict[str, Any]:
 async def _confirm_subscription(message: dict[str, Any]) -> bool:
     """Auto-confirm an SNS subscription.
 
+    The HTTP round-trip is dispatched to an executor: ``urlopen`` is blocking, and
+    this runs on the event loop. With a 10s timeout one slow confirmation stalled
+    every concurrent request in the worker — including health checks, which can
+    trip the orchestrator's liveness probe and cascade into a restart. Same shape
+    as ``channels/providers/email.py:179``.
+
     Args:
         message: SNS SubscriptionConfirmation message
 
@@ -42,22 +49,26 @@ async def _confirm_subscription(message: dict[str, Any]) -> bool:
         logger.error("SNS SubscriptionConfirmation missing SubscribeURL")
         return False
 
-    try:
-        import urllib.request
+    def _confirm() -> bool:
+        try:
+            import urllib.request
 
-        req = urllib.request.Request(subscribe_url)
-        with urllib.request.urlopen(req, timeout=10) as resp:  # nosemgrep
-            if resp.status == 200:
-                logger.info(
-                    "SNS subscription confirmed for topic: %s",
-                    message.get("TopicArn", "unknown"),
-                )
-                return True
-            logger.error("SNS subscription confirmation failed: HTTP %s", resp.status)
+            req = urllib.request.Request(subscribe_url)
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosemgrep
+                if resp.status == 200:
+                    logger.info(
+                        "SNS subscription confirmed for topic: %s",
+                        message.get("TopicArn", "unknown"),
+                    )
+                    return True
+                logger.error("SNS subscription confirmation failed: HTTP %s", resp.status)
+                return False
+        except Exception as e:
+            logger.error("Failed to confirm SNS subscription: %s", e)
             return False
-    except Exception as e:
-        logger.error("Failed to confirm SNS subscription: %s", e)
-        return False
+
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _confirm)
 
 
 def _parse_ses_event(notification_message: str) -> dict[str, Any] | None:
