@@ -782,7 +782,7 @@ def _run_llm_analyze_spec(
     try:
         from dazzle.llm import LLMProvider, SpecAnalyzer
     except ImportError:
-        typer.echo("LLM support not available. Install with: pip install dazzle[llm]", err=True)
+        typer.echo("LLM support not available. Install with: pip install dazzle-dsl[llm]", err=True)
         typer.echo("Or use: dazzle analyze-spec --offline", err=True)
         raise typer.Exit(code=1)
 

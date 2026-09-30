@@ -55,7 +55,7 @@ class RabbitMQAdapter(QueueAdapter):
         except ImportError:
             raise ImportError(
                 "aio-pika is required for RabbitMQ support. "
-                "Install it with: pip install 'dazzle[rabbitmq]'"
+                "Install it with: pip install 'dazzle-dsl[rabbitmq]'"
             )
         except Exception as e:
             logger.error("Failed to connect to RabbitMQ: %s", e)

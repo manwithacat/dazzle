@@ -4,7 +4,13 @@
 #   uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
 
 # Core runtime dependencies
-dazzle>=0.9.4
+#
+# The distribution is `dazzle-dsl` — `dazzle` is a different, unrelated
+# package on PyPI (PEP 503 normalises only the import name, which stays
+# `dazzle`). The major.minor pin is substituted at `dazzle init` time and
+# tracks the installed framework, matching framework_version in dazzle.toml
+# (#1630). Do not hand-edit a version here; it is regenerated per project.
+dazzle-dsl~={{framework_minor}}
 fastapi>=0.100.0
 uvicorn[standard]>=0.24.0
 pydantic>=2.0

@@ -107,7 +107,7 @@ def print_version_info(full: bool = False) -> None:
     if llm_available:
         llm_status = "✓ Available (" + ", ".join(llm_providers) + ")"
     else:
-        llm_status = "✗ Not available (install with: pip install dazzle[llm])"
+        llm_status = "✗ Not available (install with: pip install dazzle-dsl[llm])"
     typer.echo(f"  LLM Support:   {llm_status}")
 
     if full:

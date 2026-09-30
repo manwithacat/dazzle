@@ -230,7 +230,7 @@ def _create_redis_bus(config: TierConfig) -> RedisBus:
 
     if not REDIS_AVAILABLE:
         raise ImportError(
-            "redis is required for Redis event bus. Install with: pip install dazzle[redis]"
+            "redis is required for Redis event bus. Install with: pip install dazzle-dsl[redis]"
         )
 
     url = config.redis_url or os.getenv("REDIS_URL")
@@ -255,7 +255,7 @@ def _create_kafka_bus(config: TierConfig) -> KafkaBus:
 
     if not KAFKA_AVAILABLE:
         raise ImportError(
-            "aiokafka is required for Kafka event bus. Install with: pip install dazzle[kafka]"
+            "aiokafka is required for Kafka event bus. Install with: pip install dazzle-dsl[kafka]"
         )
 
     servers = config.kafka_bootstrap_servers
@@ -306,12 +306,12 @@ def get_tier_info() -> dict[str, Any]:
             "redis": {
                 "available": REDIS_AVAILABLE,
                 "description": "Redis Streams (Heroku growth)",
-                "install": "pip install dazzle[redis]",
+                "install": "pip install dazzle-dsl[redis]",
             },
             "kafka": {
                 "available": KAFKA_AVAILABLE,
                 "description": "Apache Kafka (production)",
-                "install": "pip install dazzle[kafka]",
+                "install": "pip install dazzle-dsl[kafka]",
             },
         },
         "environment": {

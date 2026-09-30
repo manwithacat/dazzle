@@ -67,7 +67,7 @@ try:
 except ImportError:
     pass  # Redis not installed
 
-# Optional Temporal adapter (requires: pip install dazzle[temporal])
+# Optional Temporal adapter (requires: pip install dazzle-dsl[temporal])
 try:
     from .temporal_adapter import TemporalAdapter
 

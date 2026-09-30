@@ -4,7 +4,7 @@ Temporal implementation of ProcessAdapter.
 This module provides production-grade workflow execution using Temporal,
 with dynamic workflow generation from ProcessSpec definitions.
 
-Requires: pip install dazzle[temporal]
+Requires: pip install dazzle-dsl[temporal]
 """
 
 from __future__ import annotations
@@ -36,7 +36,9 @@ class TemporalNotAvailable(Exception):
     """Raised when Temporal SDK is not installed."""
 
     def __init__(self) -> None:
-        super().__init__("Temporal SDK not installed. Install with: pip install dazzle[temporal]")
+        super().__init__(
+            "Temporal SDK not installed. Install with: pip install dazzle-dsl[temporal]"
+        )
 
 
 class HumanTaskTimeout(Exception):
