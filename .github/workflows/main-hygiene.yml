@@ -1,0 +1,188 @@
+# Main hygiene: staleness and unpatched advisories, independent of any PR.
+#
+# Why this exists (#1721)
+# ----------------------
+# `main` sat frozen for 13 days and nobody noticed. During that window a
+# critical anyio CVE (CVE-2026-63374) went unpatched, and *every* open PR went
+# red on `security-tests` simultaneously — because each branched off a base that
+# failed the security gate for a reason no in-flight PR could fix. The stall cost
+# more than the advisory did.
+#
+# Three separate CVEs landed during one working session (anyio, PyJWT, urllib3),
+# and each had the same shape: published out-of-band, discovered only when
+# someone opened a PR. `pip-audit` runs inside the PR matrix, so an advisory
+# discovered on a Tuesday sits invisible until Thursday.
+#
+# This workflow runs on a schedule, against `main`, with no PR required. It
+# reports rather than fails: a red scheduled workflow notifies nobody, so the
+# signal has to be an issue.
+#
+# Noise control: both checks are idempotent. They reuse an existing open issue
+# when one matches, so a persistent condition produces one issue that is edited,
+# not a new one per run.
+
+name: Main hygiene
+
+on:
+  schedule:
+    # Mondays 07:17 UTC. Off the hour deliberately — every other workflow in this
+    # repo fires on :00, and GitHub queues scheduled runs from the same pool.
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+# Labels applied to a hygiene issue. `automated` marks it as not hand-written.
+env:
+  HYGIENE_LABEL: "automated"
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      # --- 1. Is main going stale? -----------------------------------------
+      # The signal that was missing. There is a *minimum* gap between pushes
+      # (scripts/push_gate.py) but no maximum, so an idle repo looks identical to
+      # a healthy one.
+      - name: Check whether main has gone stale
+        id: stale
+        env:
+          STALE_DAYS: "7"
+        run: |
+          latest=$(git log -1 --format=%ct origin/main)
+          now=$(date +%s)
+          age_days=$(( (now - latest) / 86400 ))
+          echo "age_days=$age_days" >> "$GITHUB_OUTPUT"
+          echo "latest=$(git log -1 --format='%h %ad' --date=short origin/main)" >> "$GITHUB_OUTPUT"
+          if [ "$age_days" -ge "$STALE_DAYS" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::main has had no commit for ${age_days} days (threshold ${STALE_DAYS})"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+            echo "main is ${age_days} days old — within threshold"
+          fi
+
+      # --- 2. Are there advisories against main right now? -----------------
+      # This is the half that would have caught all three CVEs on publication.
+      # Same invocation as the `security-tests` job, including its one
+      # suppression, so the two cannot disagree about what is clean.
+      - name: Audit main's locked dependencies
+        id: audit
+        run: |
+          set +e
+          uv pip install -q pip-audit
+          uv pip freeze --exclude-editable > /tmp/audit-reqs.txt
+          pip-audit --strict --desc --no-deps --disable-pip \
+            --ignore-vuln MAL-2026-4750 \
+            -r /tmp/audit-reqs.txt 2>&1 | tee /tmp/audit.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -eq 0 ]; then
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+          fi
+          # Just the advisory lines, for the issue body.
+          grep -E '^[a-zA-Z0-9_.-]+ [0-9]+\.[0-9]+\.[0-9]+ +[A-Z]{4}-[0-9]{4}-[0-9]+' /tmp/audit.log \
+            > /tmp/findings.txt || true
+
+      # --- 3. Report, idempotently -----------------------------------------
+      - name: Open or update a hygiene issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+        env:
+          STALE: ${{ steps.stale.outputs.stale }}
+          AGE_DAYS: ${{ steps.stale.outputs.age_days }}
+          LATEST: ${{ steps.stale.outputs.latest }}
+          CLEAN: ${{ steps.audit.outputs.clean }}
+        with:
+          script: |
+            const fs = require('fs');
+            const stale = process.env.STALE === 'true';
+            const clean = process.env.CLEAN === 'true';
+            if (!stale && clean) {
+              core.info('main is fresh and its dependencies are clean — nothing to report.');
+              return;
+            }
+
+            const problems = [];
+            if (!clean) {
+              const findings = fs.readFileSync('/tmp/findings.txt', 'utf8').trim();
+              problems.push(
+                '### Unpatched advisories against `main`\n\n' +
+                '`pip-audit --strict` on the locked tree, same invocation as the ' +
+                '`security-tests` job. Every one of these turns **all** open PRs red ' +
+                'simultaneously, because each branches off a base that fails the gate.\n\n' +
+                '```\n' + (findings || '(see run log)') + '\n```\n\n' +
+                'Bump the offending package and land that first — it unblocks the PR queue.'
+              );
+            }
+            if (stale) {
+              problems.push(
+                '### `main` has gone stale\n\n' +
+                `Newest commit on main: \`${process.env.LATEST}\` — **${process.env.AGE_DAYS} days ago**. ` +
+                'There is a minimum gap between pushes but no maximum, so an idle ' +
+                'main looks identical to a healthy one. Check whether an agent loop ' +
+                'or a blocked release is holding it.'
+              );
+            }
+
+            const body = [
+              '<!-- main-hygiene -->',
+              'Automated weekly check of `main`. Re-opened or updated in place —',
+              'one issue tracks the condition, not each run.',
+              '',
+              ...problems,
+              '',
+              '<sub>Run: ' + context.payload.repository.full_name + ' @ ' +
+              context.runId + ' (' + context.serverUrl + '/' + context.repo.owner.repo +
+              '/actions/runs/' + context.runId + ')</sub>',
+            ].join('\n');
+
+            const title = !clean
+              ? 'main: unpatched advisories in the locked dependency tree'
+              : 'main: no new commits for over a week';
+
+            // Reuse an open issue rather than opening a new one every week.
+            const marker = '<!-- main-hygiene -->';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: process.env.HYGIENE_LABEL,
+              per_page: 100,
+            });
+            const prior = existing.data.find(i => (i.body || '').includes(marker));
+
+            if (prior) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prior.number,
+                body,
+              });
+              core.info('Updated existing hygiene issue #' + prior.number);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: [process.env.HYGIENE_LABEL],
+              });
+              core.info('Opened hygiene issue #' + created.data.number);
+            }
