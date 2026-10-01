@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.demo_blueprint import FieldStrategy
+from dazzle.core.strings import normalize_role
 
 if TYPE_CHECKING:
     from dazzle.core.ir.demo_blueprint import (
@@ -78,7 +79,7 @@ def _resolve_persona_role(entity: EntityBlueprint, persona: Any) -> str:
     if raw in allowed:
         return raw
     # Strip legacy role_ prefix: role_staff → staff, role_agent → agent
-    stripped = raw.removeprefix("role_") if raw.startswith("role_") else raw
+    stripped = normalize_role(raw)
     if stripped in allowed:
         return stripped
 

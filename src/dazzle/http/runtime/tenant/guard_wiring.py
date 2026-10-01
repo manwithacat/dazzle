@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.tenant.cookies import (
     apex_cookie_name,
     domain_session_cookie_name,
@@ -122,7 +123,7 @@ def _pick_user_role(raw_roles: list[str], super_admin_role: str) -> str:
     Returns the super-admin role if held (so apex cookies pass), otherwise
     any held role (so apex cookies on a non-admin raise), otherwise ``""``.
     """
-    normalised = {r.removeprefix("role_") for r in raw_roles}
+    normalised = {normalize_role(r) for r in raw_roles}
     if super_admin_role in normalised:
         return super_admin_role
     return next(iter(normalised), "")

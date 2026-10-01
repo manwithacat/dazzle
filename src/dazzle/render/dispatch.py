@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.renderer_registry import default_renderer_names
+from dazzle.core.strings import normalize_role
 from dazzle.render.breadcrumb_fragment import build_shell_breadcrumb
 from dazzle.render.fragment import (
     URL,
@@ -215,7 +216,7 @@ def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
     # page_routes' role_ctx) and pass per-tenant config so ``tenant_config.<key>``
     # references resolve. Visibility only — route access (RBAC) is unchanged.
     eval_ctx = {
-        "user_roles": [r.removeprefix("role_") for r in (getattr(ctx, "user_roles", None) or [])],
+        "user_roles": [normalize_role(r) for r in (getattr(ctx, "user_roles", None) or [])],
         "tenant_config": getattr(ctx, "tenant_config", {}) or {},
     }
 
@@ -288,7 +289,7 @@ def _account_identity_label(ctx: PageContext) -> str:
     name = (getattr(ctx, "user_name", "") or "").strip()
     display = email or name or "Signed in"
     roles = list(getattr(ctx, "user_roles", None) or [])
-    role_bits = [r.removeprefix("role_") for r in roles[:2] if r]
+    role_bits = [normalize_role(r) for r in roles[:2] if r]
     # Avoid "manager · manager" when username == role name.
     if role_bits and not (len(role_bits) == 1 and role_bits[0].lower() == display.lower()):
         return f"{display} · {', '.join(role_bits)}"

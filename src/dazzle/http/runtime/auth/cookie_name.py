@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.auth.crypto import cookie_secure
 from dazzle.http.runtime.tenant.cookies import (
     apex_cookie_name,
@@ -85,7 +86,7 @@ def select_write_name(
     if cfg is None:
         return default
 
-    normalised = {r.removeprefix("role_") for r in (user_roles or [])}
+    normalised = {normalize_role(r) for r in (user_roles or [])}
     role = cfg.super_admin_role if cfg.super_admin_role in normalised else ""
 
     return choose_session_cookie_name(

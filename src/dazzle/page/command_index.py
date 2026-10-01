@@ -17,7 +17,7 @@ from typing import Any
 from dazzle.core import ir
 from dazzle.core.access import workspace_allowed_personas
 from dazzle.core.ir.identity import spec_display_id
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import normalize_role, to_api_plural
 from dazzle.page.app_paths import list_path
 from dazzle.render.fragment.nav_icons import infer_nav_icon
 
@@ -35,7 +35,7 @@ class CommandEntry:
 
 
 def _norm_roles(roles: list[str] | None) -> set[str]:
-    return {r.removeprefix("role_") for r in (roles or [])}
+    return {normalize_role(r) for r in (roles or [])}
 
 
 def build_command_index(

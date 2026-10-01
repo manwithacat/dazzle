@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.core.strings import normalize_role
+
 # Cap eager regions after focus lead so persona intent wins over stage
 # STAGE_FOLD defaults without re-opening command_center / dual_pane thrash
 # (nested Playwright storms when fold ≥6 concurrent region GETs + preload —
@@ -51,7 +53,7 @@ def first_persona_override(
 ) -> tuple[list[str] | None, str | None]:
     """First role with focus and/or purpose override (table-override rule)."""
     for role in user_roles:
-        key = role.removeprefix("role_")
+        key = normalize_role(role)
         if key not in persona_focus and key not in persona_purposes:
             continue
         focus = list(persona_focus[key]) if key in persona_focus else None

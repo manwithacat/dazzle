@@ -288,3 +288,65 @@ def test_generated_requirements_pins_track_framework_minor() -> None:
             "(~major.minor) so `dazzle init` cannot scaffold a project the "
             "framework will not run"
         )
+
+
+# The canonical role-name rule lives in `core.strings.normalize_role`, beside
+# `entity_slug`. It existed alongside 38 inline `removeprefix("role_")` copies
+# and a second `_normalize_role` definition in `policy.py` with a divergent
+# isinstance guard (#1716). `check_deny_roles` skipping normalisation is what
+# made `deny:` fail open — see #1713.
+_INLINE_ROLE_PREFIX = re.compile(r"""\.removeprefix\(\s*(['"])role_\1\s*\)""")
+_ROLE_HELPERS = {"strings.py", "route_support.py", "policy.py"}
+
+
+def test_no_inline_role_normalization() -> None:
+    """`r.removeprefix("role_")` → `dazzle.core.strings.normalize_role(r)`.
+
+    Database roles may carry a `role_` prefix while DSL persona references are
+    bare, so every comparison between the two has to normalise. The
+    normalisation had 38 inline copies plus a second helper definition, which
+    is how `require:` and `deny:` came to disagree about the same input.
+    """
+    hits: list[str] = []
+    for path in _src_files(_ROLE_HELPERS):
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if not _INLINE_ROLE_PREFIX.search(line):
+                continue
+            # Docstrings and prose describing the rule are not violations.
+            stripped = line.lstrip()
+            if stripped.startswith(("#", "*", '"', "'")) or "``" in line:
+                continue
+            hits.append(f"{path.relative_to(_SRC.parent.parent)}:{lineno}")
+    assert not hits, (
+        "Inline role-name normalisation found — use "
+        "`dazzle.core.strings.normalize_role(role)` (the rule lives in `core` so "
+        "`auth/dependencies.py` can reach it; `route_support._normalize_role` "
+        "re-exports it). A copy here is how `deny:` stopped denying a "
+        "`role_`-prefixed role (#1713/#1716):\n  " + "\n  ".join(hits)
+    )
+
+
+def test_only_one_normalize_role_helper_per_module() -> None:
+    """No module may define its own `_normalize_role` body.
+
+    `policy.py` had a second definition that added an `isinstance` guard, so its
+    behaviour on non-str input diverged from the canonical rule invisibly. A
+    thin alias that delegates is fine; a re-implementation is not.
+    """
+    offenders: list[str] = []
+    for path in _src_files({"strings.py"}):
+        text = path.read_text(encoding="utf-8")
+        if "def _normalize_role(" not in text:
+            continue
+        # A delegation is fine: `return normalize_role(role)`, possibly guarded.
+        # Scan the whole function, not just the first paragraph — a docstring
+        # would otherwise be mistaken for the body.
+        body = text.split("def _normalize_role(", 1)[1]
+        body = re.split(r"\n(?=(?:def |class |@))", body, maxsplit=1)[0]
+        if "normalize_role(role)" not in body:
+            offenders.append(str(path.relative_to(_SRC.parent.parent)))
+    assert not offenders, (
+        "A module re-implements `_normalize_role` instead of delegating to "
+        f"`core.strings.normalize_role`:\n  {chr(10).join('  ' + o for o in offenders)}"
+    )

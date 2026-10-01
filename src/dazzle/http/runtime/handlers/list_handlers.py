@@ -32,7 +32,7 @@ from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
-from dazzle.core.strings import entity_slug, to_api_plural
+from dazzle.core.strings import entity_slug, normalize_role, to_api_plural
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
@@ -121,7 +121,7 @@ def _principal_can_op(
     _raw_roles = list(getattr(_user, "roles", [])) if _user else []
     _runtime_ctx = AccessRuntimeContext(
         user_id=str(_user.id) if _user else None,
-        roles=[r.removeprefix("role_") for r in _raw_roles],
+        roles=[normalize_role(r) for r in _raw_roles],
         is_superuser=getattr(_user, "is_superuser", False) if _user else False,
     )
     decision = evaluate_permission(

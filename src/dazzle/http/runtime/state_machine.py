@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.strings import normalize_role
 from dazzle.i18n.display_locale import calendar_today
 from dazzle.render.filters import clerk_form_error_field_label, clerk_stage_label
 
@@ -457,7 +458,7 @@ class TransitionValidator:
             # Check role guard
             if guard.requires_role:
                 if not is_superuser:
-                    normalized = {r.removeprefix("role_") for r in (user_roles or [])}
+                    normalized = {normalize_role(r) for r in (user_roles or [])}
                     if guard.requires_role not in normalized:
                         return TransitionValidationResult.failure(
                             GuardNotSatisfiedError(
