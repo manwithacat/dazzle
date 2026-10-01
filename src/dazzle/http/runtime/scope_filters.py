@@ -770,8 +770,17 @@ def _resolve_scope_filters(
             return {}  # scope: all — no filter
 
     # All matched rules have conditions — apply the first one that resolves.
-    # TODO(#604): When multiple restrictive rules match, OR-combine them
-    # so the user sees the union of rows visible under each role.
+    #
+    # Known residual, tracked in #1742: when several *restrictive* rules match
+    # (a dual-role user), only the first contributes, so the union of rows
+    # visible under each role is not returned. Direction is under-exposure —
+    # rows are hidden, never leaked.
+    #
+    # This was previously annotated TODO(#604), but #604 closed on 2026-03-22
+    # having shipped only the permissive half (the `scope: all` bypass above).
+    # The restrictive half was never done, and a closed issue made the comment
+    # read as handled. Fixing the union *widens* who sees what, so it is a
+    # product decision rather than a cleanup.
     for rule in matched_rules:
         condition = getattr(rule, "condition", None)
         predicate = getattr(rule, "predicate", None)

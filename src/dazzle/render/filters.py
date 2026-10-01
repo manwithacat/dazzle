@@ -377,15 +377,6 @@ def _timeago_filter(value: Any) -> str:
     return _elapsed_label(seconds, future=False)
 
 
-def _slugify_filter(value: Any) -> str:
-    """Slugify a string for use as an HTML id attribute."""
-    if value is None:
-        return ""
-    text = str(value).lower().strip()
-    text = _re.sub(r"[^a-z0-9]+", "-", text)
-    return text.strip("-")
-
-
 def _basename_or_url_filter(value: Any) -> str:
     """Extract filename from a URL or path, or return the value as-is."""
     if value is None:
@@ -839,23 +830,6 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
         if k not in _skip and isinstance(v, str) and v and len(v) < 200:
             return v
     return str(value.get("id", fallback))
-
-
-def _ref_display_filter(value: Any) -> str:
-    """Filter form of ``_ref_display_name`` for legacy import sites."""
-    return _ref_display_name(value)
-
-
-def _resolve_fk_id_filter(value: Any) -> str:
-    """Extract the id from a FK value that may be dict or scalar."""
-    if value is None:
-        return ""
-    if isinstance(value, dict):
-        for key in ("id", "ID", "uuid", "value"):
-            if key in value and value[key] is not None:
-                return str(value[key])
-        return ""
-    return str(value)
 
 
 def _truncate_filter(value: Any, length: int = 50) -> str:
