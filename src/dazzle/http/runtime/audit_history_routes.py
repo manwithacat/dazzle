@@ -17,6 +17,8 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from starlette.responses import HTMLResponse
 
+from dazzle.core.strings import normalize_role
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,9 +124,9 @@ def _extract_personas(auth_context: Any) -> list[str]:
     out: list[str] = []
     for r in raw_roles:
         if isinstance(r, str):
-            out.append(r.removeprefix("role_"))
+            out.append(normalize_role(r))
         else:
             name = getattr(r, "name", None)
             if name:
-                out.append(str(name).removeprefix("role_"))
+                out.append(normalize_role(str(name)))
     return out

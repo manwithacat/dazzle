@@ -17,6 +17,7 @@ import asyncio
 import logging
 from typing import Any
 
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
 from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
@@ -205,7 +206,7 @@ async def _workspace_batch_handler(
                 raise HTTPException(status_code=401, detail="Authentication required")
             if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
                 is_super = auth_ctx.user and auth_ctx.user.is_superuser
-                normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
+                normalized_roles = [normalize_role(r) for r in auth_ctx.roles]
                 if not is_super and not any(
                     r in ctx.ws_access.allow_personas for r in normalized_roles
                 ):
@@ -315,7 +316,7 @@ async def _workspace_stats_handler(
                 raise HTTPException(status_code=401, detail="Authentication required")
             if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
                 is_super = auth_ctx.user and auth_ctx.user.is_superuser
-                normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
+                normalized_roles = [normalize_role(r) for r in auth_ctx.roles]
                 if not is_super and not any(
                     r in ctx.ws_access.allow_personas for r in normalized_roles
                 ):

@@ -30,7 +30,7 @@ from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.ir import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.integrations import MappingTriggerType
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import normalize_role, to_api_plural
 
 # Re-export for stable import path (build_service / fidelity / experience_routes).
 # `as` form keeps mypy explicit re-export after the dispatch_ctx extract.
@@ -1023,7 +1023,7 @@ def _should_suppress_mutations(
         ws_name = deps.surface_workspace[surface_name]
         for ws in deps.appspec.workspaces:
             if ws.name == ws_name and ws.ux and ws.ux.persona_variants:
-                normalized = [r.removeprefix("role_") for r in user_roles]
+                normalized = [normalize_role(r) for r in user_roles]
                 for variant in ws.ux.persona_variants:
                     if variant.persona in normalized and variant.read_only:
                         return True
@@ -1059,7 +1059,7 @@ def _access_runtime_from_auth(auth_ctx: Any) -> AccessRuntimeContext:
     raw_roles = list(getattr(user, "roles", [])) if user else []
     return AccessRuntimeContext(
         user_id=str(user.id) if user else None,
-        roles=[r.removeprefix("role_") for r in raw_roles],
+        roles=[normalize_role(r) for r in raw_roles],
         is_superuser=getattr(user, "is_superuser", False) if user else False,
     )
 
@@ -1248,7 +1248,7 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
         return
 
     for role in user_roles:
-        normalised = role.removeprefix("role_")
+        normalised = normalize_role(role)
 
         matched = False
 
@@ -1328,7 +1328,7 @@ def _apply_persona_detail_primary(
     if not urls and not labels:
         return
     for role in user_roles:
-        normalised = role.removeprefix("role_")
+        normalised = normalize_role(role)
         if normalised not in urls and normalised not in labels:
             continue
         kind = kinds.get(normalised, "edit")
@@ -1396,7 +1396,7 @@ def _apply_persona_form_overrides(
         return False
 
     for role in user_roles:
-        normalised = role.removeprefix("role_")
+        normalised = normalize_role(role)
 
         matched = False
 
@@ -1569,12 +1569,12 @@ def _resolve_nav_model(
 ) -> NavModel:
     """Pick the single sidebar model for an authenticated or anonymous request."""
     for role in roles or []:
-        nav = deps.persona_navs.get(role.removeprefix("role_"))
+        nav = deps.persona_navs.get(normalize_role(role))
         if nav is not None:
             return nav
     if authenticated:
         for role in roles or []:
-            nav = deps.unmatched_role_navs.get(role.removeprefix("role_"))
+            nav = deps.unmatched_role_navs.get(normalize_role(role))
             if nav is not None:
                 return nav
     return deps.anon_nav or NavModel(groups=(), auto_discovered=True)
@@ -1764,7 +1764,7 @@ def _inject_onboarding_step(prc: _PageRequestContext) -> None:
     user_persona = ""
     roles = list(getattr(user, "roles", None) or [])
     if roles:
-        user_persona = roles[0].removeprefix("role_")
+        user_persona = normalize_role(roles[0])
 
     if not surface_name:
         logger.info(
@@ -1884,7 +1884,7 @@ def _check_surface_access(prc: _PageRequestContext) -> Response | None:
     if prc.auth_ctx and prc.auth_ctx.is_authenticated and prc.auth_ctx.user:
         user = {"id": getattr(prc.auth_ctx.user, "id", None)}
         raw_roles = list(getattr(prc.auth_ctx.user, "roles", []))
-        user_personas = [role.removeprefix("role_") for role in raw_roles]
+        user_personas = [normalize_role(role) for role in raw_roles]
     try:
         check_surface_access(ac, user, user_personas=user_personas, is_api_request=False)
     except SurfaceAccessDenied as error:
@@ -1947,7 +1947,7 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
     _raw_roles = list(getattr(_user, "roles", [])) if _user else []
     _runtime_ctx = AccessRuntimeContext(
         user_id=str(_user.id) if _user else None,
-        roles=[r.removeprefix("role_") for r in _raw_roles],
+        roles=[normalize_role(r) for r in _raw_roles],
         is_superuser=getattr(_user, "is_superuser", False) if _user else False,
     )
     _decision = evaluate_permission(
@@ -2176,7 +2176,7 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
     # Evaluate role-based visible conditions (#487)
     if prc.ctx.user_roles is not None:
         _role_ctx = {
-            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
+            "user_roles": [normalize_role(r) for r in prc.ctx.user_roles],
         }
         for _field in req_detail.fields:
             if _field.visible_condition:
@@ -2390,7 +2390,7 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     # Evaluate role-based visible_condition on list columns (#585)
     if prc.ctx.user_roles is not None:
         _role_ctx = {
-            "user_roles": [r.removeprefix("role_") for r in prc.ctx.user_roles],
+            "user_roles": [normalize_role(r) for r in prc.ctx.user_roles],
         }
         for _col in req_table.columns:
             if _col.visible_condition:
@@ -2730,7 +2730,7 @@ def _render_response(prc: _PageRequestContext) -> Response:
     _user_roles = getattr(prc.ctx, "user_roles", None) or []
     if persona_purposes and _user_roles:
         for _role in _user_roles:
-            _normalised = _role.removeprefix("role_")
+            _normalised = normalize_role(_role)
             if _normalised in persona_purposes:
                 prc.ctx_overrides["page_purpose"] = persona_purposes[_normalised]
                 break
@@ -3224,7 +3224,7 @@ async def _workspace_handler(
         and auth_ctx.user.is_superuser
     )
     if ws_allowed_personas and not is_superuser:
-        normalized = [r.removeprefix("role_") for r in user_roles]
+        normalized = [normalize_role(r) for r in user_roles]
         if not normalized or not any(r in ws_allowed_personas for r in normalized):
             # #1626 P0-3: structured detail so the HTML 403 page (#808 / #1536)
             # can disclose roles — never a bare string that browsers may dump

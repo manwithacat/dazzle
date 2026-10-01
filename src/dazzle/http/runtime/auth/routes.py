@@ -10,6 +10,8 @@ from fastapi import APIRouter, HTTPException, Response
 from fastapi import Request as FastAPIRequest
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from dazzle.core.strings import normalize_role
+
 from .cookie_name import clear_session_cookies, read_session_id, set_session_cookies
 from .crypto import verify_password
 from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
@@ -91,7 +93,7 @@ def _resolve_redirect(persona_routes: dict[str, str] | None, roles: list[str] | 
     """Resolve persona landing page from user roles."""
     if persona_routes and roles:
         for role in roles:
-            route = persona_routes.get(role.removeprefix("role_"))
+            route = persona_routes.get(normalize_role(role))
             if route:
                 return route
     return "/app"

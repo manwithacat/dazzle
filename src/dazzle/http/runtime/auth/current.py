@@ -34,6 +34,8 @@ from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import Any
 
+from dazzle.core.strings import normalize_role
+
 from .models import AuthContext
 
 
@@ -141,7 +143,7 @@ def require_auth(
     framework-agnostic enough to drop into any FastAPI / Starlette
     custom route. Returns plain JSONResponse so projects don't need
     to import HTTPException."""
-    required: set[str] = {r.removeprefix("role_") for r in (roles or [])}
+    required: set[str] = {normalize_role(r) for r in (roles or [])}
 
     def decorator(
         handler: Callable[..., Awaitable[Any]],
@@ -157,7 +159,7 @@ def require_auth(
                     status_code=401,
                 )
             if required:
-                user_roles = {r.removeprefix("role_") for r in auth.roles}
+                user_roles = {normalize_role(r) for r in auth.roles}
                 if not required & user_roles:
                     return JSONResponse(
                         {"error": "forbidden", "required_roles": sorted(required)},

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.workspaces import WorkspaceSpec
+from dazzle.core.strings import normalize_role
 from dazzle.page.converters.workspace_converter import workspace_allowed_personas
 from dazzle.rbac.matrix import PolicyDecision  # runtime import (ui may import rbac)
 
@@ -466,7 +467,7 @@ def _role_region_links(
 
 def build_role_nav(appspec: AppSpec, role: str, matrix: AccessMatrix) -> NavModel:
     """Sidebar for unmatched roles; only admin roles inherit admin workspaces."""
-    normalized = role.removeprefix("role_")
+    normalized = normalize_role(role)
     if normalized not in {"admin", "super_admin"}:
         return build_anon_nav(appspec, matrix)
     groups: list[NavGroup] = []

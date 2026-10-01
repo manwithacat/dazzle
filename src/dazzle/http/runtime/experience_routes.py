@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.htmx import HtmxDetails
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx, _reconcile_nav_model
 from dazzle.page.converters.nav_builder import (
@@ -437,8 +438,8 @@ async def _experience_step_get(
         if auth["is_authenticated"]:
             for role in auth["user_roles"]:
                 nav_model = (
-                    deps.persona_navs.get(role.removeprefix("role_"))
-                    or deps.admin_navs.get(role.removeprefix("role_"))
+                    deps.persona_navs.get(normalize_role(role))
+                    or deps.admin_navs.get(normalize_role(role))
                     or nav_model
                 )
                 if nav_model is not deps.anon_nav:

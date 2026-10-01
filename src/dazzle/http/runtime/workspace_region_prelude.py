@@ -21,6 +21,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from dazzle.core.strings import normalize_role
 from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
 from dazzle.http.runtime.tenant_isolation import (
     get_current_rls_user_attrs,
@@ -80,7 +81,7 @@ async def resolve_request_user_context(
         # Workspace persona gate. Roles use "role_" prefix; persona IDs don't.
         if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
             is_super = auth_ctx.user and auth_ctx.user.is_superuser
-            normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
+            normalized_roles = [normalize_role(r) for r in auth_ctx.roles]
             if not is_super and not any(
                 r in ctx.ws_access.allow_personas for r in normalized_roles
             ):

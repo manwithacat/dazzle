@@ -17,7 +17,7 @@ from typing import Any
 from dazzle.core.condition_eval import evaluate_condition as _eval_vis
 from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
-from dazzle.core.strings import to_api_plural
+from dazzle.core.strings import normalize_role, to_api_plural
 from dazzle.http.runtime.workspace_card_data import (
     _apply_format_spec,
     _initials_from,
@@ -1870,7 +1870,7 @@ def compute_columns_for_persona(
     if not any(c.get("visible_condition") for c in precomputed_columns):
         return precomputed_columns
 
-    role_ctx = {"user_roles": [r.removeprefix("role_") for r in user_roles]}
+    role_ctx = {"user_roles": [normalize_role(r) for r in user_roles]}
     return [
         c
         for c in precomputed_columns

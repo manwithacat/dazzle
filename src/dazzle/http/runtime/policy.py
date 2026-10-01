@@ -60,6 +60,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request
 
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+from dazzle.core.strings import normalize_role
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -331,8 +332,8 @@ def _permit_passes(
 
 
 def _normalize_role(role: str) -> str:
-    """Strip the auth-layer `role_` prefix — DSL personas are bare names."""
-    return role.removeprefix("role_") if isinstance(role, str) else str(role)
+    """Normalize a database role name. Thin alias for the canonical rule."""
+    return normalize_role(role) if isinstance(role, str) else str(role)
 
 
 def _check_scope_create(
