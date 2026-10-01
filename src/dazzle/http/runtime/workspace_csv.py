@@ -60,6 +60,11 @@ _CSV_CHANNEL_FORMATTERS = {
 def _csv_format_override(raw: Any, column: dict[str, Any]) -> str | None:
     """DSL ``format:`` on a CSV cell — same override the grid uses (oral #131).
 
+    An empty `currency_code` is deliberate: it lets `format_cell` resolve
+    `DisplayLocaleProfile.currency_default`. Passing "GBP" short-circuits that,
+    so a tenant with a different product currency saw GBP in the CSV while the
+    app showed its own value (#1715).
+
     Returns None when the column has no format_kind so typed inference runs.
     Leftover junk stays put (format_cell refuse, or exception → str(raw)).
     """
@@ -87,7 +92,11 @@ def _csv_typed_cell(raw: Any, column: dict[str, Any]) -> str:
         return format_cell(
             raw,
             "currency",
-            currency_code=str(column.get("currency_code") or "GBP"),
+            # No fallback here on purpose: an empty code lets `format_cell`
+            # resolve `DisplayLocaleProfile.currency_default`. Passing "GBP"
+            # short-circuits that, so a tenant setting a different product
+            # currency saw GBP in the CSV while the app showed its own value.
+            currency_code=str(column.get("currency_code") or ""),
         )
     if kind in ("date", "datetime"):
         return format_cell(raw, kind)

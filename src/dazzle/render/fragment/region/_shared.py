@@ -23,6 +23,7 @@ from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
+from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.breadcrumbs import (
     clerk_empty_carousel_title,
     clerk_empty_chart_title,
@@ -68,7 +69,8 @@ def format_minor_money_display(value: Any, *, currency_code: str = "GBP") -> str
 
     Leftover junk stays put (``format_cell`` / ``_currency``).
     """
-    text = format_cell(value, "currency", currency_code=currency_code or "GBP")
+    # Empty is meaningful: it lets `format_cell` resolve the product default.
+    text = format_cell(value, "currency", currency_code=currency_code or "")
     return text or ("" if value is None else str(value))
 
 
@@ -78,7 +80,9 @@ def _minor_currency_code(col: dict[str, Any], item: dict[str, Any] | None = None
     key = str(col.get("key") or "")
     if not code and key.endswith("_minor") and item is not None:
         code = str(item.get(f"{key[:-6]}_currency") or "")
-    return code or "GBP"
+    # The product default, not a literal "GBP" — the last of #1715's four
+    # display paths to stop disagreeing with the configured currency.
+    return code or get_display_locale().currency_default
 
 
 def _display_col_for_key(columns: Any, display_key: str) -> dict[str, Any] | None:
@@ -464,13 +468,12 @@ def _render_typed_value(
     if col_type == "currency":
         from dazzle.render.filters import _currency_filter
 
-        # Per-record currency, else the column default, else GBP — keeps
-        # workspace regions from disagreeing with entity tables on EUR/USD rows.
-        return RawHTML(
-            _currency_filter(
-                value, record_currency_code(item, key, str(col.get("currency_code") or "GBP"))
-            )
-        )
+        # Per-record currency, else the column default, else the *product*
+        # default — keeps workspace regions from disagreeing with entity tables
+        # on EUR/USD rows, and with a tenant that configured its own currency
+        # (#1704, #1715).
+        fallback = str(col.get("currency_code") or "") or get_display_locale().currency_default
+        return RawHTML(_currency_filter(value, record_currency_code(item, key, fallback)))
 
     if col_type == "bytes":
         return RawHTML(_html_escape(format_cell(value, "bytes")))
