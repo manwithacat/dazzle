@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 33  # v33: #1626 ref_as_repr counter-prior + presentation MCP
+SEED_SCHEMA_VERSION = (
+    34  # v34: +duplicated_business_rule / fail_open_default / silent_control_flow counter-priors
+)
 
 
 def compute_seed_version() -> str:
