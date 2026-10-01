@@ -41,7 +41,7 @@ jobs:
       - name: Rebuild dist bundles
         if: steps.vendor_diff.outputs.changed == 'true'
         run: python scripts/build_dist.py
-      - name: Assert maintainer-owned token is present
+      - name: Assert vendor bot App is configured
         # The PR author must equal the commit author, or branch protection's
         # `require_extra_approval_for_unattributed_changes` can never be
         # satisfied and the PR is stuck forever. `GITHUB_TOKEN` makes the PR
@@ -54,39 +54,44 @@ jobs:
         # fallback recreates exactly the stuck-PR condition this guards.
         if: steps.vendor_diff.outputs.changed == 'true'
         env:
-          VENDOR_TOKEN: ${{ secrets.VENDOR_BOT_TOKEN }}
-          VENDOR_ACTOR_NAME: ${{ vars.VENDOR_ACTOR_NAME }}
-          VENDOR_ACTOR_EMAIL: ${{ vars.VENDOR_ACTOR_EMAIL }}
+          APP_ID: ${{ vars.VENDOR_BOT_APP_ID }}
+          APP_KEY: ${{ secrets.VENDOR_BOT_PRIVATE_KEY }}
+          ACTOR_NAME: ${{ vars.VENDOR_ACTOR_NAME }}
+          ACTOR_EMAIL: ${{ vars.VENDOR_ACTOR_EMAIL }}
         run: |
           missing=""
-          [ -z "$VENDOR_TOKEN" ] && missing="${missing}secrets.VENDOR_BOT_TOKEN "
-          [ -z "$VENDOR_ACTOR_NAME" ] && missing="${missing}vars.VENDOR_ACTOR_NAME "
-          [ -z "$VENDOR_ACTOR_EMAIL" ] && missing="${missing}vars.VENDOR_ACTOR_EMAIL "
+          [ -z "$APP_ID" ]    && missing="${missing}vars.VENDOR_BOT_APP_ID "
+          [ -z "$APP_KEY" ]   && missing="${missing}secrets.VENDOR_BOT_PRIVATE_KEY "
+          [ -z "$ACTOR_NAME" ]  && missing="${missing}vars.VENDOR_ACTOR_NAME "
+          [ -z "$ACTOR_EMAIL" ] && missing="${missing}vars.VENDOR_ACTOR_EMAIL "
           if [ -n "$missing" ]; then
-            echo "::error::vendor bot is not configured — missing: ${missing}"
+            echo "::error::vendor bot App is not configured -- missing: ${missing}"
             echo ""
-            echo "The vendor update needs a maintainer-owned identity so that the"
-            echo "commit author and the PR author are the SAME identity. An App"
-            echo "installation token cannot report its own identity, so the commit"
-            echo "identity is declared explicitly."
-            echo ""
-            echo "Setup (one time, see docs/contributing/vendor-bot-token.md):"
-            echo "  1. Create a GitHub App owned by a maintainer with"
-            echo "     contents:write and pull-requests:write, or a PAT with the"
-            echo "     same scopes."
-            echo "  2. Store the token as secret VENDOR_BOT_TOKEN."
-            echo "  3. Store the App's login as variable VENDOR_ACTOR_NAME and its"
-            echo "     noreply email as VENDOR_ACTOR_EMAIL."
+            echo "The vendor update needs a maintainer-owned identity so the commit"
+            echo "author and the PR author are the SAME identity. See"
+            echo "docs/contributing/vendor-bot-token.md for the one-time setup."
             echo ""
             echo "Failing here rather than falling back to GITHUB_TOKEN: the"
-            echo "fallback recreates the stuck-PR condition this guards."
+            echo "fallback recreates the stuck-PR condition this guards against."
             exit 1
           fi
+      - name: Mint installation token
+        # An App installation token expires in ~1 hour, so it cannot be stored
+        # as a long-lived secret. It is minted here, per run, from the App's
+        # private key. That is why the App (not a PAT) is the recommended shape.
+        id: vendor_token
+        if: steps.vendor_diff.outputs.changed == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ vars.VENDOR_BOT_APP_ID }}
+          private-key: ${{ secrets.VENDOR_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: Create PR
         if: steps.vendor_diff.outputs.changed == 'true'
         env:
-          # Maintainer-owned App/PAT token, NOT GITHUB_TOKEN -- see the step above.
-          GH_TOKEN: ${{ secrets.VENDOR_BOT_TOKEN }}
+          # Minted per run -- NOT GITHUB_TOKEN. See the steps above.
+          GH_TOKEN: ${{ steps.vendor_token.outputs.token }}
           VENDOR_ACTOR_NAME: ${{ vars.VENDOR_ACTOR_NAME }}
           VENDOR_ACTOR_EMAIL: ${{ vars.VENDOR_ACTOR_EMAIL }}
         run: |
