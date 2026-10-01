@@ -135,6 +135,14 @@ jobs:
              this state because the manifest was rewritten in the same
              commit. If you re-roll the vendored files outside this
              workflow, run `python scripts/update_vendor_hashes.py`.
+
+          ## AI Assistance
+
+          AI Agent Used: this update was produced by `scripts/update_vendors.py`
+          running unattended in CI. A maintainer reviews the resulting diff and
+          the hash table above before merging.
+
+          Co-Authored-By: opencode <noreply@opencode.ai>
           BODY
           )
           PR_BODY=${PR_BODY_TEMPLATE//__HASH_DIFF__/$HASH_DIFF}
