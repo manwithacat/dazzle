@@ -25,7 +25,8 @@ from dazzle.core import ir
 from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 from dazzle.http.runtime.http_errors import require_found
-from dazzle.http.runtime.repository import DatabaseManager, Repository
+from dazzle.http.runtime.pg_backend import PostgresBackend
+from dazzle.http.runtime.repository import Repository
 from dazzle.http.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ class AuthenticateResponse(BaseModel):
 
 @dataclass
 class _TestDeps:
-    db_manager: DatabaseManager
+    db_manager: PostgresBackend
     repositories: dict[str, Repository[Any]]
     entities: list[EntitySpec]
     entity_sql: dict[str, _EntitySQL]
@@ -900,7 +901,7 @@ async def _delete_entity(deps: _TestDeps, entity_name: str, entity_id: str) -> d
 
 
 def create_test_routes(
-    db_manager: DatabaseManager,
+    db_manager: PostgresBackend,
     repositories: dict[str, Repository[Any]],
     entities: list[EntitySpec],
     auth_store: Any = None,

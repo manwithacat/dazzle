@@ -368,8 +368,8 @@ class PostgresBackend:
     """
     PostgreSQL database backend.
 
-    Drop-in replacement for DatabaseManager that uses PostgreSQL
-    instead of SQLite. Parses DATABASE_URL for connection parameters.
+    The runtime database backend. Parses DATABASE_URL for connection
+    parameters.
 
     Supports optional connection pooling via psycopg_pool.ConnectionPool.
     Call open_pool() to enable pooling; connection() will then lease from

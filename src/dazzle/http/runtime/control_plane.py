@@ -16,7 +16,8 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from dazzle.http.runtime.repository import DatabaseManager, Repository
+from dazzle.http.runtime.pg_backend import PostgresBackend
+from dazzle.http.runtime.repository import Repository
 from dazzle.http.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ class FrontendLogRequest(BaseModel):
 
 @dataclass
 class _ControlPlaneDeps:
-    db_manager: DatabaseManager | None
+    db_manager: PostgresBackend | None
     repositories: dict[str, Repository[Any]] | None
     entities: list[EntitySpec]
 
@@ -171,7 +172,7 @@ async def _clear_logs(deps: _ControlPlaneDeps) -> dict[str, Any]:
 
 
 def create_control_plane_routes(
-    db_manager: DatabaseManager | None,
+    db_manager: PostgresBackend | None,
     repositories: dict[str, Repository[Any]] | None,
     entities: list[EntitySpec],
 ) -> APIRouter:
