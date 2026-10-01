@@ -8,25 +8,41 @@ Usage:
     python scripts/bump-version.py major   # 0.10.0 -> 1.0.0
     python scripts/bump-version.py 0.12.0  # Set explicit version
 
-Updates version in:
-    - pyproject.toml (source of truth)
-    - homebrew/dazzle.rb (Homebrew formula)
-    - package.json (root)
-    - AGENTS.md (canonical agent instructions)
+Updates version in the six canonical locations:
+
+    - pyproject.toml                            (source of truth)
+    - package.json                              (root only; the HaTchi-MaXchi
+                                                package.json is independent)
+    - src/dazzle/mcp/semantics_kb/core.toml
+    - AGENTS.md
+    - ROADMAP.md
+    - homebrew/dazzle.rb                        (formula version + tarball tag)
+
+Gated by
+``tests/unit/test_agent_asset_gates.py::test_bump_implementations_agree_on_the_location_set``,
+which fails if this file and ``.agents/skills/bump/SKILL.md`` ever diverge again.
+They previously did, and each stranded files only the other knew about.
 """
 
 from __future__ import annotations
 
 import re
+import shutil
 import sys
 from pathlib import Path
 
 # Files that contain version strings to update
 VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
-    ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
+    (
+        "src/dazzle/mcp/semantics_kb/core.toml",
+        r'^version\s*=\s*["\']([^"\']+)["\']',
+        'version = "{version}"',
+    ),
     ("AGENTS.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
+    ("ROADMAP.md", r"\*\*Current Version\*\*:\s*v[\d.]+", "**Current Version**: v{version}"),
+    ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
 ]
 
 # Files where version appears in URLs/comments (update tag references)
@@ -148,19 +164,27 @@ def main() -> int:
 
     print(f"\n✓ Updated {updated} files to version {new_version}")
 
-    # Reinstall editable package to update metadata
-    print("\nReinstalling package...")
+    # Refresh the editable install so `dazzle --version` reports the new value.
+    #
+    # This used to run `pip install -e .`, which AGENTS.md forbids for this repo
+    # and which cannot work in a uv `.venv` (no pip). The failure was swallowed
+    # into a warning and the script still exited 0 — so the one command whose job
+    # is keeping versions in lockstep ended with stale metadata and reported
+    # success. It now says so plainly instead of pretending.
+    print("\nRefreshing the editable install (uv only)...")
     import subprocess
 
-    result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-e", ".", "--quiet"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode == 0:
-        print("  ✓ Package reinstalled")
+    uv = shutil.which("uv")
+    if uv is None:
+        print("  ⚠ uv not found on PATH — skipped.")
+        print("    Run `uv sync` yourself to refresh install metadata.")
     else:
-        print(f"  ⚠ pip install failed: {result.stderr}")
+        result = subprocess.run([uv, "sync", "--quiet"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("  ✓ uv sync complete")
+        else:
+            print(f"  ⚠ uv sync failed: {(result.stderr or '').strip()}")
+            print("    Run `uv sync` yourself before relying on `dazzle --version`.")
 
     print("\nNext steps:")
     print("  1. Review changes: git diff")

@@ -141,3 +141,127 @@ def test_agents_md_version_matches_pyproject() -> None:
         f"AGENTS.md footer says {agents_match.group(1)} but pyproject.toml is "
         f"{py_match.group(1)} — the bump workflow must update both."
     )
+
+
+# Every file that carries the project's canonical version. A bumped pyproject
+# with a forgotten homebrew formula ships a formula pointing at a nonexistent
+# tag, with zero test failure — that is the hole this closes.
+#
+# Deliberately EXCLUDED: packages/hatchi-maxchi/package.json, which declares
+# in its own `//` field that its "version tracks the standalone releases,
+# independent of Dazzle's version". Gating it would encode a falsehood. If
+# that ever stops being true, remove the note and add the file here.
+_CANONICAL_VERSION_FILES: tuple[tuple[str, str], ...] = (
+    ("pyproject.toml", r'^version = "(\d+\.\d+\.\d+)"'),
+    ("src/dazzle/mcp/semantics_kb/core.toml", r'^version = "(\d+\.\d+\.\d+)"'),
+    ("AGENTS.md", r"\*\*Version\*\*: (\d+\.\d+\.\d+)"),
+    ("ROADMAP.md", r"\*\*Current Version\*\*: v(\d+\.\d+\.\d+)"),
+    ("homebrew/dazzle.rb", r'^  version "(\d+\.\d+\.\d+)"'),
+    ("homebrew/dazzle.rb", r"tags/v(\d+\.\d+\.\d+)\.tar\.gz"),
+    ("package.json", r'"version": "(\d+\.\d+\.\d+)"'),
+)
+
+_INDEPENDENT_VERSION_FILES = ("packages/hatchi-maxchi/package.json",)
+
+
+def test_every_canonical_version_location_matches_pyproject() -> None:
+    """All version locations move together, or this fails.
+
+    Previously only AGENTS.md ↔ pyproject.toml was gated. `package.json` sat ten
+    minors behind (0.104.17 vs 0.114.10) because the bump skill and
+    `scripts/bump-version.py` each listed a *different* set of files, so
+    whichever ran last stranded the others.
+    """
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text()
+    canonical = re.search(r'^version = "(\d+\.\d+\.\d+)"', pyproject, re.M)
+    assert canonical, "pyproject.toml has lost its version line"
+    expected = canonical.group(1)
+
+    drift: list[str] = []
+    for rel, pattern in _CANONICAL_VERSION_FILES:
+        path = REPO_ROOT / rel
+        assert path.is_file(), f"version location {rel} moved — update the gate"
+        found = re.search(pattern, path.read_text(), re.M)
+        if not found:
+            drift.append(f"{rel}: no line matching {pattern!r}")
+        elif found.group(1) != expected:
+            drift.append(f"{rel}: {found.group(1)} != pyproject.toml {expected}")
+
+    assert not drift, (
+        f"Version drift against pyproject.toml ({expected}). Every location in "
+        "`_CANONICAL_VERSION_FILES` must move in the same bump — see "
+        "`.agents/skills/bump/SKILL.md`.\n  " + "\n  ".join(drift)
+    )
+
+
+def test_independent_version_files_are_documented_as_independent() -> None:
+    """A file may opt out of the version gate, but only by saying so.
+
+    Without this, an excluded file silently drifts and nobody notices — which is
+    how `package.json` reached ten minors behind in the first place.
+    """
+    for rel in _INDEPENDENT_VERSION_FILES:
+        text = (REPO_ROOT / rel).read_text()
+        assert "independent of Dazzle" in text, (
+            f"{rel} is excluded from the version gate but no longer declares "
+            "that its version is independent. Either restore the note or add it "
+            "to _CANONICAL_VERSION_FILES."
+        )
+
+
+def test_bump_implementations_agree_on_the_location_set() -> None:
+    """The skill and the script must cover the same files.
+
+    They drifted: the skill knew core.toml and ROADMAP.md but not package.json;
+    the script knew package.json but not the other two. A bump that used one
+    path stranded whatever only the other knew about — which is how package.json
+    reached ten minors behind.
+
+    The script's list is **parsed**, not substring-matched. An earlier version of
+    this test grepped the file for the filename, which a commented-out entry
+    satisfied — so removing a location did not fail it.
+    """
+    import importlib.util
+
+    expected = {rel for rel, _ in _CANONICAL_VERSION_FILES}
+
+    spec = importlib.util.spec_from_file_location(
+        "bump_version_under_test", REPO_ROOT / "scripts/bump-version.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    scripted = {rel for rel, _, _ in module.VERSION_FILES}
+
+    missing_from_script = sorted(expected - scripted)
+    extra_in_script = sorted(scripted - expected)
+    assert not missing_from_script, (
+        f"`scripts/bump-version.py` does not bump these version locations: {missing_from_script}"
+    )
+    assert not extra_in_script, (
+        f"`scripts/bump-version.py` bumps locations that are not canonical: "
+        f"{extra_in_script}. If one is genuinely independent, add it to "
+        "_INDEPENDENT_VERSION_FILES with a rationale rather than bumping it."
+    )
+
+    # The skill is prose, so it can only be substring-checked — but assert on the
+    # final verification `grep` line, which is what actually enforces coverage.
+    skill = (REPO_ROOT / ".agents/skills/bump/SKILL.md").read_text()
+    # The grep is a line-continuation: the pattern on one line, the file list on
+    # the next. Take both, or the file list is invisible to the check.
+    lines = skill.splitlines()
+    verification = ""
+    for idx, line in enumerate(lines):
+        if not line.lstrip().startswith("grep -E"):
+            continue
+        chunk = [line]
+        while lines[idx].rstrip().endswith("\\"):
+            idx += 1
+            chunk.append(lines[idx])
+        verification += " " + " ".join(chunk)
+    assert verification.strip(), "SKILL.md lost its verification grep"
+    missing_from_skill = sorted(rel for rel in expected if rel not in verification)
+    assert not missing_from_skill, (
+        "`.agents/skills/bump/SKILL.md` verification grep does not cover these "
+        f"version locations: {missing_from_skill}"
+    )
