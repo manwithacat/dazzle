@@ -24,6 +24,10 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    OLD="0.67.126"
    NEW="0.67.127"
 
+   # package.json — `"version": "X.Y.Z"` (root only; the HaTchi-MaXchi
+   # package.json is deliberately independent and must NOT move)
+   sed -i.bak "s/\"version\": \"${OLD}\"/\"version\": \"${NEW}\"/" package.json
+
    # pyproject.toml + core.toml — `version = "X.Y.Z"`
    sed -i.bak "s/^version = \"${OLD}\"$/version = \"${NEW}\"/" pyproject.toml src/dazzle/mcp/semantics_kb/core.toml
 
@@ -44,14 +48,15 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    # any future target moves deeper.
    find . -maxdepth 6 -name "*.bak" -delete
 
-   # Verify all six version lines moved exactly. Expected: 6 matching lines.
+   # Verify every version line moved. Expected: 7 matching lines across 6 files
+   # (homebrew/dazzle.rb carries the version twice — `version` and the tarball tag).
    # Note: \*\*Version\*\* on AGENTS.md has trailing text on the same line
    # (`| **Python**: 3.12+ | ...`) so don't anchor with `$`.
-   grep -E "^version = \"${NEW}\"$|^\\*\\*Version\\*\\*: ${NEW} |^\\*\\*Current Version\\*\\*: v${NEW}$|^  version \"${NEW}\"$|tags/v${NEW}\\.tar\\.gz" \
-     pyproject.toml src/dazzle/mcp/semantics_kb/core.toml AGENTS.md ROADMAP.md homebrew/dazzle.rb
+   grep -E "^version = \"${NEW}\"$|^\"version\": \"${NEW}\"$|^\\*\\*Version\\*\\*: ${NEW} |^\\*\\*Current Version\\*\\*: v${NEW}$|^  version \"${NEW}\"$|tags/v${NEW}\.tar\.gz" \
+     pyproject.toml package.json src/dazzle/mcp/semantics_kb/core.toml AGENTS.md ROADMAP.md homebrew/dazzle.rb
    ```
 
-   If the final `grep` prints fewer than 6 lines, **stop and investigate** — one of the canonical locations didn't match the expected shape and needs manual attention.
+   If the final `grep` prints fewer than 7 lines, **stop and investigate** — one of the canonical locations didn't match the expected shape and needs manual attention. This exact list is gated by `tests/unit/test_agent_asset_gates.py::test_every_canonical_version_location_matches_pyproject`.
 
    **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version. The sed patterns above are anchored (`^`) to avoid matching those.
 
