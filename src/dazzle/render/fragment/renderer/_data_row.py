@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
+from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.breadcrumbs import clerk_entity_confirm_noun
 from dazzle.render.cell_chrome import (
     _render_color_swatch_html,
@@ -293,7 +294,10 @@ def _render_cell_display(
     if col_type == "date":
         return _html_mod.escape(format_cell(value, "date"), quote=False)
     if col_type in ("currency", "money"):
-        currency_code = col.get("currency_code") or "GBP"
+        # Fall back to the product's configured default rather than a hardcoded
+        # "GBP", so a tenant with `locale.currency_default = "USD"` sees USD in
+        # the table and in CSV export alike (#1715).
+        currency_code = str(col.get("currency_code") or get_display_locale().currency_default)
         return _html_mod.escape(_currency_filter(value, currency_code), quote=False)
     if col_type == "color":
         # #1626 R5 / P0-8 — swatch + hex (not bare text) for palette fields.
