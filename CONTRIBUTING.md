@@ -113,6 +113,63 @@ Body has labeled `Before:` / `After:` / `Live:` lines. Harness-only ships
 say `harness_only`. Machine: `python scripts/improve_commit_contract.py`
 (also `make push-gate`). See `.claude/commands/improve.md` Step 3.
 
+## 🤖 AI co-authorship requirement
+
+Every contribution to this repository must declare its AI assistance. This is
+enforced by `.github/workflows/ai-coauthor-check.yml`, which runs on every pull
+request and fails the build when attribution is missing. The check accepts
+**either** of the following.
+
+**Option 1 — in the PR description** (preferred for anything not a single
+commit):
+
+```
+## AI Assistance
+
+AI Agent Used: <harness> / <model> — <what the agent did>
+
+Co-Authored-By: <agent trailer>
+```
+
+**Option 2 — a commit trailer**, e.g.:
+
+```
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Name the harness *and* the model
+
+Attribution is only useful if it identifies **what produced the change**, and
+those are two different things. A harness is the agent runtime — Claude Code,
+Codex CLI, opencode, Copilot. A model is what it ran — one name can front
+several, and a single vendor string ("OpenAI", "Anthropic") does not tell a
+reviewer which model actually wrote the diff.
+
+So state both, separated by `/`:
+
+```
+AI Agent Used: opencode / Space Bunny Alpha
+AI Agent Used: Claude Code / Claude Opus 4.5
+AI Agent Used: Copilot / GPT-5
+```
+
+If the model sits behind a beta or codename and its underlying identity is
+withheld, **use the name you were given** rather than guessing or omitting it —
+`opencode / Space Bunny Alpha` is more useful than an empty model field, and the
+harness alone is the part that actually determines the tooling behaviour.
+
+### Why it is a hard gate
+
+Attribution here is not a formality. The repo has shipped bugs that looked
+hand-written and were not — duplicated business rules that drifted, a `{}`
+returned where `None` was meant, a retry on an already-aborted transaction.
+Every one passed every existing gate. Declaring which agent touched a change is
+what makes that reviewable, and the commit trailer is also what lets
+`git blame` answer "why is this here?" months later.
+
+Human review is still required either way. The check verifies that assistance
+was *declared*, not that it was *correct*.
+
 ### Releases & versioning
 
 **Human-initiated development** — a defined change a person asked for — is
