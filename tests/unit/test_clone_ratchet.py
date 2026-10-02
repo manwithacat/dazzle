@@ -259,6 +259,34 @@ def test_baseline_records_the_exact_pass_as_accepted_residue() -> None:
     assert all(e["count"] == len(e["names"]) >= 2 for e in exact)
 
 
+def test_exact_signatures_are_stable_across_python_versions() -> None:
+    """The bug this serialiser replaced, pinned.
+
+    An earlier exact-body hash went through ``ast.unparse`` + ``ast.dump``.
+    ``ast.unparse`` output is not byte-stable across interpreters, so the same
+    source produced different signatures: locally the baseline looked correct,
+    and in CI all 112 exact clusters "vanished" while 112 unknown ones appeared
+    (CI runs 3.12/3.13/3.14). The canonical token serialiser must therefore not
+    depend on anything an interpreter version can move — no ``lineno``, no
+    ``ctx``, no ``type_params``, no annotation rendering.
+    """
+    fn = _fn('def f(a, b: int = 3) -> str:\n    return f"{a}{b}"\n')
+    first = _exact_body_signature(fn)
+    assert first is not None
+    assert first.startswith(EXACT_PREFIX)
+    # Re-parsing the same source must give the same key.
+    assert (
+        _exact_body_signature(_fn('def f(a, b: int = 3) -> str:\n    return f"{a}{b}"\n')) == first
+    )
+
+
+def test_exact_signature_ignores_annotations_and_positions() -> None:
+    """Annotation and layout differences are commentary, not duplicated logic."""
+    base = _exact_body_signature(_fn("def f(a):\n    return a * 2\n"))
+    annotated = _exact_body_signature(_fn("def f(a: int) -> int:\n    return a * 2\n"))
+    assert base == annotated
+
+
 def test_every_exact_cluster_in_the_baseline_is_still_present() -> None:
     """A cluster that was deduped away should show up as stale, not silently rot."""
     current = compute_clone_index(_SRC)

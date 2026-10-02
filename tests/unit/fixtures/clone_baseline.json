@@ -1,6 +1,6 @@
 [
   {
-    "signature": "exact:428a5bc82d5d3bac407a05e5cb70792a",
+    "signature": "exact:2399675f89c63bfee0999a773c2a577a",
     "count": 2,
     "names": [
       "dazzle/agent/core.py::_default_completion",
@@ -16,7 +16,7 @@
     ]
   },
   {
-    "signature": "exact:8b571e10628ec1ff33807635b9230ae2",
+    "signature": "exact:4b0924ea9f27f8df6da9e6db7be157b6",
     "count": 3,
     "names": [
       "dazzle/agent/missions/entity_completeness.py::gap_count",
@@ -44,7 +44,7 @@
     ]
   },
   {
-    "signature": "exact:62df40df2e1b18012e6861bb94e46ca5",
+    "signature": "exact:466fdb01a82e8fa7915927818519daac",
     "count": 2,
     "names": [
       "dazzle/cli/auth.py::_generate_temp_password",
@@ -60,7 +60,7 @@
     ]
   },
   {
-    "signature": "exact:4da6d5f29925013c9ecc75b0e8e780a7",
+    "signature": "exact:943b526cb590ff48fbf3c77135106b8d",
     "count": 2,
     "names": [
       "dazzle/cli/coverage.py::_example_app_dirs",
@@ -68,7 +68,7 @@
     ]
   },
   {
-    "signature": "exact:22db67e27c3ffc7bbd282fd0e1b6715a",
+    "signature": "exact:a0b61b5525770e33703711db0c73ed03",
     "count": 2,
     "names": [
       "dazzle/cli/db.py::_run",
@@ -144,7 +144,7 @@
     ]
   },
   {
-    "signature": "exact:f3cb00dfb94ca67f01a5945cf3325467",
+    "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
     "count": 5,
     "names": [
       "dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py::findings",
@@ -155,7 +155,7 @@
     ]
   },
   {
-    "signature": "exact:4d8ad6a8174690bbd8713ccef3315341",
+    "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
     "count": 11,
     "names": [
       "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
@@ -172,7 +172,7 @@
     ]
   },
   {
-    "signature": "exact:65205ee45ab1ae685cfa09c48c81c34f",
+    "signature": "exact:7d595bfd7e80fb2259fe1705e42488bd",
     "count": 2,
     "names": [
       "dazzle/cli/runtime_impl/ux_cycle_impl/visual_tier2_ingest.py::_jaccard",
@@ -180,7 +180,7 @@
     ]
   },
   {
-    "signature": "exact:6bcd353430ee991050752a62d160db3a",
+    "signature": "exact:d9f74fd1a0ad560f55a2b670ba778a6c",
     "count": 4,
     "names": [
       "dazzle/cli/story.py::next_id",
@@ -214,7 +214,7 @@
     ]
   },
   {
-    "signature": "exact:b8def91382e013ee0cdb2c8b54f00329",
+    "signature": "exact:76c47956d364b2dbea58447a6afdf1c3",
     "count": 3,
     "names": [
       "dazzle/compliance/analytics/event_vocabulary.py::get_event_schema",
@@ -223,7 +223,7 @@
     ]
   },
   {
-    "signature": "exact:e50680c854f28887723873ad94eeb215",
+    "signature": "exact:f35daa502beb4b7c129f115e149c6cbd",
     "count": 3,
     "names": [
       "dazzle/compliance/analytics/sinks/ga4.py::close",
@@ -232,7 +232,7 @@
     ]
   },
   {
-    "signature": "exact:ef6d776ec50437ef0d5233310028294b",
+    "signature": "exact:c5c53730fa432c0891126f5fff6aeb39",
     "count": 2,
     "names": [
       "dazzle/core/access.py::has_role",
@@ -240,7 +240,7 @@
     ]
   },
   {
-    "signature": "exact:cc70dc83f0fc64b27bf02578c130b955",
+    "signature": "exact:3d6a382b1a4689c7269c496243dcab95",
     "count": 3,
     "names": [
       "dazzle/core/access.py::is_authenticated",
@@ -257,7 +257,7 @@
     ]
   },
   {
-    "signature": "exact:111a137cfe98f24729467f5879b93005",
+    "signature": "exact:78fc24c73d62d1f48155a47b4b7f0935",
     "count": 2,
     "names": [
       "dazzle/core/archetype_expander.py::_to_snake_case",
@@ -273,7 +273,7 @@
     ]
   },
   {
-    "signature": "exact:b81342d8999a2743a913b31989c5c8a4",
+    "signature": "exact:83ea3dd010b7e3aa67aa6b2a667add43",
     "count": 2,
     "names": [
       "dazzle/core/docs_gen.py::_concept_title",
@@ -313,7 +313,7 @@
     ]
   },
   {
-    "signature": "exact:76fd83788a1e8efc9cd8220d996960e0",
+    "signature": "exact:e6798a8f4da5296e1c89b34ff055bc08",
     "count": 4,
     "names": [
       "dazzle/core/dsl_parser_impl/flow.py::_on_unknown_flow",
@@ -323,7 +323,7 @@
     ]
   },
   {
-    "signature": "exact:0531b41996623a8f2b94afb137467c39",
+    "signature": "exact:bf6e8aae8baaf0b5f5c776248a46e7db",
     "count": 3,
     "names": [
       "dazzle/core/dsl_parser_impl/grant.py::_gr_kw_description",
@@ -364,7 +364,7 @@
     ]
   },
   {
-    "signature": "exact:f5efb241caac46efbf0f72dc480f1527",
+    "signature": "exact:a395079a55f01be3d2ae9b2e87378e9d",
     "count": 3,
     "names": [
       "dazzle/core/dsl_parser_impl/llm.py::_on_unknown_llm_config",
@@ -381,7 +381,7 @@
     ]
   },
   {
-    "signature": "exact:02120104700439085bb597f482afbeef",
+    "signature": "exact:ba9cb8cefefe327e43d928f02b288fac",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/process.py::_parse_step_goto_field",
@@ -398,7 +398,7 @@
     ]
   },
   {
-    "signature": "exact:a46256806e61277ff1d6d57128222e08",
+    "signature": "exact:dfceb19852b1b23c1b37d86c1a91f095",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/surface.py::_c_kw_eyebrow",
@@ -406,7 +406,7 @@
     ]
   },
   {
-    "signature": "exact:7b7270e99d2ad36828d2d15297d660c8",
+    "signature": "exact:1c4e25782a932de6e5bba16b73ed3216",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/surface.py::_c_kw_limit",
@@ -414,7 +414,7 @@
     ]
   },
   {
-    "signature": "exact:fab4502ca396a3e4c7fd289e018066c2",
+    "signature": "exact:0648de3d7abc0f245daa8d84e19a2712",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/surface.py::_kw_as",
@@ -438,7 +438,7 @@
     ]
   },
   {
-    "signature": "exact:76782b0559a1d5fd90757b42059025d3",
+    "signature": "exact:7d3e855b8d10d7db6fccb313cf12e1ac",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/ux.py::_pv_kw_purpose",
@@ -446,7 +446,7 @@
     ]
   },
   {
-    "signature": "exact:ae383a4a0c3ad3077329f70cc285094f",
+    "signature": "exact:758f47c2cfff5aabaee28af86f2a7d18",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/ux.py::_pv_kw_show",
@@ -454,7 +454,7 @@
     ]
   },
   {
-    "signature": "exact:3c1c772cd32943f2e95e5333b502531c",
+    "signature": "exact:daa27ec692f64410631eeeff95eed82a",
     "count": 2,
     "names": [
       "dazzle/core/dsl_parser_impl/ux.py::_ux_kw_sort",
@@ -486,11 +486,88 @@
     ]
   },
   {
-    "signature": "exact:c354ae16bed82dee74d67b093d5bd104",
+    "signature": "exact:0897ca368bf1519a6f8e3f27dc3b1e5b",
     "count": 2,
     "names": [
       "dazzle/core/expression_lang/parser.py::__init__",
       "dazzle/core/expression_lang/tokenizer.py::__init__"
+    ]
+  },
+  {
+    "signature": "exact:a9616cdd1461bf466f7e055f98555212",
+    "count": 29,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_api",
+      "dazzle/core/ir/appspec.py::get_approval",
+      "dazzle/core/ir/appspec.py::get_archetype",
+      "dazzle/core/ir/appspec.py::get_asset",
+      "dazzle/core/ir/appspec.py::get_channel",
+      "dazzle/core/ir/appspec.py::get_document",
+      "dazzle/core/ir/appspec.py::get_domain_service",
+      "dazzle/core/ir/appspec.py::get_entity",
+      "dazzle/core/ir/appspec.py::get_enum",
+      "dazzle/core/ir/appspec.py::get_experience",
+      "dazzle/core/ir/appspec.py::get_foreign_model",
+      "dazzle/core/ir/appspec.py::get_grant_schema",
+      "dazzle/core/ir/appspec.py::get_integration",
+      "dazzle/core/ir/appspec.py::get_island",
+      "dazzle/core/ir/appspec.py::get_ledger",
+      "dazzle/core/ir/appspec.py::get_llm_intent",
+      "dazzle/core/ir/appspec.py::get_llm_model",
+      "dazzle/core/ir/appspec.py::get_message",
+      "dazzle/core/ir/appspec.py::get_process",
+      "dazzle/core/ir/appspec.py::get_schedule",
+      "dazzle/core/ir/appspec.py::get_sla",
+      "dazzle/core/ir/appspec.py::get_stream",
+      "dazzle/core/ir/appspec.py::get_surface",
+      "dazzle/core/ir/appspec.py::get_template",
+      "dazzle/core/ir/appspec.py::get_test",
+      "dazzle/core/ir/appspec.py::get_transaction",
+      "dazzle/core/ir/appspec.py::get_view",
+      "dazzle/core/ir/appspec.py::get_webhook",
+      "dazzle/core/ir/appspec.py::get_workspace"
+    ]
+  },
+  {
+    "signature": "exact:c79829c8a00cc3f0297d3a2f3c48007b",
+    "count": 2,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_field_type_conflicts",
+      "dazzle/core/ir/appspec.py::type_catalog"
+    ]
+  },
+  {
+    "signature": "exact:cf2785b721d48f407123ff27a052149d",
+    "count": 2,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_flows_by_entity",
+      "dazzle/core/ir/appspec.py::get_triples_for_entity"
+    ]
+  },
+  {
+    "signature": "exact:d213bbe13d060221d21482bdf7ef3dfb",
+    "count": 3,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_grant_schemas_by_scope",
+      "dazzle/core/ir/appspec.py::get_rules_by_scope",
+      "dazzle/core/ir/appspec.py::get_stories_by_entity"
+    ]
+  },
+  {
+    "signature": "exact:33e5f8cd0742832751784643bc2b1eba",
+    "count": 3,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_processes_by_story",
+      "dazzle/core/ir/appspec.py::get_schedules_by_story",
+      "dazzle/core/ir/appspec.py::get_story"
+    ]
+  },
+  {
+    "signature": "exact:b0348c42ed96923d85cd007d544035c6",
+    "count": 2,
+    "names": [
+      "dazzle/core/ir/appspec.py::get_stories_by_persona",
+      "dazzle/core/ir/appspec.py::get_triples_for_persona"
     ]
   },
   {
@@ -534,7 +611,7 @@
     ]
   },
   {
-    "signature": "exact:d6e4817731660eba714281793bfe39fe",
+    "signature": "exact:f8c4caad76a00b8e860dbc971b866eb9",
     "count": 3,
     "names": [
       "dazzle/core/ir/computed.py::__str__",
@@ -543,7 +620,7 @@
     ]
   },
   {
-    "signature": "exact:ceda9f5313b907b29731ced7b1cf7a88",
+    "signature": "exact:633f2e6625793bf43df5ed92d865cc1d",
     "count": 2,
     "names": [
       "dazzle/core/ir/computed.py::__str__",
@@ -559,7 +636,7 @@
     ]
   },
   {
-    "signature": "exact:4fc6cd9952cfe28892689a88b9ef2bb6",
+    "signature": "exact:2a6a3474e2402dfad84fa629bde0da46",
     "count": 2,
     "names": [
       "dazzle/core/ir/computed.py::field_name",
@@ -567,7 +644,7 @@
     ]
   },
   {
-    "signature": "exact:433bab402c04c7eac0eed5ef4e5a3bc1",
+    "signature": "exact:52afc7bbdc7d3849dcbbfab307142111",
     "count": 2,
     "names": [
       "dazzle/core/ir/computed.py::is_simple",
@@ -594,7 +671,7 @@
     ]
   },
   {
-    "signature": "exact:d735e5adebe46ce0eeba7481ae12e190",
+    "signature": "exact:d129660d52cdcecb8820dc52d51cda94",
     "count": 2,
     "names": [
       "dazzle/core/ir/domain.py::is_polymorphic_base",
@@ -602,7 +679,7 @@
     ]
   },
   {
-    "signature": "exact:4365f9d66af1bd72ccb66914bdad99f2",
+    "signature": "exact:c5d237cc76bb949510e28771b78231ae",
     "count": 2,
     "names": [
       "dazzle/core/ir/domain.py::is_polymorphic_child",
@@ -618,7 +695,7 @@
     ]
   },
   {
-    "signature": "exact:ab7ad4093e76779d3f4280d44fd9f087",
+    "signature": "exact:d98bda6f1b4681dfbe9d6c52c1e02c35",
     "count": 2,
     "names": [
       "dazzle/core/ir/hless_validator.py::errors",
@@ -626,7 +703,7 @@
     ]
   },
   {
-    "signature": "exact:161a474944d5c54aec6686934a3a1929",
+    "signature": "exact:d355bfabf3aa6a9bb434bea498a2ba09",
     "count": 2,
     "names": [
       "dazzle/core/ir/ledgers.py::validate_credit",
@@ -658,7 +735,7 @@
     ]
   },
   {
-    "signature": "exact:701b3cdf4ce6b059d69b9d4d70b590e7",
+    "signature": "exact:afb7a07326b2981e93149787a3aca2e9",
     "count": 2,
     "names": [
       "dazzle/core/ir/state_machine.py::is_transition_allowed",
@@ -666,7 +743,7 @@
     ]
   },
   {
-    "signature": "exact:1650045fa059f48253ef335f60c9cdd3",
+    "signature": "exact:7ee92c48ef26770a9581fd0729c91b97",
     "count": 2,
     "names": [
       "dazzle/core/ir/state_machine.py::is_wildcard",
@@ -674,7 +751,7 @@
     ]
   },
   {
-    "signature": "exact:c17128bec79585260d897677b25ebf2c",
+    "signature": "exact:b949637b79f509f74a78687e8826065b",
     "count": 2,
     "names": [
       "dazzle/core/ir/state_machine.py::terminal_states",
@@ -682,7 +759,7 @@
     ]
   },
   {
-    "signature": "exact:c99d0a6c988eabe5a156e4a440ade4e7",
+    "signature": "exact:a9c30de44754ab949d6e41a7b7841fb3",
     "count": 2,
     "names": [
       "dazzle/core/process/activities.py::decorator",
@@ -690,7 +767,7 @@
     ]
   },
   {
-    "signature": "exact:093109946ce46ca91c49302d3532075e",
+    "signature": "exact:69c86bea332ce719c5b3f7ebc1fc15d1",
     "count": 11,
     "names": [
       "dazzle/core/process/adapter.py::_utcnow",
@@ -723,7 +800,7 @@
     ]
   },
   {
-    "signature": "exact:3dfc197218c6a9f3942ebc9bfd6e848a",
+    "signature": "exact:429652ebb79aa901e04ea7a8544a00b5",
     "count": 2,
     "names": [
       "dazzle/core/process/eventbus_adapter.py::_resolve_param_ref",
@@ -765,7 +842,7 @@
     ]
   },
   {
-    "signature": "exact:4d9355c5aa635503fe0c3d5b5adcb396",
+    "signature": "exact:69768201c3d835ce0fed474edd6f992b",
     "count": 2,
     "names": [
       "dazzle/core/process/task_store.py::clear",
@@ -773,7 +850,7 @@
     ]
   },
   {
-    "signature": "exact:10ac141234f218bc0fa383cfb97cfb7b",
+    "signature": "exact:4c894a56558a59953c4ebdb630859916",
     "count": 3,
     "names": [
       "dazzle/core/sitespec_loader.py::__init__",
@@ -782,7 +859,7 @@
     ]
   },
   {
-    "signature": "exact:4a9f8de23f3dd4e89c9c22e0d8f033a1",
+    "signature": "exact:9019995c79e9b03f6010f8db15b37c10",
     "count": 2,
     "names": [
       "dazzle/core/sitespec_loader.py::_entity_slug",
@@ -790,7 +867,7 @@
     ]
   },
   {
-    "signature": "exact:642db833da2cbe08133a651dc63179b9",
+    "signature": "exact:28a671a41892904c7e151ed0997d1a52",
     "count": 3,
     "names": [
       "dazzle/core/sitespec_loader.py::add_error",
@@ -799,7 +876,7 @@
     ]
   },
   {
-    "signature": "exact:ec392b69e7113895399f32286f002a5d",
+    "signature": "exact:f4e8cb1c871740de9b9124f2c7780e58",
     "count": 3,
     "names": [
       "dazzle/core/sitespec_loader.py::add_warning",
@@ -808,7 +885,7 @@
     ]
   },
   {
-    "signature": "exact:08f92c9799505fc26c64e0fb805a15ac",
+    "signature": "exact:bc0231a7692a46f99802ac5b73285e03",
     "count": 3,
     "names": [
       "dazzle/core/sitespec_loader.py::is_valid",
@@ -833,7 +910,7 @@
     ]
   },
   {
-    "signature": "exact:d1ad1fad2d49fe5389a2c192d73e0fea",
+    "signature": "exact:17ed761b116bfc06d3b0cf8891f7573d",
     "count": 2,
     "names": [
       "dazzle/db/sql.py::quote_id",
@@ -841,7 +918,7 @@
     ]
   },
   {
-    "signature": "exact:fa18c4a464f4457c7365b873fa2888d9",
+    "signature": "exact:39453401e603dcadadd179421b4a0d6c",
     "count": 2,
     "names": [
       "dazzle/demo_data/loader.py::__enter__",
@@ -849,7 +926,7 @@
     ]
   },
   {
-    "signature": "exact:eebf81b1f6f2b84b17a1493090cda0f8",
+    "signature": "exact:c94dd382d7a281cdd3b61436bfc7f802",
     "count": 2,
     "names": [
       "dazzle/fitness/code.py::_py_files",
@@ -857,7 +934,7 @@
     ]
   },
   {
-    "signature": "exact:4ebdfc5481fda95918e0a0086d8bee7a",
+    "signature": "exact:7b1a45ef3106a90dc8dada8cca336ada",
     "count": 2,
     "names": [
       "dazzle/fitness/vitality.py::visit_AsyncFunctionDef",
@@ -865,7 +942,7 @@
     ]
   },
   {
-    "signature": "exact:8251e6d0df9523bfc2cb3b7cec3600fd",
+    "signature": "exact:3d4d16185bc18804deb536fe2df5a1e4",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/base.py::channel_kind",
@@ -873,7 +950,7 @@
     ]
   },
   {
-    "signature": "exact:c9423312a707bf7c1951114be6182768",
+    "signature": "exact:8be7711fefb2cea683b4634e5c3e17ab",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/base.py::channel_kind",
@@ -881,7 +958,7 @@
     ]
   },
   {
-    "signature": "exact:a820f00733cd1085b2f8821ff43bc99d",
+    "signature": "exact:3b818a07e9f1033af326173fc1b8f194",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/base.py::channel_kind",
@@ -889,7 +966,7 @@
     ]
   },
   {
-    "signature": "exact:393ad8121b86c4f56aa0862d3af4f0ff",
+    "signature": "exact:1a7d33391918e213cd33f013a8fb9946",
     "count": 3,
     "names": [
       "dazzle/http/channels/adapters/email.py::provider_name",
@@ -898,7 +975,7 @@
     ]
   },
   {
-    "signature": "exact:5195e67f8fb9735d93f627aefede7661",
+    "signature": "exact:ced25b776cbb098c2ba7cc57203655e1",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/email.py::provider_name",
@@ -906,7 +983,7 @@
     ]
   },
   {
-    "signature": "exact:7c54563162eefe3ad795ef62c1fc7339",
+    "signature": "exact:cd500a96357b005a3f3532ac9c740b85",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/email.py::provider_name",
@@ -914,7 +991,7 @@
     ]
   },
   {
-    "signature": "exact:da64953e8913370af5a24520d92bdeee",
+    "signature": "exact:0654a76c01542850938a4544e4a1ea3f",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/queue.py::_get_lock",
@@ -922,7 +999,7 @@
     ]
   },
   {
-    "signature": "exact:aea287401cff9603832918eda6ed7b96",
+    "signature": "exact:65ae4d9d8f12b04e9640acac87d7fcd7",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/queue.py::provider_name",
@@ -930,7 +1007,7 @@
     ]
   },
   {
-    "signature": "exact:f5d74ae19f2cb0e91a50cf29c88170be",
+    "signature": "exact:e8a2a0c5fd3948e87b90fd1c77b90bbe",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/queue.py::provider_name",
@@ -938,7 +1015,7 @@
     ]
   },
   {
-    "signature": "exact:2cf1f8472430339170daffba86a10237",
+    "signature": "exact:19194f2736c3f97e9b77daf63669a95b",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/stream.py::provider_name",
@@ -946,7 +1023,7 @@
     ]
   },
   {
-    "signature": "exact:0ea4b1ca2d94a7f78e38295f1e9b52bf",
+    "signature": "exact:5bca8da12b8b065a039a071b105ce55f",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/stream.py::provider_name",
@@ -954,7 +1031,7 @@
     ]
   },
   {
-    "signature": "exact:568aa3355815d54f7f06c7d2a8ac4dae",
+    "signature": "exact:6133936c2caed42b5e5ec82a99d0446a",
     "count": 2,
     "names": [
       "dazzle/http/channels/adapters/stream.py::provider_name",
@@ -987,7 +1064,7 @@
     ]
   },
   {
-    "signature": "exact:78c957641fc4ff30db687f3faac602ab",
+    "signature": "exact:fb9df53cc8d744f99618163137750474",
     "count": 2,
     "names": [
       "dazzle/http/demo_data/loader.py::__init__",
@@ -995,7 +1072,7 @@
     ]
   },
   {
-    "signature": "exact:23025aaf64c55aeea6a1a12e2233257e",
+    "signature": "exact:c16f7dea32e8375eebb672851acc25dd",
     "count": 2,
     "names": [
       "dazzle/http/events/base_event_bus.py::__aenter__",
@@ -1003,7 +1080,7 @@
     ]
   },
   {
-    "signature": "exact:a9ba6ef785f7d98034984388b2118568",
+    "signature": "exact:e22015c4402a494ba0964eca0b0706ce",
     "count": 2,
     "names": [
       "dazzle/http/events/base_event_bus.py::__aexit__",
@@ -1019,7 +1096,7 @@
     ]
   },
   {
-    "signature": "exact:557d08d36414224d5215cb486c73dccc",
+    "signature": "exact:b4fa590ddf56a9ad51221dfec1cce9d0",
     "count": 6,
     "names": [
       "dazzle/http/events/consumer.py::stats",
@@ -1031,7 +1108,7 @@
     ]
   },
   {
-    "signature": "exact:beef8277713d9b2c2223a4ffb79383e4",
+    "signature": "exact:eeb37885742ccc7003e87b645950b3e9",
     "count": 3,
     "names": [
       "dazzle/http/events/framework.py::__aenter__",
@@ -1040,7 +1117,7 @@
     ]
   },
   {
-    "signature": "exact:612340ef53e475e8e4d73f36e2d396bb",
+    "signature": "exact:cd2694743b79ddef9d012c91ebc7600d",
     "count": 3,
     "names": [
       "dazzle/http/events/framework.py::__aexit__",
@@ -1049,7 +1126,7 @@
     ]
   },
   {
-    "signature": "exact:c00b0d5ad8a0a347f0e9fc812597c1b6",
+    "signature": "exact:281a42a939efd6d39862d6b7b9d55b4d",
     "count": 2,
     "names": [
       "dazzle/http/events/postgres_bus.py::start_consumer_loop",
@@ -1057,7 +1134,7 @@
     ]
   },
   {
-    "signature": "exact:c96dd01eebc3307c76b25eca9913a924",
+    "signature": "exact:0b2fa79456377126e1980ad0895602b2",
     "count": 4,
     "names": [
       "dazzle/http/events/publisher.py::is_running",
@@ -1067,7 +1144,7 @@
     ]
   },
   {
-    "signature": "exact:c2a50bb3f14e54469dd7108c9fa3122f",
+    "signature": "exact:fe0a9e72aa37976378c0cef9275732b4",
     "count": 3,
     "names": [
       "dazzle/http/graphql/integration.py::_camel_case",
@@ -1076,7 +1153,7 @@
     ]
   },
   {
-    "signature": "exact:d6d577a83bf344af5b3d635573becbbb",
+    "signature": "exact:d0300f2627408d231ee4a39e5d1969f5",
     "count": 2,
     "names": [
       "dazzle/http/graphql/integration.py::get_context",
@@ -1084,7 +1161,7 @@
     ]
   },
   {
-    "signature": "exact:97b1792a1390b07806d9bad893f4996f",
+    "signature": "exact:9ad220736a31b37d6d9259d717369e3d",
     "count": 2,
     "names": [
       "dazzle/http/graphql/schema_generator.py::_pascal_case",
@@ -1092,7 +1169,7 @@
     ]
   },
   {
-    "signature": "exact:2b72ef386ac3f6611bbb4c194d339a54",
+    "signature": "exact:9ced59e09a1dff655eea673a3dd377cc",
     "count": 2,
     "names": [
       "dazzle/http/graphql/schema_generator.py::get_type",
@@ -1100,7 +1177,7 @@
     ]
   },
   {
-    "signature": "exact:729284ca1793159e704acc2b429a44c3",
+    "signature": "exact:7241dadfb2aa00b5c7de6bff93a81cf3",
     "count": 2,
     "names": [
       "dazzle/http/pra/data_factory.py::ledger_credited",
@@ -1132,7 +1209,7 @@
     ]
   },
   {
-    "signature": "exact:7b782a2d968f1fbd020ce7fcd10a65fc",
+    "signature": "exact:2aea0a8c835e3a82b7612c0b50d46f3c",
     "count": 2,
     "names": [
       "dazzle/http/runtime/approvals_explorer.py::_row_field",
@@ -1164,7 +1241,7 @@
     ]
   },
   {
-    "signature": "exact:e72429a0785010afb65a5c21c5a2b6eb",
+    "signature": "exact:9fed46369caf6cca1b8be96f01aa84fa",
     "count": 2,
     "names": [
       "dazzle/http/runtime/auth/connection_admin_routes.py::_normalize_domain",
@@ -1172,7 +1249,7 @@
     ]
   },
   {
-    "signature": "exact:15fc441615f248eb1a1d0676498794cd",
+    "signature": "exact:ca469de2aab75d7e79c688c0fa2af30e",
     "count": 6,
     "names": [
       "dazzle/http/runtime/auth/connection_admin_routes.py::_product_name",
@@ -1184,7 +1261,7 @@
     ]
   },
   {
-    "signature": "exact:6ba1d2f7e8596e4bd7daa47caa86a1f3",
+    "signature": "exact:faa745ef6d2a5a29be4f696f4e70f594",
     "count": 7,
     "names": [
       "dazzle/http/runtime/auth/connection_probe.py::__init__",
@@ -1197,7 +1274,7 @@
     ]
   },
   {
-    "signature": "exact:949b8838d976bcd48c8efefc3523f801",
+    "signature": "exact:8fd1c6d59ff876c18ea91d1d519ceb04",
     "count": 2,
     "names": [
       "dazzle/http/runtime/auth/domain_join.py::email_domain",
@@ -1221,7 +1298,7 @@
     ]
   },
   {
-    "signature": "exact:41e308f364a4505978c4f4c3e773ebf5",
+    "signature": "exact:748c91ca3eacb4bf9ebcbce07014f56c",
     "count": 2,
     "names": [
       "dazzle/http/runtime/auth/leftover_connection_id.py::leftover_honest_connection_id",
@@ -1253,7 +1330,7 @@
     ]
   },
   {
-    "signature": "exact:74b4dba69f70702a56a066327a045f5f",
+    "signature": "exact:c85db8de1eaf08308b25b7ef7459e337",
     "count": 2,
     "names": [
       "dazzle/http/runtime/auth/org_context_routes.py::select_org_submit",
@@ -1269,7 +1346,7 @@
     ]
   },
   {
-    "signature": "exact:592f6b419ec5ea34becf811b16e4ed09",
+    "signature": "exact:a7c40e0d37b39fd293c6912fbb799994",
     "count": 2,
     "names": [
       "dazzle/http/runtime/auth/store.py::_connect_raw",
@@ -1277,7 +1354,7 @@
     ]
   },
   {
-    "signature": "exact:652cf684019dd159f59ee1fb9a03cf35",
+    "signature": "exact:44ae1bace7e4a7e63c050b08b65e2fa9",
     "count": 3,
     "names": [
       "dazzle/http/runtime/auth/store.py::_get_connection",
@@ -1319,7 +1396,7 @@
     ]
   },
   {
-    "signature": "exact:849c3cf57b7ea0327e16d78f9acbad1c",
+    "signature": "exact:b39e87aceb4e7a9aea08e91b64f4d98f",
     "count": 3,
     "names": [
       "dazzle/http/runtime/device_registry.py::_connect_raw",
@@ -1345,7 +1422,7 @@
     ]
   },
   {
-    "signature": "exact:c6520da35cfc06560d46b89016f24ae7",
+    "signature": "exact:da7350621463f500b7bec10776188453",
     "count": 2,
     "names": [
       "dazzle/http/runtime/dispatch_ctx.py::_ref_route_for_entity",
@@ -1353,7 +1430,7 @@
     ]
   },
   {
-    "signature": "exact:bee83c2fcb42ccb3c8fe7ff3c3b718da",
+    "signature": "exact:9606fef27dee2ecc44bcb01264301f98",
     "count": 2,
     "names": [
       "dazzle/http/runtime/event_bus.py::set_websocket_manager",
@@ -1361,7 +1438,7 @@
     ]
   },
   {
-    "signature": "exact:97fab711fe573b0c014cb74a486c9b85",
+    "signature": "exact:7b30695453311f1d278461247a9fe121",
     "count": 2,
     "names": [
       "dazzle/http/runtime/graph_materializer.py::_safe_sql",
@@ -1369,7 +1446,7 @@
     ]
   },
   {
-    "signature": "exact:3c00d225c81ad58fdf8eeaa9078b6399",
+    "signature": "exact:2ada41ed8956423a64380c37ede7ad87",
     "count": 2,
     "names": [
       "dazzle/http/runtime/handlers/graph_handlers.py::_auth_handler",
@@ -1395,7 +1472,7 @@
     ]
   },
   {
-    "signature": "exact:9c192a29aac9a211dd27aeb36788f88b",
+    "signature": "exact:a929d5b5612bf5437ff300a91e98b9e0",
     "count": 2,
     "names": [
       "dazzle/http/runtime/integration_manager.py::check_channel_health",
@@ -1411,7 +1488,7 @@
     ]
   },
   {
-    "signature": "exact:9eccf63bcc014b84a57dae687729bade",
+    "signature": "exact:280f71bbd6e5d5be0b0466fedf7d6ecc",
     "count": 2,
     "names": [
       "dazzle/http/runtime/integration_manager.py::get_recent_outbox",
@@ -1419,7 +1496,7 @@
     ]
   },
   {
-    "signature": "exact:b092a88fa26e38c0722995ac614d5814",
+    "signature": "exact:f9143004466b041d84066d35ec87c367",
     "count": 2,
     "names": [
       "dazzle/http/runtime/integration_manager.py::list_channels",
@@ -1435,7 +1512,7 @@
     ]
   },
   {
-    "signature": "exact:d0d7127f65e00e7e5e30e6e7af683794",
+    "signature": "exact:ec00a39c9ed1d718762badad6d120644",
     "count": 2,
     "names": [
       "dazzle/http/runtime/job_queue.py::size",
@@ -1443,7 +1520,7 @@
     ]
   },
   {
-    "signature": "exact:5315ddfd290f03769cab0503f327f72a",
+    "signature": "exact:9c015c0dc1d0335634c39fa1598d3d63",
     "count": 2,
     "names": [
       "dazzle/http/runtime/otp_store.py::__init__",
@@ -1459,7 +1536,7 @@
     ]
   },
   {
-    "signature": "exact:6e92e42861dbe8d9f68421f6ef0f1ea2",
+    "signature": "exact:77afbae254fafd842286c20b89b59913",
     "count": 2,
     "names": [
       "dazzle/http/runtime/pg_backend.py::__init__",
@@ -1483,7 +1560,7 @@
     ]
   },
   {
-    "signature": "exact:af731dccd30d33833daa6cb5519084e0",
+    "signature": "exact:c881bf376dad13be2584cfafc595b526",
     "count": 2,
     "names": [
       "dazzle/http/runtime/renderers/site_section_override_loader.py::list_overrides",
@@ -1491,7 +1568,7 @@
     ]
   },
   {
-    "signature": "exact:7b231866f756b11e9ace5002ecf3595a",
+    "signature": "exact:60bf8fd91cf8f5ef8da191d6541916dd",
     "count": 2,
     "names": [
       "dazzle/http/runtime/retention.py::_row_id",
@@ -1507,7 +1584,7 @@
     ]
   },
   {
-    "signature": "exact:118f7eca7e45a22f1fc69ec612f4cec8",
+    "signature": "exact:fb48fdc89cb00cff6c89fde7cbdfa9a0",
     "count": 2,
     "names": [
       "dazzle/http/runtime/server.py::get_service",
@@ -1548,7 +1625,7 @@
     ]
   },
   {
-    "signature": "exact:8828846d66dcd1822a4100e5833d516c",
+    "signature": "exact:af500c26fc07ce189e78555f59cb0667",
     "count": 2,
     "names": [
       "dazzle/http/runtime/storage/s3_provider.py::render_prefix",
@@ -1572,7 +1649,7 @@
     ]
   },
   {
-    "signature": "exact:1a99d849b26fab9dd80d87f8ccb4d18f",
+    "signature": "exact:156505768564b22b3905eef106780c34",
     "count": 3,
     "names": [
       "dazzle/http/runtime/workspace_route_builder.py::workspace_region_data",
@@ -1591,7 +1668,7 @@
     ]
   },
   {
-    "signature": "exact:674d2ee10686e5ab5f3d78c9fe1bf9f6",
+    "signature": "exact:35053aa6fc3502dc4fa395b3cda62345",
     "count": 4,
     "names": [
       "dazzle/mcp/knowledge_graph/handlers/entity_handlers.py::__init__",
@@ -1641,6 +1718,17 @@
     ]
   },
   {
+    "signature": "exact:0553c3cc228ec0bdb1ef763bc05f9c00",
+    "count": 5,
+    "names": [
+      "dazzle/mcp/server/handlers_consolidated.py::handle_agent",
+      "dazzle/mcp/server/handlers_consolidated.py::handle_perf",
+      "dazzle/mcp/server/handlers_consolidated.py::handle_presentation",
+      "dazzle/mcp/server/handlers_consolidated.py::handle_representation",
+      "dazzle/mcp/server/handlers_consolidated.py::handle_spec_analyze"
+    ]
+  },
+  {
     "signature": "3ecedf5cf116cd7b87fc2df645389613",
     "count": 2,
     "names": [
@@ -1665,7 +1753,7 @@
     ]
   },
   {
-    "signature": "exact:bf66570e7551456aba364c307b191a4a",
+    "signature": "exact:ecf46dae9a54e32eb73dc032d28c818c",
     "count": 2,
     "names": [
       "dazzle/qa/hyperpart_opportunity.py::_entity_by_name",
@@ -1673,7 +1761,7 @@
     ]
   },
   {
-    "signature": "exact:c604c64d2760fe4acfc4895403ea0aef",
+    "signature": "exact:d31c0fc8e2b38232516be6379aa4c171",
     "count": 2,
     "names": [
       "dazzle/qa/hyperpart_opportunity.py::_field_type_kind",
@@ -1681,7 +1769,7 @@
     ]
   },
   {
-    "signature": "exact:96b29dbf2d672c2a0a14855c8f3e5dfa",
+    "signature": "exact:d8c452c30ec07808f28a0b7bb7abc0f5",
     "count": 2,
     "names": [
       "dazzle/qa/hyperpart_opportunity.py::_surface_mode",
@@ -1689,7 +1777,7 @@
     ]
   },
   {
-    "signature": "exact:31a3d3d83bb30b588e79c94fd71bced2",
+    "signature": "exact:1572efbb5494cbc2b19aece3db71f819",
     "count": 2,
     "names": [
       "dazzle/render/audit_history_cell.py::_leftover",
@@ -1697,7 +1785,7 @@
     ]
   },
   {
-    "signature": "exact:e4ab6f1c66376108129927c034b5cae1",
+    "signature": "exact:e9a046b4fba405f3156174926992f68b",
     "count": 2,
     "names": [
       "dazzle/render/audit_history_cell.py::clerk_audit_op_display",
@@ -1713,7 +1801,7 @@
     ]
   },
   {
-    "signature": "exact:0ab61851086b5327cdc6c224fa53a09a",
+    "signature": "exact:a260340dad02293e416fb010f1a177b9",
     "count": 4,
     "names": [
       "dazzle/render/filters.py::clerk_form_error_field_label",
@@ -1723,7 +1811,7 @@
     ]
   },
   {
-    "signature": "exact:f8e4f41deda5e5a5c4aa0e599087dd8b",
+    "signature": "exact:772a0992db44106df8a9f27052e9367c",
     "count": 3,
     "names": [
       "dazzle/render/fragment/htmx.py::__str__",
@@ -1732,7 +1820,7 @@
     ]
   },
   {
-    "signature": "exact:d38a7781ad219869fffe516086de5611",
+    "signature": "exact:f7e77c413190929cbc2d9ac21777efd4",
     "count": 2,
     "names": [
       "dazzle/render/fragment/region/_builders_timeline.py::_media_initials",
@@ -1756,7 +1844,7 @@
     ]
   },
   {
-    "signature": "exact:aa847db100ea7c98a0d4a0ee02ebae40",
+    "signature": "exact:d015211c11fdb4ab217aff9d0ae435b9",
     "count": 2,
     "names": [
       "dazzle/tenant/provisioner.py::_connect",
@@ -1764,7 +1852,7 @@
     ]
   },
   {
-    "signature": "exact:05f931f67864583e74a641a4803395e0",
+    "signature": "exact:609910252989bb670d925506308a1d61",
     "count": 2,
     "names": [
       "dazzle/testing/data_generator.py::__init__",
@@ -1772,7 +1860,7 @@
     ]
   },
   {
-    "signature": "exact:2afb13f90aa79301ea81711fd24f255b",
+    "signature": "exact:bbf16749e08f55bf638e8aac5d163a67",
     "count": 2,
     "names": [
       "dazzle/testing/walk/claims.py::__init__",

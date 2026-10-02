@@ -25,6 +25,7 @@ the gate only forbids growth beyond it.
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 from collections import defaultdict
 from pathlib import Path
@@ -167,21 +168,56 @@ def _exact_body_signature(fn: ast.AST) -> str | None:
     members of a cluster are not merely the same shape — they are the *same
     code*. That distinction is what makes it safe to run on one-liners, where
     the structural pass would only produce noise: ``return datetime.now(UTC)``
-    written 13 times is not a family of parallel abstractions, it is one line
-    copied 13 times.
+    written 11 times is not a family of parallel abstractions, it is one line
+    copied 11 times.
+
+    Serialised by :func:`_canon_tokens` rather than by ``ast.unparse`` +
+    ``ast.dump``. The unparse round-trip was the bug this replaced: ``ast.unparse``
+    output is not byte-stable across Python versions (CI runs 3.12/3.13/3.14), so
+    every signature computed on one interpreter differed from every other. The
+    local baseline looked fine and all 112 exact clusters "vanished" in CI.
     """
     body = list(getattr(fn, "body", []))
     if not body or _is_trivial_body(fn):
         return None
-    try:
-        clone = ast.parse(ast.unparse(ast.Module(body=body, type_ignores=[])))
-    except (ValueError, RecursionError):
-        return None
+    clone = ast.Module(body=copy.deepcopy(body), type_ignores=[])
     _drop_docstrings(clone)
     if not clone.body or _is_trivial_body(clone):
         return None
-    digest = hashlib.sha256(ast.dump(clone, include_attributes=False).encode())
+    tokens: list[str] = []
+    for stmt in clone.body:
+        _canon_tokens(stmt, tokens)
+    digest = hashlib.sha256("|".join(tokens).encode())
     return EXACT_PREFIX + digest.hexdigest()[:32]
+
+
+def _canon_tokens(node: ast.AST, out: list[str]) -> None:
+    """Append a version-stable token stream for ``node`` to ``out``.
+
+    Deliberately ignores ``ctx``, ``lineno``, ``type_params`` and annotations:
+    those are either position noise or type commentary, and any of them could
+    differ between interpreters parsing the same source.
+    """
+    if isinstance(node, ast.Constant):
+        out.append(f"C:{node.value!r}")
+        return
+    if isinstance(node, ast.Name):
+        out.append(f"N:{node.id}")
+        return
+    if isinstance(node, ast.Attribute):
+        out.append(f"AT:{node.attr}")
+        _canon_tokens(node.value, out)
+        return
+    if isinstance(node, ast.arg):
+        out.append(f"ARG:{node.arg}")
+        return
+    if isinstance(node, ast.keyword):
+        out.append(f"KW:{node.arg}")
+        _canon_tokens(node.value, out)
+        return
+    out.append(type(node).__name__)
+    for child in ast.iter_child_nodes(node):
+        _canon_tokens(child, out)
 
 
 def compute_clone_index(root: Path, min_stmts: int = MIN_STMTS) -> dict[str, list[str]]:
