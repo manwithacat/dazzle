@@ -18,7 +18,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir import (
-    E2ETestSpec,
     FixtureSpec,
     FlowAssertion,
     FlowAssertionKind,
@@ -424,48 +423,3 @@ async def run_flow(
     """
     async with FlowRunner(page, adapter, fixtures) as runner:
         return await runner.run_flow(flow)
-
-
-async def run_testspec(
-    page: Page,
-    testspec: E2ETestSpec,
-    adapter: BaseAdapter,
-    priority_filter: str | None = None,
-    tag_filter: str | None = None,
-) -> list[FlowResult]:
-    """
-    Run all flows in an E2ETestSpec.
-
-    Args:
-        page: Playwright Page instance
-        testspec: Complete test specification
-        adapter: Stack adapter
-        priority_filter: Optional priority filter (high, medium, low)
-        tag_filter: Optional tag filter
-
-    Returns:
-        List of FlowResults for all flows
-    """
-    from dazzle.core.ir import FlowPriority
-
-    # Build fixtures dict
-    fixtures = {f.id: f for f in testspec.fixtures}
-
-    # Filter flows
-    flows = testspec.flows
-
-    if priority_filter:
-        priority = FlowPriority(priority_filter)
-        flows = [f for f in flows if f.priority == priority]
-
-    if tag_filter:
-        flows = [f for f in flows if tag_filter in f.tags]
-
-    # Run each flow
-    results: list[FlowResult] = []
-    for flow in flows:
-        async with FlowRunner(page, adapter, fixtures) as runner:
-            result = await runner.run_flow(flow)
-            results.append(result)
-
-    return results
