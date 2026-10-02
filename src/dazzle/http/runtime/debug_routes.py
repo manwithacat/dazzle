@@ -21,8 +21,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from dazzle.core import ir
+from dazzle.http.runtime.pg_backend import PostgresBackend
 from dazzle.http.runtime.query_builder import quote_identifier, validate_sql_identifier
-from dazzle.http.runtime.repository import DatabaseManager
 from dazzle.http.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ class SpecInfo(BaseModel):
 @dataclass
 class _DebugDeps:
     appspec: ir.AppSpec
-    db_manager: DatabaseManager
+    db_manager: PostgresBackend
     entities: list[EntitySpec]
     start_time: datetime
 
@@ -315,7 +315,7 @@ async def _list_tables(deps: _DebugDeps) -> dict[str, Any]:
 
 def create_debug_routes(
     appspec: ir.AppSpec,
-    db_manager: DatabaseManager,
+    db_manager: PostgresBackend,
     entities: list[EntitySpec],
     start_time: datetime,
 ) -> APIRouter:

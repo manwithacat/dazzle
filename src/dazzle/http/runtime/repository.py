@@ -1772,16 +1772,6 @@ class Repository[T: BaseModel]:
         return result is not None
 
 
-try:
-    from dazzle.http.runtime.pg_backend import PostgresBackend
-
-    type DatabaseManager = PostgresBackend
-except ImportError:
-    PostgresBackend = None  # type: ignore[assignment,misc]
-    type DatabaseManager = Any  # type: ignore[no-redef]
-"""Deprecated — use :class:`~dazzle.http.runtime.pg_backend.PostgresBackend`."""
-
-
 # =============================================================================
 # Repository Factory
 # =============================================================================

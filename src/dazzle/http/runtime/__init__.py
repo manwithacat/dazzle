@@ -39,7 +39,6 @@ from dazzle.http.runtime.model_generator import (
     generate_update_schema,
 )
 from dazzle.http.runtime.repository import (
-    DatabaseManager,
     Repository,
     RepositoryFactory,
 )
@@ -102,7 +101,6 @@ __all__ = [
     "run_app",
     # Repository
     "Repository",
-    "DatabaseManager",
     "RepositoryFactory",
     # Migrations
     "MigrationAction",

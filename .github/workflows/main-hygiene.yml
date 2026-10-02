@@ -11,22 +11,21 @@
 # Three separate CVEs landed during one working session (anyio, PyJWT, urllib3),
 # and each had the same shape: published out-of-band, discovered only when
 # someone opened a PR. `pip-audit` runs inside the PR matrix, so an advisory
-# discovered on a Tuesday sits invisible until Thursday.
+# published on a Tuesday sits invisible until Thursday.
 #
-# This workflow runs on a schedule, against `main`, with no PR required. It
-# reports rather than fails: a red scheduled workflow notifies nobody, so the
-# signal has to be an issue.
+# This runs on a schedule, against `main`, with no PR required. It reports
+# rather than fails: a red scheduled workflow notifies nobody, so the signal has
+# to be an issue.
 #
-# Noise control: both checks are idempotent. They reuse an existing open issue
-# when one matches, so a persistent condition produces one issue that is edited,
-# not a new one per run.
+# Both checks are idempotent — an existing open issue is edited rather than a
+# new one opened per run, so a persistent condition is one tracked thread.
 
 name: Main hygiene
 
 on:
   schedule:
-    # Mondays 07:17 UTC. Off the hour deliberately — every other workflow in this
-    # repo fires on :00, and GitHub queues scheduled runs from the same pool.
+    # Mondays 07:17 UTC. Off the hour deliberately — the other workflows here all
+    # fire on :00 and they share GitHub's scheduled-run queue.
     - cron: "17 7 * * 1"
   workflow_dispatch:
 
@@ -34,7 +33,6 @@ permissions:
   contents: read
   issues: write
 
-# Labels applied to a hygiene issue. `automated` marks it as not hand-written.
 env:
   HYGIENE_LABEL: "automated"
 
@@ -46,20 +44,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+      # The same composite CI uses. This is not incidental: the first version of
+      # this workflow installed uv directly, and `uv pip install pip-audit`
+      # failed with "No virtual environment found" because no venv existed. The
+      # bare `pip-audit` then resolved to nothing, the step exited non-zero, and
+      # the workflow reported **unpatched advisories that did not exist** — a
+      # monitoring tool that cries wolf gets ignored, which is worse than not
+      # having it. The composite runs `uv sync` and puts `.venv/bin` on PATH.
+      # Extras must match the `security-tests` job's exactly
+      # (`dev,mobile,postgres,perf`). These two jobs exist to agree about what is
+      # clean; auditing a *narrower* tree here means a CVE in a `mobile`/
+      # `postgres`-only dependency reports clean here while turning every open PR
+      # red in `security-tests`. Drift this list and the monitor starts lying.
+      - uses: ./.github/actions/setup-dazzle
         with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
+          extras: dev,mobile,postgres,perf
+          optional-pip: ""
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
-        with:
-          python-version: "3.12"
+      # Same as the `security-tests` job. A separate step so its failure is
+      # attributable: with this folded into the audit script, a missing tool
+      # surfaced as "unpatched advisories".
+      - name: Install pip-audit
+        run: uv pip install pip-audit
 
       # --- 1. Is main going stale? -----------------------------------------
-      # The signal that was missing. There is a *minimum* gap between pushes
-      # (scripts/push_gate.py) but no maximum, so an idle repo looks identical to
-      # a healthy one.
+      # The signal that was missing. `scripts/push_gate.py` enforces a *minimum*
+      # gap between pushes but there is no maximum, so an idle repo looks
+      # identical to a healthy one.
       - name: Check whether main has gone stale
         id: stale
         env:
@@ -79,27 +90,75 @@ jobs:
           fi
 
       # --- 2. Are there advisories against main right now? -----------------
-      # This is the half that would have caught all three CVEs on publication.
-      # Same invocation as the `security-tests` job, including its one
-      # suppression, so the two cannot disagree about what is clean.
+      # Same invocation and same single suppression as the `security-tests`
+      # job, so the two cannot disagree about what is clean.
+      #
+      # A *broken* audit must fail this step, not be reported as a finding.
+      # `set -e` plus the explicit command check is what stops the false
+      # positive the first version produced.
       - name: Audit main's locked dependencies
         id: audit
         run: |
-          set +e
-          uv pip install -q pip-audit
+          set -euo pipefail
+          command -v pip-audit >/dev/null || {
+            echo "::error::pip-audit is not on PATH — the venv setup failed, so this run cannot say anything about advisories"
+            exit 1
+          }
           uv pip freeze --exclude-editable > /tmp/audit-reqs.txt
-          pip-audit --strict --desc --no-deps --disable-pip \
-            --ignore-vuln MAL-2026-4750 \
-            -r /tmp/audit-reqs.txt 2>&1 | tee /tmp/audit.log
-          rc=${PIPESTATUS[0]}
+          # pip-audit queries live PyPI per package, so a transient
+          # ReadTimeout/handshake failure must not be read as "advisories
+          # found" — nor red this job for a clean tree. Same classifier and
+          # retry count as the `security-tests` job (ci.yml).
+          net_flake='ReadTimeout|timed out|TimeoutError|ConnectionError|Connection reset|Temporary failure|NameResolutionError|SSLError|RemoteDisconnected|Max retries exceeded'
+          set +e
+          for attempt in 1 2 3; do
+            if [ "$attempt" -gt 1 ]; then
+              echo "=== pip-audit attempt $attempt / 3 ==="
+            fi
+            pip-audit --strict --desc --no-deps --disable-pip \
+              --ignore-vuln MAL-2026-4750 \
+              -r /tmp/audit-reqs.txt 2>&1 | tee /tmp/audit.log
+            rc=${PIPESTATUS[0]}
+            if [ "$rc" -eq 0 ] \
+               || ! grep -qiE "$net_flake" /tmp/audit.log; then
+              break            # clean, or a real failure we must not retry
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "pip-audit network flake (rc=$rc); retrying in $((attempt * 15))s"
+              sleep "$((attempt * 15))"
+            else
+              echo "::error::pip-audit exhausted network retries — this run has no advisory verdict (rc=$rc)"
+            fi
+          done
+          set -e
+          # Strip ANSI before matching; pip-audit colourises when it thinks it
+          # is on a TTY, and an escape prefix defeats a `^`-anchored pattern.
+          sed -e 's/\x1b\[[0-9;]*m//g' /tmp/audit.log > /tmp/audit.clean
+          # Column-extract rather than regex the whole line: with `--desc` a
+          # line is `name version ID fixVersions description…`, and the
+          # description carries its own CVE mentions, so a whole-line pattern
+          # both misses rows and drags prose into the issue body.
+          #
+          # The ID vocabulary MUST include PYSEC. Against the PyPI service
+          # (this repo's configuration) pip-audit reports overwhelmingly
+          # `PYSEC-YYYY-N`, not `GHSA-`/`CVE-`: measured on a real scan,
+          # 123 of 124 advisory rows were PYSEC. A `(CVE|GHSA)`-only pattern
+          # matches 1 of 124 — so a genuine CVE would have produced an empty
+          # finding set and been discarded by the phantom guard below. The
+          # monitor would have gone quiet precisely when it was needed.
+          awk '$2 ~ /^[0-9]/ && $3 ~ /^(CVE|GHSA|PYSEC|MAL)-[0-9]+(-[0-9]+)?$/ {print $1, $2, $3}' \
+            /tmp/audit.clean | sort -u > /tmp/findings.txt
           if [ "$rc" -eq 0 ]; then
             echo "clean=true" >> "$GITHUB_OUTPUT"
           else
             echo "clean=false" >> "$GITHUB_OUTPUT"
+            if [ ! -s /tmp/findings.txt ]; then
+              # Non-zero with nothing extractable is a tool/transport failure, not
+              # an advisory. Do not file a finding on it.
+              echo "::error::pip-audit exited ${rc} but no advisory rows were parsed — refusing to report a phantom finding"
+              exit 1
+            fi
           fi
-          # Just the advisory lines, for the issue body.
-          grep -E '^[a-zA-Z0-9_.-]+ [0-9]+\.[0-9]+\.[0-9]+ +[A-Z]{4}-[0-9]{4}-[0-9]+' /tmp/audit.log \
-            > /tmp/findings.txt || true
 
       # --- 3. Report, idempotently -----------------------------------------
       - name: Open or update a hygiene issue
@@ -109,6 +168,7 @@ jobs:
           AGE_DAYS: ${{ steps.stale.outputs.age_days }}
           LATEST: ${{ steps.stale.outputs.latest }}
           CLEAN: ${{ steps.audit.outputs.clean }}
+          SERVER_URL: ${{ github.server_url }}
         with:
           script: |
             const fs = require('fs');
@@ -125,8 +185,8 @@ jobs:
               problems.push(
                 '### Unpatched advisories against `main`\n\n' +
                 '`pip-audit --strict` on the locked tree, same invocation as the ' +
-                '`security-tests` job. Every one of these turns **all** open PRs red ' +
-                'simultaneously, because each branches off a base that fails the gate.\n\n' +
+                '`security-tests` job. Each of these turns **all** open PRs red ' +
+                'simultaneously, because every one branches off a base that fails the gate.\n\n' +
                 '```\n' + (findings || '(see run log)') + '\n```\n\n' +
                 'Bump the offending package and land that first — it unblocks the PR queue.'
               );
@@ -143,21 +203,20 @@ jobs:
 
             const body = [
               '<!-- main-hygiene -->',
-              'Automated weekly check of `main`. Re-opened or updated in place —',
-              'one issue tracks the condition, not each run.',
+              'Automated weekly check of `main`. Updated in place — one issue tracks',
+              'the condition, not each run.',
               '',
               ...problems,
               '',
               '<sub>Run: ' + context.payload.repository.full_name + ' @ ' +
-              context.runId + ' (' + context.serverUrl + '/' + context.repo.owner.repo +
-              '/actions/runs/' + context.runId + ')</sub>',
+              context.runId + ' (' + process.env.SERVER_URL + '/' +
+              context.repo.owner.repo + '/actions/runs/' + context.runId + ')</sub>',
             ].join('\n');
 
             const title = !clean
               ? 'main: unpatched advisories in the locked dependency tree'
               : 'main: no new commits for over a week';
 
-            // Reuse an open issue rather than opening a new one every week.
             const marker = '<!-- main-hygiene -->';
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,

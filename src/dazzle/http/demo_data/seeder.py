@@ -16,7 +16,8 @@ from .loader import DemoDataLoader
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from dazzle.http.runtime.repository import DatabaseManager, Repository
+    from dazzle.http.runtime.pg_backend import PostgresBackend
+    from dazzle.http.runtime.repository import Repository
     from dazzle.http.specs import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class DemoDataSeeder:
     def __init__(
         self,
         entities: list[EntitySpec],
-        db_manager: DatabaseManager,
+        db_manager: PostgresBackend,
         repositories: dict[str, Repository[Any]],
         project_root: Path | None = None,
         seed: int | None = None,

@@ -47,7 +47,7 @@ from .templates import render_template
 
 if TYPE_CHECKING:
     from dazzle.core.ir import ChannelSpec
-    from dazzle.http.runtime.repository import DatabaseManager
+    from dazzle.http.runtime.pg_backend import PostgresBackend
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class ChannelManager:
 
     def __init__(
         self,
-        db_manager: DatabaseManager | None,
+        db_manager: PostgresBackend | None,
         channel_specs: list[ChannelSpec],
         *,
         build_id: str | None = None,
@@ -437,7 +437,7 @@ class ChannelManager:
 
 
 def create_channel_manager(
-    db_manager: DatabaseManager | None,
+    db_manager: PostgresBackend | None,
     channel_specs: list[ChannelSpec],
     build_id: str | None = None,
 ) -> ChannelManager:

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from dazzle.core.environment import skip_boot_schema_ddl
 
 if TYPE_CHECKING:
-    from dazzle.http.runtime.repository import DatabaseManager
+    from dazzle.http.runtime.pg_backend import PostgresBackend
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def ensure_outbox_table(cur: Any) -> None:
     Single source of DDL — called by both ``OutboxRepository._ensure_table`` and
     ``ensure_framework_schema`` (#1499: _dazzle_outbox is an in-baseline framework
     table) so there is exactly one definition. ``cur`` is anything with ``.execute``
-    (a psycopg cursor in the orchestrator path; a DatabaseManager connection in the
+    (a psycopg cursor in the orchestrator path; a PostgresBackend connection in the
     boot path).
     """
     cur.execute("""
@@ -177,7 +177,7 @@ class OutboxRepository:
 
     TABLE_NAME = "_dazzle_outbox"
 
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: PostgresBackend):
         self.db = db_manager
         self._ensure_table()
 
