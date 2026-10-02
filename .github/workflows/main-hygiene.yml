@@ -90,75 +90,23 @@ jobs:
           fi
 
       # --- 2. Are there advisories against main right now? -----------------
-      # Same invocation and same single suppression as the `security-tests`
-      # job, so the two cannot disagree about what is clean.
+      # `scripts/pip_audit.py` is the same implementation the `security-tests`
+      # job runs, so the two cannot disagree about what is clean. It used to be
+      # spelled out here in shell too, and this copy was the one that filed
+      # issue #1745 — advisories that did not exist, from a broken audit, via an
+      # advisory-ID pattern that matched 1 row in 124.
       #
-      # A *broken* audit must fail this step, not be reported as a finding.
-      # `set -e` plus the explicit command check is what stops the false
-      # positive the first version produced.
+      # `--report-only` is what makes this a monitor rather than a second gate:
+      # findings become an issue, not a red Monday. Only "no verdict at all"
+      # (missing tool, crash, PyPI unreachable) fails the step, because a broken
+      # audit must never read as clean — the silent-green failure bandit shipped
+      # for a month when it skipped a renamed directory.
       - name: Audit main's locked dependencies
         id: audit
-        run: |
-          set -euo pipefail
-          command -v pip-audit >/dev/null || {
-            echo "::error::pip-audit is not on PATH — the venv setup failed, so this run cannot say anything about advisories"
-            exit 1
-          }
-          uv pip freeze --exclude-editable > /tmp/audit-reqs.txt
-          # pip-audit queries live PyPI per package, so a transient
-          # ReadTimeout/handshake failure must not be read as "advisories
-          # found" — nor red this job for a clean tree. Same classifier and
-          # retry count as the `security-tests` job (ci.yml).
-          net_flake='ReadTimeout|timed out|TimeoutError|ConnectionError|Connection reset|Temporary failure|NameResolutionError|SSLError|RemoteDisconnected|Max retries exceeded'
-          set +e
-          for attempt in 1 2 3; do
-            if [ "$attempt" -gt 1 ]; then
-              echo "=== pip-audit attempt $attempt / 3 ==="
-            fi
-            pip-audit --strict --desc --no-deps --disable-pip \
-              --ignore-vuln MAL-2026-4750 \
-              -r /tmp/audit-reqs.txt 2>&1 | tee /tmp/audit.log
-            rc=${PIPESTATUS[0]}
-            if [ "$rc" -eq 0 ] \
-               || ! grep -qiE "$net_flake" /tmp/audit.log; then
-              break            # clean, or a real failure we must not retry
-            fi
-            if [ "$attempt" -lt 3 ]; then
-              echo "pip-audit network flake (rc=$rc); retrying in $((attempt * 15))s"
-              sleep "$((attempt * 15))"
-            else
-              echo "::error::pip-audit exhausted network retries — this run has no advisory verdict (rc=$rc)"
-            fi
-          done
-          set -e
-          # Strip ANSI before matching; pip-audit colourises when it thinks it
-          # is on a TTY, and an escape prefix defeats a `^`-anchored pattern.
-          sed -e 's/\x1b\[[0-9;]*m//g' /tmp/audit.log > /tmp/audit.clean
-          # Column-extract rather than regex the whole line: with `--desc` a
-          # line is `name version ID fixVersions description…`, and the
-          # description carries its own CVE mentions, so a whole-line pattern
-          # both misses rows and drags prose into the issue body.
-          #
-          # The ID vocabulary MUST include PYSEC. Against the PyPI service
-          # (this repo's configuration) pip-audit reports overwhelmingly
-          # `PYSEC-YYYY-N`, not `GHSA-`/`CVE-`: measured on a real scan,
-          # 123 of 124 advisory rows were PYSEC. A `(CVE|GHSA)`-only pattern
-          # matches 1 of 124 — so a genuine CVE would have produced an empty
-          # finding set and been discarded by the phantom guard below. The
-          # monitor would have gone quiet precisely when it was needed.
-          awk '$2 ~ /^[0-9]/ && $3 ~ /^(CVE|GHSA|PYSEC|MAL)-[0-9]+(-[0-9]+)?$/ {print $1, $2, $3}' \
-            /tmp/audit.clean | sort -u > /tmp/findings.txt
-          if [ "$rc" -eq 0 ]; then
-            echo "clean=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "clean=false" >> "$GITHUB_OUTPUT"
-            if [ ! -s /tmp/findings.txt ]; then
-              # Non-zero with nothing extractable is a tool/transport failure, not
-              # an advisory. Do not file a finding on it.
-              echo "::error::pip-audit exited ${rc} but no advisory rows were parsed — refusing to report a phantom finding"
-              exit 1
-            fi
-          fi
+        run: python scripts/pip_audit.py --report-only \
+          --findings-file /tmp/findings.txt \
+          --verdict-file /tmp/audit-verdict.json \
+          --github-output "$GITHUB_OUTPUT"
 
       # --- 3. Report, idempotently -----------------------------------------
       - name: Open or update a hygiene issue
@@ -182,13 +130,27 @@ jobs:
             const problems = [];
             if (!clean) {
               const findings = fs.readFileSync('/tmp/findings.txt', 'utf8').trim();
+              // Never file a hollow advisory section. #1745 was exactly this:
+              // an audit that produced nothing, reported as a list of
+              // advisories. `pip_audit.py` already fails the audit step when it
+              // cannot reach a verdict, so an empty list here means the two
+              // have drifted again — fail loudly instead of inventing a finding.
+              if (!findings) {
+                core.setFailed(
+                  'audit reported not-clean but wrote no advisory rows to ' +
+                  '/tmp/findings.txt — refusing to file a phantom finding'
+                );
+                return;
+              }
               problems.push(
                 '### Unpatched advisories against `main`\n\n' +
-                '`pip-audit --strict` on the locked tree, same invocation as the ' +
-                '`security-tests` job. Each of these turns **all** open PRs red ' +
-                'simultaneously, because every one branches off a base that fails the gate.\n\n' +
-                '```\n' + (findings || '(see run log)') + '\n```\n\n' +
-                'Bump the offending package and land that first — it unblocks the PR queue.'
+                'Audited with `--strict` against the locked tree, using the same ' +
+                'implementation (`scripts/pip_audit.py`) the `security-tests` job ' +
+                'runs. Each of these turns **all** open PRs red simultaneously, ' +
+                'because every one branches off a base that fails the gate.\n\n' +
+                '```\n' + findings + '\n```\n\n' +
+                'One row per `package version advisory-id`. Bump the offending ' +
+                'package and land that first — it unblocks the PR queue.'
               );
             }
             if (stale) {

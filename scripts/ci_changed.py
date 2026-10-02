@@ -29,6 +29,20 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
+# Scripts that *are* the local/CI runner. A change here can silently stop a
+# gate being enforced, so `make ci-changed` runs the `-m gate` suite for them.
+CI_RUNNER_SCRIPTS = frozenset(
+    {
+        "Makefile",
+        "scripts/ci_changed.py",
+        "scripts/ci_local.sh",
+        "scripts/pip_audit.py",
+        "scripts/preflight_surface.py",
+        "scripts/push_gate.py",
+        "scripts/ship_surface.py",
+    }
+)
+
 
 @dataclass
 class Pack:
@@ -259,6 +273,22 @@ def select_packs(paths: list[str]) -> list[Pack]:
                 name="spec-brief",
                 reason="spec narrative / brief baseline",
                 pytest=["tests/unit/test_spec_narrative_brief_snapshot.py"],
+            )
+        )
+
+    # CI plumbing: the `-m gate` suite is where CI invariants are encoded, so
+    # an edit to the runner itself is exactly when it needs to run. Without this
+    # a change to .github/ or the local concordance runner selects *no* pack at
+    # all — verified while consolidating the pip-audit copies (#1745): the whole
+    # diff was invisible to `make ci-changed`.
+    if any_prefix(".github/workflows/", ".github/actions/", "Makefile") or any(
+        p in CI_RUNNER_SCRIPTS for p in paths
+    ):
+        packs.append(
+            Pack(
+                name="ci-infra",
+                reason="CI runner / workflow change — gate suite holds the invariants",
+                pytest=["tests/unit", "-m", "gate"],
             )
         )
 

@@ -125,11 +125,13 @@ sync-ci-test:
 	bash scripts/ci_local.sh sync-test
 
 security:
-	@echo "=== Bandit Security Check ==="
-	$(UV) run bandit -c pyproject.toml -r src/ --severity-level medium
-	@echo ""
-	@echo "=== Dependency Vulnerability Scan (soft — use make ci-core for hard-fail) ==="
-	$(UV) run pip-audit --strict --desc on || true
+	# Delegated, not reimplemented. This target used to run its own
+	# `uv run pip-audit --strict --desc on || true`: a fourth copy of the audit,
+	# soft-failing by construction, and carrying a stray `on` argument with the
+	# audit flags. "Green locally" then meant something no CI job agreed with.
+	# ci_local.sh security is the same implementation the `security-tests` job
+	# and the main-hygiene monitor run, so this is now a hard gate like CI.
+	bash scripts/ci_local.sh security
 
 # Agent hygiene — not a CI hard gate (bandit + CodeQL remain the ship gates).
 semgrep-diff:

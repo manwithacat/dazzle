@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+### Fixed
+- **The weekly `main-hygiene` monitor no longer reports advisories that do not exist (#1745).** It filed "unpatched advisories in the locked dependency tree" against a tree that is clean (`pip-audit` on the committed `uv.lock` returns `No known vulnerabilities found`). Two defects: the job installed uv directly, so `uv pip install pip-audit` failed with "No virtual environment found" on a bare runner and the absence of output was reported as a finding; and its advisory-ID pattern `(CVE|GHSA)-[0-9]+` matched **1 row in 124** against the PyPI service, which reports overwhelmingly `PYSEC-YYYY-N` — so a genuine CVE would have been discarded by the guard added to stop the phantom. The monitor also audited `extras: dev` while `security-tests` audits `dev,mobile,postgres,perf`, so the two could disagree about what "clean" means, and its issue footer linked to `github.com/undefined/actions/runs/…`.
+- **Advisory IDs are read per scheme, not by prefix.** `CVE-2021-44228`, `GHSA-4fx9-vc88-q2xc` (hex segments, not digits), `PYSEC-2021-66`, `MAL-2026-4750`. Measured against a real scan: 123 PYSEC rows, 3 GHSA rows, zero CVE rows in the ID column — the CVEs in that output are *inside advisory descriptions*, which is why the parser reads column 3 rather than matching the line.
+
+### Changed
+- **The locked-tree pip-audit verdict has one implementation: `scripts/pip_audit.py`.** It was written out in `ci.yml`, `main-hygiene.yml`, and `scripts/ci_local.sh`, and the copies had already drifted. The script returns an explicit `clean` / `findings` / `error` verdict rather than leaving callers to infer one from an exit code, runs pip-audit as `-m pip_audit` from its own interpreter, and retries only transport failures. Two modes: gate mode (findings fail, used by `security-tests`) and `--report-only` (findings become an issue, only "no verdict at all" fails, used by the monitor).
+- **`make security` is no longer a soft, separate gate.** It delegated its own `uv run pip-audit --strict --desc on || true` — a fourth copy that could not fail and carried a stray `on` argument. It now calls `bash scripts/ci_local.sh security`, i.e. the same implementation and the same hard-fail as CI.
+- **`make ci-changed` gained a `ci-infra` pack.** A diff touching `.github/workflows/`, `.github/actions/`, the `Makefile`, or one of the runner scripts (`ci_changed.py`, `ci_local.sh`, `pip_audit.py`, `preflight_surface.py`, `push_gate.py`, `ship_surface.py`) now selects the `-m gate` suite. It previously selected *nothing*: the whole pip-audit consolidation diff was invisible to the path-aware gate.
+
+### Agent Guidance
+- Do not re-inline a CI invocation that has a shared implementation. `tests/unit/test_pip_audit.py` runs under `-m gate` (so `make ci-fast` catches it) and fails if any workflow, `scripts/*.sh`, or the `Makefile` spells out the pip-audit flags or duplicates the suppression list. The rule generalises: when a command is spelled out in three places, the drift is not hypothetical — #1745 was one of the copies filing a finding from its own breakage.
+- An advisory-ID pattern must cover every scheme the tool emits, including the ones that do not look like the one you remember. `GHSA-` segments are hex, so `GHSA-[0-9]+` drops every GHSA row; `(CVE|GHSA)` dropped every PYSEC row.
+- A monitor must distinguish three states, not two: findings, clean, and *could not tell*. The third must never resolve to clean or to a finding — that is the silent-green failure bandit shipped for a month when it skipped a renamed directory.
+
 ## [0.114.10] - 2026-09-16
 
 ### Fixed

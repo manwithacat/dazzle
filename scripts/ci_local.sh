@@ -142,43 +142,18 @@ cmd_security() {
   # lint job scans all of src/; security-tests also scans http/runtime.
   # Full-tree medium is the stricter of the two local mirrors.
   _run_uv bandit -c pyproject.toml -r src/ --severity-level medium
-  # Freeze snapshot (same rationale as ci.yml — editable dazzle-dsl breaks pip-audit).
-  "$UV" pip freeze --exclude-editable > /tmp/dazzle-audit-reqs.txt
-  # MAL-2026-4750: same ignore as CI (fastapi/fastar false positive).
-  # Network flake retry mirrors .github/workflows/ci.yml security-tests
-  # (PyPI ReadTimeout should not red a clean tree — cimonitor 2026-08-09).
-  set +e
-  audit_ok=0
-  for attempt in 1 2 3; do
-    out=$(mktemp)
-    # Pin --python so `uv run` does not recreate the project venv with the
-    # host default (e.g. 3.14) and drop CI extras mid-tier1.
-    "$UV" run --python "$CI_PYTHON" pip-audit --strict --desc --no-deps --disable-pip \
-      --ignore-vuln MAL-2026-4750 \
-      -r /tmp/dazzle-audit-reqs.txt 2>&1 | tee "$out"
-    rc=${PIPESTATUS[0]}
-    if [ "$rc" -eq 0 ]; then
-      audit_ok=1
-      rm -f "$out"
-      break
-    fi
-    if grep -qiE 'ReadTimeout|timed out|TimeoutError|ConnectionError|Connection reset|Temporary failure|NameResolutionError|SSLError|RemoteDisconnected|Max retries exceeded' "$out"; then
-      rm -f "$out"
-      if [ "$attempt" -lt 3 ]; then
-        sleep_s=$((attempt * 15))
-        _log "pip-audit network flake (rc=$rc); retry in ${sleep_s}s..."
-        sleep "$sleep_s"
-        continue
-      fi
-      break
-    fi
-    rm -f "$out"
-    break
-  done
-  set -e
-  if [ "$audit_ok" -ne 1 ]; then
-    _die "pip-audit failed (rc=${rc:-1})"
-  fi
+  # One implementation, shared with ci.yml's security-tests and the main-hygiene
+  # monitor: the flags, the suppression, the PyPI-flake retry and the verdict
+  # rules all live in scripts/pip_audit.py. This copy used to be its own
+  # hand-rolled loop and had already drifted from CI's (#1745) — "green
+  # locally" has to mean the same thing as green in CI, which is only true if
+  # there is only one copy.
+  #
+  # It runs pip-audit as `-m pip_audit` from whichever interpreter invokes it,
+  # so the tree audited is the tree this venv was built from. The old
+  # `uv run --python $CI_PYTHON` form could *recreate* the project venv with the
+  # host default mid-tier1 and drop CI extras.
+  _run_uv python scripts/pip_audit.py
   _ok "bandit + pip-audit"
 }
 

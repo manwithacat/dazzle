@@ -74,3 +74,36 @@ def test_unrelated_docs_alone_selects_nothing_mapped() -> None:
     names = {p.name for p in packs}
     assert "hm-surface" not in names
     assert "http-ratchets" not in names
+
+
+def test_ci_runner_changes_select_the_gate_suite() -> None:
+    """A CI-infra diff used to select no pack at all, making it unverifiable.
+
+    Found while consolidating the pip-audit copies (#1745): the entire diff was
+    `.github/`, `Makefile`, `scripts/ci_local.sh` and a new `scripts/*.py`, and
+    `make ci-changed` reported "no path packs selected". The `-m gate` suite is
+    where CI invariants live, so it has to be reachable from a runner change.
+    """
+    mod = _load_ci_changed()
+    for path in (
+        ".github/workflows/ci.yml",
+        ".github/workflows/main-hygiene.yml",
+        ".github/actions/setup-dazzle/action.yml",
+        "Makefile",
+        "scripts/ci_local.sh",
+        "scripts/pip_audit.py",
+    ):
+        names = {p.name for p in mod.select_packs([path])}
+        assert "ci-infra" in names, f"{path} selected nothing"
+
+
+def test_ci_infra_pack_runs_the_gate_marker() -> None:
+    mod = _load_ci_changed()
+    pack = next(p for p in mod.select_packs(["Makefile"]) if p.name == "ci-infra")
+    assert pack.pytest == ["tests/unit", "-m", "gate"]
+
+
+def test_docs_only_diff_still_selects_no_ci_infra_pack() -> None:
+    """Guard against the new pack swallowing every markdown edit."""
+    mod = _load_ci_changed()
+    assert "ci-infra" not in {p.name for p in mod.select_packs(["docs/reference/taste.md"])}
