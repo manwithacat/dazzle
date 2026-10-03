@@ -124,6 +124,13 @@ sync-ci-type:
 sync-ci-test:
 	bash scripts/ci_local.sh sync-test
 
+# Is the record coherent with the code? One command: stale issues (open but
+# cited by a merged commit), PRs ready to merge, non-terminal advisories, and
+# improve-loop state that has rost (heartbeat age, backlog past compaction).
+# Advisory by design — it reports, it does not fail a build.
+reconcile:
+	@uv run python scripts/repo_reconcile.py
+
 security:
 	# Delegated, not reimplemented. This target used to run its own
 	# `uv run pip-audit --strict --desc on || true`: a fourth copy of the audit,
