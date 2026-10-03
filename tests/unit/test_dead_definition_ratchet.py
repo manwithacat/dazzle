@@ -38,6 +38,9 @@ Three attempts, all found the hard way by this gate failing on its own commit:
    * Other files (``.yml``, ``.toml``, ``.sh``, ``.j2``, ``.html``, ...) are read
      as text with ``#`` comments stripped, because YAML/TOML/shell config can
      legitimately name a handler in a string.
+   * The file set is ``git ls-files``. There is no filesystem fallback — see
+     :func:`_tracked_files` for why, and for what this gate does when git cannot
+     answer.
    * ``.md`` / ``.txt`` are excluded outright. Prose is not a use site, and a
      changelog has to be able to name what it found.
 
@@ -106,23 +109,31 @@ def _is_test_module(path: Path) -> bool:
 
 
 def _tracked_files() -> list[Path]:
-    """Every tracked text file, via git, falling back to a filesystem walk."""
+    """Every tracked text file, via ``git ls-files``.
+
+    There is deliberately **no filesystem fallback**. A walk cannot reproduce the
+    tracked set: ``.venv`` holds an installed copy of dazzle so every name in it
+    looks referenced, ``node_modules`` and generated output add more, and
+    gitignored-but-present files (this repo has ``dev_docs/``) reference names
+    that are genuinely dead. An earlier version fell back to a walk and silently
+    reported a *different* orphan set — 122 phantom entries, and every real
+    baseline entry stale at once.
+
+    So when git cannot answer, this gate skips with a reason instead of guessing.
+    A gate that says "I cannot tell" is trustworthy; one that guesses is not. CI
+    always has git, so the skip never fires there.
+    """
     try:
         proc = subprocess.run(
             ["git", "ls-files", "-z"], cwd=_REPO, check=True, capture_output=True, text=True
         )
-        rels = [r for r in proc.stdout.split("\0") if r]
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return sorted(
-            p
-            for p in _REPO.rglob("*")
-            if p.is_file()
-            and ".git" not in p.parts
-            and p.suffix in _TEXT_SUFFIXES
-            and not _is_test_module(p)
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+        pytest.skip(
+            f"git ls-files is unavailable ({exc}); this gate needs the tracked file set "
+            "and will not substitute a filesystem walk, which reports a different answer"
         )
     out: list[Path] = []
-    for rel in rels:
+    for rel in [r for r in proc.stdout.split("\0") if r]:
         p = _REPO / rel
         if p.suffix in _TEXT_SUFFIXES and p.is_file() and p.stat().st_size < _MAX_BYTES:
             out.append(p)
