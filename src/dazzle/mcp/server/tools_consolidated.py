@@ -1705,18 +1705,14 @@ def _tool_sentinel() -> Tool:
                     ],
                     "description": "Operation to perform",
                 },
-                "severity_threshold": {
-                    "type": "string",
-                    "enum": ["critical", "high", "medium", "low", "info"],
-                    "description": "Minimum severity to include (for findings). Default: info.",
-                },
                 "agent": {
                     "type": "string",
                     "description": "Filter findings by agent ID (for findings).",
                 },
                 "severity": {
                     "type": "string",
-                    "description": "Filter findings by severity (for findings).",
+                    "enum": ["critical", "high", "medium", "low", "info"],
+                    "description": "Minimum severity to include (for findings). Default: info.",
                 },
                 "scan_id": {
                     "type": "string",

@@ -532,9 +532,8 @@ Sentinel operations: findings (get findings from latest/specific scan), status (
 
 **Parameters:**
 
-- `severity_threshold` *(string)* — Minimum severity to include (for findings). Default: info.
 - `agent` *(string)* — Filter findings by agent ID (for findings).
-- `severity` *(string)* — Filter findings by severity (for findings).
+- `severity` *(string)* — Minimum severity to include (for findings). Default: info.
 - `scan_id` *(string)* — Specific scan ID (for findings).
 - `limit` *(integer)* — Max scans to return (for history). Default: 10.
 - `samples` *(integer)* — Samples per layer for fuzz_summary. Default: 10.
