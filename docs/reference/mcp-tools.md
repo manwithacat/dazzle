@@ -299,7 +299,8 @@ Knowledge graph operations for codebase understanding. Operations: query (search
 
 **Parameters:**
 
-- `text` *(string)* — Search text (for query)
+- `text` *(string)* — Search text (for query; accepted alias for inference, which takes query)
+- `query` *(string)* — Search query (for inference)
 - `entity_id` *(string)* — Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)
 - `source_id` *(string)* — Source entity ID (for paths)
 - `target_id` *(string)* — Target entity ID (for paths)

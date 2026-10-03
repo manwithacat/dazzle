@@ -728,6 +728,10 @@ tool: graph
         ],
         "type": "string"
       },
+      "query": {
+        "description": "Search query (for inference)",
+        "type": "string"
+      },
       "relation_types": {
         "description": "Filter by relation types: imports, contains, inherits, depends_on",
         "items": {
@@ -748,7 +752,7 @@ tool: graph
         "type": "string"
       },
       "text": {
-        "description": "Search text (for query)",
+        "description": "Search text (for query; accepted alias for inference, which takes query)",
         "type": "string"
       },
       "transitive": {

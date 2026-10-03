@@ -125,12 +125,23 @@ def _dispatch_standalone_ops(
     arguments: dict[str, Any],
     ops: dict[str, Callable[..., str]],
     tool_label: str,
+    value_errors_as_errors: bool = False,
 ) -> str:
-    """Dispatch for handlers that take only arguments (no project_path)."""
+    """Dispatch for handlers that take only arguments (no project_path).
+
+    `value_errors_as_errors` is for read-only tools whose stores raise on a
+    malformed argument instead of degrading — an agent must be told its call
+    was wrong, not handed an unfiltered dump that reads like an answer (#1750).
+    """
     operation = arguments.get("operation")
     fn = ops.get(operation)  # type: ignore[arg-type]
     if fn is None:
         return unknown_op_response(operation, tool_label)
+    if value_errors_as_errors:
+        try:
+            return fn(arguments)
+        except ValueError as exc:
+            return error_response(f"{tool_label} {operation}: {exc}")
     return fn(arguments)
 
 
@@ -816,7 +827,18 @@ def _handle_graph_concept(graph: Any, arguments: dict[str, Any]) -> str:
 
 
 def _handle_graph_inference(graph: Any, arguments: dict[str, Any]) -> str:
-    query_text = arguments.get("text", "")
+    # `query` is the declared key for this op (and the one the `knowledge`
+    # tool already uses for inference). The handler used to read `text`, so a
+    # caller following the published interface got "" back and a confident
+    # zero-match result instead of an error (#1750). `text` stays accepted —
+    # it is a declared property of this tool and the pre-#1750 docs example
+    # uses it — but it is an alias, not the contract, and an empty query on
+    # either key is now an error rather than a silent miss.
+    query_text = arguments.get("query") or arguments.get("text", "")
+    if not query_text:
+        return error_response(
+            "`inference` needs a query: pass query=<text to match> (text= is accepted as an alias)."
+        )
     limit = arguments.get("limit", 20)
     matches = graph.lookup_inference_matches(query_text, limit=limit)
     return json.dumps(
@@ -838,21 +860,49 @@ def _handle_graph_inference(graph: Any, arguments: dict[str, Any]) -> str:
 
 
 def _handle_graph_related(graph: Any, arguments: dict[str, Any]) -> str:
-    entity_id = arguments.get("entity_id", "")
+    # Three defects, all serving the same failure (#1750). This read
+    # `entity_id` where the schema declares `name`, so the lookup never
+    # happened; `get_relations` filtered nothing when handed the empty id it
+    # got, so the caller received every relation in the graph; and neighbours
+    # were emitted per relation rather than per entity, so one concept appeared
+    # five times. Asking for three results returned 320 rows that read like a
+    # neighbourhood computation.
+    #
+    # A name that resolves to nothing is an error now, never an unfiltered
+    # dump: a miss must not be indistinguishable from an answer.
+    name = arguments.get("name") or arguments.get("entity_id", "")
+    limit = arguments.get("limit", 20)
+    if not name:
+        return error_response(
+            "`related` needs a concept name: pass name=<concept>. "
+            "Passing nothing used to return every relation in the graph."
+        )
+    entity = graph.lookup_concept(name)
+    if entity is None:
+        return error_response(f"Concept not found: {name}")
     relations = graph.get_relations(
-        entity_id=entity_id,
+        entity_id=entity.id,
         relation_type="related_concept",
         direction="outgoing",
     )
-    related_ids = [r.target_id for r in relations]
-    related_entities = [e for eid in related_ids if (e := graph.get_entity(eid)) is not None]
+    # One row per neighbour, first-seen order preserved.
+    neighbours: dict[str, dict[str, Any]] = {}
+    for relation in relations:
+        found = graph.get_entity(relation.target_id)
+        if found is not None:
+            neighbours.setdefault(
+                found.id, {"id": found.id, "name": found.name, "type": found.entity_type}
+            )
+    ordered = list(neighbours.values())
     return json.dumps(
         {
-            "entity_id": entity_id,
-            "related": [
-                {"id": e.id, "name": e.name, "type": e.entity_type} for e in related_entities
-            ],
-            "count": len(related_entities),
+            "entity_id": entity.id,
+            "name": entity.name,
+            "related": ordered[:limit],
+            # Distinct neighbours found, not rows returned — a caller reading
+            # `count` must not be told 320 when it asked for 3.
+            "count": len(ordered),
+            "truncated": len(ordered) > limit,
         },
         indent=2,
     )
@@ -1105,7 +1155,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
         "topology": lambda args: _handle_graph_topology(args),
     }
 
-    return _dispatch_standalone_ops(arguments, ops, "graph")
+    return _dispatch_standalone_ops(arguments, ops, "graph", value_errors_as_errors=True)
 
 
 # =============================================================================

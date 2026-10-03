@@ -318,10 +318,18 @@ Looks up a seeded framework concept by name or alias. Returns the concept's type
 #### `inference` — find patterns matching a description
 
 ```json
-{"operation": "inference", "text": "user uploads a file", "limit": 5}
+{"operation": "inference", "query": "user uploads a file", "limit": 5}
 ```
 
-Finds inference pattern entries whose trigger phrases match the query text. Used by agents to discover what DSL constructs are applicable in a given situation.
+Finds inference pattern entries whose trigger phrases match the query text. Used by agents to discover what DSL constructs are applicable in a given situation. `text` is accepted as an alias for `query`; sending neither is an error, never an empty match list.
+
+#### `related` — concepts related to a concept
+
+```json
+{"operation": "related", "name": "entity", "limit": 5}
+```
+
+Looks the concept up by name (alias-aware, same resolution as `concept`), then returns its `related_concept` edges as one row per neighbour — distinct entities, not relation rows. `count` is the number of distinct neighbours found; `truncated` says whether `limit` cut the list. A name that resolves to nothing is an error: this op never falls back to an unfiltered view of the graph (#1750).
 
 #### `topology` — derive project structure
 

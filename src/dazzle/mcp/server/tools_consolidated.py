@@ -1180,7 +1180,11 @@ def _tool_graph() -> Tool:
                 },
                 "text": {
                     "type": "string",
-                    "description": "Search text (for query)",
+                    "description": "Search text (for query; accepted alias for inference, which takes query)",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query (for inference)",
                 },
                 "entity_id": {
                     "type": "string",
