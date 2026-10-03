@@ -367,7 +367,10 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_workspace_rendering.py::TestTimeagoFilter::test_naive_utc_does_not_invent_elapsed_vs_wall_now",
     # cycle 2256: workspace today must not invent unbounded / whole-book / on-time (oral #125)
     "tests/unit/test_date_expr_eval.py::test_today_is_tenant_calendar",
-    "tests/unit/test_cedar_row_filters.py::TestExtractConditionFiltersIR::test_ir_today_lt_does_not_invent_unbounded",
+    # The cedar_row_filters pin that sat here moved: that module was deleted with
+    # `_extract_cedar_row_filters` (#1720 — no reachable input from any accepted
+    # DSL). The pin directly below covers the same class on the live
+    # condition→predicate path.
     "tests/unit/test_condition_to_predicate.py::test_today_lt_binds_tenant_calendar",
     "tests/unit/test_workspace_rendering.py::TestAttentionHighlighting::test_today_overdue_does_not_invent_on_time",
     # cycle 2175: list-region _emit_pagination hx-get drops include_closed / as_of
