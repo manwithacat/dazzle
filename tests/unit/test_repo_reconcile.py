@@ -112,7 +112,7 @@ def test_unreachable_gh_is_could_not_tell_not_clean(monkeypatch: pytest.MonkeyPa
 
 def test_a_stopped_loop_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     report = rr.Report()
-    monkeypatch.setattr(rr, "_age_days", lambda path: 29.0)
+    monkeypatch.setattr(rr, "_days_since_last_cycle", lambda: 29.0)
     monkeypatch.setattr(rr, "_backlog_kb", lambda: 50.0)
 
     rr.check_loop_state(report)
@@ -124,7 +124,7 @@ def test_a_stopped_loop_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_a_backlog_over_its_own_threshold_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     report = rr.Report()
-    monkeypatch.setattr(rr, "_age_days", lambda path: 0.0)
+    monkeypatch.setattr(rr, "_days_since_last_cycle", lambda: 0.0)
     monkeypatch.setattr(rr, "_backlog_kb", lambda: 202.0)
 
     rr.check_loop_state(report)
@@ -135,7 +135,7 @@ def test_a_backlog_over_its_own_threshold_is_reported(monkeypatch: pytest.Monkey
 
 def test_healthy_loop_and_backlog_report_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     report = rr.Report()
-    monkeypatch.setattr(rr, "_age_days", lambda path: 0.2)
+    monkeypatch.setattr(rr, "_days_since_last_cycle", lambda: 0.2)
     monkeypatch.setattr(rr, "_backlog_kb", lambda: 80.0)
 
     rr.check_loop_state(report)
@@ -180,3 +180,37 @@ def test_json_output_carries_the_facts(monkeypatch: pytest.MonkeyPatch, capsys: 
 def test_findings_do_not_fail_the_build() -> None:
     """Advisory by design: the reconciler is a reading, not a gate."""
     assert rr.main(["--skip-github", "--skip-harness"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# the heartbeat reads the log's content, not its mtime
+# ---------------------------------------------------------------------------
+
+
+def test_heartbeat_ignores_a_file_that_compaction_just_rewrote(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Compaction rewrites the log, so an mtime heartbeat would report "ran
+    today" for a loop that has not run since the last compaction — the exact
+    false green the check exists to catch."""
+    log = tmp_path / "improve-log.md"
+    log.write_text(
+        "## Cycle 2410 — 2026-09-04 — lane: framework-ux\n- shipped\n"
+        "## Cycle 2409 — 2026-09-04 — lane: framework-ux\n- shipped\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(rr, "IMPROVE_LOG", log)
+
+    age = rr._days_since_last_cycle()
+
+    assert age is not None and age >= 29, f"expected ~29 days, got {age}"
+
+
+def test_heartbeat_is_none_when_no_cycle_was_ever_logged(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "improve-log.md"
+    log.write_text("# Cycle log\n\nnothing yet\n", encoding="utf-8")
+    monkeypatch.setattr(rr, "IMPROVE_LOG", log)
+
+    assert rr._days_since_last_cycle() is None

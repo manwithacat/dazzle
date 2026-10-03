@@ -54,6 +54,12 @@ ARCHIVE_STATUSES: dict[str, set[str]] = {
     "ux-converge": {"CLEAN"},
     # test-suite lane: collapsed cluster rows are settled once shipped.
     "test-suite": {"DONE"},
+    # hm-convergence: HMC-NNN rows settle on DONE (lane playbook: "Status ∈
+    # PENDING / IN_PROGRESS / DONE"). This lane was added to the driver without
+    # an entry here, so all 160 of its DONE rows were permanent in the working
+    # backlog — 54 KB of the 202 KB — and the driver's own 100 KB compaction
+    # threshold was unsatisfiable by construction.
+    "hm-convergence": {"DONE"},
 }
 
 LANE_RE = re.compile(r"^## Lane: (.+?)\s*$")
@@ -65,6 +71,37 @@ def _cells(line: str) -> list[str]:
     # Notes cells legitimately contain escaped pipes (`str \| None`) — split
     # only on unescaped ones or column counts drift and rows are never archived.
     return [c.strip() for c in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
+
+
+def _status_shaped_groups(rows: list[str]) -> list[tuple[int, int]]:
+    """Maximal runs of rows whose first cell is a status token, as (start, stop).
+
+    Some lane sections accumulate one-cell-per-row tables whose first cell *is*
+    the status::
+
+        | DONE | #2377 | cycle 2377: … |
+
+    There is no header to match, so header-driven parsing skips those rows
+    entirely — which is how 361 ``example-apps`` rows became permanently
+    unarchivable and the driver's own 100 KB threshold unsatisfiable. Only
+    consecutive runs count, so a lane that accretes a second, differently-shaped
+    table below the first still has its headerless rows claimed, and a row that
+    is not status-shaped is left alone rather than guessed at.
+    """
+    pattern = re.compile(r"[A-Z][A-Z_\-]*(?:→#\d+)?(?:\s.*)?$")
+    groups: list[tuple[int, int]] = []
+    start: int | None = None
+    for index, row in enumerate(rows):
+        shaped = bool(_cells(row)[1:]) and bool(pattern.fullmatch(_cells(row)[0]))
+        if shaped and start is None:
+            start = index
+        elif not shaped and start is not None:
+            if index - start >= 2:
+                groups.append((start, index))
+            start = None
+    if start is not None and len(rows) - start >= 2:
+        groups.append((start, len(rows)))
+    return groups
 
 
 def _status_token(cell: str) -> str:
@@ -113,8 +150,16 @@ def compact_backlog(text: str, closed_issues: set[int]) -> tuple[str, dict[str, 
     # against the most recent header with a MATCHING column count. No match →
     # row is kept (fail-safe).
     headers: list[tuple[list[str], int | None, str, str]] = []
+    # Lines already consumed by a run-handling branch. A `for i, line in
+    # enumerate(...)` reassigns `i` from the iterator every iteration, so
+    # "skip to here" cannot be done by writing `i` — that silently re-entered the
+    # run and re-appended its lines, which duplicated the whole file 68× on the
+    # first attempt at headerless support.
+    skip_until = -1
 
     for i, line in enumerate(lines):
+        if i <= skip_until:
+            continue
         m = LANE_RE.match(line)
         if m:
             lane = m.group(1)
@@ -126,6 +171,42 @@ def compact_backlog(text: str, closed_issues: set[int]) -> tuple[str, dict[str, 
         if is_table_row and SEPARATOR_RE.match(line.strip()):
             kept.append(line)
             continue
+        if is_table_row and not headers and lane:
+            # A lane can accumulate a headerless table whose first cell is the
+            # status (`| DONE | #2377 | cycle … |`) — and, appended below it
+            # without a separator, rows of a *different* headered table. Partition
+            # the run into maximal status-shaped groups rather than requiring the
+            # whole run to be homogeneous; anything else falls through
+            # untouched, so a prose-led row is never claimed.
+            run_end = i
+            while run_end < len(lines) and lines[run_end].lstrip().startswith("|"):
+                run_end += 1
+            groups = _status_shaped_groups(lines[i:run_end])
+            statuses = ARCHIVE_STATUSES.get(lane or "", set())
+            if groups and statuses:
+                cursor = 0
+                for start, stop in groups:
+                    kept.extend(lines[i + cursor : i + start])
+                    for row in lines[i + start : i + stop]:
+                        cell = _cells(row)[0]
+                        token = _status_token(cell)
+                        filed = FILED_RE.match(cell)
+                        if token in statuses or (filed and int(filed.group(1)) in closed_issues):
+                            bucket = archived.setdefault(lane or "?", [])
+                            if not bucket:
+                                # These rows had no header of their own; give the
+                                # archived block one so it stays a table.
+                                bucket.extend(["| status | ref | notes |", "|---|---|---|"])
+                            bucket.append(row)
+                        else:
+                            kept.append(row)
+                    cursor = stop
+                kept.extend(lines[i + cursor : run_end])
+                skip_until = run_end - 1
+                continue
+            # No claimable run (or a lane with no compaction policy): fall through
+            # to the header-driven path, which keeps every row it cannot match.
+
         if is_table_row:
             next_is_sep = i + 1 < len(lines) and SEPARATOR_RE.match(lines[i + 1].strip())
             if next_is_sep:

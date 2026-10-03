@@ -212,15 +212,34 @@ def _age_days(path: Path) -> float | None:
     return (datetime.now(UTC) - mtime).days
 
 
+_CYCLE_DATE = re.compile(r"^## Cycle \d+ — (\d{4}-\d{2}-\d{2})", re.MULTILINE)
+
+
+def _days_since_last_cycle() -> float | None:
+    """Days since the newest ``## Cycle N — <date>`` heading in the log.
+
+    Deliberately the log's own content, not the file mtime: compaction rewrites
+    the log, so an mtime heartbeat reports "ran today" for a loop that has not run
+    since the last compaction — the exact false green this check exists to catch.
+    """
+    if not IMPROVE_LOG.exists():
+        return None
+    dates = _CYCLE_DATE.findall(IMPROVE_LOG.read_text(encoding="utf-8"))
+    if not dates:
+        return None
+    newest = max(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=UTC) for d in dates)
+    return (datetime.now(UTC) - newest).days
+
+
 def _backlog_kb() -> float | None:
     return BACKLOG.stat().st_size / 1024 if BACKLOG.exists() else None
 
 
 def check_loop_state(report: Report) -> None:
     """The improve driver's heartbeat, and the state it is supposed to compact."""
-    log_age = _age_days(IMPROVE_LOG)
+    log_age = _days_since_last_cycle()
     backlog_kb = _backlog_kb()
-    report.facts["improve_log_age_days"] = log_age
+    report.facts["days_since_last_cycle"] = log_age
     report.facts["backlog_kb"] = round(backlog_kb, 1) if backlog_kb else None
 
     if log_age is None:
@@ -228,7 +247,7 @@ def check_loop_state(report: Report) -> None:
     elif log_age > LOOP_STALE_DAYS:
         report.add(
             "improve-loop",
-            f"last cycle {log_age} days ago (threshold {LOOP_STALE_DAYS}). The loop "
+            f"last cycle {log_age:.0f} days ago (threshold {LOOP_STALE_DAYS}). The loop "
             "self-schedules via the host's scheduler_create; nothing reports when that "
             "stops firing",
             "action",
