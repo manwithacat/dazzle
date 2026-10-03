@@ -7,6 +7,7 @@ with example references to produce enriched Relevance items.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,10 +18,16 @@ from dazzle.core.discovery.completeness_rules import check_completeness_relevanc
 from dazzle.core.discovery.component_rules import check_component_relevance
 from dazzle.core.discovery.example_index import build_example_index
 from dazzle.core.discovery.layout_rules import check_layout_relevance
-from dazzle.core.discovery.models import ExampleRef, Relevance
+from dazzle.core.discovery.models import ExampleRef, Relevance, RelevanceGroup
 from dazzle.core.discovery.widget_rules import check_widget_relevance
 
 _log = logging.getLogger(__name__)
+
+# Fold caps. A rule that fires on 14 fields must not produce 14 copies of the
+# same exemplar list; the caller learns the true count from `occurrences` and
+# the true list length from `examples_total`.
+CONTEXTS_CAP = 3
+EXAMPLES_CAP = 5
 
 
 def suggest_capabilities(
@@ -29,12 +36,12 @@ def suggest_capabilities(
     examples_dir: Path | None = None,
     suppress: bool = False,
     active: set[str] | None = None,
-) -> list[Relevance]:
-    """Return enriched Relevance items for capabilities applicable to *appspec*.
+) -> list[RelevanceGroup]:
+    """Return one :class:`RelevanceGroup` per capability applicable to *appspec*.
 
     Calls all four rule modules, builds an example index from *examples_dir*
-    (auto-detected if not provided), then joins each raw Relevance with any
-    matching example references.
+    (auto-detected if not provided), joins each raw Relevance with any matching
+    example references, then folds the per-occurrence items by capability.
 
     Args:
         appspec: The parsed and linked application specification.
@@ -44,11 +51,11 @@ def suggest_capabilities(
         suppress: If ``True``, return an empty list immediately without
             running any rules. Useful for CI environments where discovery
             output is not desired.
+        active: Capability ids the project has opted into (#1342 Phase 2).
 
     Returns:
-        A list of :class:`Relevance` objects with ``examples`` populated from
-        matching example apps.  Returns ``[]`` when *suppress* is ``True`` or
-        no rules fire.
+        One :class:`RelevanceGroup` per capability, in first-seen order. Returns
+        ``[]`` when *suppress* is ``True`` or no rules fire.
     """
     if suppress:
         return []
@@ -101,7 +108,76 @@ def suggest_capabilities(
     surfaced, _gated = partition_by_capability(
         enriched, active or set(), capability_of=lambda r: r.gated_by
     )
-    return surfaced
+    return fold_relevance(surfaced)
+
+
+def fold_relevance(
+    items: list[Relevance],
+    *,
+    contexts_cap: int = CONTEXTS_CAP,
+    examples_cap: int = EXAMPLES_CAP,
+) -> list[RelevanceGroup]:
+    """Fold per-occurrence Relevance items into one group per capability.
+
+    Two duplications are removed, both of which were invisible in review because
+    each list was individually correct:
+
+    * **Across occurrences.** Every occurrence of a capability carried the same
+      full exemplar list. ``examples/fieldtest_hub`` reported ``widget=rich_text``
+      14 times, each time with all 16 exemplars — 224 rows describing 16
+      places. Now: one entry, ``occurrences=14``, one capped list.
+    * **Within a list.** The same ``(app, context)`` pair can be indexed more
+      than once; each duplicate is kept once.
+
+    Ordering is first-seen, so the group order still follows the rules.
+    """
+    accumulators: dict[tuple[str, str, str], _Group] = {}
+    for item in items:
+        key = (item.capability, item.category, item.kg_entity)
+        acc = accumulators.get(key)
+        if acc is None:
+            acc = _Group(
+                capability=item.capability,
+                category=item.category,
+                kg_entity=item.kg_entity,
+                gated_by=item.gated_by,
+            )
+            accumulators[key] = acc
+        acc.occurrences += 1
+        if item.context not in acc.contexts:
+            acc.contexts.append(item.context)
+        for ref in item.examples:
+            if not any(r.app == ref.app and r.context == ref.context for r in acc.examples):
+                acc.examples.append(ref)
+
+    return [
+        RelevanceGroup(
+            capability=acc.capability,
+            category=acc.category,
+            kg_entity=acc.kg_entity,
+            gated_by=acc.gated_by,
+            occurrences=acc.occurrences,
+            contexts=acc.contexts[:contexts_cap],
+            contexts_truncated=len(acc.contexts) > contexts_cap,
+            examples=acc.examples[:examples_cap],
+            examples_total=len(acc.examples),
+            examples_truncated=len(acc.examples) > examples_cap,
+        )
+        for acc in accumulators.values()
+    ]
+
+
+@dataclass
+class _Group:
+    """Mutable accumulator behind :func:`fold_relevance`."""
+
+    capability: str
+    category: str
+    kg_entity: str
+    gated_by: str | None
+    occurrences: int = 0
+    contexts: list[str] = field(default_factory=list)
+    examples: list[ExampleRef] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

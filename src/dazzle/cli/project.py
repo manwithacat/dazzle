@@ -28,7 +28,7 @@ from dazzle.cli.utils import load_project_appspec
 from dazzle.core.admin_builder import format_injected_as_dsl
 from dazzle.core.anti_turing import AntiTuringValidator
 from dazzle.core.capabilities import suggest_capability, unknown_capability_ids
-from dazzle.core.discovery import Relevance
+from dazzle.core.discovery import RelevanceGroup
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.init_impl import (
@@ -89,7 +89,7 @@ def _print_human_diagnostics(
     errors: list[str],
     warnings: list[str],
     appspec: ir.AppSpec | None = None,
-    relevance: list[Relevance] | None = None,
+    relevance: list[RelevanceGroup] | None = None,
 ) -> None:
     """Print diagnostics in human-readable format."""
     if errors:
@@ -115,12 +115,16 @@ def _print_human_diagnostics(
 
     if relevance:
         typer.echo(f"\nRelevant capabilities ({len(relevance)}):")
-        for r in relevance:
+        for group in relevance:
+            places = f" x{group.occurrences}" if group.occurrences > 1 else ""
             example_ref = ""
-            if r.examples:
-                e = r.examples[0]
-                example_ref = f" in {e.app}/{e.file}:{e.line}"
-            typer.echo(f"  {r.context} — {r.capability}{example_ref}")
+            if group.examples:
+                e = group.examples[0]
+                more = f" (+{group.examples_total - 1} more)" if group.examples_total > 1 else ""
+                example_ref = f" e.g. {e.app}: {e.context}{more}"
+            typer.echo(f"  {group.capability}{places} — {group.kg_entity}{example_ref}")
+            for context in group.contexts:
+                typer.echo(f"      · {context}")
 
 
 def _print_vscode_diagnostics(errors: list[str], warnings: list[str], root: Path) -> None:

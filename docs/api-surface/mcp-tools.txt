@@ -531,6 +531,10 @@ tool: e2e
         "description": "Mode name (for describe_mode)",
         "type": "string"
       },
+      "suppress_relevance": {
+        "description": "Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.",
+        "type": "boolean"
+      },
       "operation": {
         "description": "Operation to perform",
         "enum": [

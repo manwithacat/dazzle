@@ -9,12 +9,14 @@ Covers the four core scenarios:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
-from dazzle.core.discovery import suggest_capabilities
-from dazzle.core.discovery.models import Relevance
+from dazzle.core.discovery import fold_relevance, suggest_capabilities
+from dazzle.core.discovery.engine import CONTEXTS_CAP, EXAMPLES_CAP
+from dazzle.core.discovery.models import ExampleRef, Relevance, RelevanceGroup
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
@@ -120,8 +122,8 @@ class TestSuggestCapabilities:
         results = suggest_capabilities(appspec, examples_dir=None)
         assert results == []
 
-    def test_result_types_are_relevance(self):
-        """All returned items are Relevance instances."""
+    def test_result_types_are_relevance_groups(self):
+        """One RelevanceGroup per capability, not one per occurrence (#1755)."""
         entity = _entity("Post", [_field("body", FieldTypeKind.TEXT)])
         surface = _surface("post_create", "Post", SurfaceMode.CREATE, [_element("body")])
         appspec = _appspec(entities=[entity], surfaces=[surface])
@@ -129,7 +131,7 @@ class TestSuggestCapabilities:
         results = suggest_capabilities(appspec, examples_dir=None)
 
         for item in results:
-            assert isinstance(item, Relevance)
+            assert isinstance(item, RelevanceGroup)
 
     def test_examples_empty_when_no_dir(self):
         """When examples_dir is None and auto-detection finds nothing, examples lists are []."""
@@ -187,3 +189,146 @@ surface post_create "Create Post":
             r = rich_text_results[0]
             if r.examples:
                 assert r.examples[0].app == "my_app"
+
+
+class TestFoldRelevance:
+    """#1755 — the payload fix. One entry per capability, every list capped, every
+    cap reported. The defect was invisible in review because each list was
+    individually correct: 14 occurrences of `widget=rich_text` each carried the
+    same 16 exemplars, so fieldtest_hub's `dsl lint` was 87 KB to say
+    "0 errors, 2 warnings"."""
+
+    def _occurrences(self, capability: str, count: int) -> list[Relevance]:
+        return [
+            Relevance(
+                context=f"field 'f{i}' (text) on surface 's{i}'",
+                capability=capability,
+                category="widget",
+                examples=[
+                    ExampleRef(app="a", context=f"field 'x{i}' widget=rich_text on surface 'c'"),
+                    ExampleRef(app="a", context="field 'shared' widget=rich_text on surface 'c'"),
+                    ExampleRef(app="a", context="field 'shared' widget=rich_text on surface 'c'"),
+                ],
+                kg_entity="capability:widget_rich_text",
+            )
+            for i in range(count)
+        ]
+
+    def test_one_group_per_capability_with_the_occurrence_count(self):
+        groups = fold_relevance(self._occurrences("widget=rich_text", 14))
+
+        assert len(groups) == 1
+        assert groups[0].occurrences == 14
+
+    def test_contexts_are_capped_and_the_cap_is_reported(self):
+        groups = fold_relevance(self._occurrences("widget=rich_text", 14))
+
+        assert len(groups[0].contexts) == CONTEXTS_CAP
+        assert groups[0].contexts_truncated is True
+
+    def test_examples_are_deduped_and_capped_with_a_total(self):
+        groups = fold_relevance(self._occurrences("widget=rich_text", 14))
+        group = groups[0]
+
+        usages = [(e.app, e.context) for e in group.examples]
+        assert len(usages) == len(set(usages)), "the same usage listed twice"
+        assert len(group.examples) == EXAMPLES_CAP
+        # 14 distinct 'x{i}' usages + 1 shared, indexed 14 times over.
+        assert group.examples_total == 15
+        assert group.examples_truncated is True
+
+    def test_an_uncapped_list_reports_no_truncation(self):
+        groups = fold_relevance(self._occurrences("widget=rich_text", 1))
+
+        assert groups[0].examples_truncated is False
+        assert groups[0].contexts_truncated is False
+        assert groups[0].examples_total == 2
+
+    def test_distinct_capabilities_stay_distinct(self):
+        items = self._occurrences("widget=rich_text", 2)
+        items.append(
+            Relevance(
+                context="field 'body' (text) on surface 'note'",
+                capability="widget=combobox",
+                category="widget",
+                examples=[],
+                kg_entity="capability:widget_combobox",
+            )
+        )
+
+        groups = fold_relevance(items)
+
+        assert [g.capability for g in groups] == ["widget=rich_text", "widget=combobox"]
+
+
+class TestLintRelevancePayload:
+    """#1755 — the payload an agent actually receives. Every claim in the payload
+    has to be checkable: no exemplar listed twice, every cap announced."""
+
+    @staticmethod
+    def _project(tmp_path: Path) -> Path:
+        (tmp_path / "dsl").mkdir()
+        (tmp_path / "dazzle.toml").write_text(
+            '[project]\nname = "shop"\nversion = "0.1.0"\nroot = "shop"\n\n'
+            '[modules]\npaths = ["./dsl"]\n\n[stack]\nname = "dnr"\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "dsl" / "app.dsl").write_text(
+            'module shop "Shop"\n\n'
+            "entity Post:\n"
+            "  id: uuid pk\n"
+            "  title: str(200) required\n"
+            "  body: text\n\n"
+            'surface post_create "Create Post":\n'
+            "  uses entity Post\n"
+            "  mode: create\n"
+            "  section main:\n"
+            '    field title "Title"\n'
+            '    field body "Body"\n',
+            encoding="utf-8",
+        )
+        return tmp_path
+
+    def _lint(self, tmp_path: Path, args: dict | None = None) -> dict:
+        from dazzle.mcp.server.handlers.dsl.validate import lint_project
+
+        return json.loads(lint_project(self._project(tmp_path), args or {}))
+
+    def test_one_entry_per_capability(self, tmp_path: Path):
+        relevance = self._lint(tmp_path)["relevance"]
+
+        capabilities = [g["capability"] for g in relevance]
+        assert capabilities
+        assert len(capabilities) == len(set(capabilities))
+
+    def test_no_exemplar_is_listed_twice_in_the_whole_payload(self, tmp_path: Path):
+        usages = [
+            (e["app"], e["context"])
+            for group in self._lint(tmp_path)["relevance"]
+            for e in group["examples"]
+        ]
+
+        assert len(usages) == len(set(usages))
+
+    def test_every_cap_is_announced(self, tmp_path: Path):
+        for group in self._lint(tmp_path)["relevance"]:
+            assert group["examples_truncated"] == (group["examples_total"] > len(group["examples"]))
+            assert group["contexts_truncated"] == (group["occurrences"] > len(group["contexts"]))
+            assert group["occurrences"] >= 1
+            assert group["contexts"]
+
+    def test_exemplars_carry_no_line_number(self, tmp_path: Path):
+        """The removed `file`/`line` were first-match scans, so every field using
+        a capability was cited at the same unrelated line. A pointer that looks
+        authoritative and is wrong is worse than none."""
+        for group in self._lint(tmp_path)["relevance"]:
+            for exemplar in group["examples"]:
+                assert set(exemplar) == {"app", "context"}
+
+    def test_suppress_relevance_drops_the_appendix(self, tmp_path: Path):
+        """The knob existed and was honoured, but was absent from the schema, so
+        no agent could find it. Now declared on `dsl`."""
+        payload = self._lint(tmp_path, {"suppress_relevance": True})
+
+        assert payload["relevance"] == []
+        assert payload["errors"] == 0

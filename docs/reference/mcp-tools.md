@@ -235,6 +235,7 @@ DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze
 - `surface_names` *(array)* — Surface names to fetch full details for (for get_spec). Omit for summary.
 - `surface_filter` *(string)* — Filter to a specific surface name (for fidelity)
 - `gaps_only` *(boolean)* — Omit surfaces with fidelity=1.0 (for fidelity)
+- `suppress_relevance` *(boolean)* — Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.
 - `format` *(string)* — Output format (for export_frontend_spec, default: markdown)
 - `sections` *(array)* — Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria
 - `entities` *(array)* — Filter to specific entity names (for export_frontend_spec)
