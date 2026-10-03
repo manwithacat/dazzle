@@ -57,6 +57,7 @@ from .ir.sitespec import (
     TrustBarItem,
     create_default_sitespec,
 )
+from .validation_result import ValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -605,28 +606,12 @@ def render_template_vars(
 # =============================================================================
 
 
-class SiteSpecValidationResult:
-    """Result of SiteSpec validation."""
+class SiteSpecValidationResult(ValidationResult):
+    """Result of SiteSpec validation.
 
-    def __init__(self) -> None:
-        self.errors: list[str] = []
-        self.warnings: list[str] = []
-
-    def add_error(self, message: str) -> None:
-        """Add an error message."""
-        self.errors.append(message)
-
-    def add_warning(self, message: str) -> None:
-        """Add a warning message."""
-        self.warnings.append(message)
-
-    @property
-    def is_valid(self) -> bool:
-        """True if no errors (warnings are allowed)."""
-        return len(self.errors) == 0
-
-    def __repr__(self) -> str:
-        return f"SiteSpecValidationResult(errors={len(self.errors)}, warnings={len(self.warnings)})"
+    The accumulator itself lives in :mod:`dazzle.core.validation_result` — it
+    was copy-pasted into three loaders and had begun to diverge (#1747).
+    """
 
 
 def validate_sitespec(
