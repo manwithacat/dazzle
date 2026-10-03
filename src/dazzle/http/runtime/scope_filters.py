@@ -610,6 +610,64 @@ def _extract_condition_filters(
     return consumed
 
 
+def _union_rule_filters(rules: list[dict[str, Any]], entity_name: str) -> dict[str, Any] | None:
+    """Combine every matched role's scope filters with OR (#1742).
+
+    Semantics: each role's scope applies. A user holding `role_student` (scope
+    ``owner_id = current_user``) and `role_teacher` (scope ``class_id IN (my
+    classes)``) sees the union of those rows. Before this, only the
+    first-declared rule contributed, so what a person could see depended on the
+    order of the DSL — the defect #604 half-delivered and #1742 tracked.
+
+    Two shapes come out of the per-rule resolvers and only one can be unioned:
+
+    * **SQL fragment** (``{"__scope_predicate": (sql, params)}``) — the modern
+      `scope:` path, which is what every example app uses. Fragments are
+      OR-joined and their params concatenated in the same order, so each rule's
+      own `AND`s stay inside its parentheses.
+    * **Column filters** (``{"school": "school-42"}``) — the legacy condition
+      path, which produces no SQL to join. A set containing any of these cannot
+      be expressed as one predicate, so it keeps the pre-#1742 first-declared
+      behaviour and says so in the log rather than silently dropping a role's
+      scope. That path is close to unreachable now: ADR-0010 made a field
+      condition in `permit:` a parse error, so such a `condition` is a role check
+      and resolves to no row filter at all.
+
+    Returns ``None`` when no rule resolved, so the caller keeps its fail-closed
+    fall-through: a matched rule that produced no filter is a resolution
+    failure, not `scope: all`.
+    """
+    if not rules:
+        return None
+
+    if any("__scope_predicate" not in rule for rule in rules):
+        logging.getLogger(__name__).warning(
+            "Dual-role scopes for %s include a rule resolved as column filters, "
+            "which cannot be OR-joined with a compiled predicate — keeping the "
+            "first-declared rule. Union needs every rule on the predicate-compiler "
+            "path (#1742).",
+            entity_name,
+        )
+        return rules[0]
+
+    sql_parts: list[str] = []
+    params: list[Any] = []
+    for rule_filters in rules:
+        scope_sql, scope_params = rule_filters["__scope_predicate"]
+        if not scope_sql:
+            # An empty fragment means that role's scope resolved to "no
+            # restriction", which for a union is unconditional access. The
+            # `scope: all` bypass above already handles the explicit form; this
+            # keeps the union from narrowing below either role.
+            return {}
+        sql_parts.append(f"({scope_sql})")
+        params.extend(scope_params)
+
+    if len(sql_parts) == 1:
+        return rules[0]
+    return {"__scope_predicate": (" OR ".join(sql_parts), params)}
+
+
 def _resolve_scope_filters(
     cedar_access_spec: "EntityAccessSpec",
     operation: str,
@@ -684,18 +742,20 @@ def _resolve_scope_filters(
         if (condition is None and predicate is None) or is_tautology:
             return {}  # scope: all — no filter
 
-    # All matched rules have conditions — apply the first one that resolves.
+    # All matched rules have conditions — union them.
     #
-    # Known residual, tracked in #1742: when several *restrictive* rules match
-    # (a dual-role user), only the first contributes, so the union of rows
-    # visible under each role is not returned. Direction is under-exposure —
-    # rows are hidden, never leaked.
+    # Union, not first-declared (#1742): every matched role's scope applies, so
+    # a dual-role user sees the rows visible under *either* role. Each rule
+    # already compiles to a SQL fragment, so the union is an OR-join of those
+    # fragments with their params concatenated in the same order — no new
+    # filter shape and no new QueryBuilder plumbing.
     #
-    # This was previously annotated TODO(#604), but #604 closed on 2026-03-22
-    # having shipped only the permissive half (the `scope: all` bypass above).
-    # The restrictive half was never done, and a closed issue made the comment
-    # read as handled. Fixing the union *widens* who sees what, so it is a
-    # product decision rather than a cleanup.
+    # This used to be `TODO(#604)`. #604 closed on 2026-03-22 having shipped
+    # only the permissive half (the `scope: all` bypass above); the restrictive
+    # half was never done, and the closed issue made the comment read as handled.
+    # The union *widens* who sees what, so it was a product decision — taken as
+    # "each role's scope applies" in #1742.
+    resolved_rules: list[dict[str, Any]] = []
     for rule in matched_rules:
         condition = getattr(rule, "condition", None)
         predicate = getattr(rule, "predicate", None)
@@ -703,7 +763,7 @@ def _resolve_scope_filters(
         # ---- Predicate-compiler path ----------------------------------------
         if predicate is not None and fk_graph is not None:
             try:
-                return _resolve_predicate_filters(
+                rule_filters = _resolve_predicate_filters(
                     predicate,
                     entity_name,
                     fk_graph,
@@ -720,6 +780,8 @@ def _resolve_scope_filters(
                     exc_info=True,
                 )
                 return None
+            resolved_rules.append(rule_filters)
+            continue
 
         # ---- Legacy condition-tree path (fallback) --------------------------
         if condition is not None:
@@ -743,7 +805,8 @@ def _resolve_scope_filters(
                         entity_name,
                     )
                     return None
-                return filters
+                resolved_rules.append(filters)
+                continue
             except Exception:
                 logging.getLogger(__name__).warning(
                     "Legacy scope condition resolution failed for %s — denying",
@@ -751,6 +814,10 @@ def _resolve_scope_filters(
                     exc_info=True,
                 )
                 return None
+
+    combined = _union_rule_filters(resolved_rules, entity_name)
+    if combined is not None:
+        return combined
 
     # Fall-through: a rule matched but produced no resolvable filter — e.g. a
     # predicate with no fk_graph, so neither the predicate-compiler path nor the

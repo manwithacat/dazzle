@@ -8,6 +8,7 @@ Includes linker integration tests for FK graph and predicate compilation (Task 5
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -834,3 +835,150 @@ class TestScopeRuleSpecPredicate:
         )
         result = _convert_scope_rule(ir_rule)
         assert result.predicate is None
+
+
+class TestDualRoleScopeUnion:
+    """#1742 — each role's scope applies.
+
+    Before this, a dual-role user matched several restrictive rules and the
+    resolver `return`ed on the **first** one that produced a filter, so what a
+    person could see depended on the order of the DSL. No dual-role test existed.
+
+    The union itself is tested as the pure function it is; one test through
+    `_resolve_scope_filters` proves the resolver now visits *every* matched rule
+    instead of stopping at the first.
+    """
+
+    @staticmethod
+    def _frag(sql: str, *params: Any) -> dict[str, Any]:
+        return {"__scope_predicate": (sql, list(params))}
+
+    def test_two_roles_union_their_predicates(self) -> None:
+        """The acceptance case: a student sees own rows, a teacher sees their
+        class's, and a user holding both sees the union."""
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        rules = [
+            self._frag('"owner_id" = %s', "user-1"),
+            self._frag('"class_id" = %s', "c-9"),
+        ]
+
+        result = _union_rule_filters(rules, "Doc")
+
+        sql, params = result["__scope_predicate"]
+        # Each rule keeps its own parentheses so its ANDs cannot leak across.
+        assert sql == '("owner_id" = %s) OR ("class_id" = %s)'
+        assert params == ["user-1", "c-9"], "params must follow the fragment order"
+
+    def test_union_does_not_depend_on_declaration_order(self) -> None:
+        """Swapping the rules changes the order of the fragments, never the set of
+        rows visible — which was the whole defect."""
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        a = self._frag('"owner_id" = %s', "user-1")
+        b = self._frag('"class_id" = %s', "c-9")
+
+        first = _union_rule_filters([a, b], "Doc")["__scope_predicate"][0]
+        second = _union_rule_filters([b, a], "Doc")["__scope_predicate"][0]
+
+        assert {f.strip() for f in first.split(" OR ")} == {f.strip() for f in second.split(" OR ")}
+
+    def test_single_rule_passes_through_unchanged(self) -> None:
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        rule = self._frag('"owner_id" = %s', "user-1")
+
+        assert _union_rule_filters([rule], "Doc") == rule
+
+    def test_a_role_with_no_row_restriction_makes_the_union_unconditional(self) -> None:
+        """Union means each role's scope applies — a role expressing no row
+        restriction contributes none, which is unconditional access."""
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        result = _union_rule_filters([self._frag('"x" = %s', 1), self._frag("")], "Doc")
+
+        assert result == {}
+
+    def test_legacy_column_filters_keep_first_declared_and_say_so(self, caplog) -> None:
+        """The legacy condition path produces column filters, which have no SQL to
+        OR-join. It keeps the pre-#1742 behaviour loudly rather than dropping a
+        role's scope silently."""
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        rules = [{"school": "school-42"}, {"district": "d-7"}]
+
+        with caplog.at_level("WARNING"):
+            result = _union_rule_filters(rules, "Doc")
+
+        assert result == {"school": "school-42"}
+        assert "first-declared rule" in caplog.text
+
+    def test_mixed_shapes_keep_first_declared_and_say_so(self, caplog) -> None:
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        rules = [self._frag('"owner_id" = %s', "u1"), {"district": "d-7"}]
+
+        with caplog.at_level("WARNING"):
+            result = _union_rule_filters(rules, "Doc")
+
+        assert result == rules[0]
+        assert "first-declared rule" in caplog.text
+
+    def test_no_resolved_rules_returns_none_for_the_callers_fail_closed_path(self) -> None:
+        """`None` keeps the caller's fall-through: a matched rule that produced no
+        filter is a resolution failure, not `scope: all`."""
+        from dazzle.http.runtime.scope_filters import _union_rule_filters
+
+        assert _union_rule_filters([], "Doc") is None
+
+    def test_resolver_visits_every_matched_rule_not_just_the_first(self, caplog) -> None:
+        """The plumbing half: two matching legacy rules must both be resolved,
+        which is what makes the warning above fire — the old code returned on the
+        first."""
+        from unittest.mock import MagicMock
+
+        from dazzle.http.runtime.route_generator import _resolve_scope_filters
+        from dazzle.http.specs.auth import (
+            AccessComparisonKind,
+            AccessConditionSpec,
+            AccessOperationKind,
+            EntityAccessSpec,
+            ScopeRuleSpec,
+        )
+
+        spec = EntityAccessSpec(
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(
+                        kind="comparison",
+                        field="school",
+                        comparison_op=AccessComparisonKind.EQUALS,
+                        value="current_user.school",
+                    ),
+                    personas=["teacher"],
+                ),
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(
+                        kind="comparison",
+                        field="district",
+                        comparison_op=AccessComparisonKind.EQUALS,
+                        value="current_user.district",
+                    ),
+                    personas=["auditor"],
+                ),
+            ]
+        )
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = {"school": "school-42", "district": "d-7"}
+
+        with caplog.at_level("WARNING"):
+            result = _resolve_scope_filters(
+                spec, "list", {"teacher", "auditor"}, "user-1", auth_ctx
+            )
+
+        # First-declared for the legacy shape (documented), but both rules were
+        # visited — which is the behaviour change, visible in the log.
+        assert result == {"school": "school-42"}
+        assert "first-declared rule" in caplog.text
