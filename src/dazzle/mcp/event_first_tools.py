@@ -527,99 +527,6 @@ def validate_event_first(appspec: ir.AppSpec) -> dict[str, Any]:
 
 
 # ============================================================================
-# AppSpec Diff & Migration
-# ============================================================================
-
-
-@dataclass
-class AppSpecDiff:
-    """Difference between two AppSpec versions."""
-
-    added_entities: list[str] = field(default_factory=list)
-    removed_entities: list[str] = field(default_factory=list)
-    modified_entities: list[dict[str, Any]] = field(default_factory=list)
-
-    added_streams: list[str] = field(default_factory=list)
-    removed_streams: list[str] = field(default_factory=list)
-    modified_streams: list[dict[str, Any]] = field(default_factory=list)
-
-    breaking_changes: list[str] = field(default_factory=list)
-    migration_steps: list[str] = field(default_factory=list)
-
-
-def diff_appspecs(old: ir.AppSpec, new: ir.AppSpec) -> AppSpecDiff:
-    """Compare two AppSpecs and return the differences.
-
-    Identifies:
-    - Added/removed/modified entities
-    - Added/removed/modified streams
-    - Breaking changes
-    - Required migration steps
-    """
-    diff = AppSpecDiff()
-
-    # Entity comparison
-    old_entities = {e.name: e for e in old.domain.entities}
-    new_entities = {e.name: e for e in new.domain.entities}
-
-    old_names = set(old_entities.keys())
-    new_names = set(new_entities.keys())
-
-    diff.added_entities = list(new_names - old_names)
-    diff.removed_entities = list(old_names - new_names)
-
-    # Check modified entities
-    for name in old_names & new_names:
-        old_e = old_entities[name]
-        new_e = new_entities[name]
-
-        old_fields = {f.name: f for f in old_e.fields}
-        new_fields = {f.name: f for f in new_e.fields}
-
-        added_fields = set(new_fields.keys()) - set(old_fields.keys())
-        removed_fields = set(old_fields.keys()) - set(new_fields.keys())
-
-        if added_fields or removed_fields:
-            diff.modified_entities.append(
-                {
-                    "entity": name,
-                    "added_fields": list(added_fields),
-                    "removed_fields": list(removed_fields),
-                }
-            )
-
-            # Removing required fields is breaking
-            for field_name in removed_fields:
-                if old_fields[field_name].is_required:
-                    diff.breaking_changes.append(f"Removed required field '{name}.{field_name}'")
-                    diff.migration_steps.append(
-                        f"Migrate data from '{name}.{field_name}' before removal"
-                    )
-
-    # Stream comparison
-    old_streams = {s.name: s for s in old.streams} if old.streams else {}
-    new_streams = {s.name: s for s in new.streams} if new.streams else {}
-
-    old_stream_names = set(old_streams.keys())
-    new_stream_names = set(new_streams.keys())
-
-    diff.added_streams = list(new_stream_names - old_stream_names)
-    diff.removed_streams = list(old_stream_names - new_stream_names)
-
-    # Removing streams with active consumers is breaking
-    for stream_name in diff.removed_streams:
-        diff.breaking_changes.append(f"Removed stream '{stream_name}'")
-        diff.migration_steps.append(f"Ensure no consumers depend on '{stream_name}' before removal")
-
-    # Check for entity removal (always breaking)
-    for entity_name in diff.removed_entities:
-        diff.breaking_changes.append(f"Removed entity '{entity_name}'")
-        diff.migration_steps.append(f"Migrate or archive data from '{entity_name}' before removal")
-
-    return diff
-
-
-# ============================================================================
 # Inference Rules
 # ============================================================================
 
@@ -1201,15 +1108,6 @@ def handle_validate_events(args: dict[str, Any], project_path: Path) -> str:
 
     except Exception as e:
         return json.dumps({"error": str(e)})
-
-
-def handle_diff_appspec(args: dict[str, Any], project_path: Path) -> str:
-    """Handle diff_appspec tool call."""
-    # This would need two AppSpec versions to compare
-    # For now, return a placeholder
-    return json.dumps(
-        {"error": "diff_appspec requires two AppSpec versions. Use with version control."}
-    )
 
 
 def handle_infer_tenancy(args: dict[str, Any], project_path: Path) -> str:
