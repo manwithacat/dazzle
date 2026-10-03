@@ -137,7 +137,13 @@ definition = """
 How permit rules are evaluated at runtime (the Cedar three-rule evaluation).
 """
 runtime_behaviour = """
-Entry point: `_extract_cedar_row_filters()` in route_generator.py
+Entry point for scope rules: `_resolve_scope_filters()` in
+http/runtime/scope_filters.py (via route_generator's re-export), which
+compiles the predicate tree to SQL through `predicate_compiler.compile_predicate`.
+
+Not `_extract_cedar_row_filters()`: that is the deprecated v0.44-and-earlier
+path, kept only for callers that have not migrated to `scope:` blocks, and it
+is what two KB entries used to name as canonical.
 
 Evaluation order (per entity × operation):
 1. If entity has no access spec → UNPROTECTED (all access granted)
@@ -148,8 +154,9 @@ Evaluation order (per entity × operation):
 After permit gate passes, scope rules are evaluated for row filtering.
 """
 implemented_by = [
-    "dazzle_http.runtime.route_generator._extract_cedar_row_filters",
-    "dazzle_http.runtime.route_generator._extract_condition_filters",
+    "dazzle_http.runtime.scope_filters._resolve_scope_filters (scope rules → SQL filters)",
+    "dazzle_http.runtime.scope_filters._resolve_predicate_filters",
+    "dazzle_http.runtime.predicate_compiler.compile_predicate (predicate → SQL)",
 ]
 
 [concepts.visible_directive]
@@ -318,7 +325,7 @@ POST /{entity}s (create):
   → CSRFMiddleware.__call__  (validates X-CSRF-Token)
   → AuthMiddleware           (extracts session → AuthContext)
   → _create_auth_handler     (FastAPI route handler)
-    → Cedar permit check     (_extract_cedar_row_filters)
+    → Cedar permit check     (_resolve_scope_filters)
     → service.execute(operation="create", data=...)
       → repository.create(data)
         → QueryBuilder.build_insert()
