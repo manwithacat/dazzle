@@ -134,7 +134,6 @@
   "src/dazzle/http/runtime/auth/connection_admin_routes.py": 26,
   "src/dazzle/http/runtime/auth/connection_doctor.py": 1,
   "src/dazzle/http/runtime/auth/connection_probe.py": 1,
-
   "src/dazzle/http/runtime/auth/current.py": 1,
   "src/dazzle/http/runtime/auth/dependencies.py": 7,
   "src/dazzle/http/runtime/auth/email_verification_routes.py": 2,
@@ -235,7 +234,6 @@
   "src/dazzle/layout/cache.py": 1,
   "src/dazzle/mcp/_graph_access.py": 1,
   "src/dazzle/mcp/cli_help.py": 1,
-  "src/dazzle/mcp/event_first_tools.py": 1,
   "src/dazzle/mcp/inference.py": 1,
   "src/dazzle/mcp/knowledge_graph/handlers/population_handlers.py": 1,
   "src/dazzle/mcp/knowledge_graph/seed.py": 4,

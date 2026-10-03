@@ -66,7 +66,6 @@
   "src/dazzle/llm/models.py::QuestionOption",
   "src/dazzle/llm/spec_analyzer.py::analyze_spec_file",
   "src/dazzle/mcp/_graph_access.py::get_kg",
-  "src/dazzle/mcp/event_first_tools.py::handle_list_feedback",
   "src/dazzle/mcp/examples.py::get_feature_examples_map",
   "src/dazzle/mcp/examples.py::get_v0_2_examples",
   "src/dazzle/mcp/inference.py::get_pattern_by_id",

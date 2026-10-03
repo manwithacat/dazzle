@@ -118,32 +118,6 @@ class TestFallback:
 
 
 # ---------------------------------------------------------------------------
-# Integration: handle_add_feedback
-# ---------------------------------------------------------------------------
-
-
-class TestHandleAddFeedbackIntegration:
-    def test_includes_github_issue(self) -> None:
-        with patch("dazzle.mcp.server.github_issues._gh_available", return_value=False):
-            from dazzle.mcp.event_first_tools import handle_add_feedback
-
-            result = json.loads(
-                handle_add_feedback(
-                    {
-                        "pain_point": "Something is wrong",
-                        "expected": "Should work",
-                        "observed": "Does not work",
-                        "severity": "high",
-                        "scope": "entity",
-                    },
-                    project_path=MagicMock(),
-                )
-            )
-            assert "github_issue" in result
-            assert result["github_issue"]["fallback"] is True
-
-
-# ---------------------------------------------------------------------------
 # Integration: create_handler
 # ---------------------------------------------------------------------------
 
