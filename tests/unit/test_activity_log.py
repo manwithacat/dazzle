@@ -522,7 +522,9 @@ class TestStatusHandler:
 
         result = json.loads(status_mod.get_activity_handler({"count": 10}))
         assert len(result["entries"]) == 2
-        assert "cursor" in result
+        assert result["cursor"]["epoch"] == 1  # this session's ordinal, not a constant
+        assert result["stale"] is False
+        assert result["has_more"] is False
 
     def test_get_activity_handler_formatted(self, monkeypatch):
         from dazzle.mcp.knowledge_graph import KnowledgeGraph
@@ -544,3 +546,106 @@ class TestStatusHandler:
         result = json.loads(get_activity_handler({"format": "formatted"}))
         assert "formatted" in result
         assert "pipeline.run" in result["formatted"]
+
+
+# ── The cursor protocol is real (#1754) ──────────────────────────────────────
+#
+# The handler used to answer every poll with `cursor.epoch: 0`, `stale: false`
+# and `active_tool: null` — three constants presented as observations. These
+# tests call the handler the way a polling agent does: hold the cursor, feed it
+# back, and check the verdict survives.
+
+
+class TestActivityCursorRoundTrip:
+    @staticmethod
+    def _store(monkeypatch):
+        from dazzle.mcp.knowledge_graph import KnowledgeGraph
+        from dazzle.mcp.server import state as _state_mod
+        from dazzle.mcp.server.activity_log import ActivityStore
+
+        graph = KnowledgeGraph(":memory:")
+        store = ActivityStore(
+            graph,
+            graph.start_activity_session(project_name="test", project_path="/tmp/test"),
+        )
+        monkeypatch.setattr(_state_mod.get_state(), "activity_store", store)
+        return graph, store
+
+    def test_a_returned_cursor_can_be_fed_straight_back(self, monkeypatch):
+        import json as _json
+
+        from dazzle.mcp.server.handlers.status import get_activity_handler
+
+        _graph, store = self._store(monkeypatch)
+        for i in range(3):
+            store.log_event("tool_start", "dsl", f"op{i}")
+
+        first = _json.loads(get_activity_handler({"count": 2}))
+        assert first["has_more"] is True
+        cursor = first["cursor"]
+
+        second = _json.loads(
+            get_activity_handler(
+                {"count": 2, "cursor_seq": cursor["seq"], "cursor_epoch": cursor["epoch"]}
+            )
+        )
+        assert second["stale"] is False
+        assert [e["operation"] for e in second["entries"]] == ["op2"]
+
+    def test_stale_after_a_restart_is_reported_not_assumed_away(self, monkeypatch):
+        import json as _json
+
+        from dazzle.mcp.server import state as _state_mod
+        from dazzle.mcp.server.activity_log import ActivityStore
+        from dazzle.mcp.server.handlers.status import get_activity_handler
+
+        graph, store = self._store(monkeypatch)
+        for i in range(3):
+            store.log_event("tool_start", "dsl", f"op{i}")
+        held = _json.loads(get_activity_handler({"count": 3}))["cursor"]
+
+        restarted = ActivityStore(graph, graph.start_activity_session(project_name="restarted"))
+        restarted.log_event("tool_start", "story", "propose")
+        monkeypatch.setattr(_state_mod.get_state(), "activity_store", restarted)
+
+        result = _json.loads(
+            get_activity_handler({"cursor_seq": held["seq"], "cursor_epoch": held["epoch"]})
+        )
+
+        assert result["stale"] is True
+        assert [e["tool"] for e in result["entries"]] == ["story"]
+
+    def test_formatted_view_carries_the_staleness_verdict(self, monkeypatch):
+        import json as _json
+
+        from dazzle.mcp.server.handlers.status import get_activity_handler
+
+        _graph, store = self._store(monkeypatch)
+        store.log_event("tool_start", "dsl", "validate")
+        held = _json.loads(get_activity_handler({"count": 1}))["cursor"]
+
+        result = _json.loads(
+            get_activity_handler(
+                {"format": "formatted", "cursor_seq": held["seq"], "cursor_epoch": 999}
+            )
+        )
+
+        assert result["stale"] is True
+        assert result["cursor"]["epoch"] == held["epoch"]
+
+    def test_active_tool_is_observed_not_hardcoded(self, monkeypatch):
+        import json as _json
+
+        from dazzle.mcp.server.handlers.status import get_activity_handler
+
+        _graph, store = self._store(monkeypatch)
+        store.log_event("tool_start", "composition", "audit")
+        store.log_event("tool_end", "composition", "audit", success=True)
+
+        idle = _json.loads(get_activity_handler({}))
+        assert idle["active_tool"] is None
+
+        store.log_event("tool_start", "composition", "report")
+        busy = _json.loads(get_activity_handler({}))
+        assert busy["active_tool"]["tool"] == "composition"
+        assert busy["active_tool"]["operation"] == "report"

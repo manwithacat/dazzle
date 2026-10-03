@@ -375,8 +375,14 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
 def get_activity_handler(args: dict[str, Any]) -> str:
     """Read recent MCP activity events from the SQLite activity store.
 
+    Cursor protocol (see `ActivityStore.read_page`): pass the `cursor` you got
+    last time back as `cursor_seq` + `cursor_epoch`. `stale: true` means the
+    sequence id no longer refers to this history and the read restarted — re-read
+    from the returned cursor rather than assuming you missed nothing.
+
     Parameters:
         cursor_seq: int — event id to read after (0 = from start)
+        cursor_epoch: int — epoch from the previous cursor (0 = initial)
         count: int — max entries to return (default 20)
         format: str — "structured" (default) or "formatted" (markdown)
     """
@@ -391,18 +397,19 @@ def get_activity_handler(args: dict[str, Any]) -> str:
     count = args.get("count", 20)
     fmt = args.get("format", "structured")
 
-    since_id = args.get("cursor_seq", 0)
-    events = activity_store.read_since(since_id=since_id, limit=count)
-    last_id = events[-1]["id"] if events else since_id
-
-    entries = [_db_row_to_entry(e) for e in events]
+    page = activity_store.read_page(
+        since_id=args.get("cursor_seq", 0),
+        cursor_epoch=args.get("cursor_epoch", 0),
+        limit=count,
+    )
+    entries = [_db_row_to_entry(e) for e in page["entries"]]
 
     data: dict[str, Any] = {
         "entries": entries,
-        "cursor": {"seq": last_id, "epoch": 0},
-        "has_more": len(events) == count,
-        "stale": False,
-        "active_tool": None,
+        "cursor": page["cursor"],
+        "has_more": page["has_more"],
+        "stale": page["stale"],
+        "active_tool": page["active_tool"],
         "backend": "sqlite",
     }
 
@@ -411,7 +418,14 @@ def get_activity_handler(args: dict[str, Any]) -> str:
 
         formatted = _AL.format_summary(data, color=False)
         return json.dumps(
-            {"formatted": formatted, "cursor": data["cursor"], "has_more": data["has_more"]},
+            {
+                "formatted": formatted,
+                "cursor": data["cursor"],
+                "has_more": data["has_more"],
+                # The formatted view is a summary an agent may act on without
+                # parsing the JSON, so it carries the staleness verdict too.
+                "stale": data["stale"],
+            },
             indent=2,
         )
     return json.dumps(data, indent=2)

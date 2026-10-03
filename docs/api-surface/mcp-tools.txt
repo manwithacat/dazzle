@@ -1517,7 +1517,7 @@ tool: status
         "type": "integer"
       },
       "cursor_epoch": {
-        "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+        "description": "Epoch for staleness detection (for activity). Echo back the cursor.epoch you were given; 0 means you hold no cursor yet. stale=true means the sequence id no longer refers to this history and the read has restarted.",
         "type": "integer"
       },
       "cursor_seq": {

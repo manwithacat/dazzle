@@ -367,6 +367,58 @@ class KnowledgeGraphActivity:
         finally:
             self._close_connection(conn)
 
+    def count_activity_sessions(self: KGStoreProtocol, session_id: str | None = None) -> int:
+        """Number of activity sessions recorded, optionally up to and including *session_id*.
+
+        With ``session_id`` this is that session's **ordinal** — 1 for the first
+        session in the database, 2 for the next. Used as the activity log's
+        *epoch*: a value that is stable for the life of one session and changes
+        the moment the reader's history does (server restart, project switch, or
+        the KG database being re-seeded, which restarts the autoincrement event
+        ids at 1). The MCP cursor protocol needs such a signal to tell a polling
+        consumer its sequence cursor went dead; `ActivityLog.read_since` has
+        always had one (#1754).
+        """
+        conn = self._get_connection()
+        try:
+            if session_id is None:
+                row = conn.execute("SELECT COUNT(*) FROM activity_sessions").fetchone()
+                return int(row[0]) if row else 0
+            row = conn.execute(
+                """
+                SELECT COUNT(*) FROM activity_sessions
+                WHERE started_at <= (
+                    SELECT started_at FROM activity_sessions WHERE id = ?
+                )
+                """,
+                (session_id,),
+            ).fetchone()
+            return int(row[0]) if row else 0
+        finally:
+            self._close_connection(conn)
+
+    def max_activity_event_id(self: KGStoreProtocol, session_id: str | None = None) -> int:
+        """Highest event id recorded, optionally within one session. 0 if none.
+
+        A held cursor whose sequence id is *past* the end of the available
+        history is dead rather than merely caught up — which is what a
+        re-created KG database looks like, since the autoincrement ids restart
+        at 1. Session ordinals cannot detect that (they restart too), so the
+        cursor protocol asks this question directly (#1754).
+        """
+        conn = self._get_connection()
+        try:
+            if session_id is None:
+                row = conn.execute("SELECT COALESCE(MAX(id), 0) FROM activity_events").fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT COALESCE(MAX(id), 0) FROM activity_events WHERE session_id = ?",
+                    (session_id,),
+                ).fetchone()
+            return int(row[0]) if row else 0
+        finally:
+            self._close_connection(conn)
+
     def get_activity_stats(self: KGStoreProtocol, session_id: str | None = None) -> dict[str, Any]:
         """Aggregate activity statistics, optionally filtered by session."""
         where = ""

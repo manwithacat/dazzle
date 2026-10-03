@@ -36,6 +36,11 @@ KEEP_AFTER_TRUNCATE = 300
 # Entry types
 TYPE_TOOL_START = "tool_start"
 TYPE_TOOL_END = "tool_end"
+
+# How far back `ActivityStore.active_tool` looks for an unclosed tool_start.
+# A tool running longer than this many events is reported as idle rather than
+# scanning the whole session on every poll.
+_ACTIVE_TOOL_SCAN = 200
 TYPE_PROGRESS = "progress"
 TYPE_LOG = "log"
 TYPE_ERROR = "error"
@@ -606,6 +611,94 @@ class ActivityStore:
             session_id=self._session_id,
             limit=limit,
         )
+
+    # ── Cursor protocol ──────────────────────────────────────────────────
+    #
+    # `ActivityLog.read_since` (the JSONL backend) answers a polling consumer
+    # with a cursor, a staleness flag and the in-flight tool. This store used to
+    # have the handler fabricate those three fields — `epoch: 0`, `stale: false`,
+    # `active_tool: null` — which is worse than omitting them: a polling agent
+    # was told its cursor was live when it was not (#1754).
+
+    def current_epoch(self) -> int:
+        """This session's ordinal among the database's sessions (see
+        `count_activity_sessions`). Stable while the session lives; differs the
+        moment a held cursor stops referring to this history."""
+        return self._graph.count_activity_sessions(self._session_id)
+
+    def max_seq(self) -> int:
+        """Highest event id in this session (0 when it has none)."""
+        return self._graph.max_activity_event_id(self._session_id)
+
+    def active_tool(self) -> dict[str, Any] | None:
+        """The tool started but not yet ended in this session, if any.
+
+        Derived from the same `tool_start` / `tool_end` rows the JSON backend
+        reads; `created_at` is the wall-clock start, so elapsed is real rather
+        than a constant.
+        """
+        rows = self._graph.get_activity_events(
+            since_id=0, session_id=self._session_id, limit=_ACTIVE_TOOL_SCAN
+        )
+        pending: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            tool = row.get("tool") or ""
+            if row.get("event_type") == TYPE_TOOL_START:
+                pending[tool] = row
+            elif row.get("event_type") == TYPE_TOOL_END:
+                pending.pop(tool, None)
+        if not pending:
+            return None
+        row = pending[min(pending, key=lambda t: pending[t]["id"])]
+        started = row.get("created_at") or 0.0
+        return {
+            "tool": row.get("tool"),
+            "operation": row.get("operation"),
+            "elapsed_ms": round((time.time() - started) * 1000) if started else None,
+        }
+
+    def read_page(
+        self,
+        since_id: int = 0,
+        cursor_epoch: int = 0,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """One page of the cursor protocol, same shape as `ActivityLog.read_since`.
+
+        A stale cursor means the caller's sequence id no longer refers to this
+        history, so the read restarts from zero and says so, rather than
+        returning an empty page the caller cannot distinguish from "nothing
+        happened". Two independent facts decide it:
+
+        * the epoch no longer matches, so this is not the session the cursor
+          was taken from; or
+        * the sequence id is past the end of the available history, which is
+          what a re-created KG database looks like (ids restart at 1) and what
+          a matching epoch cannot catch, since the ordinal restarts too.
+
+        Staleness is only meaningful for a caller that *holds* a cursor: with
+        ``since_id=0`` there is nothing to have gone stale, which keeps the
+        schema's documented ``cursor_epoch=0`` meaning "initial read" honest.
+        """
+        epoch = self.current_epoch()
+        stale = bool(since_id) and (cursor_epoch != epoch or since_id > self.max_seq())
+        effective_since = 0 if stale else since_id
+        # Over-fetch by one so `has_more` is a fact, not "the page happened to
+        # come back full" — an exact-length page sent a poller round again for
+        # nothing.
+        rows = self.read_since(since_id=effective_since, limit=limit + 1)
+        has_more = len(rows) > limit
+        page = rows[:limit]
+        return {
+            "entries": page,
+            "cursor": {
+                "seq": page[-1]["id"] if page else effective_since,
+                "epoch": epoch,
+            },
+            "has_more": has_more,
+            "stale": stale,
+            "active_tool": self.active_tool(),
+        }
 
     def end_session(self) -> None:
         """Mark the current session as ended."""

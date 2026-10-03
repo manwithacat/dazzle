@@ -236,3 +236,121 @@ class TestActivityStoreEndSession:
         activity_store.end_session()
         sessions = graph.get_activity_sessions()
         assert sessions[0]["ended_at"] is not None
+
+
+# ── Cursor protocol (#1754) ─────────────────────────────────────────────────
+#
+# The MCP handler used to fabricate `cursor.epoch: 0`, `stale: false` and
+# `active_tool: null` — so an agent polling its own activity was told its
+# cursor was live in exactly the case it was not. These tests pin the real
+# values.
+
+
+class TestCursorProtocol:
+    def test_epoch_is_this_sessions_ordinal(self, graph, activity_store):
+        """1 for the first session in the database, 2 for the next — stable for
+        the life of the session, which is what a held cursor compares against."""
+        assert activity_store.current_epoch() == 1
+        graph.start_activity_session(project_name="second")
+        assert activity_store.current_epoch() == 1, "a later session does not change mine"
+
+        from dazzle.mcp.server.activity_log import ActivityStore
+
+        restarted = ActivityStore(graph, graph.get_activity_sessions()[0]["id"])
+        assert restarted.current_epoch() == 2
+
+    def test_initial_read_is_never_stale(self, activity_store):
+        """The schema documents cursor_epoch=0 as "initial"; a first read has no
+        cursor to have gone stale."""
+        activity_store.log_event("tool_start", "dsl", "validate")
+
+        assert activity_store.read_page()["stale"] is False
+
+    def test_page_returns_cursor_epoch_and_no_staleness(self, activity_store):
+        activity_store.log_event("tool_start", "dsl", "validate")
+        activity_store.log_event("tool_end", "dsl", "validate", success=True)
+
+        page = activity_store.read_page()
+
+        assert page["stale"] is False
+        assert page["cursor"]["epoch"] == 1
+        assert page["cursor"]["seq"] == page["entries"][-1]["id"]
+
+    def test_a_cursor_from_a_previous_session_reads_as_stale_and_restarts(
+        self, graph, activity_store
+    ):
+        """The case the epoch exists for: a restart gives the caller a new
+        session and new event ids, so its held sequence id no longer refers to
+        this history. Before, `stale` was hardcoded false and the agent was told
+        its cursor was live (#1754)."""
+        from dazzle.mcp.server.activity_log import ActivityStore
+
+        for i in range(5):
+            activity_store.log_event("tool_start", "dsl", f"op{i}")
+        stale_cursor = activity_store.read_page(limit=2)["cursor"]
+
+        new_session = graph.start_activity_session(project_name="restarted")
+        restarted = ActivityStore(graph, new_session)
+        restarted.log_event("tool_start", "story", "propose")
+
+        page = restarted.read_page(since_id=stale_cursor["seq"], cursor_epoch=stale_cursor["epoch"])
+
+        assert page["stale"] is True
+        assert page["cursor"]["epoch"] == 2
+        # Restarted from zero rather than honouring a cursor from a session whose
+        # events this store cannot see.
+        assert [e["tool"] for e in page["entries"]] == ["story"]
+
+    def test_recreated_database_invalidates_a_held_cursor(self, graph):
+        """The other way a cursor dies: the KG db is re-created, so event ids
+        restart at 1 while the caller's cursor points into the old numbering."""
+        from dazzle.mcp.server.activity_log import ActivityStore
+
+        old = ActivityStore(graph, graph.start_activity_session(project_name="original"))
+        for i in range(3):
+            old.log_event("tool_start", "dsl", f"op{i}")
+        held = old.read_page()["cursor"]
+        assert held["seq"] == 3
+
+        fresh_graph = type(graph)(":memory:")
+        fresh = ActivityStore(
+            fresh_graph, fresh_graph.start_activity_session(project_name="rebuilt")
+        )
+        fresh.log_event("tool_start", "story", "propose")
+
+        page = fresh.read_page(since_id=held["seq"], cursor_epoch=held["epoch"])
+
+        assert page["stale"] is True
+        assert len(page["entries"]) == 1
+
+    def test_honoured_cursor_does_not_restart(self, activity_store):
+        for i in range(3):
+            activity_store.log_event("tool_start", "dsl", f"op{i}")
+        cursor = activity_store.read_page(limit=2)["cursor"]
+
+        page = activity_store.read_page(since_id=cursor["seq"], cursor_epoch=cursor["epoch"])
+
+        assert page["stale"] is False
+        assert [e["tool"] for e in page["entries"]] == ["dsl"]
+
+    def test_has_more_is_a_fact_not_a_full_page(self, activity_store):
+        for i in range(3):
+            activity_store.log_event("tool_start", "dsl", f"op{i}")
+
+        exact = activity_store.read_page(limit=3)
+        assert len(exact["entries"]) == 3
+        assert exact["has_more"] is False  # 3 events, asked for 3 → no more
+
+        short = activity_store.read_page(limit=2)
+        assert short["has_more"] is True
+
+    def test_active_tool_reports_an_unclosed_call(self, activity_store):
+        activity_store.log_event("tool_start", "dsl", "validate")
+        activity_store.log_event("tool_end", "dsl", "validate", success=True)
+
+        assert activity_store.active_tool() is None
+        activity_store.log_event("tool_start", "composition", "audit")
+        active = activity_store.active_tool()
+        assert active["tool"] == "composition"
+        assert active["operation"] == "audit"
+        assert active["elapsed_ms"] is not None

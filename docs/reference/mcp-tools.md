@@ -592,7 +592,7 @@ Status operations: mcp, logs, active_project, telemetry, activity, demo_world (a
 - `since_minutes` *(integer)* — Only show invocations from the last N minutes (for telemetry)
 - `stats_only` *(boolean)* — Only return aggregate stats, no individual invocations (for telemetry)
 - `cursor_seq` *(integer)* — Sequence number to read after (for activity, 0 = from start)
-- `cursor_epoch` *(integer)* — Epoch counter for staleness detection (for activity, 0 = initial)
+- `cursor_epoch` *(integer)* — Epoch for staleness detection (for activity). Echo back the cursor.epoch you were given; 0 means you hold no cursor yet. stale=true means the sequence id no longer refers to this history and the read has restarted.
 - `format` *(string)* — Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
