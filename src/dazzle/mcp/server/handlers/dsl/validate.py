@@ -93,16 +93,17 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
 
     relevance_items = [
         {
-            "context": r.context,
-            "capability": r.capability,
-            "category": r.category,
-            "kg_entity": r.kg_entity,
-            "examples": [
-                {"app": e.app, "file": e.file, "line": e.line, "context": e.context}
-                for e in r.examples
-            ],
+            "capability": g.capability,
+            "category": g.category,
+            "kg_entity": g.kg_entity,
+            "occurrences": g.occurrences,
+            "contexts": g.contexts,
+            "contexts_truncated": g.contexts_truncated,
+            "examples": [{"app": e.app, "context": e.context} for e in g.examples],
+            "examples_total": g.examples_total,
+            "examples_truncated": g.examples_truncated,
         }
-        for r in relevance
+        for g in relevance
     ]
 
     return json.dumps(

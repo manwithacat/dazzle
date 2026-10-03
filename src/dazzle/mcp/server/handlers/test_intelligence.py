@@ -80,7 +80,7 @@ def test_summary_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 @wrap_handler_errors
 def test_failures_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Failure patterns across recent runs."""
+    """Failure patterns across recent runs, or one run when `run_id` is given."""
     graph = _get_graph()
     if graph is None:
         return error_response("Knowledge graph not initialized")
@@ -89,6 +89,40 @@ def test_failures_handler(project_root: Path, args: dict[str, Any]) -> str:
     limit_runs = args.get("limit", 10)
     failure_type = args.get("failure_type")
     category = args.get("category")
+
+    # #1756 — `run_id` was declared ("Specific run ID to query test cases for")
+    # and read by no handler, while every response printed a run_id for the
+    # agent to drill into. It now scopes this op; an unknown id is an error,
+    # never an empty list that reads like "that run passed".
+    run_id = args.get("run_id")
+    if run_id:
+        run = graph.get_test_run(run_id)
+        if run is None:
+            return error_response(f"Test run not found: {run_id}")
+        cases = graph.get_test_cases(
+            run_id, result_filter="failed", failure_type_filter=failure_type
+        )
+        return json.dumps(
+            {
+                "project": project_name,
+                "run_id": run_id,
+                "started_at": run["started_at"],
+                "total": run["total_tests"],
+                "failed": run["failed"],
+                "failures": [
+                    {
+                        "test_id": c.get("test_id"),
+                        "category": c.get("category"),
+                        "failure_type": c.get("failure_type"),
+                        "error": c.get("error_message"),
+                        "persona": c.get("persona"),
+                    }
+                    for c in cases
+                ],
+                "count": len(cases),
+            },
+            indent=2,
+        )
 
     summary = graph.get_failure_summary(limit_runs=limit_runs, project_name=project_name)
 

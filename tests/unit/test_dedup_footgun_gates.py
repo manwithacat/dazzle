@@ -350,3 +350,46 @@ def test_only_one_normalize_role_helper_per_module() -> None:
         "A module re-implements `_normalize_role` instead of delegating to "
         f"`core.strings.normalize_role`:\n  {chr(10).join('  ' + o for o in offenders)}"
     )
+
+
+def test_no_local_product_name_lookup() -> None:
+    """The sitespec→brand product-name lookup belongs to one helper (#1746).
+
+    It was copy-pasted into six auth route modules; only one carried the "why",
+    so the other five looked like load-bearing copies. The clone ratchet cannot
+    catch a *single* re-introduction (a cluster needs two members), so this rule
+    forbids the local definition outright.
+
+    The lookup is user-visible chrome — page titles, email subjects, sign-in copy
+    — so a fourth sitespec brand shape change would otherwise land six times, or
+    once and silently diverge from the other five.
+    """
+    definition = re.compile(r"^\s*def _product_name\(", re.MULTILINE)
+    hits = [
+        str(p.relative_to(_SRC.parent.parent))
+        for p in _src_files({"product_name.py"})
+        if definition.search(p.read_text(encoding="utf-8"))
+    ]
+    assert not hits, (
+        "A local `_product_name` definition reappeared — call "
+        "`dazzle.http.runtime.auth.product_name.product_name(request)` instead:\n  "
+        + "\n  ".join(hits)
+    )
+
+
+def test_the_six_auth_route_modules_share_the_one_product_name_helper() -> None:
+    """The six copies are all callers now; none may quietly stop importing it."""
+    consumers = (
+        "connection_admin_routes",
+        "forbidden_org",
+        "invitation_routes",
+        "member_admin_routes",
+        "org_context_routes",
+        "profile_routes",
+    )
+    auth = _SRC / "http" / "runtime" / "auth"
+    for name in consumers:
+        text = (auth / f"{name}.py").read_text(encoding="utf-8")
+        assert "from dazzle.http.runtime.auth.product_name import product_name" in text, (
+            f"{name}.py no longer imports the shared product_name helper"
+        )

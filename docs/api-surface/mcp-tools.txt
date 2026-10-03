@@ -16,6 +16,15 @@ tool: agent
   description_len: 343
   {
     "properties": {
+      "mode": {
+        "description": "Proof kind (for prove). static: target exists in DSL/host map. runtime: host-module readiness. journey: surface hub / open-via hop coherence. Default: static.",
+        "enum": [
+          "static",
+          "runtime",
+          "journey"
+        ],
+        "type": "string"
+      },
       "name": {
         "description": "Playbook name (default: domain_logic)",
         "type": "string"
@@ -163,6 +172,20 @@ tool: compliance
       "project_path": {
         "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
         "type": "string"
+      },
+      "status_filter": {
+        "description": "Control states to include (for gaps). Default: [gap, partial].",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "tier_filter": {
+        "description": "Control tiers to include (for gaps), e.g. [1, 2] for the controls that matter most.",
+        "items": {
+          "type": "integer"
+        },
+        "type": "array"
       }
     },
     "required": [
@@ -343,6 +366,10 @@ tool: discovery
         ],
         "type": "string"
       },
+      "persona": {
+        "description": "Persona id to score (for coherence). Omit to score every persona.",
+        "type": "string"
+      },
       "project_path": {
         "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
         "type": "string"
@@ -503,6 +530,10 @@ tool: dsl
           "type": "string"
         },
         "type": "array"
+      },
+      "suppress_relevance": {
+        "description": "Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.",
+        "type": "boolean"
       },
       "surface_filter": {
         "description": "Filter to a specific surface name (for fidelity)",
@@ -728,6 +759,14 @@ tool: graph
         ],
         "type": "string"
       },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "query": {
+        "description": "Search query (for inference)",
+        "type": "string"
+      },
       "relation_types": {
         "description": "Filter by relation types: imports, contains, inherits, depends_on",
         "items": {
@@ -748,7 +787,7 @@ tool: graph
         "type": "string"
       },
       "text": {
-        "description": "Search text (for query)",
+        "description": "Search text (for query; accepted alias for inference, which takes query)",
         "type": "string"
       },
       "transitive": {
@@ -833,6 +872,10 @@ tool: knowledge
         "description": "Counter-prior id (for counter_prior direct fetch \u2014 returns full body)",
         "type": "string"
       },
+      "include_sources": {
+        "description": "Include source provenance with the spec (for get_spec). Default: true.",
+        "type": "boolean"
+      },
       "layer": {
         "description": "Substrate layer filter for list_all (for counter_prior)",
         "enum": [
@@ -868,6 +911,10 @@ tool: knowledge
       "since": {
         "description": "Version filter (for changelog, e.g. '0.48.0')",
         "type": "string"
+      },
+      "summary_only": {
+        "description": "Return spec file metadata instead of full content (for get_spec). Default: false.",
+        "type": "boolean"
       },
       "term": {
         "description": "Concept/pattern name (for concept)",
@@ -1379,10 +1426,6 @@ tool: sentinel
         "type": "string"
       },
       "severity": {
-        "description": "Filter findings by severity (for findings).",
-        "type": "string"
-      },
-      "severity_threshold": {
         "description": "Minimum severity to include (for findings). Default: info.",
         "enum": [
           "critical",
@@ -1469,6 +1512,13 @@ tool: spec_analyze
   description_len: 439
   {
     "properties": {
+      "active_capabilities": {
+        "description": "Capability ids the project has opted into; others are not surfaced proactively.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "answers": {
         "description": "Answers to generated questions (for refine_spec)",
         "type": "object"
@@ -1513,7 +1563,7 @@ tool: status
         "type": "integer"
       },
       "cursor_epoch": {
-        "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+        "description": "Epoch for staleness detection (for activity). Echo back the cursor.epoch you were given; 0 means you hold no cursor yet. stale=true means the sequence id no longer refers to this history and the read has restarted.",
         "type": "integer"
       },
       "cursor_seq": {
@@ -1591,6 +1641,14 @@ tool: story
   description_len: 432
   {
     "properties": {
+      "limit": {
+        "description": "Max items per page (for coverage, scope_fidelity). Default: 50.",
+        "type": "integer"
+      },
+      "offset": {
+        "description": "Items to skip (for coverage, scope_fidelity). Default: 0.",
+        "type": "integer"
+      },
       "operation": {
         "description": "Operation to perform",
         "enum": [

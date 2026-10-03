@@ -100,6 +100,10 @@ def _tool_dsl() -> Tool:
                     "type": "boolean",
                     "description": "Run extended checks (for lint)",
                 },
+                "suppress_relevance": {
+                    "type": "boolean",
+                    "description": "Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.",
+                },
                 "entity_names": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -279,6 +283,17 @@ def _tool_story() -> Tool:
                 "persona": {
                     "type": "string",
                     "description": "Filter stories by persona/actor name (for get with view=wall)",
+                },
+                # #1756 — pagination was implemented (and correct: it reports
+                # total_stories, offset and has_more) but never declared, so no
+                # agent could find it or tell a truncated page from the whole set.
+                "limit": {
+                    "type": "integer",
+                    "description": "Max items per page (for coverage, scope_fidelity). Default: 50.",
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Items to skip (for coverage, scope_fidelity). Default: 0.",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -642,7 +657,7 @@ def _tool_status() -> Tool:
                 },
                 "cursor_epoch": {
                     "type": "integer",
-                    "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+                    "description": "Epoch for staleness detection (for activity). Echo back the cursor.epoch you were given; 0 means you hold no cursor yet. stale=true means the sequence id no longer refers to this history and the read has restarted.",
                 },
                 "format": {
                     "type": "string",
@@ -737,6 +752,16 @@ def _tool_knowledge() -> Tool:
                     "type": "string",
                     "enum": ["grammar", "inference", "filter"],
                     "description": "Substrate layer filter for list_all (for counter_prior)",
+                },
+                # #1756 — `get_spec` honours both; without them an agent cannot
+                # ask for file metadata instead of the whole spec body.
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return spec file metadata instead of full content (for get_spec). Default: false.",
+                },
+                "include_sources": {
+                    "type": "boolean",
+                    "description": "Include source provenance with the spec (for get_spec). Default: true.",
                 },
             },
             "required": ["operation"],
@@ -917,6 +942,13 @@ def _tool_agent() -> Tool:
                 "name": {
                     "type": "string",
                     "description": "Playbook name (default: domain_logic)",
+                },
+                # #1756 — `prove` picks its proof kind from this; it was read but
+                # never declared, so an agent could only ever get `static`.
+                "mode": {
+                    "type": "string",
+                    "enum": ["static", "runtime", "journey"],
+                    "description": "Proof kind (for prove). static: target exists in DSL/host map. runtime: host-module readiness. journey: surface hub / open-via hop coherence. Default: static.",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1128,6 +1160,13 @@ def _tool_spec_analyze() -> Tool:
                     "type": "object",
                     "description": "Answers to generated questions (for refine_spec)",
                 },
+                # #1756 — gates which proactive capability notes refinement may
+                # surface; read but never declared.
+                "active_capabilities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Capability ids the project has opted into; others are not surfaced proactively.",
+                },
             },
             "required": ["operation"],
         },
@@ -1180,7 +1219,11 @@ def _tool_graph() -> Tool:
                 },
                 "text": {
                     "type": "string",
-                    "description": "Search text (for query)",
+                    "description": "Search text (for query; accepted alias for inference, which takes query)",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query (for inference)",
                 },
                 "entity_id": {
                     "type": "string",
@@ -1246,6 +1289,10 @@ def _tool_graph() -> Tool:
                     "enum": ["merge", "replace"],
                     "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
                 },
+                # #1756 — the graph handlers resolve the project from this key
+                # (`resolve_project_path`); it was read but never declared, so it
+                # could not arrive. Every other project-scoped tool has it.
+                **PROJECT_PATH_SCHEMA,
             },
             "required": ["operation"],
         },
@@ -1269,6 +1316,12 @@ def _tool_discovery() -> Tool:
                         "coherence",
                     ],
                     "description": "Operation to perform",
+                },
+                # #1756 — read by the handler, absent from the schema, so the
+                # "persona-by-persona" in the tool description was unreachable.
+                "persona": {
+                    "type": "string",
+                    "description": "Persona id to score (for coherence). Omit to score every persona.",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1701,18 +1754,14 @@ def _tool_sentinel() -> Tool:
                     ],
                     "description": "Operation to perform",
                 },
-                "severity_threshold": {
-                    "type": "string",
-                    "enum": ["critical", "high", "medium", "low", "info"],
-                    "description": "Minimum severity to include (for findings). Default: info.",
-                },
                 "agent": {
                     "type": "string",
                     "description": "Filter findings by agent ID (for findings).",
                 },
                 "severity": {
                     "type": "string",
-                    "description": "Filter findings by severity (for findings).",
+                    "enum": ["critical", "high", "medium", "low", "info"],
+                    "description": "Minimum severity to include (for findings). Default: info.",
                 },
                 "scan_id": {
                     "type": "string",
@@ -1887,6 +1936,16 @@ def _tool_compliance() -> Tool:
                 "framework": {
                     "type": "string",
                     "description": "Framework ID: iso27001 or soc2 (default: iso27001)",
+                },
+                "status_filter": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Control states to include (for gaps). Default: [gap, partial].",
+                },
+                "tier_filter": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "Control tiers to include (for gaps), e.g. [1, 2] for the controls that matter most.",
                 },
                 **PROJECT_PATH_SCHEMA,
             },

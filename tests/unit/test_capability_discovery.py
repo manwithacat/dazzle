@@ -2,23 +2,22 @@
 
 from pathlib import Path
 
-from dazzle.core.discovery.models import ExampleRef, Relevance
+from dazzle.core.discovery.models import ExampleRef, Relevance, RelevanceGroup
 
 
 class TestModels:
     def test_example_ref_is_frozen(self):
+        # No file/line: those were first-match scans of an app's DSL, so every
+        # field using a capability was cited at the same unrelated line (#1755).
         ref = ExampleRef(
             app="project_tracker",
-            file="dsl/app.dsl",
-            line=152,
             context='field description "Description" widget=rich_text',
         )
         assert ref.app == "project_tracker"
-        assert ref.file == "dsl/app.dsl"
-        assert ref.line == 152
+        assert ref.context == 'field description "Description" widget=rich_text'
 
     def test_relevance_is_frozen(self):
-        ref = ExampleRef(app="pt", file="dsl/app.dsl", line=1, context="example")
+        ref = ExampleRef(app="pt", context="example")
         rel = Relevance(
             context="field 'description' (text) on surface 'task_create'",
             capability="widget=rich_text",
@@ -114,7 +113,7 @@ surface task_create "Create Task":
 
         _errors, _warnings, relevance = lint_appspec(appspec)
         for item in relevance:
-            assert isinstance(item, Relevance)
+            assert isinstance(item, RelevanceGroup)
 
     def test_lint_appspec_suggest_false_skips_capability_discovery(self, tmp_path: Path):
         """`suggest=False` skips `suggest_capabilities` — that pass parses

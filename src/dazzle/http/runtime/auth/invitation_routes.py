@@ -26,12 +26,7 @@ from dazzle.http.runtime.auth.member_admin import (
     leftover_honest_persona_roles,
     leftover_persona_roles_stay_put,
 )
-
-
-def _product_name(request: Request) -> str:
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
+from dazzle.http.runtime.auth.product_name import product_name
 
 
 def create_invitation_routes() -> APIRouter:
@@ -86,7 +81,7 @@ def create_invitation_routes() -> APIRouter:
         return HTMLResponse(
             FragmentRenderer().render(
                 build_invite_result_view(
-                    product_name=_product_name(request),
+                    product_name=product_name(request),
                     message=f"Invitation sent to {honest_email}.",
                 )
             )
@@ -122,7 +117,7 @@ def create_invitation_routes() -> APIRouter:
             return HTMLResponse(
                 FragmentRenderer().render(
                     build_invite_result_view(
-                        product_name=_product_name(request),
+                        product_name=product_name(request),
                         message="This invitation is invalid or has already been used.",
                     )
                 )
@@ -136,7 +131,7 @@ def create_invitation_routes() -> APIRouter:
         return HTMLResponse(
             FragmentRenderer().render(
                 build_accept_invite_view(
-                    product_name=_product_name(request),
+                    product_name=product_name(request),
                     org_name=org.name if org is not None else inv.org_id,
                     roles=inv.roles,
                     token=token,

@@ -34,6 +34,7 @@ from .ir.themespec import (
     VisualTreatment,
 )
 from .oklch import generate_palette
+from .validation_result import ValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -215,27 +216,12 @@ def save_themespec(project_root: Path, themespec: ThemeSpecYAML) -> Path:
 # =============================================================================
 
 
-class ThemeSpecValidationResult:
-    """Result of ThemeSpec validation."""
+class ThemeSpecValidationResult(ValidationResult):
+    """Result of ThemeSpec validation.
 
-    def __init__(self) -> None:
-        self.errors: list[str] = []
-        self.warnings: list[str] = []
-
-    def add_error(self, message: str) -> None:
-        self.errors.append(message)
-
-    def add_warning(self, message: str) -> None:
-        self.warnings.append(message)
-
-    @property
-    def is_valid(self) -> bool:
-        return len(self.errors) == 0
-
-    def __repr__(self) -> str:
-        return (
-            f"ThemeSpecValidationResult(errors={len(self.errors)}, warnings={len(self.warnings)})"
-        )
+    The accumulator itself lives in :mod:`dazzle.core.validation_result` — it
+    was copy-pasted into three loaders and had begun to diverge (#1747).
+    """
 
 
 # Valid dotted paths for agent_editable_fields validation

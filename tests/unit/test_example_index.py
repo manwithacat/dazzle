@@ -44,15 +44,29 @@ class TestComponentShowcase:
         app_names = {r.app for r in refs}
         assert "component_showcase" in app_names
 
-    def test_example_ref_has_positive_line(self):
+    def test_example_ref_names_the_usage_it_points_at(self):
+        """A ref is checkable without a line number (#1755).
+
+        It used to carry `file`/`line` resolved by scanning the app's DSL for
+        the *first* line containing the capability's option value, so every
+        field using it was cited at the same unrelated line. What makes a ref
+        verifiable now is its context: it names the field and the surface.
+        """
         index = build_example_index(FIXTURES_DIR)
         assert "widget_rich_text" in index
-        for ref in index["widget_rich_text"]:
-            if ref.app == "component_showcase":
-                assert ref.line > 0
-                assert ref.file != ""
-                assert ref.context != ""
-                break
+        refs = [r for r in index["widget_rich_text"] if r.app == "component_showcase"]
+        assert refs
+        for ref in refs:
+            assert ref.context != ""
+            assert "widget=rich_text" in ref.context
+
+    def test_index_holds_no_duplicate_usages(self):
+        """One ref per place a capability is used. The fan-out was the payload
+        bug in #1755: 416 exemplar rows on fieldtest_hub for 18 usages."""
+        index = build_example_index(EXAMPLES_DIR)
+        for cap_key, refs in index.items():
+            usages = [(r.app, r.context) for r in refs]
+            assert len(usages) == len(set(usages)), f"{cap_key} indexes a usage twice"
 
     def test_layout_kanban_indexed(self):
         index = build_example_index(FIXTURES_DIR)

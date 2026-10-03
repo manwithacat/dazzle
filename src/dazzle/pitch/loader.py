@@ -15,6 +15,8 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
+from dazzle.core.validation_result import ValidationResult
+
 from .ir import (
     BrandColors,
     BusinessModelSpec,
@@ -210,22 +212,14 @@ def save_pitchspec(project_root: Path, spec: PitchSpec) -> Path:
     return pitchspec_path
 
 
-class PitchSpecValidationResult:
-    """Result of PitchSpec validation."""
+class PitchSpecValidationResult(ValidationResult):
+    """Result of PitchSpec validation.
 
-    def __init__(self) -> None:
-        self.errors: list[str] = []
-        self.warnings: list[str] = []
-
-    def add_error(self, message: str) -> None:
-        self.errors.append(message)
-
-    def add_warning(self, message: str) -> None:
-        self.warnings.append(message)
-
-    @property
-    def is_valid(self) -> bool:
-        return len(self.errors) == 0
+    The accumulator itself lives in :mod:`dazzle.core.validation_result` — it
+    was copy-pasted into three loaders and had begun to diverge (#1747). This
+    copy was the one carrying neither docstrings nor a ``__repr__``; it now
+    inherits both.
+    """
 
 
 def validate_pitchspec(spec: PitchSpec) -> PitchSpecValidationResult:

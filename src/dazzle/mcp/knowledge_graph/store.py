@@ -488,10 +488,19 @@ class KnowledgeGraph(
         Get relations for an entity.
 
         Args:
-            entity_id: Entity to get relations for (None = all relations)
+            entity_id: Entity to get relations for (None = all relations).
+                An empty string is a caller bug, not a synonym for None: it
+                used to skip the filter and return every relation in the graph,
+                which is how a mistyped lookup in `graph related` served the
+                whole knowledge graph as an answer (#1750).
             relation_type: Filter by relation type
             direction: "outgoing" (entity is source), "incoming" (entity is target), "both"
         """
+        if entity_id is not None and not entity_id:
+            raise ValueError(
+                "entity_id must be a non-empty entity id, or None to mean all relations"
+            )
+
         conditions = []
         params: list[Any] = []
 

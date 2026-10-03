@@ -1,8 +1,14 @@
 """Example index builder for capability discovery.
 
 Scans example apps under ``examples/`` and builds a mapping from capability
-key (e.g. ``"widget_rich_text"``) to a list of :class:`ExampleRef` objects that
-demonstrate that capability.
+key (e.g. ``"widget_rich_text"``) to the places in those apps that demonstrate
+the capability.
+
+Each capability is indexed **once per usage** — a distinct ``(app, context)``
+pair — because that is the grain at which a reference is worth repeating. The
+previous index emitted one ref per *field* and resolved each to the first line
+of the app's DSL containing the capability's option value, so ``widget=picker``
+in one app produced six refs all pointing at ``app.dsl:1183`` (#1755).
 
 Capabilities indexed:
 - Widget annotations on surface fields (``widget=<value>`` options)
@@ -79,12 +85,12 @@ def build_example_index(examples_dir: Path) -> dict[str, list[ExampleRef]]:
                     cap_key = _WIDGET_TO_KEY.get(str(widget_val))
                     if cap_key is None:
                         continue
-                    ref = _make_ref(
-                        app_name,
-                        app_dir,
-                        surface,
-                        search_text=f"widget={widget_val}",
-                        context=f"field {element.field_name!r} widget={widget_val} on surface {surface.name!r}",
+                    ref = ExampleRef(
+                        app=app_name,
+                        context=(
+                            f"field {element.field_name!r} widget={widget_val}"
+                            f" on surface {surface.name!r}"
+                        ),
                     )
                     index.setdefault(cap_key, []).append(ref)
 
@@ -99,94 +105,21 @@ def build_example_index(examples_dir: Path) -> dict[str, list[ExampleRef]]:
                 cap_key = _LAYOUT_DISPLAY_KEYS.get(display_val)
                 if cap_key is None:
                     continue
-                ref = _make_workspace_ref(
-                    app_name,
-                    app_dir,
-                    workspace.name,
-                    region.name,
-                    display_val,
+                ref = ExampleRef(
+                    app=app_name,
+                    context=(
+                        f"workspace {workspace.name!r} region {region.name!r} display={display_val}"
+                    ),
                 )
                 index.setdefault(cap_key, []).append(ref)
 
         # --- Index related_groups on surfaces ---
         for surface in appspec.surfaces:
             if surface.related_groups:
-                ref = _make_ref(
-                    app_name,
-                    app_dir,
-                    surface,
-                    search_text="related",
+                ref = ExampleRef(
+                    app=app_name,
                     context=f"surface {surface.name!r} has related_groups",
                 )
                 index.setdefault("layout_related_groups", []).append(ref)
 
     return index
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _find_line(dsl_files: list[Path], search_text: str) -> tuple[str, int]:
-    """Return (relative_file_str, line_number) for the first match of search_text.
-
-    Falls back to ("", 0) if not found.
-    """
-    for path in dsl_files:
-        try:
-            content = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for i, line in enumerate(content.splitlines(), start=1):
-            if search_text in line:
-                return (str(path.name), i)
-    return ("", 0)
-
-
-def _list_dsl_files(app_dir: Path) -> list[Path]:
-    """Return all .dsl files under the app directory."""
-    dsl_dir = app_dir / "dsl"
-    if dsl_dir.is_dir():
-        return sorted(dsl_dir.rglob("*.dsl"))
-    return sorted(app_dir.rglob("*.dsl"))
-
-
-def _make_ref(
-    app_name: str,
-    app_dir: Path,
-    surface: "object",
-    search_text: str,
-    context: str,
-) -> ExampleRef:
-    """Build an ExampleRef by scanning DSL files for search_text."""
-    dsl_files = _list_dsl_files(app_dir)
-    file_name, line = _find_line(dsl_files, search_text)
-    if not file_name and dsl_files:
-        file_name = dsl_files[0].name
-    return ExampleRef(
-        app=app_name,
-        file=file_name or "",
-        line=line,
-        context=context,
-    )
-
-
-def _make_workspace_ref(
-    app_name: str,
-    app_dir: Path,
-    workspace_name: str,
-    region_name: str,
-    display_val: str,
-) -> ExampleRef:
-    """Build an ExampleRef for a workspace region display mode."""
-    dsl_files = _list_dsl_files(app_dir)
-    file_name, line = _find_line(dsl_files, f"display: {display_val}")
-    if not file_name and dsl_files:
-        file_name = dsl_files[0].name
-    return ExampleRef(
-        app=app_name,
-        file=file_name or "",
-        line=line,
-        context=f"workspace {workspace_name!r} region {region_name!r} display={display_val}",
-    )

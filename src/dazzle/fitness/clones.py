@@ -25,14 +25,21 @@ the gate only forbids growth beyond it.
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-#: Functions with fewer statements than this are skipped — trivial stubs,
-#: properties, and one-liners cluster spuriously and carry no reuse signal.
+#: Functions with fewer statements than this are skipped by the *structural*
+#: pass — trivial stubs, properties, and one-liners cluster spuriously and carry
+#: no reuse signal. They are still covered by the *exact-body* pass below,
+#: which is a different claim: a byte-identical body is duplication at any size.
 MIN_STMTS = 5
+
+#: Prefix distinguishing an exact-body cluster key from a structural one, so the
+#: two passes can never collide in the shared baseline.
+EXACT_PREFIX = "exact:"
 
 
 def _py_files(root: Path) -> list[Path]:
@@ -105,11 +112,134 @@ def _stmt_count(fn: ast.AST) -> int:
     return sum(1 for x in ast.walk(fn) if isinstance(x, ast.stmt)) - 1
 
 
+def _drop_docstrings(fn: ast.AST) -> None:
+    """Strip a leading string-expression from every function body, in place.
+
+    A reworded docstring must not fork an otherwise identical body into a
+    second cluster — the docstring is prose about the code, not the code.
+    """
+    for node in ast.walk(fn):
+        body = getattr(node, "body", None)
+        if (
+            isinstance(body, list)
+            and body
+            and isinstance(body[0], ast.Expr)
+            and isinstance(body[0].value, ast.Constant)
+            and isinstance(body[0].value.value, str)
+        ):
+            body.pop(0)
+
+
+def _is_trivial_body(fn: ast.AST) -> bool:
+    """True for bodies that carry no logic: ``...``, ``pass``, ``return None``.
+
+    Dazzle implements one interface across a real and a null bus, real and
+    in-memory storage, a dozen route factories. Those *must* repeat, and they
+    all reduce to one of these shapes.
+    """
+    body = getattr(fn, "body", [])
+    if len(body) != 1:
+        return False
+    only = body[0]
+    if isinstance(only, ast.Pass):
+        return True
+    if isinstance(only, ast.Expr):
+        return isinstance(only.value, ast.Constant)
+    if isinstance(only, ast.Return):
+        return only.value is None or (
+            isinstance(only.value, ast.Constant) and not isinstance(only.value.value, str)
+        )
+    if isinstance(only, ast.Raise):
+        exc = only.exc
+        if isinstance(exc, ast.Name):
+            return exc.id == "NotImplementedError"
+        return (
+            isinstance(exc, ast.Call)
+            and isinstance(exc.func, ast.Name)
+            and exc.func.id == "NotImplementedError"
+        )
+    return False
+
+
+def _exact_body_signature(fn: ast.AST) -> str | None:
+    """Hash of the function's body verbatim, or ``None`` if not worth indexing.
+
+    Unlike :func:`_signature` this keeps local names and literal values, so two
+    members of a cluster are not merely the same shape — they are the *same
+    code*. That distinction is what makes it safe to run on one-liners, where
+    the structural pass would only produce noise: ``return datetime.now(UTC)``
+    written 11 times is not a family of parallel abstractions, it is one line
+    copied 11 times.
+
+    Serialised by :func:`_canon_tokens` rather than by ``ast.unparse`` +
+    ``ast.dump``. The unparse round-trip was the bug this replaced: ``ast.unparse``
+    output is not byte-stable across Python versions (CI runs 3.12/3.13/3.14), so
+    every signature computed on one interpreter differed from every other. The
+    local baseline looked fine and all 112 exact clusters "vanished" in CI.
+    """
+    body = list(getattr(fn, "body", []))
+    if not body or _is_trivial_body(fn):
+        return None
+    clone = ast.Module(body=copy.deepcopy(body), type_ignores=[])
+    _drop_docstrings(clone)
+    if not clone.body or _is_trivial_body(clone):
+        return None
+    tokens: list[str] = []
+    for stmt in clone.body:
+        _canon_tokens(stmt, tokens)
+    digest = hashlib.sha256("|".join(tokens).encode())
+    return EXACT_PREFIX + digest.hexdigest()[:32]
+
+
+def _canon_tokens(node: ast.AST, out: list[str]) -> None:
+    """Append a version-stable token stream for ``node`` to ``out``.
+
+    Deliberately ignores ``ctx``, ``lineno``, ``type_params`` and annotations:
+    those are either position noise or type commentary, and any of them could
+    differ between interpreters parsing the same source.
+    """
+    if isinstance(node, ast.Constant):
+        out.append(f"C:{node.value!r}")
+        return
+    if isinstance(node, ast.Name):
+        out.append(f"N:{node.id}")
+        return
+    if isinstance(node, ast.Attribute):
+        out.append(f"AT:{node.attr}")
+        _canon_tokens(node.value, out)
+        return
+    if isinstance(node, ast.arg):
+        out.append(f"ARG:{node.arg}")
+        return
+    if isinstance(node, ast.keyword):
+        out.append(f"KW:{node.arg}")
+        _canon_tokens(node.value, out)
+        return
+    out.append(type(node).__name__)
+    for child in ast.iter_child_nodes(node):
+        _canon_tokens(child, out)
+
+
 def compute_clone_index(root: Path, min_stmts: int = MIN_STMTS) -> dict[str, list[str]]:
     """Map each Type-2 clone signature to its members under ``root``.
 
-    Members are stable identities ``"<relpath>::<funcname>"`` (no line numbers).
-    Only signatures with ≥ 2 distinct members (a clone cluster) are returned.
+    Two passes, because "the same shape" and "the same code" are different
+    claims with different tolerances:
+
+    * **structural** (:func:`_signature`) for functions of at least
+      ``min_stmts`` statements — same shape, different local names and
+      literals. This is the signal that generalises, and it needs a size floor
+      to avoid clustering every one-liner in the repo.
+    * **exact-body** (:func:`_exact_body_signature`) for *every* function —
+      byte-identical logic, docstrings excluded. No size floor: an identical
+      body is duplication regardless of length, which is how sub-``MIN_STMTS``
+      real logic (a three-statement sitespec→brand lookup duplicated across six
+      route modules) was going untracked.
+
+    Keys from the two passes are namespaced (``EXACT_PREFIX``) so a cluster
+    cannot be double-counted or collide. Members are stable identities
+    ``"<relpath>::<funcname>"`` (no line numbers). Only signatures with ≥ 2
+    distinct members are returned.
     """
     by_sig: dict[str, list[str]] = defaultdict(list)
     for p in _py_files(root):
@@ -119,11 +249,14 @@ def compute_clone_index(root: Path, min_stmts: int = MIN_STMTS) -> dict[str, lis
             continue
         rel = p.relative_to(root.parent)
         for node in ast.walk(tree):
-            if (
-                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and _stmt_count(node) >= min_stmts
-            ):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if _stmt_count(node) >= min_stmts:
                 by_sig[_signature(node)].append(f"{rel}::{node.name}")
+                continue
+            exact = _exact_body_signature(node)
+            if exact is not None:
+                by_sig[exact].append(f"{rel}::{node.name}")
     return {sig: sorted(set(m)) for sig, m in by_sig.items() if len(set(m)) >= 2}
 
 

@@ -62,7 +62,7 @@ class TestInspectEntityReturnsSubtypeInfo:
     def test_base_inspect_lists_children_and_kind(self, project_root_with_appspec: Path) -> None:
         from dazzle.mcp.server.handlers.dsl.inspect import inspect_entity
 
-        result = json.loads(inspect_entity(project_root_with_appspec, {"entity_name": "Asset"}))
+        result = json.loads(inspect_entity(project_root_with_appspec, {"name": "Asset"}))
         # subtype_children populated, sorted alphabetically
         assert result["subtype_children"] == ["Building", "Vehicle"]
         # subtype_of is None on the base
@@ -76,7 +76,7 @@ class TestInspectEntityReturnsSubtypeInfo:
     ) -> None:
         from dazzle.mcp.server.handlers.dsl.inspect import inspect_entity
 
-        result = json.loads(inspect_entity(project_root_with_appspec, {"entity_name": "Vehicle"}))
+        result = json.loads(inspect_entity(project_root_with_appspec, {"name": "Vehicle"}))
         assert result["subtype_of"] == "Asset"
         assert result["subtype_children"] == []
         # Child's own fields present and NOT marked inherited
@@ -97,6 +97,6 @@ class TestInspectEntityReturnsSubtypeInfo:
 
         # Building is a child of Asset but has no children of its own — pins
         # that subtype_children is [] for a leaf child.
-        result = json.loads(inspect_entity(project_root_with_appspec, {"entity_name": "Building"}))
+        result = json.loads(inspect_entity(project_root_with_appspec, {"name": "Building"}))
         assert result["subtype_of"] == "Asset"
         assert result["subtype_children"] == []

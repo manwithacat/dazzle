@@ -144,6 +144,34 @@ class TestFindingsHandler:
         result = json.loads(findings_handler(tmp_path, {"severity": "high"}))
         assert result["count"] == 1
 
+    def test_severity_threshold_is_rejected_and_names_the_live_key(self, tmp_path: Path) -> None:
+        """#1753 — the schema advertised `severity_threshold` as the findings
+        filter while the handler read `severity`, so a caller following the
+        schema got every finding back unfiltered. A filter that does not filter
+        returns a plausible superset; the wrong key must now be an error."""
+        store = FindingStore(tmp_path)
+        store.save_scan(
+            _scan_result([_finding("DI-01", Severity.HIGH), _finding("DI-02", Severity.LOW)])
+        )
+        result = json.loads(findings_handler(tmp_path, {"severity_threshold": "high"}))
+        assert "error" in result
+        assert "severity=" in result["error"]
+        assert "findings" not in result
+
+    def test_unknown_severity_is_an_error_not_every_finding(self, tmp_path: Path) -> None:
+        """An unrecognised severity used to rank to 4 — i.e. "everything"."""
+        store = FindingStore(tmp_path)
+        store.save_scan(_scan_result([_finding("DI-01", Severity.INFO)]))
+        result = json.loads(findings_handler(tmp_path, {"severity": "severe"}))
+        assert "error" in result
+        assert "findings" not in result
+
+    def test_echoes_the_filters_actually_applied(self, tmp_path: Path) -> None:
+        store = FindingStore(tmp_path)
+        store.save_scan(_scan_result([_finding("DI-01", Severity.HIGH)]))
+        result = json.loads(findings_handler(tmp_path, {"severity": "high", "agent": "DI"}))
+        assert result["filters"] == {"scan_id": None, "agent": "DI", "severity": "high"}
+
     def test_load_specific_scan(self, tmp_path: Path) -> None:
         store = FindingStore(tmp_path)
         sr = _scan_result([_finding("DI-01")])
@@ -254,3 +282,19 @@ class TestFuzzSummaryHandler:
         mock_impl.side_effect = RuntimeError("corpus empty")
         result = json.loads(fuzz_summary_handler(tmp_path, {}))
         assert "error" in result
+
+
+class TestSentinelSchema:
+    """#1753 — the schema is the only place an agent learns parameter names, so a
+    key it declares for an op must be the key that op reads. `severity_threshold`
+    is a `dazzle sentinel scan` (CLI) parameter; it was published as the findings
+    filter, which the handler never read."""
+
+    def test_findings_declares_severity_not_severity_threshold(self) -> None:
+        from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
+
+        tools = {t.name: t for t in get_consolidated_tools()}
+        props = tools["sentinel"].input_schema["properties"]
+
+        assert "severity_threshold" not in props
+        assert props["severity"]["enum"] == ["critical", "high", "medium", "low", "info"]

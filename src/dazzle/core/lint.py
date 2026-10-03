@@ -1,5 +1,5 @@
 from . import ir
-from .discovery import Relevance, suggest_capabilities
+from .discovery import RelevanceGroup, suggest_capabilities
 from .validator import (
     extended_lint,
     validate_admin_personas_scope_conflict,
@@ -55,7 +55,7 @@ def lint_appspec(
     *,
     suggest: bool = True,
     active_capabilities: set[str] | None = None,
-) -> tuple[list[str], list[str], list[Relevance]]:
+) -> tuple[list[str], list[str], list[RelevanceGroup]]:
     """
     Validate AppSpec for semantic errors and warnings.
 
@@ -86,7 +86,8 @@ def lint_appspec(
         Tuple of (errors, warnings, relevance)
         - errors: List of error messages that must be fixed
         - warnings: List of warnings that should be addressed
-        - relevance: List of contextual capability suggestions
+        - relevance: List of RelevanceGroup items — one per applicable
+          capability, with the occurrences behind it folded in (#1755)
     """
     all_errors: list[str] = []
     all_warnings: list[str] = []

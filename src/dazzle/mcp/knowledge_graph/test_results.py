@@ -195,6 +195,24 @@ class KnowledgeGraphTestResults:
         finally:
             self._close_connection(conn)
 
+    def get_test_run(self: KGStoreProtocol, run_id: str) -> dict[str, Any] | None:
+        """One run by id, or None if there is no such run.
+
+        Lets a caller tell "this run had no failures" from "that run does not
+        exist" — an empty list cannot (#1756: `test_intelligence` advertised
+        `run_id` and no handler read it, so an agent drilling into the run id
+        the tool had just printed got the latest-N analysis instead).
+        """
+        conn = self._get_connection()
+        try:
+            row = conn.execute(
+                "SELECT * FROM test_runs WHERE id = ?",
+                (run_id,),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            self._close_connection(conn)
+
     def get_test_cases(
         self: KGStoreProtocol,
         run_id: str,

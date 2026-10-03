@@ -225,8 +225,22 @@ make type-check-ci
 3. **No Postgres / Playwright** locally unless you add services.
 4. **OS** — macOS vs `ubuntu-latest`.
 5. **Three legacy "CI" paths** — prefer `ci-fast` / `ci-core` over old `make ci`
-   (soft pip-audit, no frozen extras).
-6. **Unpaid surface debt** — MCP/CLI/IR changes without regenerating baselines
+   (no frozen extras). `make security` is no longer one of them: it delegates to
+   `bash scripts/ci_local.sh security`, which runs the same bandit + pip-audit
+   implementation as the `security-tests` job. It used to carry its own
+   `uv run pip-audit --strict --desc on || true` — a fourth copy of the audit
+   that could not fail, and whose stray `on` argument made it a different
+   command from the CI one.
+6. **The pip-audit verdict has exactly one implementation** —
+   `scripts/pip_audit.py`, shared by the `security-tests` job, the
+   `main-hygiene` monitor, and `ci_local.sh`. `make security` delegates too.
+   The three hand-rolled copies had already drifted into disagreeing about what
+   "clean" means; one of them filed issue #1745 reporting advisories that did
+   not exist, after an advisory-ID pattern matched 1 row in 124. A gate whose
+   meaning depends on which file you read is not a gate, so
+   `tests/unit/test_pip_audit.py` (a `-m gate` test, run by `make ci-fast`)
+   fails if any caller re-spells the invocation or duplicates the suppression.
+7. **Unpaid surface debt** — MCP/CLI/IR changes without regenerating baselines
    and docs. This is what `preflight-surface` exists to catch **before** push.
    Stacking feature commits on a red tip multiplies the same failures across
    every matrix cell.

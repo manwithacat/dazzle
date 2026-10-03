@@ -88,11 +88,6 @@ def leftover_honest_group_map(raw: Any, declared: Any = None) -> dict[str, str] 
     return mapping
 
 
-def leftover_group_map_stay_put(raw: Any, declared: Any = None) -> bool:
-    """True when leftover group_map would invent a persist (stay put)."""
-    return leftover_honest_group_map(raw, declared) is None
-
-
 def parse_group_map(text: str, declared: Any = None) -> dict[str, str]:
     """Parse a web ``"eng=engineer, ops=operator"`` text field → ``{"eng": "engineer", ...}``.
 

@@ -27,12 +27,7 @@ from dazzle.http.runtime.auth.member_admin import (
     leftover_honest_persona_roles,
     leftover_persona_roles_stay_put,
 )
-
-
-def _product_name(request: Request) -> str:
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
+from dazzle.http.runtime.auth.product_name import product_name
 
 
 def _back_to_members(request: Request) -> Response:
@@ -121,7 +116,7 @@ def create_member_admin_routes() -> APIRouter:
         ]
         org = store.get_organization(org_id)
         page = build_members_view(
-            product_name=_product_name(request),
+            product_name=product_name(request),
             org_name=org.name if org is not None else org_id,
             members=members,
             pending=pending,
@@ -226,7 +221,7 @@ def create_member_admin_routes() -> APIRouter:
             for jr in store.get_pending_join_requests(org_id)
         ]
         page = build_join_requests_view(
-            product_name=_product_name(request),
+            product_name=product_name(request),
             org_name=org.name if org is not None else org_id,
             requests=requests,
         )

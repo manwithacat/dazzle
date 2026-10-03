@@ -16,16 +16,7 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
-
-def _product_name(request: Request) -> str:
-    """Resolve the brand product name from the app's sitespec (default "Dazzle").
-
-    Mirrors the per-router ``_product_name`` helpers; kept local so this module
-    stays importable by every login route without a router dependency.
-    """
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
+from dazzle.http.runtime.auth.product_name import product_name
 
 
 def forbidden_org_response(request: Request) -> HTMLResponse:
@@ -37,5 +28,5 @@ def forbidden_org_response(request: Request) -> HTMLResponse:
     from dazzle.http.runtime.auth.org_context_views import build_forbidden_org_view
     from dazzle.render.fragment.renderer import FragmentRenderer
 
-    html = FragmentRenderer().render(build_forbidden_org_view(product_name=_product_name(request)))
+    html = FragmentRenderer().render(build_forbidden_org_view(product_name=product_name(request)))
     return HTMLResponse(html, status_code=403)

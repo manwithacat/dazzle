@@ -11,6 +11,11 @@ from typing import Any
 
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
+# Severity ranking, most severe first. One definition: the findings filter, the
+# `detail="issues"` slice and the findings argument validation all rank with it.
+_SEVERITY_ORDER = ("critical", "high", "medium", "low", "info")
+_SEVERITY_RANK = {name: index for index, name in enumerate(_SEVERITY_ORDER)}
+
 # ---------------------------------------------------------------------------
 # scan
 # ---------------------------------------------------------------------------
@@ -53,9 +58,8 @@ def sentinel_scan_impl(
     findings_data = [f.model_dump() for f in result.findings]
     if detail == "issues":
         # Medium severity and above
-        sev_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
         findings_data = [
-            f for f in findings_data if sev_order.get(f.get("severity", "info"), 4) <= 2
+            f for f in findings_data if _SEVERITY_RANK.get(f.get("severity", "info"), 4) <= 2
         ]
 
     out: dict[str, Any] = {
@@ -129,9 +133,8 @@ def sentinel_findings_impl(
         findings = [f for f in findings if f.agent.value == agent]
 
     if severity:
-        sev_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-        threshold = sev_order.get(severity, 4)
-        findings = [f for f in findings if sev_order.get(f.severity.value, 4) <= threshold]
+        threshold = _SEVERITY_RANK[severity]
+        findings = [f for f in findings if _SEVERITY_RANK.get(f.severity.value, 4) <= threshold]
 
     return {
         "findings": [f.model_dump() for f in findings],
@@ -142,14 +145,39 @@ def sentinel_findings_impl(
 @wrap_handler_errors
 def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Get findings from latest or specific scan."""
+    # `severity_threshold` is a `dazzle sentinel scan` parameter (CLI-only, see
+    # sentinel_scan_impl), but the MCP schema advertised it as the findings
+    # filter, so an agent sent it and got every finding back unfiltered —
+    # silently, because a filter that does not filter returns a plausible
+    # superset (#1753). The live key is `severity`; say so instead of
+    # ignoring the argument.
+    if "severity_threshold" in args:
+        return error_response(
+            "`severity_threshold` is a `dazzle sentinel scan` parameter, not a "
+            "`findings` filter. Use severity=<critical|high|medium|low|info>."
+        )
+    severity = args.get("severity")
+    if severity is not None and severity not in _SEVERITY_ORDER:
+        # An unknown severity used to fall through to "everything" via
+        # sev_order.get(severity, 4) — the same silent superset one level down.
+        return error_response(
+            f"Unknown severity {severity!r}. Expected one of: {', '.join(_SEVERITY_ORDER)}."
+        )
     result = sentinel_findings_impl(
         project_path=project_path,
         scan_id=args.get("scan_id"),
         agent=args.get("agent"),
-        severity=args.get("severity"),
+        severity=severity,
     )
     if "error" in result:
         return error_response(result["error"])
+    # Echo the filters that were actually applied, so a payload can be audited
+    # against the request instead of taken on trust.
+    result["filters"] = {
+        "scan_id": args.get("scan_id"),
+        "agent": args.get("agent"),
+        "severity": severity,
+    }
     return json.dumps(result, indent=2)
 
 
