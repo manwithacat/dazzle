@@ -247,7 +247,11 @@ class TokenType(Enum):
     COMPLETE_AT = "complete_at"
 
     # v0.3.1 keywords
-    ENGINE_HINT = "engine_hint"  # Deprecated: use STAGE instead
+    # ENGINE_HINT was the v0.3.1 spelling of `stage:`. Removed in #1720
+    # (ADR-0003: no backward-compat shims) — the token is kept only so the
+    # parser can recognise the old spelling and say what to write instead,
+    # rather than reporting it as an unknown identifier.
+    ENGINE_HINT = "engine_hint"  # REMOVED: use STAGE. Rejected by the parser.
     STAGE = "stage"  # v0.8.0: Workspace layout stage (replaces engine_hint)
 
     # v0.5.0 Domain Service Keywords

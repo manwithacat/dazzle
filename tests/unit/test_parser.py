@@ -4232,6 +4232,40 @@ entity Task "Task":
         with pytest.raises(ParseError):
             parse_dsl(dsl, Path("test.dsl"))
 
+    def test_engine_hint_is_a_hard_error_naming_stage(self):
+        """#1720 (ADR-0003). `engine_hint:` was the v0.3.1 spelling of `stage:`.
+        It kept parsing silently, so old DSL worked and the deprecation was
+        invisible — and three prose pages advertised it as a feature. Removing
+        it means failing loudly with the replacement in the message.
+
+        The token stays in the lexer for exactly this reason: without it the
+        old spelling would lex as a plain identifier and the author would get
+        "unknown keyword" instead of "rename this".
+        """
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test_engine_hint_removed
+
+workspace ops "Ops":
+  engine_hint: "command_center"
+  purpose: "internal desk"
+"""
+        with pytest.raises(ParseError, match="engine_hint.*use 'stage:'"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_stage_is_the_canonical_spelling(self):
+        """The replacement the error names must actually work."""
+        dsl = """
+module test_stage_canonical
+
+workspace ops "Ops":
+  stage: "command_center"
+  purpose: "internal desk"
+"""
+        fragment = parse_dsl(dsl, Path("test.dsl"))[-1]
+        assert [w.stage for w in fragment.workspaces] == ["command_center"]
+
 
 if __name__ == "__main__":
     main()

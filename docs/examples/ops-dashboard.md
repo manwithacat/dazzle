@@ -71,7 +71,7 @@ persona ops_engineer "Operations Engineer":
 ```dsl
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
-  engine_hint: "command_center"
+  stage: "command_center"
 
   active_alerts:
     source: Alert
@@ -123,7 +123,7 @@ The `ops_engineer` persona influences:
 
 ### Engine Hints
 
-The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER archetype for maximum information density.
+The `stage: "command_center"` explicitly requests the COMMAND_CENTER archetype for maximum information density.
 
 ## E2E Test Coverage
 

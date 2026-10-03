@@ -2423,8 +2423,19 @@ class WorkspaceParserMixin:
             state.purpose = self.expect(TokenType.STRING).value
             self.skip_newlines()
             return True
-        if self.match(TokenType.STAGE) or self.match(TokenType.ENGINE_HINT):
-            # ENGINE_HINT is the deprecated v0.3.1 form of STAGE (v0.8.0+).
+        if self.match(TokenType.ENGINE_HINT):
+            # Removed in #1720 (ADR-0003). `engine_hint:` was the v0.3.1
+            # spelling of `stage:`; it kept parsing silently, so old DSL
+            # worked and the deprecation was invisible. A loud, actionable
+            # error is the point of removing a shim.
+            token = self.current_token()
+            raise make_parse_error(
+                "'engine_hint:' was removed in v0.8.0 — use 'stage:' instead.",
+                self.file,
+                token.line,
+                token.column,
+            )
+        if self.match(TokenType.STAGE):
             self.advance()
             self.expect(TokenType.COLON)
             state.stage = self.expect(TokenType.STRING).value

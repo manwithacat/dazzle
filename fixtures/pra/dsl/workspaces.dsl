@@ -8,7 +8,7 @@
 # - [x] workspace name: (no title)
 # - [x] purpose: "..."
 # - [x] stage: "stage_name"
-# - [x] engine_hint: "archetype_name" (deprecated alias for stage)
+# - [ ] engine_hint: "archetype_name" — REMOVED in #1720 (ADR-0003); use stage:
 #
 # ACCESS CONTROL:
 # - [x] access: public

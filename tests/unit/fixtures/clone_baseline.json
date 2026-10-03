@@ -987,14 +987,6 @@
     ]
   },
   {
-    "signature": "exact:5bca8da12b8b065a039a071b105ce55f",
-    "count": 2,
-    "names": [
-      "dazzle/http/channels/adapters/stream.py::provider_name",
-      "dazzle/http/channels/providers/stream.py::provider_name"
-    ]
-  },
-  {
     "signature": "exact:6133936c2caed42b5e5ec82a99d0446a",
     "count": 2,
     "names": [

@@ -11,24 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
-
 from dazzle.core.db_url import normalise_postgres_scheme
-
-
-class OTPRecord(BaseModel):
-    """Record for a stored OTP code."""
-
-    model_config = ConfigDict(frozen=True)
-
-    user_id: UUID
-    code_hash: str
-    method: str  # "email_otp" or "totp_setup"
-    created_at: datetime
-    expires_at: datetime
-    attempts: int = 0
-    max_attempts: int = 3
-    used: bool = False
 
 
 def _hash_code(code: str) -> str:

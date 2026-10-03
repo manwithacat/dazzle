@@ -114,14 +114,6 @@ class BusinessRule(BaseModel):
     implementation: str | None = None
 
 
-class QuestionOption(BaseModel):
-    """An option for a clarifying question."""
-
-    label: str
-    description: str
-    recommended: bool = False
-
-
 class Question(BaseModel):
     """A clarifying question for the founder."""
 

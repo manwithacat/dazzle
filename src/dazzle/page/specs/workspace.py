@@ -16,15 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field
 # =============================================================================
 
 
-class LayoutKind(StrEnum):
-    """Layout types for workspaces."""
-
-    SINGLE_COLUMN = "singleColumn"
-    TWO_COLUMN_WITH_HEADER = "twoColumnWithHeader"
-    APP_SHELL = "appShell"
-    CUSTOM = "custom"
-
-
 class SingleColumnLayout(BaseModel):
     """Single column layout with main content."""
 

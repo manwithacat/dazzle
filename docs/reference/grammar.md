@@ -46,7 +46,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
-**v0.3.1 keywords**: `engine_hint`, `stage`
+**v0.3.1 keyword**: `stage` (the `engine_hint` spelling was removed in #1720 — ADR-0003)
 
 **v0.5.0 Domain Service Keywords**: `input`, `output`, `guarantees`, `stub`
 

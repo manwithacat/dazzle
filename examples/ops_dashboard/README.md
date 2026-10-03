@@ -21,7 +21,7 @@ dazzle serve
 | Feature | Usage |
 |---------|-------|
 | **Personas** | `persona ops_engineer` with proficiency and session style |
-| **Engine Hints** | `engine_hint: "command_center"` forces archetype |
+| **Stage hints** | `stage: "command_center"` forces archetype |
 | **Aggregations** | `count(System)`, `avg(response_time_ms)` |
 | **Persona-Scoped UX** | `for ops_engineer: scope: all` |
 | **Filtered Signals** | `filter: acknowledged = false` |
@@ -81,11 +81,11 @@ persona ops_engineer "Operations Engineer":
   session_style: deep_work
 ```
 
-### Engine Hint for Archetype
+### Stage Hint for Archetype
 ```dsl
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring"
-  engine_hint: "command_center"
+  stage: "command_center"
   # Forces COMMAND_CENTER archetype regardless of signal weights
 ```
 
@@ -140,9 +140,9 @@ dazzle test run
    - `session_style` affects information density
    - Used in persona-scoped UX blocks
 
-2. **Engine hints override auto-selection**
+2. **Stage hints override auto-selection**
    - Normally archetype is selected from signal weights
-   - `engine_hint` forces specific archetype
+   - `stage` forces specific archetype (the v0.3.1 spelling `engine_hint` was removed in #1720)
 
 3. **Aggregations create KPI signals**
    - `aggregate:` block with count/avg/sum functions
