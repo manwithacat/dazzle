@@ -4,7 +4,7 @@
 **Force path:** `/improve example-apps interesting_product`
 **Also:** `/improve example-apps depth` (alias)
 **Doctrine:** `docs/reference/interesting-saas-context.md`
-**Handoff:** `docs/reference/antagonist-report-post-5.8.md`
+**Handoff:** `docs/reference/antagonist-report-post-5-8.md`
 **Umbrella:** post-5.8 Goal B (interesting SaaS) — antagonist 2026-08-02
 
 When **machine residual is green**, do **not** invent another dual-open hop and

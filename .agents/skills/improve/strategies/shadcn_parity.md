@@ -41,7 +41,7 @@ From `--gaps-only` / `SHADCN_PARITY.md` Gaps table, take the top PENDING
 Skip / BLOCKED if:
 
 - Job is already `partial` with a clear compose path (do not invent a twin)
-- Invention ladder says refuse (`docs/agent/invent-safely.md`)
+- Invention ladder says refuse (`packages/hatchi-maxchi/stems/invention-ladder.md`)
 
 ### 2. Placeholder bar (minimum shippable for the loop)
 
