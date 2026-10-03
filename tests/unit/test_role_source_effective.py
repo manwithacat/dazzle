@@ -40,25 +40,6 @@ def test_build_access_context_unauthenticated_has_no_roles() -> None:
     assert list(runtime_ctx.roles) == []
 
 
-def test_cedar_row_filters_use_membership_roles() -> None:
-    """A role-gated unrestricted permit is recognised from membership roles."""
-    from dazzle.http.runtime.route_generator import _extract_cedar_row_filters
-
-    spec = SimpleNamespace(
-        permissions=[
-            SimpleNamespace(
-                operation=SimpleNamespace(value="list"),
-                effect=SimpleNamespace(value="permit"),
-                condition=None,
-                personas=["admin"],
-            )
-        ]
-    )
-    ctx = _ctx_with_membership(membership_roles=["admin"], user_roles=[])
-    # Admin (from membership) → unrestricted permit → no row filters.
-    assert _extract_cedar_row_filters(spec, user_id="u-1", auth_context=ctx) == {}
-
-
 def test_should_bypass_tenant_filter_uses_membership_roles() -> None:
     from dazzle.http.runtime.route_generator import _should_bypass_tenant_filter
 

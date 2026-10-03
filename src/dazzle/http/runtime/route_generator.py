@@ -145,7 +145,6 @@ from dazzle.http.runtime.scope_filters import (  # noqa: F401  (re-exported for 
     _deny_update_destination,
     _enforce_create_scope,
     _enforce_update_scope,
-    _extract_cedar_row_filters,
     _extract_condition_filters,
     _LazyUserAttrs,
     _resolve_predicate_filters,

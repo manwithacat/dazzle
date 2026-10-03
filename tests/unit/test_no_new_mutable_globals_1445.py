@@ -42,7 +42,6 @@ _ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("src/dazzle/http/runtime/logging.py", "_file_handler"),  # system-wide logging, init-only
         ("src/dazzle/perf/tracer.py", "_provider"),  # OTel tracer provider, set-once
         # Warn-once flags (benign one-shot latches):
-        ("src/dazzle/core/sitespec_loader.py", "_PATH_KEY_DEPRECATION_WARNED"),
         ("src/dazzle/core/manifest.py", "_FRAGMENT_CHROME_WARNED"),
         # Tracked for a later #1445 slice (genuine shared state):
         ("src/dazzle/http/runtime/tenant_isolation.py", "_rls_user_attr_names"),

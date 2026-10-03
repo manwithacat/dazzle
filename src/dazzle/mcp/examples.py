@@ -148,11 +148,6 @@ def get_example_metadata() -> dict[str, Any]:
     }
 
 
-def get_archived_example_metadata() -> dict[str, Any]:
-    """Archived examples have been deleted. Returns empty dict for backward compat."""
-    return {}
-
-
 def search_examples(
     features: list[str] | None = None, complexity: str | None = None
 ) -> list[dict[str, Any]]:

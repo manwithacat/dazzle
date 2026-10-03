@@ -219,9 +219,6 @@ def _parse_section(data: dict[str, Any]) -> SectionSpec:
     )
 
 
-_PATH_KEY_DEPRECATION_WARNED = False
-
-
 def _parse_page(data: dict[str, Any]) -> PageSpec:
     """Parse a page from raw YAML data.
 
@@ -246,24 +243,18 @@ def _parse_page(data: dict[str, Any]) -> PageSpec:
 
     page_type = PageKind(data.get("type", "landing"))
 
-    # Accept both `route:` (canonical) and `path:` (deprecated alias) — early
-    # builds of sitespec.yaml used `path:` and some hand-written fixtures
-    # still do. Without this fallback the loader raises KeyError and the
-    # boot-time try/except in serve.py silently drops the entire sitespec.
-    route = data.get("route") or data.get("path")
+    # `route:` only. The `path:` alias is gone (ADR-0003, #1720): no example or
+    # fixture in the repository used it, and the boot path
+    # (`http/runtime/app_factory.py`) logs a load failure as a warning rather
+    # than dropping the sitespec silently, so a legacy `path:` page now gets a
+    # named warning instead of a working alias. Note `source.path:` inside a
+    # page is a different key — a ContentSourceSpec field, not this alias.
+    route = data.get("route")
     if route is None:
-        raise SiteSpecError(f"Page missing required 'route' key (data: {data!r})")
-    if "path" in data and "route" not in data:
-        global _PATH_KEY_DEPRECATION_WARNED
-        if not _PATH_KEY_DEPRECATION_WARNED:
-            import logging as _logging
-
-            _logging.getLogger(__name__).warning(
-                "sitespec.yaml uses deprecated 'path:' key on page %r — "
-                "rename to 'route:' (the canonical key).",
-                route,
-            )
-            _PATH_KEY_DEPRECATION_WARNED = True
+        raise SiteSpecError(
+            f"Page missing required 'route' key (data: {data!r}). "
+            "'path:' is not accepted — rename it to 'route:'."
+        )
 
     return PageSpec(
         route=route,

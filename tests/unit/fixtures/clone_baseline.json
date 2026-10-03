@@ -1117,14 +1117,6 @@
     ]
   },
   {
-    "signature": "exact:d0300f2627408d231ee4a39e5d1969f5",
-    "count": 2,
-    "names": [
-      "dazzle/http/graphql/integration.py::get_context",
-      "dazzle/mcp/examples.py::get_archived_example_metadata"
-    ]
-  },
-  {
     "signature": "exact:9ad220736a31b37d6d9259d717369e3d",
     "count": 2,
     "names": [
