@@ -28,12 +28,7 @@ from dazzle.http.runtime.auth.connection_admin_views import leftover_honest_conn
 from dazzle.http.runtime.auth.connection_create_form import leftover_honest_group_map
 from dazzle.http.runtime.auth.cookie_name import read_session_id
 from dazzle.http.runtime.auth.member_admin import declared_persona_ids
-
-
-def _product_name(request: Request) -> str:
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
+from dazzle.http.runtime.auth.product_name import product_name
 
 
 def _back(request: Request) -> Response:
@@ -218,7 +213,7 @@ def create_connection_admin_routes() -> APIRouter:
         org = store.get_organization(org_id)
         org_settings = OrgSettings.from_dict(store.get_org_settings(org_id))
         page = build_connections_view(
-            product_name=_product_name(request),
+            product_name=product_name(request),
             org_name=org.name if org is not None else org_id,
             connections=connections,
             new_form=new_form,

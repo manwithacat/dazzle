@@ -850,47 +850,11 @@
     ]
   },
   {
-    "signature": "exact:4c894a56558a59953c4ebdb630859916",
-    "count": 3,
-    "names": [
-      "dazzle/core/sitespec_loader.py::__init__",
-      "dazzle/core/themespec_loader.py::__init__",
-      "dazzle/pitch/loader.py::__init__"
-    ]
-  },
-  {
     "signature": "exact:9019995c79e9b03f6010f8db15b37c10",
     "count": 2,
     "names": [
       "dazzle/core/sitespec_loader.py::_entity_slug",
       "dazzle/qa/trial_inventory.py::_entity_slug"
-    ]
-  },
-  {
-    "signature": "exact:28a671a41892904c7e151ed0997d1a52",
-    "count": 3,
-    "names": [
-      "dazzle/core/sitespec_loader.py::add_error",
-      "dazzle/core/themespec_loader.py::add_error",
-      "dazzle/pitch/loader.py::add_error"
-    ]
-  },
-  {
-    "signature": "exact:f4e8cb1c871740de9b9124f2c7780e58",
-    "count": 3,
-    "names": [
-      "dazzle/core/sitespec_loader.py::add_warning",
-      "dazzle/core/themespec_loader.py::add_warning",
-      "dazzle/pitch/loader.py::add_warning"
-    ]
-  },
-  {
-    "signature": "exact:bc0231a7692a46f99802ac5b73285e03",
-    "count": 3,
-    "names": [
-      "dazzle/core/sitespec_loader.py::is_valid",
-      "dazzle/core/themespec_loader.py::is_valid",
-      "dazzle/pitch/loader.py::is_valid"
     ]
   },
   {
@@ -1246,18 +1210,6 @@
     "names": [
       "dazzle/http/runtime/auth/connection_admin_routes.py::_normalize_domain",
       "dazzle/http/runtime/auth/domain_verification.py::_normalize"
-    ]
-  },
-  {
-    "signature": "exact:ca469de2aab75d7e79c688c0fa2af30e",
-    "count": 6,
-    "names": [
-      "dazzle/http/runtime/auth/connection_admin_routes.py::_product_name",
-      "dazzle/http/runtime/auth/forbidden_org.py::_product_name",
-      "dazzle/http/runtime/auth/invitation_routes.py::_product_name",
-      "dazzle/http/runtime/auth/member_admin_routes.py::_product_name",
-      "dazzle/http/runtime/auth/org_context_routes.py::_product_name",
-      "dazzle/http/runtime/auth/profile_routes.py::_product_name"
     ]
   },
   {

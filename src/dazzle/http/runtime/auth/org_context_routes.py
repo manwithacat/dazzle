@@ -23,6 +23,7 @@ from dazzle.http.runtime.auth.auth_views import (
     leftover_honest_auth_token,
 )
 from dazzle.http.runtime.auth.cookie_name import read_session_id, set_session_cookies
+from dazzle.http.runtime.auth.product_name import product_name
 from dazzle.http.runtime.auth.redirect_safety import (
     is_safe_redirect_path,
     leftover_honest_auth_next,
@@ -69,12 +70,6 @@ def leftover_membership_or_400(raw: Any) -> str | HTMLResponse:
     if not honest:
         return HTMLResponse("Membership required", status_code=400)
     return honest
-
-
-def _product_name(request: Request) -> str:
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
 
 
 async def _activate_and_redirect(
@@ -141,7 +136,7 @@ def create_org_context_routes() -> APIRouter:
                 if m.status == "active"
             )
         page = build_select_org_view(
-            product_name=_product_name(request),
+            product_name=product_name(request),
             memberships=memberships,
             next_url=honest_next or "/app",
             error_message=SELECT_ORG_ERROR_MESSAGES.get(honest_error, ""),
@@ -169,6 +164,6 @@ def create_org_context_routes() -> APIRouter:
         from dazzle.http.runtime.auth.org_context_views import build_no_orgs_view
         from dazzle.render.fragment.renderer import FragmentRenderer
 
-        return FragmentRenderer().render(build_no_orgs_view(product_name=_product_name(request)))
+        return FragmentRenderer().render(build_no_orgs_view(product_name=product_name(request)))
 
     return router

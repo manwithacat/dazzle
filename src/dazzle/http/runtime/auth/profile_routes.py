@@ -20,6 +20,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from dazzle.http.runtime.auth.cookie_name import read_session_id
+from dazzle.http.runtime.auth.product_name import product_name
 
 # Fields the framework manages — never client-editable on a profile.
 _MANAGED = {"id", "tenant_id", "identity_id", "created_at", "updated_at"}
@@ -47,12 +48,6 @@ def _kind_of(field: Any) -> str:
 def _editable_scalar_fields(entity: Any) -> list[Any]:
     """Author-declared scalar fields a member may edit (exclude managed + non-scalar)."""
     return [f for f in entity.fields if f.name not in _MANAGED and _kind_of(f) in _SCALAR_KINDS]
-
-
-def _product_name(request: Request) -> str:
-    sitespec = getattr(request.app.state, "sitespec", None) or {}
-    brand = sitespec.get("brand", {}) if isinstance(sitespec, dict) else {}
-    return str(brand.get("product_name", "Dazzle"))
 
 
 def create_profile_routes() -> APIRouter:
@@ -107,7 +102,7 @@ def create_profile_routes() -> APIRouter:
         ]
         org = store.get_organization(tenant_id)
         page = build_my_profile_view(
-            product_name=_product_name(request),
+            product_name=product_name(request),
             org_name=org.name if org is not None else tenant_id,
             fields=fields,
             current=current,
