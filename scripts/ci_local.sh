@@ -306,6 +306,14 @@ Commands:
   sync-type             uv sync --frozen with CI type-check extras (Python 3.12)
   sync-test             uv sync --frozen with CI python-tests extras (Python 3.12)
   type-check            mypy src/dazzle only
+  security              bandit (medium, src/) + pip-audit hard-fail
+  security-cli          JWT fuzz + shapes RBAC matrix (CI security-tests gates)
+  docs                  mkdocs build --strict
+  lint-extras           CSS clip + raw-ramp + coverage floor
+  dist                  build gitignored dist/ asset bundles
+  ruff-check | ruff-fix ruff check(+--fix) and format, as named
+  gates                 pytest tests/unit -m gate
+  unit-full             pytest -n auto -m "not e2e"
   help
 
 Environment:
@@ -338,6 +346,18 @@ main() {
     sync-type|sync-ci-type) cmd_sync_type ;;
     sync-test|sync-ci-test) cmd_sync_test ;;
     type-check|type-check-ci) cmd_type_check ;;
+    # Single gates. These are implemented above and were reachable only from
+    # inside tier0/tier1 — `make security` delegated here and got "unknown
+    # command", so the local security gate could not be run at all.
+    security)     cmd_security ;;
+    security-cli) cmd_security_cli ;;
+    docs)         cmd_docs ;;
+    lint-extras)  cmd_lint_extras ;;
+    dist)         cmd_build_dist ;;
+    ruff-check)   cmd_ruff_check ;;
+    ruff-fix)     cmd_ruff_fix ;;
+    gates)        cmd_gates ;;
+    unit-full)    cmd_unit_full ;;
     help|-h|--help)  usage ;;
     *) _die "unknown command: $cmd (try: help)" ;;
   esac

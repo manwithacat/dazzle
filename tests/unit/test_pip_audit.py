@@ -423,3 +423,70 @@ def test_the_monitor_reports_while_the_gate_still_gates() -> None:
 
     assert "--report-only" in run_of(hygiene, "hygiene", "Audit main")
     assert "--report-only" not in run_of(ci, "security-tests", "Run pip-audit")
+
+
+# --- wiring: a delegated subcommand must exist -------------------------------
+# `make security` delegated to `bash scripts/ci_local.sh security`, and
+# ci_local.sh had no such case arm — it answered "unknown command: security" and
+# exited 1. The function (`cmd_security`) was implemented and reachable only from
+# inside tier1. The consolidation gate above could not see it: it checks that
+# nobody re-spells the audit flags, not that the caller names a target that
+# exists. Same class as #1750 — a name that resolves to nothing, so the caller's
+# intent silently became an error nobody read.
+
+
+_CI_LOCAL = REPO / "scripts" / "ci_local.sh"
+
+
+def _dispatched_subcommands() -> set[str]:
+    """Every alternative a `case` arm in ci_local.sh's dispatcher accepts.
+
+    Matches the arm pattern rather than the command it calls, so an arm whose
+    body is an if/else (`push-gate|push_gate`) counts as dispatched. Matching
+    only `... ) cmd_*` reported that arm as missing — the walk mistaking an
+    unusual body for an absent one, which is the failure this gate exists to
+    prevent.
+    """
+    text = _CI_LOCAL.read_text(encoding="utf-8")
+    dispatcher = text[text.index("main() {") :]
+    dispatched: set[str] = set()
+    for match in re.finditer(r"^\s{4}([A-Za-z0-9_|-]+)\)[ \t\n]", dispatcher, re.MULTILINE):
+        dispatched.update(part for part in match.group(1).split("|"))
+    return dispatched
+
+
+def _delegated_subcommands() -> dict[str, str]:
+    """{subcommand: make target} for every `ci_local.sh <cmd>` the Makefile runs."""
+    makefile = _strip_comments((REPO / "Makefile").read_text(encoding="utf-8"))
+    delegated: dict[str, str] = {}
+    current = ""
+    for line in makefile.splitlines():
+        target = re.match(r"^([A-Za-z0-9_.-]+):", line)
+        if target:
+            current = target.group(1)
+        call = re.search(r"bash\s+scripts/ci_local\.sh\s+([A-Za-z0-9_-]+)", line)
+        if call:
+            delegated.setdefault(call.group(1), current)
+    return delegated
+
+
+def test_every_delegated_subcommand_exists() -> None:
+    """A gate that delegates to a name nothing dispatches is not a gate."""
+    dispatched = _dispatched_subcommands()
+    delegated = _delegated_subcommands()
+    assert delegated, "no ci_local.sh delegations found — has the Makefile moved?"
+    missing = {
+        f"make {target} -> ci_local.sh {cmd}": sorted(dispatched)
+        for cmd, target in delegated.items()
+        if cmd not in dispatched
+    }
+    assert not missing, "delegated subcommands with no case arm: " + "; ".join(missing)
+
+
+def test_the_security_gate_is_routable_and_hard_fails() -> None:
+    """`make security` is the documented local entry point for the audit. It must
+    reach `cmd_security`, and that command must run the shared implementation
+    rather than its own copy."""
+    assert "security" in _dispatched_subcommands()
+    body = _CI_LOCAL.read_text(encoding="utf-8")
+    assert "python scripts/pip_audit.py" in body, "cmd_security must call the one implementation"
