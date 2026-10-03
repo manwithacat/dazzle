@@ -11,9 +11,12 @@ from ..common import error_response, extract_progress, load_project_appspec, wra
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
     progress = extract_progress(args)
-    entity_name = args.get("entity_name") or args.get("name")
+    # `name` is the declared key (#1756 dropped the `entity_name` alias: two
+    # names for one argument is how `graph related` ended up reading a key the
+    # schema never advertised).
+    entity_name = args.get("name")
     if not entity_name:
-        return error_response("entity_name required")
+        return error_response("name required (for inspect_entity)")
 
     progress.log_sync(f"Inspecting entity '{entity_name}'...")
     app_spec = load_project_appspec(project_root)
@@ -72,9 +75,10 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
     progress = extract_progress(args)
-    surface_name = args.get("surface_name") or args.get("name")
+    # `name` is the declared key — see inspect_entity (#1756).
+    surface_name = args.get("name")
     if not surface_name:
-        return error_response("surface_name required")
+        return error_response("name required (for inspect_surface)")
 
     progress.log_sync(f"Inspecting surface '{surface_name}'...")
     app_spec = load_project_appspec(project_root)

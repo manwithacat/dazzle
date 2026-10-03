@@ -65,6 +65,7 @@ Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth
 
 - `story_id` *(string)* — Story id for prove (optional; default all accepted)
 - `name` *(string)* — Playbook name (default: domain_logic)
+- `mode` *(string)* — Proof kind (for prove). static: target exists in DSL/host map. runtime: host-module readiness. journey: surface hub / open-via hop coherence. Default: static.
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -120,6 +121,8 @@ Compliance documentation operations. compile: compile taxonomy + evidence into A
 **Parameters:**
 
 - `framework` *(string)* — Framework ID: iso27001 or soc2 (default: iso27001)
+- `status_filter` *(array)* — Control states to include (for gaps). Default: [gap, partial].
+- `tier_filter` *(array)* — Control tiers to include (for gaps), e.g. [1, 2] for the controls that matter most.
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -191,6 +194,7 @@ Capability discovery operations: coherence (persona-by-persona authenticated UX 
 
 **Parameters:**
 
+- `persona` *(string)* — Persona id to score (for coherence). Omit to score every persona.
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -231,11 +235,11 @@ DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze
 
 - `name` *(string)* — Entity or surface name (for inspect_entity/inspect_surface)
 - `extended` *(boolean)* — Run extended checks (for lint)
+- `suppress_relevance` *(boolean)* — Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.
 - `entity_names` *(array)* — Entity names to fetch full details for (for get_spec). Omit for summary.
 - `surface_names` *(array)* — Surface names to fetch full details for (for get_spec). Omit for summary.
 - `surface_filter` *(string)* — Filter to a specific surface name (for fidelity)
 - `gaps_only` *(boolean)* — Omit surfaces with fidelity=1.0 (for fidelity)
-- `suppress_relevance` *(boolean)* — Drop the capability-relevance appendix from lint output (for lint). The appendix is what most of the payload; omit it when you only need errors and warnings.
 - `format` *(string)* — Output format (for export_frontend_spec, default: markdown)
 - `sections` *(array)* — Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria
 - `entities` *(array)* — Filter to specific entity names (for export_frontend_spec)
@@ -317,6 +321,7 @@ Knowledge graph operations for codebase understanding. Operations: query (search
 - `data` *(object)* — JSON export data to import (for import)
 - `file_path` *(string)* — Path to JSON file to import (for import, alternative to data)
 - `mode` *(string)* — Import mode: merge (additive upsert) or replace (wipe and load). Default: merge
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
 
@@ -353,6 +358,8 @@ Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, c
 - `id` *(string)* — Counter-prior id (for counter_prior direct fetch — returns full body)
 - `code_shape` *(string)* — Description of code about to be written, or a code fragment — matched against triggers_code regexes with triggers_text fallback (for counter_prior)
 - `layer` *(string)* — Substrate layer filter for list_all (for counter_prior)
+- `summary_only` *(boolean)* — Return spec file metadata instead of full content (for get_spec). Default: false.
+- `include_sources` *(boolean)* — Include source provenance with the spec (for get_spec). Default: true.
 
 ---
 
@@ -572,6 +579,7 @@ Low-level narrative analysis (untrusted draft). Prefer domain(operation=extract)
 - `spec_text` *(string)* — The narrative spec text to analyze
 - `entities` *(array)* — Entity names (for identify_lifecycles, generate_questions)
 - `answers` *(object)* — Answers to generated questions (for refine_spec)
+- `active_capabilities` *(array)* — Capability ids the project has opted into; others are not surfaced proactively.
 
 ---
 
@@ -610,6 +618,8 @@ Story operations: get, composition, coverage, scope_fidelity. Use get with view=
 - `story_ids` *(array)* — Story IDs (for get: fetch full details; for composition: focus on these stories)
 - `view` *(string)* — View mode for get operation. 'wall' groups stories by implementation status (working/needs polish/not started)
 - `persona` *(string)* — Filter stories by persona/actor name (for get with view=wall)
+- `limit` *(integer)* — Max items per page (for coverage, scope_fidelity). Default: 50.
+- `offset` *(integer)* — Items to skip (for coverage, scope_fidelity). Default: 0.
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---

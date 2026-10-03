@@ -250,6 +250,53 @@ class TestTestFailuresHandler:
         assert "rbac_denied" not in data["by_failure_type"]
 
 
+class TestRunIdDrillDown:
+    """#1756 — `run_id` was declared ("Specific run ID to query test cases for")
+    and read by no handler, while every response printed a run_id for the agent
+    to drill into. Drilling in silently returned the latest-N analysis instead.
+    """
+
+    def _handler(self, graph, args):
+        with (
+            patch.object(_handler_module, "_get_graph", return_value=graph),
+            patch.object(_handler_module, "_project_name_from_root", return_value="test_project"),
+        ):
+            return json.loads(_failures_handler(Path("/tmp"), args))
+
+    def test_run_id_returns_that_runs_failures(self) -> None:
+        graph = _make_graph_with_data()
+        runs = graph.get_test_runs(project_name="test_project")
+        older = min(runs, key=lambda r: r["started_at"])
+
+        data = self._handler(graph, {"run_id": older["id"]})
+
+        assert data["run_id"] == older["id"]
+        assert data["count"] == 1
+        assert data["failures"][0]["failure_type"] == "timeout"
+        assert "by_failure_type" not in data, "a single run is not a cross-run summary"
+
+    def test_run_id_narrows_by_failure_type(self) -> None:
+        graph = _make_graph_with_data()
+        runs = graph.get_test_runs(project_name="test_project")
+        newer = max(runs, key=lambda r: r["started_at"])
+
+        data = self._handler(graph, {"run_id": newer["id"], "failure_type": "timeout"})
+
+        assert data["count"] == 1
+        assert data["failures"][0]["failure_type"] == "timeout"
+
+    def test_unknown_run_id_is_an_error_not_an_empty_result(self) -> None:
+        """A run with no failures and a run that does not exist must not look
+        the same."""
+        graph = _make_graph_with_data()
+
+        data = self._handler(graph, {"run_id": "no-such-run"})
+
+        assert "error" in data
+        assert "no-such-run" in data["error"]
+        assert "count" not in data
+
+
 class TestTestRegressionHandler:
     """Test the regression operation."""
 

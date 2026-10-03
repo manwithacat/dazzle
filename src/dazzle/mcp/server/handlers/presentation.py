@@ -138,7 +138,8 @@ def presentation_shapes_handler(_project_root: Path, args: dict[str, Any]) -> st
     """
     snap = shapes_snapshot()
     status_f = str(args.get("status") or "").strip().lower()
-    id_f = str(args.get("id") or args.get("hyperpart") or "").strip().lower()
+    # `id` is the declared key; the `hyperpart` alias is gone (#1756).
+    id_f = str(args.get("id") or "").strip().lower()
     table = _filter_shape_table(agent_shape_table(), status_f=status_f, id_f=id_f)
     shape_json, sc_rows = _shape_detail(id_f)
     missing = int(snap.get("scenario_missing") or 0)
