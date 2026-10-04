@@ -43,98 +43,12 @@ Evidence, not impression:
 
 ## Workstreams
 
-Each is independently shippable. W1–W6 are the amendments proposed in #1758;
-W7–W8 come out of the orientation investigation.
+Each is independently shippable, and each records what it changed, what proves
+it, and what it cost. W1–W6 are the amendments proposed in #1758; **W7–W9 came
+out of investigating the orientation surface** — W7 from mapping principle to
+gate, W9 from *using* the harness as documented rather than reading it.
 
-### W1 — Gate the harness's command surface, not just its prose
-`tests/unit/test_improve_harness_paths.py` checks paths named in **playbooks**.
-Nothing checks the `make` targets and scripts the driver *invokes*
-(`make preflight-surface`, `make test-ux-preflight`, `improve_policy.py`,
-`improve_example_probes.py`, `qa_smoke_bar.py`, `improve_github_inbox.py`,
-`improve_schedule_next.py`, `improve_compact.py`, `push_gate.py`). Those are the
-names that resolve to nothing when a file moves — the failure cycle 2411 hit.
-*Done when:* every command the driver's Steps 0b–0e name exists, is executable,
-and answers `--help` without error.
-
-### W2 — `future` beats a title heuristic
-In `improve_github_inbox.py`, a `future` label (or a `DD-*.md` with
-`status: PARKED`) must be **unconditionally** skip-implement; if a parked item is
-ever to be claimable, that requires an explicit label, not a sentence containing
-"error".
-*Done when:* no `future` issue can appear in `recommended[]` without an explicit
-override, and a test asserts it for a title that matches every bug keyword.
-
-### W3 — Separate "there is work" from "we have not looked"
-`qa_smoke_bar.py` prints `residual=N` for both *findings* and *stale measurement
-stamps*; in cycle 2411 all 9 were the staleness kind, and the counter selected
-the campaign named for gross bugs. Split the field (`residual=` / `stale=`), and
-add a policy rule: a mutation campaign may not be selected on a counter whose
-finding-type component has never been non-zero.
-*Done when:* the bar distinguishes the two, and `--pick` can report *why* it
-picked (finding vs re-stamp).
-
-### W4 — Require belief revision from a COGNITION cycle
-Add `Believed` / `Since revised` to the capability map's registry table, and make
-a COGNITION PASS state either the belief it revised or the measurement that
-falsified the prior one. "Re-tested, unchanged" is a legitimate outcome; "nothing
-to say" must not be.
-*Done when:* a COGNITION cycle with an empty belief line fails the gate.
-
-### W5 — A missing tool is a first-class outcome
-The forced smoke dig needs playwright, which lives in the `e2e` extra and is not
-installed by `make dev-install`; no playbook has a BLOCKED row for it. Add the
-row (with the remedy), and have Step 0b verify the *forced* campaign's toolchain
-before selection.
-*Done when:* a strategy whose toolchain is missing reports BLOCKED with the
-remedy rather than an unexplained non-zero exit.
-
-### W6 — A stated tool floor, and a portable chain
-Publish the **tool floor** the harness assumes (`gh`, `make`, `uv`, Postgres for
-runtime paths, a browser for visual paths, `scheduler_create` for the loop's
-continuity), extend the Capability Mapping table to cover *binaries* and an
-"any other agent" column with a stated degrade path, and give Step 6b a
-no-scheduler fallback that writes a machine-readable `chain_blocked` marker so
-`make reconcile` can see it.
-*Done when:* a documented floor exists, and "the chain is broken" is
-distinguishable from "the loop has nothing to do".
-
-### W7 — A principle → gate registry
-The repo's own standard (from #1749) is that *a claim nothing checks is a
-hope*. AGENTS.md states ~53 rules; some are enforced (mypy for type hints,
-`test_no_new_mutable_globals_1445` for ADR-0005, the dead-definition and clone
-ratchets, `test_docs_drift`), some are not obviously so. Publish
-`docs/harness/principle-gates.md`: claim → enforcing gate → what "failing" looks
-like, and a test that every **bold** rule in AGENTS.md's doctrine sections has a
-row.
-*Done when:* a new agent can answer "what stops me from doing X?" without reading
-source.
-
-### W8 — The orientation benchmark (the success metric)
-The programme is done when an **alternate agent** is measurably competent here.
-Concretely: a task card built from real repo work (e.g. one row of the #1748/#1749
-residue, or a bug from the burn-down), given to an agent with **no other
-context**, scored by an observer against harness-engagement assertions:
-
-| Assertion | How it is scored |
-|---|---|
-| ran the right gate before pushing | push-gate stamp + commit content |
-| left no shim / singleton / unclassified baseline row | the ratchets (they will fail on their own) |
-| consulted the counter-prior or decision record when the task touched one | the agent's report says which; observer checks the file exists |
-| did not invent work when the task was already covered | observer reads the diff for speculative scope |
-| reported the degradation when it lacked a capability | report text |
-
-The score is the programme's metric, and a *regression* in it outranks any
-product lane: an agent that cannot be swapped in is a single-agent repo that
-happens to have a `.claude` directory.
-*Done when:* two runs on two different host/model combinations, both passing.
-
-## Execution plan
-
-Per workstream: the change, what proves it, and what it costs. `W1` and `W7` are
-done and shipped; the rest are specified to the point where a session can pick
-one up cold.
-
-### W1 — Gate the harness's command surface ✅ shipped (`732ea38ef`)
+### W1 — Gate the harness's command surface  —  ✅ shipped (`732ea38ef`)
 
 **Change:** `tests/unit/test_harness_command_surface.py` — every file a `make`
 recipe names must exist; every `make` target and `scripts/*.py` the driver names
@@ -144,7 +58,7 @@ the way the driver invokes it.
 fails the static check; the original `test-ux-preflight` bug fails the smoke).
 **Cost:** one gate module (~150 lines), ~40 s of gate time.
 
-### W2 — `future` beats a title heuristic ✅ shipped (`e668ec866`)
+### W2 — `future` beats a title heuristic  —  ✅ shipped (`e668ec866`)
 
 **Change:** in `scripts/improve_github_inbox.py`, `future` (or a `DD-*.md` with
 `status: PARKED`) is skip-implement **unconditionally**. Claiming a parked item
@@ -159,7 +73,7 @@ now classify as `deferred_future`; one test asserts the title heuristic *still
 matches* #1757 and is *not obeyed*, so a future tightening of the regex cannot
 quietly re-open the hole.
 
-### W3 — Separate findings from staleness ✅ specified
+### W3 — Separate findings from staleness  —  ✅ shipped (`4c9f1a069`)
 
 **Change:** `qa_smoke_bar.py` prints `residual=` (findings: auto_seed, dead
 crawl) and `stale=` (stamp age) separately; `improve_policy.py` gains a rule that
@@ -170,7 +84,7 @@ select the bug campaign; with one auto_seed it must.
 **Cost:** ~60 lines + tests across the bar, the policy and the example_probes
 rollup. **Risk:** medium — three consumers read the current field.
 
-### W4 — Require belief revision from a COGNITION cycle ✅ specified
+### W4 — Require belief revision from a COGNITION cycle  —  ⬜ not started
 
 **Change:** capability-map registry gains `Believed` / `Since revised` columns;
 a COGNITION cycle's log entry must state one of `revised:` / `re-tested:` /
@@ -181,7 +95,61 @@ line fails.
 **Cost:** a gate plus a log-format rule. **Risk:** medium — it changes what every
 future cycle must write, so the wording has to be cheap or it will be skipped.
 
-### W9 — the documented surface must work from where the agent stands ✅ shipped
+### W5 — A missing tool is a first-class outcome  —  ✅ shipped (`616324613`)
+
+**Change:** `scripts/improve_toolchain.py` reports every capability with a
+remedy and gates on `--require`; Step 0b runs it before lane selection; **27
+strategies** that reach for a browser / database / live app / tracker declare the
+capability in `tests/unit/fixtures/toolchain_capabilities.json`, and
+`test_toolchain_probe.py` fails when a playbook adds a tool dependency without
+declaring it. Each gained a `BLOCKED` row naming the probe.
+**Proves itself:** the gate found `api_surface_audit`, `distill`,
+`dual_lock_expand`, `explore-subagent`, `semgrep_hygiene`,
+`hyperpart_presentation`, `trial_signal_action`, `visual_tier2_subagent` and
+`domain_lifecycle_priors` reaching for tools they had never declared — nine
+unrecorded dependencies, each of which could have selected into a dead end.
+**Cost:** one probe, one fixture, one gate, playbook rows.
+
+### W6 — Tool floor + portable chain  —  ✅ shipped (`296fba957`)
+
+**Change:** `docs/harness/tool-floor.md` publishes the floor (which binaries, what
+needs them, the remedy, and what to do without each) with `AGENTS.md` pointing at
+it; `improve_schedule_next.py --chain-armed 0` records that the host could not arm
+the loop's chain, and `make reconcile` reports it as `improve-chain`.
+
+**Why the chain marker is the load-bearing half:** `scheduler_create` is the only
+capability whose absence is invisible. Every other missing tool errors when used;
+this one produces *silence* — the cycle completes, logs a decision, and no cycle
+ever runs. That is what the 30-day park was, and it is why "the loop is broken"
+and "the loop has nothing to do" were the same state.
+
+**Proves itself:** four tests — the marker is written on both the armed and
+unarmed paths, and `reconcile` is quiet when armed and actionable when not. The
+first version omitted the key on the happy path, which the test caught.
+
+### W7 — Principle → gate registry  —  ✅ shipped (`1f54a79b0`)
+
+**Change:** `docs/harness/principle-gates.md`, **rendered** from
+`tests/unit/fixtures/principle_gates.json` by
+`tests/unit/test_principle_gate_registry.py` — so the human view and the gate
+cannot drift. Every doctrine rule in `AGENTS.md` has a row; every gate the
+registry names must exist; a row of kind `review` may not cite a gate.
+**Result:** **14 of 27** doctrine rules are mechanically enforced; 10 are
+review-only, 3 partial, 1 behavioural, 1 a CI check. The gate found two registry
+rows citing a non-gate module and one CI check named wrongly — i.e. it caught my
+own mistakes while being written.
+**Proves itself:** adding a rule to `AGENTS.md` without a row fails.
+
+### W8 — The orientation benchmark (the metric)  —  ⬜ not started
+
+**Change:** a task card built from real repo work (one residue row from
+#1748/#1749, or a bug from the burn-down), an **alternate agent** with no other
+context, and an observer scoring the five assertions in the table above.
+**Proves itself:** two runs on two host/model combinations, both passing.
+**Cost:** two agent sessions plus an observer. **Risk:** the finding will be that
+some assertion is unscorable — that is the point of writing it down first.
+
+### W9 — the documented surface must work from where the agent stands  —  ✅ shipped (`85ab3acf0`)
 
 Found by *using* the harness as documented rather than reading it. `AGENTS.md`'s
 Commands block tells an agent to run `uv run dazzle validate` and `uv run dazzle
@@ -202,88 +170,17 @@ programme checks that a *reference* resolves. This one runs the *command*. A
 reference can be correct while the command still cannot work from the agent's
 actual working directory — and no amount of reference-checking finds that.
 
-### W5 — A missing tool is a first-class outcome ✅ shipped (`616324613`)
-
-**Change:** `scripts/improve_toolchain.py` reports every capability with a
-remedy and gates on `--require`; Step 0b runs it before lane selection; **27
-strategies** that reach for a browser / database / live app / tracker declare the
-capability in `tests/unit/fixtures/toolchain_capabilities.json`, and
-`test_toolchain_probe.py` fails when a playbook adds a tool dependency without
-declaring it. Each gained a `BLOCKED` row naming the probe.
-**Proves itself:** the gate found `api_surface_audit`, `distill`,
-`dual_lock_expand`, `explore-subagent`, `semgrep_hygiene`,
-`hyperpart_presentation`, `trial_signal_action`, `visual_tier2_subagent` and
-`domain_lifecycle_priors` reaching for tools they had never declared — nine
-unrecorded dependencies, each of which could have selected into a dead end.
-**Cost:** one probe, one fixture, one gate, playbook rows.
-
-### W5 (superseded heading) ✅ specified
-
-**Change:** a `BLOCKED` row with the remedy in every probe-dependent strategy
-(`agent_qa_smoke`, `demo_fleet`, `journey_dogfood`, …): playwright lives in the
-`e2e` extra; Step 0b verifies the **forced** campaign's toolchain before
-selection, so a forced strategy cannot be selected into a dead end.
-**Proves itself:** with playwright absent, `agent_qa_smoke` reports BLOCKED +
-remedy instead of exiting non-zero with a bare message.
-**Cost:** playbook rows + one preflight probe. **Risk:** low.
-
-### W6 — Tool floor + portable chain ✅ shipped (`296fba957`)
-
-**Change:** `docs/harness/tool-floor.md` publishes the floor (which binaries, what
-needs them, the remedy, and what to do without each) with `AGENTS.md` pointing at
-it; `improve_schedule_next.py --chain-armed 0` records that the host could not arm
-the loop's chain, and `make reconcile` reports it as `improve-chain`.
-
-**Why the chain marker is the load-bearing half:** `scheduler_create` is the only
-capability whose absence is invisible. Every other missing tool errors when used;
-this one produces *silence* — the cycle completes, logs a decision, and no cycle
-ever runs. That is what the 30-day park was, and it is why "the loop is broken"
-and "the loop has nothing to do" were the same state.
-
-**Proves itself:** four tests — the marker is written on both the armed and
-unarmed paths, and `reconcile` is quiet when armed and actionable when not. The
-first version omitted the key on the happy path, which the test caught.
-
-### W6 (superseded) ✅ specified
-
-**Change:** publish the **tool floor** (`gh`, `make`, `uv`, Postgres for runtime
-paths, a browser for visual paths, `scheduler_create` for the loop's chain);
-extend the Capability Mapping table with a *binaries* column and an "any other
-agent" column whose cells state the degrade path; give Step 6b a no-scheduler
-fallback that writes `chain_blocked` so `make reconcile` can see it.
-**Proves itself:** an agent without `scheduler_create` completes a cycle and
-leaves a marker `make reconcile` reports.
-**Cost:** one table + one code path. **Risk:** low, and it is the most direct
-answer to "we can swap in an alternate agent".
-
-### W7 — Principle → gate registry ✅ shipped (`1f54a79b0`)
-
-**Change:** `docs/harness/principle-gates.md`, **rendered** from
-`tests/unit/fixtures/principle_gates.json` by
-`tests/unit/test_principle_gate_registry.py` — so the human view and the gate
-cannot drift. Every doctrine rule in `AGENTS.md` has a row; every gate the
-registry names must exist; a row of kind `review` may not cite a gate.
-**Result:** **14 of 27** doctrine rules are mechanically enforced; 10 are
-review-only, 3 partial, 1 behavioural, 1 a CI check. The gate found two registry
-rows citing a non-gate module and one CI check named wrongly — i.e. it caught my
-own mistakes while being written.
-**Proves itself:** adding a rule to `AGENTS.md` without a row fails.
-
-### W8 — The orientation benchmark (the metric) ⬜ not started
-
-**Change:** a task card built from real repo work (one residue row from
-#1748/#1749, or a bug from the burn-down), an **alternate agent** with no other
-context, and an observer scoring the five assertions in the table above.
-**Proves itself:** two runs on two host/model combinations, both passing.
-**Cost:** two agent sessions plus an observer. **Risk:** the finding will be that
-some assertion is unscorable — that is the point of writing it down first.
-
 ## Sequencing
 
-W1 and W7 first (they make the harness's own claims checkable), then W2/W3/W5
-(cheap, and each closes a defect the loop itself demonstrated), then W4 and W6
-(the two that need a design decision rather than a patch), then W8 — which needs
-the earlier ones to be worth measuring.
+Shipped: **W1, W7** (make the harness's own claims checkable) → **W2, W3, W5, W9**
+(cheap; each closed a defect the two live cycles demonstrated, and W9 came out of
+using the harness rather than reading it) → **W6** (the tool floor, which needed
+the chain marker to be observable).
+
+Remaining: **W4**, then **W8**. W8 is the metric, and it should run against a
+harness whose claims are checkable, whose parked-work guard holds, whose toolchain
+is declared and whose chain state is visible — everything above is instrumentation
+toward that one number.
 
 ## What this programme will not do
 
