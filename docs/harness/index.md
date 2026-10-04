@@ -13,6 +13,7 @@ the design). Executable truth for agents remains the runtime runbook:
 | **Swapping in an alternate agent** | [Agent-cognition programme](agent-cognition-programme.md) (tool floor, principle→gate registry, orientation benchmark) |
 | **Which rules can stop me** | [Principle → gate registry](principle-gates.md) (what is enforced vs review) |
 | **What this host can run** | [Tool floor](tool-floor.md) (capabilities, remedies, what to do without each) |
+| **Can an alternate agent be swapped in** | [Orientation benchmark](orientation-benchmark.md) (task cards, five scored assertions, runs) |
 | **Strategy map** (what each playbook is for) | [Strategy catalog](strategy-catalog.md) |
 | **Executing agent** | `.agents/skills/improve/SKILL.md` (not duplicated here) |
 | **Sibling commands** | [Autonomous Harness](../autonomous-harness.md) (fleet overview) |
