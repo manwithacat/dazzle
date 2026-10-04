@@ -202,7 +202,7 @@ programme checks that a *reference* resolves. This one runs the *command*. A
 reference can be correct while the command still cannot work from the agent's
 actual working directory — and no amount of reference-checking finds that.
 
-### W5 — A missing tool is a first-class outcome ✅ shipped (`e4600f4a1`)
+### W5 — A missing tool is a first-class outcome ✅ shipped (`616324613`)
 
 **Change:** `scripts/improve_toolchain.py` reports every capability with a
 remedy and gates on `--require`; Step 0b runs it before lane selection; **27
@@ -227,7 +227,7 @@ selection, so a forced strategy cannot be selected into a dead end.
 remedy instead of exiting non-zero with a bare message.
 **Cost:** playbook rows + one preflight probe. **Risk:** low.
 
-### W6 — Tool floor + portable chain ✅ shipped (`1c4d5a9a2f`)
+### W6 — Tool floor + portable chain ✅ shipped (`296fba957`)
 
 **Change:** `docs/harness/tool-floor.md` publishes the floor (which binaries, what
 needs them, the remedy, and what to do without each) with `AGENTS.md` pointing at
@@ -256,7 +256,7 @@ leaves a marker `make reconcile` reports.
 **Cost:** one table + one code path. **Risk:** low, and it is the most direct
 answer to "we can swap in an alternate agent".
 
-### W7 — Principle → gate registry ✅ shipped (`8c4d0f1c6`)
+### W7 — Principle → gate registry ✅ shipped (`1f54a79b0`)
 
 **Change:** `docs/harness/principle-gates.md`, **rendered** from
 `tests/unit/fixtures/principle_gates.json` by
