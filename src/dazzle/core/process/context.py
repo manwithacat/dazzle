@@ -13,10 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
+from dazzle.core.clock import utcnow
 
 
 class ProcessContext(BaseModel):
@@ -37,7 +34,7 @@ class ProcessContext(BaseModel):
         default_factory=dict, description="Outputs from each completed step"
     )
     current_step: str | None = Field(default=None, description="Currently executing step")
-    started_at: datetime = Field(default_factory=_utcnow)
+    started_at: datetime = Field(default_factory=utcnow)
     variables: dict[str, Any] = Field(default_factory=dict, description="User-defined variables")
 
     model_config = ConfigDict(frozen=False)

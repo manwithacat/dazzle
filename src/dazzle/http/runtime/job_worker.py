@@ -27,10 +27,10 @@ import asyncio
 import inspect
 import logging
 import time
-from datetime import UTC, datetime
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.clock import utcnow
 from dazzle.core.ir.jobs import JobBackoff
 from dazzle.http.runtime.job_handler import JobHandlerNotFound, resolve_handler
 from dazzle.http.runtime.job_queue import JobMessage, JobQueue
@@ -130,13 +130,13 @@ async def process_one(
             {
                 "status": "failed",
                 "error_message": f"No JobSpec named {message.job_name!r}",
-                "finished_at": _now(),
+                "finished_at": utcnow(),
             },
         )
         return WorkerOutcome.NO_SPEC
 
     started = time.monotonic()
-    started_at = _now()
+    started_at = utcnow()
     await _safe_update(
         job_service,
         message.job_run_id,
@@ -167,7 +167,7 @@ async def process_one(
             {
                 "status": "failed",
                 "error_message": str(exc),
-                "finished_at": _now(),
+                "finished_at": utcnow(),
                 "duration_ms": _ms_since(started),
             },
         )
@@ -187,7 +187,7 @@ async def process_one(
         message.job_run_id,
         {
             "status": "completed",
-            "finished_at": _now(),
+            "finished_at": utcnow(),
             "duration_ms": _ms_since(started),
         },
     )
@@ -230,7 +230,7 @@ async def _handle_failure(
             {
                 "status": "failed",
                 "error_message": f"{error_msg} (retrying)",
-                "finished_at": _now(),
+                "finished_at": utcnow(),
                 "duration_ms": duration_ms,
             },
         )
@@ -274,7 +274,7 @@ async def _handle_failure(
         {
             "status": final_status,
             "error_message": error_msg,
-            "finished_at": _now(),
+            "finished_at": utcnow(),
             "duration_ms": duration_ms,
         },
     )
@@ -294,10 +294,6 @@ async def _safe_update(job_service: Any, job_run_id: str, fields: dict[str, Any]
         await job_service.update(job_run_id, fields)
     except Exception:
         logger.warning("JobRun update failed for %s — continuing", job_run_id, exc_info=True)
-
-
-def _now() -> datetime:
-    return datetime.now(UTC)
 
 
 def _ms_since(started_monotonic: float) -> int:

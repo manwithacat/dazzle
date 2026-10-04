@@ -17,6 +17,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any  # conn is any DBAPI connection — the primitive imports no driver
 
+from dazzle.core.clock import utcnow
+
 
 def queue_columns_ddl(table: str) -> str:
     """Column set any queue table carries.
@@ -238,7 +240,7 @@ def fail_work(
                 f"UPDATE {table} SET status='pending', deliver_at=%(at)s, "
                 f"payload = payload || %(err)s WHERE {id_column} = %(row_id)s{worker_fence}",
                 {
-                    "at": retry_at or _now(),
+                    "at": retry_at or utcnow(),
                     "err": '{"last_error": ' + _json(error) + "}",
                     "row_id": row_id,
                     **worker_params,
@@ -247,13 +249,6 @@ def fail_work(
             outcome = "retry"
     conn.commit()
     return outcome
-
-
-def _now() -> datetime:
-    from datetime import UTC
-    from datetime import datetime as _dt
-
-    return _dt.now(UTC)
 
 
 def _json(s: str) -> str:

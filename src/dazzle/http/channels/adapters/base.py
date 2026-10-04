@@ -9,20 +9,17 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
+
+from dazzle.core.clock import utcnow
 
 if TYPE_CHECKING:
     from ..detection import DetectionResult
     from ..outbox import OutboxMessage
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
 
 
 class SendStatus(StrEnum):
@@ -52,7 +49,7 @@ class SendResult:
     provider_response: dict[str, Any] | None = None
     error: str | None = None
     latency_ms: float | None = None
-    timestamp: datetime = field(default_factory=_utcnow)
+    timestamp: datetime = field(default_factory=utcnow)
 
     @property
     def is_success(self) -> bool:

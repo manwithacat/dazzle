@@ -10,11 +10,12 @@ Storage locations:
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from dazzle.core.clock import utcnow
 from dazzle.testing.viewport import ComponentPattern, ViewportAssertion
 
 logger = logging.getLogger(__name__)
@@ -23,10 +24,6 @@ logger = logging.getLogger(__name__)
 DSL_SPECS_DIR = "dsl/tests"
 RUNTIME_SPECS_DIR = ".dazzle/viewport_specs"
 SPECS_FILE = "viewport_specs.json"
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class ViewportAssertionEntry(BaseModel):
@@ -51,8 +48,8 @@ class ViewportSpecsContainer(BaseModel):
     """Top-level container for persisting custom viewport specs."""
 
     version: str = "1.0"
-    created_at: datetime = Field(default_factory=_utcnow)
-    updated_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
     specs: list[ViewportSpecEntry] = Field(default_factory=list)
 
 
@@ -120,7 +117,7 @@ def save_custom_viewport_specs(
 
     container = ViewportSpecsContainer(
         specs=specs,
-        updated_at=_utcnow(),
+        updated_at=utcnow(),
     )
     path.write_text(container.model_dump_json(indent=2), encoding="utf-8")
     return path

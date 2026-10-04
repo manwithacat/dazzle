@@ -15,12 +15,9 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.clock import utcnow
+
 logger = logging.getLogger(__name__)
-
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
 
 
 if TYPE_CHECKING:
@@ -109,8 +106,8 @@ class Connection:
     user_id: str | None = None
     user_name: str | None = None
     subscriptions: set[str] = field(default_factory=set)
-    connected_at: datetime = field(default_factory=_utcnow)
-    last_heartbeat: datetime = field(default_factory=_utcnow)
+    connected_at: datetime = field(default_factory=utcnow)
+    last_heartbeat: datetime = field(default_factory=utcnow)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def update_heartbeat(self) -> None:

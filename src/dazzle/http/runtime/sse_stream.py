@@ -25,12 +25,9 @@ from uuid import uuid4
 from fastapi import APIRouter, Header, Query, Request
 from fastapi.responses import StreamingResponse
 
+from dazzle.core.clock import utcnow
+
 logger = logging.getLogger(__name__)
-
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
 
 
 class StreamType(StrEnum):
@@ -80,7 +77,7 @@ class StreamSubscription:
     tenant_id: str | None = None  # For tenant-scoped streams
     entity_filter: str | None = None  # Filter by entity name
     last_event_id: str | None = None  # For reconnection
-    created_at: datetime = field(default_factory=_utcnow)
+    created_at: datetime = field(default_factory=utcnow)
 
 
 class SSEStreamManager:

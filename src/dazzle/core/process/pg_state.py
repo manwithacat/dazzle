@@ -23,12 +23,13 @@ Design choices
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 import psycopg
 from psycopg.types.json import Jsonb
 
+from dazzle.core.clock import utcnow
 from dazzle.core.coordination.claim import (
     claim_due_work,
     complete_work,
@@ -57,10 +58,6 @@ _ACTIVE_STATUSES = {
 }
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 def _serialize_step(step: Any) -> dict[str, Any]:
@@ -128,8 +125,8 @@ def _row_to_run(row: dict[str, Any]) -> ProcessRun:
         outputs=row.get("outputs"),
         error=row.get("error"),
         idempotency_key=row.get("idempotency_key"),
-        started_at=_dt(row["started_at"]) or _utcnow(),
-        updated_at=_dt(row["updated_at"]) or _utcnow(),
+        started_at=_dt(row["started_at"]) or utcnow(),
+        updated_at=_dt(row["updated_at"]) or utcnow(),
         completed_at=_dt(row.get("completed_at")),
     )
 
@@ -159,10 +156,10 @@ def _row_to_task(row: dict[str, Any]) -> ProcessTask:
         status=TaskStatus(status_val),
         outcome=row.get("outcome"),
         outcome_data=row.get("outcome_data"),
-        due_at=_dt(row["due_at"]) or _utcnow(),
+        due_at=_dt(row["due_at"]) or utcnow(),
         escalated_at=_dt(row.get("escalated_at")),
         completed_at=_dt(row.get("completed_at")),
-        created_at=_dt(row.get("created_at")) or _utcnow(),
+        created_at=_dt(row.get("created_at")) or utcnow(),
     )
 
 

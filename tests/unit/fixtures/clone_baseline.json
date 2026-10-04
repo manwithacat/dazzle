@@ -727,23 +727,6 @@
     ]
   },
   {
-    "signature": "exact:69c86bea332ce719c5b3f7ebc1fc15d1",
-    "count": 11,
-    "names": [
-      "dazzle/core/process/adapter.py::_utcnow",
-      "dazzle/core/process/context.py::_utcnow",
-      "dazzle/core/process/pg_state.py::_utcnow",
-      "dazzle/http/channels/adapters/base.py::_utcnow",
-      "dazzle/http/events/envelope.py::_utc_now",
-      "dazzle/http/runtime/job_worker.py::_now",
-      "dazzle/http/runtime/presence_tracker.py::_utcnow",
-      "dazzle/http/runtime/sse_stream.py::_utcnow",
-      "dazzle/http/runtime/websocket_manager.py::_utcnow",
-      "dazzle/testing/feedback.py::_utcnow",
-      "dazzle/testing/viewport_specs.py::_utcnow"
-    ]
-  },
-  {
     "signature": "a863d356cb5196d7158b806cf0e8ce22",
     "count": 2,
     "names": [

@@ -3075,7 +3075,7 @@ ir_class: TestDesignSpec
     - test_id: str
     - title: str
   optional:
-    - created_at: datetime = <factory:_utcnow>
+    - created_at: datetime = <factory:utcnow>
     - description: str | None = None
     - entities: list[str] = []
     - expected_outcomes: list[str] = []
@@ -3089,7 +3089,7 @@ ir_class: TestDesignSpec
     - surfaces: list[str] = []
     - tags: list[str] = []
     - trigger: TestDesignTrigger = <TestDesignTrigger.USER_CLICK: 'user_click'>
-    - updated_at: datetime = <factory:_utcnow>
+    - updated_at: datetime = <factory:utcnow>
 
 ir_class: TestDesignStep
   required:

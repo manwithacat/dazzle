@@ -10,11 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
-
+from dazzle.core.clock import utcnow
 
 if TYPE_CHECKING:
     from dazzle.http.runtime.websocket_manager import (
@@ -35,8 +31,8 @@ class PresenceEntry:
     user_name: str | None
     resource: str
     connection_id: str
-    joined_at: datetime = field(default_factory=_utcnow)
-    last_seen: datetime = field(default_factory=_utcnow)
+    joined_at: datetime = field(default_factory=utcnow)
+    last_seen: datetime = field(default_factory=utcnow)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

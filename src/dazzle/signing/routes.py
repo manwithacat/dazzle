@@ -33,7 +33,6 @@ import logging
 import re
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -42,6 +41,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
+from dazzle.core.clock import utcnow
 from dazzle.core.ir import EntitySpec
 from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
@@ -339,7 +339,7 @@ async def _handle_get(
                 record_id,
                 {
                     "status": "viewed",
-                    "viewed_at": _utcnow(),
+                    "viewed_at": utcnow(),
                     "signer_ip": _client_ip(request),
                     "signer_user_agent": request.headers.get("user-agent", "")[:500],
                 },
@@ -445,7 +445,7 @@ async def _handle_post(
 
         patch: dict[str, Any] = {
             "status": "signed",
-            "signed_at": _utcnow(),
+            "signed_at": utcnow(),
             "signing_token_hash": token_hash(body.token),
             "signer_ip": _client_ip(request),
             "signer_user_agent": request.headers.get("user-agent", "")[:500],
@@ -755,12 +755,6 @@ def _row_get(row: Any, key: str) -> Any:
     if isinstance(row, dict):
         return row.get(key)
     return getattr(row, key, None)
-
-
-def _utcnow() -> datetime:
-    from datetime import UTC
-
-    return datetime.now(UTC)
 
 
 def _client_ip(request: Request) -> str:

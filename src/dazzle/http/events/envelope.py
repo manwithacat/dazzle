@@ -17,14 +17,11 @@ from __future__ import annotations  # required: EventEnvelope forward self-refer
 
 import json
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-
-def _utc_now() -> datetime:
-    """Get current UTC timestamp."""
-    return datetime.now(UTC)
+from dazzle.core.clock import utcnow
 
 
 @dataclass
@@ -62,7 +59,7 @@ class EventEnvelope:
     key: str = ""
     payload: dict[str, Any] = field(default_factory=dict)
     headers: dict[str, str] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=_utc_now)
+    timestamp: datetime = field(default_factory=utcnow)
     producer: str = "dazzle"
     deliver_at: datetime | None = None  # Delayed delivery: hold until this time
 
@@ -179,7 +176,7 @@ class EventEnvelope:
             causation_id=causation_id,
             headers=headers or {},
             producer=producer,
-            timestamp=_utc_now(),
+            timestamp=utcnow(),
         )
 
     @classmethod
@@ -203,7 +200,7 @@ class EventEnvelope:
             correlation_id=correlation_id,
             headers=headers or {},
             producer=producer,
-            timestamp=_utc_now(),
+            timestamp=utcnow(),
             deliver_at=deliver_at,
         )
 

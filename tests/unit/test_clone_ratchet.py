@@ -294,3 +294,54 @@ def test_every_exact_cluster_in_the_baseline_is_still_present() -> None:
     known = {e["signature"] for e in baseline if e["signature"].startswith(EXACT_PREFIX)}
     missing = known - set(current)
     assert not missing, f"exact clusters vanished from the tree: {sorted(missing)}"
+
+
+# --- family classification (mirrors the dead-definition gate) ----------------
+# A clone baseline that nobody has read is not a ratchet, it is a backlog nobody
+# owns. Every exact-body cluster must carry a family, and the families are
+# explained — with a retire-when condition — in `docs/reference/clone-residue.md`.
+
+
+CLONE_FAMILIES_PATH = Path(__file__).parent / "fixtures" / "clone_families.json"
+
+
+def test_every_exact_cluster_is_classified() -> None:
+    """A new duplicate cannot join the baseline silently: it has no family, and
+    this fails."""
+    data = json.loads(Path(__file__).parent.joinpath("fixtures", "clone_baseline.json").read_text())
+    exact = {e["signature"] for e in data if str(e.get("signature", "")).startswith("exact:")}
+    families = json.loads(CLONE_FAMILIES_PATH.read_text(encoding="utf-8"))
+
+    missing = sorted(exact - set(families))
+    assert not missing, (
+        f"{len(missing)} exact-body clone cluster(s) have no family classification: "
+        f"{missing[:5]} — classify each in {CLONE_FAMILIES_PATH.name} or extract it"
+    )
+    stale = sorted(set(families) - exact)
+    assert not stale, (
+        f"{len(stale)} classified cluster(s) are no longer in the baseline: {stale[:5]} — "
+        "the duplication was fixed; drop the classification"
+    )
+
+
+def test_the_clock_has_exactly_one_implementation() -> None:
+    """#1749 — the family this pass actually fixed.
+
+    Fifteen modules defined their own `datetime.now(UTC)` helper under four
+    different names (`_utcnow`, `_utc_now`, `_now`, and one already named
+    `utcnow`). A helper whose entire body is "now" does not need to exist per
+    module: a test that freezes time patched one name, not fifteen.
+    """
+    import re
+    from pathlib import Path as _Path
+
+    src = _Path(__file__).resolve().parents[2] / "src"
+    definitions = [
+        str(path.relative_to(src))
+        for path in src.rglob("*.py")
+        if re.search(r"^def (?:_?utc_?now|_now)\(\)", path.read_text(errors="replace"), re.M)
+    ]
+    assert definitions == ["dazzle/core/clock.py"], (
+        f"the clock is defined in {len(definitions)} module(s): {definitions} — "
+        "use dazzle.core.clock.utcnow"
+    )

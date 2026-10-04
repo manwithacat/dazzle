@@ -9,16 +9,13 @@ Test designs are persona-centric and outcome-focused, describing WHAT
 should be tested rather than HOW (implementation details).
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
-def _utcnow() -> datetime:
-    """Return current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
+from dazzle.core.clock import utcnow
 
 
 class TestDesignTrigger(StrEnum):
@@ -146,8 +143,8 @@ class TestDesignSpec(BaseModel):
     # Quality tracking
     notes: str | None = None
     prompt_version: str = "v1"
-    created_at: datetime = Field(default_factory=_utcnow)
-    updated_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
     model_config = ConfigDict(frozen=False)  # Mutable for status updates
 
