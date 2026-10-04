@@ -166,16 +166,24 @@ test-fast:
 # for ~40 cycles before cycle 311 surfaced 9 red tests in the full suite, AND
 # the hypothesized 4th class (type-error drift in dazzle_page/) that cycle 313 flagged.
 test-ux-preflight:
-	@# 5 of 9 prior preflight tests removed during the Jinja retirement
+	@# 6 of 10 prior preflight tests removed during the Jinja retirement
 	@# (Phase 4 deletion sweep, v0.67.X): test_template_orphan_scan,
 	@# test_page_route_coverage, test_daisyui_python_lint, test_dom_snapshots,
 	@# test_card_safety_invariants. Their drift classes are covered by
 	@# the typed-runtime gate (test_typed_runtime_no_jinja) which is now
-	@# the structural anchor for UI changes. The 4 remaining tests still
-	@# guard meaningful invariants (canonical-pointer linkage, template
-	@# None-safety, external-resource SRI, IR↔field-reader parity).
+	@# the structural anchor for UI changes.
+	@#
+	@# The 6th removal is test_template_none_safety (#1720, PR #1743): its
+	@# whole class was @pytest.mark.skip'd AND it asserted that Jinja-era
+	@# filters were still live, so it guarded a substrate ADR-0023 retired.
+	@# It stayed in this list after the file was deleted, which made
+	@# `make test-ux-preflight` exit 4 ("file not found") — i.e. the improve
+	@# loop's MANDATORY Step 0b could not run. Nothing noticed for the ~30
+	@# cycles the loop was parked, because this target is only invoked by the
+	@# loop. The 4 remaining tests still guard meaningful invariants
+	@# (canonical-pointer linkage, external-resource SRI, IR↔field-reader
+	@# parity, typed-runtime no-jinja).
 	$(UV) run pytest tests/unit/test_canonical_pointer_lint.py \
-	       tests/unit/test_template_none_safety.py \
 	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
