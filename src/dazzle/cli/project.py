@@ -454,8 +454,28 @@ def _job_handler_errors(appspec: object, root: Path) -> list[str]:
     return errors
 
 
+def _resolve_manifest(manifest: str, project: object) -> Path:
+    """Resolve the manifest path from either a CLI call or a direct call.
+
+    Tests and internal callers invoke `validate_command(...)` /
+    `lint_command(...)` in-process, where typer's default is still an
+    `OptionInfo` rather than `None`. Treating "not a Path" as "no project given"
+    keeps both call shapes working — a `Path | None` option is not `None` when
+    the function is called directly.
+    """
+    if isinstance(project, Path):
+        return (project / "dazzle.toml").resolve()
+    return Path(manifest).resolve()
+
+
 def validate_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m", help="Path to dazzle.toml"),
+    project: Path | None = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Project root containing dazzle.toml (default: cwd)",
+    ),
     format: str = typer.Option(
         "human", "--format", "-f", help="Output format: 'human' or 'vscode'"
     ),
@@ -463,9 +483,12 @@ def validate_command(
     """
     Parse all DSL modules, resolve dependencies, and validate the merged AppSpec.
 
-    Operates in CURRENT directory (must contain dazzle.toml).
+    Works from the current directory (which must contain dazzle.toml), or point
+    at a project with ``-p``/``--project`` — which is what an agent working in the
+    framework repo needs, since the repo root is not a Dazzle project (#1759:
+    the documented command could not be copied without first guessing a cd).
     """
-    manifest_path = Path(manifest).resolve()
+    manifest_path = _resolve_manifest(manifest, project)
     root = manifest_path.parent
 
     try:
@@ -536,6 +559,12 @@ def validate_command(
 
 def lint_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    project: Path | None = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Project root containing dazzle.toml (default: cwd)",
+    ),
     format: str = typer.Option("human", "--format", "-f", help="Output format"),
     anti_turing: bool = typer.Option(
         False, "--anti-turing", help="Check for Anti-Turing compliance"
@@ -553,8 +582,11 @@ def lint_command(
     - Programming patterns (=>, ternary operators, etc.)
 
     Use --strict with --anti-turing to fail CI on any violation.
+
+    Works from the current directory, or point at a project with
+    ``-p``/``--project`` (see `validate`).
     """
-    manifest_path = Path(manifest).resolve()
+    manifest_path = _resolve_manifest(manifest, project)
     root = manifest_path.parent
 
     try:

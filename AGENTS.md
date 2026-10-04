@@ -121,12 +121,13 @@ CI syncs with `--frozen` and fails on lock drift. A uv `.venv` has no `pip`; use
 # Run app (against your own Postgres + Redis via DATABASE_URL / REDIS_URL)
 uv run dazzle serve
 
-# Validate
-uv run dazzle validate        # Parse and validate DSL
-uv run dazzle lint            # Extended checks
+# Validate / lint DSL. From a project root, or point at one — the framework repo
+# root is NOT a Dazzle project, so an agent working here needs -p.
+uv run dazzle validate -p examples/simple_task   # Parse and validate DSL
+uv run dazzle lint -p examples/simple_task       # Extended checks
 
 # Test
-make test-fast                # or: uv run pytest tests/ -m "not e2e"
+make test-fast                # pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
 uv run pytest tests/ -m e2e
 
 # Lint

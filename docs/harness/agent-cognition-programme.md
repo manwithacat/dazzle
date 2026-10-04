@@ -181,6 +181,27 @@ line fails.
 **Cost:** a gate plus a log-format rule. **Risk:** medium — it changes what every
 future cycle must write, so the wording has to be cheap or it will be skipped.
 
+### W9 — the documented surface must work from where the agent stands ✅ shipped
+
+Found by *using* the harness as documented rather than reading it. `AGENTS.md`'s
+Commands block tells an agent to run `uv run dazzle validate` and `uv run dazzle
+lint`; both "operate in CURRENT directory (must contain dazzle.toml)", and the
+framework repo root has no `dazzle.toml`. A swapped-in agent's first DSL action
+returned `Error: No dazzle.toml found at /Volumes/SSD/Dazzle/dazzle.toml` and it
+had to guess a `cd`. Neither `-p` nor `--project` existed on either command,
+while `dazzle db` and `dazzle demo quality` already used the convention.
+
+**Change:** both commands take `-p/--project`; the doc uses it; and
+`tests/unit/test_documented_commands.py` (gate) parses the Commands block,
+requires the `-p` form, and runs both commands from the repo root *and* from
+inside a project so the cwd-relative shape other scripts depend on cannot
+regress. The `make test-fast` gloss now matches the target.
+
+**The lesson worth more than the fix:** every other harness gate I added this
+programme checks that a *reference* resolves. This one runs the *command*. A
+reference can be correct while the command still cannot work from the agent's
+actual working directory — and no amount of reference-checking finds that.
+
 ### W5 — A missing tool is a first-class outcome ✅ specified
 
 **Change:** a `BLOCKED` row with the remedy in every probe-dependent strategy
