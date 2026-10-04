@@ -128,6 +128,98 @@ product lane: an agent that cannot be swapped in is a single-agent repo that
 happens to have a `.claude` directory.
 *Done when:* two runs on two different host/model combinations, both passing.
 
+## Execution plan
+
+Per workstream: the change, what proves it, and what it costs. `W1` and `W7` are
+done and shipped; the rest are specified to the point where a session can pick
+one up cold.
+
+### W1 — Gate the harness's command surface ✅ shipped (`732ea38ef`)
+
+**Change:** `tests/unit/test_harness_command_surface.py` — every file a `make`
+recipe names must exist; every `make` target and `scripts/*.py` the driver names
+in a fenced block must resolve; the player's own mandatory preflight is invoked
+the way the driver invokes it.
+**Proves itself:** both directions were falsified (a dangling recipe reference
+fails the static check; the original `test-ux-preflight` bug fails the smoke).
+**Cost:** one gate module (~150 lines), ~40 s of gate time.
+
+### W2 — `future` beats a title heuristic ✅ specified
+
+**Change:** in `scripts/improve_github_inbox.py`, `future` (or a `DD-*.md` with
+`status: PARKED`) is skip-implement **unconditionally**. Claiming a parked item
+requires an explicit label, never a title that happens to contain "error".
+**Proves itself:** a test with #1757's exact title and a `future` label must not
+appear in `recommended[]`; add `has_dd_status()` so a `FORCED` DD is the only
+door.
+**Cost:** ~30 lines + a test. **Risk:** low.
+
+### W3 — Separate findings from staleness ✅ specified
+
+**Change:** `qa_smoke_bar.py` prints `residual=` (findings: auto_seed, dead
+crawl) and `stale=` (stamp age) separately; `improve_policy.py` gains a rule that
+a mutation campaign may not be selected on a counter whose *finding* component
+has never been non-zero, and `--pick` reports **why** (finding vs re-stamp).
+**Proves itself:** with nine stale stamps and zero findings, `--pick` must not
+select the bug campaign; with one auto_seed it must.
+**Cost:** ~60 lines + tests across the bar, the policy and the example_probes
+rollup. **Risk:** medium — three consumers read the current field.
+
+### W4 — Require belief revision from a COGNITION cycle ✅ specified
+
+**Change:** capability-map registry gains `Believed` / `Since revised` columns;
+a COGNITION cycle's log entry must state one of `revised:` / `re-tested:` /
+`falsified:`; a gate checks the map has no COGNITION row whose `Since revised` is
+empty while its owning lane is `USED`.
+**Proves itself:** a cycle that stamps a COGNITION row `USED` without a belief
+line fails.
+**Cost:** a gate plus a log-format rule. **Risk:** medium — it changes what every
+future cycle must write, so the wording has to be cheap or it will be skipped.
+
+### W5 — A missing tool is a first-class outcome ✅ specified
+
+**Change:** a `BLOCKED` row with the remedy in every probe-dependent strategy
+(`agent_qa_smoke`, `demo_fleet`, `journey_dogfood`, …): playwright lives in the
+`e2e` extra; Step 0b verifies the **forced** campaign's toolchain before
+selection, so a forced strategy cannot be selected into a dead end.
+**Proves itself:** with playwright absent, `agent_qa_smoke` reports BLOCKED +
+remedy instead of exiting non-zero with a bare message.
+**Cost:** playbook rows + one preflight probe. **Risk:** low.
+
+### W6 — Tool floor + portable chain ✅ specified
+
+**Change:** publish the **tool floor** (`gh`, `make`, `uv`, Postgres for runtime
+paths, a browser for visual paths, `scheduler_create` for the loop's chain);
+extend the Capability Mapping table with a *binaries* column and an "any other
+agent" column whose cells state the degrade path; give Step 6b a no-scheduler
+fallback that writes `chain_blocked` so `make reconcile` can see it.
+**Proves itself:** an agent without `scheduler_create` completes a cycle and
+leaves a marker `make reconcile` reports.
+**Cost:** one table + one code path. **Risk:** low, and it is the most direct
+answer to "we can swap in an alternate agent".
+
+### W7 — Principle → gate registry ✅ shipped (`8c4d0f1c6`)
+
+**Change:** `docs/harness/principle-gates.md`, **rendered** from
+`tests/unit/fixtures/principle_gates.json` by
+`tests/unit/test_principle_gate_registry.py` — so the human view and the gate
+cannot drift. Every doctrine rule in `AGENTS.md` has a row; every gate the
+registry names must exist; a row of kind `review` may not cite a gate.
+**Result:** **14 of 27** doctrine rules are mechanically enforced; 10 are
+review-only, 3 partial, 1 behavioural, 1 a CI check. The gate found two registry
+rows citing a non-gate module and one CI check named wrongly — i.e. it caught my
+own mistakes while being written.
+**Proves itself:** adding a rule to `AGENTS.md` without a row fails.
+
+### W8 — The orientation benchmark (the metric) ⬜ not started
+
+**Change:** a task card built from real repo work (one residue row from
+#1748/#1749, or a bug from the burn-down), an **alternate agent** with no other
+context, and an observer scoring the five assertions in the table above.
+**Proves itself:** two runs on two host/model combinations, both passing.
+**Cost:** two agent sessions plus an observer. **Risk:** the finding will be that
+some assertion is unscorable — that is the point of writing it down first.
+
 ## Sequencing
 
 W1 and W7 first (they make the harness's own claims checkable), then W2/W3/W5
