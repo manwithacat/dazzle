@@ -144,7 +144,7 @@ the way the driver invokes it.
 fails the static check; the original `test-ux-preflight` bug fails the smoke).
 **Cost:** one gate module (~150 lines), ~40 s of gate time.
 
-### W2 — `future` beats a title heuristic ✅ specified
+### W2 — `future` beats a title heuristic ✅ shipped (`e668ec866`)
 
 **Change:** in `scripts/improve_github_inbox.py`, `future` (or a `DD-*.md` with
 `status: PARKED`) is skip-implement **unconditionally**. Claiming a parked item
@@ -153,6 +153,11 @@ requires an explicit label, never a title that happens to contain "error".
 appear in `recommended[]`; add `has_dd_status()` so a `FORCED` DD is the only
 door.
 **Cost:** ~30 lines + a test. **Risk:** low.
+**Shipped as:** `is_implementable()` reads the issue's linked DD for
+`status: FORCED`, or an explicit `implementable` label. All five `future` issues
+now classify as `deferred_future`; one test asserts the title heuristic *still
+matches* #1757 and is *not obeyed*, so a future tightening of the regex cannot
+quietly re-open the hole.
 
 ### W3 — Separate findings from staleness ✅ specified
 
