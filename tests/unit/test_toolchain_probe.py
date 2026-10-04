@@ -144,3 +144,114 @@ def test_strategies_with_tool_requirements_state_a_blocked_outcome() -> None:
             "row in its FIX bar — a missing tool must be a first-class outcome, "
             "not an improvised dead end (#1758 F5)"
         )
+
+
+# --- the chain marker (#1759 W6) ---------------------------------------------
+# `scheduler_create` is the only capability whose absence is invisible: every
+# other missing tool errors when used, and this one produces silence — the cycle
+# completes, logs a scheduling decision, and no further cycle ever runs. That is
+# indistinguishable from a loop with nothing to do, which is how this loop sat
+# parked for 30 days.
+
+
+def test_schedule_records_whether_the_chain_was_armed(tmp_path: Path) -> None:
+    """`--chain-armed 0` must leave a machine-readable marker, because the
+    agent that could not arm the chain is exactly the agent nobody is watching."""
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "sched", REPO / "scripts" / "improve_schedule_next.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["sched"] = mod
+    spec.loader.exec_module(mod)
+    monkey_state = tmp_path / "improve-schedule-state.json"
+    monkey_state.write_text("{}", encoding="utf-8")
+    mod.STATE = monkey_state
+
+    import io
+    from contextlib import redirect_stdout
+
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        assert mod.main(["--result", "PASS", "--ci", "green", "--chain-armed", "0"]) == 0
+
+    state = json.loads(monkey_state.read_text(encoding="utf-8"))
+    if state["action"] == "schedule":
+        assert state["chain_armed"] is False
+        assert "scheduler_create" in state["chain_blocked_reason"]
+
+    # And the armed case is the default, so a host that did arm it is not
+    # reported as broken.
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        mod.main(["--result", "PASS", "--ci", "green"])
+    armed = json.loads(monkey_state.read_text(encoding="utf-8"))
+    if armed["action"] == "schedule":
+        assert armed["chain_armed"] is True
+        assert armed["chain_blocked_reason"] is None
+
+
+def test_reconcile_reports_an_unarmed_chain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "reconcile", REPO / "scripts" / "repo_reconcile.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["reconcile"] = mod
+    spec.loader.exec_module(mod)
+
+    state = tmp_path / "state.json"
+    state.write_text(
+        json.dumps(
+            {
+                "action": "schedule",
+                "interval": "15m",
+                "chain_armed": False,
+                "chain_blocked_reason": "host provides no scheduler_create",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "SCHEDULE_STATE", state)
+
+    report = mod.Report()
+    mod.check_chain(report)
+
+    chain = [f for f in report.findings if f.kind == "improve-chain"]
+    assert chain and chain[0].severity == "action", report.findings
+    assert "never armed" in chain[0].detail
+
+
+def test_reconcile_is_quiet_when_the_chain_is_armed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "reconcile", REPO / "scripts" / "repo_reconcile.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["reconcile"] = mod
+    spec.loader.exec_module(mod)
+
+    state = tmp_path / "state.json"
+    state.write_text(
+        json.dumps({"action": "schedule", "interval": "15m", "chain_armed": True}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "SCHEDULE_STATE", state)
+
+    report = mod.Report()
+    mod.check_chain(report)
+
+    assert report.findings == []

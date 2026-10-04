@@ -510,6 +510,12 @@ the degradation in your report.
 | model-tiering | mechanical work → cheapest tier; judgment work → session tier | host model selection | single model — n/a | per-subagent model field |
 | commit-trailer | `Co-Authored-By` for the acting harness only; human stays Author | `Co-Authored-By: Claude <noreply@anthropic.com>` | (none standard) | `Co-Authored-By: Grok Build <grok@x.ai>` |
 
+**Binaries are a separate floor.** That table maps harness *features*; the harness
+also *runs* things — `uv`, `git`, `gh` (authenticated), `make`, and for live paths
+`postgres` + `playwright` + a served app. A host can satisfy every row above and
+still be unable to run a cycle. Floor, remedies and the degrade rules:
+`docs/harness/tool-floor.md`; probe: `uv run python scripts/improve_toolchain.py --status`.
+
 Model policy: mechanical work (lint, fixed-signature scrapes, format churn) runs on the
 cheapest available tier; judgment work (root-cause, design, review) runs at the session
 tier. Never pin judgment work below the session tier — pins freeze quality as models

@@ -587,6 +587,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip writing .dazzle/improve-schedule-state.json",
     )
+    ap.add_argument(
+        "--chain-armed",
+        type=int,
+        choices=(0, 1),
+        default=1,
+        help=(
+            "1 (default): the host's scheduler_create was called, so the chain is live. "
+            "0: it could not be — records chain_blocked for `make reconcile` (#1759 W6)."
+        ),
+    )
     args = ap.parse_args(argv)
 
     backlog_text = BACKLOG.read_text(encoding="utf-8") if BACKLOG.exists() else ""
@@ -635,6 +645,23 @@ def main(argv: list[str] | None = None) -> int:
         }
     else:
         decision["scheduler_create"] = None
+
+    # W6 — a portable chain. Step 6b can only be performed by a host that
+    # provides `scheduler_create`; where it is absent, the cycle ended in
+    # `STOP reason=no host scheduler_create` and nothing outside the cycle could
+    # see it — a stopped loop and a loop with nothing to do were the same state,
+    # which is how this one sat parked for 30 days. `--chain-armed 0` (the agent
+    # sets it when it could not arm the chain) records a machine-readable marker
+    # that `make reconcile` reports.
+    decision["chain_armed"] = bool(args.chain_armed) if decision["action"] == "schedule" else None
+    # Always present, so a consumer never has to guard the key: null means the
+    # chain is not the reason to worry.
+    decision["chain_blocked_reason"] = (
+        "host provides no scheduler_create; arm the chain manually or run cycles "
+        "by hand. See docs/harness/tool-floor.md."
+        if decision["chain_armed"] is False
+        else None
+    )
 
     if not args.no_write_state:
         STATE.parent.mkdir(parents=True, exist_ok=True)

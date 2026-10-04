@@ -263,6 +263,34 @@ def check_loop_state(report: Report) -> None:
         )
 
 
+def check_chain(report: Report) -> None:
+    """Is the improve loop's *chain* armed, and has it stopped?
+
+    The loop's continuity is `scheduler_create`, a host tool. Where it is absent
+    the cycle ends in `STOP reason=no host scheduler_create` and nothing outside
+    the cycle can see it — a stopped loop and a loop with nothing to do are the
+    same state, which is how this one sat parked for 30 days while the loop's own
+    courtesy work went with it (#1759 W6).
+    """
+    if not SCHEDULE_STATE.is_file():
+        report.add("improve-chain", "no schedule state — has a cycle ever run?", "notice")
+        return
+    try:
+        state = json.loads(SCHEDULE_STATE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        report.add("improve-chain", f"schedule state unreadable: {exc}", "notice")
+        return
+    report.facts["chain_armed"] = state.get("chain_armed")
+    if state.get("action") == "schedule" and state.get("chain_armed") is False:
+        report.add(
+            "improve-chain",
+            "the loop decided to schedule but the chain was never armed "
+            f"({state.get('chain_blocked_reason', 'no reason recorded')}) — "
+            "the next cycle will not run unless a human or a host scheduler fires it",
+            "action",
+        )
+
+
 def check_harness(report: Report) -> None:
     """The harness-path gate, restated as a fact for the summary."""
     proc = subprocess.run(
@@ -306,6 +334,7 @@ def _slug() -> str:
 def build_report(*, skip_github: bool = False, skip_harness: bool = False) -> Report:
     report = Report()
     check_loop_state(report)
+    check_chain(report)
     if not skip_github:
         check_stale_issues(report)
         check_pull_requests(report)

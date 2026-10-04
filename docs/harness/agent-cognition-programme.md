@@ -227,7 +227,24 @@ selection, so a forced strategy cannot be selected into a dead end.
 remedy instead of exiting non-zero with a bare message.
 **Cost:** playbook rows + one preflight probe. **Risk:** low.
 
-### W6 — Tool floor + portable chain ✅ specified
+### W6 — Tool floor + portable chain ✅ shipped (`1c4d5a9a2f`)
+
+**Change:** `docs/harness/tool-floor.md` publishes the floor (which binaries, what
+needs them, the remedy, and what to do without each) with `AGENTS.md` pointing at
+it; `improve_schedule_next.py --chain-armed 0` records that the host could not arm
+the loop's chain, and `make reconcile` reports it as `improve-chain`.
+
+**Why the chain marker is the load-bearing half:** `scheduler_create` is the only
+capability whose absence is invisible. Every other missing tool errors when used;
+this one produces *silence* — the cycle completes, logs a decision, and no cycle
+ever runs. That is what the 30-day park was, and it is why "the loop is broken"
+and "the loop has nothing to do" were the same state.
+
+**Proves itself:** four tests — the marker is written on both the armed and
+unarmed paths, and `reconcile` is quiet when armed and actionable when not. The
+first version omitted the key on the happy path, which the test caught.
+
+### W6 (superseded) ✅ specified
 
 **Change:** publish the **tool floor** (`gh`, `make`, `uv`, Postgres for runtime
 paths, a browser for visual paths, `scheduler_create` for the loop's chain);
