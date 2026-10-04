@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -223,22 +224,42 @@ def test_stale_stamps_alone_do_not_arm_the_smoke_campaign() -> None:
     assert nxt is None
 
 
-def test_a_seeded_smoke_finding_arms_the_campaign(tmp_path: Path) -> None:
+def test_a_seeded_smoke_finding_arms_the_campaign(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """And the other direction: a real finding must still rotate the campaign, or
-    the fix above would have blinded the loop rather than sharpened it."""
+    the fix above would have blinded the loop rather than sharpened it.
+
+    Built in a temporary tree: `examples/*/dev_docs` is gitignored, so writing a
+    probe report there made this gate fail in a clean checkout while passing on a
+    developer's machine.
+    """
+    import importlib.util
     import json
+    import time
 
-    import scripts.improve_policy as pol
+    spec = importlib.util.spec_from_file_location(
+        "qa_smoke_bar_probe", REPO / "scripts" / "qa_smoke_bar.py"
+    )
+    assert spec and spec.loader
+    bar = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = bar
+    spec.loader.exec_module(bar)
 
-    # A synthetic report, newest in the tree, in an example that already has one.
-    app = REPO / "examples" / "invoice_ops" / "dev_docs"
-    assert app.is_dir(), "example layout changed — pick another app"
-    probe = app / "qa-smoke-manager-29991231-235959.json"
-    probe.write_text(json.dumps({"auto_seed": [{"id": "synthetic-probe"}]}), encoding="utf-8")
-    try:
-        findings, nxt = pol.qa_smoke_residual()
-    finally:
-        probe.unlink()
+    monkeypatch.setattr(bar, "EXAMPLES", tmp_path)
+    monkeypatch.setattr(bar, "SHOWCASE", ["simple_task"])
+    app = tmp_path / "simple_task"
+    (app / "dev_docs").mkdir(parents=True)
+    (app / "trial.toml").write_text("x", encoding="utf-8")
+    report = app / "dev_docs" / "qa-smoke-manager-20260101-000000.json"
+    report.write_text(json.dumps({"auto_seed": [{"id": "synthetic-probe"}]}), encoding="utf-8")
+    old = time.time() - 40 * 86400
+    import os
 
-    assert findings >= 1
-    assert nxt == "invoice_ops"
+    os.utime(report, (old, old))
+
+    findings = [r for r in bar.scan() if r.is_finding()]
+
+    assert len(findings) == 1
+    assert findings[0].app == "simple_task"
+    assert findings[0].smoke_auto_seed == 1

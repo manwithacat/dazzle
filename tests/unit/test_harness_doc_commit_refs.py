@@ -33,6 +33,23 @@ DOCS = [REPO / "AGENTS.md", *sorted((REPO / "docs" / "harness").glob("*.md"))]
 _SHA = re.compile(r"`([0-9a-f]{8,40})`")
 
 
+def _shallow() -> bool:
+    """True when the history needed to resolve cited commits is absent.
+
+    Covers both a shallow clone (CI) and a plain export with no `.git` at all
+    (a tarball, an archive build), where nothing can be resolved and nothing
+    should be claimed.
+
+    CI checks out with a shallow fetch, so a commit from three hours ago is not
+    in the object store. Treating that as "does not resolve" made this gate red
+    on main while green locally — the exact failure the repository's own dead-def
+    ratchet documents its `git ls-files` skip for.
+    """
+    if not (REPO / ".git").exists():
+        return True
+    return (REPO / ".git" / "shallow").exists()
+
+
 def _resolves(sha: str) -> bool:
     return (
         subprocess.run(
@@ -52,6 +69,12 @@ def test_there_are_docs_to_check() -> None:
 
 
 def test_every_cited_sha_resolves() -> None:
+    if _shallow():
+        pytest.skip(
+            "shallow clone: older commits are absent from the object store, so a cited "
+            "SHA cannot be distinguished from a fabricated one here. Runs in full "
+            "clones (locally and in any job with fetch-depth: 0)."
+        )
     bad: list[str] = []
     for doc in DOCS:
         if not doc.is_file():

@@ -100,7 +100,7 @@ def test_since_revised_is_never_after_the_run_that_exercised_it() -> None:
 def test_no_revision_is_dated_in_the_future() -> None:
     """`Since revised` is a cycle number, not a promise."""
     current = _current_cycle()
-    assert current > 0, "no cycles in the log — the map's cycle numbers cannot be checked"
+    assert current > 0, "no cycle numbers anywhere — the map's revisions cannot be checked"
     future = [r[0] for r in _table() if r[7].isdigit() and int(r[7]) > current]
     assert not future, f"revised after the last recorded cycle ({current}): {future[:4]}"
 
