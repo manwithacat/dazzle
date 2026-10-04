@@ -171,3 +171,11 @@ This strategy increments the shared `/improve` explore budget by **5** — one h
 - The example-apps backlog has open `PENDING` rows from a previous sweep → drain those first via the lane's normal cycle, then re-sweep.
 - Explore budget near cap (≥90/100) → wait until next reset.
 - A previous sweep within the last 24h reinforced ≥80% of its findings as duplicates → signal is converged; re-run only after a framework change.
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

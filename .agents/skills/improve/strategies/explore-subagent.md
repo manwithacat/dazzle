@@ -196,3 +196,10 @@ Message: `improve: explore cycle {N} framework-ux — {proposals} proposals, {ob
 ## Multi-persona fan-out
 
 Runs one cycle per persona inside a single subprocess lifetime. Playwright launches once; each persona gets fresh `browser.new_context()` for cookie isolation. Per-persona failures (login rejected, engine crashed, anchor nav failed) → BLOCKED outcome but don't abort the loop. Aggregated `StrategyOutcome` sums per-persona findings, surfaces max independence score across all personas.
+
+## Toolchain
+
+A live app (`postgres`, `served-app`) and a browser (`playwright`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints
+(#1758 F5).

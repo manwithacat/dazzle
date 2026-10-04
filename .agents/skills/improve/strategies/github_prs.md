@@ -93,3 +93,10 @@ Log `lane: github-prs`. List PRs merged / blocked / reviewed.
 - Prefer **squash** for Dependabot.
 - One cycle may merge up to two ready Dependabot PRs; then stop (keep cycles short).
 - After merges, next self-schedule should treat main CI as in-progress (deployed).
+
+## Toolchain
+
+`gh` authenticated. If `uv run python scripts/improve_toolchain.py --require gh-auth`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+merge decisions need the tracker, and a BLOCKED cycle costs one run rather
+than a guessed merge (#1758 F5).

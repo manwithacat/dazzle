@@ -55,6 +55,7 @@ Design: `docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sen
 | A3 | Run ≥1 panel seat **or** explicit skip | MUST | trial report JSON **or** `trial_skip_reason` |
 | A4 | Verdict parseable by `trial_verdict_bar` when trial ran | MUST | `qa-trial-*.json` with recommend |
 | A5 | Dig receipt | MUST | `improve_dig_receipt.py write --strategy agent_acceptance_panel` |
+| A6 | Toolchain present | MUST | `uv run python scripts/improve_toolchain.py --require playwright --require served-app` exits 0, else `outcome: BLOCKED` with the remedy — a blocked panel is not a PASS panel (#1758 F5) |
 
 ```bash
 # After a real trial (report under dev_docs/ or .dazzle/):
@@ -177,3 +178,10 @@ Stamp `.agents/skills/improve/capability-map.md` for `qa trial` / product_qualit
 | demo_fleet / product_quality | Are seeds and stills honest? |
 | **agent_acceptance_panel** | Would a careful multi-role pilot accept this job? |
 | Human L4 pack | Final commercial/sign-off when agents already green |
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

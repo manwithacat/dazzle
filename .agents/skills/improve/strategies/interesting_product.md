@@ -181,3 +181,11 @@ If the cycle is only open-via / walk labels: force `story_walk` etc. and log
 * Presentation chrome (Goal B language): `hyperpart_presentation`
 * Investigation of dual-open monoculture: `docs/reference/antagonist-investigation-2026-08-02.md`
 * F1 still recapture example: `docs/reference/antagonist-rescore-handoff-2026-08-02.md`
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

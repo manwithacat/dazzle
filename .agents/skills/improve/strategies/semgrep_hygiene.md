@@ -81,3 +81,9 @@ top: …
 - Both pack scan and sentinel scan ran (or explicit tooling error logged)
 - Capability map stamped
 - Any true-positive fix either shipped or filed with rule id + path
+
+## Toolchain
+
+`gh` (Semgrep findings come from the GitHub API). If
+`uv run python scripts/improve_toolchain.py --require gh-auth` exits non-zero, this
+cycle is `outcome: BLOCKED` with the remedy it prints (#1758 F5).

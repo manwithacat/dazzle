@@ -165,3 +165,10 @@ FAIL means at least one DISCREPANCY was found (the cycle itself still completed)
   shared tree. The subagent brief must state this explicitly, and the driver must
   verify `git status` is clean after the fan-out returns, recovering with `git
   reset --hard HEAD` if not (HEAD is safe — all audited work is committed).
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

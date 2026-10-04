@@ -139,3 +139,15 @@ Track this via `improve-log.md` — count consecutive `lane: trials` housekeepin
 - **`max turns` ≠ BLOCKED.** Headless subscription drivers can burn turns on trial-sized prompts; raise driver/agent `max_turns` (cycle 715: driver 20, agent 32) rather than skipping the capability map. Treat max-turns aborts as **product/config FAIL**, not "LLM blocked".
 - **No sticky "blocked on grok" folklore.** A prior cycle's BLOCKED/FAIL does not permanently retire `dazzle qa trial` STALE. Before skipping for "LLM", re-probe `call_subscription_cli` (or `dazzle doctor` driver line). If the probe works, run the trial (with the host's available driver override).
 - **Pin vs host.** Example apps may pin `[llm] driver = "claude-cli"`; when only the alternate driver is available, pass `--llm-driver grok-cli`.
+
+## Toolchain
+
+Visual, serve- and tracker-dependent digs in this lane need the same
+capabilities as the strategies they dispatch
+(`tests/unit/fixtures/toolchain_capabilities.json`). Check before selecting:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+Missing capability → `outcome: BLOCKED` with the remedy it prints (#1758 F5).

@@ -75,3 +75,10 @@ in the `example-apps` improve backlog; route shared causes to `framework-ux`
 or `hm-convergence`. A wider sweep samples one important job per persona or
 app first, then expands around repeated causes rather than counting every
 screen equally.
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

@@ -64,3 +64,10 @@ If unreproducible on current main: set status `RESOLVED-STALE` or `NEEDS_REINFOR
 - **Subscription trial drivers only** for re-trials in the default loop (no metered key required). Prefer `--llm-driver grok-cli` when the pinned subscription CLI is absent (examples often pin `claude-cli`).
 - **Do not mass-close ancient OPEN_*** rows** without repro — many predate current substrate.
 - **FIXED-VERIFY is not blocked by sticky LLM folklore.** Re-probe subscription CLI; `max turns reached` → fix turns / re-run, do not leave TR in FIXED-VERIFY for cycles "waiting on grok". See `.agents/skills/improve/lanes/trials.md` outcome classification.
+
+## Toolchain
+
+Re-running a trial drives a browser against a served app. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+a FIXED-VERIFY that never ran is not a verification (#1758 F5).

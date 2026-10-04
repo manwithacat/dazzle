@@ -181,3 +181,10 @@ budget_consumed: 0   # implementation cycle, not explore-budget burn
 - Authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md` steps 1 + 4
 - Plan: `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md`
 - Lane: `.agents/skills/improve/lanes/hm-convergence.md`
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

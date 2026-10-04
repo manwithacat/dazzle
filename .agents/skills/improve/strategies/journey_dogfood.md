@@ -182,3 +182,11 @@ Return complete story DSL blocks + patch notes for the parent agent.
   `BLOCKED` / hand to framework-ux or /issues — do not paper over in every app.
 - **Three attempts** then `BLOCKED` with notes.
 - Prefer binding + hub chrome over adding more narrative-only CRUD stories.
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

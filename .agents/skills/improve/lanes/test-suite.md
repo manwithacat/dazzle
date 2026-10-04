@@ -114,3 +114,15 @@ cross-file cluster. `budget_consumed: 1`.
   not a note. (IR-field lesson: `-k`-filtered runs give false confidence — run full.)
 - **keep_all is a real outcome.** Forced collapses that erase documentation value
   are scope creep, not progress.
+
+## Toolchain
+
+Visual, serve- and tracker-dependent digs in this lane need the same
+capabilities as the strategies they dispatch
+(`tests/unit/fixtures/toolchain_capabilities.json`). Check before selecting:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+Missing capability → `outcome: BLOCKED` with the remedy it prints (#1758 F5).

@@ -88,6 +88,14 @@ Optionally seed an improve backlog row if framework work is needed:
 Log `lane: consumer-issues`. Summarize issue #, author, tier, action taken.
 `budget_consumed: 0` (triage/comment) or `1` (implemented fix).
 
+## Toolchain
+
+`gh` (binary + authenticated). If
+`uv run python scripts/improve_toolchain.py --require gh-auth` exits non-zero,
+this cycle is `BLOCKED` with the remedy it prints — a triage strategy cannot
+proceed without the tracker, and a BLOCKED cycle costs one run rather than an
+invented substitute.
+
 ## Hard rules
 
 - **One issue per cycle** (plus trivial already-fixed closes).

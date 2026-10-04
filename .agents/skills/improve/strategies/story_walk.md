@@ -157,3 +157,11 @@ Commit walks (+ optional claims). Log contract lines + residual delta.
 * Bind stories → `journey_dogfood`
 * Empty stills/seeds → `demo_fleet`
 * Buyer judgment → `agent_acceptance_panel`
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

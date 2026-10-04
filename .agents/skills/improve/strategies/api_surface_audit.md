@@ -127,3 +127,10 @@ Counts against the shared explore budget — cap 100, same as other framework-ux
 - `dev_docs/api-surface-audit-log.md` — append-only ledger of audit cycles
 - `docs/api-surface/*.txt` — the five committed baselines
 - Issue [#961](https://github.com/manwithacat/dazzle/issues/961) — the breaking-change pass tooling that enables this strategy
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

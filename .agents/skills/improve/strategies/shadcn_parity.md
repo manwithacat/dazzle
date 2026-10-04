@@ -93,3 +93,10 @@ budget_consumed: 0 if shipped, 1 if survey-only
 - Dual-lock after surface: `.agents/skills/improve/strategies/dual_lock_expand.md`
 - Authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
 - Taste: `docs/reference/taste.md` (before real styling)
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

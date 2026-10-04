@@ -177,3 +177,11 @@ Unified entry for every example-apps OBSERVE:
 ```bash
 python scripts/improve_example_probes.py --status
 ```
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

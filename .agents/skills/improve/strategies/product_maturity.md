@@ -116,3 +116,10 @@ emit(source='product_maturity', kind='app-fixed',
 - Framework shell bugs (builder chrome always on) → `framework-ux` / #1626, not every app.
 - After structural residual=0, prefer **`demo_fleet`** / **`agent_acceptance_panel`**
   over STALE Tier-1 and over WI D densify under floor.
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

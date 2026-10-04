@@ -288,6 +288,21 @@ Pick one app, run a review subagent that compares its DSL against patterns from 
 
 Increments shared budget by 5 (significantly more expensive).
 
+## Toolchain
+
+This lane dispatches every browser-, database- and served-app-dependent dig, so
+selection must check the toolchain **before** it picks a sub-strategy:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+If the sub-strategy's capabilities are missing (see
+`tests/unit/fixtures/toolchain_capabilities.json`), the cycle is
+`outcome: BLOCKED` with the remedy the probe prints, and selection falls back to
+a capability-free sub-strategy. Cycle 2411 selected `agent_qa_smoke` and died on
+a missing Playwright with no defined outcome (#1758 F5).
+
 ## Hard rules
 
 - **One gap per cycle.** Don't chain.

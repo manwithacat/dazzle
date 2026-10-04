@@ -196,3 +196,15 @@ Return `{status: PASS|FAIL|BLOCKED|EXPLORED|HOUSEKEEPING, summary, signals_to_em
 budget_consumed}`. Prefer dual-lock / sophistication work when floors are green.
 Consumes `dazzle-updated` after a release (re-check floors). Ship discipline for
 HM + Dazzle changes: bump + HM dist rebuild + Dazzle dist rebuild + push.
+
+## Toolchain
+
+Visual, serve- and tracker-dependent digs in this lane need the same
+capabilities as the strategies they dispatch
+(`tests/unit/fixtures/toolchain_capabilities.json`). Check before selecting:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+Missing capability → `outcome: BLOCKED` with the remedy it prints (#1758 F5).

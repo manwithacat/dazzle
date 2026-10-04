@@ -94,3 +94,11 @@ Capability map: `hm gallery interaction probes` → `USED@N`.
   before a one-off visual fix; the goal is autonomous re-detection
 - **One FAIL root-cause fix per cycle** when draining (same as dual_lock_expand)
 - **Local `site/` by default** — rebuild before trusting PASS after registry edits
+
+## Toolchain
+
+This dig needs a browser (`playwright`), a database (`postgres`) and a running
+app (`served-app`). If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, the cycle is `outcome: BLOCKED` with the remedy it prints —
+never a stamp and never a silent PASS (#1758 F5).

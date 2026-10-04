@@ -112,3 +112,15 @@ Add new rows to lane backlog. If still zero apps with failures → outcome `HOUS
 - **Always update baseline on CLEAN** — otherwise the next cycle will rediscover the same "failures" against a stale baseline.
 - **Inner iteration cap is 5.** Never let a single cycle run forever.
 - **Framework-level template bugs go to /issues, not fixed inline.** This lane targets DSL fixes and contract calibration. Template fixes belong in `framework-ux` or a GitHub issue.
+
+## Toolchain
+
+Visual, serve- and tracker-dependent digs in this lane need the same
+capabilities as the strategies they dispatch
+(`tests/unit/fixtures/toolchain_capabilities.json`). Check before selecting:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+Missing capability → `outcome: BLOCKED` with the remedy it prints (#1758 F5).

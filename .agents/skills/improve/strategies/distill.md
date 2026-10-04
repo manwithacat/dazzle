@@ -94,3 +94,10 @@ One app per cycle. Stop when that app’s `coat_flag=0` or honest grain is met
 on the worst desk. Do not start a second app.
 
 `require_mutation` is **on** — a deletion is a ship.
+
+## Toolchain
+
+Recapture drives a browser. If
+`uv run python scripts/improve_toolchain.py --require playwright` exits non-zero,
+the cycle is `outcome: BLOCKED` with the remedy it prints — a recapture that
+never ran is not a clean dig (#1758 F5).

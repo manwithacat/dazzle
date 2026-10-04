@@ -103,3 +103,10 @@ Do not open a full cimonitor investigation. One line in the eventual cycle log i
 - **Don't burn explore budget** on CI repair.
 - **Flaky/infra** — if the only failure is timeouts/runners, prefer `gh run rerun <id> --failed` once, log it, and leave product code alone unless rerun stays red with a real assert.
 - **Lanes do not re-implement this.** Product lanes assume Step 0c already ran; they may still run local tests for their own changes.
+
+## Toolchain
+
+`gh` authenticated. If `uv run python scripts/improve_toolchain.py --require gh-auth`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+merge decisions need the tracker, and a BLOCKED cycle costs one run rather
+than a guessed merge (#1758 F5).

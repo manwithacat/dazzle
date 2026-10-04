@@ -158,6 +158,21 @@ If either is red, **STOP and fix before continuing** — same rule as old /ux-cy
 applies to every lane now. Do not start a product lane on unpaid surface debt
 (that is the red-main stacking pattern).
 
+**Toolchain precondition** (before Step 1 selection — a forced campaign must not
+be selected into a dead end, #1758 F5):
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+If the sub-strategy you are about to pick needs a capability that is `MISS`,
+this cycle is `outcome: BLOCKED`: log the missing capability and the remedy the
+probe prints, pick a capability-free sub-strategy if one exists, and release the
+lock. Do **not** improvise a substitute and do **not** stamp the capability
+`USED`. Capabilities and which strategies need them live in
+`tests/unit/fixtures/toolchain_capabilities.json`; gate:
+`tests/unit/test_toolchain_probe.py`.
+
 When this cycle will **ship** product code (any lane that commits), also run
 before push (or rely on `make ci-fast`, which includes it):
 

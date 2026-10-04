@@ -94,3 +94,10 @@ Do not invent assignee formats. Proposal-quality creativity = good role mapping 
 * Mid-dot separators (R1) stay; they do not replace Avatar
 * Catalogue/HM pick-a-surface is authoring — orthogonal to this emit process
 * Do not grow the matrix without a still that proves the host gap
+
+## Toolchain
+
+A live app and a browser where the dig reads a rendered surface. If
+`uv run python scripts/improve_toolchain.py --require playwright --require served-app`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+an unrun dig is not a clean dig (#1758 F5).

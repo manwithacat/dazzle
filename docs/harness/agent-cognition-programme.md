@@ -202,7 +202,22 @@ programme checks that a *reference* resolves. This one runs the *command*. A
 reference can be correct while the command still cannot work from the agent's
 actual working directory — and no amount of reference-checking finds that.
 
-### W5 — A missing tool is a first-class outcome ✅ specified
+### W5 — A missing tool is a first-class outcome ✅ shipped (`e4600f4a1`)
+
+**Change:** `scripts/improve_toolchain.py` reports every capability with a
+remedy and gates on `--require`; Step 0b runs it before lane selection; **27
+strategies** that reach for a browser / database / live app / tracker declare the
+capability in `tests/unit/fixtures/toolchain_capabilities.json`, and
+`test_toolchain_probe.py` fails when a playbook adds a tool dependency without
+declaring it. Each gained a `BLOCKED` row naming the probe.
+**Proves itself:** the gate found `api_surface_audit`, `distill`,
+`dual_lock_expand`, `explore-subagent`, `semgrep_hygiene`,
+`hyperpart_presentation`, `trial_signal_action`, `visual_tier2_subagent` and
+`domain_lifecycle_priors` reaching for tools they had never declared — nine
+unrecorded dependencies, each of which could have selected into a dead end.
+**Cost:** one probe, one fixture, one gate, playbook rows.
+
+### W5 (superseded heading) ✅ specified
 
 **Change:** a `BLOCKED` row with the remedy in every probe-dependent strategy
 (`agent_qa_smoke`, `demo_fleet`, `journey_dogfood`, …): playwright lives in the

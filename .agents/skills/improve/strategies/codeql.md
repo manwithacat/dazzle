@@ -87,3 +87,10 @@ One line in the cycle log is enough:
 - **CI red owns the cycle first** (Step 0c). CodeQL runs only when 0c does not claim repair.
 - **Model pack over mass dismiss** for framework barriers that CodeQL does not see.
 - Keep remediation scoped: one cluster of related alerts per cycle when the queue is large.
+
+## Toolchain
+
+`gh` authenticated. If `uv run python scripts/improve_toolchain.py --require gh-auth`
+exits non-zero, this cycle is `outcome: BLOCKED` with the remedy it prints —
+merge decisions need the tracker, and a BLOCKED cycle costs one run rather
+than a guessed merge (#1758 F5).

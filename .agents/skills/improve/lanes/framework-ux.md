@@ -2,7 +2,19 @@
 
 Brings Dazzle's UX layer under ux-architect governance one component at a time, and verifies via agent-led QA against example apps. Adapted from former /ux-cycle.
 
-## Targets
+## Toolchain
+
+Visual and serve-dependent digs in this lane need the same capabilities as the
+strategies they dispatch (`tests/unit/fixtures/toolchain_capabilities.json`).
+Check before selecting:
+
+```bash
+uv run python scripts/improve_toolchain.py --status
+```
+
+Missing capability → `outcome: BLOCKED` with the remedy it prints (#1758 F5).
+
+## ## Targets
 
 Dazzle framework's UI templates, contracts, fitness walks. **Not** example-app DSL — that's `example-apps` lane.
 

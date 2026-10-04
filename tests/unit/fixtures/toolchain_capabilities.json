@@ -1,0 +1,112 @@
+[
+  {
+    "name": "playwright",
+    "summary": "Browser automation: qa smoke-crawl/capture, visual probes, UX walks",
+    "remedy": "uv pip install playwright && uv run playwright install chromium",
+    "required_for": [
+      "agent_qa_smoke",
+      "demo_fleet",
+      "journey_dogfood",
+      "gallery_probes",
+      "component_vision",
+      "property_vision",
+      "visual_tier2",
+      "distill",
+      "dual_lock_expand",
+      "explore-subagent",
+      "hyperpart_coherence",
+      "hyperpart_presentation",
+      "interesting_product",
+      "product_maturity",
+      "job_screen_review",
+      "shadcn_parity",
+      "self_audit",
+      "owned_idle_exercise",
+      "trial_signal_action",
+      "visual_tier2_subagent"
+    ],
+    "probe": "module",
+    "spec": "playwright"
+  },
+  {
+    "name": "postgres",
+    "summary": "Runtime paths: serve against DATABASE_URL, migrate, integration tests",
+    "remedy": "export DATABASE_URL=postgresql://<user>@localhost:5432/<db> (see docs/reference/databases.md)",
+    "required_for": [
+      "demo_fleet",
+      "journey_dogfood",
+      "story_walk",
+      "agent_acceptance_panel",
+      "domain_lifecycle_priors",
+      "explore-subagent",
+      "interesting_product",
+      "product_maturity",
+      "job_screen_review",
+      "self_audit",
+      "owned_idle_exercise"
+    ],
+    "probe": "env",
+    "spec": "DATABASE_URL"
+  },
+  {
+    "name": "gh",
+    "summary": "GitHub inbox, CodeQL gate, CI badge snapshot, push-gate",
+    "remedy": "install gh and run: gh auth login",
+    "required_for": [
+      "github_inbox",
+      "codeql",
+      "cimonitor",
+      "consumer_issues",
+      "github_prs",
+      "api_surface_audit",
+      "self_audit",
+      "owned_idle_exercise",
+      "interesting_product",
+      "semgrep_hygiene"
+    ],
+    "probe": "binary",
+    "spec": "gh"
+  },
+  {
+    "name": "gh-auth",
+    "summary": "Authenticated gh \u2014 required by every inbox/PR/codeql step",
+    "remedy": "gh auth login",
+    "required_for": [
+      "github_inbox",
+      "codeql",
+      "consumer_issues",
+      "github_prs",
+      "api_surface_audit",
+      "cimonitor",
+      "self_audit",
+      "owned_idle_exercise",
+      "interesting_product",
+      "semgrep_hygiene"
+    ],
+    "probe": "module",
+    "spec": "gh"
+  },
+  {
+    "name": "served-app",
+    "summary": "A running example app for live smoke / journey walks",
+    "remedy": "cd examples/<app> && DAZZLE_QA_MODE=1 dazzle serve --port <port> --test-mode",
+    "required_for": [
+      "agent_qa_smoke",
+      "journey_dogfood",
+      "agent_acceptance_panel",
+      "hyperpart_coherence",
+      "hyperpart_presentation",
+      "interesting_product",
+      "product_maturity",
+      "job_screen_review",
+      "shadcn_parity",
+      "self_audit",
+      "owned_idle_exercise",
+      "demo_fleet",
+      "trial_signal_action",
+      "visual_tier2_subagent"
+    ],
+    "probe": "url",
+    "spec": "http://127.0.0.1:9100/"
+  }
+]
