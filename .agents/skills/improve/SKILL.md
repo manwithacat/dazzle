@@ -479,8 +479,13 @@ If the lane requires sub-strategy dispatch, the lane reads from
    from dazzle.cli.runtime_impl.ux_cycle_signals import mark_run
    mark_run(source="improve")
    ```
-5. **Stamp capability coverage**: in `.agents/skills/improve/capability-map.md`,
-   set **Last-exercised = N** and Status → `USED` for capabilities this cycle invoked.
+5. **Stamp capability coverage, and say what the run re-tested** (W4): in
+   `.agents/skills/improve/capability-map.md`, set **Last-exercised = N**, Status →
+   `USED`, **Believed** = one clause naming the belief this cycle re-tested, and
+   **Since revised** = N — for every capability this cycle invoked. A cycle that
+   changed nothing still fills them: "re-tested, unchanged" is a result, and an
+   empty cell is not, because `Last-exercised` alone cannot tell a fresh
+   measurement from a fresh *mistake*. Gate: `tests/unit/test_capability_map_beliefs.py`.
    **Only the registry table** — never multi-paragraph cycle digests (those were oral
    history thrash; durable rules go in `improve/oral-history.md`). Capability-sweep may
    overwrite the short “Last sweep” block (≤5 one-liners). Commit the map when it changes.

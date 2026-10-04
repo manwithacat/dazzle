@@ -84,7 +84,18 @@ select the bug campaign; with one auto_seed it must.
 **Cost:** ~60 lines + tests across the bar, the policy and the example_probes
 rollup. **Risk:** medium — three consumers read the current field.
 
-### W4 — Require belief revision from a COGNITION cycle  —  ⬜ not started
+### W4 — Require belief revision from a COGNITION cycle  —  ✅ shipped
+
+**Change:** the capability map's registry gains `Believed` / `Since revised`;
+`test_capability_map_beliefs.py` (gate) fails on a `USED` row with an empty
+belief, a revision post-dating its run, or a future-dated revision; the driver's
+Step 3 requires the line and states that "re-tested, unchanged" is a result.
+
+**Proves itself:** falsified by clearing one belief cell. Filling the seven
+existing `USED` rows honestly required **re-testing three of them** rather than
+writing from memory — `dazzle fragment-audit examples/simple_task` (71 regions, no
+gaps), the CodeQL poll and the inbox poll — which is the point: the gate turns a
+timestamp into a claim, and a claim has to be earned.
 
 **Change:** capability-map registry gains `Believed` / `Since revised` columns;
 a COGNITION cycle's log entry must state one of `revised:` / `re-tested:` /
