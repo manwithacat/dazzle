@@ -298,6 +298,39 @@ def fetch_prs(owner: str, repo: str) -> list[dict[str, Any]]:
     )
 
 
+# An issue that says "look at this later" must never be auto-claimed because its
+# title happens to read like a bug. `future` is an explicit decision; a title
+# keyword is a heuristic, and the heuristic was winning (#1758 F2 — it recommended
+# #1757, a deliberately parked note, as claimable `owner_issue` work).
+#
+# The only door: a linked Deferred Decision whose `status:` is `FORCED`. That is
+# the mechanism DD-001 already documents, so this reads the mechanism rather than
+# inventing one.
+FUTURE_LABEL = "future"
+FORCED_OVERRIDE_LABEL = "implementable"  # explicit, auditable, rarely used
+
+
+def _linked_dd_status(iss: dict[str, Any]) -> str | None:
+    """Status of a Deferred Decision linked from the issue body, if any."""
+    body = str(iss.get("body") or "")
+    for match in re.finditer(r"docs/decisions/(DD-[A-Za-z0-9._-]+\.md)", body):
+        path = ROOT / match.group(1)
+        if not path.is_file():
+            continue
+        found = re.search(r"^status:\s*([A-Z]+)", path.read_text(encoding="utf-8"), re.MULTILINE)
+        if found:
+            return found.group(1)
+    return None
+
+
+def is_implementable(iss: dict[str, Any]) -> bool:
+    """False for anything parked. The loop's one hard safety rule."""
+    labels = {x.lower() for x in _label_names(iss.get("labels"))}
+    if FUTURE_LABEL in labels and FORCED_OVERRIDE_LABEL not in labels:
+        return _linked_dd_status(iss) == "FORCED"
+    return True
+
+
 def classify(
     *,
     issues: list[dict[str, Any]],
@@ -312,9 +345,10 @@ def classify(
         login = _author_login(iss.get("author"))
         labels = _label_names(iss.get("labels"))
         title = str(iss.get("title") or "")
-        lab_lower = {x.lower() for x in labels}
-        # Skip deferred futures unless they're bugs
-        if "future" in lab_lower and not is_bug_shaped(title, labels):
+        # Parked work is never claimable on a title heuristic (#1758 F2). Only a
+        # FORCED Deferred Decision — or an explicit `implementable` label —
+        # re-opens it, so the exception is auditable rather than incidental.
+        if not is_implementable(iss):
             other_issues.append(
                 {
                     "number": iss.get("number"),

@@ -206,3 +206,107 @@ def test_classify_consumer_bug_outranks_owner_bug(inbox):
     assert out["heat"] == "consumer_bug"
     assert out["primary"]["kind"] == "consumer_issue"
     assert out["primary"]["issue"] == 11
+
+
+# --- parked work is never claimable on a title heuristic (#1758 F2) -----------
+# The classifier skipped `future` issues "unless they're bugs", and bug-shaped was
+# a *title keyword* match. #1757 — a deliberately parked note whose whole content
+# is "decide later whether to fix or delete" — was recommended as claimable
+# `owner_issue` work because its title contained "error".
+#
+# An explicit label is a decision; a title keyword is a heuristic. The decision
+# has to win.
+
+
+def _issue(**over):
+    base = {
+        "number": 1,
+        "title": "Something is broken",
+        "labels": [{"name": "bug"}],
+        "body": "",
+        "author": {"login": "someone-else"},
+        "url": "https://example.test/1",
+    }
+    base.update(over)
+    return base
+
+
+def test_a_future_issue_is_not_implementable_even_with_a_bug_title(inbox):
+    issue = _issue(
+        number=1757,
+        title="GraphQL: 7 resolvers swallow every error as null",
+        labels=[{"name": "future"}, {"name": "framework"}],
+    )
+
+    assert inbox.is_bug_shaped(issue["title"], ["future", "framework"]) is True, (
+        "the heuristic still matches — which is why it must not decide"
+    )
+    assert inbox.is_implementable(issue) is False
+
+
+def test_a_future_issue_never_reaches_recommended(inbox):
+    out = inbox.classify(
+        issues=[
+            _issue(
+                number=1757,
+                title="GraphQL: resolvers fail silently and the proof is thin",
+                labels=[{"name": "future"}, {"name": "framework"}],
+                author={"login": "manwithacat"},
+            )
+        ],
+        prs=[],
+        owner_login="manwithacat",
+    )
+
+    assert out["recommended"] == []
+    assert out["owner_bugs"] == []
+    assert [(i["number"], i.get("class")) for i in out["other_issues"]] == [
+        (1757, "deferred_future")
+    ]
+
+
+def test_a_forced_deferred_decision_reopens_a_future_issue(inbox, tmp_path, monkeypatch):
+    """The only door: the DD mechanism the repo already documents. `status: FORCED`
+    is a deliberate edit to a decision record; a title keyword is not."""
+    dd = tmp_path / "DD-999-test.md"
+    dd.write_text("---\nname: DD-999\nstatus: FORCED\n---\n", encoding="utf-8")
+    monkeypatch.setattr(inbox, "ROOT", tmp_path)
+
+    issue = _issue(
+        number=1600,
+        title="Poly ref polish is broken",
+        labels=[{"name": "future"}],
+        body="Blocked on docs/decisions/DD-999-test.md",
+    )
+
+    assert inbox.is_implementable(issue) is True
+
+
+def test_a_parked_deferred_decision_does_not_reopen(inbox, tmp_path, monkeypatch):
+    dd = tmp_path / "DD-998-test.md"
+    dd.write_text("---\nname: DD-998\nstatus: PARKED\n---\n", encoding="utf-8")
+    monkeypatch.setattr(inbox, "ROOT", tmp_path)
+
+    issue = _issue(
+        number=1601,
+        title="STI as EAV is broken",
+        labels=[{"name": "future"}],
+        body="Tracked in docs/decisions/DD-998-test.md",
+    )
+
+    assert inbox.is_implementable(issue) is False
+
+
+def test_an_explicit_implementable_label_reopens(inbox):
+    """Rare and auditable, but it must exist so an operator is never stuck."""
+    issue = _issue(
+        number=1602,
+        title="Parked but wanted now",
+        labels=[{"name": "future"}, {"name": "implementable"}],
+    )
+
+    assert inbox.is_implementable(issue) is True
+
+
+def test_an_ordinary_bug_is_unaffected(inbox):
+    assert inbox.is_implementable(_issue()) is True
