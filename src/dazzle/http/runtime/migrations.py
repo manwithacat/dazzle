@@ -74,41 +74,6 @@ class ColumnInfo:
     is_pk: bool
 
 
-def get_table_schema(conn: Any, table_name: str, schema: str = "public") -> list[ColumnInfo]:
-    """Get column information for a PostgreSQL table."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT column_name, data_type, is_nullable, column_default "
-        "FROM information_schema.columns "
-        "WHERE table_schema = %s AND table_name = %s "
-        "ORDER BY ordinal_position",
-        (schema, table_name),
-    )
-    columns = []
-    for row in cursor.fetchall():
-        r = dict(row)
-        columns.append(
-            ColumnInfo(
-                name=r["column_name"],
-                type=r["data_type"].upper(),
-                not_null=r["is_nullable"] == "NO",
-                default=r["column_default"],
-                is_pk=False,  # PK detection via pg_constraint if needed
-            )
-        )
-    return columns
-
-
-def get_table_indexes(conn: Any, table_name: str, schema: str = "public") -> list[str]:
-    """Get index names for a PostgreSQL table."""
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT indexname FROM pg_indexes WHERE schemaname = %s AND tablename = %s",
-        (schema, table_name),
-    )
-    return [dict(row)["indexname"] for row in cursor.fetchall()]
-
-
 class MigrationError(Exception):
     """Error during migration execution."""
 

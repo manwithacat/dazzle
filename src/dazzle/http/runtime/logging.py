@@ -308,29 +308,9 @@ def log_with_context(
 # =============================================================================
 
 
-def get_backend_logger() -> logging.Logger:
-    """Get logger for backend/API operations."""
-    return get_logger("API", Colors.BACKEND)
-
-
 def get_frontend_logger() -> logging.Logger:
     """Get logger for frontend/UI operations."""
     return get_logger("UI", Colors.FRONTEND)
-
-
-def get_dev_logger() -> logging.Logger:
-    """Get logger for dev control plane operations."""
-    return get_logger("Bar", Colors.DAZZLE)
-
-
-def get_dazzle_logger() -> logging.Logger:
-    """Get logger for general dazzle operations."""
-    return get_logger("dazzle", Colors.DAZZLE)
-
-
-# =============================================================================
-# Frontend Error Logging
-# =============================================================================
 
 
 def log_frontend_entry(
@@ -398,11 +378,6 @@ def log_frontend_entry(
 # =============================================================================
 # Utility Functions
 # =============================================================================
-
-
-def get_log_dir() -> Path | None:
-    """Get the current log directory."""
-    return _log_dir
 
 
 def get_log_file() -> Path | None:

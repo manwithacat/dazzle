@@ -1,13 +1,5 @@
 [
   {
-    "signature": "exact:2399675f89c63bfee0999a773c2a577a",
-    "count": 2,
-    "names": [
-      "dazzle/agent/core.py::_default_completion",
-      "dazzle/agent/missions/testing.py::test_completion"
-    ]
-  },
-  {
     "signature": "e2431e05ff701b4b6a7331d412a4acd4",
     "count": 2,
     "names": [
@@ -91,30 +83,6 @@
       "dazzle/cli/pitch.py::pitch_enrich",
       "dazzle/cli/pitch.py::pitch_init_assets",
       "dazzle/cli/pitch.py::pitch_review"
-    ]
-  },
-  {
-    "signature": "0d2c953a2239483219d342a64ed16132",
-    "count": 2,
-    "names": [
-      "dazzle/cli/project.py::_is_directory_empty",
-      "dazzle/cli/utils.py::is_directory_empty"
-    ]
-  },
-  {
-    "signature": "f5e64b16260179c3d1bf94b85645bb1f",
-    "count": 2,
-    "names": [
-      "dazzle/cli/project.py::_print_vscode_diagnostics",
-      "dazzle/cli/utils.py::print_vscode_diagnostics"
-    ]
-  },
-  {
-    "signature": "8970021d269b4644eb074a17265d94a2",
-    "count": 2,
-    "names": [
-      "dazzle/cli/project.py::_print_vscode_parse_error",
-      "dazzle/cli/utils.py::print_vscode_parse_error"
     ]
   },
   {
@@ -475,14 +443,6 @@
     "names": [
       "dazzle/core/dsl_parser_impl/workspace.py::_parse_pipeline_stage_label",
       "dazzle/core/dsl_parser_impl/workspace.py::_parse_status_entry_title"
-    ]
-  },
-  {
-    "signature": "db93314a82de6be7d588e6d14b39676e",
-    "count": 2,
-    "names": [
-      "dazzle/core/errors.py::make_link_error",
-      "dazzle/core/errors.py::make_validation_error"
     ]
   },
   {

@@ -410,37 +410,3 @@ class LoadGenerator:
             return None
         elapsed = time.monotonic() - self._start_time
         return self.profile.get_state(elapsed)
-
-
-async def run_load_test(
-    profile: LoadProfile,
-    emit_callback: EventEmitter,
-    config: GeneratorConfig | None = None,
-    metrics: MetricsCollector | None = None,
-) -> GeneratorStats:
-    """
-    Run a complete load test with the given profile.
-
-    Args:
-        profile: Load profile to execute
-        emit_callback: Callback to emit events
-        config: Optional generator configuration
-        metrics: Optional metrics collector
-
-    Returns:
-        Final generator statistics
-    """
-    generator = LoadGenerator(
-        profile=profile,
-        emit_callback=emit_callback,
-        config=config,
-        metrics=metrics,
-    )
-
-    await generator.start()
-
-    # Wait for profile to complete
-    while generator.is_running:
-        await asyncio.sleep(1.0)
-
-    return generator.stats

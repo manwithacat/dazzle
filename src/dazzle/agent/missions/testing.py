@@ -8,7 +8,6 @@ Mission object that plugs into the generic agent framework.
 from typing import Any
 
 from ..core import Mission
-from ..models import ActionType, AgentAction, Step
 
 
 def build_test_mission(
@@ -54,8 +53,3 @@ def build_test_mission(
         start_url=base_url,
         context={"test_spec": test_spec},
     )
-
-
-def test_completion(action: AgentAction, history: list[Step]) -> bool:
-    """E2E test completion: stop on DONE action."""
-    return action.type == ActionType.DONE

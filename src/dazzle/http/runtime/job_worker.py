@@ -302,16 +302,3 @@ def _now() -> datetime:
 
 def _ms_since(started_monotonic: float) -> int:
     return int((time.monotonic() - started_monotonic) * 1000)
-
-
-async def _maybe_async(handler: Any, payload: dict[str, Any]) -> Any:
-    """Helper kept for the cycle-5 loop to share — runs sync
-    handlers in a thread, async handlers in-place.
-
-    Not used in cycle 4's `process_one` (which inlines the async
-    branch for clearer error attribution); reserved here to avoid
-    duplication when the cycle-5 worker loop lands.
-    """
-    if inspect.iscoroutinefunction(handler):
-        return await handler(**payload)
-    return await asyncio.to_thread(handler, **payload)

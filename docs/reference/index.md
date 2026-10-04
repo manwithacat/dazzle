@@ -23,6 +23,7 @@
 | [Frontend & Templates](frontend.md) | The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. |
 | [Messaging & Events](messaging.md) | Messaging and events enable asynchronous communication between components and users. |
 | [Graph Features](graphs.md) | Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. |
+| [Dead-Code Residue](dead-code-residue.md) | The reviewed inventory behind the dead-definition ratchet: which unreferenced definitions are accepted residue, which family each belongs to, and what would retire it. |
 | [Compliance Framework](compliance.md) | Dazzle can automatically assess how well your DSL specification maps to recognised compliance frameworks. |
 | [Governance](governance.md) | Governance constructs enforce organisational policies, approval workflows, and service-level agreements. |
 | [Patterns](patterns.md) | Patterns are reusable DSL recipes that combine multiple constructs into proven solutions. |

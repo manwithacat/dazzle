@@ -83,19 +83,9 @@ def project_log_dir(project_root: Path) -> Path:
     return project_dazzle_dir(project_root) / LOGS_DIR
 
 
-def project_activity_log(project_root: Path) -> Path:
-    """Return the activity log path for a project."""
-    return project_dazzle_dir(project_root) / ACTIVITY_LOG_FILE
-
-
 def project_test_results_dir(project_root: Path) -> Path:
     """Return the test results directory for a project."""
     return project_dazzle_dir(project_root) / TEST_RESULTS_DIR
-
-
-def project_stories_dir(project_root: Path) -> Path:
-    """Return the stories directory for a project."""
-    return project_dazzle_dir(project_root) / STORIES_DIR
 
 
 def project_demo_data_dir(project_root: Path) -> Path:
@@ -106,11 +96,6 @@ def project_demo_data_dir(project_root: Path) -> Path:
 def project_processes_dir(project_root: Path) -> Path:
     """Return the processes directory for a project."""
     return project_dazzle_dir(project_root) / PROCESSES_DIR
-
-
-def project_overrides_file(project_root: Path) -> Path:
-    """Return the overrides registry path for a project."""
-    return project_dazzle_dir(project_root) / OVERRIDES_FILE
 
 
 def project_last_seen_version(project_root: Path) -> Path:

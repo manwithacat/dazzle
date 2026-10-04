@@ -213,9 +213,18 @@ def _py_references(text: str, wanted: set[str]) -> Counter[str]:
             if node.attr in wanted:
                 counts[node.attr] += 1
         elif isinstance(node, ast.alias):
-            name = node.asname or node.name.split(".")[-1]
-            if name in wanted:
-                counts[name] += 1
+            # Both halves of an import are references: the bound local
+            # (`import x as y` → `y`) and the imported name
+            # (`from m import x as y` → `x`, used *as* the definition).
+            # Counting only the local half reported
+            # `_playwright_helpers::login_as_persona` dead while
+            # `fitness_strategy.py` imported it as `_login_as_persona` and
+            # called that — mypy caught the deletion, not this gate.
+            if node.asname and node.asname in wanted:
+                counts[node.asname] += 1
+            imported = node.name.split(".")[-1]
+            if imported in wanted:
+                counts[imported] += 1
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
             if id(node) in docstrings:
                 continue
@@ -285,6 +294,33 @@ def test_no_new_unreferenced_definition_in_src() -> None:
         + "\n  ".join(new)
         + "\nIf it is deliberately reached by a string resolved at runtime, add it "
         "to fixtures/dead_definitions_baseline.json."
+    )
+
+
+FAMILIES_PATH = Path(__file__).parent / "fixtures" / "dead_definitions_families.json"
+
+
+def test_every_baselined_orphan_is_classified() -> None:
+    """An inventory nobody has read is not a review.
+
+    Each accepted-residue entry must be assigned a family
+    (`dead_definitions_families.json`, explained in
+    `docs/reference/dead-code-residue.md`) so "we looked at it and it stays" is a
+    recorded decision rather than an accumulation. A new dead definition cannot
+    be baselined silently: it has no family, and this fails.
+    """
+    baseline = json.loads(_BASELINE_PATH.read_text(encoding="utf-8"))
+    families = json.loads(FAMILIES_PATH.read_text(encoding="utf-8"))
+
+    missing = sorted(set(baseline) - set(families))
+    assert not missing, (
+        f"{len(missing)} baselined orphan(s) have no family classification: "
+        f"{missing[:5]} — classify each in {FAMILIES_PATH.name} or delete the code"
+    )
+    stale = sorted(set(families) - set(baseline))
+    assert not stale, (
+        f"{len(stale)} classified entr(ies) are no longer baselined: {stale[:5]} — "
+        "the code was deleted or came back to life; drop the classification"
     )
 
 

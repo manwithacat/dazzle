@@ -28,31 +28,6 @@ from dazzle.page.specs import (
 # =============================================================================
 
 
-def _find_list_surface_for_entity(
-    entity_name: str,
-    surfaces: list[ir.SurfaceSpec],
-    surface_component_map: dict[str, str],
-) -> str | None:
-    """Find the list surface component for an entity."""
-    for surface in surfaces:
-        if surface.entity_ref == entity_name and surface.mode == ir.SurfaceMode.LIST:
-            return surface_component_map.get(surface.name)
-    return None
-
-
-def _find_surface_by_mode(
-    entity_name: str,
-    mode: ir.SurfaceMode,
-    surfaces: list[ir.SurfaceSpec],
-    surface_component_map: dict[str, str],
-) -> str | None:
-    """Find a surface component by entity and mode."""
-    for surface in surfaces:
-        if surface.entity_ref == entity_name and surface.mode == mode:
-            return surface_component_map.get(surface.name)
-    return None
-
-
 def _get_default_list_component(
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],

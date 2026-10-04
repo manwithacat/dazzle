@@ -11,7 +11,6 @@ import typer
 
 from dazzle._version import get_version
 from dazzle.core.appspec_loader import load_project_appspec as load_project_appspec
-from dazzle.core.errors import ParseError
 
 
 def print_version_info(full: bool = False) -> None:
@@ -126,98 +125,6 @@ def version_callback(value: bool) -> None:
     if value:
         print_version_info(full=False)
         raise typer.Exit()
-
-
-def print_human_diagnostics(errors: list[str], warnings: list[str]) -> None:
-    """Print diagnostics in human-readable format."""
-    if errors:
-        typer.echo("Validation failed:\n", err=True)
-        for err in errors:
-            typer.echo(f"ERROR: {err}", err=True)
-
-    if warnings:
-        typer.echo("Validation warnings:\n", err=False)
-        for warn in warnings:
-            typer.echo(f"WARNING: {warn}", err=False)
-
-    if not errors and not warnings:
-        typer.echo("OK: spec is valid.")
-
-
-def print_vscode_diagnostics(errors: list[str], warnings: list[str], root: Path) -> None:
-    """
-    Print diagnostics in VS Code format: file:line:col: severity: message
-
-    Since most validation errors don't have location info yet, we output
-    them with a generic location. Parse errors will have specific locations.
-    """
-    for err in errors:
-        # Try to extract file info from error message if present
-        # Format: "filename.dsl:line:col: error: message"
-        # For now, output generic location
-        typer.echo(f"dazzle.toml:1:1: error: {err}", err=True)
-
-    for warn in warnings:
-        typer.echo(f"dazzle.toml:1:1: warning: {warn}", err=True)
-
-    # If no errors or warnings, output success (for CLI feedback)
-    if not errors and not warnings:
-        typer.echo("::notice: Validation successful")
-
-
-def print_vscode_parse_error(error: ParseError, root: Path) -> None:
-    """Print parse error in VS Code format with location info."""
-    if error.context:
-        # ParseError has file, line, column information
-        file_path = error.context.file
-        if file_path:
-            # Make path relative to root
-            try:
-                rel_path = Path(file_path).relative_to(root)
-            except ValueError:
-                rel_path = Path(file_path)
-
-            line = error.context.line or 1
-            col = error.context.column or 1
-            typer.echo(f"{rel_path}:{line}:{col}: error: {error.message}", err=True)
-        else:
-            typer.echo(f"::error: {error.message}", err=True)
-    else:
-        typer.echo(f"::error: {error.message}", err=True)
-
-
-def is_directory_empty(directory: Path) -> bool:
-    """
-    Check if directory is empty (or has only files we commonly allow).
-
-    A directory is considered "empty" for init purposes if it contains:
-    - No files at all, OR
-    - Only .git directory, OR
-    - Only .git and common files (.gitignore, README.md, LICENSE, .DS_Store)
-
-    Args:
-        directory: Path to check
-
-    Returns:
-        True if directory is empty or only has allowed files
-    """
-    if not directory.exists():
-        return True
-
-    contents = list(directory.iterdir())
-
-    if len(contents) == 0:
-        return True
-
-    # Allow some common files that might be pre-created
-    allowed_files = {".git", ".gitignore", "README.md", "LICENSE", ".DS_Store"}
-    actual_files = {item.name for item in contents}
-
-    # If all files are in allowed list, consider it empty
-    if actual_files.issubset(allowed_files):
-        return True
-
-    return False
 
 
 def project_root_from_manifest(manifest: str | Path) -> Path:

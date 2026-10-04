@@ -703,34 +703,3 @@ class SitePageContext(BaseModel):
     active_analytics_providers: list[dict[str, Any]] = Field(default_factory=list)
     # Tenant slug (v0.61.0 Phase 6). Populates data-dz-tenant on <body>.
     tenant_slug: str | None = None
-
-
-class SiteAuthContext(BaseModel):
-    """Context for auth page templates (login, signup, forgot/reset password, 2fa_*)."""
-
-    product_name: str = "My App"
-    page_type: str = "login"  # login, signup, forgot_password, reset_password, 2fa_*
-    title: str = "Sign In"
-    action_url: str = "/auth/login"
-    button_text: str = "Sign In"
-    is_login: bool = True
-    other_page: str = "/signup"
-    other_link_text: str = "Create an account"
-    show_forgot_password: bool = False
-    show_name_field: bool = False
-    show_confirm_password: bool = False
-    show_success_alert: bool = False
-    subtitle: str = ""
-    custom_css: bool = False
-    # 2FA-specific fields; unused on other auth pages.
-    session_token: str = ""
-    default_method: str = "totp"
-    methods: list[str] = Field(default_factory=lambda: ["totp"])
-
-    # Site404Context and SiteErrorContext were retired in Phase 2.A
-    # (v0.67.34) alongside the deletion of `site/404.html` and
-    # `site/403.html`. Marketing-site error pages now render via the
-    # typed-Fragment views `build_site_404_view` and `build_site_403_view`
-    # in `dazzle.http.runtime.error_views`.
-
-    message: str = ""
