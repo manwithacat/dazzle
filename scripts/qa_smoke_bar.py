@@ -52,8 +52,23 @@ class AppSmokeBar:
     has_trial: bool = False
     stale: bool = False
     reasons: list[str] = field(default_factory=list)
+    # Reasons that mean "the smoke found product work" as opposed to "we have not
+    # looked recently". #1758 F3: both used to set `reasons`, so `residual=N`
+    # counted nine *stale measurement stamps* the same as nine findings, and the
+    # campaign named for gross bugs was selected by a counter that had never seen
+    # a bug. Re-measuring a clean app is hygiene; a seeded finding is work.
+    finding_reasons: list[str] = field(default_factory=list)
+
+    def is_finding(self) -> bool:
+        """Product work this app is carrying (auto_seed / dead crawl)."""
+        return bool(self.finding_reasons)
+
+    def is_stale(self) -> bool:
+        """The measurement is old — the fix is to re-run, not to ship."""
+        return self.stale
 
     def is_residual(self) -> bool:
+        """Anything outstanding, for callers that want one number."""
         return bool(self.reasons)
 
     def ok(self) -> bool:
@@ -114,9 +129,9 @@ def score_app(app: str, *, stale_days: float = DEFAULT_STALE_DAYS) -> AppSmokeBa
         age = (time.time() - smoke.stat().st_mtime) / 86400.0
         row.smoke_age_days = round(age, 2)
         if row.smoke_auto_seed:
-            row.reasons.append(f"smoke_auto_seed={row.smoke_auto_seed}")
+            row.finding_reasons.append(f"smoke_auto_seed={row.smoke_auto_seed}")
         if _is_dead_crawl(smoke):
-            row.reasons.append("smoke_dead_crawl")
+            row.finding_reasons.append("smoke_dead_crawl")
         if age > stale_days:
             row.stale = True
             row.reasons.append(f"smoke_stale_days={row.smoke_age_days}>{stale_days}")
@@ -125,7 +140,9 @@ def score_app(app: str, *, stale_days: float = DEFAULT_STALE_DAYS) -> AppSmokeBa
         row.reasons.append("no_smoke_report")
     row.hyperpart_auto_seed = _auto_seed_count(hyper)
     if row.hyperpart_auto_seed:
-        row.reasons.append(f"hyperpart_auto_seed={row.hyperpart_auto_seed}")
+        row.finding_reasons.append(f"hyperpart_auto_seed={row.hyperpart_auto_seed}")
+    # findings first so `reasons` stays the union both callers expect
+    row.reasons = [*row.finding_reasons, *row.reasons]
     return row
 
 
@@ -134,13 +151,23 @@ def scan(*, stale_days: float = DEFAULT_STALE_DAYS) -> list[AppSmokeBar]:
 
 
 def format_status(rows: list[AppSmokeBar]) -> str:
-    residual = [r for r in rows if r.is_residual()]
-    nxt = residual[0].app if residual else "-"
+    """Two numbers, because they call for different work (#1758 F3).
+
+    `residual` = product work this app is carrying (a smoke seeded something, or
+    a crawl died). `stale` = the measurement is older than `stale_days`; the
+    remedy is to re-run, not to ship. Reporting one number for both meant the
+    campaign named for gross bugs was selected by a counter that had never seen
+    a bug.
+    """
+    findings = [r for r in rows if r.is_finding()]
+    stale = [r for r in rows if r.is_stale()]
     parts = [
-        f"qa_smoke residual={len(residual)} next={nxt}",
+        f"qa_smoke residual={len(findings)} stale={len(stale)}",
+        f"next_finding={findings[0].app if findings else '-'}",
+        f"next_stale={stale[0].app if stale else '-'}",
     ]
-    for r in residual[:6]:
-        parts.append(f"{r.app}:{'/'.join(r.reasons)}")
+    for r in findings[:6]:
+        parts.append(f"{r.app}:{'/'.join(r.finding_reasons)}")
     return " ".join(parts)
 
 
@@ -153,14 +180,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--stale-days", type=float, default=DEFAULT_STALE_DAYS)
     args = p.parse_args(argv)
     rows = scan(stale_days=args.stale_days)
-    residual = [r for r in rows if r.is_residual()]
+    findings = [r for r in rows if r.is_finding()]
     if args.json:
         print(json.dumps([asdict(r) for r in rows], indent=2))
     elif args.next:
-        print(residual[0].app if residual else "")
+        # `--next` means "what should I work on", so it follows findings, not
+        # stamp age. A stale stamp with no finding is re-stamp hygiene.
+        print(findings[0].app if findings else "")
     else:
         print(format_status(rows))
-    if args.strict and residual:
+    if args.strict and findings:
         return 1
     return 0
 

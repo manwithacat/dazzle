@@ -141,12 +141,18 @@ def _process_dig() -> tuple[str, str | None, int, str | None]:
 
 
 def _qa_smoke() -> tuple[str, str | None, int]:
-    """L2.5 smoke residual — last smoke-crawl auto_seed / stale / missing."""
+    """L2.5 smoke residual — findings only, not stamp age (#1758 F3).
+
+    The rollup feeds campaign selection, so it must count *product work the app
+    is carrying*. Stamp age is re-measurement: it belongs in the hygiene cadence
+    (`qa_smoke_bar.py --status` still prints it as `stale=`), not in the number
+    that rotates the mutation ladder.
+    """
     mod = _load("qa_smoke_bar", REPO / "scripts" / "qa_smoke_bar.py")
     rows = mod.scan()
-    residual = [r for r in rows if r.is_residual()]
-    nxt = residual[0].app if residual else None
-    return mod.format_status(rows), nxt, len(residual)
+    findings = [r for r in rows if r.is_finding()]
+    nxt = findings[0].app if findings else None
+    return mod.format_status(rows), nxt, len(findings)
 
 
 def _domain_cognition() -> tuple[str, str | None, int]:

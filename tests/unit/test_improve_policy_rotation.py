@@ -201,3 +201,44 @@ def test_no_interesting_product_when_residual_hot() -> None:
     ):
         d = pol.pick(policy)
     assert d["strategy"] != "interesting_product"
+
+
+# --- W3: the smoke campaign rotates on findings, not on stamp age --------------
+# `land-l25-smoke` exists to find gross bugs. It was selected by
+# `smoke_residual=9` where all nine were *stale measurement stamps* — so the
+# campaign re-measured already-clean apps and reported nine units of residual
+# without having observed a single finding.
+
+
+def test_stale_stamps_alone_do_not_arm_the_smoke_campaign() -> None:
+    """The live state right now: seven stale stamps, zero findings."""
+    import scripts.improve_policy as pol
+
+    findings, nxt = pol.qa_smoke_residual()
+
+    assert findings == 0, (
+        "a smoke report is carrying product work (auto_seed or a dead crawl) — this "
+        "test's premise changed; update it rather than loosening the assertion"
+    )
+    assert nxt is None
+
+
+def test_a_seeded_smoke_finding_arms_the_campaign(tmp_path: Path) -> None:
+    """And the other direction: a real finding must still rotate the campaign, or
+    the fix above would have blinded the loop rather than sharpened it."""
+    import json
+
+    import scripts.improve_policy as pol
+
+    # A synthetic report, newest in the tree, in an example that already has one.
+    app = REPO / "examples" / "invoice_ops" / "dev_docs"
+    assert app.is_dir(), "example layout changed — pick another app"
+    probe = app / "qa-smoke-manager-29991231-235959.json"
+    probe.write_text(json.dumps({"auto_seed": [{"id": "synthetic-probe"}]}), encoding="utf-8")
+    try:
+        findings, nxt = pol.qa_smoke_residual()
+    finally:
+        probe.unlink()
+
+    assert findings >= 1
+    assert nxt == "invoice_ops"

@@ -378,6 +378,15 @@ def dual_lock_queue_depth() -> int | None:
 
 
 def qa_smoke_residual() -> tuple[int, str | None]:
+    """(findings, next app with a finding).
+
+    Findings, not stamp age. `land-l25-smoke` exists to find gross bugs, and
+    nine stale measurement stamps are not nine bugs: selecting it on staleness
+    made the campaign re-measure already-clean apps and report
+    `smoke_residual=9` without having observed a single finding (#1758 F3).
+    Staleness is still visible — `qa_smoke_bar.py --status` prints `stale=N` —
+    and is the trigger for the *hygiene* cadence, not this campaign.
+    """
     bar = REPO / "scripts" / "qa_smoke_bar.py"
     if not bar.is_file():
         return 0, None
@@ -389,9 +398,9 @@ def qa_smoke_residual() -> tuple[int, str | None]:
     sys.modules["qa_smoke_bar"] = mod  # required for dataclass on 3.14
     spec.loader.exec_module(mod)
     rows = mod.scan()
-    residual = [r for r in rows if r.is_residual()]
-    nxt = residual[0].app if residual else None
-    return len(residual), nxt
+    findings = [r for r in rows if r.is_finding()]
+    nxt = findings[0].app if findings else None
+    return len(findings), nxt
 
 
 def _is_hyperpart_coherence_entry(ent: dict[str, Any]) -> bool:
@@ -696,7 +705,7 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                     "reason": (
                         f"recurring:{sid} due (last={last} every={every})"
                         if due
-                        else f"qa_smoke residual={smoke_n}"
+                        else f"qa_smoke findings={smoke_n}"
                     ),
                 }
             )
@@ -708,7 +717,7 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
                 "force_args": "example-apps agent_qa_smoke",
                 "lane": "example-apps",
                 "strategy": "agent_qa_smoke",
-                "reason": f"qa_smoke residual={smoke_n} next={smoke_next}",
+                "reason": f"qa_smoke findings={smoke_n} next={smoke_next} (stamp age is hygiene, not a campaign trigger)",
             }
         )
     return decision
@@ -809,7 +818,7 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
         f"improve_policy active_campaign={policy.get('active_campaign') or '-'}",
         f"posture={d.get('posture') or camp.get('posture') or 'steady'}",
         f"pick force={d.get('force_args') or '-'} reason={d.get('reason')}",
-        f"qa_smoke residual={d.get('qa_smoke_residual')} next={d.get('qa_smoke_next') or '-'}",
+        f"qa_smoke findings={d.get('qa_smoke_residual')} next={d.get('qa_smoke_next') or '-'}",
     ]
     if camp.get("suppress_recurring_smoke"):
         lines.append("suppress_recurring_smoke=1")
