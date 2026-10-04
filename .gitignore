@@ -2,6 +2,9 @@
 .env
 .env.local
 
+# Local credential drops (vendor-bot keys, gh hosts.yml) — never tracked.
+.credentials/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -151,7 +151,24 @@ rows citing a non-gate module and one CI check named wrongly — i.e. it caught 
 own mistakes while being written.
 **Proves itself:** adding a rule to `AGENTS.md` without a row fails.
 
-### W8 — The orientation benchmark (the metric)  —  ⬜ not started
+### W8 — The orientation benchmark (the metric)  —  ✅ shipped
+
+**Change:** `docs/harness/orientation-benchmark.md` (five assertions, each read
+from an artefact), two task cards that name the task and its bounds but *not* the
+records an agent must find, `scripts/orientation_benchmark.py` as the recorder, and
+`test_orientation_benchmark.py` keeping the instrument honest.
+
+**The self-baseline scored 5/5 — and that is the finding, not a pass.** An agent
+carrying this repository's history satisfies every assertion before starting.
+The instrument refuses an unlabelled run and refuses `scorer: self` precisely so
+that number cannot be mistaken for evidence the harness works.
+
+**What the run actually bought:** a gate defect, found only by doing the work.
+Writing the residue page made five accepted entries read as live — the tracking
+was keeping the code alive — and the gate's own test file was doing the same to
+the names it declares dead. Both fixed, both tested.
+
+**Cost:** one spec, two cards, one script, one gate module. Plus one real gate fix.
 
 **Change:** a task card built from real repo work (one residue row from
 #1748/#1749, or a bug from the burn-down), an **alternate agent** with no other

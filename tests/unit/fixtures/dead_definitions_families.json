@@ -22,7 +22,6 @@
   "src/dazzle/fitness/missions/story_walk.py::run_pass1_for_stories": "agent-and-loop-legacy",
   "src/dazzle/http/email/inbound.py::SMTPInboundAdapter": "optional-extra-plumbing",
   "src/dazzle/http/events/kafka_bus.py::create_kafka_bus": "optional-extra-plumbing",
-  "src/dazzle/http/runtime/auth/scim_provisioning.py::_member_ids": "superseded-runtime-path",
   "src/dazzle/http/runtime/auth/scim_routes.py::_coerce_active": "superseded-runtime-path",
   "src/dazzle/http/runtime/consent_routes.py::resolve_consent_state_json": "superseded-runtime-path",
   "src/dazzle/http/runtime/device_registry.py::create_device_routes": "superseded-runtime-path",

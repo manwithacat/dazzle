@@ -25,4 +25,30 @@ Two things to know before deleting anything the gate names:
 2. **Nothing here is public API.** Zero entries appear in
    `docs/api-surface/public-helpers.txt` or `ir-types.txt`.
 
-Full page: `docs/reference/dead-code-residue.md`.
+## The families, and what retires each
+
+| family | n | retires when |
+|---|---|---|
+| `superseded-runtime-path` | 16 | each entry is re-wired, or confirmed superseded by name — the leftovers of ADR-0023 (Jinja2 → typed Fragments), ADR-0038's four-layer split, and the tenant-hierarchy work |
+| `qa-and-testing-helpers` | 10 | the UX contract suite stops referencing them, or they fold into the runner that does |
+| `error-and-report-helpers` | 8 | the callers are gone and no dynamic use remains — error constructors and introspection helpers |
+| `agent-and-loop-legacy` | 7 | the legacy agent entrypoints are deleted in favour of the current loop |
+| `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
+| `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
+| `cli-parity-helpers` | 4 | `cli/project.py` absorbs the last caller |
+| `optional-extra-plumbing` | 4 | **the wiring lands, or the capability is formally dropped** — see below |
+| `domain-brief-and-llm-legacy` | 3 | the pitch asset path is confirmed dead or re-wired |
+
+`optional-extra-plumbing` (`create_kafka_bus`, `create_s3_file_service`,
+`create_jwt_service`, `SMTPInboundAdapter`) is the family to worry about: these are
+meant to be reachable when the matching extra is installed, and nothing
+constructs them. That is either missing wiring — a bug report — or a dropped
+feature, and the answer changes what the fix is.
+
+## The trap when you go looking
+
+`scim_provisioning.py::_member_ids` sits directly beside the live
+`leftover_honest_scim_member_ids`, and the live one's docstring cites the dead
+one by name as the historical culprit. Reading the code alone, the pair looks
+like a helper and its caller. The ratchet is right about which is which; your eyes
+are not, which is why the gate exists.

@@ -174,11 +174,6 @@ def leftover_scim_external_id_stay_put(body: dict[str, Any]) -> bool:
     return leftover_scim_string_attr_stay_put(body, "externalId")
 
 
-def _member_ids(value: Any) -> list[str]:
-    """Member ids from a SCIM ``members`` value — leftover is empty, not a crash."""
-    return leftover_honest_scim_member_ids(value) or []
-
-
 def parse_group_patch(body: dict[str, Any]) -> list[tuple[str, Any]]:
     """Parse a SCIM PATCH body into concrete ``(op, arg)`` tuples (#1342).
 

@@ -281,6 +281,15 @@ def check_chain(report: Report) -> None:
         report.add("improve-chain", f"schedule state unreadable: {exc}", "notice")
         return
     report.facts["chain_armed"] = state.get("chain_armed")
+    if state.get("parked_by_decision"):
+        report.add(
+            "improve-chain",
+            f"the loop is parked by decision ({state.get('parked_reason', 'no reason')}) — "
+            "cycles run by hand. Re-arm with a host scheduler or `make reconcile` once the "
+            "reason no longer holds",
+            "notice",
+        )
+        return
     if state.get("action") == "schedule" and state.get("chain_armed") is False:
         report.add(
             "improve-chain",

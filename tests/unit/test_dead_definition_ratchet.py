@@ -88,6 +88,51 @@ _BASELINE_PATH = Path(__file__).resolve().parent / "fixtures" / "dead_definition
 _TEXT_SUFFIXES = frozenset({".cfg", ".html", ".ini", ".j2", ".py", ".sh", ".toml", ".yaml", ".yml"})
 
 #: Formats where ``#`` starts a comment that must not count as a use site.
+# Surfaces where a mention is bookkeeping, not a call site.
+#
+# The gate must not be satisfied by a name appearing in the machinery that
+# *tracks* dead code — otherwise the tracking is what keeps the code alive. Two
+# real cases, both found by doing the work:
+#
+# * `docs/reference/dead-code-residue.md` (and the semantics-KB TOML it is
+#   generated from) name the accepted residue. Writing that page — the first
+#   thing an agent does before deleting anything — made three entries read as
+#   live and the gate demanded their removal.
+# * `tests/unit/fixtures/complexity_baseline.json` lists accepted clone
+#   clusters by name, so every member of a baseline cluster is "referenced".
+#
+# Config that a loader genuinely reads (dispatch tables in `.json`/`.yml` the
+# framework imports) is still counted; this list is deliberately narrow.
+_BOOKKEEPING_SUFFIXES = {".md"}
+_BOOKKEEPING_PREFIXES = ("src/dazzle/mcp/semantics_kb/",)
+_FIXTURE_PREFIX = "tests/unit/fixtures/"
+_BOOKKEEPING_NAMES = {"complexity_baseline.json", "dead_definitions_baseline.json"}
+# This file. String literals in Python count as uses (dispatch tables are
+# strings), so a test that asserts "these names are dead" was itself keeping
+# them alive: the assertion mentioned `create_s3_file_service` and
+# `SMTPInboundAdapter`, and the gate then reported both as referenced. A gate
+# must not be able to keep its own findings alive by naming them.
+_SELF = "tests/unit/test_dead_definition_ratchet.py"
+
+
+def _is_bookkeeping(relpath: str) -> bool:
+    """True when a mention is tracking dead code rather than using it.
+
+    Deliberately narrow. `src/dazzle/mcp/semantics_kb/` is excluded **only for
+    its TOML sources** — the Python beside them is ordinary framework code, and
+    excluding it too hid ~20 genuinely-unreferenced definitions behind a
+    directory prefix that had nothing to do with the bug.
+    """
+    path = Path(relpath)
+    if path.suffix in _BOOKKEEPING_SUFFIXES or path.name in _BOOKKEEPING_NAMES:
+        return True
+    if relpath == _SELF:
+        return True
+    if relpath.startswith(_BOOKKEEPING_PREFIXES) and path.suffix == ".toml":
+        return True
+    return relpath.startswith(_FIXTURE_PREFIX)
+
+
 _HASH_COMMENT = frozenset({".cfg", ".ini", ".sh", ".toml", ".yaml", ".yml"})
 
 _MAX_BYTES = 4_000_000
@@ -242,9 +287,27 @@ def _text_references(text: str, wanted: set[str], suffix: str) -> Counter[str]:
 
 
 def _reference_counts(wanted: set[str]) -> Counter[str]:
-    """Repo-wide use counts for the candidate names."""
+    """Repo-wide use counts for the candidate names.
+
+    Prose is not a use site. Markdown is excluded because documenting the
+    residue is exactly what an agent does *before* deleting it — and naming
+    `create_kafka_bus` in the residue page made three accepted entries read as
+    live, which is a gate telling you to stop reviewing the inventory because
+    prose mentioned a name. The same principle the Python path already applies
+    to docstrings.
+
+    Config and data files stay counted: a loader really does read a dispatch
+    table out of `.json`/`.toml`/`.yml`, and those references are real.
+    """
     totals: Counter[str] = Counter()
+    root = _REPO.resolve()
     for path in _tracked_files():
+        try:
+            rel = str(path.resolve().relative_to(root))
+        except ValueError:  # pragma: no cover — outside the repo
+            rel = path.name
+        if _is_bookkeeping(rel):
+            continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -387,3 +450,39 @@ def test_a_string_literal_naming_a_name_is_a_reference() -> None:
 def test_hash_comments_in_config_are_not_references() -> None:
     assert not _text_references("# see orphan_name\n", {"orphan_name"}, ".yml")
     assert _text_references('handler: "orphan_name"\n', {"orphan_name"}, ".yml")["orphan_name"] == 1
+
+
+# --- bookkeeping is not a use site (#1759 W8, found by doing the work) -------
+# Documenting the residue is the *first* thing an agent does before deleting
+# anything. Writing that page — in `docs/reference/dead-code-residue.md`, and in
+# the semantics-KB TOML it is generated from — named `create_kafka_bus`,
+# `create_s3_file_service`, `create_jwt_service`, `SMTPInboundAdapter` and
+# `_session_to_dict`, and the gate then reported them as *live* and demanded
+# their removal. The tracking was keeping the code alive.
+
+
+def test_prose_and_baselines_are_not_use_sites() -> None:
+    assert _is_bookkeeping("docs/reference/dead-code-residue.md")
+    assert _is_bookkeeping("README.md")
+    assert _is_bookkeeping("src/dazzle/mcp/semantics_kb/doc_pages.toml")
+    assert _is_bookkeeping("tests/unit/fixtures/complexity_baseline.json")
+    assert _is_bookkeeping("tests/unit/fixtures/dead_definitions_baseline.json")
+
+
+def test_ordinary_code_is_still_a_use_site() -> None:
+    """The exclusion is narrow on purpose: a prefix that hid the whole
+    semantics_kb *package* also hid ~20 genuinely unreferenced definitions."""
+    assert not _is_bookkeeping("src/dazzle/mcp/semantics_kb/__init__.py")
+    assert not _is_bookkeeping("src/dazzle/mcp/server/handlers/user_management.py")
+    assert _is_bookkeeping("tests/unit/test_dead_definition_ratchet.py"), (
+        "this gate's own assertions must not count as uses, or naming a finding resurrects it"
+    )
+    assert not _is_bookkeeping("src/dazzle/http/events/kafka_bus.py")
+
+
+def test_a_name_documented_only_in_prose_is_still_dead() -> None:
+    """The behavioural assertion behind the two above: writing a residue page
+    must not resurrect what it describes."""
+    names = {"create_kafka_bus", "create_s3_file_service", "SMTPInboundAdapter"}
+    counts = _reference_counts(names)
+    assert counts["create_kafka_bus"] == 0, counts
