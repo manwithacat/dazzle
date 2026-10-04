@@ -57,14 +57,26 @@ def _table() -> list[list[str]]:
 
 
 def _current_cycle() -> int:
-    """Highest cycle number the log has recorded."""
+    """Highest cycle number this repository can attest to.
+
+    `dev_docs/improve-log.md` is **gitignored local state** and does not exist in
+    a clean checkout, so trusting it alone made this gate red in CI while green on
+    a developer machine. Prefer the committed map's own numbers; consult the log
+    only when it happens to be present.
+    """
+    rows = _table()
+    from_map = max(
+        (int(cell) for row in rows for cell in (row[4], row[7]) if cell.isdigit()),
+        default=0,
+    )
     log = REPO / "dev_docs" / "improve-log.md"
     if not log.is_file():
-        return 0
-    return max(
+        return from_map
+    from_log = max(
         (int(m) for m in re.findall(r"^## Cycle (\d+)", log.read_text(encoding="utf-8"), re.M)),
         default=0,
     )
+    return max(from_map, from_log)
 
 
 def test_the_registry_table_has_the_belief_columns() -> None:
