@@ -165,14 +165,20 @@ def compare_screenshots(
             img_baseline = img_baseline.resize(img_current.size)
 
         diff = ImageChops.difference(img_current.convert("RGB"), img_baseline.convert("RGB"))
-        # Per-pixel max across the RGB bands: a pixel differs iff any channel
-        # is nonzero, i.e. iff the band-max is nonzero. Single-band data is
-        # flat ints, which is also the shape get_flattened_data is typed for
-        # (the multiband tuple-of-tuples runtime shape is untyped territory).
-        band_max = functools.reduce(ImageChops.lighter, diff.split())
-        diff_pixels = sum(
-            1 for v in band_max.get_flattened_data() if isinstance(v, (int, float)) and v > 0
-        )
+        # Per-pixel max across the RGB bands: a pixel differs iff any channel is
+        # nonzero, so collapse the bands to one 8-bit channel where 0 means
+        # "identical".
+        #
+        # The previous read was `functools.reduce(ImageChops.lighter,
+        # diff.split()).get_flattened_data()`, which on a 3-band image yields
+        # nested tuples rather than scalars — no scalar ever matched the
+        # `isinstance` guard, `diff_pixels` was always 0, and this comparator
+        # **could not fail**. A histogram counts the same thing exactly, and is
+        # typed (`list[int]`) where Pillow's bundled stubs type `getdata()` as
+        # `Generator[bool, ...]`.
+        luma = functools.reduce(ImageChops.lighter, diff.split()).convert("L")
+        total_pixels = img_current.size[0] * img_current.size[1]
+        diff_pixels = total_pixels - luma.histogram()[0]
         total_pixels = img_current.size[0] * img_current.size[1]
         diff_pct = diff_pixels / total_pixels if total_pixels > 0 else 0.0
 
