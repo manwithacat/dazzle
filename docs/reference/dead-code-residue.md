@@ -35,7 +35,7 @@ Two things to know before deleting anything the gate names:
 | `agent-and-loop-legacy` | 7 | the legacy agent entrypoints are deleted in favour of the current loop |
 | `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
 | `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
-| `cli-parity-helpers` | 4 | `cli/project.py` absorbs the last caller |
+| `cli-parity-helpers` | 3 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
 | `optional-extra-plumbing` | 4 | **the wiring lands, or the capability is formally dropped** — see below |
 | `domain-brief-and-llm-legacy` | 3 | the pitch asset path is confirmed dead or re-wired |
 

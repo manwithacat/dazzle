@@ -84,6 +84,7 @@ top: …
 
 ## Toolchain
 
-`gh` (Semgrep findings come from the GitHub API). If
-`uv run python scripts/improve_toolchain.py --require gh-auth` exits non-zero, this
-cycle is `outcome: BLOCKED` with the remedy it prints (#1758 F5).
+`semgrep` on PATH, and the Sentinel scanner (`dazzle sentinel scan`). If
+`uv run python scripts/improve_toolchain.py --require semgrep` exits non-zero,
+this cycle is `outcome: BLOCKED` with the remedy it prints — a hygiene pass that
+never ran is not a clean pass (#1758 F5).

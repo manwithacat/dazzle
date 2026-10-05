@@ -234,31 +234,6 @@ def read_runtime_test_secret(project_root: Path) -> str | None:
         return None
 
 
-def read_runtime_file(project_root: Path) -> PortAllocation | None:
-    """
-    Read runtime state file to get current port allocation.
-
-    Args:
-        project_root: Project root directory
-
-    Returns:
-        PortAllocation if file exists, None otherwise
-    """
-    runtime_file = project_root / ".dazzle" / "runtime.json"
-    if not runtime_file.exists():
-        return None
-
-    try:
-        data = json.loads(runtime_file.read_text(encoding="utf-8"))
-        return PortAllocation(
-            ui_port=data["ui_port"],
-            api_port=data["api_port"],
-            project_name=data["project_name"],
-        )
-    except (json.JSONDecodeError, KeyError):
-        return None
-
-
 def clear_runtime_file(project_root: Path) -> None:
     """
     Remove runtime state file when server stops.

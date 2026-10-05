@@ -3,7 +3,6 @@
   "src/dazzle/agent_loop/core.py::prove_json",
   "src/dazzle/api_kb/loader.py::get_all_env_vars",
   "src/dazzle/cli/i18n.py::_extract_msgids",
-  "src/dazzle/cli/runtime_impl/ports.py::read_runtime_file",
   "src/dazzle/cli/ux_interactions.py::_default_workspace_path",
   "src/dazzle/cli_ui.py::create_panel",
   "src/dazzle/compliance/analytics/consent_banner.py::render_consent_banner_from_state",

@@ -1,6 +1,7 @@
 # TASK-002 — retire a dead CLI helper without touching its live neighbour
 
-**Status:** open
+**Status:** spent — consumed by the first `fresh` run (see
+`dev_docs/orientation-benchmark/runs.json`).
 
 **From:** `tests/unit/fixtures/dead_definitions_families.json`
 (`cli-parity-helpers` family), reported by `test_dead_definition_ratchet`.
@@ -29,9 +30,11 @@ what is being measured. Two bear on this change:
 
 ## The trap
 
-The same module keeps `load_runtime_file`-style neighbours that **are** live. If
-you cannot tell which is which from the code alone, the ratchet is the
-authority — not your reading of the directory.
+The same module keeps neighbours that **are** live — `write_runtime_file`,
+`read_runtime_test_secret`, `clear_runtime_file` — three readers of the same
+`.dazzle/runtime.json` next to one that nothing calls. If you cannot tell which
+is which by eye, the ratchet is the authority, not your reading of the
+directory.
 
 ## Bounds
 
@@ -44,6 +47,22 @@ authority — not your reading of the directory.
 - `uv run pytest tests/unit/test_dead_definition_ratchet.py -q` is green.
 - The gate path for a `src/` diff is green (`make ci-changed`).
 - The commit subject states the task, and the diff is the task.
+
+## Consuming a card
+
+Three files, in this order, and the gate is happy with all three:
+
+```bash
+# 1. do the work, then record the run BEFORE flipping the status — a card whose
+#    symbol is gone from the residue with a run against it is 'consumed', not drift
+uv run python scripts/orientation_benchmark.py --run TASK-00N --scorer … --context … --agent … \
+    --scores … --notes …
+# 2. flip **Status:** to spent
+# 3. author the successor card, or the run leaves no open task
+```
+
+Step 3 is what the fresh run flagged as missing: the instrument then has no
+runnable task, which it asserts.
 
 ## How the run is scored
 

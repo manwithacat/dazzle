@@ -3,7 +3,6 @@
   "src/dazzle/agent_loop/core.py::prove_json": "agent-and-loop-legacy",
   "src/dazzle/api_kb/loader.py::get_all_env_vars": "semantics-and-kb-residue",
   "src/dazzle/cli/i18n.py::_extract_msgids": "cli-parity-helpers",
-  "src/dazzle/cli/runtime_impl/ports.py::read_runtime_file": "cli-parity-helpers",
   "src/dazzle/cli/ux_interactions.py::_default_workspace_path": "cli-parity-helpers",
   "src/dazzle/cli_ui.py::create_panel": "cli-parity-helpers",
   "src/dazzle/compliance/analytics/consent_banner.py::render_consent_banner_from_state": "error-and-report-helpers",

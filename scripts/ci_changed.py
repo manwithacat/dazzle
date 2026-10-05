@@ -292,6 +292,23 @@ def select_packs(paths: list[str]) -> list[Pack]:
             )
         )
 
+    # A gate *module* or a ratchet *fixture* is the diff's own contract: editing
+    # one is exactly when the whole gate suite should run. Before this, a
+    # src/-plus-fixtures diff selected only `bandit-src`, so a change that turned a
+    # gate red could not be seen by the mid-edit tier — found by the orientation
+    # benchmark's fresh run, which reported a regression its own card's
+    # "Done when" gate was structurally unable to see.
+    if any_prefix("tests/unit/fixtures/") or any(
+        p.startswith("tests/unit/") and p.endswith(".py") and "test_" in p for p in paths
+    ):
+        packs.append(
+            Pack(
+                name="gate-contracts",
+                reason="gate module or ratchet fixture change — the gate suite is the contract",
+                pytest=["tests/unit", "-m", "gate"],
+            )
+        )
+
     # Dedup by name preserving order
     seen: set[str] = set()
     out: list[Pack] = []

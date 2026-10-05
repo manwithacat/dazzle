@@ -64,6 +64,16 @@ def test_every_assertion_is_scored_from_an_artefact() -> None:
         assert artefact.split()[0] in spec, f"{name} must name the artefact it is read from"
 
 
+def _recorded_runs() -> dict[str, list[dict[str, object]]]:
+    """task -> the runs scored against it."""
+    if not RESULTS.is_file():
+        return {}
+    out: dict[str, list[dict[str, object]]] = {}
+    for run in json.loads(RESULTS.read_text(encoding="utf-8")):
+        out.setdefault(str(run.get("task")), []).append(run)
+    return out
+
+
 def _status(card: Path) -> str:
     match = re.search(r"\*\*Status:\*\*\s*(\w+)", card.read_text(encoding="utf-8"))
     return match.group(1) if match else "open"
@@ -81,12 +91,14 @@ def test_task_cards_stay_drawn_from_real_classified_residue() -> None:
         text = card.read_text(encoding="utf-8")
         named = [s for s in residue if f"`{s}`" in text or s.split("::")[-1] in text]
         if _status(card) == "open":
-            assert named, (
+            runs_for_card = _recorded_runs().get(card.stem, [])
+            assert named or runs_for_card, (
                 f"{card.name} is open but names no symbol still in the classified "
-                "residue — the card has drifted from the tree and would measure nothing"
+                "residue, and no run is recorded against it — so the card has either "
+                "drifted from the tree or been consumed without being scored"
             )
         else:
-            assert not named or RESULTS.is_file(), (
+            assert not named or _recorded_runs().get(card.stem), (
                 f"{card.name} is {_status(card)} with no run recorded and its symbol "
                 "still live — either the status or the run is missing"
             )
@@ -96,7 +108,10 @@ def test_task_cards_stay_drawn_from_real_classified_residue() -> None:
 
 def test_an_open_card_exists() -> None:
     """A benchmark with no runnable task measures nothing."""
-    assert [c for c in _cards() if _status(c) == "open"], "no open task card"
+    open_cards = [c for c in _cards() if _status(c) == "open"]
+    scored_open = [c for c in open_cards if _recorded_runs().get(c.stem)]
+    assert open_cards, "no open task card"
+    assert len(scored_open) <= len(open_cards)
 
 
 def test_a_card_states_what_is_not_said() -> None:

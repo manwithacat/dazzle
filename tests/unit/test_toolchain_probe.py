@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,8 @@ PROBE = REPO / "scripts" / "improve_toolchain.py"
 
 STRATEGIES = sorted((IMPROVE / "strategies").glob("*.md"))
 LANES = sorted((IMPROVE / "lanes").glob("*.md"))
+STRATEGIES_BY_NAME = {p.stem: p for p in STRATEGIES}
+LANES_BY_NAME = {p.stem: p for p in LANES}
 
 # What a playbook has to say before it can be selected. The strategies are the
 # dig playbooks; the lanes own selection.
@@ -255,3 +258,109 @@ def test_reconcile_is_quiet_when_the_chain_is_armed(
     mod.check_chain(report)
 
     assert report.findings == []
+
+
+# --- the other direction: a declaration that is not true ----------------------
+# Everything above catches a dependency that exists and was not declared. This
+# catches the opposite, and it is the half that makes the inventory trustworthy:
+# a capability listed for a strategy that does not use it, or a BLOCKED row that
+# names a probe which cannot answer for it. Both make the toolchain report
+# confidently wrong — the failure mode this programme has spent its life on.
+
+
+def test_the_fixture_equals_the_derivation() -> None:
+    """`required_for` is derived from the playbooks and pinned here.
+
+    The first version of this inventory was written by hand and got it wrong
+    twice: five names that resolve to no playbook at all, and eleven strategies
+    listed for a database they never mention. A hand-kept capability map is a
+    claim; this makes it a reading of the playbooks.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "toolchain_probe_src", REPO / "scripts" / "improve_toolchain.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+
+    derived = mod.derive_requirements()
+    for cap in _caps():
+        want = derived.get(cap["name"])
+        if want is None:
+            continue
+        assert cap["required_for"] == want, (
+            f"{cap['name']}: fixture says {cap['required_for']}, the playbooks say {want}. "
+            "Run: uv run python scripts/improve_toolchain.py --refresh"
+        )
+
+
+def test_no_capability_claims_a_strategy_that_does_not_use_it() -> None:
+    """`required_for` is a claim. A wrong claim sends an operator to install
+    something a strategy never needed, and teaches the next reader that the
+    strategy needs it."""
+    wrong: list[str] = []
+    for cap in _caps():
+        for strategy in cap["required_for"]:
+            playbook = STRATEGIES_BY_NAME.get(strategy) or LANES_BY_NAME.get(strategy)
+            if playbook is None:
+                wrong.append(f"{cap['name']} requires {strategy}, which does not exist")
+                continue
+            text = playbook.read_text(encoding="utf-8")
+            if not TOOL_SIGNALS.search(text) and "## Toolchain" not in text:
+                wrong.append(f"{cap['name']} requires {strategy}, which names no tool")
+    assert not wrong, "capabilities requiring a strategy that does not use them:\n  " + "\n  ".join(
+        wrong
+    )
+
+
+def _toolchain_module() -> Any:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "toolchain_probe_src", REPO / "scripts" / "improve_toolchain.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_every_declared_requirement_is_a_real_tool_signal() -> None:
+    """Each capability's signal must appear in the playbooks it claims.
+
+    Reads the signal table from `improve_toolchain.py` rather than keeping a
+    second copy: the first copy drifted (it matched the word "render" and claimed
+    a browser for a strategy that never drives one).
+    """
+    signals = _toolchain_module().SIGNALS
+    unsubstantiated: list[str] = []
+    for cap in _caps():
+        pattern = signals.get(cap["name"])
+        if pattern is None:
+            continue
+        for strategy in cap["required_for"]:
+            playbook = STRATEGIES_BY_NAME.get(strategy) or LANES_BY_NAME.get(strategy)
+            if playbook is None:
+                continue
+            if not re.search(pattern, playbook.read_text(encoding="utf-8"), re.IGNORECASE):
+                unsubstantiated.append(f"{cap['name']} -> {strategy} (no matching signal)")
+    assert not unsubstantiated, "\n".join(unsubstantiated)
+
+
+def test_a_strategy_that_declares_a_toolchain_says_how_to_report_it_blocked() -> None:
+    """Every BLOCKED outcome must be reachable by name. A playbook that says
+    `BLOCKED` without naming the probe leaves the next agent to invent the
+    command."""
+    unnamed: list[str] = []
+    for cap in _caps():
+        for strategy in cap["required_for"]:
+            playbook = STRATEGIES_BY_NAME.get(strategy)
+            if playbook is None or "BLOCKED" not in playbook.read_text(encoding="utf-8"):
+                continue
+            if "improve_toolchain.py" not in playbook.read_text(encoding="utf-8"):
+                unnamed.append(f"{strategy} reports BLOCKED without naming improve_toolchain.py")
+    assert not unnamed, "\n".join(unnamed)
