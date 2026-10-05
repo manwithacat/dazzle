@@ -128,6 +128,11 @@ sync-ci-test:
 # cited by a merged commit), PRs ready to merge, non-terminal advisories, and
 # improve-loop state that has rost (heartbeat age, backlog past compaction).
 # Advisory by design — it reports, it does not fail a build.
+# Rehearse the /improve loop's mechanics on this host: steps in order, each with
+# a verdict, no dead ends. Part of `make ci-fast` (tier0); runnable alone.
+harness-validate:
+	bash scripts/ci_local.sh harness-validate
+
 reconcile:
 	@uv run python scripts/repo_reconcile.py
 

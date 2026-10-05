@@ -152,40 +152,57 @@ def step_0b_preflight(quick: bool) -> list[Step]:
     ]
 
 
+def _head_sha() -> str | None:
+    code, out, _ = _run(["git", "rev-parse", "origin/main"], timeout=60)
+    if code != 0:
+        return None
+    return out.strip() or None
+
+
 def step_0c_ci() -> Step:
-    """CI badge snapshot. `gh` absent must read as unavailable-with-a-reason,
-    never as green."""
+    """CI badge for the head of `main`, read from the check-runs API for a known
+    SHA.
+
+    Not `gh run list`: through this client that listing returned a 2026-07-31 run
+    and then a 2026-06-23 run for the same branch minutes apart, while the badge
+    was red throughout (4 failing checks on a6097e293). A rehearsal step that
+    can read green from a red badge is worse than no step — a false green produced
+    by the instrument meant to detect false greens. `gh` absent, or an answer with
+    no verdict in it, reads as unavailable rather than as a pass.
+    """
     if not _gh_available():
         return Step(
             "0c ci-badge", UNAVAILABLE, "gh unavailable — the driver logs `ci: unavailable`"
         )
-    code, out, _ = _run(
-        [
-            "gh",
-            "run",
-            "list",
-            "--workflow",
-            "ci.yml",
-            "--branch",
-            "main",
-            "--limit",
-            "1",
-            "--json",
-            "status,conclusion",
-        ],
-        timeout=120,
+    sha = _head_sha()
+    if sha is None:
+        return Step("0c ci-badge", UNAVAILABLE, "cannot resolve origin/main")
+    jq = (
+        "{total: .total_count,"
+        ' failing: [.check_runs[] | select(.conclusion=="failure")] | length,'
+        ' running: [.check_runs[] | select(.status!="completed")] | length}'
+    )
+    code, out, err = _run(
+        ["gh", "api", f"repos/manwithacat/dazzle/commits/{sha}/check-runs", "--jq", jq],
+        timeout=180,
     )
     if code != 0:
-        return Step("0c ci-badge", UNAVAILABLE, f"gh exited {code}")
+        return Step("0c ci-badge", UNAVAILABLE, f"check-runs API exited {code}: {_tail(err)}")
     try:
-        runs = json.loads(out)
+        data = json.loads(out)
     except json.JSONDecodeError:
         return Step("0c ci-badge", SILENT, f"unparseable: {_tail(out)}")
-    if not runs:
-        return Step("0c ci-badge", UNAVAILABLE, "no runs on main")
-    latest = runs[0]
-    verdict = latest.get("conclusion") or latest.get("status")
-    return Step("0c ci-badge", OK, f"main: {verdict}")
+    if "failing" not in data:
+        return Step("0c ci-badge", SILENT, f"no verdict in the answer: {_tail(out)}")
+    failing, running, total = data["failing"], data["running"], data["total"]
+    detail = f"main {sha[:9]}: {total} checks, {failing} failing, {running} running"
+    if failing:
+        return Step(
+            "0c ci-badge",
+            DEGRADED,
+            detail + " — a cycle would be CI repair, not product work (Step 0c pre-empts)",
+        )
+    return Step("0c ci-badge", OK, detail)
 
 
 def step_0c2_codeql() -> Step:
@@ -230,12 +247,15 @@ def step_0c3_inbox() -> Step:
         return Step("0c3 inbox", SILENT, f"unparseable: {_tail(out)}")
     counts = data.get("counts", {})
     recommended = data.get("recommended") or []
+    if not isinstance(recommended, list):
+        recommended = []
     parked = [
         i["number"] for i in data.get("other_issues", []) if i.get("class") == "deferred_future"
     ]
     detail = (
         f"{counts.get('open_issues', '?')} open, {counts.get('open_prs', '?')} PRs, "
-        f"{len(parked)} parked, recommended: {[r['issue'] for r in recommended] or '-'}"
+        f"{len(parked)} parked, recommended: "
+        f"{[r.get('issue', '?') for r in recommended] or '-'}"
     )
     return Step("0c3 inbox", OK, detail)
 

@@ -248,6 +248,19 @@ cmd_changed() {
   _ok "ci-changed clean"
 }
 
+# The loop's mechanics, rehearsed on this host. Every other gate here checks a
+# *piece* of the harness; this one checks that the /improve loop still runs — steps
+# in order, each producing a verdict, no dead ends. It is what caught a red badge
+# and three gates that were green locally, and seven harness fixes had gone a full
+# cycle unexercised before it existed. `--quick` skips the two slow gates (the
+# ship-surface gate has just run them).
+cmd_harness_validate() {
+  _log "harness rehearsal  (/improve loop mechanics, --quick)"
+  _run_uv python scripts/harness_validate.py --quick \
+    || _die "the /improve loop does not run on this host — fix it before shipping changes that assume it does"
+  _ok "harness loop mechanics ok"
+}
+
 cmd_tier0() {
   _log "TIER 0 / ship-fast  (preflight + ship-surface + ruff + mypy + gate + docs)"
   cmd_preflight_surface
@@ -255,6 +268,7 @@ cmd_tier0() {
   cmd_ruff_fix
   cmd_type_check
   cmd_gates
+  cmd_harness_validate
   cmd_docs
   _cmd_push_gate_record 0
   _ok "tier0 complete — not full CI; run 'make ci-core' before a release tag"
@@ -306,6 +320,7 @@ Commands:
   sync-type             uv sync --frozen with CI type-check extras (Python 3.12)
   sync-test             uv sync --frozen with CI python-tests extras (Python 3.12)
   type-check            mypy src/dazzle only
+  harness-validate      rehearse the /improve loop's mechanics on this host
   security              bandit (medium, src/) + pip-audit hard-fail
   security-cli          JWT fuzz + shapes RBAC matrix (CI security-tests gates)
   docs                  mkdocs build --strict
@@ -346,6 +361,7 @@ main() {
     sync-type|sync-ci-type) cmd_sync_type ;;
     sync-test|sync-ci-test) cmd_sync_test ;;
     type-check|type-check-ci) cmd_type_check ;;
+    harness-validate) cmd_harness_validate ;;
     # Single gates. These are implemented above and were reachable only from
     # inside tier0/tier1 — `make security` delegated here and got "unknown
     # command", so the local security gate could not be run at all.
