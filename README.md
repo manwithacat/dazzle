@@ -225,7 +225,7 @@ That's a todo app. The same language scales to 39-entity accountancy platforms w
 | **HLESS Events** | Intent/Fact/Observation/Derivation event semantics | Replay correctness, audit lineage, no "events as a vague bucket" |
 | **Fragments** | Constrained custom rendering inside generated surfaces | Differentiated UX without losing semantic integrity |
 | **Islands** | Self-contained interactive JS components mounted into server-rendered pages | Charts, editors, drag-and-drop without adopting an SPA framework |
-| **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, HMRC, Xero, and more |
+| **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, Xero, Companies House, and more |
 | **LLM Jobs** | Classification, extraction, generation tasks | AI capabilities without prompt engineering sprawl |
 | **Services** | Custom business logic declared in DSL, implemented in typed Python/TS stubs | A bounded escape hatch for domain logic that keeps the declarative boundary |
 | **Compliance** | Maps DSL constructs to ISO 27001 and SOC 2 controls | Control-coverage evidence, gaps flagged |

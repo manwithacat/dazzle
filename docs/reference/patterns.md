@@ -537,7 +537,7 @@ from dazzle.http.graphql.adapters import (
     ErrorSeverity,
 )
 
-normalized = normalize_error(error, service_name="hmrc")
+normalized = normalize_error(error, service_name="xero")
 ```
 
 ### Example
@@ -550,12 +550,12 @@ from dazzle.http.graphql.adapters import (
 )
 
 try:
-    result = await hmrc_adapter.get_vat_obligations(vrn)
+    result = await xero_adapter.list_invoices()
 except AdapterError as e:
     normalized = normalize_error(e, request_id="req-123")
 
     # Access normalized error properties
-    print(normalized.code)           # "HMRC_RATE_LIMIT_EXCEEDED"
+    print(normalized.code)           # "XERO_RATE_LIMIT_EXCEEDED"
     print(normalized.category)       # ErrorCategory.RATE_LIMIT
     print(normalized.severity)       # ErrorSeverity.WARNING
     print(normalized.user_message)   # "Too many requests. Please try again in 30 seconds."
@@ -608,7 +608,7 @@ def log_error(normalized: NormalizedError):
 
 ## External Adapter
 
-Abstract base class for integrating with external APIs (HMRC, banks, payment providers, etc.) with built-in retry logic, rate limiting, and error normalization.
+Abstract base class for integrating with external APIs (banks, payment providers, accounting platforms, etc.) with built-in retry logic, rate limiting, and error normalization.
 
 ### Syntax
 
@@ -635,27 +635,22 @@ from dazzle.http.graphql.adapters import (
     AdapterResult,
 )
 
-class HMRCAdapter(BaseExternalAdapter[AdapterConfig]):
-    """Adapter for HMRC VAT API."""
+class XeroAdapter(BaseExternalAdapter[AdapterConfig]):
+    """Adapter for the Xero Accounting API."""
 
     def __init__(self, bearer_token: str):
         config = AdapterConfig(
-            base_url="https://api.service.hmrc.gov.uk",
+            base_url="https://api.xero.com/api.xro/2.0",
             timeout=30.0,
             headers={"Authorization": f"Bearer {bearer_token}"},
             retry=RetryConfig(max_retries=3, base_delay=1.0),
-            rate_limit=RateLimitConfig(requests_per_second=4),
+            rate_limit=RateLimitConfig(requests_per_second=10),
         )
         super().__init__(config)
 
-    async def get_vat_obligations(
-        self, vrn: str, from_date: str, to_date: str
-    ) -> AdapterResult[list[dict]]:
-        """Fetch VAT obligations for a business."""
-        return await self._get(
-            f"/organisations/vat/{vrn}/obligations",
-            params={"from": from_date, "to": to_date, "status": "O"},
-        )
+    async def get_invoice(self, invoice_id: str) -> AdapterResult[dict]:
+        """Fetch one invoice."""
+        return await self._get(f"/Invoices/{invoice_id}")
 ```
 
 **Related:** [Error Normalization](patterns.md#error-normalization), [Adapter Result](patterns.md#adapter-result), [Graphql Bff Pattern](patterns.md#graphql-bff-pattern)

@@ -627,20 +627,20 @@ integration companies_house:
       incorporation_date <- response.date_of_creation
     on_error: set company_status = "lookup_failed", log_warning
 
-integration hmrc_mtd:
-  base_url: "https://api.service.hmrc.gov.uk"
-  auth: oauth2 from env("HMRC_CLIENT_ID"), env("HMRC_CLIENT_SECRET")
+integration xero_accounting:
+  base_url: "https://api.xero.com/api.xro/2.0"
+  auth: oauth2 from env("XERO_CLIENT_ID"), env("XERO_CLIENT_SECRET")
 
-  mapping submit_vat on VATReturn:
+  mapping create_invoice on Invoice:
     trigger: on_transition reviewed -> submitted
-    request: POST "/organisations/vat/returns"
+    request: POST "/Invoices"
     headers:
-      "Accept": "application/vnd.hmrc.1.0+json"
+      "Accept": "application/json"
     map_request:
-      periodKey <- self.period_key
-      vatDueSales <- self.box1_vat_due_sales
+      Type <- self.invoice_type
+      Contact.ContactID <- self.contact_id
     map_response:
-      hmrc_receipt_id <- response.formBundleNumber
+      xero_invoice_id <- response.InvoiceID
     on_error: revert_transition
 '''
 related = ["domain_service", "foreign_model", "entity"]

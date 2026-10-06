@@ -245,7 +245,7 @@ def get_runtime_tools() -> list[Tool]:
                 "properties": {
                     "service_type": {
                         "type": "string",
-                        "description": "Type of service (hmrc, payment, email, crm, etc.)",
+                        "description": "Type of service (payment, email, crm, etc.)",
                     }
                 },
                 "required": [],

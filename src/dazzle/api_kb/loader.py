@@ -593,7 +593,7 @@ def search_packs(
 
     Args:
         category: Filter by category (e.g., "payments", "accounting")
-        provider: Filter by provider name (e.g., "Stripe", "HMRC")
+        provider: Filter by provider name (e.g., "Stripe", "Xero")
         query: Text search in name, provider, description
 
     Returns:

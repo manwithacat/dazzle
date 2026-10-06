@@ -1,0 +1,9 @@
+[scenario]
+name = "rate_limited"
+description = "Stripe returns 429 Too Many Requests"
+vendor = "stripe_payments"
+
+[[steps]]
+operation = "create_payment_intent"
+response_override = { error = { type = "rate_limit_error", code = "rate_limit", message = "Too many requests." } }
+status_override = 429

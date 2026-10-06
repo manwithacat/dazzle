@@ -22,13 +22,13 @@ class TestPackLoading:
         ("pack_name", "provider", "category"),
         [
             ("stripe_payments", "Stripe", "payments"),
-            ("hmrc_mtd_vat", "HMRC", "tax"),
+            ("sumsub_kyc", "SumSub", "verification"),
             ("companies_house_lookup", "Companies House", "business_data"),
             ("xero_accounting", "Xero", "accounting"),
         ],
         ids=[
             "test_load_stripe_payments_pack",
-            "test_load_hmrc_mtd_vat_pack",
+            "test_load_sumsub_kyc_pack",
             "test_load_companies_house_pack",
             "test_load_xero_accounting_pack",
         ],
@@ -52,9 +52,10 @@ class TestPackLoading:
         assert len(packs) >= 4  # We have at least 4 packs
         pack_names = [p.name for p in packs]
         assert "stripe_payments" in pack_names
-        assert "hmrc_mtd_vat" in pack_names
+        assert "sumsub_kyc" in pack_names
         assert "companies_house_lookup" in pack_names
         assert "xero_accounting" in pack_names
+        assert "hmrc_mtd_vat" not in pack_names
 
 
 class TestPackSearch:
@@ -69,25 +70,21 @@ class TestPackSearch:
         assert any(p.name == "stripe_payments" for p in packs)
 
     def test_search_by_category_tax(self):
-        """Test searching packs by tax category."""
-        packs = search_packs(category="tax")
-
-        assert len(packs) >= 1
-        assert all(p.category == "tax" for p in packs)
-        assert any(p.name == "hmrc_mtd_vat" for p in packs)
+        """The catalogue no longer ships a tax pack."""
+        assert search_packs(category="tax") == []
 
     @pytest.mark.parametrize(
         ("kwargs", "category", "provider"),
         [
             ({"category": "accounting"}, "accounting", None),
             ({"provider": "Stripe"}, None, "Stripe"),
-            ({"provider": "HMRC"}, None, "HMRC"),
+            ({"provider": "Xero"}, None, "Xero"),
             ({"category": "payments", "provider": "Stripe"}, "payments", "Stripe"),
         ],
         ids=[
             "test_search_by_category_accounting",
             "test_search_by_provider_stripe",
-            "test_search_by_provider_hmrc",
+            "test_search_by_provider_xero",
             "test_search_combined_filters",
         ],
     )
@@ -102,11 +99,10 @@ class TestPackSearch:
 
     def test_search_by_query(self):
         """Test searching packs by text query."""
-        packs = search_packs(query="vat")
+        packs = search_packs(query="invoice")
 
         assert len(packs) >= 1
-        # Should find HMRC MTD VAT
-        assert any("vat" in p.name.lower() or "vat" in p.description.lower() for p in packs)
+        assert any(p.name == "xero_accounting" for p in packs)
 
     def test_search_by_query_payment(self):
         """Test searching packs by 'payment' query."""
@@ -153,9 +149,9 @@ class TestPackContents:
         assert "Charge" in model_names
         assert "Refund" in model_names
 
-    def test_hmrc_pack_has_oauth2_auth(self):
-        """Test HMRC pack has OAuth2 auth configured."""
-        pack = load_pack("hmrc_mtd_vat")
+    def test_xero_pack_has_oauth2_auth(self):
+        """Test Xero pack has OAuth2 auth configured."""
+        pack = load_pack("xero_accounting")
         assert pack is not None
         assert pack.auth is not None
         assert pack.auth.auth_type == "oauth2"
@@ -195,15 +191,15 @@ class TestDSLGeneration:
         assert 'inline "pack:stripe_payments"' in dsl
         assert "auth_profile:" in dsl
 
-    def test_generate_service_dsl_hmrc(self):
-        """Test generating DSL service block for HMRC."""
-        pack = load_pack("hmrc_mtd_vat")
+    def test_generate_service_dsl_xero(self):
+        """Test generating DSL service block for Xero."""
+        pack = load_pack("xero_accounting")
         assert pack is not None
 
         dsl = pack.generate_service_dsl()
 
         assert "service" in dsl.lower()
-        assert 'inline "pack:hmrc_mtd_vat"' in dsl
+        assert 'inline "pack:xero_accounting"' in dsl
         assert "oauth2" in dsl
 
     def test_generate_foreign_model_dsl(self):
@@ -235,7 +231,7 @@ class TestDSLGeneration:
 
     def test_auth_profile_oauth2(self):
         """Test auth profile DSL for OAuth2 auth."""
-        pack = load_pack("hmrc_mtd_vat")
+        pack = load_pack("xero_accounting")
         assert pack is not None
         assert pack.auth is not None
 
@@ -263,12 +259,12 @@ class TestEnvExampleGeneration:
 
     def test_generate_env_example_multiple_packs(self):
         """Test generating .env.example for multiple packs."""
-        env_example = generate_env_example(["stripe_payments", "hmrc_mtd_vat"])
+        env_example = generate_env_example(["stripe_payments", "xero_accounting"])
 
         assert "Stripe" in env_example
         assert "STRIPE_SECRET_KEY" in env_example
-        assert "HMRC" in env_example
-        assert "HMRC_CLIENT_ID" in env_example
+        assert "Xero" in env_example
+        assert "XERO_CLIENT_ID" in env_example
 
     def test_env_var_to_example_line(self):
         """Test EnvVarSpec to .env.example line conversion."""
