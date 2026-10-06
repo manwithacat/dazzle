@@ -1,4 +1,9 @@
-"""HM visual captures must represent the same current gallery on both platforms."""
+"""The linux HM visual baseline is the committed oracle.
+
+Darwin captures are local and gitignored. Standalone CI runs on Linux, and
+only that set can make the pixel compare fail. A checkout without
+``baselines/linux`` would skip the visual test instead of failing it.
+"""
 
 from __future__ import annotations
 
@@ -17,24 +22,16 @@ sys.path.insert(0, str(PACKAGE / "tools"))
 from visual_baseline_manifest import image_hashes, source_digest  # noqa: E402
 
 
-def test_hm_visual_baseline_darwin_linux_pairs_not_split() -> None:
+def test_hm_visual_baseline_linux_set_matches_its_manifest() -> None:
     current_source = source_digest()
-    sets: dict[str, set[str]] = {}
-    for platform in ("darwin", "linux"):
-        capture = BASE / platform / "capture.json"
-        assert capture.is_file(), f"{platform} capture manifest missing; recapture visual baselines"
-        recorded = json.loads(capture.read_text())
-        assert recorded["source_digest"] == current_source, (
-            f"{platform} visual baseline source is stale; recapture against current gallery"
-        )
-        current_images = image_hashes(platform)
-        assert recorded["images"] == current_images, (
-            f"{platform} visual images changed after capture manifest was written"
-        )
-        sets[platform] = set(current_images)
-
-    assert sets["darwin"] == sets["linux"], (
-        "Darwin and Linux visual scene coverage differs: "
-        f"darwin-only={sorted(sets['darwin'] - sets['linux'])}, "
-        f"linux-only={sorted(sets['linux'] - sets['darwin'])}"
+    capture = BASE / "linux" / "capture.json"
+    assert capture.is_file(), "linux capture manifest missing; recapture visual baselines"
+    recorded = json.loads(capture.read_text())
+    assert recorded["source_digest"] == current_source, (
+        "linux visual baseline source is stale; recapture against current gallery"
     )
+    current_images = image_hashes("linux")
+    assert recorded["images"] == current_images, (
+        "linux visual images changed after the capture manifest was written"
+    )
+    assert current_images, "linux baseline set is empty"
