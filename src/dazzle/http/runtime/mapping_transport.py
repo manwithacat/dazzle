@@ -161,4 +161,4 @@ async def _notify(
     try:
         await callback(attempt, max_attempts, status_code, error, next_backoff)
     except Exception:
-        logger.debug("app transport on_attempt failed", exc_info=True)
+        logger.warning("app transport on_attempt failed", exc_info=True)

@@ -1432,6 +1432,7 @@ ir_class: IntegrationSpec
     - source: SourceLocation | None = None
     - syncs: list[IntegrationSync] = []
     - title: str | None = None
+    - transport: str | None = None
 
 ir_class: IntegrationSync
   required:
