@@ -578,6 +578,11 @@ data sync points, and declarative field mappings for external systems.
 
 v0.30.0 adds declarative mapping blocks: base_url, auth, mapping with triggers,
 HTTP requests, request/response field mappings, and error handling strategies.
+
+A `map_request` target is a dotted path. An all-digit segment is a list index:
+`otherGains.0.assetType` renders `{"otherGains": [{"assetType": ...}]}`, and a
+later `.1` extends that list. `map_response` accepts the same target string and
+stores it as one entity field name.
 """
 syntax = '''
 integration <name> ["<Title>"]:
@@ -593,7 +598,7 @@ integration <name> ["<Title>"]:
     [headers:]
       "<Header-Name>": "<value>"
     [map_request:]
-      <field[.path]> <- <source.path>
+      <field[.index][.path]> <- <source.path>
     [map_response:]
       <field[.path]> <- <source.path>
     [on_error: <ignore|log_warning|revert_transition|retry>]

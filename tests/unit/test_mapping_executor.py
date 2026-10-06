@@ -1039,3 +1039,19 @@ class TestSetNestedValue:
         d: dict[str, Any] = {}
         MappingExecutor._set_nested_value(d, "a.b.c", 42)
         assert d == {"a": {"b": {"c": 42}}}
+
+    def test_index_grows_a_list(self) -> None:
+        d: dict[str, Any] = {}
+        MappingExecutor._set_nested_value(d, "otherGains.0.assetType", "other-property")
+        MappingExecutor._set_nested_value(d, "otherGains.1.assetType", "shares")
+        assert d == {
+            "otherGains": [
+                {"assetType": "other-property"},
+                {"assetType": "shares"},
+            ]
+        }
+
+    def test_higher_index_leaves_a_hole(self) -> None:
+        d: dict[str, Any] = {}
+        MappingExecutor._set_nested_value(d, "rows.2.name", "third")
+        assert d == {"rows": [None, None, {"name": "third"}]}

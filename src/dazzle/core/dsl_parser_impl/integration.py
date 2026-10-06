@@ -399,9 +399,11 @@ class IntegrationParserMixin:
             target_field <- "literal"
             target_field <- true
 
-        The target may be a dotted path (#1766). ``MappingExecutor``
-        already nests that string on the request body; this parser
-        used to stop at the first identifier and reject the dot.
+        The target may be a dotted path (#1766) with integer indexes
+        (#1770). ``otherGains.0.assetType`` is one string.
+        ``MappingExecutor`` nests objects and grows lists from it.
+        ``map_response`` shares this parser and still stores the string
+        as one entity field name.
         """
         rules: list[ir.MappingRule] = []
 
@@ -410,7 +412,7 @@ class IntegrationParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            target = self._parse_dotted_name()
+            target = self._parse_larrow_target()
             self.expect(TokenType.LARROW)
             source = self._parse_expression()
 
@@ -448,6 +450,40 @@ class IntegrationParserMixin:
         parts = [self.expect_identifier_or_keyword().value]
         while self.match(TokenType.DOT):
             self.advance()
+            parts.append(self.expect_identifier_or_keyword().value)
+        return ".".join(parts)
+
+    def _parse_larrow_target(self) -> str:
+        """A ``map_request`` / ``map_response`` target.
+
+        Segments are identifiers or integer indexes. The lexer folds the
+        dot after an integer into the number token (``NUMBER "0."``), so
+        a trailing dot on that token is the next separator, not part of
+        the index. ``read_number`` is left alone: ``source:`` and other
+        dotted names stay identifier-only.
+        """
+        parts = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.DOT):
+            self.advance()
+            if self.match(TokenType.NUMBER):
+                tok = self.current_token()
+                raw = self.advance().value
+                trailing = raw.endswith(".")
+                body = raw[:-1] if trailing else raw
+                pieces = body.split(".") if body else []
+                if not pieces or any(
+                    not piece.isascii() or not piece.isdigit() for piece in pieces
+                ):
+                    raise make_parse_error(
+                        f"List index must be an integer, got {raw!r}",
+                        self.file,
+                        tok.line,
+                        tok.column,
+                    )
+                parts.extend(pieces)
+                if trailing:
+                    parts.append(self.expect_identifier_or_keyword().value)
+                continue
             parts.append(self.expect_identifier_or_keyword().value)
         return ".".join(parts)
 

@@ -43,6 +43,7 @@ from dazzle.core.ir.integrations import (
     MappingTriggerType,
 )
 from dazzle.http.runtime.event_bus import EntityEvent, EntityEventType
+from dazzle.http.runtime.mapping_body import set_nested_value
 from dazzle.http.runtime.retry_accumulator import (
     RetryAccumulator,
     RetryEvent,
@@ -619,11 +620,8 @@ class MappingExecutor:
 
     @staticmethod
     def _set_nested_value(d: dict[str, Any], key: str, value: Any) -> None:
-        """Set a value in a nested dict using dotted key path."""
-        parts = key.split(".")
-        for part in parts[:-1]:
-            d = d.setdefault(part, {})
-        d[parts[-1]] = value
+        """Nest ``key`` into ``d``. An all-digit segment is a list index."""
+        set_nested_value(d, key, value)
 
     # =========================================================================
     # Auth Resolution

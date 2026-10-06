@@ -462,6 +462,53 @@ integration my_api:
         assert rule.target_field == "address.city"
         assert rule.source.path == "response.city"
 
+    def test_indexed_target_builds_a_list(self) -> None:
+        """#1770: an integer segment is a list index, not a dict key."""
+        from unittest.mock import MagicMock
+
+        from dazzle.http.runtime.event_bus import EntityEventBus
+        from dazzle.http.runtime.mapping_executor import MappingExecutor
+
+        dsl = """
+module test
+app test "Test"
+
+entity Disposal "Disposal":
+  id: uuid pk
+  asset_description: str(100) required
+  proceeds: decimal(10,2) required
+
+integration hmrc:
+  mapping gains on Disposal:
+    request: POST "/other-gains"
+    map_request:
+      otherGains.0.assetType <- self.asset_description
+      otherGains.0.disposalProceeds <- self.proceeds
+      otherGains.1.assetType <- "shares"
+    map_response:
+      otherGains.0.assetType <- response.assetType
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert [rule.target_field for rule in mapping.request_mapping] == [
+            "otherGains.0.assetType",
+            "otherGains.0.disposalProceeds",
+            "otherGains.1.assetType",
+        ]
+        assert mapping.response_mapping[0].target_field == "otherGains.0.assetType"
+
+        executor = MappingExecutor(MagicMock(), EntityEventBus())
+        body = executor._apply_request_mapping(
+            mapping.request_mapping,
+            {"asset_description": "other-property", "proceeds": "1000.00"},
+        )
+        assert body == {
+            "otherGains": [
+                {"assetType": "other-property", "disposalProceeds": "1000.00"},
+                {"assetType": "shares"},
+            ]
+        }
+
 
 class TestRequestHeaders:
     """#1767: a mapping can declare static request headers."""
