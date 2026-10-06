@@ -28,6 +28,8 @@ integration <name> ["<Title>"]:
     [trigger: on_transition <from> -> <to>]
     [trigger: manual "<Label>"]
     request: <GET|POST|PUT|DELETE|PATCH> "<url_template>"
+    [headers:]
+      "<Header-Name>": "<value>"
     [map_request:]
       <field[.path]> <- <source.path>
     [map_response:]
@@ -60,6 +62,8 @@ integration hmrc_mtd:
   mapping submit_vat on VATReturn:
     trigger: on_transition reviewed -> submitted
     request: POST "/organisations/vat/returns"
+    headers:
+      "Accept": "application/vnd.hmrc.1.0+json"
     map_request:
       periodKey <- self.period_key
       vatDueSales <- self.box1_vat_due_sales

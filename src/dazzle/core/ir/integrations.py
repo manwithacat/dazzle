@@ -180,16 +180,25 @@ class HttpMethod(StrEnum):
     PATCH = "PATCH"
 
 
+# Names the mapping executor fills itself. A declared header with one of
+# these names would either drop the auth credential or disagree with the
+# JSON body the executor actually sends.
+EXECUTOR_OWNED_REQUEST_HEADERS = frozenset({"authorization", "content-type"})
+
+
 class HttpRequestSpec(BaseModel):
     """HTTP request specification for an integration mapping.
 
     Attributes:
         method: HTTP method (GET, POST, PUT, DELETE, PATCH)
         url_template: URL path with interpolation, e.g. /company/{self.company_number}
+        headers: Static request headers declared on the mapping. Authorization
+            and Content-Type are not accepted here.
     """
 
     method: HttpMethod
     url_template: str
+    headers: dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 

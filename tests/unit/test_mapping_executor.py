@@ -369,6 +369,34 @@ class TestAuthResolution:
         assert "Authorization" not in headers
         assert headers["Content-Type"] == "application/json"
 
+    def test_declared_headers_are_added_and_cannot_replace_auth(self) -> None:
+        auth = AuthSpec(auth_type=AuthType.BEARER, credentials=["MY_TOKEN"])
+        mapping = _make_mapping(
+            request_mapping=[],
+        )
+        mapping = mapping.model_copy(
+            update={
+                "request": HttpRequestSpec(
+                    method=HttpMethod.GET,
+                    url_template="/records",
+                    headers={
+                        "Accept": "application/vnd.hmrc.5.0+json",
+                        "Authorization": "Bearer stolen",
+                        "content-type": "text/plain",
+                    },
+                )
+            }
+        )
+        integration = _make_integration(auth=auth, mappings=[mapping])
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus())
+
+        with patch.dict("os.environ", {"MY_TOKEN": "bearer-token-123"}):
+            headers = executor._request_headers(integration, mapping)
+
+        assert headers["Accept"] == "application/vnd.hmrc.5.0+json"
+        assert headers["Authorization"] == "Bearer bearer-token-123"
+        assert headers["Content-Type"] == "application/json"
+
 
 # ---------------------------------------------------------------------------
 # Base URL Resolution

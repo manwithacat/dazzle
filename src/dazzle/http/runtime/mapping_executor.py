@@ -37,6 +37,7 @@ from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
 from dazzle.core.ir.expressions import FieldRef, Literal
 from dazzle.core.ir.integrations import (
+    EXECUTOR_OWNED_REQUEST_HEADERS,
     AuthType,
     ErrorAction,
     MappingTriggerType,
@@ -297,7 +298,7 @@ class MappingExecutor:
         url = self._interpolate_url(base_url, mapping.request.url_template, entity_data)
         method = mapping.request.method.value
         body = self._apply_request_mapping(mapping.request_mapping, entity_data)
-        headers = self._resolve_auth_headers(integration)
+        headers = self._request_headers(integration, mapping)
 
         # Cache: only for GET requests (reads, not mutations)
         cache = self._cache
@@ -660,6 +661,24 @@ class MappingExecutor:
             if cred_values:
                 headers["Authorization"] = f"Bearer {cred_values[0]}"
 
+        return headers
+
+    def _request_headers(
+        self,
+        integration: IntegrationSpec,
+        mapping: IntegrationMapping,
+    ) -> dict[str, str]:
+        """Auth headers, plus static headers declared on the mapping.
+
+        Authorization and Content-Type stay owned by :meth:`_resolve_auth_headers`.
+        The parser rejects those names; this skip covers a hand-built IR.
+        """
+        headers = self._resolve_auth_headers(integration)
+        declared = mapping.request.headers if mapping.request is not None else {}
+        for name, value in declared.items():
+            if name.lower() in EXECUTOR_OWNED_REQUEST_HEADERS:
+                continue
+            headers[name] = value
         return headers
 
     # =========================================================================

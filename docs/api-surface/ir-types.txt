@@ -1324,7 +1324,8 @@ ir_class: HttpRequestSpec
   required:
     - method: HttpMethod
     - url_template: str
-  optional: (none)
+  optional:
+    - headers: dict[str, str] = {}
 
 ir_class: HumanTaskOutcome
   required:

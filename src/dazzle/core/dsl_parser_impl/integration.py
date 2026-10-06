@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
+from ..ir.integrations import EXECUTOR_OWNED_REQUEST_HEADERS
 from ..lexer import TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
@@ -222,9 +223,9 @@ class IntegrationParserMixin:
         """Parse a ``mapping <name> [on Entity]:`` block.
 
         Refactored to dispatch-table style (follow-on to #1098). 3
-        token-keyed (trigger/source/target) + 7 IDENT-text-matched
+        token-keyed (trigger/source/target) + 8 IDENT-text-matched
         (request/cache/map_request/map_response/transform/on_conflict/
-        on_error) + a `_build_mapping` builder.
+        on_error/headers) + a `_build_mapping` builder.
 
         Syntax (original — with ``on Entity``)::
 
@@ -265,6 +266,16 @@ class IntegrationParserMixin:
             state=state,
         )
         self.expect(TokenType.DEDENT)
+        if state.headers:
+            if state.request is None:
+                tok = self.current_token()
+                raise make_parse_error(
+                    "headers: requires a request: on the same mapping",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            state.request = state.request.model_copy(update={"headers": dict(state.headers)})
         return _build_mapping(mapping_name, state)
 
     def _parse_mapping_trigger(self) -> ir.MappingTriggerSpec:
@@ -781,8 +792,8 @@ class IntegrationParserMixin:
 #
 # The 146-line monolith was replaced (v0.70.31) with the dispatch
 # pattern shipped in #1097. 3 token-keyed (trigger/source/target)
-# + 7 IDENT-text-matched (request/cache/map_request/map_response/
-# transform/on_conflict/on_error) + a `_build_mapping` builder.
+# + 8 IDENT-text-matched (request/cache/map_request/map_response/
+# transform/on_conflict/on_error/headers) + a `_build_mapping` builder.
 
 
 @dataclass
@@ -803,6 +814,7 @@ class _MappingState:
     on_error: ir.ErrorStrategy | None = None
     on_conflict: str = ""
     cache_ttl: int | None = None
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -841,6 +853,59 @@ def _m_kw_request(parser: Any, state: _MappingState) -> None:
     parser.expect(TokenType.COLON)
     state.request = parser._parse_http_request()
     parser.skip_newlines()
+
+
+def _m_kw_headers(parser: Any, state: _MappingState) -> None:
+    """``headers:`` — indented ``"Name": "value"`` pairs (#1767).
+
+    Names are quoted so a hyphen (``Gov-Test-Scenario``, ``Content-Type``)
+    stays one token. Values are static strings. Authorization and
+    Content-Type are rejected: the executor owns both.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        tok = parser.current_token()
+        if tok.type != TokenType.STRING:
+            raise make_parse_error(
+                'Expected a quoted header name, for example "Accept": "application/json"',
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        name = parser.advance().value.strip()
+        if not name:
+            raise make_parse_error(
+                "Header name is empty",
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        if name.lower() in EXECUTOR_OWNED_REQUEST_HEADERS:
+            raise make_parse_error(
+                f"{name} is set by the mapping executor "
+                "(Authorization from auth:, Content-Type for the JSON body)",
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        parser.expect(TokenType.COLON)
+        value_tok = parser.current_token()
+        if value_tok.type != TokenType.STRING:
+            raise make_parse_error(
+                "Expected a quoted header value",
+                parser.file,
+                value_tok.line,
+                value_tok.column,
+            )
+        state.headers[name] = parser.advance().value
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
 
 
 def _m_kw_cache(parser: Any, state: _MappingState) -> None:
@@ -918,6 +983,7 @@ _MAPPING_IDENT_KEYWORDS: dict[str, KeywordParser[_MappingState]] = {
     "transform": _m_kw_transform,
     "on_conflict": _m_kw_on_conflict,
     "on_error": _m_kw_on_error,
+    "headers": _m_kw_headers,
 }
 
 

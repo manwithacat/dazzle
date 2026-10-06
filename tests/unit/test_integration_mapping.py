@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     AuthType,
@@ -459,6 +461,112 @@ integration my_api:
         rule = fragment.integrations[0].mappings[0].response_mapping[0]
         assert rule.target_field == "address.city"
         assert rule.source.path == "response.city"
+
+
+class TestRequestHeaders:
+    """#1767: a mapping can declare static request headers."""
+
+    def test_quoted_headers_attach_to_the_request(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity VATReturn "VAT Return":
+  id: uuid pk
+  period_key: str(50) required
+
+integration hmrc:
+  mapping submit on VATReturn:
+    headers:
+      "Accept": "application/vnd.hmrc.5.0+json"
+      "Gov-Test-Scenario": "STATEFUL"
+    request: POST "/organisations/vat/returns"
+"""
+        request = _parse(dsl).integrations[0].mappings[0].request
+        assert request is not None
+        assert request.headers == {
+            "Accept": "application/vnd.hmrc.5.0+json",
+            "Gov-Test-Scenario": "STATEFUL",
+        }
+
+    def test_duplicate_header_keeps_the_last_value(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "Accept": "application/json"
+      "Accept": "application/vnd.hmrc.5.0+json"
+"""
+        request = _parse(dsl).integrations[0].mappings[0].request
+        assert request is not None
+        assert request.headers == {"Accept": "application/vnd.hmrc.5.0+json"}
+
+    def test_executor_owned_header_names_are_rejected(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "Content-Type": "text/plain"
+"""
+        with pytest.raises(ParseError, match="Content-Type is set by the mapping executor"):
+            _parse(dsl)
+
+    def test_authorization_is_rejected_regardless_of_case(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "authorization": "Bearer stolen"
+"""
+        with pytest.raises(ParseError, match="authorization is set by the mapping executor"):
+            _parse(dsl)
+
+    def test_headers_without_a_request_are_rejected(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    headers:
+      "Accept": "application/json"
+"""
+        with pytest.raises(ParseError, match="headers: requires a request:"):
+            _parse(dsl)
 
 
 class TestErrorStrategy:
