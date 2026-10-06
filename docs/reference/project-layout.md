@@ -169,6 +169,23 @@ leaves the server-rendered auth gate seeing `None` — so persona-gated overlays
 (e.g. onboarding guides) never render and `ux verify --guides` false-negatives.
 A missing callable is a no-op; a non-callable attribute is ignored with a warning.
 
+### Integration send hook (#1769)
+
+An integration marked `transport: app` does not open a socket. The same module
+may expose `integration_transport(request)`. The executor calls it with the
+rendered method, interpolated path, declared `base_url`, static mapping
+headers, and JSON body (`request.integration` and `request.mapping` name the
+source). Return `(status: int, body)`. The application adds per-request
+headers, chooses the host, and attaches the caller token. `on_error: retry`
+calls the hook again. A missing callable is an error at send time.
+
+```python
+# pipeline/serve/app_init.py
+async def integration_transport(request):
+    response = await my_client.send(request)
+    return response.status_code, response.json()
+```
+
 ## See Also
 
 - [Customising rendered output](htmx-templates.md#customising-rendered-output) — custom renderers + per-entity detail viewers (replaces the removed Jinja template-override mechanism)

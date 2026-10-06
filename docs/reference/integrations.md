@@ -20,10 +20,18 @@ A `map_request` target is a dotted path. An all-digit segment is a list index:
 later `.1` extends that list. `map_response` accepts the same target string and
 stores it as one entity field name.
 
+`transport: app` renders the request and calls
+`pipeline.serve.app_init.integration_transport` instead of opening a socket.
+The hook receives the method, interpolated path, declared base_url, static
+mapping headers, and JSON body, and returns the status and body. The
+application adds per-request headers and chooses the host. `on_error: retry`
+calls the hook again. A missing hook is an error.
+
 ### Syntax
 
 ```dsl
 integration <name> ["<Title>"]:
+  [transport: app]
   [base_url: "<url>"]
   [auth: <api_key|oauth2|bearer|basic> from env("<KEY>")[, env("<KEY2>")]]
 

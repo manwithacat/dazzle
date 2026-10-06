@@ -57,12 +57,14 @@ def _make_integration(
     base_url: str = "https://api.example.com",
     mappings: list[IntegrationMapping] | None = None,
     auth: AuthSpec | None = None,
+    transport: str | None = None,
 ) -> IntegrationSpec:
     return IntegrationSpec(
         name=name,
         base_url=base_url,
         auth=auth,
         mappings=mappings or [],
+        transport=transport,
     )
 
 
@@ -1055,3 +1057,223 @@ class TestSetNestedValue:
         d: dict[str, Any] = {}
         MappingExecutor._set_nested_value(d, "rows.2.name", "third")
         assert d == {"rows": [None, None, {"name": "third"}]}
+
+
+# ---------------------------------------------------------------------------
+# transport: app (#1769)
+# ---------------------------------------------------------------------------
+
+
+def _app_mapping() -> IntegrationMapping:
+    mapping = _make_mapping(
+        name="submit",
+        entity_ref="VATReturn",
+        method=HttpMethod.POST,
+        url_template="/organisations/vat/{self.vrn}/returns",
+        request_mapping=[
+            MappingRule(target_field="periodKey", source=Expression(path="self.period_key")),
+        ],
+        response_mapping=[
+            MappingRule(
+                target_field="hmrc_receipt_id",
+                source=Expression(path="response.formBundleNumber"),
+            ),
+        ],
+    )
+    return mapping.model_copy(
+        update={
+            "request": HttpRequestSpec(
+                method=HttpMethod.POST,
+                url_template="/organisations/vat/{self.vrn}/returns",
+                headers={"Accept": "application/vnd.hmrc.1.0+json"},
+            )
+        }
+    )
+
+
+class _MemCache:
+    def __init__(self) -> None:
+        self.store: dict[tuple[str, str], dict[str, Any]] = {}
+
+    async def get(self, scope: str, url: str) -> dict[str, Any] | None:
+        return self.store.get((scope, url))
+
+    async def put(self, scope: str, url: str, data: dict[str, Any], ttl: int = 0) -> None:
+        self.store[(scope, url)] = data
+
+    async def acquire_lock(self, scope: str, url: str) -> bool:
+        return True
+
+    async def release_lock(self, scope: str, url: str) -> None:
+        return None
+
+
+class TestAppTransport:
+    def test_hook_receives_the_rendered_request_and_no_socket_opens(self) -> None:
+        seen: list[Any] = []
+
+        async def hook(request: Any) -> tuple[int, dict[str, str]]:
+            seen.append(request)
+            return 200, {"formBundleNumber": "bundle-1"}
+
+        mapping = _app_mapping()
+        auth = AuthSpec(auth_type=AuthType.BEARER, credentials=["HMRC_TOKEN"])
+        integration = _make_integration(
+            name="hmrc_mtd",
+            base_url="https://api.service.hmrc.gov.uk/",
+            auth=auth,
+            mappings=[mapping],
+            transport="app",
+        )
+        executor = MappingExecutor(
+            _make_appspec(integration),
+            EntityEventBus(),
+            app_transport=hook,
+        )
+
+        with (
+            patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient") as client,
+            patch.dict("os.environ", {"HMRC_TOKEN": "secret-token"}),
+        ):
+            result = _run(
+                executor.execute_manual(
+                    "hmrc_mtd",
+                    "submit",
+                    {"vrn": "123456789", "period_key": "24A1"},
+                )
+            )
+
+        client.assert_not_called()
+        assert result.success is True
+        assert result.status_code == 200
+        assert result.mapped_fields == {"hmrc_receipt_id": "bundle-1"}
+        assert len(seen) == 1
+        request = seen[0]
+        assert request.method == "POST"
+        assert request.path == "/organisations/vat/123456789/returns"
+        assert request.base_url == "https://api.service.hmrc.gov.uk/"
+        assert request.headers == {"Accept": "application/vnd.hmrc.1.0+json"}
+        assert "Authorization" not in request.headers
+        assert "Content-Type" not in request.headers
+        assert request.body == {"periodKey": "24A1"}
+        assert request.integration == "hmrc_mtd"
+        assert request.mapping == "submit"
+
+    def test_missing_hook_errors_without_opening_a_socket(self) -> None:
+        mapping = _app_mapping()
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(_make_appspec(integration), EntityEventBus())
+
+        with patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient") as client:
+            result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        client.assert_not_called()
+        assert result.success is False
+        assert result.error is not None
+        assert "integration_transport is missing" in result.error
+
+    def test_retry_calls_the_hook_again(self) -> None:
+        seen: list[int] = []
+
+        async def hook(request: Any) -> tuple[int, dict[str, str]]:
+            seen.append(1)
+            if len(seen) == 1:
+                return 503, {"error": "busy"}
+            return 200, {"formBundleNumber": "bundle-2"}
+
+        mapping = _app_mapping().model_copy(
+            update={"on_error": ErrorStrategy(actions=[ErrorAction.RETRY])}
+        )
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(
+            _make_appspec(integration),
+            EntityEventBus(),
+            app_transport=hook,
+        )
+
+        with patch("dazzle.http.runtime.mapping_transport.asyncio.sleep", new_callable=AsyncMock):
+            result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        assert seen == [1, 1]
+        assert result.success is True
+        assert result.mapped_fields == {"hmrc_receipt_id": "bundle-2"}
+
+    def test_without_retry_a_transient_status_is_one_call(self) -> None:
+        seen: list[int] = []
+
+        async def hook(request: Any) -> tuple[int, dict[str, str]]:
+            seen.append(1)
+            return 503, {"error": "busy"}
+
+        mapping = _app_mapping()
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        executor = MappingExecutor(
+            _make_appspec(integration),
+            EntityEventBus(),
+            app_transport=hook,
+        )
+        result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+
+        assert seen == [1]
+        assert result.success is False
+        assert result.status_code == 503
+
+    def test_get_cache_wraps_the_hook(self) -> None:
+        seen: list[Any] = []
+
+        async def hook(request: Any) -> tuple[int, dict[str, str]]:
+            seen.append(request)
+            return 200, {"formBundleNumber": "cached"}
+
+        mapping = _make_mapping(
+            name="lookup",
+            method=HttpMethod.GET,
+            url_template="/vat/{self.vrn}",
+            response_mapping=[
+                MappingRule(
+                    target_field="hmrc_receipt_id",
+                    source=Expression(path="response.formBundleNumber"),
+                ),
+            ],
+        )
+        integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+        cache = _MemCache()
+        executor = MappingExecutor(
+            _make_appspec(integration),
+            EntityEventBus(),
+            cache=cache,  # type: ignore[arg-type]
+            app_transport=hook,
+        )
+        first = _run(executor.execute_manual("hmrc_mtd", "lookup", {"vrn": "9"}))
+        second = _run(executor.execute_manual("hmrc_mtd", "lookup", {"vrn": "9"}))
+
+        assert first.success is True
+        assert second.cache_hit is True
+        assert second.mapped_fields == {"hmrc_receipt_id": "cached"}
+        assert len(seen) == 1
+
+    def test_project_module_hook_is_used_when_none_is_injected(self) -> None:
+        import sys
+        import types
+
+        seen: list[Any] = []
+
+        async def integration_transport(request: Any) -> tuple[int, dict[str, bool]]:
+            seen.append(request)
+            return 204, {"ok": True}
+
+        module = types.ModuleType("pipeline.serve.app_init")
+        module.integration_transport = integration_transport  # type: ignore[attr-defined]
+        sys.modules["pipeline.serve.app_init"] = module
+        try:
+            mapping = _app_mapping()
+            integration = _make_integration(name="hmrc_mtd", mappings=[mapping], transport="app")
+            executor = MappingExecutor(_make_appspec(integration), EntityEventBus())
+            with patch("dazzle.http.runtime.mapping_executor.httpx.AsyncClient") as client:
+                result = _run(executor.execute_manual("hmrc_mtd", "submit", {"vrn": "1"}))
+            client.assert_not_called()
+            assert result.success is True
+            assert len(seen) == 1
+            assert seen[0].integration == "hmrc_mtd"
+        finally:
+            sys.modules.pop("pipeline.serve.app_init", None)

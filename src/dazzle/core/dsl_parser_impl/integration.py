@@ -68,6 +68,7 @@ class IntegrationParserMixin:
         name, title, loc = self._parse_construct_header(TokenType.INTEGRATION)
 
         base_url = None
+        transport = None
         auth = None
         api_refs: list[str] = []
         foreign_model_refs: list[str] = []
@@ -79,8 +80,6 @@ class IntegrationParserMixin:
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            tok = self.current_token()
 
             # uses service ServiceName[,ServiceName]
             if self.match(TokenType.USES):
@@ -140,22 +139,13 @@ class IntegrationParserMixin:
                 mapping = self._parse_mapping_block()
                 mappings.append(mapping)
 
-            # base_url: "https://..." (v0.30.0)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "base_url":
-                self.advance()
-                self.expect(TokenType.COLON)
-                base_url = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # auth: api_key from env("KEY") (v0.30.0)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "auth":
-                self.advance()
-                self.expect(TokenType.COLON)
-                auth = self._parse_auth_spec()
-                self.skip_newlines()
-
             else:
-                break
+                update = self._parse_integration_field()
+                if update is None:
+                    break
+                base_url = update.get("base_url", base_url)
+                transport = update.get("transport", transport)
+                auth = update.get("auth", auth)
 
         self.expect(TokenType.DEDENT)
 
@@ -163,6 +153,7 @@ class IntegrationParserMixin:
             name=name,
             title=title,
             base_url=base_url,
+            transport=transport,
             auth=auth,
             api_refs=api_refs,
             foreign_model_refs=foreign_model_refs,
@@ -173,6 +164,43 @@ class IntegrationParserMixin:
         )
 
     # --- v0.30.0: Declarative mapping blocks ---
+
+    def _parse_integration_field(self) -> dict[str, Any] | None:
+        """Parse one of ``base_url``, ``transport``, or ``auth``.
+
+        Returns None when the current token is not one of those fields, and
+        does not consume it. ``transport`` accepts only ``app`` (#1769).
+        """
+        tok = self.current_token()
+        if tok.type != TokenType.IDENTIFIER:
+            return None
+        if tok.value == "base_url":
+            self.advance()
+            self.expect(TokenType.COLON)
+            value = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+            return {"base_url": value}
+        if tok.value == "transport":
+            self.advance()
+            self.expect(TokenType.COLON)
+            mode = self.current_token()
+            if mode.type != TokenType.APP:
+                raise make_parse_error(
+                    f"Expected transport: app, got '{mode.value}'",
+                    self.file,
+                    mode.line,
+                    mode.column,
+                )
+            self.advance()
+            self.skip_newlines()
+            return {"transport": "app"}
+        if tok.value == "auth":
+            self.advance()
+            self.expect(TokenType.COLON)
+            auth = self._parse_auth_spec()
+            self.skip_newlines()
+            return {"auth": auth}
+        return None
 
     def _parse_auth_spec(self) -> ir.AuthSpec:
         """Parse auth specification.

@@ -11,7 +11,7 @@ Data flow::
         → interpolate URL template with entity fields
         → apply request_mapping (entity → request body)
         → check cache (ApiResponseCache, if available)
-        → HTTP call via httpx (on cache miss)
+        → HTTP call via httpx, or the app hook when transport: app (on cache miss)
         → cache response (for GET requests)
         → apply response_mapping (response → entity field updates)
         → handle errors per ErrorStrategy
@@ -44,6 +44,11 @@ from dazzle.core.ir.integrations import (
 )
 from dazzle.http.runtime.event_bus import EntityEvent, EntityEventType
 from dazzle.http.runtime.mapping_body import set_nested_value
+from dazzle.http.runtime.mapping_transport import (
+    AppTransportRequest,
+    invoke_app_transport,
+    load_project_transport,
+)
 from dazzle.http.runtime.retry_accumulator import (
     RetryAccumulator,
     RetryEvent,
@@ -116,6 +121,9 @@ class MappingExecutor:
         cache: Optional :class:`~dazzle.http.runtime.api_cache.ApiResponseCache`.
             When provided, GET request responses are cached and dedup-locked.
             ``None`` (default) = no caching.
+        app_transport: Optional send hook for integrations marked
+            ``transport: app``. When omitted, the executor loads
+            ``pipeline.serve.app_init.integration_transport``.
     """
 
     def __init__(
@@ -126,6 +134,7 @@ class MappingExecutor:
         update_entity: Any | None = None,
         cache: ApiResponseCache | None = None,
         retry_accumulator: RetryAccumulator | None = None,
+        app_transport: Any | None = None,
     ) -> None:
         self._appspec = appspec
         self._event_bus = event_bus
@@ -144,6 +153,9 @@ class MappingExecutor:
         self._retry_accumulator: RetryAccumulator = (
             retry_accumulator if retry_accumulator is not None else RetryAccumulator()
         )
+        # #1769: tests inject the hook. Production loads it from the project
+        # module the first time a transport: app mapping sends.
+        self._app_transport = app_transport
 
     @property
     def results(self) -> list[MappingResult]:
@@ -282,9 +294,10 @@ class MappingExecutor:
             success=False,
         )
 
-        # Resolve base URL
+        # Resolve base URL. transport: app may omit it: the hook chooses the host.
+        delegated = getattr(integration, "transport", None) == "app"
         base_url = self._resolve_base_url(integration)
-        if not base_url:
+        if not base_url and not delegated:
             result.error = f"No base_url configured for integration '{integration.name}'"
             logger.warning(result.error)
             self._results.append(result)
@@ -296,10 +309,15 @@ class MappingExecutor:
             self._results.append(result)
             return result
 
-        url = self._interpolate_url(base_url, mapping.request.url_template, entity_data)
         method = mapping.request.method.value
         body = self._apply_request_mapping(mapping.request_mapping, entity_data)
-        headers = self._request_headers(integration, mapping)
+        if delegated:
+            path = self._fill_url_template(mapping.request.url_template, entity_data)
+            declared = (integration.base_url or "").rstrip("/")
+            url = f"{declared}{path}"
+        else:
+            path = ""
+            url = self._interpolate_url(base_url, mapping.request.url_template, entity_data)
 
         # Cache: only for GET requests (reads, not mutations)
         cache = self._cache
@@ -348,10 +366,6 @@ class MappingExecutor:
         # Execute HTTP request with optional retry
         try:
             try:
-                request_kwargs: dict[str, Any] = {"headers": headers}
-                if method in ("POST", "PUT", "PATCH"):
-                    request_kwargs["json"] = body
-
                 # #1194: record each retry attempt's outcome into the
                 # in-process accumulator. Surfaced via
                 # /_dazzle/integrations/{name}/retries. Volatile; resets
@@ -386,20 +400,35 @@ class MappingExecutor:
                         )
                     )
 
-                async with httpx.AsyncClient(
-                    timeout=30.0
-                ) as client:  # DZ-HTTP-NORETRY  retry via async_retrying_request below
-                    resp = await async_retrying_request(
-                        client,
-                        method,
-                        url,
-                        max_retries=max_attempts - 1,
-                        backoff=tuple(
-                            _RETRY_BACKOFF_BASE * (2**i) for i in range(max_attempts - 1)
-                        ),
+                if delegated:
+                    resp = await self._call_app_transport(
+                        integration,
+                        mapping,
+                        method=method,
+                        path=path,
+                        body=body,
+                        max_attempts=max_attempts,
                         on_attempt=_on_attempt,
-                        **request_kwargs,
                     )
+                else:
+                    headers = self._request_headers(integration, mapping)
+                    request_kwargs: dict[str, Any] = {"headers": headers}
+                    if method in ("POST", "PUT", "PATCH"):
+                        request_kwargs["json"] = body
+                    async with httpx.AsyncClient(
+                        timeout=30.0
+                    ) as client:  # DZ-HTTP-NORETRY  retry via async_retrying_request below
+                        resp = await async_retrying_request(
+                            client,
+                            method,
+                            url,
+                            max_retries=max_attempts - 1,
+                            backoff=tuple(
+                                _RETRY_BACKOFF_BASE * (2**i) for i in range(max_attempts - 1)
+                            ),
+                            on_attempt=_on_attempt,
+                            **request_kwargs,
+                        )
 
                 result.status_code = resp.status_code
 
@@ -559,18 +588,59 @@ class MappingExecutor:
         self._pack_ttl_cache[cache_key] = ttl
         return ttl
 
-    def _interpolate_url(
-        self, base_url: str, url_template: str, entity_data: dict[str, Any]
-    ) -> str:
-        """Resolve {self.field} or {field} placeholders in a URL template."""
+    def _fill_url_template(self, url_template: str, entity_data: dict[str, Any]) -> str:
+        """Replace ``{self.field}`` or ``{field}`` placeholders. No base URL."""
 
         def replace_match(m: re.Match[str]) -> str:
             field_name = m.group(1)
             value = entity_data.get(field_name, "")
             return str(value) if value is not None else ""
 
-        path = _URL_PLACEHOLDER.sub(replace_match, url_template)
-        return f"{base_url}{path}"
+        return _URL_PLACEHOLDER.sub(replace_match, url_template)
+
+    def _interpolate_url(
+        self, base_url: str, url_template: str, entity_data: dict[str, Any]
+    ) -> str:
+        """Resolve placeholders and join them to ``base_url``."""
+        return f"{base_url}{self._fill_url_template(url_template, entity_data)}"
+
+    async def _call_app_transport(
+        self,
+        integration: IntegrationSpec,
+        mapping: IntegrationMapping,
+        *,
+        method: str,
+        path: str,
+        body: dict[str, Any],
+        max_attempts: int,
+        on_attempt: Any,
+    ) -> Any:
+        """Send through the application hook. Never opens a socket."""
+        hook = self._app_transport
+        if hook is None:
+            hook = load_project_transport()
+        if hook is None:
+            raise RuntimeError(
+                f"Integration {integration.name!r} sets transport: app but "
+                "pipeline.serve.app_init.integration_transport is missing"
+            )
+        declared = mapping.request.headers if mapping.request is not None else {}
+        request = AppTransportRequest(
+            method=method,
+            path=path,
+            base_url=integration.base_url or "",
+            headers=dict(declared),
+            body=body,
+            integration=integration.name,
+            mapping=mapping.name,
+        )
+        return await invoke_app_transport(
+            hook,
+            request,
+            max_attempts=max_attempts,
+            backoff=tuple(_RETRY_BACKOFF_BASE * (2**i) for i in range(max(max_attempts - 1, 0))),
+            on_attempt=on_attempt,
+        )
 
     def _apply_request_mapping(
         self,

@@ -315,6 +315,8 @@ class IntegrationSpec(BaseModel):
         name: Integration identifier
         title: Human-readable title
         base_url: Base URL for the external API (v0.30.0)
+        transport: ``"app"`` delegates the send to the project hook (#1769).
+            Absent means the executor sends with httpx.
         auth: Authentication specification (v0.30.0)
         api_refs: List of external APIs used (legacy action/sync style)
         foreign_model_refs: List of foreign models used (legacy action/sync style)
@@ -326,6 +328,7 @@ class IntegrationSpec(BaseModel):
     name: str
     title: str | None = None
     base_url: str | None = None
+    transport: str | None = None
     auth: AuthSpec | None = None
     api_refs: list[str] = Field(default_factory=list)
     foreign_model_refs: list[str] = Field(default_factory=list)

@@ -61,6 +61,63 @@ integration external_api:
         assert integration.base_url is None
 
 
+class TestAppTransport:
+    """#1769: transport: app delegates the send to the project hook."""
+
+    def test_transport_app_is_stored(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Return "Return":
+  id: uuid pk
+
+integration hmrc_mtd "HMRC":
+  transport: app
+  base_url: "https://api.service.hmrc.gov.uk"
+
+  mapping submit on Return:
+    request: POST "/organisations/vat/returns"
+"""
+        fragment = _parse(dsl)
+        integration = fragment.integrations[0]
+        assert integration.transport == "app"
+        assert integration.base_url == "https://api.service.hmrc.gov.uk"
+
+    def test_absent_transport_stays_http(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Item "Item":
+  id: uuid pk
+
+integration external_api:
+  mapping sync_items on Item:
+    request: GET "/items"
+"""
+        fragment = _parse(dsl)
+        assert fragment.integrations[0].transport is None
+
+    def test_unknown_transport_is_a_parse_error(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Item "Item":
+  id: uuid pk
+
+integration external_api:
+  transport: http
+  mapping sync_items on Item:
+    request: GET "/items"
+"""
+        with pytest.raises(ParseError, match="Expected transport: app"):
+            _parse(dsl)
+
+
 class TestIntegrationAuth:
     """Tests for integration auth parsing."""
 
