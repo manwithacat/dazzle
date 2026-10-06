@@ -29,9 +29,9 @@ integration <name> ["<Title>"]:
     [trigger: manual "<Label>"]
     request: <GET|POST|PUT|DELETE|PATCH> "<url_template>"
     [map_request:]
-      <field> <- <source.path>
+      <field[.path]> <- <source.path>
     [map_response:]
-      <field> <- <source.path>
+      <field[.path]> <- <source.path>
     [on_error: <ignore|log_warning|revert_transition|retry>]
     [on_error: set <field> = "<value>", <action>]
 ```

@@ -384,8 +384,13 @@ class IntegrationParserMixin:
 
         Syntax:
             target_field <- source.path
+            periodDates.periodStartDate <- self.period_from
             target_field <- "literal"
             target_field <- true
+
+        The target may be a dotted path (#1766). ``MappingExecutor``
+        already nests that string on the request body; this parser
+        used to stop at the first identifier and reject the dot.
         """
         rules: list[ir.MappingRule] = []
 
@@ -394,7 +399,7 @@ class IntegrationParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            target = self.expect_identifier_or_keyword().value
+            target = self._parse_dotted_name()
             self.expect(TokenType.LARROW)
             source = self._parse_expression()
 

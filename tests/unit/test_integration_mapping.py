@@ -399,6 +399,67 @@ integration hmrc:
         assert mapping.request_mapping[1].target_field == "vatDueSales"
         assert mapping.request_mapping[1].source.path == "self.box1_amount"
 
+    def test_dotted_target_parses_and_nests(self) -> None:
+        """#1766: a dotted map_request target is one field path, and the executor nests it."""
+        from unittest.mock import MagicMock
+
+        from dazzle.http.runtime.event_bus import EntityEventBus
+        from dazzle.http.runtime.mapping_executor import MappingExecutor
+
+        dsl = """
+module test
+app test "Test"
+
+entity Submission "Submission":
+  id: uuid pk
+  period_from: str(20) required
+  turnover: decimal(10,2) required
+
+integration hmrc:
+  mapping cumulative on Submission:
+    request: PUT "/obligations"
+    map_request:
+      periodDates.periodStartDate <- self.period_from
+      ukProperty.income.turnover <- self.turnover
+"""
+        fragment = _parse(dsl)
+        rules = fragment.integrations[0].mappings[0].request_mapping
+        assert [rule.target_field for rule in rules] == [
+            "periodDates.periodStartDate",
+            "ukProperty.income.turnover",
+        ]
+
+        executor = MappingExecutor(MagicMock(), EntityEventBus())
+        body = executor._apply_request_mapping(
+            rules,
+            {"period_from": "2026-04-06", "turnover": "1000.00"},
+        )
+        assert body == {
+            "periodDates": {"periodStartDate": "2026-04-06"},
+            "ukProperty": {"income": {"turnover": "1000.00"}},
+        }
+
+    def test_dotted_response_target_is_the_field_name(self) -> None:
+        """map_response shares the parser. The response executor does not nest."""
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    map_response:
+      address.city <- response.city
+"""
+        fragment = _parse(dsl)
+        rule = fragment.integrations[0].mappings[0].response_mapping[0]
+        assert rule.target_field == "address.city"
+        assert rule.source.path == "response.city"
+
 
 class TestErrorStrategy:
     """Tests for error strategy parsing."""
