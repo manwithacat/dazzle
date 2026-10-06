@@ -411,7 +411,17 @@ def test_each_caller_goes_through_the_shared_script(relative: str) -> None:
 
 
 def test_the_monitor_reports_while_the_gate_still_gates() -> None:
-    """main-hygiene must not red every Monday; security-tests must keep failing."""
+    """main-hygiene must not red every Monday; security-tests must keep failing.
+
+    A plain multiline `run:` folds newlines to spaces. The audit step was
+    written with backslash continuations, so the shell received
+    ``\\ --findings-file`` and argparse saw a flag with a leading space
+    (``unrecognized arguments``, exit 2). ``--report-only`` was still a
+    substring of that folded line, which is why a substring check stayed
+    green. The parsed argv has to be the flags the script accepts.
+    """
+    import shlex
+
     import yaml
 
     hygiene = yaml.safe_load((REPO / ".github" / "workflows" / "main-hygiene.yml").read_text())
@@ -421,7 +431,11 @@ def test_the_monitor_reports_while_the_gate_still_gates() -> None:
         steps = doc["jobs"][job]["steps"]
         return next(s["run"] for s in steps if str(s.get("name", "")).startswith(name_prefix))
 
-    assert "--report-only" in run_of(hygiene, "hygiene", "Audit main")
+    audit = run_of(hygiene, "hygiene", "Audit main")
+    argv = shlex.split(audit)
+    for flag in ("--report-only", "--findings-file", "--verdict-file", "--github-output"):
+        assert flag in argv, f"{flag} missing from parsed argv: {argv}"
+    assert all(not arg.startswith(" ") and arg != "\\" for arg in argv), argv
     assert "--report-only" not in run_of(ci, "security-tests", "Run pip-audit")
 
 

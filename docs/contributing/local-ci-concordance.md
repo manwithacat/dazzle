@@ -63,6 +63,8 @@ after a full `ci.yml` matrix. Script: `scripts/ship_surface.py`.
 | golden IR snapshot | `test_simple_dsl_to_ir_snapshot` |
 | viewport DRAWER freshness | shell toggle selector rot (browser-free) |
 | `gen_surface_check` | catalogue md/css + `CONTRACT_SURFACE.md` vs generators |
+| `test_preflight_recipe_does_not_rebuild_the_venv` | `uv run` recreates a non-3.14 `.venv` mid-suite |
+| `test_the_monitor_reports_while_the_gate_still_gates` | main-hygiene `run:` folded so `\` ate the audit flags |
 
 **Also runs automatically as the second step of Tier 0** (after preflight).
 Standalone for mid-edit: `make ship-surface`.
@@ -244,6 +246,18 @@ make type-check-ci
    and docs. This is what `preflight-surface` exists to catch **before** push.
    Stacking feature commits on a red tip multiplies the same failures across
    every matrix cell.
+8. **`uv run` against the pinned `.python-version`.** The Makefile exports
+   `UV_MANAGED_PYTHON=1` and `.python-version` is 3.14. A recipe the suite
+   shells out to (`make test-ux-preflight`) that calls `$(UV) run` deletes a
+   3.12 or 3.13 `.venv` and recreates it as 3.14 with the default extras.
+   The laptop is already 3.14, so `make ci-fast` stays green. The preflight
+   recipe calls `.venv/bin/python -m`, and the python-tests pytest steps set
+   `UV_NO_SYNC=1`.
+9. **A plain multiline `run:` folds backslashes.** `main-hygiene`'s audit
+   step was several lines of `python scripts/pip_audit.py --report-only \`
+   without a `|` block. Actions joined the lines with spaces, the `\` escaped
+   that space, and `pip_audit.py` exited 2 on flags with a leading space.
+   Keep that invocation on one line.
 
 ---
 

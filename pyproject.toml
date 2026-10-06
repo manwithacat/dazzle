@@ -193,10 +193,7 @@ signing = [
     # dazzle.signing.cert (not in core deps — pulled in here).
     "fpdf2>=2.8.0",
     "pyhanko>=0.25.0",
-    # Floor held below 12: 12.3.0's Linux wheels fail to import
-    # `PIL.ImageColor`/`PIL.ImageFile`, which collection-scatters across the
-    # suite on the CI runner while importing fine on macOS. See
-    # [tool.uv] constraint-dependencies for the CI-concordance note.
+    # Floor: see [tool.uv] constraint-dependencies.
     "Pillow>=11.0.0",
     "cryptography>=50.0.0",
 ]
@@ -296,10 +293,7 @@ pitch = [
 ]
 # Viewport visual regression testing
 viewport = [
-    # Floor held below 12: 12.3.0's Linux wheels fail to import
-    # `PIL.ImageColor`/`PIL.ImageFile`, which collection-scatters across the
-    # suite on the CI runner while importing fine on macOS. See
-    # [tool.uv] constraint-dependencies for the CI-concordance note.
+    # Floor: see [tool.uv] constraint-dependencies.
     "Pillow>=11.0.0",
 ]
 # TigerBeetle ledger integration (v0.5.0 - Issue #ledgers)
@@ -392,13 +386,12 @@ dazzle = "dazzle.cli:main"
 python-preference = "only-managed"
 
 # Transitive constraints, not dependencies. `pillow` is pulled in by matplotlib,
-# python-pptx, weasyprint and fpdf2, and 12.3.0 fails on the Linux CI runner:
-# `PIL/Image.py` cannot import `ImageColor`/`ImageFile` from the package root,
-# which collection-scatters into ~125 test failures across signing, saml, jwt,
-# richtext and viewport suites. The same version imports fine on macOS, so nothing
-# local catches it — a green laptop and a red badge, which is the one thing the
-# CI concordance work exists to prevent. Constrain rather than depend: this pins
-# resolution without claiming we import it.
+# python-pptx, weasyprint and fpdf2. Held below 12. The Oct 2026 collection
+# scatter (ImageColor, ImageFile, jwt, hypothesis — 3.12 and 3.13 only) was the
+# uv runner deleting the job venv, not a wheel that fails to import. The earlier
+# claim that 12.3.0's Linux wheels cannot import ImageColor was not re-checked
+# after that, so the floor stays. It reopens PYSEC-2026-2253–2257. Constrain
+# rather than depend: this pins resolution without claiming we import it.
 constraint-dependencies = [
     "pillow<12",
 ]

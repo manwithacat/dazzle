@@ -103,10 +103,12 @@ jobs:
       # for a month when it skipped a renamed directory.
       - name: Audit main's locked dependencies
         id: audit
-        run: python scripts/pip_audit.py --report-only \
-          --findings-file /tmp/findings.txt \
-          --verdict-file /tmp/audit-verdict.json \
-          --github-output "$GITHUB_OUTPUT"
+        # One line. A plain multiline `run:` folds newlines to spaces, and a
+        # trailing `\` then escapes that space, so argparse receives
+        # ` --findings-file` (leading space) and exits 2. The job log shows
+        # the backslashes still in the command. `--report-only` remains a
+        # substring, which is why a substring assertion stayed green.
+        run: python scripts/pip_audit.py --report-only --findings-file /tmp/findings.txt --verdict-file /tmp/audit-verdict.json --github-output "$GITHUB_OUTPUT"
 
       # --- 3. Report, idempotently -----------------------------------------
       - name: Open or update a hygiene issue
