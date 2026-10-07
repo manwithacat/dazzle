@@ -11,5 +11,6 @@ Process: `.agents/skills/blue-sky/SKILL.md`
 .venv/bin/python scripts/blue_sky_spec.py --example invoice_ops --slice approver --write
 ```
 
-`specs/` is regenerable from example DSL. `runs/` is disposable
-(`node_modules` gitignored).
+`specs/` is regenerable from example DSL. `runs/` is local and
+gitignored: the prototype and its critique are not committed.
+`LOG.md` is the record that ships.

@@ -1,11 +1,13 @@
 # Blue Sky log
 
-Append-only. Prototypes are throwaway; the critique is the payload.
+Append-only. This file is the record that ships. A run directory
+(`blue_sky/runs/`, gitignored) holds the prototype and its critique
+on the machine that built them. Do not commit it.
 
 ## 2026-08-30 invoice_ops / approver
 
 **Spec:** `blue_sky/specs/invoice_ops/approver.md`
-**Prototype:** runnable (`npm run dev` in `blue_sky/runs/2026-08-30-invoice_ops-approver/`) — On the Desk
+**Prototype:** On the Desk (local run, not in the tree)
 **Top enquiry:** If the work is the sheet in hand, why does Dazzle still generate the list as the job?
 **Promote:** steal rows are example copy/guards; translate rows wait on `stems/story-driven-jobs` before any framework issue.
 

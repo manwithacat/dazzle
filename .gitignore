@@ -109,10 +109,8 @@ examples/*/dnr-ui/
 
 # Node.js
 node_modules/
-blue_sky/runs/*/node_modules/
-blue_sky/runs/*/dist/
-blue_sky/runs/*/.vite/
-blue_sky/runs/*/tsconfig.tsbuildinfo
+# Blue Sky prototypes and critiques stay on the machine that built them.
+blue_sky/runs/
 dev_docs/
 tmp/
 

@@ -27,7 +27,8 @@ stems / GitHub issues).
 ```
 
 Default example if the user did not name one: `invoice_ops` (keystone).
-Default slice: the first unused persona slice (no `blue_sky/runs/*-<example>-<slice>/`).
+Default slice: the first persona slice that `blue_sky/LOG.md` does not
+already record, and that has no local `blue_sky/runs/*-<example>-<slice>/`.
 One slice per builder. Do not prototype the whole example.
 
 ## 1. EXTRACT (this repo)
@@ -48,7 +49,9 @@ fix the script, do not hand-edit around it.
 ## 2. BUILD (independent agent)
 
 Create `blue_sky/runs/YYYY-MM-DD-<example>-<slice>/` with **only** the two spec
-files copied in. Spawn a general-purpose subagent:
+files copied in. That directory is gitignored. The prototype, its lockfile,
+and `CRITIQUE.md` stay on this machine. Do not `git add` them. Spawn a
+general-purpose subagent:
 
 - `cwd` = that run directory (absolute). Do **not** use `isolation=worktree`
   (a Dazzle worktree is full of DSL).
@@ -93,7 +96,8 @@ For each **steal** / **translate** / **theory** row:
 - translate → read `stems/` first, then a Dazzle issue or stem amendment
 - theory → `examples/<app>/stems/`
 
-Cite the run path and lens. Log the round in `blue_sky/LOG.md`.
+Cite the log entry (date, example, slice) and the lens. Do not cite a run
+file as shipped evidence. Log the round in `blue_sky/LOG.md`.
 
 ## 5. What not to do
 
@@ -101,3 +105,4 @@ Cite the run path and lens. Log the round in `blue_sky/LOG.md`.
 - Port the prototype stack into Dazzle or an example.
 - File a framework issue from taste without a stem.
 - Run Blue Sky as an improve ticker.
+- Commit `blue_sky/runs/`. Specs and `LOG.md` are the tree. The run is not.

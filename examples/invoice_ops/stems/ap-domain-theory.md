@@ -47,8 +47,9 @@ invent entities or rails from the prototypes.
 
 ## Expressions
 
-- Evidence: `blue_sky/runs/2026-08-30-invoice_ops-*/TRANSLATION.md`
-  (BS-IO-R04, F03/F04, A03, 08)
+- Evidence: `blue_sky/LOG.md` (2026-08-30 invoice_ops wave). The
+  per-run translation files stayed on the machine that built them
+  (BS-IO-R04, F03/F04, A03, 08).
 - DSL already: `process settle_invoice`; LineItem `po_match`; Invoice
   `disputed -> approved | rejected`; PaymentAttempt `pending|succeeded|failed`
 - Sibling steal (copy/guards, not theory): #1668
