@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
+from ..ir.integrations import EXECUTOR_OWNED_REQUEST_HEADERS
 from ..lexer import TokenType
 from .dispatch import KeywordParser, parse_block_with_dispatch
 
@@ -67,6 +68,7 @@ class IntegrationParserMixin:
         name, title, loc = self._parse_construct_header(TokenType.INTEGRATION)
 
         base_url = None
+        transport = None
         auth = None
         api_refs: list[str] = []
         foreign_model_refs: list[str] = []
@@ -78,8 +80,6 @@ class IntegrationParserMixin:
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            tok = self.current_token()
 
             # uses service ServiceName[,ServiceName]
             if self.match(TokenType.USES):
@@ -139,22 +139,13 @@ class IntegrationParserMixin:
                 mapping = self._parse_mapping_block()
                 mappings.append(mapping)
 
-            # base_url: "https://..." (v0.30.0)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "base_url":
-                self.advance()
-                self.expect(TokenType.COLON)
-                base_url = self.expect(TokenType.STRING).value
-                self.skip_newlines()
-
-            # auth: api_key from env("KEY") (v0.30.0)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "auth":
-                self.advance()
-                self.expect(TokenType.COLON)
-                auth = self._parse_auth_spec()
-                self.skip_newlines()
-
             else:
-                break
+                update = self._parse_integration_field()
+                if update is None:
+                    break
+                base_url = update.get("base_url", base_url)
+                transport = update.get("transport", transport)
+                auth = update.get("auth", auth)
 
         self.expect(TokenType.DEDENT)
 
@@ -162,6 +153,7 @@ class IntegrationParserMixin:
             name=name,
             title=title,
             base_url=base_url,
+            transport=transport,
             auth=auth,
             api_refs=api_refs,
             foreign_model_refs=foreign_model_refs,
@@ -172,6 +164,43 @@ class IntegrationParserMixin:
         )
 
     # --- v0.30.0: Declarative mapping blocks ---
+
+    def _parse_integration_field(self) -> dict[str, Any] | None:
+        """Parse one of ``base_url``, ``transport``, or ``auth``.
+
+        Returns None when the current token is not one of those fields, and
+        does not consume it. ``transport`` accepts only ``app`` (#1769).
+        """
+        tok = self.current_token()
+        if tok.type != TokenType.IDENTIFIER:
+            return None
+        if tok.value == "base_url":
+            self.advance()
+            self.expect(TokenType.COLON)
+            value = self.expect(TokenType.STRING).value
+            self.skip_newlines()
+            return {"base_url": value}
+        if tok.value == "transport":
+            self.advance()
+            self.expect(TokenType.COLON)
+            mode = self.current_token()
+            if mode.type != TokenType.APP:
+                raise make_parse_error(
+                    f"Expected transport: app, got '{mode.value}'",
+                    self.file,
+                    mode.line,
+                    mode.column,
+                )
+            self.advance()
+            self.skip_newlines()
+            return {"transport": "app"}
+        if tok.value == "auth":
+            self.advance()
+            self.expect(TokenType.COLON)
+            auth = self._parse_auth_spec()
+            self.skip_newlines()
+            return {"auth": auth}
+        return None
 
     def _parse_auth_spec(self) -> ir.AuthSpec:
         """Parse auth specification.
@@ -222,9 +251,9 @@ class IntegrationParserMixin:
         """Parse a ``mapping <name> [on Entity]:`` block.
 
         Refactored to dispatch-table style (follow-on to #1098). 3
-        token-keyed (trigger/source/target) + 7 IDENT-text-matched
+        token-keyed (trigger/source/target) + 8 IDENT-text-matched
         (request/cache/map_request/map_response/transform/on_conflict/
-        on_error) + a `_build_mapping` builder.
+        on_error/headers) + a `_build_mapping` builder.
 
         Syntax (original — with ``on Entity``)::
 
@@ -265,6 +294,16 @@ class IntegrationParserMixin:
             state=state,
         )
         self.expect(TokenType.DEDENT)
+        if state.headers:
+            if state.request is None:
+                tok = self.current_token()
+                raise make_parse_error(
+                    "headers: requires a request: on the same mapping",
+                    self.file,
+                    tok.line,
+                    tok.column,
+                )
+            state.request = state.request.model_copy(update={"headers": dict(state.headers)})
         return _build_mapping(mapping_name, state)
 
     def _parse_mapping_trigger(self) -> ir.MappingTriggerSpec:
@@ -384,8 +423,15 @@ class IntegrationParserMixin:
 
         Syntax:
             target_field <- source.path
+            periodDates.periodStartDate <- self.period_from
             target_field <- "literal"
             target_field <- true
+
+        The target may be a dotted path (#1766) with integer indexes
+        (#1770). ``otherGains.0.assetType`` is one string.
+        ``MappingExecutor`` nests objects and grows lists from it.
+        ``map_response`` shares this parser and still stores the string
+        as one entity field name.
         """
         rules: list[ir.MappingRule] = []
 
@@ -394,7 +440,7 @@ class IntegrationParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            target = self.expect_identifier_or_keyword().value
+            target = self._parse_larrow_target()
             self.expect(TokenType.LARROW)
             source = self._parse_expression()
 
@@ -432,6 +478,40 @@ class IntegrationParserMixin:
         parts = [self.expect_identifier_or_keyword().value]
         while self.match(TokenType.DOT):
             self.advance()
+            parts.append(self.expect_identifier_or_keyword().value)
+        return ".".join(parts)
+
+    def _parse_larrow_target(self) -> str:
+        """A ``map_request`` / ``map_response`` target.
+
+        Segments are identifiers or integer indexes. The lexer folds the
+        dot after an integer into the number token (``NUMBER "0."``), so
+        a trailing dot on that token is the next separator, not part of
+        the index. ``read_number`` is left alone: ``source:`` and other
+        dotted names stay identifier-only.
+        """
+        parts = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.DOT):
+            self.advance()
+            if self.match(TokenType.NUMBER):
+                tok = self.current_token()
+                raw = self.advance().value
+                trailing = raw.endswith(".")
+                body = raw[:-1] if trailing else raw
+                pieces = body.split(".") if body else []
+                if not pieces or any(
+                    not piece.isascii() or not piece.isdigit() for piece in pieces
+                ):
+                    raise make_parse_error(
+                        f"List index must be an integer, got {raw!r}",
+                        self.file,
+                        tok.line,
+                        tok.column,
+                    )
+                parts.extend(pieces)
+                if trailing:
+                    parts.append(self.expect_identifier_or_keyword().value)
+                continue
             parts.append(self.expect_identifier_or_keyword().value)
         return ".".join(parts)
 
@@ -776,8 +856,8 @@ class IntegrationParserMixin:
 #
 # The 146-line monolith was replaced (v0.70.31) with the dispatch
 # pattern shipped in #1097. 3 token-keyed (trigger/source/target)
-# + 7 IDENT-text-matched (request/cache/map_request/map_response/
-# transform/on_conflict/on_error) + a `_build_mapping` builder.
+# + 8 IDENT-text-matched (request/cache/map_request/map_response/
+# transform/on_conflict/on_error/headers) + a `_build_mapping` builder.
 
 
 @dataclass
@@ -798,6 +878,7 @@ class _MappingState:
     on_error: ir.ErrorStrategy | None = None
     on_conflict: str = ""
     cache_ttl: int | None = None
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -836,6 +917,59 @@ def _m_kw_request(parser: Any, state: _MappingState) -> None:
     parser.expect(TokenType.COLON)
     state.request = parser._parse_http_request()
     parser.skip_newlines()
+
+
+def _m_kw_headers(parser: Any, state: _MappingState) -> None:
+    """``headers:`` — indented ``"Name": "value"`` pairs (#1767).
+
+    Names are quoted so a hyphen (``Gov-Test-Scenario``, ``Content-Type``)
+    stays one token. Values are static strings. Authorization and
+    Content-Type are rejected: the executor owns both.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    parser.skip_newlines()
+    parser.expect(TokenType.INDENT)
+    while not parser.match(TokenType.DEDENT):
+        parser.skip_newlines()
+        if parser.match(TokenType.DEDENT):
+            break
+        tok = parser.current_token()
+        if tok.type != TokenType.STRING:
+            raise make_parse_error(
+                'Expected a quoted header name, for example "Accept": "application/json"',
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        name = parser.advance().value.strip()
+        if not name:
+            raise make_parse_error(
+                "Header name is empty",
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        if name.lower() in EXECUTOR_OWNED_REQUEST_HEADERS:
+            raise make_parse_error(
+                f"{name} is set by the mapping executor "
+                "(Authorization from auth:, Content-Type for the JSON body)",
+                parser.file,
+                tok.line,
+                tok.column,
+            )
+        parser.expect(TokenType.COLON)
+        value_tok = parser.current_token()
+        if value_tok.type != TokenType.STRING:
+            raise make_parse_error(
+                "Expected a quoted header value",
+                parser.file,
+                value_tok.line,
+                value_tok.column,
+            )
+        state.headers[name] = parser.advance().value
+        parser.skip_newlines()
+    parser.expect(TokenType.DEDENT)
 
 
 def _m_kw_cache(parser: Any, state: _MappingState) -> None:
@@ -913,6 +1047,7 @@ _MAPPING_IDENT_KEYWORDS: dict[str, KeywordParser[_MappingState]] = {
     "transform": _m_kw_transform,
     "on_conflict": _m_kw_on_conflict,
     "on_error": _m_kw_on_error,
+    "headers": _m_kw_headers,
 }
 
 

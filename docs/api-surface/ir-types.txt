@@ -1324,7 +1324,8 @@ ir_class: HttpRequestSpec
   required:
     - method: HttpMethod
     - url_template: str
-  optional: (none)
+  optional:
+    - headers: dict[str, str] = {}
 
 ir_class: HumanTaskOutcome
   required:
@@ -1431,6 +1432,7 @@ ir_class: IntegrationSpec
     - source: SourceLocation | None = None
     - syncs: list[IntegrationSync] = []
     - title: str | None = None
+    - transport: str | None = None
 
 ir_class: IntegrationSync
   required:

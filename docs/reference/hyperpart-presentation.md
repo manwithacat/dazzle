@@ -2,7 +2,7 @@
 
 **Audience:** `/improve` framework-ux + example-apps agents
 **Doctrine source:** antagonist `HYPERPART_PRESENTATION_PROCESS` (2026-08-01)
-**Stills:** `examples/*/.dazzle/qa/screenshots` — stills beat claims
+**Stills:** a local `dazzle qa capture` writes `examples/*/.dazzle/qa/screenshots`. That directory is gitignored. Stills beat claims, and they are a capture of this run, not files in the tree.
 **Related:** #1626 · `product-maturity.md` · HM pick-a-surface (authoring, orthogonal)
 
 Closed **role × host → Hyperpart density** matrix with one emit seam

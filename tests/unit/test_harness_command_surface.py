@@ -134,6 +134,40 @@ def test_every_script_the_driver_names_exists() -> None:
     assert not missing, f"the harness names scripts that do not exist: {missing}"
 
 
+def test_preflight_recipe_does_not_rebuild_the_venv() -> None:
+    """`uv run` from a recipe the suite shells out to deletes `.venv`.
+
+    The Makefile exports `UV_MANAGED_PYTHON=1` and `.python-version` is 3.14.
+    On a 3.12 or 3.13 CI cell, `$(UV) run` removes the job venv and recreates
+    it as 3.14 with the default extras. The rest of the matrix then dies on
+    missing modules (`jwt`, `hypothesis`, `PIL.ImageColor`, …). The laptop is
+    already 3.14, so `test_the_players_own_preflight_targets_run` stays green
+    while the badge is red. This assertion is what a 3.14 checkout can fail.
+
+    `UV_NO_SYNC` on the python-tests pytest steps is the belt for any other
+    nested `uv run` during the suite.
+    """
+    import yaml
+
+    for target in ("test-ux-preflight", "test-ux-deep"):
+        recipe = _recipe_of(target)
+        assert not re.search(r"(\$\(UV\)|\buv) run\b", recipe), (
+            f"make {target} calls uv run; that recreates .venv on a non-3.14 "
+            f"CI cell. Use .venv/bin/python -m."
+        )
+        assert ".venv/bin/python -m" in recipe, (
+            f"make {target} must invoke the project venv interpreter"
+        )
+
+    doc = yaml.safe_load((REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = doc["jobs"]["python-tests"]["steps"]
+    pytest_steps = [s for s in steps if str(s.get("name", "")).startswith("Run tests with pytest")]
+    assert len(pytest_steps) == 2
+    for step in pytest_steps:
+        env = step.get("env") or {}
+        assert str(env.get("UV_NO_SYNC")) == "1", step.get("name")
+
+
 def test_the_players_own_preflight_targets_run() -> None:
     """The two targets Step 0b declares mandatory, invoked the way the driver
     invokes them. `test-ux-preflight` is here because it is the one that was

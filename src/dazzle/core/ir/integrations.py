@@ -180,16 +180,25 @@ class HttpMethod(StrEnum):
     PATCH = "PATCH"
 
 
+# Names the mapping executor fills itself. A declared header with one of
+# these names would either drop the auth credential or disagree with the
+# JSON body the executor actually sends.
+EXECUTOR_OWNED_REQUEST_HEADERS = frozenset({"authorization", "content-type"})
+
+
 class HttpRequestSpec(BaseModel):
     """HTTP request specification for an integration mapping.
 
     Attributes:
         method: HTTP method (GET, POST, PUT, DELETE, PATCH)
         url_template: URL path with interpolation, e.g. /company/{self.company_number}
+        headers: Static request headers declared on the mapping. Authorization
+            and Content-Type are not accepted here.
     """
 
     method: HttpMethod
     url_template: str
+    headers: dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 
@@ -306,6 +315,8 @@ class IntegrationSpec(BaseModel):
         name: Integration identifier
         title: Human-readable title
         base_url: Base URL for the external API (v0.30.0)
+        transport: ``"app"`` delegates the send to the project hook (#1769).
+            Absent means the executor sends with httpx.
         auth: Authentication specification (v0.30.0)
         api_refs: List of external APIs used (legacy action/sync style)
         foreign_model_refs: List of foreign models used (legacy action/sync style)
@@ -317,6 +328,7 @@ class IntegrationSpec(BaseModel):
     name: str
     title: str | None = None
     base_url: str | None = None
+    transport: str | None = None
     auth: AuthSpec | None = None
     api_refs: list[str] = Field(default_factory=list)
     foreign_model_refs: list[str] = Field(default_factory=list)

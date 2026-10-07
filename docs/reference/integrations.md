@@ -15,10 +15,23 @@ data sync points, and declarative field mappings for external systems.
 v0.30.0 adds declarative mapping blocks: base_url, auth, mapping with triggers,
 HTTP requests, request/response field mappings, and error handling strategies.
 
+A `map_request` target is a dotted path. An all-digit segment is a list index:
+`otherGains.0.assetType` renders `{"otherGains": [{"assetType": ...}]}`, and a
+later `.1` extends that list. `map_response` accepts the same target string and
+stores it as one entity field name.
+
+`transport: app` renders the request and calls
+`pipeline.serve.app_init.integration_transport` instead of opening a socket.
+The hook receives the method, interpolated path, declared base_url, static
+mapping headers, and JSON body, and returns the status and body. The
+application adds per-request headers and chooses the host. `on_error: retry`
+calls the hook again. A missing hook is an error.
+
 ### Syntax
 
 ```dsl
 integration <name> ["<Title>"]:
+  [transport: app]
   [base_url: "<url>"]
   [auth: <api_key|oauth2|bearer|basic> from env("<KEY>")[, env("<KEY2>")]]
 
@@ -28,10 +41,12 @@ integration <name> ["<Title>"]:
     [trigger: on_transition <from> -> <to>]
     [trigger: manual "<Label>"]
     request: <GET|POST|PUT|DELETE|PATCH> "<url_template>"
+    [headers:]
+      "<Header-Name>": "<value>"
     [map_request:]
-      <field> <- <source.path>
+      <field[.index][.path]> <- <source.path>
     [map_response:]
-      <field> <- <source.path>
+      <field[.path]> <- <source.path>
     [on_error: <ignore|log_warning|revert_transition|retry>]
     [on_error: set <field> = "<value>", <action>]
 ```
@@ -53,18 +68,20 @@ integration companies_house:
       incorporation_date <- response.date_of_creation
     on_error: set company_status = "lookup_failed", log_warning
 
-integration hmrc_mtd:
-  base_url: "https://api.service.hmrc.gov.uk"
-  auth: oauth2 from env("HMRC_CLIENT_ID"), env("HMRC_CLIENT_SECRET")
+integration xero_accounting:
+  base_url: "https://api.xero.com/api.xro/2.0"
+  auth: oauth2 from env("XERO_CLIENT_ID"), env("XERO_CLIENT_SECRET")
 
-  mapping submit_vat on VATReturn:
+  mapping create_invoice on Invoice:
     trigger: on_transition reviewed -> submitted
-    request: POST "/organisations/vat/returns"
+    request: POST "/Invoices"
+    headers:
+      "Accept": "application/json"
     map_request:
-      periodKey <- self.period_key
-      vatDueSales <- self.box1_vat_due_sales
+      Type <- self.invoice_type
+      Contact.ContactID <- self.contact_id
     map_response:
-      hmrc_receipt_id <- response.formBundleNumber
+      xero_invoice_id <- response.InvoiceID
     on_error: revert_transition
 ```
 

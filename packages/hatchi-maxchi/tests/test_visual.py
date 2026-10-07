@@ -1,19 +1,18 @@
-"""Visual-domain regression — gallery screenshots vs committed baselines.
+"""Visual-domain regression — gallery screenshots vs the linux baseline set.
 
 Above-fold (1280x900) captures of the gallery in light and dark, compared
 pixel-wise with a tolerance that absorbs same-platform rendering noise but
 fails on real palette / layout drift.
 
-Baselines are **per-platform** (``baselines/linux/``, ``baselines/darwin/``)
-because Chromium's font rasterisation differs enough across OSes (~4% of
-pixels) to swamp a tight threshold. CI compares against the linux set; local
-runs compare against your platform's set (and skip-write it if absent).
+Only ``baselines/linux/`` is in git. Standalone CI runs on Linux and that
+set is what makes this test able to fail. Chromium's font rasterisation
+differs enough across OSes (~4% of pixels) that a darwin capture cannot
+share those files. A missing file on any other platform skips, and does
+not write, so a local run cannot dirty the worktree. Capture deliberately:
 
-Update baselines after an INTENDED visual change:
-    HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py   # yours
-    python tools/visual_baseline_manifest.py                        # yours
-    gh workflow run update-baselines.yml                          # linux set
-and commit the PNGs (review the diff images first).
+    HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py
+    python tools/visual_baseline_manifest.py
+    gh workflow run update-baselines.yml          # replaces the linux set
 """
 
 import os
@@ -37,10 +36,15 @@ def _compare(name: str, png_bytes: bytes) -> None:
     import io
 
     baseline_path = BASELINES / f"{name}.png"
-    if os.environ.get("HM_UPDATE_BASELINES") == "1" or not baseline_path.exists():
+    if os.environ.get("HM_UPDATE_BASELINES") == "1":
         BASELINES.mkdir(parents=True, exist_ok=True)
         baseline_path.write_bytes(png_bytes)
-        pytest.skip(f"baseline written: {sys.platform}/{baseline_path.name} — commit it")
+        pytest.skip(f"baseline written: {sys.platform}/{baseline_path.name}")
+    if not baseline_path.is_file():
+        pytest.skip(
+            f"no baseline for {sys.platform}/{name} — "
+            "CI compares baselines/linux; set HM_UPDATE_BASELINES=1 to capture locally"
+        )
 
     baseline = Image.open(baseline_path).convert("RGB")
     current = Image.open(io.BytesIO(png_bytes)).convert("RGB")

@@ -83,7 +83,7 @@ class TestScenarioListing:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 16
+        assert len(all_scenarios) >= 14
         assert "sumsub_kyc/kyc_approved" in all_scenarios
         assert "stripe_payments/payment_succeeded" in all_scenarios
 
@@ -139,12 +139,13 @@ class TestScenarioIntercept:
 
         # With status override
         e2 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        e2.load_scenario("hmrc_mtd_vat", "vat_return_rejected")
+        e2.load_scenario("stripe_payments", "payment_failed_insufficient")
         data2, status2 = _run_async(
-            e2.intercept("hmrc_mtd_vat", "submit_return", {"id": "ret-1"}, 201)
+            e2.intercept("stripe_payments", "confirm_payment_intent", {"id": "pi_1"}, 200)
         )
-        assert status2 == 422
-        assert data2["code"] == "INVALID_REQUEST"
+        assert status2 == 402
+        assert data2["last_payment_error"]["decline_code"] == "insufficient_funds"
+        assert data2["id"] == "pi_1"
 
         # No match
         e3 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
@@ -213,10 +214,10 @@ class TestErrorInjection:
 
     def test_inject_latency(self) -> None:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.inject_latency("hmrc_mtd_vat", "submit_return", delay_ms=50)
+        engine.inject_latency("stripe_payments", "create_payment_intent", delay_ms=50)
 
         start = time.monotonic()
-        _run_async(engine.intercept("hmrc_mtd_vat", "submit_return", {"ok": True}, 200))
+        _run_async(engine.intercept("stripe_payments", "create_payment_intent", {"ok": True}, 200))
         elapsed = (time.monotonic() - start) * 1000
         assert elapsed >= 40  # At least ~40ms (allowing for timing variance)
 
@@ -292,17 +293,17 @@ class TestScenarioWithMockServer:
         assert resp.status_code == 201
         assert resp.json()["review_status"] == "init"
 
-    def test_hmrc_rate_limited(self) -> None:
-        client, engine = self._make_client("hmrc_mtd_vat", "rate_limited")
+    def test_stripe_rate_limited(self) -> None:
+        client, engine = self._make_client("stripe_payments", "rate_limited")
         auth = {"Authorization": "Bearer test-token"}
 
         resp = client.post(
-            "/organisations/vat/{vrn}/returns",
-            json={"periodKey": "A001"},
+            "/payment_intents",
+            json={"amount": 100, "currency": "gbp"},
             headers=auth,
         )
         assert resp.status_code == 429
-        assert resp.json()["code"] == "TOO_MANY_REQUESTS"
+        assert resp.json()["error"]["code"] == "rate_limit"
 
     def test_error_injection_with_server(self) -> None:
         client, engine = self._make_client("sumsub_kyc")
@@ -378,11 +379,11 @@ class TestBuiltInScenarios:
 
     def test_built_in_scenarios_combined(self) -> None:
         """Combined: all scenarios loadable + per-vendor coverage
-        (sumsub, stripe, hmrc, xero, companies_house)."""
+        (sumsub, stripe, xero, companies_house)."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 16
+        assert len(all_scenarios) >= 14
 
         for scenario_ref in all_scenarios:
             vendor, name = scenario_ref.split("/", 1)
@@ -405,7 +406,7 @@ class TestBuiltInScenarios:
         assert "payment_succeeded" in stripe_names
         assert "payment_failed_insufficient" in stripe_names
 
-        # HMRC, Xero, Companies House
-        assert len(engine.list_scenarios(vendor="hmrc_mtd_vat")) >= 3
+        # Xero, Companies House. HMRC is not a built-in vendor.
+        assert engine.list_scenarios(vendor="hmrc_mtd_vat") == []
         assert len(engine.list_scenarios(vendor="xero_accounting")) >= 3
         assert len(engine.list_scenarios(vendor="companies_house_lookup")) >= 3

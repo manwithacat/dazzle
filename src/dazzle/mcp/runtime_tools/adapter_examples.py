@@ -49,11 +49,11 @@ ADAPTERS = [
 # Service patterns for external APIs
 SERVICE_PATTERNS = [
     {
-        "name": "HMRC VAT API",
-        "type": "government",
-        "example_methods": ["get_vat_obligations", "submit_vat_return"],
+        "name": "Xero Accounting API",
+        "type": "accounting",
+        "example_methods": ["create_invoice", "list_invoices", "create_payment"],
         "auth": "OAuth2 Bearer Token",
-        "rate_limit": "4 requests/second",
+        "rate_limit": "Provider-specific",
     },
     {
         "name": "Payment Provider",
@@ -80,52 +80,6 @@ SERVICE_PATTERNS = [
 
 # Implementation guides for different service types
 ADAPTER_GUIDES = {
-    "hmrc": {
-        "service": "HMRC VAT API",
-        "description": "UK tax authority API for VAT submissions",
-        "base_url": "https://api.service.hmrc.gov.uk",
-        "auth_type": "OAuth2 Bearer Token",
-        "rate_limit": "4 requests per second",
-        "error_codes": [
-            "INVALID_VRN",
-            "VRN_NOT_FOUND",
-            "DATE_RANGE_TOO_LARGE",
-            "FORBIDDEN",
-            "NOT_SIGNED_UP_TO_MTD",
-        ],
-        "example": '''from dazzle.http.graphql.adapters import (
-    BaseExternalAdapter,
-    AdapterConfig,
-    RetryConfig,
-    RateLimitConfig,
-    AdapterResult,
-)
-
-class HMRCAdapter(BaseExternalAdapter[AdapterConfig]):
-    """Adapter for HMRC VAT API."""
-
-    def __init__(self, bearer_token: str):
-        config = AdapterConfig(
-            base_url="https://api.service.hmrc.gov.uk",
-            timeout=30.0,
-            headers={
-                "Authorization": f"Bearer {bearer_token}",
-                "Accept": "application/vnd.hmrc.1.0+json",
-            },
-            retry=RetryConfig(max_retries=3, base_delay=1.0),
-            rate_limit=RateLimitConfig(requests_per_second=4),
-        )
-        super().__init__(config)
-
-    async def get_vat_obligations(
-        self, vrn: str, from_date: str, to_date: str
-    ) -> AdapterResult[list[dict]]:
-        """Fetch VAT obligations for a business."""
-        return await self._get(
-            f"/organisations/vat/{vrn}/obligations",
-            params={"from": from_date, "to": to_date, "status": "O"},
-        )''',
-    },
     "payment": {
         "service": "Payment Provider",
         "description": "Generic payment processing integration",

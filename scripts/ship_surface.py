@@ -727,6 +727,14 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2378 cimonitor: example_hub supervisor `from registry` shadowed
     # by packages/hatchi-maxchi/site/registry.py under pytest-xdist
     "tests/unit/test_example_eval_hub.py::TestSupervisorOurs::test_load_survives_hm_registry_shadow",
+    # CI badge red 2026-10-06: make test-ux-preflight's `$(UV) run` recreated
+    # .venv mid-suite on the 3.12/3.13 cells. The runtime smoke stays green
+    # on the 3.14 laptop, so only the static recipe check can see it.
+    "tests/unit/test_harness_command_surface.py::test_preflight_recipe_does_not_rebuild_the_venv",
+    # main-hygiene red 2026-10-05: a plain `run:` scalar folded the
+    # backslash continuations, so pip_audit.py received flags with a
+    # leading space and exited 2. `--report-only` was still a substring.
+    "tests/unit/test_pip_audit.py::test_the_monitor_reports_while_the_gate_still_gates",
 )
 
 REMEDIATION = """
@@ -813,6 +821,16 @@ Remediation by class (run from repo root):
     pytest tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open -q
     pytest tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open -q
     pytest tests/unit/test_llm_classifier_conversation_goal_b.py tests/unit/test_design_studio_conversation_goal_b.py -q
+
+  Preflight recipe recreates .venv (python-tests 3.12/3.13 missing modules)
+    # make test-ux-preflight must call .venv/bin/python -m, not $(UV) run.
+    # Both python-tests pytest steps must set UV_NO_SYNC=1.
+    pytest tests/unit/test_harness_command_surface.py::test_preflight_recipe_does_not_rebuild_the_venv -q
+
+  main-hygiene audit command folded (exit 2, unrecognized arguments)
+    # Keep the pip_audit.py invocation on one line, or under `run: |`.
+    # A plain multiline run: folds the backslash into a leading space on each flag.
+    pytest tests/unit/test_pip_audit.py::test_the_monitor_reports_while_the_gate_still_gates -q
 
   acme_billing RBAC matrix / compliance auditspec drift
     # After DSL entity/permit/scope changes on examples/acme_billing:

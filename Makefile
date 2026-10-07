@@ -188,13 +188,20 @@ test-ux-preflight:
 	@# loop. The 4 remaining tests still guard meaningful invariants
 	@# (canonical-pointer linkage, external-resource SRI, IR↔field-reader
 	@# parity, typed-runtime no-jinja).
-	$(UV) run pytest tests/unit/test_canonical_pointer_lint.py \
+	@# Do not prefix these tools with the uv runner. The unit suite shells
+	@# out to this target. UV_MANAGED_PYTHON=1 plus .python-version 3.14
+	@# makes that runner delete a 3.12 or 3.13 .venv and recreate it as
+	@# 3.14 with the default extras. The rest of that CI cell then imports
+	@# a tree that is being replaced. The laptop is already 3.14, so
+	@# nothing local notices. Use the interpreter that is already there.
+	@test -x .venv/bin/python || { echo "missing .venv/bin/python; run make dev-install"; exit 1; }
+	.venv/bin/python -m pytest tests/unit/test_canonical_pointer_lint.py \
 	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
 	@# src/dazzle_page/ merged into src/dazzle/page/ in v0.67.98 (#1055).
-	$(UV) run mypy src/dazzle/page/ --ignore-missing-imports
+	.venv/bin/python -m mypy src/dazzle/page/ --ignore-missing-imports
 	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
 	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
 	@# surfaces it on every preflight but doesn't fail the cycle — runs
@@ -214,7 +221,8 @@ test-ux-preflight:
 #
 # Path note: src/dazzle_http/ → src/dazzle/http/ at v0.67.98 (#1055).
 test-ux-deep: test-ux-preflight
-	$(UV) run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/http/ \
+	@test -x .venv/bin/python || { echo "missing .venv/bin/python; run make dev-install"; exit 1; }
+	.venv/bin/python -m mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/http/ \
 	     --ignore-missing-imports --exclude 'eject'
 
 # On-demand half-finished-internals audit. Not part of preflight — regenerates

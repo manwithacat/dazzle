@@ -201,14 +201,7 @@ Try extending this example:
 
 ## Screenshots
 
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
-
-### List View with Data
-![List View](screenshots/14_list_view_data.png)
-
-### Create Form
-![Create Form](screenshots/05_create_form_no_inputs.png)
+A local `dazzle qa capture` writes stills under `.dazzle/qa/screenshots/`. They are not part of this tree.
 
 ---
 

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     AuthType,
@@ -57,6 +59,63 @@ integration external_api:
         fragment = _parse(dsl)
         integration = fragment.integrations[0]
         assert integration.base_url is None
+
+
+class TestAppTransport:
+    """#1769: transport: app delegates the send to the project hook."""
+
+    def test_transport_app_is_stored(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Return "Return":
+  id: uuid pk
+
+integration hmrc_mtd "HMRC":
+  transport: app
+  base_url: "https://api.service.hmrc.gov.uk"
+
+  mapping submit on Return:
+    request: POST "/organisations/vat/returns"
+"""
+        fragment = _parse(dsl)
+        integration = fragment.integrations[0]
+        assert integration.transport == "app"
+        assert integration.base_url == "https://api.service.hmrc.gov.uk"
+
+    def test_absent_transport_stays_http(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Item "Item":
+  id: uuid pk
+
+integration external_api:
+  mapping sync_items on Item:
+    request: GET "/items"
+"""
+        fragment = _parse(dsl)
+        assert fragment.integrations[0].transport is None
+
+    def test_unknown_transport_is_a_parse_error(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Item "Item":
+  id: uuid pk
+
+integration external_api:
+  transport: http
+  mapping sync_items on Item:
+    request: GET "/items"
+"""
+        with pytest.raises(ParseError, match="Expected transport: app"):
+            _parse(dsl)
 
 
 class TestIntegrationAuth:
@@ -398,6 +457,220 @@ integration hmrc:
         assert mapping.request_mapping[0].source.path == "self.period_key"
         assert mapping.request_mapping[1].target_field == "vatDueSales"
         assert mapping.request_mapping[1].source.path == "self.box1_amount"
+
+    def test_dotted_target_parses_and_nests(self) -> None:
+        """#1766: a dotted map_request target is one field path, and the executor nests it."""
+        from unittest.mock import MagicMock
+
+        from dazzle.http.runtime.event_bus import EntityEventBus
+        from dazzle.http.runtime.mapping_executor import MappingExecutor
+
+        dsl = """
+module test
+app test "Test"
+
+entity Submission "Submission":
+  id: uuid pk
+  period_from: str(20) required
+  turnover: decimal(10,2) required
+
+integration hmrc:
+  mapping cumulative on Submission:
+    request: PUT "/obligations"
+    map_request:
+      periodDates.periodStartDate <- self.period_from
+      ukProperty.income.turnover <- self.turnover
+"""
+        fragment = _parse(dsl)
+        rules = fragment.integrations[0].mappings[0].request_mapping
+        assert [rule.target_field for rule in rules] == [
+            "periodDates.periodStartDate",
+            "ukProperty.income.turnover",
+        ]
+
+        executor = MappingExecutor(MagicMock(), EntityEventBus())
+        body = executor._apply_request_mapping(
+            rules,
+            {"period_from": "2026-04-06", "turnover": "1000.00"},
+        )
+        assert body == {
+            "periodDates": {"periodStartDate": "2026-04-06"},
+            "ukProperty": {"income": {"turnover": "1000.00"}},
+        }
+
+    def test_dotted_response_target_is_the_field_name(self) -> None:
+        """map_response shares the parser. The response executor does not nest."""
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    map_response:
+      address.city <- response.city
+"""
+        fragment = _parse(dsl)
+        rule = fragment.integrations[0].mappings[0].response_mapping[0]
+        assert rule.target_field == "address.city"
+        assert rule.source.path == "response.city"
+
+    def test_indexed_target_builds_a_list(self) -> None:
+        """#1770: an integer segment is a list index, not a dict key."""
+        from unittest.mock import MagicMock
+
+        from dazzle.http.runtime.event_bus import EntityEventBus
+        from dazzle.http.runtime.mapping_executor import MappingExecutor
+
+        dsl = """
+module test
+app test "Test"
+
+entity Disposal "Disposal":
+  id: uuid pk
+  asset_description: str(100) required
+  proceeds: decimal(10,2) required
+
+integration hmrc:
+  mapping gains on Disposal:
+    request: POST "/other-gains"
+    map_request:
+      otherGains.0.assetType <- self.asset_description
+      otherGains.0.disposalProceeds <- self.proceeds
+      otherGains.1.assetType <- "shares"
+    map_response:
+      otherGains.0.assetType <- response.assetType
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert [rule.target_field for rule in mapping.request_mapping] == [
+            "otherGains.0.assetType",
+            "otherGains.0.disposalProceeds",
+            "otherGains.1.assetType",
+        ]
+        assert mapping.response_mapping[0].target_field == "otherGains.0.assetType"
+
+        executor = MappingExecutor(MagicMock(), EntityEventBus())
+        body = executor._apply_request_mapping(
+            mapping.request_mapping,
+            {"asset_description": "other-property", "proceeds": "1000.00"},
+        )
+        assert body == {
+            "otherGains": [
+                {"assetType": "other-property", "disposalProceeds": "1000.00"},
+                {"assetType": "shares"},
+            ]
+        }
+
+
+class TestRequestHeaders:
+    """#1767: a mapping can declare static request headers."""
+
+    def test_quoted_headers_attach_to_the_request(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity VATReturn "VAT Return":
+  id: uuid pk
+  period_key: str(50) required
+
+integration hmrc:
+  mapping submit on VATReturn:
+    headers:
+      "Accept": "application/vnd.hmrc.5.0+json"
+      "Gov-Test-Scenario": "STATEFUL"
+    request: POST "/organisations/vat/returns"
+"""
+        request = _parse(dsl).integrations[0].mappings[0].request
+        assert request is not None
+        assert request.headers == {
+            "Accept": "application/vnd.hmrc.5.0+json",
+            "Gov-Test-Scenario": "STATEFUL",
+        }
+
+    def test_duplicate_header_keeps_the_last_value(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "Accept": "application/json"
+      "Accept": "application/vnd.hmrc.5.0+json"
+"""
+        request = _parse(dsl).integrations[0].mappings[0].request
+        assert request is not None
+        assert request.headers == {"Accept": "application/vnd.hmrc.5.0+json"}
+
+    def test_executor_owned_header_names_are_rejected(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "Content-Type": "text/plain"
+"""
+        with pytest.raises(ParseError, match="Content-Type is set by the mapping executor"):
+            _parse(dsl)
+
+    def test_authorization_is_rejected_regardless_of_case(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    request: GET "/records"
+    headers:
+      "authorization": "Bearer stolen"
+"""
+        with pytest.raises(ParseError, match="authorization is set by the mapping executor"):
+            _parse(dsl)
+
+    def test_headers_without_a_request_are_rejected(self) -> None:
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  title: str(100) required
+
+integration my_api:
+  mapping fetch on Record:
+    headers:
+      "Accept": "application/json"
+"""
+        with pytest.raises(ParseError, match="headers: requires a request:"):
+            _parse(dsl)
 
 
 class TestErrorStrategy:

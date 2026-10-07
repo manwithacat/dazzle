@@ -296,12 +296,13 @@ pip install pytest playwright pillow && playwright install chromium
 python build.py && python -m pytest tests/
 ```
 
-Visual baselines: after an intended visual change,
-run `HM_UPDATE_BASELINES=1 python -m pytest tests/test_visual.py`, then
-`python tools/visual_baseline_manifest.py` for the local platform. Capture
-Linux through `update-baselines.yml` and commit both image sets and their
-`capture.json` manifests. The manifests prove that unchanged PNGs were
-recaptured against the current gallery assets.
+Visual baselines: CI compares `tests/baselines/linux/` only. That set is
+committed as real blobs (the standalone repo has no Git LFS). After an
+intended visual change, capture Linux through `update-baselines.yml` and
+commit `tests/baselines/linux/` including `capture.json`. A local run on
+another platform skips when its baseline is absent and does not write.
+`HM_UPDATE_BASELINES=1` captures on purpose; `baselines/darwin/` is
+gitignored.
 
 ### Touch input — every Hyperpart, by construction
 

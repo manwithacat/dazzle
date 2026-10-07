@@ -75,9 +75,16 @@ pytest-of-*/
 # Agent E2E test reports (generated)
 **/dsl/tests/reports/
 
-# DAZZLE runtime data
+# DAZZLE runtime data. Captures land here and stay out of the tree.
 .dazzle/
 **/.dazzle/
+
+# Run artifacts, not source. The linux HM gallery baselines stay tracked so
+# standalone CI can fail a pixel diff. A darwin capture is local.
+packages/hatchi-maxchi/tests/baselines/darwin/
+examples/*/screenshots/
+src/dazzle/examples/**/screenshots/
+tests/e2e/screenshots/
 *.db
 
 # invoice_ops commits its migration history — a project's migrations

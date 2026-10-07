@@ -105,14 +105,7 @@ dazzle test list
 
 ## Screenshots
 
-### Dashboard
-![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/dashboard.png)
-
-### List View
-![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/list_view.png)
-
-### Create Form
-![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/create_form.png)
+A local `dazzle qa capture` writes stills under `.dazzle/qa/screenshots/`. They are not in the repository.
 
 ## API Endpoints
 

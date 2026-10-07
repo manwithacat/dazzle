@@ -135,14 +135,7 @@ The `stage: "command_center"` explicitly requests the COMMAND_CENTER archetype f
 
 ## Screenshots
 
-### Dashboard
-![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/dashboard.png)
-
-### List View
-![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/list_view.png)
-
-### Create Form
-![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/create_form.png)
+A local `dazzle qa capture` writes stills under `.dazzle/qa/screenshots/`. They are not in the repository.
 
 ## API Endpoints
 

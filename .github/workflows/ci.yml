@@ -94,11 +94,18 @@ jobs:
       if: matrix.python-version == '3.12'
       env:
         COVERAGE_CORE: sysmon
+        # A nested `uv run` (Makefile exports UV_MANAGED_PYTHON=1;
+        # .python-version is 3.14) otherwise deletes this cell's .venv
+        # and recreates it as 3.14 without the job extras.
+        UV_NO_SYNC: "1"
       run: |
         pytest -n auto --dist loadgroup --cov=src/dazzle --cov-report=xml -m "not e2e"
 
     - name: Run tests with pytest
       if: matrix.python-version != '3.12'
+      env:
+        # Same belt as the coverage cell. See test-ux-preflight.
+        UV_NO_SYNC: "1"
       run: |
         pytest -n auto --dist loadgroup -m "not e2e"
 
