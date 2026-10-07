@@ -2,7 +2,7 @@
 
 # AUTO-GENERATED vendored copy of packages/hatchi-maxchi/icons/registry.py
 # (regenerate via icons/gen_registry.py --sync) — do not edit.
-Source: lucide-static@1.49.0 (https://lucide.dev), ISC license:
+Source: lucide-static@1.52.0 (https://lucide.dev), ISC license:
 Copyright (c) Lucide Contributors 2022 — permission to use, copy,
 modify, and/or distribute this software for any purpose with or
 without fee is hereby granted (full text: lucide.dev/license).
@@ -12,7 +12,7 @@ wrap them in the <svg> shell at render time. Regenerate (never
 hand-edit) via packages/hatchi-maxchi/icons/gen_registry.py.
 """
 
-LUCIDE_VERSION = "1.49.0"
+LUCIDE_VERSION = "1.52.0"
 
 ICONS: dict[str, str] = {
     "archive": '<rect width="20" height="5" x="2" y="3" rx="1" /> <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /> <path d="M10 12h4" />',
