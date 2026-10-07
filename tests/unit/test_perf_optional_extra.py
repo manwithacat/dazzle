@@ -1,9 +1,11 @@
 """Regression guard for #1164 — the `perf` extra must be optional.
 
 `dazzle.cli` imports `dazzle.perf` at module load (tracer init at CLI
-entry, #1158). `opentelemetry` ships only in the optional `perf`
-extra, so a plain `pip install dazzle-dsl` must still yield a working
-CLI. These tests run a fresh interpreter with `opentelemetry` masked.
+entry, #1158). The SDK, instrumentors, and exporter ship only in the
+optional `perf` and `observability` extras. FastAPI 0.142 imports
+`opentelemetry-api` while building an application, so that API package
+is a transitive dependency of the serve stack and a CLI import needs
+it. These tests run a fresh interpreter with the pieces under test masked.
 """
 
 from __future__ import annotations
@@ -25,20 +27,44 @@ builtins.__import__ = _blocked
 """
 
 
-def _run_without_otel(body: str) -> subprocess.CompletedProcess[str]:
+# FastAPI 0.142 imports the API package by name. Masking that name makes
+# `import fastapi` fail, which is upstream, not the perf extra. The SDK and
+# the instrumentors are still ours to keep optional.
+_MASK_SDK = """
+import builtins
+_real = builtins.__import__
+_PREFIXES = (
+    "opentelemetry.sdk",
+    "opentelemetry.instrumentation",
+    "opentelemetry.exporter",
+)
+def _blocked(name, *a, **k):
+    if name.startswith(_PREFIXES):
+        raise ModuleNotFoundError(f"No module named '{name}'")
+    return _real(name, *a, **k)
+builtins.__import__ = _blocked
+"""
+
+
+def _run(mask: str, body: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-c", _MASK + textwrap.dedent(body)],
+        [sys.executable, "-c", mask + textwrap.dedent(body)],
         capture_output=True,
         text=True,
     )
 
 
+def _run_without_otel(body: str) -> subprocess.CompletedProcess[str]:
+    return _run(_MASK, body)
+
+
 def test_cli_imports_without_opentelemetry() -> None:
-    result = _run_without_otel(
+    result = _run(
+        _MASK_SDK,
         """
         import dazzle.cli  # must not raise
         print('ok')
-        """
+        """,
     )
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
