@@ -193,8 +193,7 @@ signing = [
     # dazzle.signing.cert (not in core deps — pulled in here).
     "fpdf2>=2.8.0",
     "pyhanko>=0.25.0",
-    # Floor: see [tool.uv] constraint-dependencies.
-    "Pillow>=11.0.0",
+    "Pillow>=12.3.0",
     "cryptography>=50.0.0",
 ]
 dev = [
@@ -293,8 +292,7 @@ pitch = [
 ]
 # Viewport visual regression testing
 viewport = [
-    # Floor: see [tool.uv] constraint-dependencies.
-    "Pillow>=11.0.0",
+    "Pillow>=12.3.0",
 ]
 # TigerBeetle ledger integration (v0.5.0 - Issue #ledgers)
 tigerbeetle = [
@@ -385,15 +383,14 @@ dazzle = "dazzle.cli:main"
 [tool.uv]
 python-preference = "only-managed"
 
-# Transitive constraints, not dependencies. `pillow` is pulled in by matplotlib,
-# python-pptx, weasyprint and fpdf2. Held below 12. The Oct 2026 collection
-# scatter (ImageColor, ImageFile, jwt, hypothesis — 3.12 and 3.13 only) was the
-# uv runner deleting the job venv, not a wheel that fails to import. The earlier
-# claim that 12.3.0's Linux wheels cannot import ImageColor was not re-checked
-# after that, so the floor stays. It reopens PYSEC-2026-2253–2257. Constrain
-# rather than depend: this pins resolution without claiming we import it.
+# Transitive floor, not a dependency claim. matplotlib, python-pptx,
+# weasyprint and fpdf2 also pull pillow. The Oct 2026 collection scatter
+# (ImageColor, ImageFile, jwt, hypothesis — 3.12 and 3.13 only) was the uv
+# runner deleting the job venv. Linux wheels of 12.3.0 import ImageColor and
+# ImageFile on 3.12, 3.13, and 3.14 (Actions run 37811834250), so the <12
+# hold is gone. Keep the floor at the patched release.
 constraint-dependencies = [
-    "pillow<12",
+    "pillow>=12.3.0",
 ]
 
 [tool.setuptools]
