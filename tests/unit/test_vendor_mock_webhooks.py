@@ -1,6 +1,5 @@
 """Tests for vendor mock webhook dispatcher."""
 
-import base64
 import hashlib
 import hmac as hmac_mod
 from typing import Any
@@ -32,12 +31,6 @@ class TestPayloadBuilding:
         payload = dispatcher.build_payload("stripe_payments", "payment_intent.succeeded")
         assert payload["type"] == "payment_intent.succeeded"
         assert payload["data"]["object"]["status"] == "succeeded"
-
-    def test_build_xero_invoice_updated(self) -> None:
-        dispatcher = WebhookDispatcher()
-        payload = dispatcher.build_payload("xero_accounting", "invoice.updated")
-        assert "events" in payload
-        assert payload["events"][0]["eventCategory"] == "INVOICE"
 
     def test_build_with_overrides(self) -> None:
         dispatcher = WebhookDispatcher()
@@ -114,15 +107,6 @@ class TestWebhookSigning:
         signed_payload = f"{timestamp}.".encode() + payload
         expected = hmac_mod.new(b"whsec_test", signed_payload, hashlib.sha256).hexdigest()
         assert parts["v1"] == expected
-
-    def test_xero_signing(self) -> None:
-        dispatcher = WebhookDispatcher(signing_secret="xero-key")
-        payload = b'{"events": []}'
-        headers = dispatcher.sign_payload("xero_accounting", payload)
-        assert "x-xero-signature" in headers
-        # Verify base64-encoded HMAC
-        expected = hmac_mod.new(b"xero-key", payload, hashlib.sha256).digest()
-        assert headers["x-xero-signature"] == base64.b64encode(expected).decode()
 
     def test_per_vendor_secrets(self) -> None:
         dispatcher = WebhookDispatcher(
@@ -325,7 +309,6 @@ class TestWebhookRegistry:
         expected_vendors = {
             "sumsub_kyc",
             "stripe_payments",
-            "xero_accounting",
         }
         assert expected_vendors.issubset(set(WEBHOOK_EVENTS.keys()))
 
@@ -339,7 +322,3 @@ class TestWebhookRegistry:
         assert "payment_intent.succeeded" in events
         assert "payment_intent.payment_failed" in events
         assert "charge.refunded" in events
-
-    def test_xero_events(self) -> None:
-        events = set(WEBHOOK_EVENTS["xero_accounting"].keys())
-        assert "invoice.updated" in events

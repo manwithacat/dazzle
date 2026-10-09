@@ -1,7 +1,7 @@
 """
 Vendor mock system — auto-generated API simulators from API pack definitions.
 
-Generate mock servers for third-party vendor APIs (SumSub, Stripe, Xero, etc.)
+Generate mock servers for third-party vendor APIs (SumSub, Stripe, Companies House, etc.)
 directly from TOML-defined API packs. Provides stateful CRUD, auth validation,
 and realistic response data for integration testing without vendor credentials.
 """

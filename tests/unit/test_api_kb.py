@@ -24,13 +24,11 @@ class TestPackLoading:
             ("stripe_payments", "Stripe", "payments"),
             ("sumsub_kyc", "SumSub", "verification"),
             ("companies_house_lookup", "Companies House", "business_data"),
-            ("xero_accounting", "Xero", "accounting"),
         ],
         ids=[
             "test_load_stripe_payments_pack",
             "test_load_sumsub_kyc_pack",
             "test_load_companies_house_pack",
-            "test_load_xero_accounting_pack",
         ],
     )
     def test_load_pack(self, pack_name: str, provider: str, category: str):
@@ -54,7 +52,8 @@ class TestPackLoading:
         assert "stripe_payments" in pack_names
         assert "sumsub_kyc" in pack_names
         assert "companies_house_lookup" in pack_names
-        assert "xero_accounting" in pack_names
+        assert "xero_accounting" not in pack_names
+        assert "xero_advisory_reports" not in pack_names
         assert "hmrc_mtd_vat" not in pack_names
 
 
@@ -73,18 +72,18 @@ class TestPackSearch:
         """The catalogue no longer ships a tax pack."""
         assert search_packs(category="tax") == []
 
+    def test_search_by_category_accounting(self):
+        """The catalogue no longer ships an accounting pack."""
+        assert search_packs(category="accounting") == []
+
     @pytest.mark.parametrize(
         ("kwargs", "category", "provider"),
         [
-            ({"category": "accounting"}, "accounting", None),
             ({"provider": "Stripe"}, None, "Stripe"),
-            ({"provider": "Xero"}, None, "Xero"),
             ({"category": "payments", "provider": "Stripe"}, "payments", "Stripe"),
         ],
         ids=[
-            "test_search_by_category_accounting",
             "test_search_by_provider_stripe",
-            "test_search_by_provider_xero",
             "test_search_combined_filters",
         ],
     )
@@ -99,10 +98,10 @@ class TestPackSearch:
 
     def test_search_by_query(self):
         """Test searching packs by text query."""
-        packs = search_packs(query="invoice")
+        packs = search_packs(query="company")
 
         assert len(packs) >= 1
-        assert any(p.name == "xero_accounting" for p in packs)
+        assert any(p.name == "companies_house_lookup" for p in packs)
 
     def test_search_by_query_payment(self):
         """Test searching packs by 'payment' query."""
@@ -149,14 +148,6 @@ class TestPackContents:
         assert "Charge" in model_names
         assert "Refund" in model_names
 
-    def test_xero_pack_has_oauth2_auth(self):
-        """Test Xero pack has OAuth2 auth configured."""
-        pack = load_pack("xero_accounting")
-        assert pack is not None
-        assert pack.auth is not None
-        assert pack.auth.auth_type == "oauth2"
-        assert pack.auth.token_url is not None
-
     def test_companies_house_pack_has_api_key_auth(self):
         """Test Companies House pack has API key auth."""
         pack = load_pack("companies_house_lookup")
@@ -191,17 +182,6 @@ class TestDSLGeneration:
         assert 'inline "pack:stripe_payments"' in dsl
         assert "auth_profile:" in dsl
 
-    def test_generate_service_dsl_xero(self):
-        """Test generating DSL service block for Xero."""
-        pack = load_pack("xero_accounting")
-        assert pack is not None
-
-        dsl = pack.generate_service_dsl()
-
-        assert "service" in dsl.lower()
-        assert 'inline "pack:xero_accounting"' in dsl
-        assert "oauth2" in dsl
-
     def test_generate_foreign_model_dsl(self):
         """Test generating DSL foreign_model block."""
         pack = load_pack("stripe_payments")
@@ -230,17 +210,19 @@ class TestDSLGeneration:
         assert "STRIPE_SECRET_KEY" in profile
 
     def test_auth_profile_oauth2(self):
-        """Test auth profile DSL for OAuth2 auth."""
-        pack = load_pack("xero_accounting")
-        assert pack is not None
-        assert pack.auth is not None
+        """OAuth2 profile text does not depend on a built-in vendor pack."""
+        from dazzle.api_kb.loader import AuthSpec
 
-        profile = pack.auth.to_dsl_auth_profile()
+        profile = AuthSpec(
+            auth_type="oauth2",
+            env_var="ACCOUNTING_CLIENT_ID",
+            token_url="https://example.test/token",
+        ).to_dsl_auth_profile()
 
-        assert "oauth2" in profile
-        assert "client_id_env" in profile
-        assert "client_secret_env" in profile
-        assert "token_url" in profile
+        assert profile.startswith("oauth2 ")
+        assert 'client_id_env="ACCOUNTING_CLIENT_ID"' in profile
+        assert 'client_secret_env="ACCOUNTING_CLIENT_SECRET"' in profile
+        assert 'token_url="https://example.test/token"' in profile
 
 
 class TestEnvExampleGeneration:
@@ -259,12 +241,12 @@ class TestEnvExampleGeneration:
 
     def test_generate_env_example_multiple_packs(self):
         """Test generating .env.example for multiple packs."""
-        env_example = generate_env_example(["stripe_payments", "xero_accounting"])
+        env_example = generate_env_example(["stripe_payments", "companies_house_lookup"])
 
         assert "Stripe" in env_example
         assert "STRIPE_SECRET_KEY" in env_example
-        assert "Xero" in env_example
-        assert "XERO_CLIENT_ID" in env_example
+        assert "Companies House" in env_example
+        assert "COMPANIES_HOUSE_API_KEY" in env_example
 
     def test_env_var_to_example_line(self):
         """Test EnvVarSpec to .env.example line conversion."""

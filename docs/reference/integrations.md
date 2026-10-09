@@ -68,20 +68,20 @@ integration companies_house:
       incorporation_date <- response.date_of_creation
     on_error: set company_status = "lookup_failed", log_warning
 
-integration xero_accounting:
-  base_url: "https://api.xero.com/api.xro/2.0"
-  auth: oauth2 from env("XERO_CLIENT_ID"), env("XERO_CLIENT_SECRET")
+integration stripe_payments:
+  base_url: "https://api.stripe.com/v1"
+  auth: api_key from env("STRIPE_SECRET_KEY")
 
-  mapping create_invoice on Invoice:
+  mapping create_payment on Invoice:
     trigger: on_transition reviewed -> submitted
-    request: POST "/Invoices"
+    request: POST "/payment_intents"
     headers:
       "Accept": "application/json"
     map_request:
-      Type <- self.invoice_type
-      Contact.ContactID <- self.contact_id
+      amount <- self.amount_pence
+      currency <- self.currency
     map_response:
-      xero_invoice_id <- response.InvoiceID
+      stripe_payment_id <- response.id
     on_error: revert_transition
 ```
 

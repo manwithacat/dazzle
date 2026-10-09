@@ -2,14 +2,13 @@
 Webhook dispatcher for vendor mock servers.
 
 Simulates vendor-initiated webhook calls to a running Dazzle app. Supports
-vendor-appropriate HMAC signing (SumSub, Stripe, Xero), automatic
+vendor-appropriate HMAC signing (SumSub, Stripe), automatic
 triggering from scenario steps, and delivery tracking.
 """
 
 from __future__ import annotations  # required: forward reference
 
 import asyncio
-import base64
 import hashlib
 import hmac
 import json
@@ -110,38 +109,18 @@ WEBHOOK_EVENTS: dict[str, dict[str, dict[str, Any]]] = {
             "created": 0,
         },
     },
-    "xero_accounting": {
-        "invoice.updated": {
-            "events": [
-                {
-                    "resourceUrl": "",
-                    "resourceId": "",
-                    "eventDateUtc": "",
-                    "eventType": "UPDATE",
-                    "eventCategory": "INVOICE",
-                    "tenantId": "",
-                    "tenantType": "ORGANISATION",
-                },
-            ],
-            "firstEventSequence": 1,
-            "lastEventSequence": 1,
-            "entropy": "",
-        },
-    },
 }
 
 # Signing schemes per vendor
 SIGNING_SCHEMES: dict[str, str] = {
     "sumsub_kyc": "sumsub_hmac",
     "stripe_payments": "stripe_hmac",
-    "xero_accounting": "xero_hmac",
 }
 
 # Default webhook URL patterns
 DEFAULT_WEBHOOK_PATHS: dict[str, str] = {
     "sumsub_kyc": "/webhooks/sumsub",
     "stripe_payments": "/webhooks/stripe",
-    "xero_accounting": "/webhooks/xero",
 }
 
 
@@ -396,10 +375,6 @@ class WebhookDispatcher:
             signed_payload = f"{timestamp}.".encode() + payload_bytes
             sig = hmac.new(secret.encode(), signed_payload, hashlib.sha256).hexdigest()
             return {"Stripe-Signature": f"t={timestamp},v1={sig}"}
-
-        elif scheme == "xero_hmac":
-            raw_sig = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).digest()
-            return {"x-xero-signature": base64.b64encode(raw_sig).decode()}
 
         else:
             # Generic HMAC-SHA256

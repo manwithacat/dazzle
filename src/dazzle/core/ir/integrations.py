@@ -261,7 +261,7 @@ class IntegrationMapping(BaseModel):
 
     Maps entity lifecycle events to HTTP requests and response field mappings.
     v0.33.1: Added source_ref, on_conflict, and transform for data
-    transformation pipelines (e.g., Xero sync with currency tagging).
+    transformation pipelines (e.g., an external sync with currency tagging).
 
     Attributes:
         name: Mapping identifier

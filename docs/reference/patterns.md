@@ -537,7 +537,7 @@ from dazzle.http.graphql.adapters import (
     ErrorSeverity,
 )
 
-normalized = normalize_error(error, service_name="xero")
+normalized = normalize_error(error, service_name="stripe")
 ```
 
 ### Example
@@ -550,12 +550,12 @@ from dazzle.http.graphql.adapters import (
 )
 
 try:
-    result = await xero_adapter.list_invoices()
+    result = await stripe_adapter.list_payment_intents()
 except AdapterError as e:
     normalized = normalize_error(e, request_id="req-123")
 
     # Access normalized error properties
-    print(normalized.code)           # "XERO_RATE_LIMIT_EXCEEDED"
+    print(normalized.code)           # "STRIPE_RATE_LIMIT_EXCEEDED"
     print(normalized.category)       # ErrorCategory.RATE_LIMIT
     print(normalized.severity)       # ErrorSeverity.WARNING
     print(normalized.user_message)   # "Too many requests. Please try again in 30 seconds."
@@ -635,22 +635,22 @@ from dazzle.http.graphql.adapters import (
     AdapterResult,
 )
 
-class XeroAdapter(BaseExternalAdapter[AdapterConfig]):
-    """Adapter for the Xero Accounting API."""
+class StripeAdapter(BaseExternalAdapter[AdapterConfig]):
+    """Adapter for the Stripe payments API."""
 
-    def __init__(self, bearer_token: str):
+    def __init__(self, secret_key: str):
         config = AdapterConfig(
-            base_url="https://api.xero.com/api.xro/2.0",
+            base_url="https://api.stripe.com/v1",
             timeout=30.0,
-            headers={"Authorization": f"Bearer {bearer_token}"},
+            headers={"Authorization": f"Bearer {secret_key}"},
             retry=RetryConfig(max_retries=3, base_delay=1.0),
             rate_limit=RateLimitConfig(requests_per_second=10),
         )
         super().__init__(config)
 
-    async def get_invoice(self, invoice_id: str) -> AdapterResult[dict]:
-        """Fetch one invoice."""
-        return await self._get(f"/Invoices/{invoice_id}")
+    async def get_payment_intent(self, payment_id: str) -> AdapterResult[dict]:
+        """Fetch one payment intent."""
+        return await self._get(f"/payment_intents/{payment_id}")
 ```
 
 **Related:** [Error Normalization](patterns.md#error-normalization), [Adapter Result](patterns.md#adapter-result), [Graphql Bff Pattern](patterns.md#graphql-bff-pattern)

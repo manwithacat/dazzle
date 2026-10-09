@@ -2,7 +2,7 @@
 Error normalization for external API responses.
 
 Provides a unified error model that normalizes different error formats
-from external APIs (HMRC, banks, Xero, etc.) into a consistent structure
+from external APIs (banks, payment providers, and others) into a consistent structure
 for the GraphQL layer.
 
 This enables:

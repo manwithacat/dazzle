@@ -49,10 +49,10 @@ ADAPTERS = [
 # Service patterns for external APIs
 SERVICE_PATTERNS = [
     {
-        "name": "Xero Accounting API",
-        "type": "accounting",
-        "example_methods": ["create_invoice", "list_invoices", "create_payment"],
-        "auth": "OAuth2 Bearer Token",
+        "name": "Companies House API",
+        "type": "business_data",
+        "example_methods": ["search_companies", "get_company_profile"],
+        "auth": "API Key",
         "rate_limit": "Provider-specific",
     },
     {
