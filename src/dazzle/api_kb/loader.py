@@ -138,7 +138,7 @@ class WebhookEventSpec:
 
     name: str
     description: str = ""
-    signing: str = "hmac-sha256"  # hmac-sha256, stripe-v1, sumsub-hmac, none
+    signing: str = "hmac-sha256"  # hmac-sha256, stripe-v1, none
     signing_header: str = "X-Webhook-Signature"
     signing_env_var: str = ""  # env var for signing secret
     webhook_path: str = ""  # e.g. /webhooks/stripe

@@ -103,8 +103,10 @@ def run_mocks(
 
 @mock_app.command(name="scenario")
 def scenario_cmd(
-    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
-    name: str | None = typer.Argument(None, help="Scenario name (e.g. kyc_rejected)"),
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. stripe_payments)"),
+    name: str | None = typer.Argument(
+        None, help="Scenario name (e.g. payment_failed_insufficient)"
+    ),
     list_all: bool = typer.Option(False, "--list", "-l", help="List available scenarios"),
 ) -> None:
     """List or inspect vendor mock scenarios.
@@ -155,8 +157,8 @@ def scenario_cmd(
 
 @mock_app.command(name="webhook")
 def webhook_cmd(
-    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
-    event: str | None = typer.Argument(None, help="Event name (e.g. applicant_reviewed)"),
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. stripe_payments)"),
+    event: str | None = typer.Argument(None, help="Event name (e.g. payment_intent.succeeded)"),
     target: str = typer.Option(resolve_api_url(), "--target", "-t", help="Target URL"),
     data: str | None = typer.Option(None, "--data", "-d", help="JSON payload overrides"),
     list_all: bool = typer.Option(False, "--list", "-l", help="List available events"),
@@ -230,8 +232,8 @@ def scenarios_cmd(
 
 @mock_app.command(name="fire-webhook")
 def fire_webhook_cmd(
-    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
-    event: str = typer.Argument(..., help="Event name (e.g. applicant_reviewed)"),
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. stripe_payments)"),
+    event: str = typer.Argument(..., help="Event name (e.g. payment_intent.succeeded)"),
     overrides: str | None = typer.Option(
         None, "--overrides", "-o", help="JSON string of payload overrides"
     ),
@@ -266,7 +268,7 @@ def fire_webhook_cmd(
 
 @mock_app.command(name="inject-error")
 def inject_error_cmd(
-    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. stripe_payments)"),
     operation: str = typer.Argument(..., help="Operation name to inject error for"),
     status: int = typer.Option(500, "--status", "-s", help="HTTP status code"),
     body: str | None = typer.Option(None, "--body", "-b", help="JSON response body"),

@@ -384,7 +384,7 @@ Vendor mock server management: status, request_log. Operates on auto-started moc
 
 **Parameters:**
 
-- `vendor` *(string)* — API pack name (e.g. 'sumsub_kyc')
+- `vendor` *(string)* — API pack name (e.g. 'stripe_payments')
 - `method` *(string)* — Filter by HTTP method (for request_log)
 - `path` *(string)* — Filter by path substring (for request_log)
 - `limit` *(integer)* — Max results (for request_log, default: 20)

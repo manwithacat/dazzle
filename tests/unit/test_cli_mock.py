@@ -19,7 +19,7 @@ class TestMockList:
     def test_list_with_packs(self, mock_load: MagicMock) -> None:
         appspec = MagicMock()
         api1 = MagicMock()
-        api1.spec_inline = "pack:sumsub_kyc"
+        api1.spec_inline = "pack:companies_house_lookup"
         api2 = MagicMock()
         api2.spec_inline = "pack:stripe_payments"
         appspec.apis = [api1, api2]
@@ -27,7 +27,7 @@ class TestMockList:
 
         result = runner.invoke(mock_app, ["list"])
         assert result.exit_code == 0
-        assert "sumsub_kyc" in result.output
+        assert "companies_house_lookup" in result.output
         assert "stripe_payments" in result.output
         assert "2 vendor" in result.output
 
@@ -56,20 +56,22 @@ class TestMockList:
 
 class TestMockScenario:
     def test_list_scenarios(self) -> None:
-        result = runner.invoke(mock_app, ["scenario", "sumsub_kyc", "--list"])
+        result = runner.invoke(mock_app, ["scenario", "companies_house_lookup", "--list"])
         assert result.exit_code == 0
-        assert "kyc_approved" in result.output
-        assert "kyc_rejected" in result.output
+        assert "company_found" in result.output
+        assert "company_dissolved" in result.output
 
     def test_inspect_scenario(self) -> None:
-        result = runner.invoke(mock_app, ["scenario", "sumsub_kyc", "kyc_rejected"])
+        result = runner.invoke(
+            mock_app, ["scenario", "stripe_payments", "payment_failed_insufficient"]
+        )
         assert result.exit_code == 0
-        assert "kyc_rejected" in result.output
-        assert "document face mismatch" in result.output.lower()
+        assert "payment_failed_insufficient" in result.output
+        assert "insufficient funds" in result.output.lower()
         assert "Steps" in result.output
 
     def test_scenario_not_found(self) -> None:
-        result = runner.invoke(mock_app, ["scenario", "sumsub_kyc", "nonexistent"])
+        result = runner.invoke(mock_app, ["scenario", "stripe_payments", "nonexistent"])
         assert result.exit_code == 1
         assert "not found" in result.output
 
@@ -92,10 +94,10 @@ class TestMockScenario:
 
 class TestMockWebhook:
     def test_list_webhook_events(self) -> None:
-        result = runner.invoke(mock_app, ["webhook", "sumsub_kyc", "--list"])
+        result = runner.invoke(mock_app, ["webhook", "stripe_payments", "--list"])
         assert result.exit_code == 0
-        assert "applicant_reviewed" in result.output
-        assert "applicant_created" in result.output
+        assert "payment_intent.succeeded" in result.output
+        assert "charge.refunded" in result.output
 
     def test_list_unknown_vendor(self) -> None:
         result = runner.invoke(mock_app, ["webhook", "nonexistent", "--list"])
@@ -106,7 +108,13 @@ class TestMockWebhook:
         """Firing to a non-running server records the error."""
         result = runner.invoke(
             mock_app,
-            ["webhook", "sumsub_kyc", "applicant_reviewed", "--target", "http://127.0.0.1:19999"],
+            [
+                "webhook",
+                "stripe_payments",
+                "payment_intent.succeeded",
+                "--target",
+                "http://127.0.0.1:19999",
+            ],
         )
         assert result.exit_code == 0
         assert "failed" in result.output.lower()
@@ -114,7 +122,7 @@ class TestMockWebhook:
     def test_fire_webhook_invalid_json(self) -> None:
         result = runner.invoke(
             mock_app,
-            ["webhook", "sumsub_kyc", "applicant_reviewed", "--data", "not-json"],
+            ["webhook", "stripe_payments", "payment_intent.succeeded", "--data", "not-json"],
         )
         assert result.exit_code == 1
         assert "Invalid JSON" in result.output

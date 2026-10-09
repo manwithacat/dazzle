@@ -22,13 +22,13 @@ class TestPackLoading:
         ("pack_name", "provider", "category"),
         [
             ("stripe_payments", "Stripe", "payments"),
-            ("sumsub_kyc", "SumSub", "verification"),
             ("companies_house_lookup", "Companies House", "business_data"),
+            ("os_places", "Ordnance Survey", "address"),
         ],
         ids=[
             "test_load_stripe_payments_pack",
-            "test_load_sumsub_kyc_pack",
             "test_load_companies_house_pack",
+            "test_load_os_places_pack",
         ],
     )
     def test_load_pack(self, pack_name: str, provider: str, category: str):
@@ -47,11 +47,12 @@ class TestPackLoading:
         """Test listing all available packs."""
         packs = list_packs()
 
-        assert len(packs) >= 4  # We have at least 4 packs
+        assert len(packs) >= 3  # Stripe, Companies House, OS Places
         pack_names = [p.name for p in packs]
         assert "stripe_payments" in pack_names
-        assert "sumsub_kyc" in pack_names
         assert "companies_house_lookup" in pack_names
+        assert "os_places" in pack_names
+        assert "sumsub_kyc" not in pack_names
         assert "xero_accounting" not in pack_names
         assert "xero_advisory_reports" not in pack_names
         assert "hmrc_mtd_vat" not in pack_names
@@ -75,6 +76,10 @@ class TestPackSearch:
     def test_search_by_category_accounting(self):
         """The catalogue no longer ships an accounting pack."""
         assert search_packs(category="accounting") == []
+
+    def test_search_by_category_verification(self):
+        """The catalogue no longer ships a verification pack."""
+        assert search_packs(category="verification") == []
 
     @pytest.mark.parametrize(
         ("kwargs", "category", "provider"),

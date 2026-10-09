@@ -202,7 +202,7 @@ def _tool_mock() -> Tool:
                 },
                 "vendor": {
                     "type": "string",
-                    "description": "API pack name (e.g. 'sumsub_kyc')",
+                    "description": "API pack name (e.g. 'stripe_payments')",
                 },
                 "method": {
                     "type": "string",

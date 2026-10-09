@@ -39,41 +39,37 @@ class TestScenarioLoading:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         # Load scenario
-        s = engine.load_scenario("sumsub_kyc", "kyc_approved")
-        assert s.name == "kyc_approved"
-        assert s.vendor == "sumsub_kyc"
+        s = engine.load_scenario("stripe_payments", "payment_succeeded")
+        assert s.name == "payment_succeeded"
+        assert s.vendor == "stripe_payments"
         assert len(s.steps) > 0
 
         # Not found
         with pytest.raises(FileNotFoundError, match="Scenario not found"):
-            engine.load_scenario("sumsub_kyc", "nonexistent_scenario")
+            engine.load_scenario("stripe_payments", "nonexistent_scenario")
 
         # Unknown vendor
         with pytest.raises(FileNotFoundError):
             engine.load_scenario("unknown_vendor", "anything")
 
         # Steps parsed
-        rej = engine.load_scenario("sumsub_kyc", "kyc_rejected")
-        ops = [step.operation for step in rej.steps]
-        assert "create_applicant" in ops
-        assert "request_check" in ops
-        assert "get_review_result" in ops
+        failed = engine.load_scenario("stripe_payments", "payment_failed_insufficient")
+        ops = [step.operation for step in failed.steps]
+        assert "create_payment_intent" in ops
+        assert "confirm_payment_intent" in ops
 
         # Response overrides
-        review_step = next(step for step in rej.steps if step.operation == "get_review_result")
-        assert review_step.response_override["review_result"] == "RED"
-        assert "DOCUMENT_FACE_MISMATCH" in review_step.response_override["reject_labels"]
+        create_step = next(step for step in s.steps if step.operation == "create_payment_intent")
+        assert create_step.response_override["status"] == "requires_confirmation"
 
         # Status override
-        stripe = engine.load_scenario("stripe_payments", "payment_failed_insufficient")
         confirm_step = next(
-            step for step in stripe.steps if step.operation == "confirm_payment_intent"
+            step for step in failed.steps if step.operation == "confirm_payment_intent"
         )
         assert confirm_step.status_override == 402
-
-        # Delay
-        check_step = next(step for step in rej.steps if step.operation == "request_check")
-        assert check_step.delay_ms == 500
+        assert confirm_step.response_override["last_payment_error"]["decline_code"] == (
+            "insufficient_funds"
+        )
 
 
 class TestScenarioListing:
@@ -83,13 +79,14 @@ class TestScenarioListing:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 11
-        assert "sumsub_kyc/kyc_approved" in all_scenarios
+        assert len(all_scenarios) >= 7
         assert "stripe_payments/payment_succeeded" in all_scenarios
+        assert "companies_house_lookup/company_found" in all_scenarios
+        assert engine.list_scenarios(vendor="sumsub_kyc") == []
 
-        sumsub = engine.list_scenarios(vendor="sumsub_kyc")
-        assert len(sumsub) >= 4
-        assert all(s.startswith("sumsub_kyc/") for s in sumsub)
+        stripe = engine.list_scenarios(vendor="stripe_payments")
+        assert len(stripe) >= 4
+        assert all(s.startswith("stripe_payments/") for s in stripe)
 
         assert engine.list_scenarios(vendor="nonexistent") == []
 
@@ -101,16 +98,16 @@ class TestScenarioReset:
         """Combined: reset specific vendor, reset all, active_scenarios property."""
         # Reset specific
         e1 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        e1.load_scenario("sumsub_kyc", "kyc_approved")
+        e1.load_scenario("companies_house_lookup", "company_found")
         e1.load_scenario("stripe_payments", "payment_succeeded")
         assert len(e1.active_scenarios) == 2
-        e1.reset(vendor="sumsub_kyc")
-        assert "sumsub_kyc" not in e1.active_scenarios
+        e1.reset(vendor="companies_house_lookup")
+        assert "companies_house_lookup" not in e1.active_scenarios
         assert "stripe_payments" in e1.active_scenarios
 
         # Reset all
         e2 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        e2.load_scenario("sumsub_kyc", "kyc_approved")
+        e2.load_scenario("companies_house_lookup", "company_found")
         e2.load_scenario("stripe_payments", "payment_succeeded")
         e2.reset()
         assert len(e2.active_scenarios) == 0
@@ -118,8 +115,8 @@ class TestScenarioReset:
         # active_scenarios property
         e3 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
         assert e3.active_scenarios == {}
-        e3.load_scenario("sumsub_kyc", "kyc_approved")
-        assert e3.active_scenarios == {"sumsub_kyc": "kyc_approved"}
+        e3.load_scenario("stripe_payments", "payment_succeeded")
+        assert e3.active_scenarios == {"stripe_payments": "payment_succeeded"}
 
 
 class TestScenarioIntercept:
@@ -128,13 +125,12 @@ class TestScenarioIntercept:
         no active scenario."""
         # With override
         e1 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        e1.load_scenario("sumsub_kyc", "kyc_rejected")
+        e1.load_scenario("stripe_payments", "payment_succeeded")
         data, status = _run_async(
-            e1.intercept("sumsub_kyc", "get_review_result", {"id": "abc"}, 200)
+            e1.intercept("stripe_payments", "create_payment_intent", {"id": "pi_1"}, 200)
         )
-        assert data["review_result"] == "RED"
-        assert "DOCUMENT_FACE_MISMATCH" in data["reject_labels"]
-        assert data["id"] == "abc"
+        assert data["status"] == "requires_confirmation"
+        assert data["id"] == "pi_1"
         assert status == 200
 
         # With status override
@@ -149,9 +145,9 @@ class TestScenarioIntercept:
 
         # No match
         e3 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        e3.load_scenario("sumsub_kyc", "kyc_approved")
+        e3.load_scenario("stripe_payments", "payment_succeeded")
         data3, status3 = _run_async(
-            e3.intercept("sumsub_kyc", "delete_applicant", {"ok": True}, 200)
+            e3.intercept("stripe_payments", "create_refund", {"ok": True}, 200)
         )
         assert data3 == {"ok": True}
         assert status3 == 200
@@ -159,7 +155,7 @@ class TestScenarioIntercept:
         # No active scenario
         e4 = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
         data4, status4 = _run_async(
-            e4.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+            e4.intercept("stripe_payments", "create_payment_intent", {"id": "abc"}, 201)
         )
         assert data4 == {"id": "abc"}
         assert status4 == 201
@@ -168,32 +164,32 @@ class TestScenarioIntercept:
 class TestErrorInjection:
     def test_inject_error_immediate(self) -> None:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.inject_error("sumsub_kyc", "create_applicant", status=500)
+        engine.inject_error("stripe_payments", "create_payment_intent", status=500)
 
         data, status = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "abc"}, 201)
         )
         assert status == 500
         assert "error" in data
 
     def test_inject_error_after_n(self) -> None:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.inject_error("sumsub_kyc", "create_applicant", status=503, after_n=2)
+        engine.inject_error("stripe_payments", "create_payment_intent", status=503, after_n=2)
 
         # First two calls succeed (index 0 and 1)
         data1, status1 = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "1"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "1"}, 201)
         )
         assert status1 == 201
 
         data2, status2 = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "2"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "2"}, 201)
         )
         assert status2 == 201
 
         # Third call fails (index 2 >= after_n)
         data3, status3 = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "3"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "3"}, 201)
         )
         assert status3 == 503
 
@@ -223,23 +219,23 @@ class TestErrorInjection:
 
     def test_reset_clears_injections(self) -> None:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.inject_error("sumsub_kyc", "create_applicant", status=500)
-        engine.inject_latency("sumsub_kyc", "get_applicant", delay_ms=100)
+        engine.inject_error("stripe_payments", "create_payment_intent", status=500)
+        engine.inject_latency("stripe_payments", "get_payment_intent", delay_ms=100)
 
-        engine.reset(vendor="sumsub_kyc")
+        engine.reset(vendor="stripe_payments")
 
         data, status = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "abc"}, 201)
         )
         assert status == 201  # No error injection
 
     def test_error_takes_precedence_over_scenario(self) -> None:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
-        engine.load_scenario("sumsub_kyc", "kyc_approved")
-        engine.inject_error("sumsub_kyc", "create_applicant", status=500)
+        engine.load_scenario("stripe_payments", "payment_succeeded")
+        engine.inject_error("stripe_payments", "create_payment_intent", status=500)
 
         data, status = _run_async(
-            engine.intercept("sumsub_kyc", "create_applicant", {"id": "abc"}, 201)
+            engine.intercept("stripe_payments", "create_payment_intent", {"id": "abc"}, 201)
         )
         # Error injection takes precedence
         assert status == 500
@@ -261,37 +257,34 @@ class TestScenarioWithMockServer:
         client = TestClient(app, raise_server_exceptions=False)
         return client, engine
 
-    def test_kyc_approved_flow(self) -> None:
-        client, engine = self._make_client("sumsub_kyc", "kyc_approved")
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+    def test_payment_succeeded_flow(self) -> None:
+        client, engine = self._make_client("stripe_payments", "payment_succeeded")
+        auth = {"Authorization": "Bearer test-token"}
 
-        # Create applicant
         resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 100, "currency": "gbp"},
             headers=auth,
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["review_status"] == "init"
-        applicant_id = data["id"]
+        assert data["status"] == "requires_confirmation"
+        payment_id = data["id"]
 
-        # Get review result
-        resp = client.get(f"/resources/applicants/{applicant_id}", headers=auth)
+        resp = client.get(f"/payment_intents/{payment_id}", headers=auth)
         assert resp.status_code == 200
 
-    def test_kyc_rejected_flow(self) -> None:
-        client, engine = self._make_client("sumsub_kyc", "kyc_rejected")
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+    def test_payment_failed_flow(self) -> None:
+        client, engine = self._make_client("stripe_payments", "payment_failed_insufficient")
+        auth = {"Authorization": "Bearer test-token"}
 
-        # Create applicant
         resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 100, "currency": "gbp"},
             headers=auth,
         )
         assert resp.status_code == 201
-        assert resp.json()["review_status"] == "init"
+        assert resp.json()["status"] == "requires_confirmation"
 
     def test_stripe_rate_limited(self) -> None:
         client, engine = self._make_client("stripe_payments", "rate_limited")
@@ -306,67 +299,45 @@ class TestScenarioWithMockServer:
         assert resp.json()["error"]["code"] == "rate_limit"
 
     def test_error_injection_with_server(self) -> None:
-        client, engine = self._make_client("sumsub_kyc")
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+        client, engine = self._make_client("stripe_payments")
+        auth = {"Authorization": "Bearer test-token"}
+        body = {"amount": 100, "currency": "gbp"}
 
-        # No error initially
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers=auth,
-        )
+        resp = client.post("/payment_intents", json=body, headers=auth)
         assert resp.status_code == 201
 
-        # Inject error
-        engine.inject_error("sumsub_kyc", "create_applicant", status=503)
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers=auth,
-        )
+        engine.inject_error("stripe_payments", "create_payment_intent", status=503)
+        resp = client.post("/payment_intents", json=body, headers=auth)
         assert resp.status_code == 503
 
-        # Reset and verify normal operation
         engine.reset()
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers=auth,
-        )
+        resp = client.post("/payment_intents", json=body, headers=auth)
         assert resp.status_code == 201
 
     def test_scenario_switch(self) -> None:
-        client, engine = self._make_client("sumsub_kyc", "kyc_approved")
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+        client, engine = self._make_client("stripe_payments", "payment_succeeded")
+        auth = {"Authorization": "Bearer test-token"}
+        body = {"amount": 100, "currency": "gbp"}
 
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers=auth,
-        )
-        assert resp.json()["review_status"] == "init"
+        resp = client.post("/payment_intents", json=body, headers=auth)
+        assert resp.json()["status"] == "requires_confirmation"
 
-        # Switch to rejected scenario
-        engine.load_scenario("sumsub_kyc", "kyc_rejected")
-        resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers=auth,
-        )
-        assert resp.json()["review_status"] == "init"  # Same for create step
+        engine.load_scenario("stripe_payments", "rate_limited")
+        resp = client.post("/payment_intents", json=body, headers=auth)
+        assert resp.status_code == 429
 
     def test_recorder_works_with_scenarios(self) -> None:
-        client, engine = self._make_client("sumsub_kyc", "kyc_approved")
+        client, engine = self._make_client("stripe_payments", "payment_succeeded")
         recorder = get_recorder(client.app)
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+        auth = {"Authorization": "Bearer test-token"}
 
         client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 100, "currency": "gbp"},
             headers=auth,
         )
         assert recorder.request_count == 1
-        recorder.assert_called(method="POST", path="/resources/applicants")
+        recorder.assert_called(method="POST", path="/payment_intents")
 
 
 # ---------------------------------------------------------------------------
@@ -379,11 +350,11 @@ class TestBuiltInScenarios:
 
     def test_built_in_scenarios_combined(self) -> None:
         """Combined: all scenarios loadable + per-vendor coverage
-        (sumsub, stripe, companies_house)."""
+        (stripe, companies_house)."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 11
+        assert len(all_scenarios) >= 7
 
         for scenario_ref in all_scenarios:
             vendor, name = scenario_ref.split("/", 1)
@@ -392,21 +363,15 @@ class TestBuiltInScenarios:
             assert scenario.vendor == vendor
             assert len(scenario.steps) > 0, f"Scenario {scenario_ref} has no steps"
 
-        # Sumsub
-        sumsub = engine.list_scenarios(vendor="sumsub_kyc")
-        assert len(sumsub) >= 4
-        sumsub_names = {s.split("/")[1] for s in sumsub}
-        assert "kyc_approved" in sumsub_names
-        assert "kyc_rejected" in sumsub_names
-
         # Stripe
         stripe = engine.list_scenarios(vendor="stripe_payments")
-        assert len(stripe) >= 3
+        assert len(stripe) >= 4
         stripe_names = {s.split("/")[1] for s in stripe}
         assert "payment_succeeded" in stripe_names
         assert "payment_failed_insufficient" in stripe_names
 
-        # Companies House. HMRC and Xero are not built-in vendors.
+        # Companies House. HMRC, Xero, and SumSub are not built-in vendors.
         assert engine.list_scenarios(vendor="hmrc_mtd_vat") == []
         assert engine.list_scenarios(vendor="xero_accounting") == []
+        assert engine.list_scenarios(vendor="sumsub_kyc") == []
         assert len(engine.list_scenarios(vendor="companies_house_lookup")) >= 3

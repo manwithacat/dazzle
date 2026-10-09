@@ -4,8 +4,8 @@ from dazzle.testing.vendor_mock.data_generators import DataGenerator
 from dazzle.testing.vendor_mock.state import MockStateStore
 
 
-def _sumsub_models() -> dict:
-    """Minimal SumSub-like model definitions for testing."""
+def _sample_models() -> dict:
+    """Minimal foreign-model definitions for the state store."""
     return {
         "Applicant": {
             "description": "A person undergoing verification",
@@ -52,13 +52,13 @@ def _int_pk_models() -> dict:
 
 class TestCreate:
     def test_creates_with_auto_id(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         record = store.create("Applicant", {"type": "individual", "email": "test@example.com"})
         assert record["id"] is not None
         assert record["id"].startswith("App_") or record["id"].startswith("app_")
 
     def test_creates_with_provided_id(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         record = store.create("Applicant", {"id": "custom-123", "type": "individual"})
         assert record["id"] == "custom-123"
 
@@ -70,13 +70,13 @@ class TestCreate:
         assert r2["id"] == 2
 
     def test_auto_sets_timestamps(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         record = store.create("Applicant", {"type": "individual"})
         assert record.get("created_at") is not None
         assert record.get("updated_at") is not None
 
     def test_preserves_provided_data(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         record = store.create(
             "Applicant",
             {"type": "company", "email": "corp@test.com", "first_name": "Test Corp"},
@@ -86,7 +86,7 @@ class TestCreate:
         assert record["first_name"] == "Test Corp"
 
     def test_generates_defaults_for_required_fields(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         record = store.create("Applicant", {})
         # 'type' is required — should have a generated value
         assert record["type"] in ("individual", "company")
@@ -94,35 +94,35 @@ class TestCreate:
 
 class TestGet:
     def test_get_returns_created_record(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         created = store.create("Applicant", {"type": "individual", "email": "get@test.com"})
         fetched = store.get("Applicant", created["id"])
         assert fetched is not None
         assert fetched["email"] == "get@test.com"
 
     def test_get_returns_none_for_missing(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         assert store.get("Applicant", "nonexistent") is None
 
     def test_get_returns_none_for_unknown_model(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         assert store.get("UnknownModel", "any-id") is None
 
 
 class TestList:
     def test_list_returns_all_records(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         store.create("Applicant", {"type": "individual"})
         store.create("Applicant", {"type": "company"})
         records = store.list("Applicant")
         assert len(records) == 2
 
     def test_list_empty_collection(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         assert store.list("Applicant") == []
 
     def test_list_with_filter(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         store.create("Applicant", {"type": "individual"})
         store.create("Applicant", {"type": "company"})
         store.create("Applicant", {"type": "individual"})
@@ -133,7 +133,7 @@ class TestList:
 
 class TestUpdate:
     def test_update_modifies_record(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         created = store.create("Applicant", {"type": "individual", "review_status": "init"})
         updated = store.update("Applicant", created["id"], {"review_status": "pending"})
         assert updated is not None
@@ -142,7 +142,7 @@ class TestUpdate:
         assert updated["type"] == "individual"
 
     def test_update_sets_updated_at(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         created = store.create("Applicant", {"type": "individual"})
         updated = store.update("Applicant", created["id"], {"email": "new@test.com"})
         assert updated is not None
@@ -150,11 +150,11 @@ class TestUpdate:
         assert updated.get("updated_at") is not None
 
     def test_update_returns_none_for_missing(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         assert store.update("Applicant", "nonexistent", {"type": "company"}) is None
 
     def test_update_persists(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         created = store.create("Applicant", {"type": "individual"})
         store.update("Applicant", created["id"], {"email": "persisted@test.com"})
         fetched = store.get("Applicant", created["id"])
@@ -164,19 +164,19 @@ class TestUpdate:
 
 class TestDelete:
     def test_delete_removes_record(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         created = store.create("Applicant", {"type": "individual"})
         assert store.delete("Applicant", created["id"]) is True
         assert store.get("Applicant", created["id"]) is None
 
     def test_delete_returns_false_for_missing(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         assert store.delete("Applicant", "nonexistent") is False
 
 
 class TestClear:
     def test_clear_all(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         store.create("Applicant", {"type": "individual"})
         store.create("Document", {"applicant_id": "x", "id_doc_type": "PASSPORT", "country": "GBR"})
         store.clear()
@@ -184,7 +184,7 @@ class TestClear:
         assert store.list("Document") == []
 
     def test_clear_specific_model(self) -> None:
-        store = MockStateStore(foreign_models=_sumsub_models(), generator=DataGenerator(seed=1))
+        store = MockStateStore(foreign_models=_sample_models(), generator=DataGenerator(seed=1))
         store.create("Applicant", {"type": "individual"})
         store.create("Document", {"applicant_id": "x", "id_doc_type": "PASSPORT", "country": "GBR"})
         store.clear("Applicant")

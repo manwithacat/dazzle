@@ -121,7 +121,7 @@ class MockOrchestrator:
         """Add a vendor mock server.
 
         Args:
-            pack_name: API pack name (e.g. "sumsub_kyc").
+            pack_name: API pack name (e.g. "stripe_payments").
             port: Explicit port, or auto-allocated from base_port.
             auth_tokens: Auth credentials for this vendor.
 
@@ -290,8 +290,8 @@ def _pack_to_env_var(pack_name: str) -> str:
     ``DAZZLE_API_{NAME}_URL``
 
     Examples:
-        "sumsub_kyc" → "DAZZLE_API_SUMSUB_KYC_URL"
         "stripe_payments" → "DAZZLE_API_STRIPE_PAYMENTS_URL"
+        "companies_house_lookup" → "DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL"
     """
     name_upper = pack_name.upper().replace("-", "_").replace(".", "_")
     return f"DAZZLE_API_{name_upper}_URL"

@@ -73,10 +73,10 @@ def _make_pack(
     return pack
 
 
-# Standard SumSub-like test fixtures
+# Synthetic HMAC-auth pack. The routes are a stand-in, not a shipped vendor.
 
 
-def _sumsub_fields() -> dict:
+def _hmac_fields() -> dict:
     return {
         "id": _make_field("str(50)", required=True, pk=True),
         "external_user_id": _make_field("str(100)"),
@@ -89,9 +89,9 @@ def _sumsub_fields() -> dict:
     }
 
 
-def _sumsub_pack() -> MagicMock:
+def _hmac_pack() -> MagicMock:
     applicant_fm = _make_foreign_model(
-        "Applicant", "id", _sumsub_fields(), "A person undergoing verification"
+        "Applicant", "id", _hmac_fields(), "A person undergoing verification"
     )
     ops = [
         _make_operation("create_applicant", "POST", "/resources/applicants?levelName={level_name}"),
@@ -100,8 +100,8 @@ def _sumsub_pack() -> MagicMock:
     ]
     auth = _make_auth("hmac")
     return _make_pack(
-        name="sumsub_kyc",
-        provider="SumSub",
+        name="hmac_vendor",
+        provider="HmacVendor",
         foreign_models=[applicant_fm],
         operations=ops,
         auth=auth,
@@ -274,13 +274,13 @@ class TestNoAuthMockServer:
 
 
 class TestHmacAuthMockServer:
-    """Test mock server with HMAC auth (SumSub-style)."""
+    """Test mock server with request HMAC auth."""
 
     @pytest.fixture()
     def client(self) -> TestClient:
         from dazzle.testing.vendor_mock.generator import _build_app
 
-        pack = _sumsub_pack()
+        pack = _hmac_pack()
         app = _build_app(pack, seed=42)
         return TestClient(app, raise_server_exceptions=False)
 
@@ -432,28 +432,27 @@ class TestApiKeyAuthWithTokenValidation:
 class TestCreateMockServerFromPack:
     """Test creating a mock server from an actual API pack TOML file."""
 
-    def test_sumsub_pack_creates_app(self) -> None:
-        app = create_mock_server("sumsub_kyc", seed=1)
+    def test_stripe_pack_creates_app(self) -> None:
+        app = create_mock_server("stripe_payments", seed=1)
         client = TestClient(app, raise_server_exceptions=False)
         resp = client.get("/health")
         assert resp.status_code == 200
-        assert resp.json()["provider"] == "SumSub"
+        assert resp.json()["provider"] == "Stripe"
 
-    def test_sumsub_pack_has_routes(self) -> None:
-        app = create_mock_server("sumsub_kyc", seed=1)
+    def test_stripe_pack_has_routes(self) -> None:
+        app = create_mock_server("stripe_payments", seed=1)
         from dazzle.http.runtime.route_validator import route_paths as _route_paths
 
         route_paths = _route_paths(app)
         assert "/health" in route_paths
-        # Should have applicant routes
-        assert any("applicant" in p for p in route_paths)
+        assert any("payment_intent" in p for p in route_paths)
 
     def test_unknown_pack_raises(self) -> None:
         with pytest.raises(ValueError, match="not found"):
             create_mock_server("nonexistent_pack_xyz")
 
     def test_store_accessible(self) -> None:
-        app = create_mock_server("sumsub_kyc", seed=1)
+        app = create_mock_server("stripe_payments", seed=1)
         assert app.state.store is not None
         assert app.state.request_log is not None
         assert app.state.pack is not None

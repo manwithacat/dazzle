@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 def vendor_mocks() -> Generator[MockOrchestrator, None, None]:
     """Create a vendor mock orchestrator with deterministic seed.
 
-    Use ``vendor_mocks.add_vendor("sumsub_kyc")`` to add specific vendors,
+    Use ``vendor_mocks.add_vendor("stripe_payments")`` to add specific vendors,
     or combine with an AppSpec fixture for auto-discovery.
 
     Yields:
@@ -73,7 +73,7 @@ def mock_vendor(
     the full orchestrator.
 
     Args:
-        pack_name: API pack name (e.g. "sumsub_kyc").
+        pack_name: API pack name (e.g. "stripe_payments").
         seed: Seed for deterministic data generation.
         port: Port for the mock server.
         auth_tokens: Optional auth credentials.
@@ -83,11 +83,11 @@ def mock_vendor(
 
     Example::
 
-        def test_sumsub_applicant():
-            client = mock_vendor("sumsub_kyc")
-            resp = client.post("/resources/applicants",
-                json={"type": "individual"},
-                headers={"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"})
+        def test_stripe_payment_intent():
+            client = mock_vendor("stripe_payments")
+            resp = client.post("/payment_intents",
+                json={"amount": 1000, "currency": "gbp"},
+                headers={"Authorization": "Bearer sk_test"})
             assert resp.status_code == 201
     """
     from fastapi.testclient import TestClient

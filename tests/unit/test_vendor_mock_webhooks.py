@@ -19,13 +19,6 @@ from dazzle.testing.vendor_mock.webhooks import (
 
 
 class TestPayloadBuilding:
-    def test_build_sumsub_applicant_reviewed(self) -> None:
-        dispatcher = WebhookDispatcher()
-        payload = dispatcher.build_payload("sumsub_kyc", "applicant_reviewed")
-        assert payload["type"] == "applicant_reviewed"
-        assert "reviewResult" in payload
-        assert payload["reviewResult"]["reviewAnswer"] == "GREEN"
-
     def test_build_stripe_payment_succeeded(self) -> None:
         dispatcher = WebhookDispatcher()
         payload = dispatcher.build_payload("stripe_payments", "payment_intent.succeeded")
@@ -35,21 +28,21 @@ class TestPayloadBuilding:
     def test_build_with_overrides(self) -> None:
         dispatcher = WebhookDispatcher()
         payload = dispatcher.build_payload(
-            "sumsub_kyc",
-            "applicant_reviewed",
-            overrides={"reviewResult": {"reviewAnswer": "RED", "rejectLabels": ["FRAUD"]}},
+            "stripe_payments",
+            "payment_intent.succeeded",
+            overrides={"data": {"object": {"status": "processing"}}},
         )
-        assert payload["reviewResult"]["reviewAnswer"] == "RED"
-        assert payload["reviewResult"]["rejectLabels"] == ["FRAUD"]
+        assert payload["data"]["object"]["status"] == "processing"
+        assert payload["type"] == "payment_intent.succeeded"
 
     def test_build_with_entity_data(self) -> None:
         dispatcher = WebhookDispatcher()
         payload = dispatcher.build_payload(
-            "sumsub_kyc",
-            "applicant_reviewed",
-            entity_data={"id": "app-123"},
+            "stripe_payments",
+            "payment_intent.succeeded",
+            entity_data={"id": "pi_abc"},
         )
-        assert payload["applicantId"] == "app-123"
+        assert payload["id"] == "pi_abc"
 
     def test_build_stripe_with_entity_data(self) -> None:
         dispatcher = WebhookDispatcher()
@@ -63,7 +56,7 @@ class TestPayloadBuilding:
     def test_build_unknown_event_raises(self) -> None:
         dispatcher = WebhookDispatcher()
         with pytest.raises(ValueError, match="Unknown webhook event"):
-            dispatcher.build_payload("sumsub_kyc", "nonexistent_event")
+            dispatcher.build_payload("stripe_payments", "nonexistent_event")
 
     def test_build_unknown_vendor_raises(self) -> None:
         dispatcher = WebhookDispatcher()
@@ -72,9 +65,8 @@ class TestPayloadBuilding:
 
     def test_timestamps_populated(self) -> None:
         dispatcher = WebhookDispatcher()
-        payload = dispatcher.build_payload("sumsub_kyc", "applicant_reviewed")
-        # createdAtMs should be populated (non-empty)
-        assert payload["createdAtMs"] != ""
+        payload = dispatcher.build_payload("stripe_payments", "payment_intent.succeeded")
+        assert payload["created"] != 0
 
 
 # ---------------------------------------------------------------------------
@@ -83,15 +75,6 @@ class TestPayloadBuilding:
 
 
 class TestWebhookSigning:
-    def test_sumsub_signing(self) -> None:
-        dispatcher = WebhookDispatcher(signing_secret="test-secret")
-        payload = b'{"type": "applicant_reviewed"}'
-        headers = dispatcher.sign_payload("sumsub_kyc", payload)
-        assert "X-Payload-Digest" in headers
-        # Verify the HMAC
-        expected = hmac_mod.new(b"test-secret", payload, hashlib.sha256).hexdigest()
-        assert headers["X-Payload-Digest"] == expected
-
     def test_stripe_signing(self) -> None:
         dispatcher = WebhookDispatcher(signing_secret="whsec_test")
         payload = b'{"type": "payment_intent.succeeded"}'
@@ -111,16 +94,17 @@ class TestWebhookSigning:
     def test_per_vendor_secrets(self) -> None:
         dispatcher = WebhookDispatcher(
             signing_secret="default",
-            vendor_secrets={"sumsub_kyc": "sumsub-secret"},
+            vendor_secrets={"stripe_payments": "whsec_vendor"},
         )
         payload = b'{"test": true}'
 
-        # SumSub uses its specific secret
-        headers = dispatcher.sign_payload("sumsub_kyc", payload)
-        expected = hmac_mod.new(b"sumsub-secret", payload, hashlib.sha256).hexdigest()
-        assert headers["X-Payload-Digest"] == expected
+        headers = dispatcher.sign_payload("stripe_payments", payload)
+        sig_header = headers["Stripe-Signature"]
+        parts = dict(p.split("=", 1) for p in sig_header.split(","))
+        signed_payload = f"{parts['t']}.".encode() + payload
+        expected = hmac_mod.new(b"whsec_vendor", signed_payload, hashlib.sha256).hexdigest()
+        assert parts["v1"] == expected
 
-        # Other vendors use default
         headers = dispatcher.sign_payload("custom_vendor", payload)
         expected = hmac_mod.new(b"default", payload, hashlib.sha256).hexdigest()
         assert headers["X-Webhook-Signature"] == expected
@@ -140,13 +124,13 @@ class TestDeliveryTracking:
 
     def test_delivery_attempt_dataclass(self) -> None:
         attempt = DeliveryAttempt(
-            vendor="sumsub_kyc",
-            event_name="applicant_reviewed",
-            target_url="http://localhost:8000/webhooks/sumsub",
-            payload={"type": "applicant_reviewed"},
+            vendor="stripe_payments",
+            event_name="payment_intent.succeeded",
+            target_url="http://localhost:8000/webhooks/stripe",
+            payload={"type": "payment_intent.succeeded"},
             status_code=200,
         )
-        assert attempt.vendor == "sumsub_kyc"
+        assert attempt.vendor == "stripe_payments"
         assert attempt.status_code == 200
         assert attempt.error is None
 
@@ -190,13 +174,13 @@ class TestEventListing:
         dispatcher = WebhookDispatcher()
         events = dispatcher.list_events()
         assert len(events) > 0
-        assert any("sumsub_kyc/" in e for e in events)
         assert any("stripe_payments/" in e for e in events)
+        assert all("sumsub_kyc/" not in e for e in events)
 
     def test_list_vendor_events(self) -> None:
         dispatcher = WebhookDispatcher()
-        events = dispatcher.list_events(vendor="sumsub_kyc")
-        assert all(e.startswith("sumsub_kyc/") for e in events)
+        events = dispatcher.list_events(vendor="stripe_payments")
+        assert all(e.startswith("stripe_payments/") for e in events)
         assert len(events) >= 3
 
     def test_list_unknown_vendor(self) -> None:
@@ -213,7 +197,6 @@ class TestEventListing:
 class TestTargetUrls:
     def test_default_urls(self) -> None:
         dispatcher = WebhookDispatcher(target_base_url="http://localhost:8000")
-        assert dispatcher._get_target_url("sumsub_kyc") == "http://localhost:8000/webhooks/sumsub"
         assert (
             dispatcher._get_target_url("stripe_payments") == "http://localhost:8000/webhooks/stripe"
         )
@@ -221,12 +204,11 @@ class TestTargetUrls:
     def test_custom_paths(self) -> None:
         dispatcher = WebhookDispatcher(
             target_base_url="http://localhost:3000",
-            webhook_paths={"sumsub_kyc": "/api/hooks/sumsub"},
+            webhook_paths={"stripe_payments": "/api/hooks/stripe"},
         )
-        assert dispatcher._get_target_url("sumsub_kyc") == "http://localhost:3000/api/hooks/sumsub"
-        # Others still use defaults
         assert (
-            dispatcher._get_target_url("stripe_payments") == "http://localhost:3000/webhooks/stripe"
+            dispatcher._get_target_url("stripe_payments")
+            == "http://localhost:3000/api/hooks/stripe"
         )
 
     def test_unknown_vendor_fallback(self) -> None:
@@ -238,7 +220,9 @@ class TestTargetUrls:
 
     def test_trailing_slash_stripped(self) -> None:
         dispatcher = WebhookDispatcher(target_base_url="http://localhost:8000/")
-        assert dispatcher._get_target_url("sumsub_kyc") == "http://localhost:8000/webhooks/sumsub"
+        assert (
+            dispatcher._get_target_url("stripe_payments") == "http://localhost:8000/webhooks/stripe"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +234,7 @@ class TestSyncDelivery:
     def test_sync_delivery_connection_error(self) -> None:
         """fire_sync records connection errors gracefully."""
         dispatcher = WebhookDispatcher(target_base_url="http://127.0.0.1:19999")
-        attempt = dispatcher.fire_sync("sumsub_kyc", "applicant_reviewed")
+        attempt = dispatcher.fire_sync("stripe_payments", "payment_intent.succeeded")
         assert attempt.status_code is None
         assert attempt.error is not None
         assert dispatcher.delivery_count == 1
@@ -259,13 +243,13 @@ class TestSyncDelivery:
     def test_sync_delivery_tracks_payload(self) -> None:
         dispatcher = WebhookDispatcher(target_base_url="http://127.0.0.1:19999")
         attempt = dispatcher.fire_sync(
-            "sumsub_kyc",
-            "applicant_reviewed",
-            overrides={"reviewResult": {"reviewAnswer": "RED"}},
+            "stripe_payments",
+            "payment_intent.succeeded",
+            overrides={"data": {"object": {"status": "processing"}}},
         )
-        assert attempt.payload["reviewResult"]["reviewAnswer"] == "RED"
-        assert attempt.vendor == "sumsub_kyc"
-        assert attempt.event_name == "applicant_reviewed"
+        assert attempt.payload["data"]["object"]["status"] == "processing"
+        assert attempt.vendor == "stripe_payments"
+        assert attempt.event_name == "payment_intent.succeeded"
 
 
 # ---------------------------------------------------------------------------
@@ -306,16 +290,7 @@ class TestDeepMerge:
 
 class TestWebhookRegistry:
     def test_all_vendors_have_events(self) -> None:
-        expected_vendors = {
-            "sumsub_kyc",
-            "stripe_payments",
-        }
-        assert expected_vendors.issubset(set(WEBHOOK_EVENTS.keys()))
-
-    def test_sumsub_events(self) -> None:
-        events = set(WEBHOOK_EVENTS["sumsub_kyc"].keys())
-        assert "applicant_reviewed" in events
-        assert "applicant_created" in events
+        assert set(WEBHOOK_EVENTS.keys()) == {"stripe_payments"}
 
     def test_stripe_events(self) -> None:
         events = set(WEBHOOK_EVENTS["stripe_payments"].keys())

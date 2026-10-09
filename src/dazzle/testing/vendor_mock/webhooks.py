@@ -2,7 +2,7 @@
 Webhook dispatcher for vendor mock servers.
 
 Simulates vendor-initiated webhook calls to a running Dazzle app. Supports
-vendor-appropriate HMAC signing (SumSub, Stripe), automatic
+vendor-appropriate HMAC signing (Stripe), automatic
 triggering from scenario steps, and delivery tracking.
 """
 
@@ -30,35 +30,6 @@ logger = logging.getLogger(__name__)
 
 # Maps vendor → { event_name → default_payload_template }
 WEBHOOK_EVENTS: dict[str, dict[str, dict[str, Any]]] = {
-    "sumsub_kyc": {
-        "applicant_reviewed": {
-            "type": "applicant_reviewed",
-            "applicantId": "",
-            "inspectionId": "",
-            "correlationId": "",
-            "reviewResult": {
-                "reviewAnswer": "GREEN",
-                "moderationComment": "",
-                "rejectLabels": [],
-            },
-            "reviewStatus": "completed",
-            "createdAtMs": "",
-        },
-        "applicant_created": {
-            "type": "applicant_created",
-            "applicantId": "",
-            "inspectionId": "",
-            "correlationId": "",
-            "createdAtMs": "",
-        },
-        "applicant_pending": {
-            "type": "applicant_pending",
-            "applicantId": "",
-            "inspectionId": "",
-            "reviewStatus": "pending",
-            "createdAtMs": "",
-        },
-    },
     "stripe_payments": {
         "payment_intent.succeeded": {
             "id": "",
@@ -113,13 +84,11 @@ WEBHOOK_EVENTS: dict[str, dict[str, dict[str, Any]]] = {
 
 # Signing schemes per vendor
 SIGNING_SCHEMES: dict[str, str] = {
-    "sumsub_kyc": "sumsub_hmac",
     "stripe_payments": "stripe_hmac",
 }
 
 # Default webhook URL patterns
 DEFAULT_WEBHOOK_PATHS: dict[str, str] = {
-    "sumsub_kyc": "/webhooks/sumsub",
     "stripe_payments": "/webhooks/stripe",
 }
 
@@ -322,16 +291,13 @@ class WebhookDispatcher:
             )
 
         payload = _deep_merge(template, {})  # Deep copy
-        now_ms = str(int(time.time() * 1000))
 
         # Populate timestamp fields
-        _set_nested(payload, "createdAtMs", now_ms)
         _set_nested(payload, "created", int(time.time()))
         _set_nested(payload, "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
         # Populate IDs from entity data
         if entity_data:
-            _set_nested(payload, "applicantId", entity_data.get("id", ""))
             _set_nested(payload, "id", entity_data.get("id", ""))
             if "data" in payload and isinstance(payload["data"], dict):
                 if "object" in payload["data"] and isinstance(payload["data"]["object"], dict):
@@ -361,16 +327,12 @@ class WebhookDispatcher:
         pack_signing = self._pack_signing.get(vendor)
         if pack_signing:
             scheme = pack_signing[0]
-            # Normalize scheme names: pack uses "sumsub-hmac" style, code uses "sumsub_hmac"
+            # Pack TOML uses hyphenated names; the branches below use underscores.
             scheme = scheme.replace("-", "_")
         else:
             scheme = SIGNING_SCHEMES.get(vendor, "hmac_sha256")
 
-        if scheme == "sumsub_hmac":
-            hex_sig = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
-            return {"X-Payload-Digest": hex_sig}
-
-        elif scheme in ("stripe_hmac", "stripe_v1"):
+        if scheme in ("stripe_hmac", "stripe_v1"):
             timestamp = str(int(time.time()))
             signed_payload = f"{timestamp}.".encode() + payload_bytes
             sig = hmac.new(secret.encode(), signed_payload, hashlib.sha256).hexdigest()

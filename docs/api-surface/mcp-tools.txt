@@ -991,7 +991,7 @@ tool: mock
         "type": "string"
       },
       "vendor": {
-        "description": "API pack name (e.g. 'sumsub_kyc')",
+        "description": "API pack name (e.g. 'stripe_payments')",
         "type": "string"
       }
     },

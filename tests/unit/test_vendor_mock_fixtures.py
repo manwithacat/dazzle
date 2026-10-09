@@ -182,23 +182,19 @@ class TestRequestRecorder:
 
 class TestGetRecorder:
     def test_from_mock_app(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         # The test client wraps a real FastAPI app
         recorder = get_recorder(client.app)
         assert recorder.request_count == 0
 
         # Make a request and verify it's recorded
         client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers={
-                "X-App-Token": "tok",
-                "X-App-Access-Ts": "0",
-                "X-App-Access-Sig": "sig",
-            },
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
+            headers={"Authorization": "Bearer sk_test"},
         )
         assert recorder.request_count == 1
-        recorder.assert_called(method="POST", path="/resources/applicants")
+        recorder.assert_called(method="POST", path="/payment_intents")
 
 
 # ---------------------------------------------------------------------------
@@ -208,30 +204,24 @@ class TestGetRecorder:
 
 class TestMockVendor:
     def test_returns_test_client(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         assert isinstance(client, TestClient)
 
     def test_health_endpoint(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         resp = client.get("/health")
         assert resp.status_code == 200
-        assert resp.json()["provider"] == "SumSub"
+        assert resp.json()["provider"] == "Stripe"
 
     def test_deterministic_seed(self) -> None:
-        c1 = mock_vendor("sumsub_kyc", seed=42)
-        c2 = mock_vendor("sumsub_kyc", seed=42)
+        c1 = mock_vendor("stripe_payments", seed=42)
+        c2 = mock_vendor("stripe_payments", seed=42)
 
         # Same seed → same generated IDs
-        r1 = c1.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers={"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"},
-        )
-        r2 = c2.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers={"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"},
-        )
+        body = {"amount": 1000, "currency": "gbp"}
+        auth = {"Authorization": "Bearer sk_test"}
+        r1 = c1.post("/payment_intents", json=body, headers=auth)
+        r2 = c2.post("/payment_intents", json=body, headers=auth)
         assert r1.json()["id"] == r2.json()["id"]
 
     def test_different_seed_different_generated_data(self) -> None:
@@ -247,26 +237,21 @@ class TestMockVendor:
         assert m1["name"] != m2["name"] or m1["email"] != m2["email"]
 
     def test_auth_token_validation(self) -> None:
-        """HMAC auth accepts requests when no secret is provided for validation."""
-        client = mock_vendor("sumsub_kyc")
+        """API-key auth accepts any header value when no token is configured."""
+        client = mock_vendor("stripe_payments")
         resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
-            headers={
-                "X-App-Token": "any-token",
-                "X-App-Access-Ts": "0",
-                "X-App-Access-Sig": "any-sig",
-            },
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
+            headers={"Authorization": "Bearer any-token"},
         )
-        # No auth_tokens → any correctly-formatted auth accepted
         assert resp.status_code == 201
 
     def test_auth_missing_headers_rejected(self) -> None:
-        """HMAC auth rejects requests without required headers."""
-        client = mock_vendor("sumsub_kyc")
+        """API-key auth rejects requests without the auth header."""
+        client = mock_vendor("stripe_payments")
         resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
         )
         assert resp.status_code == 401
 
@@ -286,26 +271,27 @@ class TestVendorMocksFixture:
         import os
 
         orch = MockOrchestrator(seed=42, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("stripe_payments")
         orch.inject_env()
-        assert "DAZZLE_API_SUMSUB_KYC_URL" in os.environ
+        assert "DAZZLE_API_STRIPE_PAYMENTS_URL" in os.environ
 
         orch.clear_env()
-        assert "DAZZLE_API_SUMSUB_KYC_URL" not in os.environ
+        assert "DAZZLE_API_STRIPE_PAYMENTS_URL" not in os.environ
 
     def test_orchestrator_seed_propagates(self) -> None:
         """Orchestrator seed produces deterministic mock data."""
         orch1 = MockOrchestrator(seed=42, base_port=19001)
         orch2 = MockOrchestrator(seed=42, base_port=19002)
-        orch1.add_vendor("sumsub_kyc")
-        orch2.add_vendor("sumsub_kyc")
+        orch1.add_vendor("stripe_payments")
+        orch2.add_vendor("stripe_payments")
 
-        c1 = TestClient(orch1.get_app("sumsub_kyc"), raise_server_exceptions=False)
-        c2 = TestClient(orch2.get_app("sumsub_kyc"), raise_server_exceptions=False)
-        auth = {"X-App-Token": "t", "X-App-Access-Ts": "0", "X-App-Access-Sig": "s"}
+        c1 = TestClient(orch1.get_app("stripe_payments"), raise_server_exceptions=False)
+        c2 = TestClient(orch2.get_app("stripe_payments"), raise_server_exceptions=False)
+        auth = {"Authorization": "Bearer sk_test"}
+        body = {"amount": 1000, "currency": "gbp"}
 
-        r1 = c1.post("/resources/applicants", json={"type": "individual"}, headers=auth)
-        r2 = c2.post("/resources/applicants", json={"type": "individual"}, headers=auth)
+        r1 = c1.post("/payment_intents", json=body, headers=auth)
+        r2 = c2.post("/payment_intents", json=body, headers=auth)
         assert r1.json()["id"] == r2.json()["id"]
 
 
@@ -314,14 +300,14 @@ class TestVendorMocksFromAppspec:
         """MockOrchestrator.from_appspec discovers and registers vendors."""
         import os
 
-        appspec = _make_appspec(_make_api("sumsub", "pack:sumsub_kyc"))
+        appspec = _make_appspec(_make_api("stripe", "pack:stripe_payments"))
         orch = MockOrchestrator.from_appspec(appspec, seed=42, base_port=19001)
-        assert "sumsub_kyc" in orch.vendors
+        assert "stripe_payments" in orch.vendors
 
         orch.inject_env()
-        assert "DAZZLE_API_SUMSUB_KYC_URL" in os.environ
+        assert "DAZZLE_API_STRIPE_PAYMENTS_URL" in os.environ
         orch.clear_env()
-        assert "DAZZLE_API_SUMSUB_KYC_URL" not in os.environ
+        assert "DAZZLE_API_STRIPE_PAYMENTS_URL" not in os.environ
 
     def test_from_appspec_empty(self) -> None:
         """Empty appspec yields empty orchestrator."""
@@ -339,51 +325,38 @@ class TestRecorderIntegration:
     """End-to-end test: mock_vendor + recorder + assertions."""
 
     def test_full_crud_recording(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         recorder = get_recorder(client.app)
-        auth_headers = {
-            "X-App-Token": "tok",
-            "X-App-Access-Ts": "0",
-            "X-App-Access-Sig": "sig",
-        }
+        auth_headers = {"Authorization": "Bearer sk_test"}
 
-        # Create
         resp = client.post(
-            "/resources/applicants",
-            json={"type": "individual", "email": "test@example.com"},
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
             headers=auth_headers,
         )
         assert resp.status_code == 201
-        applicant_id = resp.json()["id"]
+        payment_id = resp.json()["id"]
 
-        # Read
-        resp = client.get(f"/resources/applicants/{applicant_id}", headers=auth_headers)
+        resp = client.get(f"/payment_intents/{payment_id}", headers=auth_headers)
         assert resp.status_code == 200
 
-        # Verify recordings
         assert recorder.request_count == 2
-        recorder.assert_called(method="POST", path="/resources/applicants", times=1)
-        recorder.assert_called(method="GET", path="/resources/applicants", times=1)
-        recorder.assert_not_called(method="DELETE", path="/resources/applicants")
+        recorder.assert_called(method="POST", path="/payment_intents", times=1)
+        recorder.assert_called(method="GET", path="/payment_intents", times=1)
+        recorder.assert_not_called(method="DELETE", path="/payment_intents")
 
     def test_filter_by_status_code(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         recorder = get_recorder(client.app)
-        auth_headers = {
-            "X-App-Token": "tok",
-            "X-App-Access-Ts": "0",
-            "X-App-Access-Sig": "sig",
-        }
+        auth_headers = {"Authorization": "Bearer sk_test"}
 
-        # Successful create
         client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
             headers=auth_headers,
         )
 
-        # Failed read (not found)
-        client.get("/resources/applicants/nonexistent", headers=auth_headers)
+        client.get("/payment_intents/nonexistent", headers=auth_headers)
 
         created = recorder.filter(status=201)
         assert len(created) == 1
@@ -391,17 +364,13 @@ class TestRecorderIntegration:
         assert len(not_found) == 1
 
     def test_clear_and_rerecord(self) -> None:
-        client = mock_vendor("sumsub_kyc")
+        client = mock_vendor("stripe_payments")
         recorder = get_recorder(client.app)
-        auth_headers = {
-            "X-App-Token": "tok",
-            "X-App-Access-Ts": "0",
-            "X-App-Access-Sig": "sig",
-        }
+        auth_headers = {"Authorization": "Bearer sk_test"}
 
         client.post(
-            "/resources/applicants",
-            json={"type": "individual"},
+            "/payment_intents",
+            json={"amount": 1000, "currency": "gbp"},
             headers=auth_headers,
         )
         assert recorder.request_count == 1
@@ -410,5 +379,5 @@ class TestRecorderIntegration:
         assert recorder.request_count == 0
 
         # Make another recorded request (health endpoint is unlogged)
-        client.get("/resources/applicants/nonexistent", headers=auth_headers)
+        client.get("/payment_intents/nonexistent", headers=auth_headers)
         assert recorder.request_count == 1

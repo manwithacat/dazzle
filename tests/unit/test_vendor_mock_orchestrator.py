@@ -41,7 +41,7 @@ def _make_api(name: str, spec_inline: str | None = None) -> APISpec:
 
 class TestPackToEnvVar:
     def test_simple_name(self) -> None:
-        assert _pack_to_env_var("sumsub_kyc") == "DAZZLE_API_SUMSUB_KYC_URL"
+        assert _pack_to_env_var("companies_house_lookup") == "DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL"
 
     def test_hyphenated_name(self) -> None:
         assert _pack_to_env_var("my-vendor") == "DAZZLE_API_MY_VENDOR_URL"
@@ -59,10 +59,10 @@ class TestDiscoverPacks:
     def test_discovers_pack_refs(self) -> None:
         appspec = _make_appspec(
             _make_api("stripe", "pack:stripe_payments"),
-            _make_api("sumsub", "pack:sumsub_kyc"),
+            _make_api("companies_house", "pack:companies_house_lookup"),
         )
         packs = discover_packs_from_appspec(appspec)
-        assert packs == ["stripe_payments", "sumsub_kyc"]
+        assert packs == ["stripe_payments", "companies_house_lookup"]
 
     def test_ignores_non_pack_specs(self) -> None:
         appspec = _make_appspec(
@@ -96,29 +96,29 @@ class TestOrchestratorManual:
 
     def test_add_vendor(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        mock = orch.add_vendor("sumsub_kyc")
-        assert mock.pack_name == "sumsub_kyc"
-        assert mock.provider == "SumSub"
+        mock = orch.add_vendor("companies_house_lookup")
+        assert mock.pack_name == "companies_house_lookup"
+        assert mock.provider == "Companies House"
         assert mock.port == 19001
         assert mock.base_url == "http://127.0.0.1:19001"
-        assert mock.env_var == "DAZZLE_API_SUMSUB_KYC_URL"
+        assert mock.env_var == "DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL"
 
     def test_add_multiple_vendors_sequential_ports(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        m1 = orch.add_vendor("sumsub_kyc")
+        m1 = orch.add_vendor("companies_house_lookup")
         m2 = orch.add_vendor("stripe_payments")
         assert m1.port == 19001
         assert m2.port == 19002
 
     def test_add_vendor_explicit_port(self) -> None:
         orch = MockOrchestrator(seed=1)
-        mock = orch.add_vendor("sumsub_kyc", port=18080)
+        mock = orch.add_vendor("companies_house_lookup", port=18080)
         assert mock.port == 18080
 
     def test_add_duplicate_returns_existing(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        m1 = orch.add_vendor("sumsub_kyc")
-        m2 = orch.add_vendor("sumsub_kyc")
+        m1 = orch.add_vendor("companies_house_lookup")
+        m2 = orch.add_vendor("companies_house_lookup")
         assert m1 is m2
 
     def test_add_unknown_pack_raises(self) -> None:
@@ -128,10 +128,10 @@ class TestOrchestratorManual:
 
     def test_vendors_property(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
         orch.add_vendor("stripe_payments")
         vendors = orch.vendors
-        assert "sumsub_kyc" in vendors
+        assert "companies_house_lookup" in vendors
         assert "stripe_payments" in vendors
         assert len(vendors) == 2
 
@@ -141,11 +141,11 @@ class TestOrchestratorFromAppSpec:
 
     def test_from_appspec_discovers_packs(self) -> None:
         appspec = _make_appspec(
-            _make_api("sumsub", "pack:sumsub_kyc"),
+            _make_api("companies_house", "pack:companies_house_lookup"),
             _make_api("stripe", "pack:stripe_payments"),
         )
         orch = MockOrchestrator.from_appspec(appspec, seed=1, base_port=19001)
-        assert "sumsub_kyc" in orch.vendors
+        assert "companies_house_lookup" in orch.vendors
         assert "stripe_payments" in orch.vendors
         assert len(orch.vendors) == 2
 
@@ -160,20 +160,20 @@ class TestOrchestratorEnvInjection:
 
     def test_inject_env(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
         injected = orch.inject_env()
         try:
-            assert "DAZZLE_API_SUMSUB_KYC_URL" in injected
-            assert os.environ["DAZZLE_API_SUMSUB_KYC_URL"] == "http://127.0.0.1:19001"
+            assert "DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL" in injected
+            assert os.environ["DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL"] == "http://127.0.0.1:19001"
         finally:
             orch.clear_env()
 
     def test_clear_env(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
         orch.inject_env()
         orch.clear_env()
-        assert "DAZZLE_API_SUMSUB_KYC_URL" not in os.environ
+        assert "DAZZLE_API_COMPANIES_HOUSE_LOOKUP_URL" not in os.environ
 
 
 class TestOrchestratorApps:
@@ -181,17 +181,17 @@ class TestOrchestratorApps:
 
     def test_get_app(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
-        app = orch.get_app("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
+        app = orch.get_app("companies_house_lookup")
         client = TestClient(app)
         resp = client.get("/health")
         assert resp.status_code == 200
-        assert resp.json()["provider"] == "SumSub"
+        assert resp.json()["provider"] == "Companies House"
 
     def test_get_store(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
-        store = orch.get_store("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
+        store = orch.get_store("companies_house_lookup")
         assert store is not None
 
     def test_get_app_unknown_raises(self) -> None:
@@ -201,32 +201,28 @@ class TestOrchestratorApps:
 
     def test_health_check(self) -> None:
         orch = MockOrchestrator(seed=1, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
         orch.add_vendor("stripe_payments")
         health = orch.health_check()
-        assert health["sumsub_kyc"] is True
+        assert health["companies_house_lookup"] is True
         assert health["stripe_payments"] is True
 
     def test_multi_vendor_crud(self) -> None:
         """Test CRUD operations across multiple vendor mocks."""
         orch = MockOrchestrator(seed=42, base_port=19001)
-        orch.add_vendor("sumsub_kyc")
+        orch.add_vendor("companies_house_lookup")
         orch.add_vendor("stripe_payments")
 
-        # SumSub: create applicant
-        sumsub_client = TestClient(orch.get_app("sumsub_kyc"), raise_server_exceptions=False)
-        resp = sumsub_client.post(
-            "/resources/applicants",
-            json={"type": "individual", "email": "test@example.com"},
-            headers={
-                "X-App-Token": "tok",
-                "X-App-Access-Ts": "123",
-                "X-App-Access-Sig": "sig",
-            },
+        companies_client = TestClient(
+            orch.get_app("companies_house_lookup"), raise_server_exceptions=False
         )
-        assert resp.status_code == 201
+        resp = companies_client.get(
+            "/search/companies",
+            params={"q": "acme"},
+            headers={"Authorization": "Basic dGVzdDo="},
+        )
+        assert resp.status_code == 200
 
-        # Stripe: create payment intent
         stripe_client = TestClient(orch.get_app("stripe_payments"), raise_server_exceptions=False)
         resp = stripe_client.post(
             "/payment_intents",
@@ -236,8 +232,9 @@ class TestOrchestratorApps:
         assert resp.status_code == 201
 
         # State stores are isolated
-        sumsub_records = orch.get_store("sumsub_kyc").list("Applicant")
-        assert len(sumsub_records) == 1
+        payment_intents = orch.get_store("stripe_payments").list("PaymentIntent")
+        assert len(payment_intents) == 1
+        assert orch.get_store("companies_house_lookup") is not orch.get_store("stripe_payments")
 
 
 class TestOrchestratorLifecycle:

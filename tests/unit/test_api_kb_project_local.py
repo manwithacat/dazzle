@@ -52,14 +52,14 @@ def test_project_local_pack_discovered(tmp_path: Path) -> None:
 def test_project_local_overrides_builtin(tmp_path: Path) -> None:
     """Project-local pack overrides built-in pack with same name."""
     # Create a project-local pack with the same name as a built-in
-    pack_dir = tmp_path / ".dazzle" / "api_packs" / "sumsub"
-    _write_pack_toml(pack_dir / "sumsub_kyc.toml", "sumsub_kyc", "OverriddenSumSub")
+    pack_dir = tmp_path / ".dazzle" / "api_packs" / "stripe"
+    _write_pack_toml(pack_dir / "stripe_payments.toml", "stripe_payments", "OverriddenStripe")
 
     set_project_root(tmp_path)
-    pack = load_pack("sumsub_kyc")
+    pack = load_pack("stripe_payments")
 
     assert pack is not None
-    assert pack.provider == "OverriddenSumSub"
+    assert pack.provider == "OverriddenStripe"
 
 
 def test_builtin_packs_still_available(tmp_path: Path) -> None:
@@ -70,8 +70,9 @@ def test_builtin_packs_still_available(tmp_path: Path) -> None:
     # Built-in packs should still load
     packs = list_packs()
     names = {p.name for p in packs}
-    assert "sumsub_kyc" in names
     assert "stripe_payments" in names
+    assert "companies_house_lookup" in names
+    assert "sumsub_kyc" not in names
 
 
 def test_missing_project_dir_is_fine(tmp_path: Path) -> None:
@@ -112,4 +113,5 @@ def test_project_and_builtin_merge(tmp_path: Path) -> None:
     names = {p.name for p in packs}
 
     assert "custom_api" in names
-    assert "sumsub_kyc" in names  # built-in still present
+    assert "stripe_payments" in names
+    assert "sumsub_kyc" not in names

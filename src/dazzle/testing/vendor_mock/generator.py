@@ -35,7 +35,7 @@ def create_mock_server(
     """Create a mock FastAPI server from an API pack definition.
 
     Args:
-        pack_name: Name of the API pack (e.g. "sumsub_kyc").
+        pack_name: Name of the API pack (e.g. "stripe_payments").
         seed: Optional seed for deterministic data generation.
         auth_tokens: Optional dict of valid auth credentials for validation.
             Keys depend on auth type: 'api_key', 'token', 'secret', etc.
@@ -157,7 +157,7 @@ def _create_auth_middleware(pack: ApiPack, auth_tokens: dict[str, str] | None) -
                     return JSONResponse({"error": "Invalid token"}, status_code=401)
 
         elif auth.auth_type == "hmac":
-            # SumSub-style HMAC: X-App-Token + X-App-Access-Ts + X-App-Access-Sig
+            # Request HMAC: X-App-Token, X-App-Access-Ts, and X-App-Access-Sig.
             app_token = request.headers.get("X-App-Token")
             timestamp = request.headers.get("X-App-Access-Ts")
             signature = request.headers.get("X-App-Access-Sig")
@@ -213,7 +213,7 @@ def _path_to_fastapi(path: str) -> str:
     # Strip query string portion
     path = path.split("?")[0]
 
-    # Handle SumSub-style semicolon params: /-;key={value} → /-;key/{value}
+    # Semicolon params: /-;key={value} becomes a path parameter.
     # Convert "-;externalUserId={external_user_id}" to a path param
     path = re.sub(r"-;(\w+)=\{(\w+)\}", r"{\2}", path)
 

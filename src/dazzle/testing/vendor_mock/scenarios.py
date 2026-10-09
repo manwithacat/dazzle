@@ -1,7 +1,7 @@
 """
 Scenario engine for vendor mock edge case testing.
 
-Loads named test scenarios (e.g., "kyc_rejected", "payment_failed") that
+Loads named test scenarios (e.g., "payment_failed_insufficient") that
 override default mock behaviour with specific responses, error codes, delays,
 and sequenced multi-step flows.
 """
@@ -45,9 +45,9 @@ class Scenario:
     """A named test scenario for a vendor mock.
 
     Attributes:
-        name: Scenario identifier (e.g. "kyc_rejected").
+        name: Scenario identifier (e.g. "payment_failed_insufficient").
         description: Human-readable description.
-        vendor: API pack name (e.g. "sumsub_kyc").
+        vendor: API pack name (e.g. "stripe_payments").
         steps: Ordered list of step overrides.
     """
 
@@ -117,8 +117,8 @@ class ScenarioEngine:
         """Load and activate a named scenario.
 
         Args:
-            vendor: API pack name (e.g. "sumsub_kyc").
-            scenario_name: Scenario name (e.g. "kyc_rejected").
+            vendor: API pack name (e.g. "stripe_payments").
+            scenario_name: Scenario name (e.g. "payment_failed_insufficient").
 
         Returns:
             The loaded Scenario.
