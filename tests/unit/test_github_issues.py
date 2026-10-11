@@ -1,6 +1,5 @@
-"""Tests for GitHub issue creation helper and its integration points."""
+"""Tests for the gh CLI availability check."""
 
-import json
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -9,76 +8,7 @@ from unittest.mock import MagicMock, patch
 for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
     sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
 
-from dazzle.mcp.server.github_issues import (  # noqa: E402
-    _fallback,
-    _gh_available,
-    create_github_issue,
-)
-
-# ---------------------------------------------------------------------------
-# create_github_issue
-# ---------------------------------------------------------------------------
-
-
-class TestCreateGithubIssue:
-    def test_success_returns_url(self) -> None:
-        with (
-            patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
-            patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
-        ):
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout="https://github.com/manwithacat/dazzle/issues/42\n",
-            )
-            result = create_github_issue("title", "body", ["bug"])
-            assert result == {"url": "https://github.com/manwithacat/dazzle/issues/42"}
-
-    def test_failure_modes_return_fallback(self) -> None:
-        """Each failure mode (gh missing, gh nonzero exit, gh binary not on PATH)
-        produces a fallback result with manual_url."""
-        # gh not available
-        with patch("dazzle.mcp.server.github_issues._gh_available", return_value=False):
-            result = create_github_issue("title", "body", ["bug"])
-            assert result["fallback"] is True
-            assert "manual_url" in result
-
-        # gh available but command fails
-        with (
-            patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
-            patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
-        ):
-            mock_run.return_value = MagicMock(returncode=1, stderr="auth error")
-            assert create_github_issue("title", "body", ["bug"])["fallback"] is True
-
-        # gh binary not found at exec time
-        with (
-            patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
-            patch(
-                "dazzle.mcp.server.github_issues.subprocess.run",
-                side_effect=FileNotFoundError,
-            ),
-        ):
-            assert create_github_issue("title", "body", ["bug"])["fallback"] is True
-
-    def test_labels_passed_to_command(self) -> None:
-        with (
-            patch("dazzle.mcp.server.github_issues._gh_available", return_value=True),
-            patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
-        ):
-            mock_run.return_value = MagicMock(
-                returncode=0, stdout="https://github.com/x/y/issues/1\n"
-            )
-            create_github_issue("t", "b", ["feedback", "high"])
-            cmd = mock_run.call_args[0][0]
-            assert "--label" in cmd
-            label_indices = [i for i, v in enumerate(cmd) if v == "--label"]
-            labels = [cmd[i + 1] for i in label_indices]
-            assert labels == ["feedback", "high"]
-
-
-# ---------------------------------------------------------------------------
-# _gh_available
-# ---------------------------------------------------------------------------
+from dazzle.mcp.server.github_issues import _gh_available  # noqa: E402
 
 
 class TestGhAvailable:
@@ -101,44 +31,3 @@ class TestGhAvailable:
         ):
             mock_run.return_value = MagicMock(returncode=1, stderr="not logged in")
             assert _gh_available() is False
-
-
-# ---------------------------------------------------------------------------
-# _fallback
-# ---------------------------------------------------------------------------
-
-
-class TestFallback:
-    def test_contains_manual_url(self) -> None:
-        result = _fallback("t", "b", "owner/repo")
-        assert result["manual_url"] == "https://github.com/owner/repo/issues/new"
-        assert result["fallback"] is True
-        assert result["title"] == "t"
-        assert result["body"] == "b"
-
-
-# ---------------------------------------------------------------------------
-# Integration: create_handler
-# ---------------------------------------------------------------------------
-
-
-class TestCreateHandlerIntegration:
-    def test_includes_github_issue(self) -> None:
-        with patch("dazzle.mcp.server.github_issues._gh_available", return_value=False):
-            from dazzle.mcp.server.handlers.contribution import create_handler
-
-            result = json.loads(
-                create_handler(
-                    {
-                        "type": "feature_request",
-                        "title": "Test Feature",
-                        "description": "A test",
-                        "content": {
-                            "motivation": "Testing",
-                            "proposed_solution": "Do the thing",
-                        },
-                    }
-                )
-            )
-            assert "github_issue" in result
-            assert result["github_issue"]["fallback"] is True

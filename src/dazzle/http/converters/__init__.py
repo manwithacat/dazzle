@@ -73,8 +73,7 @@ def _convert_channels(ir_channels: list[ir.ChannelSpec]) -> list[ChannelSpec]:
 def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:
     """Convert AppSpec to BackendSpec.
 
-    Only used by the GraphQL subsystem which still requires BackendSpec.
-    All other code paths now use AppSpec directly.
+    Most code paths use AppSpec directly.
     """
     from dazzle.http.specs.backend_spec import BackendSpec
 

@@ -221,7 +221,8 @@ MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long
   counter_prior, search_commands) is the fastest orientation call.
 - **CLI process groups**: `discovery`, `e2e`, `story`, `rhythm`, `process`, `test-design`,
   `test`, `pulse`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock`,
-  `contribution`, `spec brief` — `dazzle <group> --help` or `dazzle search <keyword>`.
+  `test`, `pitch`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock` —
+  `dazzle <group> --help` or `dazzle search <keyword>`.
 
 ## Autonomous Loops (awareness)
 
@@ -246,7 +247,6 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
 |------|-----------|------|
 | Chart / report regions (`bar_chart`, `pivot_table`, `heatmap`, `funnel_chart`, `metrics`) | `docs/reference/reports.md` — display-mode per cardinality, fast vs slow path, scope-safety, `dazzle db explain-aggregate` | one scope-aware `GROUP BY` per region, never N+1 |
 | Per-persona onboarding `guide` overlays | `docs/reference/guides.md` | `tests/unit/test_example_guide_bar.py`; `dazzle ux verify --guides`; declaring guides adds `OnboardingState` to RBAC + compliance evidence — regenerate `expected/` |
-| Stakeholder specification prose (DSL → `SPECIFICATION.md`) | **spec-narrate** skill; Stage 1 is `dazzle spec brief` (also `dsl` MCP op `brief`) | `tests/unit/test_spec_narrative_claims.py`, brief golden snapshot |
 | Writing / editing `.dsl` | **dsl-authoring** skill; `docs/reference/grammar.md` | `dazzle validate` / `dazzle lint` |
 | PyPI | package `dazzle-dsl`, import name `dazzle`, console command `dazzle` | — |
 
@@ -300,7 +300,6 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **semgrep** — Diff-scoped Semgrep (python/owasp/audit) + optional Sentinel modernisation; CLI SSOT via `scripts/semgrep_diff.py`
 - **dsl-authoring** — Syntax rules, common mistakes and scope-rule forms for writing/editing Dazzle `.dsl` files
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
-- **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
 - **stems** — Reconstruct framework/package/app judgement from `stems/` before inventing structure
 - **issues** — Consumer-forced issue triage and resolution loop
 - **fuzz** — Cross-app boot and integration fuzz sweep

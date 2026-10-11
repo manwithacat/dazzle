@@ -216,11 +216,6 @@ Create new backends to generate different outputs:
   - Relationship mappings
   - Migration support
 
-- **GraphQL Backend**: Generate GraphQL schema
-  - Type definitions
-  - Resolvers
-  - Mutations for CRUD operations
-
 - **React/Next.js Frontend**: Generate UI components
   - Form components for surfaces
   - List views

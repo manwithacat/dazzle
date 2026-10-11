@@ -54,8 +54,7 @@ Higher `score` = higher residual priority for improve.
 3. **Set** `default_workspace` to that desk (not one shared mega-workspace).
 4. **Gate** access so each persona has ≥2–3 accessible product workspaces when
    auto-nav is list-heavy (nav list share).
-5. Align stories `given:` and stems with the new defaults; refresh
-   `SPECIFICATION.md` “Where work happens” + fingerprint.
+5. Align stories `given:` and stems with the new defaults.
 
 ## Warehouse Index (WI) — continuous inverse-utility gradient
 

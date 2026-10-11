@@ -1,7 +1,7 @@
 """
 the Dazzle runtime MCP tool handlers.
 
-Implementations for backend, UI, and GraphQL BFF tool calls.
+Implementations for backend, UI, and channel tool calls.
 """
 
 import functools
@@ -449,182 +449,6 @@ def _compose_workspace(args: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# GraphQL BFF Tool Implementations (v0.6)
-# =============================================================================
-
-
-def _get_graphql_schema(args: dict[str, Any]) -> str:
-    """Get the GraphQL schema from AppSpec."""
-    spec = get_state().appspec_data
-    if not spec:
-        return json.dumps(
-            {
-                "status": "no_spec",
-                "message": "No AppSpec loaded. Select a project first.",
-            }
-        )
-
-    output_format = args.get("format", "sdl")
-
-    # Try to import GraphQL support
-    try:
-        from dazzle.core.ir.appspec import AppSpec
-        from dazzle.http import convert_appspec_to_backend, format_schema, inspect_schema
-
-        # Reconstruct AppSpec and convert to BackendSpec for GraphQL generation
-        appspec = AppSpec.model_validate(spec)
-        backend_spec = convert_appspec_to_backend(appspec)
-
-        if output_format == "info":
-            info = inspect_schema(backend_spec)
-            return json.dumps(info, indent=2)
-        else:
-            sdl = format_schema(backend_spec)
-            return json.dumps(
-                {
-                    "status": "success",
-                    "format": "sdl",
-                    "schema": sdl,
-                },
-                indent=2,
-            )
-    except ImportError:
-        return json.dumps(
-            {
-                "status": "unavailable",
-                "message": "GraphQL support not available. Install with: pip install strawberry-graphql",
-            }
-        )
-
-
-def _list_graphql_types(_args: dict[str, Any] | None = None) -> str:
-    """List GraphQL types from AppSpec entities."""
-    spec = get_state().appspec_data
-    if not spec:
-        return json.dumps(
-            {
-                "status": "no_spec",
-                "message": "No AppSpec loaded. Select a project first.",
-                "types": [],
-            }
-        )
-
-    domain = spec.get("domain", {})
-    entities = domain.get("entities", [])
-    types = []
-
-    for entity in entities:
-        entity_name = entity.get("name", "Unknown")
-        fields = entity.get("fields", [])
-
-        # Map entity fields to GraphQL fields
-        graphql_fields = []
-        for field in fields:
-            field_name = field.get("name", "")
-            field_type_obj = field.get("type", {})
-            # In AppSpec dict, type is {"kind": "str", ...}
-            field_type = (
-                field_type_obj.get("kind", "str")
-                if isinstance(field_type_obj, dict)
-                else str(field_type_obj)
-            )
-            modifiers = field.get("modifiers", [])
-            is_required = "required" in modifiers or "pk" in modifiers
-
-            # Map DAZZLE types to GraphQL
-            graphql_type = _map_to_graphql_type(field_type)
-            if is_required:
-                graphql_type += "!"
-
-            graphql_fields.append({"name": field_name, "type": graphql_type})
-
-        types.append(
-            {
-                "name": entity_name,
-                "kind": "OBJECT",
-                "fields": graphql_fields,
-                "hasQuery": True,
-                "hasMutation": True,
-            }
-        )
-
-        # Add input type
-        types.append(
-            {
-                "name": f"{entity_name}Input",
-                "kind": "INPUT_OBJECT",
-                "fields": [f for f in graphql_fields if f["name"] != "id"],
-            }
-        )
-
-    return json.dumps(
-        {
-            "status": "success",
-            "types": types,
-            "hint": "Use get_graphql_schema for full SDL",
-        },
-        indent=2,
-    )
-
-
-def _map_to_graphql_type(dazzle_type: str) -> str:
-    """Map DAZZLE field types to GraphQL types."""
-    type_lower = dazzle_type.lower()
-    if type_lower.startswith("uuid"):
-        return "ID"
-    elif type_lower.startswith("str"):
-        return "String"
-    elif type_lower.startswith("int"):
-        return "Int"
-    elif type_lower.startswith("float") or type_lower.startswith("decimal"):
-        return "Float"
-    elif type_lower.startswith("bool"):
-        return "Boolean"
-    elif type_lower.startswith("datetime"):
-        return "DateTime"
-    elif type_lower.startswith("date"):
-        return "Date"
-    elif type_lower.startswith("json"):
-        return "JSON"
-    elif type_lower.startswith("enum"):
-        return "String"  # Enums are strings in simplified mapping
-    else:
-        return "String"
-
-
-def _list_adapters(_args: dict[str, Any] | None = None) -> str:
-    """List available adapter patterns for BFF layer."""
-    from .adapter_examples import ADAPTERS, SERVICE_PATTERNS
-
-    return json.dumps(
-        {
-            "status": "success",
-            "adapters": ADAPTERS,
-            "service_patterns": SERVICE_PATTERNS,
-            "hint": "Use get_adapter_guide with service_type for implementation details",
-        },
-        indent=2,
-    )
-
-
-def _get_adapter_guide(args: dict[str, Any]) -> str:
-    """Get implementation guide for a specific adapter type."""
-    from .adapter_examples import ADAPTER_GUIDES
-
-    service_type = args.get("service_type", "generic")
-    guide = ADAPTER_GUIDES.get(service_type.lower(), ADAPTER_GUIDES["generic"])
-
-    return json.dumps(
-        {
-            "status": "success",
-            "service_type": service_type,
-            "guide": guide,
-        },
-        indent=2,
-    )
-
-
-# =============================================================================
 # Channel/Messaging Tool Implementations (v0.9)
 # =============================================================================
 
@@ -836,11 +660,6 @@ def _build_dispatch_table() -> dict[str, Callable[[dict[str, Any]], str]]:
         "create_uispec_component": _create_uispec_component,
         "patch_uispec_component": _patch_uispec_component,
         "compose_workspace": _compose_workspace,
-        # GraphQL BFF tools (v0.6)
-        "get_graphql_schema": _get_graphql_schema,
-        "list_graphql_types": _list_graphql_types,
-        "list_adapters": _list_adapters,
-        "get_adapter_guide": _get_adapter_guide,
         # Channel/Messaging tools (v0.9)
         "list_channels": _list_channels,
         "get_channel_status": _get_channel_status,

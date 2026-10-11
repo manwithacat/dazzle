@@ -21,9 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = (
-    34  # v34: +duplicated_business_rule / fail_open_default / silent_control_flow counter-priors
-)
+SEED_SCHEMA_VERSION = 35  # v35: -GraphQL BFF / adapter patterns (flense ship C)
 
 
 def compute_seed_version() -> str:

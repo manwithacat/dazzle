@@ -56,8 +56,6 @@ after a full `ci.yml` matrix. Script: `scripts/ship_surface.py`.
 | Step | CI failure class |
 |------|------------------|
 | `bandit -r src/ --severity-level medium` | lint job B3xx (e.g. B324 hashlib) |
-| `test_example_spec_bar` | example DSL without SPECIFICATION.md regen |
-| `test_spec_narrative_brief_snapshot` | simple_task brief golden |
 | `pattern_count` meta tests | patterns.toml `[meta].pattern_count` |
 | `test_no_new_ir_field_orphans` | IR reader baseline |
 | golden IR snapshot | `test_simple_dsl_to_ir_snapshot` |

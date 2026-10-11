@@ -1,6 +1,6 @@
 """Lifecycle identification for founder-spec analysis (agent cognition).
 
-Pure helpers used by ``spec_analyze.identify_lifecycles`` and domain extract.
+Pure helpers used by ``spec_analyze.identify_lifecycles``.
 Goals (agent-domain-prior investigation P0/P1):
 
 - Honour explicit arrow chains with underscore-safe state tokens (``in_progress``).
@@ -145,7 +145,7 @@ def _merge_template_row(patterns: dict[str, list[str]], row: dict[str, Any]) -> 
 def workflow_lifecycle_patterns() -> dict[str, list[str]]:
     """Keyword → states from inference_kb workflow_templates + builtins."""
     patterns = dict(_BUILTIN_PATTERNS)
-    toml_path = Path(__file__).resolve().parents[1] / "mcp" / "inference_kb.toml"
+    toml_path = Path(__file__).resolve().parents[2] / "inference_kb.toml"
     if not toml_path.is_file():
         return patterns
     try:

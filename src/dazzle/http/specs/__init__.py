@@ -71,7 +71,7 @@ from dazzle.http.specs.service import (
 )
 
 __all__ = [
-    # BackendSpec (used by GraphQL subsystem and tests)
+    # BackendSpec (used by converters and tests)
     "BackendSpec",
     # Entity types
     "EntitySpec",

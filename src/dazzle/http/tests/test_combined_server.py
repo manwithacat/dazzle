@@ -129,7 +129,6 @@ class TestRunBackendOnlySignature:
             "enable_dev_mode",
             "enable_auth",
             "auth_config",
-            "enable_graphql",
             "sitespec_data",
             "project_root",
             "redis_url",

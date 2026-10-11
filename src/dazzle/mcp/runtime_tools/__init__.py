@@ -9,7 +9,6 @@ Split into focused modules:
 - definitions.py - Tool definitions
 - handlers.py - Tool call handlers
 - components.py - Built-in component registry
-- adapter_examples.py - Adapter implementation examples
 """
 
 # Re-export public API

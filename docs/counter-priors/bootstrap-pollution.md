@@ -52,17 +52,13 @@ Worse than hand-authoring from the brief.
 
 ## Right shape
 
-1. **Default path:** founder brief → **`dazzle domain extract`** / `domain(extract)`
-   → AGENT_DOMAIN.md (agent audience) → `domain research` / gaps → `domain promote`
-   → knowledge concepts → hand-author DSL → validate.
-2. Rank bootstrap **below** domain intermediate and validate loop.
-3. If bootstrap is used: it writes/refreshes AGENT_DOMAIN and programs
-   **domain-first generation steps**; treat `analysis.entities` as
-   **untrusted draft**, not SSOT.
-4. **Offline path (#1631):** domain extract uses chrome-safe offline noun mining;
-   LLM `analyze-spec` times out loud (90s) — never wait on bootstrap to ship.
-5. **Research:** `domain research` may answer questions and set owner hints;
-   it refuses ungrounded nouns (no chrome invents).
+1. **Default path:** founder brief → close open questions with the founder
+   → knowledge concepts → hand-author DSL from the brief's vocabulary → validate.
+2. Rank bootstrap **below** hand-authoring and the validate loop.
+3. If bootstrap is used: treat `analysis.entities` as **untrusted draft**,
+   not SSOT; keep only nouns the founder actually uses.
+4. **Offline path (#1631):** LLM `analyze-spec` times out loud (90s) — never
+   wait on bootstrap to ship.
 
 ## Why this matters here
 

@@ -43,17 +43,17 @@ def _import_spec_analyze():
         / "server"
         / "handlers"
     )
-    # Preload sibling module used by spec_analyze (relative import; package is mocked).
-    sq_path = handlers_dir / "spec_questions.py"
-    sq_spec = importlib.util.spec_from_file_location(
-        "dazzle.mcp.server.handlers.spec_questions",
-        sq_path,
-    )
-    assert sq_spec and sq_spec.loader
-    sq_mod = importlib.util.module_from_spec(sq_spec)
-    sys.modules["dazzle.mcp.server.handlers.spec_questions"] = sq_mod
-    handlers_pkg.spec_questions = sq_mod
-    sq_spec.loader.exec_module(sq_mod)
+    # Preload sibling modules used by spec_analyze (relative imports; package is mocked).
+    for sibling in ("spec_questions", "spec_lifecycles"):
+        sib_spec = importlib.util.spec_from_file_location(
+            f"dazzle.mcp.server.handlers.{sibling}",
+            handlers_dir / f"{sibling}.py",
+        )
+        assert sib_spec and sib_spec.loader
+        sib_mod = importlib.util.module_from_spec(sib_spec)
+        sys.modules[f"dazzle.mcp.server.handlers.{sibling}"] = sib_mod
+        setattr(handlers_pkg, sibling, sib_mod)
+        sib_spec.loader.exec_module(sib_mod)
 
     module_path = handlers_dir / "spec_analyze.py"
     spec = importlib.util.spec_from_file_location(

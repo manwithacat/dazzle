@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 37 tools, 175 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 35 tools, 167 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -23,8 +23,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
 | [`demo_data`](#demo_data) | 1 | Demo data operations: get |
 | [`discovery`](#discovery) | 1 | Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score) |
-| [`domain`](#domain) | 5 | Agent-audience domain brief — the cognition draft between founder prose and DSL |
-| [`dsl`](#dsl) | 11 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
+| [`dsl`](#dsl) | 10 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec |
 | [`e2e`](#e2e) | 4 | E2E environment operations (read-only) |
 | [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
 | [`graph`](#graph) | 14 | Knowledge graph operations for codebase understanding |
@@ -46,7 +45,6 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`spec_analyze`](#spec_analyze) | 6 | Low-level narrative analysis (untrusted draft) |
 | [`status`](#status) | 7 | Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime) |
 | [`story`](#story) | 4 | Story operations: get, composition, coverage, scope_fidelity |
-| [`test_design`](#test_design) | 2 | Test design operations: get, gaps |
 | [`test_intelligence`](#test_intelligence) | 6 | Query persisted test result history |
 | [`user_management`](#user_management) | 9 | User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config |
 | [`user_profile`](#user_profile) | 4 | User profile for adaptive persona inference |
@@ -197,37 +195,11 @@ Capability discovery operations: coherence (persona-by-persona authenticated UX 
 
 ---
 
-### `domain`
-
-Agent-audience domain brief — the cognition draft between founder prose and DSL. Operations: extract (offline chrome-safe → AGENT_DOMAIN.md + agent_domain.json), show, gaps, research (answer questions / notes / grounded adds — never invent chrome), promote (DSL hand-author checklist). Prefer over bootstrap/spec_analyze as cognition draft. DSL remains runtime SSOT. CLI: dazzle domain extract|show|gaps|research|promote.
-
-**Operations (5):** `extract`, `show`, `gaps`, `research`, `promote`
-
-**Parameters:**
-
-- `spec_text` *(string)* — Founder brief text (extract)
-- `spec_path` *(string)* — Path to founder SPEC.md (extract)
-- `project_root` *(string)* — Project directory for AGENT_DOMAIN files
-- `write` *(boolean)* — Write AGENT_DOMAIN files (extract/research, default true)
-- `note` *(string)* — Research note to append (research)
-- `answer_question_id` *(string)* — Open question id to answer (research)
-- `answer_text` *(string)* — Answer body for answer_question_id (research)
-- `clear_question_id` *(string)* — Drop an open question by id (research)
-- `set_owner_field` *(string)* — Owner field hint e.g. requester (research)
-- `owner_for` *(string)* — Noun or desk name for set_owner_field (research)
-- `add_persona` *(object)* — Persona dict: label, id_hint, job, desk (research; must be in brief)
-- `add_noun` *(object)* — Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)
-- `add_spine` *(object)* — Demo spine row: persona, story, entity_hint (research)
-- `mark_hypothesis` *(string)* — Mark noun name as hypothesis (research)
-- `project_path` *(string)* — Optional absolute project path
-
----
-
 ### `dsl`
 
-DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief. 'brief' returns the deterministic stakeholder spec-brief (fact-only app facts + activated framework value-claims) consumed by the /spec-narrate skill. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.
+DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.
 
-**Operations (11):** `validate`, `list_modules`, `inspect_entity`, `inspect_surface`, `analyze`, `lint`, `get_spec`, `fidelity`, `list_fragments`, `export_frontend_spec`, `brief`
+**Operations (10):** `validate`, `list_modules`, `inspect_entity`, `inspect_surface`, `analyze`, `lint`, `get_spec`, `fidelity`, `list_fragments`, `export_frontend_spec`
 
 **Parameters:**
 
@@ -542,7 +514,7 @@ SiteSpec operations: get, validate, scaffold, coherence, review, advise. Copy op
 
 ### `spec_analyze`
 
-Low-level narrative analysis (untrusted draft). Prefer domain(operation=extract) for the agent-audience intermediate. Operations: discover_entities (extract nouns/relationships), identify_lifecycles (find state transitions), extract_personas (identify user roles), surface_rules (extract business rules), generate_questions (surface ambiguities), refine_spec (produce structured spec from all analyses). Counter-prior: bootstrap_pollution.
+Low-level narrative analysis (untrusted draft). Operations: discover_entities (extract nouns/relationships), identify_lifecycles (find state transitions), extract_personas (identify user roles), surface_rules (extract business rules), generate_questions (surface ambiguities), refine_spec (produce structured spec from all analyses). Counter-prior: bootstrap_pollution.
 
 **Operations (6):** `discover_entities`, `identify_lifecycles`, `extract_personas`, `surface_rules`, `generate_questions`, `refine_spec`
 
@@ -592,20 +564,6 @@ Story operations: get, composition, coverage, scope_fidelity. Use get with view=
 - `persona` *(string)* — Filter stories by persona/actor name (for get with view=wall)
 - `limit` *(integer)* — Max items per page (for coverage, scope_fidelity). Default: 50.
 - `offset` *(integer)* — Items to skip (for coverage, scope_fidelity). Default: 0.
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `test_design`
-
-Test design operations: get, gaps. Query test designs and identify coverage gaps.
-
-**Operations (2):** `get`, `gaps`
-
-**Parameters:**
-
-- `status_filter` *(string)* — Filter by status (for get)
-- `test_ids` *(array)* — Test design IDs to fetch full details (for get)
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---

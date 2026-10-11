@@ -144,7 +144,7 @@ def get_active_project_path() -> Path | None:
         return _state.project_root
     # In dev mode, prefer explicitly selected project over CWD.
     # select_project() sets active_project — honour that choice so
-    # sentinel/pulse/fidelity analyse the right project.
+    # sentinel/fidelity analyse the right project.
     if _state.active_project and _state.active_project in _state.available_projects:
         return _state.available_projects[_state.active_project]
     # Fall back to CWD if it has a dazzle.toml

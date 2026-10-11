@@ -195,7 +195,6 @@ class _ServeContext:
         "env",
         "ui_only",
         "backend_only",
-        "graphql",
         "workers",
         "local_assets",
         "bundle",
@@ -224,7 +223,6 @@ class _ServeContext:
         self.env: Any = None
         self.ui_only: bool = False
         self.backend_only: bool = False
-        self.graphql: bool = False
         self.workers: int | None = 1
         self.local_assets: bool | None = False
         self.bundle: bool | None = None
@@ -534,13 +532,9 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
     if ctx.enable_test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
-    if ctx.graphql:
-        typer.echo("  • GraphQL: ENABLED (/graphql endpoint)")
     typer.echo()
     typer.echo(f"API: http://{ctx.host}:{ctx.api_port}")
     typer.echo(f"Docs: http://{ctx.host}:{ctx.api_port}/docs")
-    if ctx.graphql:
-        typer.echo(f"GraphQL: http://{ctx.host}:{ctx.api_port}/graphql")
     typer.echo()
 
     run_backend_only(
@@ -550,7 +544,6 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
         enable_dev_mode=ctx.enable_dev_mode,
         enable_auth=ctx.auth_enabled,
         auth_config=ctx.mf.auth if ctx.mf and ctx.auth_enabled else None,
-        enable_graphql=ctx.graphql,
         host=ctx.host,
         sitespec_data=ctx.sitespec_data,
         project_root=ctx.project_root,
@@ -763,11 +756,6 @@ def serve_command(
         "-W",
         help="Also watch framework source files (Python, CSS, JS). Implies --watch.",
     ),
-    graphql: bool = typer.Option(
-        False,
-        "--graphql",
-        help="Enable GraphQL endpoint at /graphql (requires strawberry-graphql)",
-    ),
     database_url: str = typer.Option(
         "",
         "--database-url",
@@ -830,7 +818,6 @@ def serve_command(
         dazzle serve --api-port 9000    # API on 9000
         dazzle serve --ui-only          # Static UI only (no API)
         dazzle serve --no-test-mode     # Disable E2E test endpoints
-        dazzle serve --graphql          # Enable GraphQL at /graphql
 
     Hot reload (--watch):
         Watch DSL files for changes and auto-refresh browser.
@@ -847,7 +834,6 @@ def serve_command(
     ctx.auto_mock = auto_mock
     ctx.ui_only = ui_only
     ctx.backend_only = backend_only
-    ctx.graphql = graphql
     ctx.workers = workers
     ctx.local_assets = local_assets
     ctx.bundle = bundle

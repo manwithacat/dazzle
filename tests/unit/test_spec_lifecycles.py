@@ -1,10 +1,9 @@
-"""P0/P1 agent domain priors: lifecycle attach, arrow tokens, process candidates."""
+"""spec_analyze lifecycle priors: lifecycle attach, arrow tokens, process candidates."""
 
 from __future__ import annotations
 
-from dazzle.domain_brief import lifecycles as sl
-from dazzle.domain_brief.extract import extract_from_text
-from dazzle.domain_brief.lifecycles import identify_lifecycles
+from dazzle.mcp.server.handlers import spec_lifecycles as sl
+from dazzle.mcp.server.handlers.spec_lifecycles import identify_lifecycles
 
 
 class TestArrowChains:
@@ -88,68 +87,3 @@ class TestIdentifyLifecycles:
         )
         ids = {c["id_hint"] for c in result.get("process_candidates") or []}
         assert "approval_flow" in ids or "settlement" in ids
-
-
-class TestDomainExtractLifecyclePriors:
-    INVOICE_BRIEF = """
-# Invoice Ops
-
-A multi-tenant supplier invoice system.
-
-## Personas
-
-- Requester submits invoices for approval
-- Approver reviews and approves or rejects
-- Finance processes payment after approval
-- Auditor reviews paid invoices read-only
-
-## Entities
-
-An Invoice is a supplier bill moving through draft, submitted, approved, and paid.
-A Supplier is a vendor that bills a tenant.
-A Tenant is a customer company.
-
-Requesters submit invoices. Approvers approve. Finance pays settled invoices.
-"""
-
-    SUPPORT_BRIEF = """
-# Support Tickets
-
-A SupportTicket is a customer issue from open to resolved.
-A Comment is a note on a ticket.
-
-Agents work the queue. Managers handle escalations. Customers submit tickets and follow their own.
-"""
-
-    def test_invoice_noun_gets_lifecycle_hint(self) -> None:
-        ad = extract_from_text(self.INVOICE_BRIEF, source_path="inline")
-        by_name = {n.name: n for n in ad.nouns}
-        assert "Invoice" in by_name
-        assert by_name["Invoice"].lifecycle_hint
-
-    def test_support_ticket_gets_ticket_lifecycle(self) -> None:
-        ad = extract_from_text(self.SUPPORT_BRIEF, source_path="inline")
-        by_name = {n.name: n for n in ad.nouns}
-        assert "SupportTicket" in by_name
-        life = by_name["SupportTicket"].lifecycle_hint
-        assert life
-        assert "open" in life
-
-    def test_process_candidates_present_for_invoice(self) -> None:
-        ad = extract_from_text(self.INVOICE_BRIEF, source_path="inline")
-        ids = {p.id_hint for p in ad.process_candidates}
-        assert ids & {"approval_flow", "settlement", "escalation"}
-
-    def test_generic_user_persona_filtered_without_job(self) -> None:
-        brief = """
-# Widget App
-
-A Widget is a thing users look at in the product marketing page.
-
-A Manager assigns Widgets. A Member completes assigned Widgets.
-Manager can assign. Member can complete.
-"""
-        ad = extract_from_text(brief, source_path="inline")
-        ids = {p.id_hint for p in ad.personas}
-        assert "user" not in ids
-        assert "manager" in ids or "member" in ids

@@ -125,7 +125,6 @@ _td = _import_test_design()
 propose_persona_tests_handler = _td.propose_persona_tests_handler
 get_test_gaps_handler = _td.get_test_gaps_handler
 save_test_designs_handler = _td.save_test_designs_handler
-get_test_designs_handler = _td.get_test_designs_handler
 get_coverage_actions_handler = _td.get_coverage_actions_handler
 
 # Pure predicate from the gaps submodule (loaded via the isolation dance above).
@@ -403,72 +402,6 @@ class TestSaveTestDesignsHandler:
         data = json.loads(result)
 
         assert "error" in data
-
-
-class TestGetTestDesignsHandler:
-    """Tests for get_test_designs_handler."""
-
-    def test_returns_empty_for_no_designs(self, temp_project) -> None:
-        """Test handling of no test designs."""
-        result = get_test_designs_handler(temp_project, {})
-        data = json.loads(result)
-
-        assert "count" in data
-        assert data["count"] == 0
-
-    def test_filters_by_status(self, temp_project) -> None:
-        """Test filtering test designs by status."""
-        # First save a design
-        designs = [
-            {
-                "test_id": "TD-001",
-                "title": "Test Design",
-                "description": "Test",
-                "persona": "admin",
-                "trigger": "user_click",
-                "steps": [{"action": "click", "target": "button"}],
-                "expected_outcomes": ["Success"],
-                "entities": ["Task"],
-                "tags": [],
-                "status": "accepted",
-            }
-        ]
-        save_test_designs_handler(temp_project, {"designs": designs})
-
-        # Get only accepted designs
-        result = get_test_designs_handler(temp_project, {"status_filter": "accepted"})
-        data = json.loads(result)
-
-        assert data["count"] == 1
-
-    def test_returns_full_details_for_test_ids(self, temp_project) -> None:
-        """Test getting full test design details by ID."""
-        # First save a design
-        designs = [
-            {
-                "test_id": "TD-001",
-                "title": "Test Design",
-                "description": "Detailed description",
-                "persona": "admin",
-                "trigger": "user_click",
-                "steps": [{"action": "click", "target": "button"}],
-                "expected_outcomes": ["Success"],
-                "entities": ["Task"],
-                "tags": ["important"],
-                "status": "proposed",
-            }
-        ]
-        save_test_designs_handler(temp_project, {"designs": designs})
-
-        result = get_test_designs_handler(temp_project, {"test_ids": ["TD-001"]})
-        data = json.loads(result)
-
-        assert data["count"] == 1
-        # Response may use 'designs' or 'test_designs' key
-        designs_list = data.get("test_designs") or data.get("designs") or []
-        design = designs_list[0]
-        # Full details should include description
-        assert "description" in design
 
 
 class TestStateTransitionFlowCovered:

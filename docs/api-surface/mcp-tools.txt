@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 38 tools
+# Count: 36 tools
 
 tool: agent
   description_hash: 644a118f9248
@@ -381,92 +381,9 @@ tool: discovery
     "type": "object"
   }
 
-tool: domain
-  description_hash: 356f2239b3d8
-  description_len: 421
-  {
-    "properties": {
-      "add_noun": {
-        "description": "Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)",
-        "type": "object"
-      },
-      "add_persona": {
-        "description": "Persona dict: label, id_hint, job, desk (research; must be in brief)",
-        "type": "object"
-      },
-      "add_spine": {
-        "description": "Demo spine row: persona, story, entity_hint (research)",
-        "type": "object"
-      },
-      "answer_question_id": {
-        "description": "Open question id to answer (research)",
-        "type": "string"
-      },
-      "answer_text": {
-        "description": "Answer body for answer_question_id (research)",
-        "type": "string"
-      },
-      "clear_question_id": {
-        "description": "Drop an open question by id (research)",
-        "type": "string"
-      },
-      "mark_hypothesis": {
-        "description": "Mark noun name as hypothesis (research)",
-        "type": "string"
-      },
-      "note": {
-        "description": "Research note to append (research)",
-        "type": "string"
-      },
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "extract",
-          "show",
-          "gaps",
-          "research",
-          "promote"
-        ],
-        "type": "string"
-      },
-      "owner_for": {
-        "description": "Noun or desk name for set_owner_field (research)",
-        "type": "string"
-      },
-      "project_path": {
-        "description": "Optional absolute project path",
-        "type": "string"
-      },
-      "project_root": {
-        "description": "Project directory for AGENT_DOMAIN files",
-        "type": "string"
-      },
-      "set_owner_field": {
-        "description": "Owner field hint e.g. requester (research)",
-        "type": "string"
-      },
-      "spec_path": {
-        "description": "Path to founder SPEC.md (extract)",
-        "type": "string"
-      },
-      "spec_text": {
-        "description": "Founder brief text (extract)",
-        "type": "string"
-      },
-      "write": {
-        "description": "Write AGENT_DOMAIN files (extract/research, default true)",
-        "type": "boolean"
-      }
-    },
-    "required": [
-      "operation"
-    ],
-    "type": "object"
-  }
-
 tool: dsl
-  description_hash: 800dd35f88b8
-  description_len: 543
+  description_hash: f031b49924ad
+  description_len: 385
   {
     "properties": {
       "entities": {
@@ -515,8 +432,7 @@ tool: dsl
           "get_spec",
           "fidelity",
           "list_fragments",
-          "export_frontend_spec",
-          "brief"
+          "export_frontend_spec"
         ],
         "type": "string"
       },
@@ -1452,8 +1368,8 @@ tool: sitespec
   }
 
 tool: spec_analyze
-  description_hash: b2b8157a09d8
-  description_len: 439
+  description_hash: bb7b64131c43
+  description_len: 369
   {
     "properties": {
       "active_capabilities": {
@@ -1634,49 +1550,6 @@ tool: story
           "wall"
         ],
         "type": "string"
-      }
-    },
-    "required": [
-      "operation"
-    ],
-    "type": "object"
-  }
-
-tool: test_design
-  description_hash: e81d17dc5311
-  description_len: 81
-  {
-    "properties": {
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "get",
-          "gaps"
-        ],
-        "type": "string"
-      },
-      "project_path": {
-        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
-        "type": "string"
-      },
-      "status_filter": {
-        "description": "Filter by status (for get)",
-        "enum": [
-          "all",
-          "proposed",
-          "accepted",
-          "implemented",
-          "verified",
-          "rejected"
-        ],
-        "type": "string"
-      },
-      "test_ids": {
-        "description": "Test design IDs to fetch full details (for get)",
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
       }
     },
     "required": [

@@ -4,6 +4,7 @@
   "approvals.ApprovalEscalationSpec.to_role",
   "approvals.ApprovalOutcomeSpec.target_status",
   "approvals.ApprovalSpec.auto_approve",
+  "approvals.ApprovalSpec.quorum",
   "appspec.AppSpec.hless_mode",
   "domain.BulkConfig.export_enabled",
   "domain.BulkConfig.formats",

@@ -100,25 +100,6 @@ def select_packs(paths: list[str]) -> list[Pack]:
     def any_glob_substr(*subs: str) -> bool:
         return any(any(s in p for s in subs) for p in paths)
 
-    example_dsl = [
-        p for p in paths if p.startswith("examples/") and ("/dsl/" in p or p.endswith(".dsl"))
-    ]
-    if example_dsl or any(
-        p.startswith("examples/") and p.endswith("SPECIFICATION.md") for p in paths
-    ):
-        apps = sorted(
-            {p.split("/")[1] for p in paths if p.startswith("examples/") and "/" in p[9:]}
-        )
-        packs.append(
-            Pack(
-                name="examples-spec",
-                reason=f"example DSL/SPEC touch ({', '.join(apps[:6])}{'…' if len(apps) > 6 else ''})",
-                pytest=[
-                    "tests/unit/test_example_spec_bar.py",
-                ],
-            )
-        )
-
     if any_prefix("src/dazzle/mcp/semantics_kb/") or any(
         p.endswith("patterns.toml") for p in paths
     ):
@@ -262,17 +243,6 @@ def select_packs(paths: list[str]) -> list[Pack]:
                 name="example-eval-hub",
                 reason="example eval hub / registry name collision",
                 pytest=["tests/unit/test_example_eval_hub.py"],
-            )
-        )
-
-    if any_prefix("src/dazzle/spec_narrative/") or any(
-        "spec_brief_simple_task" in p for p in paths
-    ):
-        packs.append(
-            Pack(
-                name="spec-brief",
-                reason="spec narrative / brief baseline",
-                pytest=["tests/unit/test_spec_narrative_brief_snapshot.py"],
             )
         )
 

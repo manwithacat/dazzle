@@ -148,7 +148,7 @@ dazzle rbac verify                             # Verify runtime matches matrix
 - /architecture/mcp-server/ — MCP tool integration
 - /architecture/event-semantics/ — PostgreSQL event system
 
-## MCP Tools (26 tools, 170+ operations)
+## MCP Tools (25 tools, 170+ operations)
 
 When connected via Claude Code, these tools are available:
 
@@ -158,7 +158,6 @@ When connected via Claude Code, these tools are available:
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas | Spec → DSL |
 | `dsl` | validate, lint, inspect_entity, inspect_surface, fidelity | Validation |
 | `story` | propose, save, get, coverage | Stories & Testing |
-| `test_design` | propose_persona, gaps, auto_populate, improve_coverage | Stories & Testing |
 | `test_intelligence` | summary, failures, regression, coverage, context | Stories & Testing |
 | `rhythm` | propose, evaluate, coverage, get, list | Stories & Testing |
 | `demo_data` | propose, save, get, generate | Stories & Testing |

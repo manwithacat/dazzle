@@ -49,9 +49,7 @@
   "exact:9019995c79e9b03f6010f8db15b37c10": "naming-and-slug-helpers",
   "exact:943b526cb590ff48fbf3c77135106b8d": "cli-entrypoint-scaffolding",
   "exact:9606fef27dee2ecc44bcb01264301f98": "per-module-sql-and-connection-helpers",
-  "exact:9ad220736a31b37d6d9259d717369e3d": "naming-and-slug-helpers",
   "exact:9c015c0dc1d0335634c39fa1598d3d63": "dataclass-and-store-boilerplate",
-  "exact:9ced59e09a1dff655eea673a3dd377cc": "predicate-and-type-resolution",
   "exact:9fed46369caf6cca1b8be96f01aa84fa": "auth-domain-and-connection-helpers",
   "exact:a0b61b5525770e33703711db0c73ed03": "cli-entrypoint-scaffolding",
   "exact:a260340dad02293e416fb010f1a177b9": "cell-and-label-formatters",
@@ -102,6 +100,5 @@
   "exact:f8c4caad76a00b8e860dbc971b866eb9": "dataclass-and-store-boilerplate",
   "exact:f9143004466b041d84066d35ec87c367": "module-singleton-resolvers",
   "exact:faa745ef6d2a5a29be4f696f4e70f594": "dataclass-and-store-boilerplate",
-  "exact:fb48fdc89cb00cff6c89fde7cbdfa9a0": "module-singleton-resolvers",
-  "exact:fe0a9e72aa37976378c0cef9275732b4": "naming-and-slug-helpers"
+  "exact:fb48fdc89cb00cff6c89fde7cbdfa9a0": "module-singleton-resolvers"
 }

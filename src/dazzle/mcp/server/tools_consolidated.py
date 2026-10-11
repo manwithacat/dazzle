@@ -71,7 +71,7 @@ def _tool_dsl() -> Tool:
     """DSL operations (replaces 7 tools)."""
     return Tool(
         name="dsl",
-        description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief. 'brief' returns the deterministic stakeholder spec-brief (fact-only app facts + activated framework value-claims) consumed by the /spec-narrate skill. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
+        description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec. NOTE: export_frontend_spec produces a LARGE output intended for human developers migrating away from Dazzle — always use 'sections' and/or 'entities' filters to avoid flooding context. Prefer inspect_entity/inspect_surface for LLM queries.",
         input_schema={
             "type": "object",
             "properties": {
@@ -88,7 +88,6 @@ def _tool_dsl() -> Tool:
                         "fidelity",
                         "list_fragments",
                         "export_frontend_spec",
-                        "brief",
                     ],
                     "description": "Operation to perform",
                 },
@@ -389,46 +388,6 @@ def _tool_feedback() -> Tool:
                 },
                 "assigned_to": {"type": "string", "description": "Assign to (triage only)"},
                 "resolved_by": {"type": "string", "description": "Who resolved (resolve only)"},
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_test_design() -> Tool:
-    """Test design (replaces 7 tools + 2 new autonomous operations)."""
-    return Tool(
-        name="test_design",
-        description="Test design operations: get, gaps. Query test designs and identify coverage gaps.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "get",
-                        "gaps",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "status_filter": {
-                    "type": "string",
-                    "enum": [
-                        "all",
-                        "proposed",
-                        "accepted",
-                        "implemented",
-                        "verified",
-                        "rejected",
-                    ],
-                    "description": "Filter by status (for get)",
-                },
-                "test_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Test design IDs to fetch full details (for get)",
-                },
                 **PROJECT_PATH_SCHEMA,
             },
             "required": ["operation"],
@@ -1010,98 +969,12 @@ def _tool_bootstrap() -> Tool:
     )
 
 
-def _tool_domain() -> Tool:
-    """Agent-audience domain brief (cognition draft before DSL)."""
-    return Tool(
-        name="domain",
-        description=(
-            "Agent-audience domain brief — the cognition draft between founder prose and DSL. "
-            "Operations: extract (offline chrome-safe → AGENT_DOMAIN.md + agent_domain.json), "
-            "show, gaps, research (answer questions / notes / grounded adds — never invent chrome), "
-            "promote (DSL hand-author checklist). Prefer over bootstrap/spec_analyze as cognition "
-            "draft. DSL remains runtime SSOT. CLI: dazzle domain extract|show|gaps|research|promote."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["extract", "show", "gaps", "research", "promote"],
-                    "description": "Operation to perform",
-                },
-                "spec_text": {
-                    "type": "string",
-                    "description": "Founder brief text (extract)",
-                },
-                "spec_path": {
-                    "type": "string",
-                    "description": "Path to founder SPEC.md (extract)",
-                },
-                "project_root": {
-                    "type": "string",
-                    "description": "Project directory for AGENT_DOMAIN files",
-                },
-                "write": {
-                    "type": "boolean",
-                    "description": "Write AGENT_DOMAIN files (extract/research, default true)",
-                },
-                "note": {
-                    "type": "string",
-                    "description": "Research note to append (research)",
-                },
-                "answer_question_id": {
-                    "type": "string",
-                    "description": "Open question id to answer (research)",
-                },
-                "answer_text": {
-                    "type": "string",
-                    "description": "Answer body for answer_question_id (research)",
-                },
-                "clear_question_id": {
-                    "type": "string",
-                    "description": "Drop an open question by id (research)",
-                },
-                "set_owner_field": {
-                    "type": "string",
-                    "description": "Owner field hint e.g. requester (research)",
-                },
-                "owner_for": {
-                    "type": "string",
-                    "description": "Noun or desk name for set_owner_field (research)",
-                },
-                "add_persona": {
-                    "type": "object",
-                    "description": "Persona dict: label, id_hint, job, desk (research; must be in brief)",
-                },
-                "add_noun": {
-                    "type": "object",
-                    "description": "Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)",
-                },
-                "add_spine": {
-                    "type": "object",
-                    "description": "Demo spine row: persona, story, entity_hint (research)",
-                },
-                "mark_hypothesis": {
-                    "type": "string",
-                    "description": "Mark noun name as hypothesis (research)",
-                },
-                "project_path": {
-                    "type": "string",
-                    "description": "Optional absolute project path",
-                },
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_spec_analyze() -> Tool:
     """Spec analyze (individual cognition operations)."""
     return Tool(
         name="spec_analyze",
         description=(
-            "Low-level narrative analysis (untrusted draft). Prefer domain(operation=extract) "
-            "for the agent-audience intermediate. Operations: "
+            "Low-level narrative analysis (untrusted draft). Operations: "
             "discover_entities (extract nouns/relationships), "
             "identify_lifecycles (find state transitions), "
             "extract_personas (identify user roles), "
@@ -1962,8 +1835,8 @@ def get_consolidated_tools() -> list[Tool]:
     """
     Get consolidated tools (knowledge/query operations only).
 
-    Process operations (dsl_test, e2e_test, nightly, pipeline, pulse,
-    contribution) are available via CLI commands instead.
+    Process operations (dsl_test, e2e_test, pipeline, test-design) are
+    available via CLI commands instead.
 
     Each tool uses an 'operation' enum to specify the action, preserving
     discoverability while reducing schema overhead.
@@ -1977,7 +1850,6 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_rhythm(),
         _tool_demo_data(),
         _tool_feedback(),
-        _tool_test_design(),
         _tool_sitespec(),
         _tool_semantics(),
         _tool_process(),
@@ -1989,7 +1861,6 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_agent(),
         _tool_representation(),
         _tool_presentation(),
-        _tool_domain(),
         _tool_spec_analyze(),
         _tool_graph(),
         _tool_discovery(),

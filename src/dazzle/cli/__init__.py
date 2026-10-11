@@ -274,13 +274,11 @@ from dazzle.cli.clean import clean_app  # noqa: E402
 from dazzle.cli.compliance import compliance_app  # noqa: E402
 from dazzle.cli.composition import composition_app  # noqa: E402
 from dazzle.cli.conformance import conformance_app  # noqa: E402
-from dazzle.cli.contribution import contribution_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.discovery import discovery_app  # noqa: E402
 from dazzle.cli.docs import docs_app  # noqa: E402
-from dazzle.cli.domain_cli import domain_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.feedback import feedback_app  # noqa: E402
@@ -291,13 +289,11 @@ from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.mock import mock_app  # noqa: E402
-from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.param import param_app  # noqa: E402
 from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
 from dazzle.cli.prove import prove_app  # noqa: E402
-from dazzle.cli.pulse import pulse_app  # noqa: E402
 from dazzle.cli.qa import qa_app  # noqa: E402
 from dazzle.cli.quality import quality_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
@@ -327,11 +323,9 @@ app.add_typer(compliance_app, name="compliance")
 app.add_typer(conformance_app, name="conformance")
 app.add_typer(backup_app, name="backup")
 app.add_typer(composition_app, name="composition")
-app.add_typer(contribution_app, name="contribution")
 app.add_typer(clean_app, name="clean")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
-app.add_typer(domain_app, name="domain")
 app.add_typer(discovery_app, name="discovery")
 app.add_typer(feedback_app, name="feedback")
 app.add_typer(fitness_app, name="fitness")
@@ -356,10 +350,8 @@ app.add_typer(events_app, name="events")
 app.add_typer(dlq_app, name="dlq")
 app.add_typer(outbox_app, name="outbox")
 app.add_typer(migrate_app, name="process-migrate")
-app.add_typer(nightly_app, name="nightly")
 app.add_typer(pipeline_app, name="pipeline")
 app.add_typer(perf_app, name="perf")
-app.add_typer(pulse_app, name="pulse")
 app.add_typer(quality_app, name="quality")
 app.add_typer(rbac_app, name="rbac")
 app.add_typer(kg_app, name="kg")

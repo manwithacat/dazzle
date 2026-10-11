@@ -207,7 +207,7 @@ def test_no_inline_currency_minor_unit_scale() -> None:
 _WRONG_DIST = re.compile(r"\bdazzle\[")
 _EXTRA_NAMES = (
     "temporal|redis|kafka|rabbitmq|llm|pitch|tigerbeetle|aws|aws-test|i18n|serve|"
-    "sendgrid|sso|proof|graphql|compliance|events|signing|mobile|mobile_full|"
+    "sendgrid|sso|proof|compliance|events|signing|mobile|mobile_full|"
     "viewport|social_auth|postgres|test|test-full|dev"
 )
 

@@ -212,8 +212,7 @@ def _build_next_steps(report: Any) -> list[str]:
     if report.overall < 0.5:
         steps.append("Critical: Many surfaces have structural issues. Fix missing elements first.")
         steps.append(
-            "If this looks like a Dazzle bug, file it: "
-            "`contribution(operation='create', type='bug_fix')`"
+            "If this looks like a Dazzle bug, file it: `gh issue create --repo manwithacat/dazzle`"
         )
     elif report.overall < 0.8:
         steps.append("Fix major gaps to improve fidelity above 0.8.")

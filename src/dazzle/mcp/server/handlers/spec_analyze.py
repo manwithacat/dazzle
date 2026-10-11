@@ -18,9 +18,9 @@ import re
 from typing import Any
 
 from dazzle.core.capabilities.cognition import enable_suggestion
-from dazzle.domain_brief.lifecycles import identify_lifecycles as _identify_lifecycles_core
 
 from .common import error_response, extract_progress, unknown_op_response
+from .spec_lifecycles import identify_lifecycles as _identify_lifecycles_core
 from .spec_questions import (
     bilateral_review_signal,
     build_clarification_questions,

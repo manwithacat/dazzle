@@ -121,10 +121,9 @@ empty work here** — confirm-and-close, do not budget for it.
 
 ```
 src/dazzle/http/runtime/route_generator.py:191, 2006, 2059, 4281, 4308
-src/dazzle/http/graphql/integration.py:323, 361, 394
 ```
 
-These dynamically build FastAPI/GraphQL handler signatures by **setting** `fn.__annotations__ = {…}`. Under PEP 649
+These dynamically build FastAPI handler signatures by **setting** `fn.__annotations__ = {…}`. Under PEP 649
 (3.14) deferred annotations, *assigning* a plain dict still works; the interaction to verify is whether FastAPI's
 own annotation *reading* of these synthetic handlers changes. **Classify as "review on 3.14," not "broken."**
 `typing.get_args/get_origin`: 6 sites (static-analysis paths; low risk).

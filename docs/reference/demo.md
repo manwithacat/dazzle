@@ -114,9 +114,9 @@ CI residual does not prove stills — re-run recapture after seed changes.
 Closed-loop workflow from cold project to persona stills without tribal SQL.
 
 **Steps:**
-1. Founder brief → `dazzle domain extract` (AGENT_DOMAIN.md — agent audience)
-2. `dazzle domain gaps` + `dazzle domain research` — answer open_questions; no chrome invents
-3. `dazzle domain promote` when ready → hand-author DSL (STABLE persona ids)
+1. Read the founder brief; `bootstrap` / `spec_analyze` output is an untrusted draft
+2. Close open questions with the founder; no chrome invents
+3. Hand-author DSL from the brief's vocabulary (STABLE persona ids)
 4. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
 5. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
 6. **Re-read runtime.json** (ports/secret/database_url may change)
@@ -125,18 +125,15 @@ Closed-loop workflow from cold project to persona stills without tribal SQL.
 9. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
 10. `status(operation=demo_world)` / `dazzle demo quality` for residual
 
-**MCP:** domain, knowledge, status demo_world, product_quality.
-**CLI writes:** domain extract, serve, reset-and-load, capture.
+**MCP:** knowledge, status demo_world, product_quality.
+**CLI writes:** serve, reset-and-load, capture.
 **Do not** use bootstrap entities as SSOT (bootstrap_pollution).
 
 ### Syntax
 
 ```dsl
-dazzle domain extract -p ./app
-dazzle domain gaps -p ./app
-dazzle domain research -p ./app --answer q_owner=requester binds desks
-dazzle domain promote -p ./app
-# hand-author DSL from AGENT_DOMAIN, then:
+# hand-author DSL from the founder brief, then:
+dazzle validate -p ./app
 dazzle serve --project ./app
 dazzle demo reset-and-load --project ./app -y
 ```
@@ -145,55 +142,26 @@ dazzle demo reset-and-load --project ./app -y
 
 - workflow: knowledge(operation='workflow', workflow='first_principles_demo')
 - Always load demo_ops from agent context or status(demo_world)
-- domain extract → research → promote before entity blocks
-- bootstrap instructions are domain-first; ignore analysis.entities as SSOT
+- close founder questions before entity blocks
+- ignore bootstrap analysis.entities as SSOT
 
-**Related:** [Demo Identity](demo.md#demo-identity), [Empty Desk False Green](demo.md#empty-desk-false-green), [Workspace Region Filters](workspaces.md#workspace-region-filters), [Agent Domain](demo.md#agent-domain), [Bootstrap Pollution](demo.md#bootstrap-pollution)
-
----
-
-## Agent Domain
-
-**AGENT_DOMAIN** is the agent-audience intermediate between founder prose and DSL.
-
-| Audience | Artifact |
-|----------|----------|
-| Human founder | SPEC.md / chat brief |
-| AI agent | AGENT_DOMAIN.md + agent_domain.json |
-| Runtime | *.dsl (validate/serve SSOT) |
-| Investor | SPECIFICATION.md (from DSL via spec brief) |
-
-Rules: grounded nouns only; hypotheses explicit; no chrome entities; research
-into open_questions/research_notes via `domain research`. Promote only when
-`dazzle domain promote` is ready. CLI: `dazzle domain extract|show|gaps|research|promote`.
-MCP: `domain(operation=…)`.
-
-### Best Practices
-
-- domain extract before bootstrap entities
-- domain research for answers/owners — never invent chrome nouns
-- knowledge counter_prior bootstrap_pollution
-- Never invent entity names not in founder vocabulary
-
-**Related:** [First Principles Demo](demo.md#first-principles-demo), [Bootstrap Pollution](demo.md#bootstrap-pollution), [Demo Identity](demo.md#demo-identity)
+**Related:** [Demo Identity](demo.md#demo-identity), [Empty Desk False Green](demo.md#empty-desk-false-green), [Workspace Region Filters](workspaces.md#workspace-region-filters), [Bootstrap Pollution](demo.md#bootstrap-pollution)
 
 ---
 
 ## Bootstrap Pollution
 
 Do **not** use bootstrap / analyze-spec / discover_entities as the default
-SPEC→DSL path. Prefer founder brief → domain extract → gaps/promote →
+SPEC→DSL path. Prefer founder brief → close open questions →
 hand-author DSL → validate. Treat bootstrap analysis.entities as untrusted.
-Offline chrome-safe extract (#1631); domain intermediate is the cognition draft.
 Counter-prior: bootstrap_pollution.
 
 ### Best Practices
 
-- Rank bootstrap below domain intermediate + validate loop
+- Rank bootstrap below hand-authoring + validate loop
 - knowledge counter_prior bootstrap_pollution
-- Prefer dazzle domain extract over bootstrap entities
 
-**Related:** [First Principles Demo](demo.md#first-principles-demo), [Agent Domain](demo.md#agent-domain), [Demo Identity](demo.md#demo-identity)
+**Related:** [First Principles Demo](demo.md#first-principles-demo), [Demo Identity](demo.md#demo-identity)
 
 ---
 

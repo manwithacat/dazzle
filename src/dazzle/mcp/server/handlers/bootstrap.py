@@ -182,24 +182,6 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             seen_names.add(name)
             clean_entities.append(e)
 
-    # Agent-audience domain intermediate (preferred cognition path)
-    agent_domain_payload: dict[str, Any] | None = None
-    try:
-        from dazzle.domain_brief import extract_from_text, save_domain, score_gaps
-
-        if work_dir is not None:
-            ad = extract_from_text(spec_text, source_path=spec_source)
-            paths = save_domain(work_dir, ad)
-            agent_domain_payload = {
-                "written": paths,
-                "gaps": score_gaps(ad).to_dict(),
-                "title": ad.title,
-                "personas": len(ad.personas),
-                "grounded_nouns": len([n for n in ad.nouns if n.status == "grounded"]),
-            }
-    except Exception as exc:  # noqa: BLE001 — best-effort; bootstrap must not fail
-        agent_domain_payload = {"ok": False, "error": str(exc)[:200]}
-
     briefing = {
         "status": "analyzed",
         "spec_source": spec_source,
@@ -218,29 +200,23 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             "representation_decision": representation_decision,
             # #1631 — offline extract is draft
             "extract_mode": entities_result.get("extract_mode", "offline_deterministic"),
-            # Agent-domain intermediate (preferred over analysis.entities)
-            "agent_domain": agent_domain_payload,
         },
         "clarification_needed": has_questions,
         "questions": questions,
         "warnings": [
             (
                 "bootstrap_pollution: analysis.entities is untrusted draft. "
-                "Prefer AGENT_DOMAIN (domain extract) → research gaps → promote checklist "
-                "→ hand-author DSL → validate. Counter-prior: bootstrap_pollution."
+                "Close open questions with the founder → hand-author DSL from the brief's "
+                "own vocabulary → validate. Counter-prior: bootstrap_pollution."
             ),
-            (
-                "Default path: dazzle domain extract | domain(operation=extract) → "
-                "domain gaps/promote → knowledge concepts → DSL. Do not invent chrome entities."
-            ),
+            "Do not invent chrome entities (Optional, Field, Display, …).",
         ],
         "agent_instructions": _build_instructions(
             has_questions, questions, representation_decision
         ),
         "preferred_next": [
-            "domain(operation='show') or read AGENT_DOMAIN.md",
-            "domain(operation='research') / gaps — close open questions in the domain doc",
-            "domain(operation='promote') when ready — then hand-author DSL",
+            "Ask the founder the questions below — do not guess answers",
+            "Hand-author DSL from nouns and roles the founder actually uses",
             "knowledge(operation='concept') for entity/persona/workspace syntax",
             "dsl.validate loop — never trust bootstrap entities as SSOT",
         ],
@@ -280,39 +256,31 @@ def _representation_instruction_bits(
     ]
 
 
-def _domain_first_generation_steps(
+def _generation_steps(
     rep_bits: list[str],
 ) -> list[str]:
-    """Domain-first DSL authoring — AGENT_DOMAIN is cognition draft; DSL is SSOT."""
+    """Brief-first DSL authoring — analysis is an untrusted draft; DSL is SSOT."""
     return [
-        # --- Domain intermediate (before DSL) ---
+        # --- Founder brief (before DSL) ---
         (
-            "0a. Read AGENT_DOMAIN (domain show / AGENT_DOMAIN.md). "
-            "analysis.entities is untrusted draft — do not author DSL from it "
-            "(counter-prior bootstrap_pollution)."
+            "0a. Re-read the founder brief. analysis.entities is untrusted draft — "
+            "do not author DSL from it (counter-prior bootstrap_pollution)."
         ),
         (
-            "0b. Close domain gaps: domain(operation='research') or dazzle domain research "
-            "for open_questions / owner hints / demo spine. Never invent chrome nouns."
-        ),
-        (
-            "0c. domain(operation='promote') must be ready before entity blocks. "
-            "Follow promote checklist; STABLE persona ids only."
+            "0b. Close open questions with the founder (owners, lifecycles, who sees "
+            "what). Never invent chrome nouns."
         ),
         # --- Structure ---
         "1. Create dsl/ directory if it doesn't exist",
         "2. Generate module header with app name and description",
         (
-            "3. Define personas from AGENT_DOMAIN personas (STABLE id_hint + human title) "
-            "with default_workspace = desk names from domain.desks"
+            "3. Define personas from the roles the brief names (STABLE ids + human "
+            "title) with default_workspace = the desk each role works from"
         ),
         # --- Data model ---
-        (
-            "4. Author entities for AGENT_DOMAIN grounded nouns only "
-            "(never rejected_chrome; never analysis.entities chrome)"
-        ),
+        ("4. Author entities for nouns the brief grounds (never analysis.entities chrome)"),
         *rep_bits,
-        "5. Add state machines where domain.nouns[].lifecycle_hint is non-empty",
+        "5. Add state machines where analysis.lifecycles matches the brief",
         (
             "6. If spec mentions third-party services (payments, email, identity, etc.), "
             "call api_pack(operation='search', query=<vendor>) to check for existing "
@@ -333,7 +301,7 @@ def _domain_first_generation_steps(
             "sees, not whether they may access the endpoint. Use field conditions with "
             "an as: clause naming the persona(s) the rule binds to: "
             "'scope: school = current_user.school as: teacher'. "
-            "Bind current_user using domain owner_field_hint values. "
+            "Bind current_user to the owner field the founder confirmed. "
             "Every role permitted in step 7a MUST have a matching scope: rule unless "
             "the intent is to grant unrestricted row access, in which case use "
             "'scope: all as: admin'. The '*' wildcard grants all rows to all "
@@ -356,12 +324,12 @@ def _domain_first_generation_steps(
             "Use knowledge(operation='concept', term='ux_block') for syntax"
         ),
         (
-            "10. Create workspaces/desks from AGENT_DOMAIN desks with "
-            "access: persona() and filters using owner_field_hint + current_user"
+            "10. Create workspaces/desks per persona job with "
+            "access: persona() and filters using the owner field + current_user"
         ),
         # --- Seeds ---
         (
-            "10b. Seed demo_spine stories under dsl/seeds/demo_data using "
+            "10b. Seed the brief's core stories under dsl/seeds/demo_data using "
             "STABLE_PERSONA_USER_IDS (knowledge concept demo_identity)"
         ),
         # --- Validation gates ---
@@ -409,10 +377,9 @@ def _domain_first_generation_steps(
 
 def _dsl_generation_rules() -> list[str]:
     return [
-        "SSOT chain: founder brief → AGENT_DOMAIN (cognition) → hand-author DSL (runtime) "
-        "→ SPECIFICATION.md is investor prose only",
+        "SSOT chain: founder brief → hand-author DSL (runtime)",
         "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
-        "Generate only from AGENT_DOMAIN grounded nouns + promote checklist — "
+        "Generate only from nouns the brief grounds — "
         "never analysis.entities (bootstrap_pollution)",
         "Generate incrementally and validate frequently",
         (
@@ -439,9 +406,9 @@ def _build_instructions(
     questions: list[dict[str, Any]],
     representation_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the agent instruction block (domain-first)."""
+    """Build the agent instruction block (brief-first)."""
     rep_bits = _representation_instruction_bits(representation_decision)
-    steps = _domain_first_generation_steps(rep_bits)
+    steps = _generation_steps(rep_bits)
     rules = _dsl_generation_rules()
     setup = {
         "action": "Run `dazzle agent sync` to install autonomous development commands",
@@ -459,12 +426,11 @@ def _build_instructions(
             "action": "ask_questions",
             "questions_to_ask": question_texts,
             "present_as": (
-                "Before I author DSL, I need to close domain questions so "
-                "AGENT_DOMAIN stays grounded:"
+                "Before I author DSL, I need to close a few questions so the "
+                "model stays grounded in your brief:"
             ),
             "on_answers": (
-                "Record answers with domain(operation='research', answer_question_id=…, "
-                "answer_text=…) or dazzle domain research — not into bootstrap entities. "
+                "Record answers in the founder brief — not into bootstrap entities. "
                 "Optionally refine_spec for founder prose only. Then follow generation steps."
             ),
             "generation_steps": steps,

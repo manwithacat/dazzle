@@ -440,7 +440,6 @@ def run_backend_only(
     enable_dev_mode: bool = True,
     enable_auth: bool = True,
     auth_config: Any = None,
-    enable_graphql: bool = False,
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
     redis_url: str = "",
@@ -458,7 +457,6 @@ def run_backend_only(
         enable_dev_mode: Enable dev control plane
         enable_auth: Enable authentication (required for QA magic-link)
         auth_config: Manifest auth config when enable_auth is True
-        enable_graphql: Enable GraphQL endpoint at /graphql
         sitespec_data: SiteSpec data as dict for public site shell
         project_root: Project root directory for content file loading
     """
@@ -501,31 +499,6 @@ def run_backend_only(
     # Same #768 QA mount as unified serve — needed for trial-coverage / magic-link
     # against ``dazzle serve --backend-only`` (agent demos, CI harnesses).
     _mount_qa_mode_if_armed(app, appspec)
-
-    # Mount GraphQL if enabled
-    if enable_graphql:
-        try:
-            from dazzle.http import convert_appspec_to_backend
-            from dazzle.http.graphql import mount_graphql
-
-            # mount_graphql expects a BackendSpec (not AppSpec) — the
-            # function reads `spec.entities` directly, whereas AppSpec
-            # exposes entities at `appspec.domain.entities`. Without
-            # the conversion this path would raise AttributeError the
-            # moment GraphQL is enabled (the bug stayed latent because
-            # --graphql defaults to off). Match the pattern already
-            # used by dazzle.mcp.runtime_tools.handlers.
-            backend_spec = convert_appspec_to_backend(appspec)
-            mount_graphql(
-                app,
-                backend_spec,
-                services=app_builder.services,
-                repositories=app_builder.repositories,
-            )
-            graphql_url = f"http://{host}:{port}/graphql"
-            print(f"[Dazzle] GraphQL: {_clickable_url(graphql_url)}")
-        except ImportError:
-            print("[Dazzle] Warning: GraphQL not available (install strawberry-graphql)")
 
     backend_url = f"http://{host}:{port}"
     docs_url = f"{backend_url}/docs"

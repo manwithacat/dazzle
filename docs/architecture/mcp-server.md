@@ -82,22 +82,6 @@ Workflow process inspection and visualization.
 | `diagram` | Generate Mermaid diagrams (flowchart or state) |
 | `coverage` | Process coverage analysis |
 
-### test_design
-
-UX test coverage and test design management.
-
-| Operation | Purpose |
-|-----------|---------|
-| `propose_persona` | Generate tests from persona goals |
-| `gaps` | Identify untested areas |
-| `save` | Persist test designs |
-| `get` | Retrieve test designs by status |
-| `coverage_actions` | Get prioritized actions to increase coverage |
-| `runtime_gaps` | Analyze runtime coverage report |
-| `save_runtime` | Save runtime coverage report |
-| `auto_populate` | Auto-populate stories and test designs |
-| `improve_coverage` | Suggest coverage improvements |
-
 ### demo_data
 
 Generate demo and seed data from DSL.
@@ -221,18 +205,6 @@ Full deterministic quality audit in a single call.
 |-----------|---------|
 | `run` | Chain: validate, lint, fidelity, tests, coverage, semantics |
 
-### pulse
-
-Founder-ready project health report.
-
-| Operation | Purpose |
-|-----------|---------|
-| `run` | Full report with narrative and launch readiness score |
-| `radar` | Compact 6-axis readiness chart |
-| `persona` | View app through a specific persona's eyes |
-| `timeline` | Project timeline view |
-| `decisions` | Decisions needing founder input |
-
 ### composition
 
 Visual composition analysis.
@@ -274,17 +246,6 @@ RBAC access control analysis.
 | `conflicts` | Detect conflicting permissions |
 | `coverage` | Measure RBAC coverage gaps |
 | `simulate` | Simulate access for a persona/route |
-
-### contribution
-
-Package contributions for sharing.
-
-| Operation | Purpose |
-|-----------|---------|
-| `templates` | List available contribution templates |
-| `create` | Create a contribution package |
-| `validate` | Validate contribution format |
-| `examples` | Browse example contributions |
 
 ### user_management
 
@@ -330,15 +291,6 @@ Claude: [Uses dsl tool with operation=inspect_entity, name=Task]
 User: "Propose user stories for my app"
 Claude: [Uses story tool with operation=propose]
         "Generated 12 stories covering Task CRUD and status transitions..."
-```
-
-**Running quality audit:**
-
-```
-User: "How's the project health?"
-Claude: [Uses pulse tool with operation=run]
-        "Launch Readiness: 72%. Strengths: DSL coverage, API tests.
-         Gaps: Missing persona tests, 2 surfaces below fidelity threshold."
 ```
 
 **Visualizing a process:**
@@ -466,7 +418,6 @@ src/dazzle/mcp/server/
 │   ├── dsl_test.py              # API test generation and execution
 │   ├── e2e_test.py              # E2E Playwright tests
 │   ├── pipeline.py              # Quality audit pipeline
-│   ├── pulse.py                 # Project health reports
 │   ├── composition.py           # Visual composition analysis
 │   ├── policy.py                # RBAC access control analysis
 │   ├── status.py                # MCP + runtime status and activity

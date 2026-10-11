@@ -1,7 +1,7 @@
 """
 the Dazzle runtime MCP tool definitions.
 
-Contains Tool objects for backend, UI, and GraphQL BFF tools.
+Contains Tool objects for backend, UI, and channel tools.
 """
 
 try:
@@ -203,54 +203,6 @@ def get_runtime_tools() -> list[Tool]:
                 "required": ["workspace_name", "layout_kind", "region_components", "routes"],
             },
         ),
-        # GraphQL BFF Tools (v0.6)
-        Tool(
-            name="get_graphql_schema",
-            description="Get the auto-generated GraphQL schema (SDL) from AppSpec entities. Requires strawberry-graphql to be installed.",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "format": {
-                        "type": "string",
-                        "enum": ["sdl", "info"],
-                        "description": "Output format: 'sdl' for raw schema, 'info' for structured info",
-                    }
-                },
-                "required": [],
-            },
-        ),
-        Tool(
-            name="list_graphql_types",
-            description="List all GraphQL types generated from AppSpec entities with their fields.",
-            input_schema={
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
-        ),
-        Tool(
-            name="list_adapters",
-            description="List available external API adapter patterns and their use cases for the BFF layer.",
-            input_schema={
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
-        ),
-        Tool(
-            name="get_adapter_guide",
-            description="Get a guide for implementing an external API adapter with the BFF pattern.",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "service_type": {
-                        "type": "string",
-                        "description": "Type of service (payment, email, crm, etc.)",
-                    }
-                },
-                "required": [],
-            },
-        ),
         # v0.9 Channel/Messaging Tools
         Tool(
             name="list_channels",
@@ -313,11 +265,6 @@ RUNTIME_TOOL_NAMES = [
     "create_uispec_component",
     "patch_uispec_component",
     "compose_workspace",
-    # v0.6 GraphQL BFF tools
-    "get_graphql_schema",
-    "list_graphql_types",
-    "list_adapters",
-    "get_adapter_guide",
     # v0.9 Channel/Messaging tools
     "list_channels",
     "get_channel_status",

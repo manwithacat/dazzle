@@ -67,11 +67,6 @@ def schema_command(
         "--api-url",
         help="URL of running Dazzle API server (for --live mode)",
     ),
-    schema: bool = typer.Option(
-        False,
-        "--schema",
-        help="Generate and display GraphQL schema SDL (requires strawberry-graphql)",
-    ),
 ) -> None:
     """
     Inspect the Dazzle app structure and generated artifacts.
@@ -92,7 +87,6 @@ def schema_command(
         dazzle schema --components       # Show UI components
         dazzle schema --live             # Query running server
         dazzle schema --live --entity Task  # Live entity details
-        dazzle schema --schema           # Show GraphQL schema SDL
     """
     # Handle live mode - query running server
     if live:
@@ -141,10 +135,6 @@ def schema_command(
 
     if endpoints:
         _inspect_endpoints(appspec, format_output)
-        return
-
-    if schema:
-        _inspect_schema(appspec, format_output)
         return
 
     if components:
@@ -375,30 +365,6 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
         typer.echo()
         for c in ui_spec.components:
             typer.echo(f"   • {c.name} ({c.category})")
-
-
-def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
-    """Inspect GraphQL schema."""
-    try:
-        from dazzle.http import convert_appspec_to_backend, format_schema, inspect_schema
-    except ImportError:
-        typer.echo(
-            "GraphQL support not available. Install with: pip install strawberry-graphql",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
-    backend_spec = convert_appspec_to_backend(appspec)
-
-    if format_output == "json":
-        info = inspect_schema(backend_spec)
-        typer.echo(json_module.dumps(info, indent=2))
-    else:
-        # Print SDL for tree/summary formats
-        typer.echo("📊 GraphQL Schema")
-        typer.echo()
-        sdl = format_schema(backend_spec)
-        typer.echo(sdl)
 
 
 def _inspect_live(api_url: str, format_output: str, entity_name: str | None = None) -> None:

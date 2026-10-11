@@ -342,12 +342,6 @@ aws-test = [
     "boto3>=1.35",
     "moto[s3]>=5.0",
 ]
-# GraphQL BFF layer (src/dazzle/http/graphql/*) — Strawberry-generated
-# schema + resolvers. Optional; without it the /graphql BFF is unavailable
-# and its tests skip. Declaring the extra lets CI cover the subsystem.
-graphql = [
-    "strawberry-graphql>=0.235",
-]
 # Coverage bundle: the pure-pip optional subsystems whose tests otherwise
 # skip on the CI coverage job (no native deps), undercounting coverage.
 # Wired into the py-tests (coverage) job's install. Deliberately EXCLUDES
@@ -355,7 +349,7 @@ graphql = [
 # client) and saml (native libxmlsec1) — those need system deps and are a
 # separate decision.
 test-full = [
-    "dazzle-dsl[graph,signing,sendgrid,observability,graphql,aws]",
+    "dazzle-dsl[graph,signing,sendgrid,observability,aws]",
     "aiosqlite>=0.19",
 ]
 

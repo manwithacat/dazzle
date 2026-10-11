@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     from dazzle.http.converters import convert_appspec_to_backend as convert_appspec_to_backend
     from dazzle.http.converters.entity_converter import convert_entities as convert_entities
     from dazzle.http.events.tier import create_bus as create_bus
-    from dazzle.http.graphql.integration import format_schema as format_schema
-    from dazzle.http.graphql.integration import inspect_schema as inspect_schema
     from dazzle.http.runtime.auth import AuthStore as AuthStore
     from dazzle.http.runtime.migrations import MigrationAction as MigrationAction
     from dazzle.http.runtime.pg_backend import PostgresBackend as PostgresBackend
@@ -77,18 +75,6 @@ def _get_convert_entities() -> object:
     return convert_entities
 
 
-def _get_inspect_schema() -> object:
-    from dazzle.http.graphql.integration import inspect_schema
-
-    return inspect_schema
-
-
-def _get_format_schema() -> object:
-    from dazzle.http.graphql.integration import format_schema
-
-    return format_schema
-
-
 _LOADERS: dict[str, object] = {
     "AuthStore": _get_AuthStore,
     "create_bus": _get_create_bus,
@@ -97,8 +83,6 @@ _LOADERS: dict[str, object] = {
     "build_metadata": _get_build_metadata,
     "convert_appspec_to_backend": _get_convert_appspec_to_backend,
     "convert_entities": _get_convert_entities,
-    "inspect_schema": _get_inspect_schema,
-    "format_schema": _get_format_schema,
 }
 
 

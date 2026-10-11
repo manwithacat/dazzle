@@ -37,7 +37,6 @@ _TRACKED_PREFIXES = (
     # those between collections left ``mcp.server`` half-loaded so later
     # modules failed with ``mcp.server is not a package`` (SDK v2 + CacheHint).
     # Temporary module names used by spec_from_file_location
-    "contribution_module",
     "event_first_tools_module",
     "process_module",
     "setup_module",

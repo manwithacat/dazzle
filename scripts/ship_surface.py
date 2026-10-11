@@ -7,8 +7,7 @@
 of *deterministic, cheap* checks:
 
 * bandit medium on ``src/`` (e.g. B324 hashlib)
-* example SPECIFICATION.md freshness after DSL edits
-* simple_task brief golden + IR golden snapshot
+* IR golden snapshot
 * patterns.toml ``pattern_count`` meta
 * IR reader orphan baseline
 * viewport DRAWER_PATTERN selector freshness (browser-free)
@@ -39,13 +38,11 @@ REPO = Path(__file__).resolve().parents[1]
 # Ordered: cheapest / highest-signal first. Prefer nodeids when the whole
 # module is large or mixed.
 SHIP_TESTS: tuple[str, ...] = (
-    "tests/unit/test_example_spec_bar.py",
     "tests/unit/test_example_product_maturity.py",
     "tests/unit/test_demo_fleet_bar.py",
     "tests/unit/test_nav_platform_isolation_1626.py",
     "tests/unit/test_human_create_cta_label.py",
     "tests/unit/test_dashboard_card_remove_gating.py",
-    "tests/unit/test_spec_narrative_brief_snapshot.py",
     "tests/unit/test_patterns_phase2_kb_1217.py::test_pattern_count_meta_matches_actual_count",
     "tests/unit/test_patterns_subtype_of_kb_1248.py::test_pattern_count_meta_matches_actual_count",
     "tests/unit/test_ir_field_reader_parity.py::test_no_new_ir_field_orphans",
@@ -745,13 +742,6 @@ Remediation by class (run from repo root):
     bandit -c pyproject.toml -r src/ --severity-level medium
     # fix finding (e.g. hashlib.sha1(..., usedforsecurity=False) for non-crypto)
 
-  Example SPECIFICATION.md stale / structure
-    # DSL changed → refresh footer fingerprints (and add ## sections if needed):
-    .venv/bin/python -c "from dazzle.spec_narrative.brief import build_brief, brief_fingerprint; ..."
-    # or re-run /spec-narrate for prose; footer must match:
-    #   dazzle spec brief -p examples/<app> --fingerprint
-    pytest tests/unit/test_example_spec_bar.py -q
-
   Product maturity residual (example fleet warehouse-shaped)
     python scripts/example_product_maturity.py --strict
     # Fix: job workspaces + persona default_workspace (not more entity lists).
@@ -762,11 +752,6 @@ Remediation by class (run from repo root):
     python scripts/demo_fleet_bar.py --strict
     # Fix: product nav isolation, blueprint mins, product stills (not only platform).
     pytest tests/unit/test_demo_fleet_bar.py -q
-
-  simple_task brief golden
-    dazzle spec brief -p examples/simple_task -f json \\
-      > tests/unit/baselines/spec_brief_simple_task.json
-    # review diff + CHANGELOG if public shape changed
 
   IR golden snapshot
     pytest tests/integration/test_golden_master.py::test_simple_dsl_to_ir_snapshot \\

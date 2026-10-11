@@ -15,5 +15,5 @@ HR Records is a **personnel system** where authoritative facts and who may see t
 
 ## Expressions
 
-- `dsl/`, SPEC.md, SPECIFICATION.md
+- `dsl/`, SPEC.md
 - Framework: `stems/dsl-first.md`, `stems/rbac-and-scope.md`

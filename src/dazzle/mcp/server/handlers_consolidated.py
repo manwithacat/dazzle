@@ -234,15 +234,6 @@ def _dsl_list_fragments(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps({"fragments": get_fragment_registry()}, indent=2)
 
 
-def _dsl_brief(project_path: Path, args: dict[str, Any]) -> str:
-    """Stateless read mirror of `dazzle spec brief` — the spec-narrative brief."""
-    from dazzle.core.appspec_loader import load_project_appspec
-    from dazzle.spec_narrative.brief import build_brief
-
-    appspec = load_project_appspec(project_path)
-    return build_brief(appspec).model_dump_json(indent=2)
-
-
 handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
     "DSL",
     {
@@ -257,7 +248,6 @@ handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
         "fidelity": f"{_MOD_DSL_FIDELITY}:score_fidelity_handler",
         "export_frontend_spec": f"{_MOD_DSL}:export_frontend_spec_handler",
         "list_fragments": _dsl_list_fragments,
-        "brief": _dsl_brief,
     },
 )
 
@@ -690,21 +680,6 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
         )
     else:
         return unknown_op_response(operation, "user_management")
-
-
-# =============================================================================
-# Test Design Handler
-# =============================================================================
-
-_MOD_TD = "dazzle.mcp.server.handlers.test_design"
-
-handle_test_design: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "test design",
-    {
-        "get": f"{_MOD_TD}:get_test_designs_handler",
-        "gaps": f"{_MOD_TD}:get_test_gaps_handler",
-    },
-)
 
 
 # =============================================================================
@@ -1190,24 +1165,6 @@ handle_product_quality: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
-# Domain brief Handler (agent-audience intermediate)
-# =============================================================================
-
-_MOD_DOMAIN = "dazzle.mcp.server.handlers.domain"
-
-handle_domain: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "domain",
-    {
-        "extract": f"{_MOD_DOMAIN}:domain_extract_handler",
-        "show": f"{_MOD_DOMAIN}:domain_show_handler",
-        "gaps": f"{_MOD_DOMAIN}:domain_gaps_handler",
-        "promote": f"{_MOD_DOMAIN}:domain_promote_handler",
-        "research": f"{_MOD_DOMAIN}:domain_research_handler",
-    },
-)
-
-
-# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1445,7 +1402,6 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "rhythm": handle_rhythm,
     "demo_data": handle_demo_data,
     "feedback": handle_feedback,
-    "test_design": handle_test_design,
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,
     "process": handle_process,
@@ -1453,7 +1409,6 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "knowledge": handle_knowledge,
     "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
-    "domain": handle_domain,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,

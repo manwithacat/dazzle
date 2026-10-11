@@ -2,7 +2,7 @@
 Shared quality pipeline orchestration infrastructure.
 
 Provides the common step execution, result aggregation, and detail-level
-filtering used by both ``pipeline`` (sequential) and ``nightly`` (parallel).
+filtering used by ``pipeline``.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def run_step(
     Args:
         step: The step to execute.
         activity_store: Optional activity store for logging start/end events.
-        activity_prefix: Prefix for activity event names (e.g. "nightly:").
+        activity_prefix: Prefix for activity event names (e.g. "pipeline:").
         timeout: Maximum wall-clock seconds for the step (0 = no limit).
 
     Returns:
@@ -614,7 +614,7 @@ def aggregate_results(
     *,
     detail: str = "issues",
 ) -> str:
-    """Build the final pipeline/nightly response JSON.
+    """Build the final pipeline response JSON.
 
     Detail levels:
     - ``"metrics"``: compact stats per step + top_issues (~1KB)

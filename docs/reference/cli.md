@@ -141,12 +141,10 @@ there requires a row here.
 | `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
 | `dazzle composition` | Visual composition analysis for Dazzle apps |
 | `dazzle conformance` | DSL conformance testing |
-| `dazzle contribution` | Community contribution packaging — create, validate, share |
 | `dazzle db` | Database migration commands (Alembic) |
 | `dazzle demo` | Demo data management commands |
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 | `dazzle discovery` | App discovery and coherence analysis |
-| `dazzle domain` | Agent-audience domain brief — extract/gaps/research/promote before DSL |
 | `dazzle dlq` | Dead letter queue commands |
 | `dazzle docs` | Documentation generation, validation, and maintenance |
 | `dazzle events` | Event system commands |
@@ -158,7 +156,6 @@ there requires a row here.
 | `dazzle lsp` | Language Server Protocol (LSP) commands |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle mock` | Vendor mock server management |
-| `dazzle nightly` | Run quality checks in parallel (faster pipeline) |
 | `dazzle outbox` | Event outbox commands |
 | `dazzle param` | Runtime parameter management |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
@@ -166,7 +163,6 @@ there requires a row here.
 | `dazzle process` | Process proposal, storage, and diagramming |
 | `dazzle process-migrate` | Process migration commands for safe DSL version deployments |
 | `dazzle prove` | Static story binding evidence (agent closed loop #1605) + representation prove (#1617) |
-| `dazzle pulse` | Project health pulse checks |
 | `dazzle qa` | QA toolkit — visual quality evaluation and screenshot capture |
 | `dazzle quality` | Quality pipeline scaffolding |
 | `dazzle rbac` | RBAC verification and compliance |
@@ -267,7 +263,6 @@ dazzle serve [OPTIONS]
 | `--watch-source` | `-W` | | Also watch framework source files |
 | `--ui-only` | | | Serve static UI only (no API) |
 | `--backend-only` | | | Serve API only (no frontend) |
-| `--graphql` | | | Enable GraphQL endpoint at `/graphql` |
 | `--rebuild` | | | Force Docker image rebuild |
 | `--attach` | `-a` | | Stream Docker logs to terminal |
 | `--database-url` | | | PostgreSQL URL (also reads `DATABASE_URL` env) |
@@ -287,8 +282,6 @@ dazzle serve --backend-only
 # Custom ports
 dazzle serve --port 4000 --api-port 9000
 
-# With GraphQL
-dazzle serve --graphql
 ```
 
 **Endpoints:**
@@ -299,7 +292,6 @@ dazzle serve --graphql
 | `http://localhost:8000/api/` | REST API |
 | `http://localhost:8000/docs` | Interactive API docs (Swagger) |
 | `http://localhost:8000/redoc` | Alternative API docs |
-| `http://localhost:8000/graphql` | GraphQL (if `--graphql` enabled) |
 
 ---
 

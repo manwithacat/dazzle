@@ -10,7 +10,7 @@ attention signals — not a product domain model.
 
 - Prefer teaching clarity over realistic multi-entity graphs.
 - DSL under `dsl/` is the source of truth; don’t invent parallel Python domain.
-- SPEC / SPECIFICATION are expressions of this intent, not competing stems.
+- SPEC is an expression of this intent, not a competing stem.
 
 ## Not this
 
@@ -19,5 +19,5 @@ attention signals — not a product domain model.
 
 ## Expressions
 
-- `dsl/`, `SPEC.md`, `SPECIFICATION.md`, `README.md`
+- `dsl/`, `SPEC.md`, `README.md`
 - Framework: `stems/dsl-first.md`, `stems/hypermedia-ssr.md`

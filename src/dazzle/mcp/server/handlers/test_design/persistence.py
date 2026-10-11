@@ -14,7 +14,6 @@ from dazzle.core.ir.test_design import (
 )
 
 from ..common import error_response, extract_progress, wrap_handler_errors
-from ..serializers import serialize_test_design, serialize_test_design_summary
 from .proposals import _parse_test_design_action, _parse_test_design_trigger
 
 logger = logging.getLogger(__name__)
@@ -106,51 +105,3 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         overwrite=args.get("overwrite", False),
     )
     return json.dumps(result, indent=2)
-
-
-@wrap_handler_errors
-def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Retrieve test designs from storage.
-
-    Returns compact summaries by default. When ``test_ids`` is provided,
-    returns full content for those specific designs only.
-    """
-    from dazzle.testing.test_design_persistence import (
-        get_dsl_tests_dir,
-        get_test_designs_by_status,
-    )
-
-    progress = extract_progress(args)
-
-    status_filter = args.get("status_filter")
-    test_ids = args.get("test_ids")
-
-    progress.log_sync("Retrieving test designs...")
-    status = TestDesignStatus(status_filter) if status_filter and status_filter != "all" else None
-    designs = get_test_designs_by_status(project_root, status)
-    designs_file = get_dsl_tests_dir(project_root) / "designs.json"
-
-    if test_ids:
-        # Return full content for requested designs only
-        filtered = [d for d in designs if d.test_id in test_ids]
-        return json.dumps(
-            {
-                "count": len(filtered),
-                "filter": status_filter or "all",
-                "file": str(designs_file) if designs_file.exists() else None,
-                "designs": [serialize_test_design(d) for d in filtered],
-            },
-            indent=2,
-        )
-
-    # Default: return compact summaries
-    return json.dumps(
-        {
-            "count": len(designs),
-            "filter": status_filter or "all",
-            "file": str(designs_file) if designs_file.exists() else None,
-            "designs": [serialize_test_design_summary(d) for d in designs],
-            "guidance": "Use test_design(operation='get', test_ids=['TD-001']) to fetch full details.",
-        },
-        indent=2,
-    )

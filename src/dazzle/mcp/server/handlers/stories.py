@@ -824,7 +824,7 @@ def story_generate_tests_impl(
     return {
         "status": "generated",
         "count": len(test_designs),
-        "note": "Test designs saved. Use test_design(operation='get', status_filter='proposed') for full details.",
+        "note": "Test designs saved to dsl/tests/designs.json.",
         "test_designs": [serialize_test_design_summary(td) for td in test_designs],
     }
 

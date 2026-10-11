@@ -20,6 +20,6 @@ binding are part of the model, not post-hoc UI filters.
 
 ## Expressions
 
-- `dsl/`, `SPEC.md`, `SPECIFICATION.md`, `trial.toml`
+- `dsl/`, `SPEC.md`, `trial.toml`
 - Framework: `stems/rbac-and-scope.md`, `stems/hypermedia-ssr.md`
 - HM: chart Hyperparts under `packages/hatchi-maxchi/`

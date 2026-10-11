@@ -119,7 +119,6 @@ async def test_tool_registration() -> bool:
             "api_pack",
             "story",
             "demo_data",
-            "test_design",
             "sitespec",
             "semantics",
             "process",

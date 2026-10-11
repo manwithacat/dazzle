@@ -77,16 +77,6 @@
     ]
   },
   {
-    "signature": "c17177babd761b1708355c78a36ac086",
-    "count": 4,
-    "names": [
-      "dazzle/cli/pulse.py::pulse_decisions",
-      "dazzle/cli/pulse.py::pulse_radar",
-      "dazzle/cli/pulse.py::pulse_run",
-      "dazzle/cli/pulse.py::pulse_timeline"
-    ]
-  },
-  {
     "signature": "c110390b0e47acf8a942164d3be42943",
     "count": 2,
     "names": [
@@ -100,23 +90,6 @@
     "names": [
       "dazzle/cli/runtime_impl/build.py::_generate_asyncapi_target",
       "dazzle/cli/runtime_impl/build.py::_generate_openapi_target"
-    ]
-  },
-  {
-    "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
-    "count": 11,
-    "names": [
-      "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
-      "dazzle/core/state.py::to_dict",
-      "dazzle/domain_brief/models.py::to_dict",
-      "dazzle/http/metrics/reporter.py::to_dict",
-      "dazzle/http/runtime/retry_accumulator.py::to_dict",
-      "dazzle/qa/hyperpart_types.py::to_json",
-      "dazzle/qa/smoke_dig.py::to_json",
-      "dazzle/qa/trial_inventory.py::to_json",
-      "dazzle/qa/work_surface_utility.py::to_json",
-      "dazzle/rbac/access_evidence.py::to_dict",
-      "dazzle/rbac/audit.py::to_dict"
     ]
   },
   {
@@ -185,15 +158,6 @@
     "names": [
       "dazzle/core/access.py::has_role",
       "dazzle/http/runtime/access_control.py::has_role"
-    ]
-  },
-  {
-    "signature": "exact:3d6a382b1a4689c7269c496243dcab95",
-    "count": 3,
-    "names": [
-      "dazzle/core/access.py::is_authenticated",
-      "dazzle/http/graphql/context.py::is_authenticated",
-      "dazzle/http/runtime/access_control.py::is_authenticated"
     ]
   },
   {
@@ -837,14 +801,6 @@
     ]
   },
   {
-    "signature": "exact:1a7d33391918e213cd33f013a8fb9946",
-    "count": 2,
-    "names": [
-      "dazzle/http/channels/adapters/email.py::provider_name",
-      "dazzle/http/channels/providers/email.py::provider_name"
-    ]
-  },
-  {
     "signature": "exact:ced25b776cbb098c2ba7cc57203655e1",
     "count": 2,
     "names": [
@@ -950,14 +906,6 @@
     ]
   },
   {
-    "signature": "exact:b4fa590ddf56a9ad51221dfec1cce9d0",
-    "count": 2,
-    "names": [
-      "dazzle/http/events/consumer.py::stats",
-      "dazzle/http/events/publisher.py::stats"
-    ]
-  },
-  {
     "signature": "exact:eeb37885742ccc7003e87b645950b3e9",
     "count": 3,
     "names": [
@@ -976,54 +924,11 @@
     ]
   },
   {
-    "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
-    "count": 4,
-    "names": [
-      "dazzle/http/events/null.py::get_recent_outbox_entries",
-      "dazzle/http/events/null.py::list_consumer_groups",
-      "dazzle/http/events/null.py::list_topics",
-      "dazzle/http/runtime/workspace_card_fetchers.py::_empty_list_coro"
-    ]
-  },
-  {
     "signature": "exact:281a42a939efd6d39862d6b7b9d55b4d",
     "count": 2,
     "names": [
       "dazzle/http/events/postgres_bus.py::start_consumer_loop",
       "dazzle/http/events/redis_bus.py::start_consumer_loop"
-    ]
-  },
-  {
-    "signature": "exact:0b2fa79456377126e1980ad0895602b2",
-    "count": 2,
-    "names": [
-      "dazzle/http/events/publisher.py::is_running",
-      "dazzle/testing/vendor_mock/orchestrator.py::is_running"
-    ]
-  },
-  {
-    "signature": "exact:fe0a9e72aa37976378c0cef9275732b4",
-    "count": 3,
-    "names": [
-      "dazzle/http/graphql/integration.py::_camel_case",
-      "dazzle/http/graphql/resolver_generator.py::_camel_case",
-      "dazzle/http/graphql/schema_generator.py::_camel_case"
-    ]
-  },
-  {
-    "signature": "exact:9ad220736a31b37d6d9259d717369e3d",
-    "count": 2,
-    "names": [
-      "dazzle/http/graphql/schema_generator.py::_pascal_case",
-      "dazzle/specs/openapi.py::_pascal_case"
-    ]
-  },
-  {
-    "signature": "exact:9ced59e09a1dff655eea673a3dd377cc",
-    "count": 2,
-    "names": [
-      "dazzle/http/graphql/schema_generator.py::get_type",
-      "dazzle/render/fragment/registry.py::resolve"
     ]
   },
   {
@@ -1273,14 +1178,6 @@
     "names": [
       "dazzle/http/runtime/handlers/graph_handlers.py::_auth_handler",
       "dazzle/http/runtime/handlers/graph_handlers.py::_noauth_handler"
-    ]
-  },
-  {
-    "signature": "1ab2b34f8eb73ec30edb98ae4b18b286",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/handlers/graph_handlers.py::_check_networkx",
-      "dazzle/http/runtime/richtext_processor.py::is_available"
     ]
   },
   {
@@ -1669,6 +1566,72 @@
     "names": [
       "dazzle/testing/walk/claims.py::__init__",
       "dazzle/testing/walk/loader.py::__init__"
+    ]
+  },
+  {
+    "signature": "exact:1a7d33391918e213cd33f013a8fb9946",
+    "count": 2,
+    "names": [
+      "dazzle/http/channels/adapters/email.py::provider_name",
+      "dazzle/http/channels/providers/email.py::provider_name"
+    ]
+  },
+  {
+    "signature": "exact:b4fa590ddf56a9ad51221dfec1cce9d0",
+    "count": 2,
+    "names": [
+      "dazzle/http/events/consumer.py::stats",
+      "dazzle/http/events/publisher.py::stats"
+    ]
+  },
+  {
+    "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
+    "count": 4,
+    "names": [
+      "dazzle/http/events/null.py::get_recent_outbox_entries",
+      "dazzle/http/events/null.py::list_consumer_groups",
+      "dazzle/http/events/null.py::list_topics",
+      "dazzle/http/runtime/workspace_card_fetchers.py::_empty_list_coro"
+    ]
+  },
+  {
+    "signature": "exact:0b2fa79456377126e1980ad0895602b2",
+    "count": 2,
+    "names": [
+      "dazzle/http/events/publisher.py::is_running",
+      "dazzle/testing/vendor_mock/orchestrator.py::is_running"
+    ]
+  },
+  {
+    "signature": "1ab2b34f8eb73ec30edb98ae4b18b286",
+    "count": 2,
+    "names": [
+      "dazzle/http/runtime/handlers/graph_handlers.py::_check_networkx",
+      "dazzle/http/runtime/richtext_processor.py::is_available"
+    ]
+  },
+  {
+    "signature": "exact:c401f08efd6a7dae7009649c0c6f3ccc",
+    "count": 10,
+    "names": [
+      "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py::to_dict",
+      "dazzle/core/state.py::to_dict",
+      "dazzle/http/metrics/reporter.py::to_dict",
+      "dazzle/http/runtime/retry_accumulator.py::to_dict",
+      "dazzle/qa/hyperpart_types.py::to_json",
+      "dazzle/qa/smoke_dig.py::to_json",
+      "dazzle/qa/trial_inventory.py::to_json",
+      "dazzle/qa/work_surface_utility.py::to_json",
+      "dazzle/rbac/access_evidence.py::to_dict",
+      "dazzle/rbac/audit.py::to_dict"
+    ]
+  },
+  {
+    "signature": "exact:3d6a382b1a4689c7269c496243dcab95",
+    "count": 2,
+    "names": [
+      "dazzle/core/access.py::is_authenticated",
+      "dazzle/http/runtime/access_control.py::is_authenticated"
     ]
   }
 ]

@@ -105,7 +105,7 @@ def discover_apps(
                 name=name,
                 path=path,
                 title=_title_from_toml(toml, name),
-                has_spec=(path / "SPECIFICATION.md").is_file() or (path / "SPEC.md").is_file(),
+                has_spec=(path / "SPEC.md").is_file(),
                 has_trial=(path / "trial.toml").is_file(),
                 has_stories=any((path / "dsl").rglob("stories.dsl"))
                 if (path / "dsl").is_dir()

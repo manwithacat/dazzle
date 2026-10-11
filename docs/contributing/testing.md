@@ -17,7 +17,7 @@ DAZZLE has a multi-layered test infrastructure with **5,000+ test functions** ac
 │                                                                  │
 │                   Integration Tests                              │
 │         ┌─────────────────────────────────────────────┐         │
-│         │  Multi-component, runtime pipeline, GraphQL     │         │
+│         │  Multi-component, runtime pipeline              │         │
 │         └─────────────────────────────────────────────┘         │
 │                                                                  │
 │                        Unit Tests                                │
@@ -97,7 +97,6 @@ Multi-component tests:
 | `test_end_to_end.py` | Complete workflows |
 | `test_archetype_examples.py` | Archetype expansion |
 | `test_golden_master.py` | Snapshot/golden master testing |
-| `test_graphql_integration.py` | GraphQL schema generation |
 | `test_ux_semantic_layer.py` | UX semantic layer |
 
 ```bash
