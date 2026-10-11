@@ -31,6 +31,5 @@ polished example is useful evidence only when the underlying job still works.
 ## Expressions
 
 - `docs/guides/story-to-composition.md` — choose regions from the job.
-- `.agents/skills/improve/strategies/job_screen_review.md` — portable probe.
 - `docs/evaluation/example-job-scenes.toml` — fixed scene selection.
 - `docs/evaluation/agent-first-shadcn-parity.md` — paired pilot evidence.

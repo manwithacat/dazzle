@@ -13,10 +13,6 @@ Usage (monorepo root)::
     python scripts/hm_coherence_queue.py --write          # → packages/hatchi-maxchi/COHERENCE_QUEUE.md
     python scripts/hm_coherence_queue.py --seed-backlog   # print HMC table rows for PENDING seed
     python scripts/hm_coherence_queue.py --status         # one-line for improve driver logs
-
-Consumed by:
-  - ``improve/strategies/hyperpart_coherence.md`` (investigate + drain phases)
-  - ``improve/lanes/hm-convergence.md`` pick table
 """
 
 from __future__ import annotations

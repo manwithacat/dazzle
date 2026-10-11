@@ -1,9 +1,8 @@
 # AGENTS.md
 
 Canonical repository instructions for ALL coding agents (any harness). Drift-gated by
-`tests/unit/test_docs_drift.py`, `tests/unit/test_agent_asset_gates.py`,
-`tests/unit/test_documented_commands.py` and `tests/unit/test_principle_gate_registry.py`;
-the version footer is maintained by the bump workflow. Harness adapters
+`tests/unit/test_docs_drift.py`, `tests/unit/test_agent_asset_gates.py` and
+`tests/unit/test_documented_commands.py`; the version footer is maintained by the bump workflow. Harness adapters
 (`.claude/CLAUDE.md`, `.github/copilot-instructions.md`) stay thin — project facts live
 only here. This file is always-on context: it carries judgement, commands and gates.
 Reference material lives in `docs/` and is pointed to, not copied.
@@ -208,9 +207,7 @@ example/fixture requires updating the matching line here.
 **Examples are framework probes, not list-first CRUD.** Read
 `stems/example-apps-as-probes.md` before changing an example's job screen; map persona
 jobs → workspace Hyperparts via `docs/guides/story-to-composition.md` (prefer
-`display: queue` / `metrics` / `status_list` for open work). Protocol for comparing a
-seeded scene and classifying the owner of a finding:
-`.agents/skills/improve/strategies/job_screen_review.md`.
+`display: queue` / `metrics` / `status_list` for open work).
 
 ## MCP / CLI Boundary
 
@@ -229,24 +226,9 @@ MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long
 
 ## Autonomous Loops (awareness)
 
-The **improve loop** is the single agent-first entrypoint for autonomous investigation,
-improvement, refactoring and remediation. The driver picks the highest-leverage lane each
-cycle (`framework-ux`, `example-apps`, `trials`, `ux-converge`, `test-suite`,
-`hm-convergence`) and hands off to that lane's playbook; it also maintains
-`.agents/skills/improve/capability-map.md`, a registry of every CLI/MCP/skill capability
-with an owning lane and staleness.
-
-- **Files:** driver `.agents/skills/improve/SKILL.md`; lanes `.agents/skills/improve/lanes/`;
-  strategies `.agents/skills/improve/strategies/`. Human map: `docs/harness/improve-exemplar.md`;
-  operator rearm `docs/harness/operator-field-guide.md`.
-- **State:** `dev_docs/improve-backlog.md` (one `## Lane:` section per lane),
-  `dev_docs/improve-log.md` (append-only), `.dazzle/improve.lock` + `.dazzle/improve-explore-count`
-  (driver state), `.dazzle/signals/` (cross-loop signal bus).
-- **Lock rule:** ANY agent that pushes to `main` must honour `.dazzle/improve.lock`
-  (`PID ISO-timestamp`, 15-min TTL: fresh = defer; stale = remove) and Ship Discipline below.
-- **Siblings:** the cross-app **fuzz sweep** (`.agents/skills/fuzz/SKILL.md`) scrapes boot
-  stderr of every example + fixture for integration regressions `dazzle validate` cannot see;
-  `qa-trial` lets downstream users author `trial.toml` persona scenarios.
+- The **issues loop** (`.agents/skills/issues/SKILL.md`) runs on consumer force only.
+- The cross-app **fuzz sweep** (`.agents/skills/fuzz/SKILL.md`) stays.
+- ANY agent that pushes to `main` honours `.dazzle/improve.lock` (15-min TTL) and Ship Discipline below.
 
 ## Deferred decisions (long-horizon plans)
 
@@ -254,7 +236,7 @@ When you park work as "not yet / consumer-forced / future", write or update a
 **Deferred Decision** under `docs/decisions/` (template `TEMPLATE.md`, row in `INDEX.md`,
 `status: PARKED`, **Plan** / **Reopen when** / **Already shipped** / **Out of scope**),
 pin the DD path in the issue body, and link it from any related stem **Expressions**.
-Improve / `/issues` must **not** implement `PARKED` DDs or `future`-labeled issues until
+The issues loop must **not** implement `PARKED` DDs or `future`-labeled issues until
 `status: FORCED` with a named consumer. When the consumer appears: `FORCED` → implement
 *that* plan → `DONE`. Grep: `rg -n '^status: PARKED' docs/decisions/`.
 Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/#1622.
@@ -283,7 +265,7 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 ## Ship Discipline
 
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
-- **Bump on human-initiated ships, not on `/improve` cycles**: `/bump` + `/ship` tag a defined change a person asked for. The autonomous improve loop commits on `main` **without** bump or tag.
+- **Bump on human-initiated ships, not on autonomous loop cycles**: `/bump` + `/ship` tag a defined change a person asked for. An autonomous loop commits on `main` **without** bump or tag.
 - **Local CI tiers (concordance)** — laptop green ≠ GitHub badge. Canonical doc:
   `docs/contributing/local-ci-concordance.md`. Shared runner: `scripts/ci_local.sh`.
   | Habit | Command | When |
@@ -292,8 +274,7 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
   | Recurrent badge-red pack | `make ship-surface` | Always in Tier 0 — bandit + SPEC/IR/viewport pack |
   | Path-aware mid-edit | `make ci-changed` | After touching examples DSL, shell/viewport, KB, or `src/` — not a ship substitute |
   | Default ship gate | `make ci-fast` | Every `/ship` (preflight + ship-surface + ruff + mypy + gate + docs); writes push stamp |
-  | Push allow/deny | `make push-gate` | **Before every `git push`** — stamp match + ≤4 commits/h + CI not in_progress + HM plane + improve commit contract |
-  | Improve commit contract | `python scripts/improve_commit_contract.py --message-file MSG --paths-from-index` | Every `/improve` cycle before `git commit` |
+  | Push allow/deny | `make push-gate` | **Before every `git push`** — stamp match + ≤4 commits/h + CI not in_progress + HM plane |
   | Release / version bump | `make ci-core` | Before tags / when operator wants GitHub-core concordance |
   | HM visual ship / tag | `push_gate check --require-hm-green` | Sibling hatchi-maxchi CI must be green for gallery CSS/JS baselines |
   | Badge red | `/cimonitor` | Fix **and** promote the failure class into ship-surface/preflight |
@@ -317,19 +298,13 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **check** — On-demand quality gate on modified files; prefers `make ci-changed` path packs + full unit when Python changed
 - **bump** — Bump the semantic version across all six canonical locations and update CHANGELOG
 - **cimonitor** — Snapshot/repair the main CI badge; after repair, promote new failure classes into `ship-surface` / `preflight-surface`
-- **docs-update** — Sync documentation with recently closed GitHub issues
-- **smells** — Two-phase read-only code-smells analysis: regression checks + new systemic patterns
 - **semgrep** — Diff-scoped Semgrep (python/owasp/audit) + optional Sentinel modernisation; CLI SSOT via `scripts/semgrep_diff.py`
 - **dsl-authoring** — Syntax rules, common mistakes and scope-rule forms for writing/editing Dazzle `.dsl` files
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
 - **stems** — Reconstruct framework/package/app judgement from `stems/` before inventing structure
-- **blue-sky** — Orthogonal prototype from an example's DSL; critique for framework gaps (not a second CRUD admin)
-- **improve** — Autonomous improvement driver, lanes, strategies, and capability map
-- **issues** — Issue triage and resolution loop
+- **issues** — Consumer-forced issue triage and resolution loop
 - **fuzz** — Cross-app boot and integration fuzz sweep
-- **xproject** — Read-only cross-project quality scan
-- **phase-contract** — Gate-driven multi-phase execution when the user grants advance authority
 
 ## Capability Mapping
 
@@ -345,14 +320,15 @@ harness features. *degrade* = follow the playbook sequentially and note the degr
 | parallel-investigation | run independent investigations concurrently | background Agent tool | *degrade* (sequential) | subagents |
 | scheduled-loop | re-run a playbook on a cadence | /loop + session cron | external scheduler (CI cron) | headless CI mode |
 | web-search | consult current docs when knowledge may be stale | WebSearch tool | built-in browse | built-in search |
-| model-tiering | mechanical work → cheapest tier; judgment work → session tier | host model selection | single model — n/a | per-subagent model field |
+| model-tiering | mechanical work → cheapest tier; ship-level judgement → strong tier; review + ship path → session tier | host model selection | single model — n/a | per-subagent model field |
 | commit-trailer | `Co-Authored-By` for the acting harness only; human stays Author | `Co-Authored-By: Claude <noreply@anthropic.com>` (a model-versioned form such as `Claude Fable 5.1` is acceptable) | (none standard) | `Co-Authored-By: Grok Build <grok@x.ai>` |
 
-Model policy: mechanical work (lint, fixed-signature scrapes, format churn) runs on the
-cheapest available tier; judgment work (root-cause, design, review) runs at the session
-tier. Never pin judgment work below the session tier. Portable playbooks never require a
-named model. Harness-specific runtime notes (PATH, hooks, local services) live in the
-harness adapter, not here.
+Model policy: mechanical work (lint, fixed-signature scrapes, format churn, reference
+sweeps) runs on the cheapest tier; ship-level judgement (a flense ship, a bug fix prepared
+in a worktree) runs on a strong tier below the session; final review and the ship path
+(gates, commit, push) stay with the session tier. Portable playbooks never require a named
+model. Harness-specific runtime notes (PATH, hooks, local services) live in the harness
+adapter, not here.
 
 ## UI Invariants
 

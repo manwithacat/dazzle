@@ -3,33 +3,6 @@
     "name": "playwright",
     "summary": "Browser automation: qa smoke-crawl/capture, visual probes, UX walks",
     "remedy": "uv pip install playwright && uv run playwright install chromium",
-    "required_for": [
-      "agent_acceptance_panel",
-      "agent_qa_smoke",
-      "api_surface_audit",
-      "demo_fleet",
-      "distill",
-      "domain_lifecycle_priors",
-      "dual_lock_expand",
-      "example-apps",
-      "explore-subagent",
-      "framework-ux",
-      "gallery_probes",
-      "hm-convergence",
-      "hyperpart_coherence",
-      "hyperpart_presentation",
-      "interesting_product",
-      "job_screen_review",
-      "journey_dogfood",
-      "owned_idle_exercise",
-      "product_maturity",
-      "self_audit",
-      "shadcn_parity",
-      "story_walk",
-      "trial_signal_action",
-      "ux-converge",
-      "visual_tier2_subagent"
-    ],
     "probe": "module",
     "spec": "playwright"
   },
@@ -37,21 +10,6 @@
     "name": "postgres",
     "summary": "Runtime paths: serve against DATABASE_URL, migrate, integration tests",
     "remedy": "export DATABASE_URL=postgresql://<user>@localhost:5432/<db> (see docs/reference/databases.md)",
-    "required_for": [
-      "agent_acceptance_panel",
-      "demo_fleet",
-      "domain_lifecycle_priors",
-      "explore-subagent",
-      "gallery_probes",
-      "hm-convergence",
-      "interesting_product",
-      "journey_dogfood",
-      "story_walk",
-      "trial_signal_action",
-      "trials",
-      "ux-converge",
-      "visual_tier2_subagent"
-    ],
     "probe": "env",
     "spec": "DATABASE_URL"
   },
@@ -59,15 +17,6 @@
     "name": "gh",
     "summary": "GitHub inbox, CodeQL gate, CI badge snapshot, push-gate",
     "remedy": "install gh and run: gh auth login",
-    "required_for": [
-      "api_surface_audit",
-      "cimonitor",
-      "codeql",
-      "consumer_issues",
-      "demo_fleet",
-      "example-apps",
-      "github_prs"
-    ],
     "probe": "binary",
     "spec": "gh"
   },
@@ -75,15 +24,6 @@
     "name": "gh-auth",
     "summary": "Authenticated gh \u2014 required by every inbox/PR/codeql step",
     "remedy": "gh auth login",
-    "required_for": [
-      "api_surface_audit",
-      "cimonitor",
-      "codeql",
-      "consumer_issues",
-      "demo_fleet",
-      "example-apps",
-      "github_prs"
-    ],
     "probe": "module",
     "spec": "gh"
   },
@@ -91,18 +31,6 @@
     "name": "served-app",
     "summary": "A running example app for live smoke / journey walks",
     "remedy": "cd examples/<app> && DAZZLE_QA_MODE=1 dazzle serve --port <port> --test-mode",
-    "required_for": [
-      "agent_qa_smoke",
-      "demo_fleet",
-      "explore-subagent",
-      "framework-ux",
-      "hm-convergence",
-      "story_walk",
-      "trial_signal_action",
-      "trials",
-      "ux-converge",
-      "visual_tier2_subagent"
-    ],
     "probe": "url",
     "spec": "http://127.0.0.1:9100/"
   },
@@ -110,10 +38,6 @@
     "name": "semgrep",
     "summary": "Semgrep binary on PATH \u2014 the semgrep_hygiene dig and the Sentinel python_audit pack",
     "remedy": "uv pip install semgrep",
-    "required_for": [
-      "github_prs",
-      "semgrep_hygiene"
-    ],
     "probe": "binary",
     "spec": "semgrep"
   },
@@ -121,11 +45,6 @@
     "name": "sentinel",
     "summary": "dazzle sentinel scan \u2014 the Sentinel python_audit hygiene pass",
     "remedy": "available from the package (dazzle sentinel scan); no install step",
-    "required_for": [
-      "framework-ux",
-      "semgrep_hygiene",
-      "test-suite"
-    ],
     "probe": "binary",
     "spec": "dazzle"
   }

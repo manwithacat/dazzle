@@ -93,7 +93,6 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 ## Gaps (improve-loop placeholders)
 
 Each row is a candidate `HMC-NNN` scope `shadcn_parity <id>`.
-Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 
 | # | shadcn | suggested Hyperpart id | notes |
 |--:|--------|------------------------|-------|

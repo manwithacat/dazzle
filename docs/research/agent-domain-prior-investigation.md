@@ -281,8 +281,6 @@ signals as the authoring checklist — optional fleet re-extract of AGENT_DOMAIN
 | Piece | Role |
 |-------|------|
 | `scripts/domain_cognition_bar.py` | Residual sensor: domain_stale, multi_persona∄process+candidates, status∄trans |
-| `scripts/improve_example_probes.py` | Emits `domain_cognition` line; `next_strategy=domain_lifecycle_priors` when only residual |
-| `improve/strategies/domain_lifecycle_priors.md` | Dig playbook: reextract → process/transitions densify |
 | Capability map | `dazzle domain` + domain lifecycle/process priors Class COGNITION |
 
 **First dig result:** reextract cleared fleet `domain_stale`; `support_tickets` process densify from `escalation` candidate raised sophistication score and cleared mpp. Residual remains on other multi-persona apps — intentional multi-cycle COGNITION work, not WI densify.

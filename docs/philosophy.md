@@ -20,7 +20,7 @@ Dazzle is **not** a code generator that scaffolds a project you then edit. The D
 
 ### Agent-first, human-readable
 
-Dazzle's primary consumer is an AI agent — a Claude Code session, a Dazzle MCP client, the autonomous `/improve` loop. Humans read and review the DSL, but agents are the population that writes most of it ([ADR-0004](adr/0004-dsl-agent-first.md)). This single decision drives nearly every other one in the system:
+Dazzle's primary consumer is an AI agent — a Claude Code session, a Dazzle MCP client, an autonomous loop. Humans read and review the DSL, but agents are the population that writes most of it ([ADR-0004](adr/0004-dsl-agent-first.md)). This single decision drives nearly every other one in the system:
 
 - **Precision over ergonomics.** When agents are the writer, terseness loses to formal precision. `as: persona_name` beats an inferred `for:` clause; explicit FK paths beat magic. Ambiguity is a bug.
 - **Clean breaks over compat shims.** ([ADR-0003](adr/0003-clean-breaks.md)) Agents update all callers in the same commit. Backwards-compatibility wrappers exist to spare humans the diff; agents don't need that mercy.
@@ -135,7 +135,6 @@ Dazzle had three knowledge systems (semantic KB, inference KB, project KG). It n
 | Audit the public API | `docs/api-surface/` (five baselines, drift-tested) |
 | Decide if a change needs an ADR | If it would change a "What we deliberately don't do" answer above: yes |
 | Understand an architectural choice | `docs/adr/INDEX.md` |
-| Run autonomous improvement | `/improve` (driver picks lane) — human map: [Improve exemplar](harness/improve-exemplar.md); runtime: `.agents/skills/improve/SKILL.md` |
 | Cross-check against industry conventions | This doc + the relevant ADR |
 
 The single most useful habit when contributing: **before writing code, find the IR types involved and read them.** The IR is small, stable, and frozen — it tells you the shape of the world the runtime sees. Most "I don't know how to do this in Dazzle" questions resolve in five minutes once the IR is in your head.

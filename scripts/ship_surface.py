@@ -42,8 +42,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_example_spec_bar.py",
     "tests/unit/test_example_product_maturity.py",
     "tests/unit/test_demo_fleet_bar.py",
-    "tests/unit/test_improve_example_probes.py",
-    "tests/unit/test_improve_commit_contract.py",
     "tests/unit/test_nav_platform_isolation_1626.py",
     "tests/unit/test_human_create_cta_label.py",
     "tests/unit/test_dashboard_card_remove_gating.py",
@@ -540,9 +538,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
     "tests/unit/test_join_request_view.py::test_join_requested_no_form",
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
-    # AUD-014 list actuators must not crash load_receipt (cycle 2113)
-    "tests/unit/test_improve_dig_contracts.py::test_load_receipt_coerces_actuator_name_list",
-    "tests/unit/test_improve_dig_contracts.py::TestLiveGreen::test_zero_live_run_is_not_green",
     # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
     # depth on contact_manager — display_field + home region rename ×3 Pythons)
     "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
@@ -730,7 +725,7 @@ SHIP_TESTS: tuple[str, ...] = (
     # CI badge red 2026-10-06: make test-ux-preflight's `$(UV) run` recreated
     # .venv mid-suite on the 3.12/3.13 cells. The runtime smoke stays green
     # on the 3.14 laptop, so only the static recipe check can see it.
-    "tests/unit/test_harness_command_surface.py::test_preflight_recipe_does_not_rebuild_the_venv",
+    "tests/unit/test_make_recipe_surface.py::test_preflight_recipe_does_not_rebuild_the_venv",
     # main-hygiene red 2026-10-05: a plain `run:` scalar folded the
     # backslash continuations, so pip_audit.py received flags with a
     # leading space and exited 2. `--report-only` was still a substring.
@@ -761,19 +756,12 @@ Remediation by class (run from repo root):
     python scripts/example_product_maturity.py --strict
     # Fix: job workspaces + persona default_workspace (not more entity lists).
     # Docs: docs/reference/product-maturity.md
-    # Improve: /improve example-apps product_maturity
     pytest tests/unit/test_example_product_maturity.py -q
 
   Demo fleet residual (#1626 nav/seed/stills floors)
     python scripts/demo_fleet_bar.py --strict
     # Fix: product nav isolation, blueprint mins, product stills (not only platform).
-    # Improve: /improve example-apps demo_fleet
     pytest tests/unit/test_demo_fleet_bar.py -q
-
-  Unified example probes (product + demo + journey for /improve OBSERVE)
-    python scripts/improve_example_probes.py --status
-    python scripts/improve_example_probes.py --strict
-    pytest tests/unit/test_improve_example_probes.py -q
 
   simple_task brief golden
     dazzle spec brief -p examples/simple_task -f json \\
@@ -825,7 +813,7 @@ Remediation by class (run from repo root):
   Preflight recipe recreates .venv (python-tests 3.12/3.13 missing modules)
     # make test-ux-preflight must call .venv/bin/python -m, not $(UV) run.
     # Both python-tests pytest steps must set UV_NO_SYNC=1.
-    pytest tests/unit/test_harness_command_surface.py::test_preflight_recipe_does_not_rebuild_the_venv -q
+    pytest tests/unit/test_make_recipe_surface.py::test_preflight_recipe_does_not_rebuild_the_venv -q
 
   main-hygiene audit command folded (exit 2, unrecognized arguments)
     # Keep the pip_audit.py invocation on one line, or under `run: |`.

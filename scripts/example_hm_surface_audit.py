@@ -31,7 +31,6 @@ Exit codes:
   2 — usage / environment error (no examples found, etc.)
 
 Consumed by:
-  - ``improve/lanes/example-apps.md`` (Tier-0 HM surface gate)
   - agents deciding whether an "Alpine residual" is live or stale preview
 """
 

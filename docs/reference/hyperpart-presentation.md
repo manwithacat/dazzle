@@ -126,7 +126,6 @@ presentation process. Use the published surfaces:
 | Surface | How to find / invoke | What it answers |
 |---------|----------------------|-----------------|
 | Doctrine | `docs/reference/hyperpart-presentation.md` · KG doc page `hyperpart-presentation` | Rules + matrix |
-| Improve strategy | `/improve framework-ux hyperpart_presentation` · playbook `improve/strategies/hyperpart_presentation.md` | OBSERVE→PROVE loop |
 | Felt bar | CLI `dazzle demo quality` · MCP `product_quality(operation=score)` | residual_total + force path |
 | Presentation tool | MCP `presentation(operation=cognition\|opportunities\|residual\|shapes)` | Matrix honesty + still OCR residual + rational DSL shapes |
 | Opportunity scan | CLI `dazzle qa hyperpart-opportunities` · MCP `presentation(opportunities)` | Host emit coverage |

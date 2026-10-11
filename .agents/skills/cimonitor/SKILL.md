@@ -5,8 +5,6 @@ description: Monitor CI pipeline status, diagnose failures, and drive the badge 
 
 Monitor CI/CD pipeline status. Checks both the current branch and the CI badge workflow on main.
 
-**Also wired into `/improve`:** every improve cycle runs Step 0c (see `.agents/skills/improve/SKILL.md` and `improve/strategies/cimonitor.md`) — a cheap snapshot of the `main` badge. When the latest completed `ci.yml` run is red, that improve cycle becomes CI repair (this skill's body) and does not pick a product lane. When green / in progress / `gh` unavailable, improve logs one line and continues.
-
 **Local habits (pair with repair, do not replace the badge):**
 
 | When | Command |
@@ -40,7 +38,7 @@ gh run list --branch $(git branch --show-current) --limit 5 \
 ## 3. Poll in-progress runs
 
 For each `in_progress` or `queued` run, poll every 15 seconds up to 20 attempts
-**only when already in repair mode after a push** (do not burn an improve cycle
+**only when already in repair mode after a push** (do not burn a loop cycle
 waiting on green):
 
 ```bash

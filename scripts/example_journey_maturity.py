@@ -27,7 +27,6 @@ Exit codes:
   2 — usage / environment error
 
 Consumed by:
-  - ``improve/strategies/journey_dogfood.md`` (example-apps lane)
   - ``scripts/example_agent_prove.sh`` (optional preflight ranking)
   - agents deciding which example to mature next
 """

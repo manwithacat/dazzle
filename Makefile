@@ -68,7 +68,7 @@ help:
 	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
 	@echo "  ship-surface     Tier 0.5: bandit + recurrent SPEC/IR/viewport pack (badge-red classes)"
 	@echo "  gen-surface-check  Catalogue + CONTRACT_SURFACE freshness (no write; part of ship-surface)"
-	@echo "  push-gate        Allow/deny git push (stamp + throttle + CI wait + HM plane + improve commit contract)"
+	@echo "  push-gate        Allow/deny git push (stamp + throttle + CI wait + HM plane)"
 	@echo "  ci-changed       Path-aware packs for git diff (fast mid-edit loop)"
 	@echo "  ci-fast          Tier 0: preflight + ship-surface + ruff + mypy + gate + mkdocs"
 	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"
@@ -127,18 +127,6 @@ sync-ci-type:
 sync-ci-test:
 	bash scripts/ci_local.sh sync-test
 
-# Is the record coherent with the code? One command: stale issues (open but
-# cited by a merged commit), PRs ready to merge, non-terminal advisories, and
-# improve-loop state that has rost (heartbeat age, backlog past compaction).
-# Advisory by design — it reports, it does not fail a build.
-# Rehearse the /improve loop's mechanics on this host: steps in order, each with
-# a verdict, no dead ends. Part of `make ci-fast` (tier0); runnable alone.
-harness-validate:
-	bash scripts/ci_local.sh harness-validate
-
-reconcile:
-	@uv run python scripts/repo_reconcile.py
-
 security:
 	# Delegated, not reimplemented. This target used to run its own
 	# `uv run pip-audit --strict --desc on || true`: a fourth copy of the audit,
@@ -185,10 +173,8 @@ test-ux-preflight:
 	@# whole class was @pytest.mark.skip'd AND it asserted that Jinja-era
 	@# filters were still live, so it guarded a substrate ADR-0023 retired.
 	@# It stayed in this list after the file was deleted, which made
-	@# `make test-ux-preflight` exit 4 ("file not found") — i.e. the improve
-	@# loop's MANDATORY Step 0b could not run. Nothing noticed for the ~30
-	@# cycles the loop was parked, because this target is only invoked by the
-	@# loop. The 4 remaining tests still guard meaningful invariants
+	@# `make test-ux-preflight` exit 4 ("file not found"). The 4 remaining
+	@# tests still guard meaningful invariants
 	@# (canonical-pointer linkage, external-resource SRI, IR↔field-reader
 	@# parity, typed-runtime no-jinja).
 	@# Do not prefix these tools with the uv runner. The unit suite shells

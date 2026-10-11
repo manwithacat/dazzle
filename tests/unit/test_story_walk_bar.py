@@ -137,20 +137,3 @@ class TestTrialVerdictBar:
         # domain_join may not be in SHOWCASE; score_app still works
         if not row.has_trial_toml:
             assert not row.is_residual
-
-
-class TestImproveExampleProbesWiring:
-    def test_story_walk_in_unified_status(self) -> None:
-        mod = _load("improve_example_probes", "scripts/improve_example_probes.py")
-        # capture stdout
-        import io
-        from contextlib import redirect_stdout
-
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            code = mod.main(["--status"])
-        out = buf.getvalue()
-        assert code == 0
-        assert "story_walk" in out
-        assert "trial_verdict" in out
-        assert "example_probes residual_total=" in out

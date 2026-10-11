@@ -19,7 +19,7 @@ connected; use **Sentinel** for the shipped modernisation ruleset.
 # Working tree + staged (typical mid-edit)
 python scripts/semgrep_diff.py
 
-# Against main (PR / improve hygiene)
+# Against main (PR hygiene)
 python scripts/semgrep_diff.py --base origin/main
 
 # Full framework tree (slower)
@@ -55,7 +55,7 @@ Shipped rules: `src/dazzle/sentinel/rules/python_audit.yml` (deprecated stdlib, 
 | `dazzle sentinel scan -a PA` from an **example** | That app's `app/` + `scripts/` only — not the framework tree |
 
 ```bash
-# Framework modernisation (preferred for monorepo improve hygiene)
+# Framework modernisation (preferred for monorepo hygiene)
 python scripts/semgrep_diff.py --sentinel --all-src
 
 # Product CLI on a consumer app (AgentId = PA)
@@ -65,8 +65,6 @@ python -m dazzle sentinel findings
 ```
 
 MCP (Dazzle server): tool `sentinel` with `operation=scan` / `findings`.
-
-Stamp improve capability **`dazzle sentinel scan`** when either path runs in a cycle.
 
 ## 3. Semgrep MCP (native)
 
@@ -83,7 +81,6 @@ If MCP is missing: still run `scripts/semgrep_diff.py` — CLI is the SSOT.
 |---------|---------|
 | After editing `src/**/*.py` | `python scripts/semgrep_diff.py` |
 | `/check` with `py_changed` | include semgrep_diff in the report |
-| `/improve semgrep` | full hygiene playbook: `improve/strategies/semgrep_hygiene.md` |
 | Pre-ship of auth/signing/SQL surfaces | `--paths` those dirs or `--all-src` |
 
 ## Report format

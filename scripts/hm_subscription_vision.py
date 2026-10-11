@@ -19,8 +19,7 @@ Usage (monorepo root)::
     # 3) agent Reads PNGs, Writes scores JSON (see prompt), then:
     python scripts/hm_subscription_vision.py --ingest .dazzle/hm-visual-scores-raw.json
 
-    # Fleet path (existing): see
-    #   .agents/skills/improve/strategies/visual_tier2_subagent.md
+    # Fleet path (existing): dazzle qa capture
 """
 
 from __future__ import annotations
@@ -198,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  2. Subagent Writes scores JSON to {scores_raw}")
             print(f"  3. python scripts/hm_subscription_vision.py --ingest {scores_raw}")
             print()
-            print("Fleet alternative: .agents/skills/improve/strategies/visual_tier2_subagent.md")
+            print("Fleet alternative: dazzle qa capture")
         return 0
 
     if args.json:

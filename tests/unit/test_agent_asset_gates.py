@@ -82,7 +82,7 @@ def test_agents_skills_have_shims_and_index() -> None:
 
 def test_operator_playbooks_have_one_open_home() -> None:
     """Host command discovery must point at a portable source, never duplicate it."""
-    operators = ("improve", "issues", "fuzz", "xproject")
+    operators = ("issues", "fuzz")
     for name in operators:
         canonical = REPO_ROOT / ".agents" / "skills" / name / "SKILL.md"
         shim = REPO_ROOT / ".claude" / "commands" / f"{name}.md"
@@ -91,11 +91,6 @@ def test_operator_playbooks_have_one_open_home() -> None:
         assert f".agents/skills/{name}/SKILL.md" in shim_text
         # frontmatter (description + model-invocation policy) + pointer + args
         assert len(shim_text.splitlines()) <= 8
-
-    improve = REPO_ROOT / ".agents" / "skills" / "improve"
-    assert (improve / "capability-map.md").is_file()
-    assert list((improve / "lanes").glob("*.md"))
-    assert list((improve / "strategies").glob("*.md"))
 
 
 _VENDOR_RE = re.compile(r"\b(Claude|Codex|Copilot|Cursor|Grok|Anthropic|OpenAI|xAI)\b")

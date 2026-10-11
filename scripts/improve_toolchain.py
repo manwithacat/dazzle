@@ -1,23 +1,9 @@
 """What can this host actually do? One probe, machine-readable, with remedies.
 
-Cycle 2411 selected the forced campaign `example-apps agent_qa_smoke` and
-immediately hit a wall: `dazzle qa smoke-dig` needs Playwright, which lives in
-the `e2e` extra, and `make dev-install` does not install it. The strategy
-playbook's FIX bar is a table of *findings* — it has no row for "the tool is
-missing", so the agent improvising at that moment has no defined outcome. It
-should have reported `BLOCKED` with the remedy, and nothing in the loop could
-tell it to.
-
-This probe is the missing precondition check. It is advisory by default
-(reports, exit 0) and a gate with `--require` (exit non-zero, prints the
-remedy). Step 0b runs it before lane selection, so a forced campaign cannot be
-selected into a dead end.
-
-Playwright is not the only such tool: `qa/capture.py`, `qa/component_vision.py`
-and `qa/property_vision.py` import it too, and the runtime paths need Postgres.
-So the capability list is data — `tests/unit/fixtures/toolchain_capabilities.json`
-— and `test_toolchain_probe.py` asserts every probe-dependent playbook names a
-capability here, so a strategy cannot grow a new tool dependency silently.
+Advisory by default (reports, exit 0) and a gate with `--require` (exit
+non-zero, prints the remedy). The capability list is data —
+`tests/unit/fixtures/toolchain_capabilities.json`; `docs/harness/tool-floor.md`
+explains it.
 
 Usage:
     uv run python scripts/improve_toolchain.py --status
@@ -31,11 +17,10 @@ import argparse
 import importlib.util
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -50,7 +35,6 @@ class Capability:
     name: str
     summary: str
     remedy: str
-    required_for: list[str] = field(default_factory=list)
     probe: str = "module"  # module | binary | env | url | any
     spec: str = ""
 
@@ -104,67 +88,6 @@ def _url_reachable(url: str, timeout: float = 1.5) -> bool:
         return False
 
 
-# How a capability shows up in a playbook's text. `required_for` in the fixture is
-# *derived* from these by `derive_requirements()` and the gate asserts the fixture
-# equals the derivation — so the inventory cannot claim a tool a strategy does not
-# use, and cannot miss one it does.
-SIGNALS: dict[str, str] = {
-    # Tool *invocations*, not subject matter. A strategy that talks about
-    # "render" or "visual" does not need a browser; one that runs
-    # `smoke-crawl` cannot proceed without one.
-    # `dazzle qa hyperpart-opportunities` reads stored JSON — no browser — so the
-    # bare `dazzle qa` is not a signal; only the driving commands are.
-    "playwright": r"playwright|smoke-crawl|smoke-dig|taste-panel|ux verify"
-    r"|hm_pages_vision|recapture|screenshot",
-    "postgres": r"database_url|--fresh-db|postgres|dazzle e2e env",
-    "served-app": r"dazzle serve|--test-mode|base_url|127\.0\.0\.1|--port|dazzle e2e env",
-    "gh": r"\bgh (issue|pr|run|api|auth|repo)\b",
-    "gh-auth": r"\bgh (issue|pr|run|api|auth|repo)\b",
-    "semgrep": r"\bsemgrep\b",
-    "sentinel": r"\bsentinel (scan|fuzz|history|findings)\b|dazzle sentinel",
-}
-
-
-def _playbooks() -> list[Path]:
-    base = REPO / ".agents" / "skills" / "improve"
-    return sorted((base / "strategies").glob("*.md")) + sorted((base / "lanes").glob("*.md"))
-
-
-def derive_requirements() -> dict[str, list[str]]:
-    """capability -> the strategies whose text mentions its tool.
-
-    Mechanical, so the inventory is a reading of the playbooks rather than a
-    list somebody remembered. `test_toolchain_probe.py` pins the fixture to this,
-    which is what makes "no failed tool declarations" checkable rather than
-    aspirational.
-    """
-    out: dict[str, list[str]] = {}
-    for name, pattern in SIGNALS.items():
-        found = [
-            playbook.stem
-            for playbook in _playbooks()
-            if re.search(pattern, playbook.read_text(encoding="utf-8"), re.IGNORECASE)
-        ]
-        out[name] = sorted(found)
-    return out
-
-
-def refresh_fixture() -> int:
-    """Rewrite `required_for` in the fixture from the derivation. Returns the
-    number of entries changed."""
-    derived = derive_requirements()
-    raw = json.loads(CAPS.read_text(encoding="utf-8"))
-    changed = 0
-    for cap in raw:
-        want = derived.get(cap["name"])
-        if want is None or want == cap.get("required_for"):
-            continue
-        changed += len(set(want) ^ set(cap.get("required_for", [])))
-        cap["required_for"] = want
-    CAPS.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
-    return changed
-
-
 def load_caps() -> list[Capability]:
     raw: list[dict[str, Any]] = json.loads(CAPS.read_text(encoding="utf-8"))
     return [Capability(**row) for row in raw]
@@ -193,7 +116,6 @@ def report(caps: list[Capability] | None = None) -> list[dict[str, Any]]:
                 "ok": ok,
                 "detail": detail,
                 "remedy": cap.remedy,
-                "required_for": cap.required_for,
                 "summary": cap.summary,
             }
         )
@@ -205,16 +127,6 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--status", action="store_true", help="print availability for every capability")
     ap.add_argument("--json", action="store_true", help="machine-readable")
     ap.add_argument(
-        "--derive",
-        action="store_true",
-        help="print the capability -> strategy derivation from the playbooks",
-    )
-    ap.add_argument(
-        "--refresh",
-        action="store_true",
-        help="rewrite required_for in the fixture from that derivation",
-    )
-    ap.add_argument(
         "--require",
         action="append",
         default=[],
@@ -222,14 +134,6 @@ def main(argv: list[str] | None = None) -> int:
         help="exit non-zero unless CAP is available (repeatable)",
     )
     args = ap.parse_args(argv)
-
-    if args.derive:
-        print(json.dumps(derive_requirements(), indent=2))
-        return 0
-    if args.refresh:
-        changed = refresh_fixture()
-        print(f"{CAPS.name}: {changed} required_for entr(ies) changed")
-        return 0
 
     rows = report()
     by_name = {r["name"]: r for r in rows}

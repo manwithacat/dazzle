@@ -1,7 +1,7 @@
 {
-  "src_lines": 475386,
-  "test_lines": 425632,
-  "docs_lines": 252001,
+  "src_lines": 475420,
+  "test_lines": 422470,
+  "docs_lines": 249894,
   "construct_count": 57,
   "written": "2026-10-11",
   "exceptions": [
@@ -20,6 +20,20 @@
         "test_lines"
       ],
       "reason": "consumer bug fix #1775 (+src/+tests); slack to be recovered by the Phase 1 harness retirement ship"
+    },
+    {
+      "date": "2026-10-11",
+      "rose": [
+        "src_lines"
+      ],
+      "reason": "Phase 1 retirement: src +34 lines inside a net -21.5k ship (tests -3.2k, docs -2.6k)"
+    },
+    {
+      "date": "2026-10-11",
+      "rose": [
+        "test_lines"
+      ],
+      "reason": "Phase 1 commit: pre-commit EOF fix and committed-tree count differ from the pre-commit baseline by a few lines inside a net -21.5k ship"
     }
   ]
 }

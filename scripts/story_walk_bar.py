@@ -302,21 +302,16 @@ def _divergence_issues(
 
 
 def _live_unproven_issues(app_dir: Path, walks: list[object]) -> list[str]:
-    """Epistemic: walk exists but never live-green."""
-    import importlib.util
-    import sys
+    """Epistemic: walk exists but never live-green.
 
-    path = REPO / "scripts" / "improve_dig_receipt.py"
-    spec = importlib.util.spec_from_file_location("improve_dig_receipt", path)
-    if not spec or not spec.loader:
-        return []
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["improve_dig_receipt"] = mod
+    The committed marker is `fixtures/scene_walks/.live_green.json`
+    (`{"walks": {"<walk_id>": {...}}}`), written when a walk last ran green live.
+    """
+    marker = app_dir / "fixtures" / "scene_walks" / ".live_green.json"
     try:
-        spec.loader.exec_module(mod)
-    except Exception:  # noqa: BLE001
-        return []
-    is_walk_live_green = mod.is_walk_live_green
+        live_green = set(json.loads(marker.read_text(encoding="utf-8")).get("walks") or {})
+    except (OSError, json.JSONDecodeError, AttributeError):
+        live_green = set()
 
     issues: list[str] = []
     for walk in walks:
@@ -324,7 +319,7 @@ def _live_unproven_issues(app_dir: Path, walks: list[object]) -> list[str]:
         if not wid:
             continue
         wid = Path(str(wid)).stem if "/" in str(wid) or str(wid).endswith(".yaml") else str(wid)
-        if not is_walk_live_green(app_dir, wid):
+        if wid not in live_green:
             issues.append(f"live_unproven:{wid}")
     return issues[:6]
 

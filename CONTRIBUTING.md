@@ -106,13 +106,6 @@ Add hover documentation for entity fields
 Closes #123
 ```
 
-**Autonomous `/improve` cycles** use a stricter contract (oral #127) so
-`git log` stays clerk-readable and leftover-token clones cannot hide as
-progress. Subject names the *user-visible lie*, not `leftover-honest <param>`.
-Body has labeled `Before:` / `After:` / `Live:` lines. Harness-only ships
-say `harness_only`. Machine: `python scripts/improve_commit_contract.py`
-(also `make push-gate`). See `.claude/commands/improve.md` Step 3.
-
 ## 🤖 AI co-authorship requirement
 
 Every contribution to this repository must declare its AI assistance. This is
@@ -179,12 +172,9 @@ and GitHub Releases. Patch tags (`vX.Y.1+`) exist for traceability of those
 human ships and are **not** published. To cut a published release, bump
 the minor: `/bump minor`.
 
-**Autonomous `/improve` commits are not bumped and not tagged.** The loop
-lands `improve: cycle N …` / `fix: cycle N …` on `main` at high frequency.
-Those commits are the git log, not the release train. Tagging every
-15-minute cycle would drown PyPI/Homebrew machinery and contradict the
-point of an unattended loop. A human who wants a named release of
-improve-era work runs `/bump minor` (or patch) and `/ship` on purpose.
+**Autonomous loop commits are not bumped and not tagged.** Those commits
+are the git log, not the release train. A human who wants a named release
+of that work runs `/bump minor` (or patch) and `/ship` on purpose.
 
 To keep the public record tidy, on each minor release a workflow prunes patch
 **tags + GitHub Releases** whose minor series has fallen outside the most recent 5

@@ -188,5 +188,4 @@ python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5
 python packages/hatchi-maxchi/tools/dual_lock_queue.py --write   # → DUAL_LOCK_QUEUE.md
 ```
 
-Playbook: `.claude/commands/improve/strategies/dual_lock_expand.md`.
 Force path: `/improve hm-convergence dual_lock_expand`.

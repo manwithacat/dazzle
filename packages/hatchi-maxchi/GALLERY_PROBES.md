@@ -66,7 +66,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 
 1. `--discover` → uncovered multi-details stems (must declare intent)
 2. Author `Probe` with `intent=exclusive|multi_open` + fix_surface
-3. `--run` → FAIL drains via `improve/strategies/gallery_probes.md`
+3. `--run` → FAIL rows drain as HMC backlog rows
 4. Human observation → `--validate-observation '{…}'`
 5. CI pin optional: `tests/test_behaviour.py` scenario for ship-grade contracts
 

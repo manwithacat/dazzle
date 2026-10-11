@@ -6,8 +6,7 @@
 **Do not claim bake-off pass** until a fresh human re-score says so.
 
 Tracking: GitHub **#1626**. Product-maturity overview:
-[`product-maturity.md`](./product-maturity.md) (Antagonist demo bar). Strategy:
-`.agents/skills/improve/strategies/demo_fleet.md`.
+[`product-maturity.md`](./product-maturity.md) (Antagonist demo bar).
 
 ---
 
@@ -189,5 +188,4 @@ Requires Postgres `dazzle_<app>` and Playwright Chromium.
 python scripts/demo_fleet_bar.py --status
 python scripts/demo_fleet_bar.py --strict
 dazzle demo quality -p examples
-python scripts/improve_example_probes.py --status
 ```

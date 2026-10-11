@@ -65,10 +65,6 @@ SANCTIONED = {
     # Hyperpart coherence drain queue: ranks .dazzle sweep findings; writes
     # packages/hatchi-maxchi/COHERENCE_QUEUE.md (measurement/governance, not runtime).
     "scripts/hm_coherence_queue.py",
-    # /improve campaign picker gates dual_lock rotation on queue depth by reading
-    # packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md (or invoking the queue tool). Governance
-    # only — not runtime HM consumption.
-    "scripts/improve_policy.py",
     # Ship-surface remediation playbook documents regenerating
     # packages/hatchi-maxchi/CONTRACT_SURFACE.md via the package tool (operator
     # governance docs in REMEDIATION string — not runtime consumption).

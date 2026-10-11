@@ -10,8 +10,7 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 
 1. `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5`
 2. Pick the **lowest priority** row that is not BLOCKED (prefer `emitter_uncontracted` / `contract_none` with emitters).
-3. Follow `.claude/commands/improve/strategies/dual_lock_expand.md`.
-4. Ship with Tier 0; re-run this tool — the promoted stem must leave the queue.
+3. Ship with Tier 0; re-run this tool — the promoted stem must leave the queue.
 
 | # | stem | kind | pri | dual-lock | contract | css | gallery | emitters | action |
 |--:|------|------|----:|-----------|:--------:|:---:|:-------:|----------|--------|

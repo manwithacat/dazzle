@@ -59,7 +59,6 @@ Exit codes:
   2 — usage / environment error
 
 Consumed by:
-  - ``improve/lanes/example-apps.md`` (prefer product residuals before Tier-1)
   - agents deciding whether an app is a warehouse or a product
   - quiet-fleet feature_creep: minimize ``wi_fleet`` / ``wi_next``
 """

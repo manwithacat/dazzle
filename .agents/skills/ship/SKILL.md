@@ -129,20 +129,12 @@ See the concordance doc for Tier 2.
 - Stage only the relevant changed files by name (never `git add -A` or `git add .`).
 - Do NOT stage files that look like secrets (.env, credentials, tokens).
 - Write a concise commit message that explains *why* the change was made, following the conventional commit style used in recent history (`git log --oneline -10`).
-- **Improve-cycle ships** (`improve: cycle N` / `fix: cycle N`) must follow the oral #127 contract in `.agents/skills/improve/SKILL.md` Step 3: clerk-visible subject, `Before:` / `After:` / `Live:` body, `harness_only` when the diff is not product. Validate before commit:
-
-  ```bash
-  python scripts/improve_commit_contract.py --message-file /tmp/improve-msg --paths-from-index
-  python scripts/improve_commit_contract.py --status
-  ```
-
-  Non-zero → rewrite; do not commit. `make push-gate` re-checks HEAD.
 - End the commit message with your harness's agent-attribution trailer, if it defines one (a `Co-Authored-By:` line naming the agent — match the signature style visible in recent commits; harnesses that supply their own trailer automatically need nothing extra).
 - Use a HEREDOC to pass the message to `git commit -m`.
 
 ## 3. Tag (if version was bumped)
 
-Human-initiated `/ship` after `/bump` only. Autonomous `/improve`
+Human-initiated `/ship` after `/bump` only. Autonomous loop
 cycles **must not** bump or tag (README position 11).
 
 - Check if `pyproject.toml` was modified in this commit by running `git diff HEAD~1 HEAD -- pyproject.toml`.
@@ -193,12 +185,10 @@ make push-gate
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 - **HM visual plane:** when the push touches `packages/hatchi-maxchi/{components,controllers,site,tests/baselines,base,tokens,families,dist}/`, treat sibling `hatchi-maxchi` CI as a release plane — do not claim done until `python scripts/hm_standalone_ci_status.py --prefer-completed` is green; use `--require-hm-green` for tags.
 
-## 6. Signal the improvement loop
+## 6. Emit ship signals
 
-After a successful push, emit the `fix-deployed` signal so /improve lanes
-re-verify rows the change may affect (the cross-lane contract in
-`improve.md` names /ship as this signal's emitter — previously declared
-but never wired, so lanes sat on stale verification state across releases):
+After a successful push, emit the `fix-deployed` signal on the signal bus
+(`.dazzle/signals/`) so consumers of verification state know the change is live:
 
 ```bash
 python -c "
@@ -209,10 +199,8 @@ emit(source='ship', kind='fix-deployed', payload={'sha': '$(git rev-parse --shor
 
 If step 5 pushed a **published-release tag** — one matching `vX.Y.0`, the same
 `endsWith('.0')` condition the release workflows use to publish to PyPI/Homebrew —
-additionally emit `dazzle-updated` (the cross-lane contract's "(external — releases)"
-signal). This is what tells /improve a new framework version is live: lanes mark
-affected rows for re-verification and the driver resets the explore budget
-(new release = fresh explore territory):
+additionally emit `dazzle-updated`, which announces that a new framework version
+is live:
 
 ```bash
 python -c "

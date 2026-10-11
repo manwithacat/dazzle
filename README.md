@@ -149,7 +149,7 @@ Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
 8. **Provable RBAC (scoped, honestly).** Scope rules compile to a formal predicate algebra, statically validated against the FK graph; their meta-properties (least-privilege containment, deny-overrides precedence, …) are mechanically proved over the DSL by an SMT solver — `dazzle rbac prove`. The proof is of a *model* of the policy over a stated trust boundary (PostgreSQL, auth, the single query path are *trusted, not proven*); runtime conformance is *verified by test*, and grants you mint outside the declared classes fall outside the proof. The tool says which — `PROVED` / `VACUOUS` / `INFORMATIONAL` / `FAILED` — rather than a blanket green.
 9. **No hidden singletons.** Dependencies are explicit (`RuntimeServices`, `ServerState`) — readable by both humans and agents.
 10. **No backwards-compat shims.** Pre-1.0, clean breaks beat layered workarounds. Callers are updated in the same commit.
-11. **Tag human-initiated releases; leave autonomous improve untagged.** A human-started `/bump` + `/ship` cuts a `vX.Y.Z` tag (minors publish; patches are traceability). The `/improve` loop commits on `main` without bumping or tagging — high-frequency agent work is the git log, not the release train. See [Releases](CONTRIBUTING.md#releases--versioning).
+11. **Tag human-initiated releases; leave autonomous loop work untagged.** A human-started `/bump` + `/ship` cuts a `vX.Y.Z` tag (minors publish; patches are traceability). An autonomous loop commits on `main` without bumping or tagging — high-frequency agent work is the git log, not the release train. See [Releases](CONTRIBUTING.md#releases--versioning).
 
 If you disagree with one of these, you'll probably disagree with the rest. That's the point of stating them up front.
 
@@ -374,20 +374,6 @@ The agent framework uses an **observe-decide-act-record** loop to autonomously e
 
 For the live tool-by-tool inventory (operations, parameters, descriptions), see the [MCP Tool Inventory](docs/reference/mcp-tools.md) — generated from the registry every doc build. For the architectural model, see [Architecture: MCP Server](docs/architecture/mcp-server.md).
 
-### Autonomous improve harness (how Dazzle develops itself)
-
-Dazzle’s own development loop (`/improve`) is a **control plane** around agents: one cycle owner, safety gates (main CI → CodeQL → GitHub inbox) before product digs, machine residual probes, dig contracts, self-schedule, and an append-only cycle log. It is agent-first by design; the docs below package that structure for humans who want to understand or adapt the pattern without reading 24 strategy playbooks.
-
-| Doc | Audience |
-|-----|----------|
-| **[Improve harness exemplar](docs/harness/improve-exemplar.md)** | Humans — portable anatomy, preemption stack, glossary, adapt checklist |
-| **[Operator field guide](docs/harness/operator-field-guide.md)** | Operators — status, rearm, force a dig, read the log |
-| **[Strategy catalog](docs/harness/strategy-catalog.md)** | Both — one-line map of playbooks |
-| **[Autonomous Harness](docs/autonomous-harness.md)** | Fleet overview of slash commands |
-| **Runtime runbook** (`.agents/skills/improve/SKILL.md`) | Executing agents — not a substitute for the exemplar |
-
-Hub: [docs/harness/](docs/harness/index.md) · published docs nav section **Harness**.
-
 ### Agent integration
 
 ```bash
@@ -460,10 +446,6 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
 - **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
-- **[Harness hub](docs/harness/index.md)** — human map of the autonomous improve loop
-- **[Improve harness exemplar](docs/harness/improve-exemplar.md)** — portable control-plane design (adapt checklist + glossary)
-- **[Leftover-honesty ethnography](docs/harness/leftover-honesty-ethnography.md)** — how the unattended loop named *invent*, *coat*, and Goodhart (for humans new to Dazzle)
-- **[Autonomous Harness](docs/autonomous-harness.md)** — slash-command fleet overview
 
 - **[Research notes](docs/research/INDEX.md)** — reproducible empirical investigations (agent-era counter-priors, predicting task context from a code graph)
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
@@ -477,7 +459,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 
 Dazzle is an agent-native framework and a research project in how application substrates and **representational infrastructure** should look when AI collaborators are first-class readers and writers. The north star is simple: make the correct change **obvious, local, inspectable, and testable** — for humans and for agents that improve over time.
 
-It is developed in the open, primarily by a single author, with heavy AI assistance — both in the framework itself and in the example apps built on top of it. Human-initiated work is versioned and tagged; the autonomous improve loop commits on `main` without a tag (see position 11). Pre-1.0 breaks are intentional rather than apologetic. If you're evaluating Dazzle for production use, talk to us first.
+It is developed in the open, primarily by a single author, with heavy AI assistance — both in the framework itself and in the example apps built on top of it. Human-initiated work is versioned and tagged; autonomous loop work commits on `main` without a tag (see position 11). Pre-1.0 breaks are intentional rather than apologetic. If you're evaluating Dazzle for production use, talk to us first.
 
 ## Contributing
 

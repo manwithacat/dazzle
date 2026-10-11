@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 475,386 |
-| Test lines (`tests/`) | 425,632 |
-| Documentation lines (`docs/**/*.md`) | 251,517 |
+| Framework source lines (`src/dazzle`) | 475,420 |
+| Test lines (`tests/`) | 422,387 |
+| Documentation lines (`docs/**/*.md`) | 249,410 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
 
@@ -104,13 +104,13 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
 | `http` | 143,792 | 652 |
-| `core` | 97,194 | 2,097 |
+| `core` | 97,228 | 2,097 |
 | `mcp` | 44,145 | 6,382 |
 | `cli` | 34,425 | 10,319 |
 | `render` | 32,981 | 6,157 |
 | `testing` | 27,706 | 68 |
 | `page` | 14,233 | 2,599 |
-| `agent` | 10,845 | 9,578 |
+| `agent` | 10,845 | 9,573 |
 | `qa` | 7,506 | 3,431 |
 | `sentinel` | 7,252 | 563 |
 | `fitness` | 5,858 | 1,401 |
@@ -280,7 +280,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `test-design` | 0 | 0 | 0 | 0 |  |
 | `theme` | 0 | 0 | 0 | 0 |  |
 | `ux` | 63 | 12 | 5 | 1 | `explore`, `maturity`, `verify` |
-| `validate` | 46 | 128 | 89 | 40 |  |
+| `validate` | 46 | 129 | 89 | 40 |  |
 | `version` | 0 | 0 | 0 | 0 |  |
 | `vocab` | 0 | 0 | 0 | 25 | `expand`, `list`, `show` |
 | `worker` | 1 | 0 | 0 | 0 |  |
@@ -461,7 +461,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | Directory | Markdown lines |
 |---|---:|
 | `docs/superpowers/` | 193,364 |
-| `docs/reference/` | 20,914 |
+| `docs/reference/` | 20,894 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
@@ -469,14 +469,14 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `docs/history/` | 3,588 |
 | `docs/counter-priors/` | 3,112 |
 | `docs/architecture/` | 2,696 |
-| `docs/harness/` | 1,694 |
 | `docs/evaluation/` | 1,662 |
-| `docs/contributing/` | 1,415 |
+| `docs/contributing/` | 1,414 |
 | `docs/examples/` | 819 |
-| `docs/research/` | 813 |
+| `docs/research/` | 811 |
 | `docs/getting-started/` | 665 |
 | `docs/recipes/` | 501 |
 | `docs/decisions/` | 239 |
+| `docs/harness/` | 47 |
 | `docs/agent-loop/` | 25 |
 | `docs/api-reference/` | 0 |
 | `docs/api-surface/` | 0 |

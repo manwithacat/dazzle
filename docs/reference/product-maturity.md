@@ -143,23 +143,15 @@ queue (agent brief R1–R6) before STALE Tier-1 noise. Do **not** add entity lis
 surfaces to “fix” commercial bake-off. Do **not** claim fleet ≥5.5 until a
 human still re-score (or explicit demotion) says so.
 
-### Agent loop (`/improve`)
+### Probes
 
-| Force path | Strategy | Probe |
-|------------|----------|-------|
-| `/improve example-apps product_maturity` | `improve/strategies/product_maturity.md` | `example_product_maturity.py` |
-| `/improve example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `demo_fleet_bar.py` |
-| `/improve example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `example_journey_maturity.py` |
-| `/improve example-apps story_walk` | `improve/strategies/story_walk.md` | `story_walk_bar.py` (landing stories ↔ walks) |
-| `/improve example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `trial_verdict_bar.py` + `dazzle qa trial` |
-
-Every example-apps OBSERVE (and `/improve --status`) starts with the unified suite:
-
-```bash
-python scripts/improve_example_probes.py --status
-# product → demo → journey → felt → story_walk → trial_verdict
-# warehouse_index … densify_allowed=0|1
-```
+| Bar | Probe |
+|-----|-------|
+| Product maturity | `example_product_maturity.py` |
+| Demo fleet | `demo_fleet_bar.py` |
+| Journey maturity | `example_journey_maturity.py` |
+| Story walk | `story_walk_bar.py` (landing stories ↔ walks) |
+| Agent acceptance | `trial_verdict_bar.py` + `dazzle qa trial` |
 
 Agents should also score **felt** demo quality (persona-home seeds, metric/list
 current_user residual #1632, + still floors) via the single bar — structural
@@ -171,8 +163,6 @@ dazzle demo quality -p examples --app support_tickets --json
 # MCP: product_quality(operation="score", project_root="examples/invoice_ops")
 ```
 
-`scripts/improve_example_probes.py` folds `product_quality` into OBSERVE so
-`residual_total` is not falsely 0 when persona homes or empty-hero stills remain.
 
 Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality, including presentation residual) → story_walk → trial_verdict / agent_acceptance → Tier 1**.
 
@@ -207,8 +197,7 @@ humans the quality definition (humans stay **L4** on the agent QA ladder).
 | Backlog feed | JSON `auto_seed` → improve PENDING (product only) |
 
 **When residual=0 and densify is closed**, acceptance is the right continuous
-improvement surface — not another `typography_ops` desk. Full playbook:
-`improve/strategies/agent_acceptance_panel.md`. Ladder doctrine:
+improvement surface — not another `typography_ops` desk. Ladder doctrine:
 `docs/recipes/agent-qa-ladder.md`.
 
 Do **not** treat low WI as customer acceptance. Low WI means “not a warehouse
@@ -263,11 +252,6 @@ maturity residual is next.
 ## CLI
 
 ```bash
-# Unified /improve OBSERVE (product + demo + journey)
-python scripts/improve_example_probes.py --status
-python scripts/improve_example_probes.py --next
-python scripts/improve_example_probes.py --strict
-
 # Product only
 python scripts/example_product_maturity.py
 python scripts/example_product_maturity.py --status

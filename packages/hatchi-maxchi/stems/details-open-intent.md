@@ -27,7 +27,6 @@ content) or tree (hierarchical browse).
 4. Pin intent with a gallery probe before claiming “fixed”:
    - `packages/hatchi-maxchi/tools/gallery_probes.py` / `scripts/hm_gallery_probes.py`
    - Catalog: `GALLERY_PROBES.md`
-   - Strategy: monorepo `improve/strategies/gallery_probes.md`
 
 ## Not this
 

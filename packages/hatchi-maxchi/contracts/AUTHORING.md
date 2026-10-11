@@ -5,8 +5,7 @@
 `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`. **Promotion queue** (what
 `/improve hm-convergence dual_lock_expand` picks next):
 `python packages/hatchi-maxchi/tools/dual_lock_queue.py --write` →
-`packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md`. Cycle recipe:
-`.claude/commands/improve/strategies/dual_lock_expand.md`.
+`packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md`.
 
 **shadcn parity:** `python packages/hatchi-maxchi/tools/shadcn_parity.py --write`
 → `SHADCN_PARITY.md`. Gaps are improve placeholders
