@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### Added
+- **ADR-0057 and the flense programme: consumer-forced growth and a framework mass ratchet.** Dazzle's product is a verifiable SaaS model for regulated domains (safeguarding and data protection in state education, KYC/AML and filings in accountancy, IP and royalties in publishing); its framework was ~30× the DSL it serves, 27 of 57 top-level constructs had no consumer, and no consumer ran the compliance proof surface. From here a construct, subsystem, tool or document stays only if a named consumer uses it or a parked DD names the consumer that will; the proof surface must be *exercised* by each regulated consumer in CI; and framework mass may only fall. Plan: `docs/plans/2026-10-11-flense-programme.md`.
+- **`scripts/flense_inventory.py` → `docs/reference/flense-inventory.md`** — the only admissible evidence for a keep or a removal. Reads `flense_consumers.toml` (the three consumer checkouts) and reports, per top-level DSL construct, MCP tool, CLI group, framework subpackage and docs directory, how much it weighs and which consumer uses it. An absent checkout is reported as *absent*, never *unused*. `--check` fails when the committed table is stale.
+- **`scripts/mass_ratchet.py` + `tests/unit/test_mass_ratchet.py` (gate)** — framework source lines, test lines, in-tree documentation lines and top-level construct count may only fall. The baseline (`tests/unit/fixtures/mass_baseline.json`) is rewritten downward with `--write-baseline`; raising a value needs `--force --reason`, recorded in the fixture. Starting point: 476,741 / 425,933 / 352,449 / 57.
+
 ## [0.115.0] - 2026-10-11
 
 ### Changed

@@ -1,0 +1,21 @@
+# Consumer manifest for the flense programme (ADR-0057).
+#
+# `scripts/flense_inventory.py` reads this to decide what "a named consumer
+# uses it" means. Paths are local checkouts; a missing path is reported as
+# absent, never as "unused". Keep this list short and real: these are the apps
+# whose obligations define the product.
+
+[[consumers]]
+name = "AegisMark"
+path = "/Volumes/SSD/AegisMark"
+domain = "state education — safeguarding, data protection, high-stakes formative marking"
+
+[[consumers]]
+name = "cyfuture"
+path = "/Volumes/SSD/cyfuture"
+domain = "accountancy — regulatory filings, KYC/AML, document signing"
+
+[[consumers]]
+name = "pennydreadful"
+path = "/Volumes/SSD/pennydreadful"
+domain = "publishing — IP and authorship verification, royalties, rights auctions"

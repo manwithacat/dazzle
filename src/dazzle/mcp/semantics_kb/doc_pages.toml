@@ -1876,3 +1876,10 @@ slug = "verified-domain-join"
 order = 134
 handwritten = true
 intro = "The verified-domain join (#1424): a non-SSO user with a verified work email self-joins the tenant that owns their email domain — DNS-TXT domain proof, per-tenant join policy, and the password-side complement to invitations and SSO JIT provisioning."
+
+[pages.flense-inventory]
+title = "Flense Inventory"
+slug = "flense-inventory"
+order = 101
+handwritten = true
+intro = "Generated usage and mass table — the only admissible evidence for keeping or removing a framework part under ADR-0057."

@@ -1,0 +1,17 @@
+{
+  "src_lines": 476741,
+  "test_lines": 425935,
+  "docs_lines": 352450,
+  "construct_count": 57,
+  "written": "2026-10-11",
+  "exceptions": [
+    {
+      "date": "2026-10-11",
+      "rose": [
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "Phase 0 bootstrap: baseline written before docs generate linked the inventory page and ruff formatted the gate"
+    }
+  ]
+}

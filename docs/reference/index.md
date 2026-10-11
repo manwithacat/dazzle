@@ -39,6 +39,7 @@
 | [Ingest](ingest.md) | Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676). |
 | [Project Layout](project-layout.md) | The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live. |
 | [DSL Grammar Specification](grammar.md) | The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`. |
+| [Flense Inventory](flense-inventory.md) | Generated usage and mass table — the only admissible evidence for keeping or removing a framework part under ADR-0057. |
 | [Personas and Scenarios](scenarios.md) | Personas define user types; scenarios define test-data states for development and demonstration. |
 | [UI Islands](islands.md) | Self-contained interactive JavaScript components that mount into server-rendered pages. |
 | [Reports & Charts](reports.md) | How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries. |
