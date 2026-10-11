@@ -226,34 +226,6 @@ class TestDurationLexHelpers:
         assert short_duration_seconds(text) is None
 
 
-# ---- parse_aggregate_where: any clause → ScopePredicate OR ValueError, never RecursionError ----
-
-
-class TestParseAggregateWhere:
-    @given(_UNICODE_TEXT)
-    @settings(max_examples=400, suppress_health_check=[HealthCheck.too_slow])
-    def test_arbitrary_clause(self, s: str) -> None:
-        from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
-
-        try:
-            parse_aggregate_where(s)
-        except ValueError:
-            pass  # documented outcome
-
-    @given(st.integers(min_value=0, max_value=4000))
-    @settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None)
-    def test_deep_nesting_is_value_error_not_recursion_error(self, k: int) -> None:
-        # A clause with k nested parens must raise the documented ValueError (depth cap),
-        # never an undocumented RecursionError (a DoS on the report WHERE path).
-        from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
-
-        clause = "(" * k + "a = 1" + ")" * k
-        try:
-            parse_aggregate_where(clause)
-        except ValueError:
-            pass
-
-
 # ---- parse_schedule: TOTAL — any str → a (weekdays, start, end) tuple, never raises ----
 
 

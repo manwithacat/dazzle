@@ -47,6 +47,7 @@ async def _fetch_region_json(
     # scope state so a missing repo or early exception doesn't bypass
     # the gate on `_compute_aggregate_metrics` below.
     _scope_only_filters_batch: dict[str, Any] | None = None
+    _region_filters_batch: dict[str, Any] | None = None  # #1773
     _scope_denied: bool = True
 
     if repo:
@@ -76,6 +77,9 @@ async def _fetch_region_json(
                         filters = None
                 except Exception:
                     logger.warning("Failed to evaluate condition filter for region", exc_info=True)
+            # #1773: the compiled region `filter:` (incl. current_context) so
+            # the aggregate metrics below count the rows the region shows.
+            _region_filters_batch = dict(filters) if filters else None
 
             sort_list: list[str] | None = None
             ir_sort = ctx.ir_region.sort
@@ -92,38 +96,6 @@ async def _fetch_region_json(
             )
             if _scope_only_filters_batch:
                 filters = {**(filters or {}), **_scope_only_filters_batch}
-
-            # #1305: isolate the `current_context` slice so the aggregate
-            # metrics below re-scope by the context selector (batch JSON path),
-            # mirroring the single-region path in compute_region_render_inputs.
-            _ctx_id_batch = (filter_context or {}).get("current_context")
-            if ir_filter is not None and _ctx_id_batch:
-                try:
-                    from dazzle.http.runtime.scope_filters import (
-                        _extract_condition_filters,
-                    )
-
-                    _ctx_filters_batch: dict[str, Any] = {}
-                    _extract_condition_filters(
-                        ir_filter,
-                        user_id or (filter_context or {}).get("current_user_id", ""),
-                        _ctx_filters_batch,
-                        logger,
-                        auth_context,
-                        ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
-                        context_id=_ctx_id_batch,
-                        all_ref_targets=ctx.entity_ref_targets,
-                        context_only=True,
-                    )
-                    if _ctx_filters_batch:
-                        _scope_only_filters_batch = {
-                            **(_scope_only_filters_batch or {}),
-                            **_ctx_filters_batch,
-                        }
-                except Exception:
-                    logger.warning(
-                        "Failed to isolate current_context filter (batch)", exc_info=True
-                    )
 
             limit = ctx.ctx_region.limit or page_size
             include_rels = ctx.auto_include or None
@@ -160,7 +132,8 @@ async def _fetch_region_json(
 
     # SECURITY (#887): suppress aggregates when scope is denied AND
     # propagate the scope-only filters so the aggregate query stays
-    # tenant-bounded for the legitimate case.
+    # tenant-bounded for the legitimate case. The region filter narrows
+    # same-source metrics on top of scope (#1773).
     metrics: list[dict[str, Any]] = []
     if ctx.ctx_region.aggregates and not _scope_denied:
         metrics = await _compute_aggregate_metrics(
@@ -172,6 +145,7 @@ async def _fetch_region_json(
             delta=getattr(ctx.ctx_region, "delta", None),
             source_entity=ctx.source,  # #888 Phase 1
             tones=getattr(ctx.ctx_region, "tones", None),  # v0.61.65
+            region_filters=_region_filters_batch,  # #1773
         )
 
     return {

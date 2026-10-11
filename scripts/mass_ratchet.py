@@ -19,6 +19,7 @@ import argparse
 import datetime as _dt
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,10 +30,19 @@ _SKIP = {"node_modules", ".venv", "__pycache__", ".git"}
 METRICS = ("src_lines", "test_lines", "docs_lines", "construct_count")
 
 
+def _tracked(root: Path, suffix: str) -> list[Path]:
+    """Git-tracked files under ``root`` with ``suffix`` — the same set CI sees."""
+    out = subprocess.run(
+        ["git", "ls-files", "-z", "--", str(root)], cwd=REPO, capture_output=True, check=True
+    ).stdout
+    # A file deleted in the worktree but not yet staged is still listed; skip it.
+    return [
+        REPO / p for p in out.decode().split("\0") if p.endswith(suffix) and (REPO / p).is_file()
+    ]
+
+
 def _lines(root: Path, suffix: str) -> int:
-    return sum(
-        sum(1 for _ in p.open("rb")) for p in root.rglob(f"*{suffix}") if _SKIP.isdisjoint(p.parts)
-    )
+    return sum(sum(1 for _ in p.open("rb")) for p in _tracked(root, suffix))
 
 
 def measure() -> dict[str, int]:

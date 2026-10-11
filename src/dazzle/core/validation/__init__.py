@@ -126,6 +126,7 @@ from .rbac import (
     validate_stable_persona_ids_for_demo,
     validate_visibility_bool_field_scope_coverage,
 )
+from .region_aggregates import validate_region_filter_aggregate_reach
 from .surfaces import (
     validate_experiences,
     validate_surfaces,
@@ -222,6 +223,7 @@ __all__ = [
     "validate_ledgers",
     "validate_lifecycles",
     "validate_comparison_regions",
+    "validate_region_filter_aggregate_reach",
     "validate_legal_entity_money_span",
     "validate_money_fields",
     "validate_insight_summaries",

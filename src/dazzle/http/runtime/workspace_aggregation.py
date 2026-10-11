@@ -13,10 +13,9 @@ tenants.
 Per ADR-0024 the top-level entry points (``_compute_aggregate_metrics``,
 ``_compute_bucketed_aggregates``, ``_compute_pivot_buckets``) accept
 ``dict[str, AggregateRef]`` and dispatch on the typed IR fields
-directly — no regex. The where-clause is still stringified at the
-boundary to the existing ``_fetch_*`` helpers (Slice 2 retires that
-string round-trip by folding ``parse_aggregate_where`` into the main
-predicate parser).
+directly — no regex. Every where-clause stays a typed ``ConditionExpr``
+and compiles through ``_build_aggregate_filters`` → ``compile_predicate``
+(#1774 retired the string round-trip and ``_parse_simple_where``).
 
 Contents:
 - `_format_bucket_label`: human label for a date_trunc bucket value.
@@ -29,7 +28,6 @@ Contents:
 - `_compute_bucketed_aggregates`: top-level bucketed dispatcher.
 - `_bucket_key_label`: shared key/label tuple for a bucket value.
 - `_compute_aggregate_metrics`: top-level scalar dispatcher.
-- `_parse_simple_where`: legacy WHERE parser (still used by fast path).
 """
 
 import asyncio
@@ -38,7 +36,6 @@ import logging
 from typing import Any
 
 from dazzle.core.ir import AggregateRef, BucketRef, ConditionExpr, ConditionValue, DerivedMetric
-from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
 from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
 from dazzle.http.runtime.aggregate import Dimension, MeasureWindow, resolve_fk_display_field
@@ -208,24 +205,30 @@ def _scope_filters_for_aggregate(
     *,
     region_source: str | None,
     aggregate_entity: str | None,
+    region_filters: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Drop source-entity-qualified ``__scope_predicate`` for cross-entity metrics.
+    """Base filters for one aggregate: scope, plus the region ``filter:`` when
+    the aggregate counts the region's own source entity.
 
-    Region RBAC compiles scope against the workspace region ``source:`` entity.
-    Cross-entity counts (e.g. ``count(InvoiceNote)`` on an Invoice metrics tile)
-    would otherwise emit ``FROM "InvoiceNote" WHERE ("Invoice"."tenant_id" = …)``
-    → Postgres ``UndefinedTable`` → swallowed 0 (#901 family). Same root cause
-    as the cohort FK path strip (#1250 / #1231). Destination entity RLS still
-    applies via session GUC; same-entity aggregates keep the predicate.
+    Same-entity aggregates get the compiled region ``filter:`` (#1773) so a
+    ranked/grouped/metric number counts the rows the region shows. Scope keys
+    win on collision — the region filter narrows scope, never replaces it
+    (#887). Cross-entity aggregates skip the region filter: its keys name the
+    source entity's columns, which the aggregated table doesn't have.
+
+    Cross-entity aggregates also drop the source-entity-qualified
+    ``__scope_predicate``: e.g. ``count(InvoiceNote)`` on an Invoice metrics
+    tile would otherwise emit ``FROM "InvoiceNote" WHERE ("Invoice"."tenant_id"
+    = …)`` → Postgres ``UndefinedTable`` → swallowed 0 (#901 family). Same root
+    cause as the cohort FK path strip (#1250 / #1231). Destination entity RLS
+    still applies via session GUC; same-entity aggregates keep the predicate.
     """
-    if not scope_filters:
+    same_entity = not region_source or not aggregate_entity or region_source == aggregate_entity
+    if same_entity:
+        if region_filters:
+            return {**region_filters, **(scope_filters or {})}
         return scope_filters
-    if (
-        not region_source
-        or not aggregate_entity
-        or region_source == aggregate_entity
-        or "__scope_predicate" not in scope_filters
-    ):
+    if not scope_filters or "__scope_predicate" not in scope_filters:
         return scope_filters
     out = dict(scope_filters)
     out.pop("__scope_predicate", None)
@@ -238,7 +241,7 @@ def _scope_filters_for_aggregate(
 
 
 def _build_aggregate_filters(
-    where: Any,  # ConditionExpr | str | None — strings retire when current_bucket migrates
+    where: ConditionExpr | None,
     scope_filters: dict[str, Any] | None,
     agg_repo: Any,
     source_entity: str,
@@ -246,87 +249,39 @@ def _build_aggregate_filters(
     """Compose aggregate where-clause + scope into a filter dict for
     ``Repository.list`` / ``Repository.aggregate``.
 
-    Per ADR-0024 / Slice 2 of the aggregate migration, ``where`` is
-    typed as :class:`ConditionExpr` (translated to ``ScopePredicate``
-    via :func:`condition_expr_to_scope_predicate`, then compiled to
-    SQL via :func:`compile_predicate`). The string path remains as a
-    deprecated fallback for the bar_chart fast-path which substitutes
-    a ``current_bucket`` sentinel into the where-clause text before
-    re-parsing — that consumer migrates separately when the sentinel
-    moves to an IR-level marker.
+    Per ADR-0024 ``where`` is a typed :class:`ConditionExpr`, translated to a
+    ``ScopePredicate`` via :func:`condition_expr_to_scope_predicate` and
+    compiled to SQL via :func:`compile_predicate` — so ``x = null`` becomes
+    ``IS NULL`` and ``or`` / ``in [...]`` keep their structure (#1774).
 
-    When ``scope_filters`` already carries a ``__scope_predicate``
-    (from the route generator's RBAC compiler or upstream callers),
-    the two SQL fragments are AND-combined into a single slot.
+    The where SQL is AND-combined into the ``__scope_predicate`` slot; it
+    never replaces scope keys, so the aggregate stays tenant-bounded (#887).
     """
     base: dict[str, Any] = dict(scope_filters) if scope_filters else {}
-    if where is None or (isinstance(where, str) and not where):
+    if where is None:
         return base or None
-
-    if isinstance(where, ConditionExpr):
-        # Typed path — no string round-trip, no parse step.
-        try:
-            pred = condition_expr_to_scope_predicate(where)
-        except ValueError:
-            logger.debug(
-                "ConditionExpr translation to ScopePredicate failed; skipping where-clause",
-                exc_info=True,
-            )
-            return base or None
-        where_sql, where_params = compile_predicate(pred, source_entity, _FKGraph())
-        if not where_sql:
-            return base or None
-        resolved = _materialize_predicate_params(where_params, base)
-        if resolved is None:
-            return {"id": "__unresolved_current_user__"}
-        existing_pred = base.get("__scope_predicate")
-        if existing_pred is None:
-            base["__scope_predicate"] = (where_sql, resolved)
-        else:
-            existing_sql, existing_params = existing_pred
-            base["__scope_predicate"] = (
-                f"({existing_sql}) AND ({where_sql})",
-                list(existing_params) + list(resolved),
-            )
-        return base
-
-    else:
-        # Legacy string path — used by bar_chart's `current_bucket`
-        # sentinel substitution. Once that substitution moves to the
-        # ConditionExpr layer this branch can delete.
-        from dazzle.http.runtime.aggregate_where_parser import parse_aggregate_where
-
-        spec = getattr(agg_repo, "entity_spec", None)
-        known_cols: frozenset[str] = (
-            frozenset(f.name for f in getattr(spec, "fields", []))
-            if spec is not None
-            else frozenset()
+    try:
+        pred = condition_expr_to_scope_predicate(where)
+    except ValueError:
+        logger.debug(
+            "ConditionExpr translation to ScopePredicate failed; skipping where-clause",
+            exc_info=True,
         )
-        try:
-            pred = parse_aggregate_where(where, known_columns=known_cols)
-        except ValueError as exc:
-            logger.debug(
-                "Aggregate where-clause %r didn't parse via algebra (%s) — "
-                "falling back to legacy _parse_simple_where",
-                where,
-                exc,
-            )
-            legacy = _parse_simple_where(where)
-            base.update(legacy)
-            return base or None
-
+        return base or None
     where_sql, where_params = compile_predicate(pred, source_entity, _FKGraph())
     if not where_sql:
         return base or None
-
+    resolved = _materialize_predicate_params(where_params, base)
+    if resolved is None:
+        return {"id": "__unresolved_current_user__"}
     existing_pred = base.get("__scope_predicate")
     if existing_pred is None:
-        base["__scope_predicate"] = (where_sql, where_params)
+        base["__scope_predicate"] = (where_sql, resolved)
     else:
         existing_sql, existing_params = existing_pred
         base["__scope_predicate"] = (
             f"({existing_sql}) AND ({where_sql})",
-            list(existing_params) + list(where_params),
+            list(existing_params) + list(resolved),
         )
     return base
 
@@ -561,10 +516,6 @@ async def _compute_pivot_buckets(
     entity_name = ref.entity or ""
     if entity_name != source_entity or _condition_references_current_bucket(ref.where):
         return [], []
-    # Stringify for the legacy `_parse_simple_where` filter merge below
-    # — the pivot path retains string-based merge until a future cleanup.
-    where_clause = condition_expr_to_legacy_where(ref.where)
-
     source_repo = repositories.get(source_entity)
     if source_repo is None:
         return [], []
@@ -624,12 +575,8 @@ async def _compute_pivot_buckets(
             }
         )
 
-    # Merge any author-supplied where clause + scope filters.
-    merged_filters: dict[str, Any] = {}
-    if where_clause:
-        merged_filters.update(_parse_simple_where(where_clause))
-    if scope_filters:
-        merged_filters = {**scope_filters, **merged_filters}
+    # Typed where + scope → one AND-composed predicate (#1774).
+    merged_filters = _build_aggregate_filters(ref.where, scope_filters, source_repo, source_entity)
 
     try:
         buckets = await source_repo.aggregate(
@@ -679,8 +626,7 @@ async def _aggregate_via_groupby(
     *,
     measures: dict[str, str],
     group_by: Any,  # str | BucketRef
-    where_clause: str | None,
-    scope_filters: dict[str, Any] | None,
+    filters: dict[str, Any] | None,
     source_entity_spec: Any,
     fk_target_spec: Any | None,
 ) -> list[dict[str, Any]]:
@@ -700,20 +646,14 @@ async def _aggregate_via_groupby(
     by firing ALL measures in one query. Each returned bucket carries
     ``value`` (first measure, legacy alias) plus ``metrics: {<name>:
     <value>, ...}`` for templates that want all of them.
+
+    ``filters`` is the already-composed scope + where filter dict (built by
+    the caller via ``_build_aggregate_filters``).
     """
     if not measures:
         return []
 
     first_metric_name = next(iter(measures))
-
-    # Merge any author-supplied where clause into the filter dict via
-    # _parse_simple_where — same semantics the slow path used to apply
-    # before its per-bucket extension.
-    merged_filters: dict[str, Any] = {}
-    if where_clause:
-        merged_filters.update(_parse_simple_where(where_clause))
-    if scope_filters:
-        merged_filters = {**scope_filters, **merged_filters}
 
     def _build_metrics_dict(b: Any) -> dict[str, Any]:
         return {name: b.measures.get(name, 0) for name in measures}
@@ -728,7 +668,7 @@ async def _aggregate_via_groupby(
         buckets = await agg_repo.aggregate(
             dimensions=[bucket_dim],
             measures=measures,
-            filters=merged_filters or None,
+            filters=filters or None,
         )
         out: list[dict[str, Any]] = []
         for b in buckets:
@@ -757,7 +697,7 @@ async def _aggregate_via_groupby(
     buckets = await agg_repo.aggregate(
         dimensions=[dim],
         measures=measures,
-        filters=merged_filters or None,
+        filters=filters or None,
     )
 
     out = []
@@ -1047,6 +987,7 @@ async def _compute_bucketed_aggregates(
     bucket_values: list[str] | None = None,
     scope_filters: dict[str, Any] | None = None,
     source_entity: str | None = None,
+    region_filters: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Evaluate aggregate expressions once per bucket — for bar_chart distributions.
 
@@ -1079,29 +1020,29 @@ async def _compute_bucketed_aggregates(
             wouldn't be allowed to see rows for.
         source_entity: The source entity name — used to resolve the
             source repo for distinct-bucket enumeration (#849 Bug B).
+        region_filters: The compiled region ``filter:`` (#1773). Narrows
+            bucket enumeration and every aggregate over ``source_entity``;
+            cross-entity aggregates skip it (see
+            ``_scope_filters_for_aggregate``).
     """
     if not aggregates:
         return []
 
     # Per ADR-0024 the aggregates dict values are typed AggregateRef.
-    # Flatten each to the (name, func, arg, where_str) tuple the
-    # downstream dispatch already handles. ``arg`` is the entity name
-    # for ``count(...)`` and the column name for ``avg/sum/min/max(...)``.
-    # The where-clause is stringified here ONLY for the bucketed path's
-    # ``current_bucket`` sentinel substitution — the fetcher paths
-    # consume the typed ConditionExpr directly via Slice 2 of the
-    # migration.
-    parsed_aggs: list[tuple[str, str, str, str | None, Any]] = []
+    # Flatten each to a (name, func, arg, where) tuple. ``arg`` is the
+    # entity name for ``count(...)`` and the column name for
+    # ``avg/sum/min/max(...)``; ``where`` stays a typed ConditionExpr on
+    # every path (#1774).
+    parsed_aggs: list[tuple[str, str, str, ConditionExpr | None]] = []
     for name, ref in aggregates.items():
         if not isinstance(ref, AggregateRef):
             continue  # DerivedMetric entries are evaluated post-query (#1359 slice 2)
         arg = ref.entity or "" if ref.func == "count" else ref.column or ""
-        where_str = condition_expr_to_legacy_where(ref.where)
-        parsed_aggs.append((name, ref.func, arg, where_str, ref.where))
+        parsed_aggs.append((name, ref.func, arg, ref.where))
     if not parsed_aggs:
         return []
 
-    first_name, first_func, first_arg, first_where, first_typed_where = parsed_aggs[0]
+    first_name, first_func, first_arg, first_typed_where = parsed_aggs[0]
     # The "count entity" the legacy single-measure code resolved against —
     # used as the fallback for the slow per-bucket path. For multi-measure
     # the source entity drives the agg_repo (since avg/sum apply to columns
@@ -1110,6 +1051,13 @@ async def _compute_bucketed_aggregates(
     agg_repo = repositories.get(legacy_entity_name) if repositories else None
     if not agg_repo:
         return []
+    # #1773: the region filter narrows the source rows — bucket enumeration
+    # always runs on the source; the aggregate only when it counts the source.
+    source_filters = _scope_filters_for_aggregate(
+        scope_filters, region_source=None, aggregate_entity=None, region_filters=region_filters
+    )
+    if legacy_entity_name == source_entity:
+        scope_filters = source_filters
 
     # ---- Fast path: ALL aggregates against `source_entity` with no
     # current_bucket — fire them as one multi-measure GROUP BY query.
@@ -1120,10 +1068,8 @@ async def _compute_bucketed_aggregates(
     # expressions that need true per-bucket queries.
     is_bucket_ref = isinstance(group_by, BucketRef)
 
-    def _fast_path_eligible(
-        name: str, func: str, arg: str, where: str | None, _typed: Any = None
-    ) -> bool:
-        if where and "current_bucket" in where:
+    def _fast_path_eligible(name: str, func: str, arg: str, where: ConditionExpr | None) -> bool:
+        if _condition_references_current_bucket(where):
             return False
         if func == "count":
             # count(<X>) is fast-path-eligible only when X is the source
@@ -1137,14 +1083,12 @@ async def _compute_bucketed_aggregates(
     if is_simple_distribution or (is_bucket_ref and all_fast):
         # Build measures dict for the multi-measure GROUP BY call.
         measures: dict[str, str] = {}
-        for name, func, arg, _w, _tw in parsed_aggs:
+        for name, func, arg, _w in parsed_aggs:
             measures[name] = "count" if func == "count" else f"{func}:{arg}"
         # When multiple aggregates share a where clause they must all be
         # the same; otherwise the fast path can't represent it. Fall back
         # to slow path if they diverge.
-        unique_wheres = {w for _n, _f, _a, w, _tw in parsed_aggs}
-        if len(unique_wheres) == 1:
-            shared_where = next(iter(unique_wheres))
+        if all(w == first_typed_where for _n, _f, _a, w in parsed_aggs):
             try:
                 fk_target = None
                 if not is_bucket_ref:
@@ -1153,8 +1097,9 @@ async def _compute_bucketed_aggregates(
                     agg_repo,
                     measures=measures,
                     group_by=group_by,
-                    where_clause=shared_where,
-                    scope_filters=scope_filters,
+                    filters=_build_aggregate_filters(
+                        first_typed_where, scope_filters, agg_repo, legacy_entity_name
+                    ),
                     source_entity_spec=getattr(agg_repo, "entity_spec", None),
                     fk_target_spec=fk_target,
                 )
@@ -1174,9 +1119,6 @@ async def _compute_bucketed_aggregates(
 
     # Below this point: slow per-bucket path. Multi-measure not yet
     # supported here — only the first parsed aggregate is evaluated.
-    # ``first_where`` (the legacy stringified form) is intentionally
-    # dropped here — the typed ``first_typed_where`` is the canonical
-    # input post-#1154.
     metric_name, func, entity_name, typed_where = (
         first_name,
         first_func,
@@ -1213,7 +1155,7 @@ async def _compute_bucketed_aggregates(
         enum_succeeded = False
         if source_repo is not None:
             buckets, enum_succeeded = await _enumerate_distinct_buckets(
-                source_repo, group_by, scope_filters
+                source_repo, group_by, source_filters
             )
         else:
             buckets = []
@@ -1434,6 +1376,7 @@ def _prior_period_task(
     repositories: dict[str, Any] | None,
     source_entity: str | None,
     prior_window: dict[str, Any],
+    region_filters: dict[str, Any] | None = None,
 ) -> Any | None:
     """Build the prior-period fetch coroutine for one metric's delta (#884, #1491).
 
@@ -1454,6 +1397,7 @@ def _prior_period_task(
             prior_window,
             region_source=source_entity,
             aggregate_entity=entity_name,
+            region_filters=region_filters,
         )
         return _fetch_count_metric(
             metric_name, agg_repo, ref.where, metric_scope, source_entity=entity_name
@@ -1471,6 +1415,7 @@ def _prior_period_task(
         prior_window,
         region_source=source_entity,
         aggregate_entity=agg_entity,
+        region_filters=region_filters,
     )
     return _fetch_scalar_metric(
         metric_name,
@@ -1495,6 +1440,7 @@ async def _compute_aggregate_metrics(
     *,
     source_entity: str | None = None,  # #888 Phase 1 — for scalar aggregates
     tones: dict[str, str] | None = None,  # v0.61.65 — per-tile palette token
+    region_filters: dict[str, Any] | None = None,  # #1773 — compiled region `filter:`
 ) -> list[dict[str, Any]]:
     """Compute aggregate metrics, batching independent DB queries concurrently.
 
@@ -1543,6 +1489,7 @@ async def _compute_aggregate_metrics(
                 scope_filters,
                 region_source=source_entity,
                 aggregate_entity=agg_entity,
+                region_filters=region_filters,
             )
             key = _window_group_key(ref, agg_entity)
             windowed_groups.setdefault(key, []).append((metric_name, ref))
@@ -1558,6 +1505,7 @@ async def _compute_aggregate_metrics(
                 scope_filters,
                 region_source=source_entity,
                 aggregate_entity=entity_name,
+                region_filters=region_filters,
             )
             async_tasks.append(
                 (
@@ -1593,6 +1541,7 @@ async def _compute_aggregate_metrics(
                 scope_filters,
                 region_source=source_entity,
                 aggregate_entity=agg_entity,
+                region_filters=region_filters,
             )
             async_tasks.append(
                 (
@@ -1687,7 +1636,9 @@ async def _compute_aggregate_metrics(
             # #1491 L4: compute a prior-period value for *any* grain — count and
             # scalar sum/avg/min/max — so a revenue-sum or rating-avg tile gets a
             # trend too, not just count tiles.
-            task = _prior_period_task(metric_name, ref, repositories, source_entity, prior_window)
+            task = _prior_period_task(
+                metric_name, ref, repositories, source_entity, prior_window, region_filters
+            )
             if task is None:
                 continue
             prior_tasks.append(task)
@@ -1727,28 +1678,3 @@ async def _compute_aggregate_metrics(
             m["delta_period_label"] = delta.period_label
 
     return built_metrics
-
-
-def _parse_simple_where(where_clause: str) -> dict[str, Any]:
-    """Parse simple WHERE clause to repository filter dict.
-
-    Supports: ``field = value``, ``field != value``, ``field > value``, etc.
-    Multiple conditions joined with ``and``.
-    """
-    filters: dict[str, Any] = {}
-    parts = [p.strip() for p in where_clause.split(" and ")]
-    for part in parts:
-        for op, suffix in [
-            ("!=", "__ne"),
-            (">=", "__gte"),
-            ("<=", "__lte"),
-            (">", "__gt"),
-            ("<", "__lt"),
-            ("=", ""),
-        ]:
-            if op in part:
-                field, value = [x.strip() for x in part.split(op, 1)]
-                key = f"{field}{suffix}" if suffix else field
-                filters[key] = value
-                break
-    return filters

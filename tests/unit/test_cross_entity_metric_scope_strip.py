@@ -13,6 +13,8 @@ aggregates; destination RLS still applies via session GUC.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.http.runtime.workspace_aggregation import _scope_filters_for_aggregate
 
 
@@ -67,3 +69,24 @@ class TestScopeFiltersForAggregate:
             _scope_filters_for_aggregate(scope, region_source="Invoice", aggregate_entity=None)
             is scope
         )
+
+    @pytest.mark.parametrize(
+        ("aggregate_entity", "expected"),
+        [
+            # #1773: same-entity aggregates count only the rows the region shows;
+            # scope wins a key collision (the filter narrows, never replaces).
+            ("StudentProfile", {"is_current": True, "below_target": True, "school_id": "s1"}),
+            # Cross-entity: region-filter keys name source columns — skipped.
+            ("Note", {"school_id": "s1"}),
+        ],
+    )
+    def test_region_filter_composes_for_same_entity_only(
+        self, aggregate_entity: str, expected: dict[str, object]
+    ) -> None:
+        out = _scope_filters_for_aggregate(
+            {"school_id": "s1"},
+            region_source="StudentProfile",
+            aggregate_entity=aggregate_entity,
+            region_filters={"is_current": True, "below_target": True, "school_id": "evil"},
+        )
+        assert out == expected

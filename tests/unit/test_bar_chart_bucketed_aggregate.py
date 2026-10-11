@@ -219,7 +219,7 @@ class TestBucketedAggregatesWithFK:
             "target",
             items,
         )
-        # _parse_simple_where turns `target = t-1` into {"target": "t-1"}.
+        # The bucket key rides as a plain filter beside the typed where.
         call = repo.list.await_args_list[0]
         assert call.kwargs.get("filters", {}).get("target") == "t-1"
 
@@ -653,7 +653,9 @@ class TestStrategyCGroupByFastPath:
         assert dims[0].fk_display_field == "label"
 
     @pytest.mark.asyncio()
-    async def test_scope_filters_passed_to_aggregate_call(self) -> None:
+    async def test_scope_and_region_filters_passed_to_aggregate_call(self) -> None:
+        """Scope reaches the GROUP BY; so does the region `filter:` (#1773 —
+        a comparison/bar_chart counted rows the author filtered out)."""
         agg_repo = _make_aggregate_repo([])
         target_repo = _make_target_repo_with_label_field()
         await _compute_bucketed_aggregates(
@@ -663,9 +665,54 @@ class TestStrategyCGroupByFastPath:
             items=[],
             source_entity="MarkingResult",
             scope_filters={"__scope_predicate": ('"MarkingResult"."dept" = %s', ["d-1"])},
+            region_filters={"is_current": True, "below_target": True},
         )
-        kw = agg_repo.aggregate.call_args.kwargs
-        assert "__scope_predicate" in (kw.get("filters") or {})
+        filters = agg_repo.aggregate.call_args.kwargs.get("filters") or {}
+        assert "__scope_predicate" in filters
+        assert filters["is_current"] is True
+        assert filters["below_target"] is True
+
+    @pytest.mark.asyncio()
+    @pytest.mark.parametrize("path", ["grouped", "pivot"])
+    @pytest.mark.parametrize(
+        ("op", "sql_frag"),
+        [("!=", "IS NOT NULL"), ("=", "IS NULL")],
+    )
+    async def test_null_where_compiles_to_is_null(self, path: str, op: str, sql_frag: str) -> None:
+        """#1774: `x != null` / `x = null` on the GROUP BY fast paths compiles to
+        `IS [NOT] NULL` AND-composed with scope — never the string 'null'."""
+        from dazzle.http.runtime.workspace_aggregation import _compute_pivot_buckets
+
+        agg_repo = _make_aggregate_repo([])
+        ref = agg(f"count(MarkingResult where teacher_override_score {op} null)")
+        scope = {"__scope_predicate": ('"MarkingResult"."dept" = %s', ["d-1"])}
+        if path == "grouped":
+            await _compute_bucketed_aggregates(
+                {"overrides": ref},
+                {
+                    "MarkingResult": agg_repo,
+                    "AssessmentObjective": _make_target_repo_with_label_field(),
+                },
+                "assessment_objective",
+                items=[],
+                source_entity="MarkingResult",
+                scope_filters=scope,
+            )
+        else:
+            await _compute_pivot_buckets(
+                {"overrides": ref},
+                {"MarkingResult": agg_repo},
+                ["assessment_objective"],
+                source_entity="MarkingResult",
+                source_entity_spec=agg_repo.entity_spec,
+                scope_filters=scope,
+            )
+        filters = agg_repo.aggregate.call_args.kwargs["filters"]
+        sql, params = filters["__scope_predicate"]
+        assert sql.startswith('("MarkingResult"."dept" = %s) AND (')
+        assert f'"teacher_override_score" {sql_frag}' in sql
+        assert params == ["d-1"]
+        assert "null" not in filters.values()
 
     @pytest.mark.asyncio()
     async def test_aggregate_failure_falls_back_to_slow_path(self) -> None:
@@ -904,8 +951,7 @@ class TestTimeBucketedAggregates:
             agg_repo,
             measures={"count": "count"},
             group_by=BucketRef(field="created_at", unit="day"),
-            where_clause=None,
-            scope_filters=None,
+            filters=None,
             source_entity_spec=source_entity_spec,
             fk_target_spec=None,
         )

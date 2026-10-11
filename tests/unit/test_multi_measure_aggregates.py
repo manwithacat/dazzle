@@ -64,8 +64,7 @@ class TestAggregateViaGroupbyMultiMeasure:
             repo,
             measures={"actual": "avg:scaled_mark", "target": "avg:target_mark"},
             group_by="ao",
-            where_clause=None,
-            scope_filters=None,
+            filters=None,
             source_entity_spec=None,
             fk_target_spec=None,
         )
@@ -99,8 +98,7 @@ class TestAggregateViaGroupbyMultiMeasure:
             repo,
             measures={"alpha": "count", "beta": "avg:something"},
             group_by="x",
-            where_clause=None,
-            scope_filters=None,
+            filters=None,
             source_entity_spec=None,
             fk_target_spec=None,
         )
@@ -114,8 +112,7 @@ class TestAggregateViaGroupbyMultiMeasure:
             repo,
             measures={},
             group_by="x",
-            where_clause=None,
-            scope_filters=None,
+            filters=None,
             source_entity_spec=None,
             fk_target_spec=None,
         )

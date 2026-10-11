@@ -13,9 +13,10 @@ Pipeline (per region request):
 3. Layer query-param filters (``filter_<key>=value``) and date-range
    filters (#566) on top.
 4. Apply entity-level scope predicates (#574). The returned
-   ``scope_only_filters`` is captured separately so downstream
-   aggregate paths can stay tenant-bounded without re-mixing in
-   request filters (#887).
+   ``scope_only_filters`` and the compiled region ``filter:``
+   (``region_filters``, #1773) are captured separately so downstream
+   aggregate paths stay tenant-bounded and count the same rows the
+   region shows, without re-mixing in request query-param filters.
 5. Pick the page-size for grouped displays (KANBAN/BAR_CHART/
    FUNNEL_CHART/BOX_PLOT — #889) so paginated defaults surface all
    buckets.
@@ -63,19 +64,15 @@ class RegionItemsResult:
     plain dicts.
 
     ``scope_only_filters`` is the scope predicate slice **without**
-    the request/IR filters mixed in — downstream aggregate paths
-    (metrics / bucketed / overlay / pivot) need the pure scope slice
-    so their GROUP BY queries stay tenant-bounded without re-applying
-    the row-level filters.
+    the request/IR filters mixed in. Aggregate paths that count another
+    entity, or carry no region filter, use it on its own (#887).
 
-    ``context_filters`` (#1305) is the ``current_context`` slice of the
-    region ``filter:`` — the context-selector boundary, isolated from the
-    row-level ``status``/literal predicates. It rides *alongside*
-    ``scope_only_filters`` into the aggregate paths so a bar_chart /
-    group_by / metric region re-scopes when the workspace
-    ``context_selector`` changes, exactly as the list path does. Empty
-    when no ``context_id`` is bound (selector cleared) or the filter has
-    no ``current_context`` term.
+    ``region_filters`` (#1773) is the compiled region ``filter:`` —
+    literals, ``current_user`` terms and the resolved ``current_context``
+    selector (#1305) — without request query-param filters. Aggregate
+    paths over the region source compose it with ``scope_only_filters``
+    (scope wins on key collision) so ranked/grouped/metric numbers count
+    the rows the list shows. ``None`` when the region has no ``filter:``.
 
     ``scope_denied`` is the default-deny flag (#887): aggregate
     paths suppress their queries when this is True so an unfiltered
@@ -85,7 +82,7 @@ class RegionItemsResult:
     items: list[dict[str, Any]] = field(default_factory=list)
     total: int = 0
     scope_only_filters: dict[str, Any] | None = None
-    context_filters: dict[str, Any] | None = None  # #1305
+    region_filters: dict[str, Any] | None = None  # #1773
     # Default-deny: any failure path that skips scope evaluation
     # MUST surface as a denial — initialised True here to match the
     # original handler's #887 semantics.
@@ -249,6 +246,10 @@ async def fetch_region_items(
                     filters = None
             except Exception:
                 logger.warning("Failed to evaluate condition filter", exc_info=True)
+        # #1773: the compiled region `filter:` alone (incl. the resolved
+        # `current_context` slice, #1305) — captured before query-param /
+        # scope keys are layered on so the aggregate paths can compose it.
+        region_filters = dict(filters) if filters else None
 
         # Step 2: leftover-honest sort / dir, then user > IR > surface (#362).
         # Raw FastAPI ``?sort=zzz`` used to reach repo.list and invent
@@ -297,34 +298,6 @@ async def fetch_region_items(
         if scope_only_filters:
             filters = {**(filters or {}), **scope_only_filters}
 
-        # Step 4b (#1305): isolate the `current_context` slice of the region
-        # filter so the aggregate paths can re-scope by the context selector
-        # without re-mixing the row-level literals (#887). The list query above
-        # already resolved current_context into `filters`; this second pass
-        # extracts JUST the context terms (same FK-path resolution as #1304),
-        # which `compute_region_render_inputs` merges into the aggregate
-        # scope filters. Empty when no context_id is bound or no current_context
-        # term exists.
-        context_filters: dict[str, Any] = {}
-        if ir_filter is not None and user_ctx.filter_context.get("current_context"):
-            try:
-                from dazzle.http.runtime.scope_filters import _extract_condition_filters
-
-                _extract_condition_filters(
-                    ir_filter,
-                    user_ctx.user_id or "",
-                    context_filters,
-                    logger,
-                    user_ctx.auth_ctx_for_filters,
-                    ref_targets=ctx.entity_ref_targets.get(ctx.source) or {},
-                    context_id=user_ctx.filter_context.get("current_context"),
-                    all_ref_targets=ctx.entity_ref_targets,
-                    context_only=True,
-                )
-            except Exception:
-                logger.warning("Failed to isolate current_context filter", exc_info=True)
-                context_filters = {}
-
         # Step 5: page-size for grouped displays (#889).
         include_rels = ctx.auto_include
         if (
@@ -372,7 +345,7 @@ async def fetch_region_items(
             items=items,
             total=total,
             scope_only_filters=scope_only_filters,
-            context_filters=context_filters or None,
+            region_filters=region_filters,
             scope_denied=scope_denied,
         )
 

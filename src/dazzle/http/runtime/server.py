@@ -88,7 +88,6 @@ from dazzle.http.runtime.usage_signal import UsageCollector, UsageSignalMiddlewa
 from dazzle.http.runtime.workspace_aggregation import (  # noqa: F401
     _compute_aggregate_metrics,
     _fetch_count_metric,
-    _parse_simple_where,
 )
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,  # noqa: F401

@@ -180,7 +180,7 @@ def render_catalogue_region(
         items=items,
         total=len(items),
         scope_only_filters={},
-        context_filters={},
+        region_filters=None,
         scope_denied=False,
     )
     user_ctx = RequestUserContext(

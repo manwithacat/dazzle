@@ -31,6 +31,7 @@ from .validator import (
     validate_process_step_service_refs,
     validate_rag_decorators,
     validate_rbac_matrix_diagnostics,
+    validate_region_filter_aggregate_reach,
     validate_role_references_against_enum,
     validate_scope_personas_declared,
     validate_scope_predicates,
@@ -169,6 +170,11 @@ def lint_appspec(
 
     # rag_on fixed-band decorator validation (#1470)
     errors, warnings = validate_rag_decorators(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # #1773: a region `filter:` can't narrow a cross-entity aggregate
+    errors, warnings = validate_region_filter_aggregate_reach(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

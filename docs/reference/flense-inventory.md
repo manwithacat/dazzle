@@ -6,13 +6,20 @@
 
 Snapshot: 2026-10-11. Consumers absent on this machine: none (absent means *unknown*, never *unused*).
 
+**How to read.** DSL declarations are one signal among seven. Consumers also reach the
+framework through CLI calls in scripts and docs, Python imports, `dazzle.toml` sections,
+framework-read project files (`sitespec.yaml`, `pitchspec.yaml` ...), framework URLs in
+app code and assets, and MCP tool use. A removal needs a zero in *every*
+signal section below for *every* present consumer; `?` (absent consumer) is unknown,
+never zero. The non-DSL scanners are text matches: they over-count rather than miss.
+
 ## Totals
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 476,741 |
-| Test lines (`tests/`) | 425,933 |
-| Documentation lines (`docs/**/*.md`) | 352,230 |
+| Framework source lines (`src/dazzle`) | 475,386 |
+| Test lines (`tests/`) | 425,632 |
+| Documentation lines (`docs/**/*.md`) | 251,517 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
 
@@ -96,10 +103,10 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 144,229 | 652 |
-| `core` | 97,267 | 2,097 |
+| `http` | 143,792 | 652 |
+| `core` | 97,194 | 2,097 |
 | `mcp` | 44,145 | 6,382 |
-| `cli` | 34,384 | 10,273 |
+| `cli` | 34,425 | 10,319 |
 | `render` | 32,981 | 6,157 |
 | `testing` | 27,706 | 68 |
 | `page` | 14,233 | 2,599 |
@@ -107,7 +114,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `qa` | 7,506 | 3,431 |
 | `sentinel` | 7,252 | 563 |
 | `fitness` | 5,858 | 1,401 |
-| `db` | 4,362 | 3,692 |
+| `db` | 4,404 | 3,779 |
 | `compliance` | 4,286 | 1,417 |
 | `rbac` | 4,243 | 7,853 |
 | `pitch` | 4,069 | 1,893 |
@@ -121,7 +128,6 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `services` | 1,632 | 274 |
 | `agent_loop` | 1,542 | 154 |
 | `product_quality` | 1,536 | 293 |
-| `examples` | 1,499 | 1,052 |
 | `perf` | 1,217 | 2,357 |
 | `specs` | 1,149 | 466 |
 | `e2e` | 1,095 | 2,440 |
@@ -132,6 +138,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `notifications` | 900 | 0 |
 | `docs_update` | 886 | 599 |
 | `spec_narrative` | 881 | 523 |
+| `examples` | 571 | 1,052 |
 | `tenant` | 537 | 6,998 |
 | `stubs` | 517 | 0 |
 | `risk` | 344 | 294 |
@@ -191,13 +198,270 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 `agent`, `analytics`, `api-pack`, `auth`, `backup`, `capability`, `clean`, `compliance`, `composition`, `conformance`, `contribution`, `db`, `demo`, `deploy`, `discovery`, `dlq`, `docs`, `domain`, `events`, `feedback`, `fitness`, `guide`, `inspect`, `kg`, `lsp`, `mcp`, `mock`, `nightly`, `outbox`, `param`, `perf`, `pipeline`, `pitch`, `process`, `process-migrate`, `prove`, `pulse`, `qa`, `quality`, `rbac`, `representation`, `rhythm`, `scaffold`, `sentinel`, `signing`, `spec`, `specs`, `story`, `stubs`, `sweep`, `tenant`, `test`, `test-design`, `theme`, `ux`, `vocab`, `worker`
 
+## CLI groups × consumers
+
+Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.sh`, `*.yml`, `*.yaml`, `*.toml`, `*.md`, `*.py`, excluding `node_modules`, `.venv`, `.git`, `dev_docs/`, `archive/`, `.grok/`, `.dazzle/`, `__pycache__`. "Subcommands seen" is the next word after the group, so prose can add noise.
+
+| CLI group / command | AegisMark | cyfuture | pennydreadful | examples | Subcommands seen |
+|---|---:|---:|---:|---:|---|
+| `agent` | 28 | 35 | 1 | 2 | `playbook`, `prove`, `seed`, `signals`, `sync`, `wall` |
+| `analytics` | 0 | 0 | 0 | 0 |  |
+| `analyze-spec` | 0 | 0 | 0 | 0 |  |
+| `api-pack` | 0 | 0 | 0 | 0 |  |
+| `auth` | 26 | 1 | 1 | 4 | `connection`, `create-user`, `impersonate`, `migrate` |
+| `backup` | 0 | 0 | 0 | 0 |  |
+| `build` | 0 | 0 | 0 | 3 |  |
+| `build-api` | 0 | 4 | 0 | 0 |  |
+| `build-css` | 0 | 0 | 0 | 0 |  |
+| `build-ui` | 0 | 0 | 0 | 1 |  |
+| `capability` | 0 | 0 | 0 | 0 |  |
+| `check` | 0 | 0 | 0 | 0 |  |
+| `clean` | 0 | 0 | 0 | 0 |  |
+| `commands` | 0 | 0 | 0 | 2 |  |
+| `compliance` | 3 | 2 | 0 | 17 | `compile`, `evidence`, `gaps`, `privacy` |
+| `composition` | 0 | 0 | 0 | 0 |  |
+| `conformance` | 0 | 0 | 0 | 0 |  |
+| `contribution` | 0 | 0 | 0 | 0 |  |
+| `coverage` | 1 | 0 | 0 | 0 |  |
+| `db` | 136 | 25 | 83 | 36 | `apply-rls`, `at`, `baseline`, `current`, `downgrade`, `history`, `migrate`, `reconcile-baseline`, `revision`, `snapshot`, `snapshot-baseline`, `stamp`, `status`, `upgrade`, `verify` |
+| `dbshell` | 0 | 0 | 0 | 0 |  |
+| `demo` | 3 | 0 | 2 | 0 | `ingest`, `load`, `validate` |
+| `deploy` | 1 | 0 | 0 | 0 | `plan` |
+| `discovery` | 0 | 0 | 0 | 0 |  |
+| `dlq` | 0 | 0 | 0 | 0 |  |
+| `docs` | 3 | 12 | 0 | 0 | `claims`, `guides`, `site` |
+| `doctor` | 0 | 0 | 0 | 0 |  |
+| `domain` | 0 | 0 | 0 | 12 | `promote` |
+| `events` | 0 | 0 | 0 | 0 |  |
+| `example` | 0 | 0 | 0 | 0 |  |
+| `feedback` | 0 | 0 | 0 | 0 |  |
+| `fitness` | 2 | 0 | 3 | 0 | `queue`, `triage`, `vitality` |
+| `fragment-audit` | 0 | 0 | 0 | 0 |  |
+| `grammar` | 0 | 0 | 0 | 0 |  |
+| `guide` | 0 | 0 | 0 | 0 |  |
+| `info` | 0 | 0 | 0 | 0 |  |
+| `init` | 0 | 0 | 0 | 1 |  |
+| `inspect` | 1 | 0 | 3 | 0 | `renderers`, `rls` |
+| `kg` | 0 | 0 | 0 | 0 |  |
+| `layout-plan` | 0 | 0 | 0 | 0 |  |
+| `lint` | 29 | 14 | 29 | 0 |  |
+| `lsp` | 0 | 0 | 0 | 0 |  |
+| `mcp` | 0 | 0 | 0 | 0 |  |
+| `migrate` | 2 | 3 | 0 | 0 |  |
+| `mock` | 0 | 0 | 0 | 0 |  |
+| `nightly` | 0 | 0 | 0 | 0 |  |
+| `outbox` | 0 | 0 | 0 | 0 |  |
+| `param` | 0 | 0 | 0 | 0 |  |
+| `perf` | 1 | 0 | 0 | 0 | `sweep` |
+| `pipeline` | 83 | 41 | 0 | 0 | `run` |
+| `pitch` | 0 | 0 | 0 | 0 |  |
+| `process` | 0 | 0 | 0 | 9 | `list` |
+| `process-migrate` | 0 | 0 | 0 | 0 |  |
+| `prove` | 0 | 0 | 0 | 3 | `representation`, `story` |
+| `pulse` | 0 | 0 | 0 | 0 |  |
+| `qa` | 2 | 10 | 0 | 6 | `login`, `taste-panel`, `trial`, `trial-hypotheses` |
+| `quality` | 0 | 0 | 0 | 0 |  |
+| `rbac` | 12 | 5 | 0 | 36 | `byte-routes`, `matrix`, `prove`, `report`, `routes` |
+| `representation` | 0 | 0 | 0 | 0 |  |
+| `rhythm` | 0 | 0 | 0 | 0 |  |
+| `scaffold` | 1 | 1 | 0 | 1 |  |
+| `schema` | 0 | 0 | 0 | 0 |  |
+| `search` | 0 | 0 | 0 | 0 |  |
+| `sentinel` | 2 | 3 | 0 | 0 | `scan` |
+| `serve` | 103 | 11 | 44 | 33 |  |
+| `signing` | 1 | 0 | 0 | 0 | `init` |
+| `spec` | 0 | 0 | 0 | 0 |  |
+| `specs` | 0 | 0 | 0 | 2 | `asyncapi` |
+| `story` | 0 | 2 | 0 | 0 | `list` |
+| `stubs` | 0 | 0 | 0 | 0 |  |
+| `sweep` | 0 | 0 | 0 | 0 |  |
+| `tenant` | 0 | 5 | 0 | 3 | `create`, `list` |
+| `test` | 9 | 62 | 0 | 8 | `agent`, `coverage`, `create-sessions`, `diff-personas`, `dsl-run`, `generate`, `pack`, `populate`, `run`, `tier2-generate`, `verify-story`, `walk` |
+| `test-design` | 0 | 0 | 0 | 0 |  |
+| `theme` | 0 | 0 | 0 | 0 |  |
+| `ux` | 63 | 12 | 5 | 1 | `explore`, `maturity`, `verify` |
+| `validate` | 46 | 128 | 89 | 40 |  |
+| `version` | 0 | 0 | 0 | 0 |  |
+| `vocab` | 0 | 0 | 0 | 25 | `expand`, `list`, `show` |
+| `worker` | 1 | 0 | 0 | 0 |  |
+
+## Framework modules imported × consumers
+
+`from dazzle.<a>[.<b>] import` / `import dazzle.<a>[.<b>]` in `*.py`, keyed by the first two levels. A module not listed is imported by nobody.
+
+| Module | AegisMark | cyfuture | pennydreadful | examples |
+|---|---:|---:|---:|---:|
+| `dazzle` | 0 | 0 | 1 | 0 |
+| `dazzle.api_kb.loader` | 0 | 2 | 0 | 0 |
+| `dazzle.cli.db` | 1 | 0 | 0 | 0 |
+| `dazzle.cli.services` | 10 | 0 | 0 | 0 |
+| `dazzle.core` | 0 | 0 | 3 | 0 |
+| `dazzle.core.access` | 1 | 0 | 0 | 0 |
+| `dazzle.core.appspec_loader` | 4 | 3 | 2 | 0 |
+| `dazzle.core.demo_blueprint_persistence` | 0 | 0 | 0 | 1 |
+| `dazzle.core.environment` | 2 | 0 | 0 | 0 |
+| `dazzle.core.ir` | 9 | 5 | 0 | 0 |
+| `dazzle.core.validator` | 1 | 0 | 0 | 0 |
+| `dazzle.demo_data.blueprint_generator` | 0 | 0 | 0 | 1 |
+| `dazzle.http` | 2 | 0 | 0 | 0 |
+| `dazzle.http.runtime` | 78 | 159 | 9 | 0 |
+| `dazzle.i18n.display_locale` | 0 | 2 | 0 | 0 |
+| `dazzle.page.runtime` | 2 | 0 | 0 | 0 |
+| `dazzle.page.themes` | 1 | 0 | 0 | 0 |
+| `dazzle.rbac.matrix` | 1 | 0 | 0 | 0 |
+| `dazzle.render` | 0 | 1 | 0 | 0 |
+| `dazzle.render.context` | 0 | 1 | 4 | 0 |
+| `dazzle.render.dispatch` | 0 | 0 | 1 | 0 |
+| `dazzle.render.fragment` | 13 | 9 | 7 | 0 |
+| `dazzle.render.onboarding` | 0 | 0 | 1 | 0 |
+| `dazzle.seed.generator` | 0 | 1 | 0 | 0 |
+| `dazzle.signing` | 0 | 0 | 0 | 2 |
+| `dazzle.signing.tokens` | 1 | 1 | 0 | 0 |
+| `dazzle.tenant` | 1 | 0 | 0 | 0 |
+| `dazzle.tenant.cache_registry` | 1 | 0 | 0 | 0 |
+| `dazzle.testing.entity_client` | 0 | 2 | 0 | 0 |
+| `dazzle.testing.session_manager` | 0 | 1 | 0 | 0 |
+| `dazzle.testing.step_executor` | 0 | 1 | 0 | 0 |
+| `dazzle.testing.test_design_persistence` | 1 | 0 | 0 | 0 |
+| `dazzle.testing.test_runner` | 0 | 1 | 0 | 0 |
+| `dazzle.testing.testspec_generator` | 1 | 0 | 0 | 0 |
+| `dazzle.testing.unified_runner` | 0 | 1 | 0 | 0 |
+| `dazzle.testing.walk` | 0 | 11 | 0 | 0 |
+| `dazzle.ui.runtime` | 0 | 1 | 0 | 0 |
+
+## dazzle.toml sections × consumers
+
+Number of `dazzle.toml` files declaring each top-level table (`[[auth.oauth_providers]]` counts as `auth`). A section not listed is declared by nobody.
+
+| Section | AegisMark | cyfuture | pennydreadful | examples |
+|---|---:|---:|---:|---:|
+| `audit` | 1 | 0 | 0 | 0 |
+| `auth` | 1 | 1 | 0 | 12 |
+| `database` | 0 | 0 | 1 | 0 |
+| `dsl` | 0 | 0 | 0 | 1 |
+| `environments` | 1 | 1 | 1 | 0 |
+| `extensions` | 0 | 0 | 1 | 0 |
+| `fileset` | 1 | 0 | 0 | 1 |
+| `llm` | 0 | 0 | 0 | 12 |
+| `modules` | 0 | 1 | 1 | 10 |
+| `project` | 1 | 1 | 1 | 12 |
+| `renderers` | 1 | 0 | 1 | 0 |
+| `serve` | 0 | 0 | 1 | 0 |
+| `signing` | 1 | 0 | 0 | 0 |
+| `stack` | 1 | 1 | 0 | 12 |
+| `storage` | 1 | 0 | 0 | 0 |
+| `tenant` | 0 | 1 | 0 | 0 |
+| `theme` | 0 | 0 | 0 | 1 |
+| `ui` | 1 | 1 | 0 | 6 |
+
+## Framework project files × consumers
+
+Files the framework reads from a project (`*spec.yaml` literals in `src/dazzle`, `*.toml` literals in `src/dazzle/cli`), counted by name. This is how `pitch`, `sitespec` and `theme` are consumed without any CLI call.
+
+| File | AegisMark | cyfuture | pennydreadful | examples |
+|---|---:|---:|---:|---:|
+| `brandspec.yaml` | 1 | 0 | 0 | 0 |
+| `dazzle.toml` | 1 | 1 | 1 | 12 |
+| `pitchspec.yaml` | 1 | 0 | 0 | 0 |
+| `sitespec.yaml` | 1 | 1 | 0 | 12 |
+| `test_personas.toml` | 0 | 0 | 0 | 0 |
+| `themespec.yaml` | 1 | 1 | 0 | 1 |
+| `trial.toml` | 1 | 1 | 0 | 11 |
+
+## Framework endpoints referenced × consumers
+
+Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: the first segment of every route in `docs/api-surface/runtime-urls.txt` plus the router mount prefixes in `src/dazzle/http`. Baseline routes are router-relative, so generic segments (`/app`, `/api`, `/select`) also match app-owned URLs: a non-zero is *possible* use, a zero is strong evidence of none.
+
+| Path prefix | AegisMark | cyfuture | pennydreadful | examples |
+|---|---:|---:|---:|---:|
+| `2fa` | 0 | 0 | 0 | 0 |
+| `__test__` | 12 | 9 | 51 | 0 |
+| `_dazzle` | 45 | 8 | 2 | 10 |
+| `_dz` | 0 | 0 | 0 | 0 |
+| `_ops` | 0 | 0 | 0 | 0 |
+| `_site` | 0 | 0 | 0 | 0 |
+| `api` | 201 | 94 | 1240 | 27 |
+| `app` | 2216 | 5967 | 74 | 41 |
+| `auth` | 129 | 135 | 71 | 1 |
+| `banner` | 0 | 0 | 0 | 0 |
+| `data` | 1 | 1 | 0 | 6 |
+| `dazzle` | 0 | 0 | 3 | 6 |
+| `devices` | 0 | 0 | 0 | 1 |
+| `field` | 0 | 0 | 0 | 0 |
+| `files` | 7 | 21 | 0 | 0 |
+| `forgot-password` | 0 | 1 | 0 | 0 |
+| `graphql` | 0 | 0 | 47 | 0 |
+| `intents` | 0 | 0 | 0 | 0 |
+| `jobs` | 0 | 0 | 0 | 0 |
+| `locale` | 0 | 0 | 0 | 0 |
+| `login` | 84 | 145 | 6 | 29 |
+| `logs` | 0 | 4 | 0 | 0 |
+| `models` | 0 | 0 | 0 | 0 |
+| `pending` | 0 | 0 | 0 | 0 |
+| `qa` | 113 | 14 | 0 | 0 |
+| `reset-password` | 0 | 0 | 0 | 0 |
+| `search` | 1 | 2 | 0 | 0 |
+| `select` | 141 | 8 | 11 | 21 |
+| `sign` | 28 | 12 | 1 | 0 |
+| `signup` | 236 | 101 | 0 | 2 |
+| `site.js` | 0 | 0 | 0 | 0 |
+| `state` | 0 | 0 | 0 | 0 |
+| `stats` | 0 | 0 | 0 | 0 |
+| `styles` | 3 | 0 | 0 | 0 |
+| `ws` | 0 | 0 | 0 | 0 |
+
+## MCP tools named × consumers (approximate)
+
+`mcp__dazzle__<tool>`, a backticked tool name followed by one of its operations, or `<tool>(operation=...)` in `*.md`, `*.toml`, `*.py`. Approximate: bare prose mentions are missed and agent transcripts are not scanned.
+
+| Tool | AegisMark | cyfuture | pennydreadful | examples |
+|---|---:|---:|---:|---:|
+| `agent` | 0 | 1 | 0 | 0 |
+| `agent_commands` | 0 | 0 | 0 | 0 |
+| `api_pack` | 0 | 0 | 0 | 0 |
+| `bootstrap` | 0 | 0 | 0 | 0 |
+| `compliance` | 1 | 0 | 0 | 0 |
+| `composition` | 0 | 0 | 0 | 0 |
+| `conformance` | 0 | 1 | 0 | 0 |
+| `db` | 5 | 0 | 2 | 0 |
+| `demo_data` | 0 | 0 | 0 | 0 |
+| `discovery` | 0 | 4 | 0 | 0 |
+| `domain` | 0 | 0 | 0 | 0 |
+| `dsl` | 82 | 8 | 0 | 0 |
+| `e2e` | 0 | 0 | 0 | 0 |
+| `feedback` | 5 | 0 | 0 | 0 |
+| `fitness` | 0 | 0 | 0 | 0 |
+| `graph` | 0 | 0 | 0 | 0 |
+| `guide` | 1 | 0 | 0 | 0 |
+| `knowledge` | 3 | 0 | 0 | 0 |
+| `llm` | 0 | 0 | 0 | 0 |
+| `mock` | 0 | 0 | 0 | 0 |
+| `param` | 0 | 0 | 0 | 0 |
+| `perf` | 0 | 0 | 0 | 0 |
+| `pitch` | 0 | 0 | 0 | 0 |
+| `policy` | 5 | 0 | 0 | 0 |
+| `presentation` | 0 | 0 | 0 | 0 |
+| `process` | 0 | 0 | 0 | 0 |
+| `product_quality` | 0 | 0 | 0 | 0 |
+| `representation` | 0 | 0 | 0 | 0 |
+| `rhythm` | 3 | 0 | 0 | 0 |
+| `semantics` | 1 | 4 | 0 | 0 |
+| `sentinel` | 2 | 6 | 0 | 0 |
+| `sitespec` | 16 | 0 | 0 | 0 |
+| `spec_analyze` | 0 | 0 | 0 | 0 |
+| `status` | 3 | 1 | 0 | 0 |
+| `story` | 5 | 13 | 0 | 0 |
+| `test_design` | 0 | 0 | 0 | 0 |
+| `test_intelligence` | 0 | 0 | 0 | 0 |
+| `user_management` | 0 | 0 | 0 | 0 |
+| `user_profile` | 0 | 0 | 0 | 0 |
+
 ## Documentation by directory
 
 | Directory | Markdown lines |
 |---|---:|
 | `docs/superpowers/` | 193,364 |
-| `docs/api-reference/` | 100,716 |
-| `docs/reference/` | 20,911 |
+| `docs/reference/` | 20,914 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
@@ -214,6 +478,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `docs/recipes/` | 501 |
 | `docs/decisions/` | 239 |
 | `docs/agent-loop/` | 25 |
+| `docs/api-reference/` | 0 |
 | `docs/api-surface/` | 0 |
 | `docs/assets/` | 0 |
 | `docs/ux-architect/` | 0 |
