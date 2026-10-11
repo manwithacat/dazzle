@@ -1,7 +1,7 @@
 """Load hyperpart scenario catalogue + scenario-driven opportunity rows.
 
 Pairs with ``packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml`` and
-``docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md``.
+``archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md``.
 
 Scanners implemented here are *small* heuristics that close residual gaps
 the avatar/queue hardcode does not cover (e.g. planned switch emitter).
@@ -140,7 +140,7 @@ def catalogue_snapshot() -> dict[str, Any]:
         "by_hyperpart": by_hp,
         "scenarios": [s.to_json() for s in rows],
         "doctrine": (
-            "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
+            "archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
         ),
     }
 

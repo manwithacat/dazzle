@@ -281,7 +281,7 @@ class TestCycle147Regression:
     action from the prose-preambled response cleanly.
 
     This test uses the exact prose+JSON pattern captured from cycle 147's
-    logs (see dev_docs/ux-log.md cycle 147 entry for the original
+    logs (see archive/dev_docs/ux-log.md cycle 147 entry for the original
     occurrence).
     """
 

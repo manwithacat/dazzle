@@ -4,7 +4,7 @@
 **Depends on:** [ADR-0036](0036-tenant-hierarchy-data-model.md) (hierarchy + host lens), [ADR-0037](0037-declarative-membership-relation.md) (membership), [ADR-0033](0033-csrf-as-auth-class-disposition.md) (CSRF Origin==Host), [ADR-0003](0003-clean-breaks.md), [ADR-0005](0005-runtime-services.md)
 **Does not replace:** ADR-0034 (reserved RLS capstone), ADR-0036, ADR-0037
 **Stem:** [`stems/tenancy.md`](https://github.com/manwithacat/dazzle/blob/main/stems/tenancy.md)
-**CONOPS:** [`docs/superpowers/specs/2026-08-30-hosting-topology-conops.md`](https://github.com/manwithacat/dazzle/blob/main/docs/superpowers/specs/2026-08-30-hosting-topology-conops.md)
+**CONOPS:** `archive/docs-superpowers/specs/2026-08-30-hosting-topology-conops.md` (archived; see the `archive` branch)
 **Issues:** #1657, #1656, #1655 (failure class)
 
 ## Context

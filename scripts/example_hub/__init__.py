@@ -1,6 +1,6 @@
 """Local multi-host evaluation hub for Dazzle example apps.
 
-See docs/superpowers/specs/2026-07-21-example-eval-hub-design.md
+See archive/docs-superpowers/specs/2026-07-21-example-eval-hub-design.md
 """
 
 from __future__ import annotations

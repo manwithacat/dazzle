@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, PyYAML, WeasyPrint, Dazzle MCP tools (dsl/policy/conformance), Claude Code Agent tool for AI expansion.
 
-**Spec:** `docs/superpowers/specs/2026-03-23-compliance-compiler-design.md`
+**Spec:** `archive/docs-superpowers/specs/2026-03-23-compliance-compiler-design.md`
 
 ---
 

@@ -4,7 +4,7 @@ Points Dazzle's drift-ratchet instinct at ``src/dazzle``'s own Python structure 
 ungated surface (every other gate targets the DSL/IR/generated-app surface). ``dazzle fitness
 code`` writes the hotspot queue (report-only); the committed baseline feeds
 ``tests/unit/test_complexity_ratchet.py`` (the creep gate). See
-docs/superpowers/specs/2026-06-19-framework-structural-fitness-design.md.
+archive/docs-superpowers/specs/2026-06-19-framework-structural-fitness-design.md.
 """
 
 from __future__ import annotations

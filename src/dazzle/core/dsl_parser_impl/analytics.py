@@ -18,7 +18,7 @@ the framework registry (gtm, plausible, ...); unknown names are parser
 errors. Per-provider parameters are validated against the registry's
 `required_params` / `optional_params` declarations at link time.
 
-See docs/superpowers/specs/2026-04-24-analytics-privacy-design.md §2.1.
+See archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md §2.1.
 """
 
 from __future__ import annotations

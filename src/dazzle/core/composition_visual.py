@@ -282,7 +282,7 @@ DIMENSION_PROMPT_BUILDERS: dict[str, Any] = {
 
 
 # ── Opt-in taste dimensions ─────────────────────────────────────────
-# HaTchi-MaXchi rubric dimensions (spec: docs/superpowers/specs/
+# HaTchi-MaXchi rubric dimensions (spec: archive/docs-superpowers/specs/
 # 2026-07-02-taste-house-aesthetic-design.md). Never run by default —
 # they cost LLM tokens and exist for explicit focus=["taste"] audits.
 # Prompts follow the composition findings contract (not the blind

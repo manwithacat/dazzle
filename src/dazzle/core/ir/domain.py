@@ -339,7 +339,7 @@ class TenantHostSpec(BaseModel):
     """Host-header tenant routing configuration for an entity (#1289).
 
     Auto-mounts the framework's TenantResolutionMiddleware when any entity
-    declares this block. See docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md
+    declares this block. See archive/docs-superpowers/specs/2026-05-28-tenant-host-keyword-design.md
     """
 
     model_config = ConfigDict(frozen=True)

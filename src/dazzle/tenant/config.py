@@ -12,7 +12,7 @@ SCHEMA_PREFIX = "tenant_"
 # first for a clearer error), and `qa_` is the grammar-valid form a normal
 # create could otherwise claim. The load-bearing test-tenant marker is the
 # queryable `is_test` column on the tenant record, not this prefix
-# (belt-and-suspenders — see docs/superpowers/specs/2026-06-04-tenant-lifecycle-design.md §5).
+# (belt-and-suspenders — see archive/docs-superpowers/specs/2026-06-04-tenant-lifecycle-design.md §5).
 RESERVED_SLUG_PREFIXES = ("qa-", "qa_")
 
 

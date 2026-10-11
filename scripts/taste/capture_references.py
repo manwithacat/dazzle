@@ -2,7 +2,7 @@
 """Capture shadcn/Vercel-dialect reference screenshots for the taste panel.
 
 Screenshots are the parity references for the blind judge panel
-(spec: docs/superpowers/specs/2026-07-02-taste-house-aesthetic-design.md,
+(spec: archive/docs-superpowers/specs/2026-07-02-taste-house-aesthetic-design.md,
 Phase 0). They are THIRD-PARTY content: written to .dazzle/ (gitignored),
 never committed. Re-run this script to refresh; public pages drift and
 that is fine — the panel is re-baselined per run.

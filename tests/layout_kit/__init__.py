@@ -1,6 +1,6 @@
 """L2 layout concordance kit — browser-measured layout properties.
 
-LAYER: L2 (see docs/superpowers/specs/2026-07-21-css-layout-test-architecture.md)
+LAYER: L2 (see archive/docs-superpowers/specs/2026-07-21-css-layout-test-architecture.md)
 
 Prefer geometric predicates over CSS-source regex. Chromium is the CSS
 grammar for cascade + table + flex; this package loads production CSS +

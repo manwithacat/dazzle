@@ -6,7 +6,7 @@ optional and phased (see [Upstream ladder](#upstream-ladder)).
 
 **Proof-of-shape:** AegisMark `docs-site/`, `pipeline/docsite/`,
 `scripts/docs_ship.sh`, `tests/docs/`, design
-`docs/superpowers/specs/2026-07-01-evergreen-docs-site-design.md`.
+`archive/docs-superpowers/specs/2026-07-01-evergreen-docs-site-design.md`.
 
 **Second-consumer signal:** any multi-persona Dazzle product that needs
 user-facing documentation that stays true to the live DSL.
@@ -475,5 +475,5 @@ capture path rather than inventing a second walker.
 | `scripts/docs_ship.sh` | §9 |
 | `docs-site/wrangler.toml` | §8 |
 | `pyproject.toml` `[dependency-groups].docs` | §2 |
-| Design spec `docs/superpowers/specs/2026-07-01-evergreen-docs-site-design.md` | full rationale |
+| Design spec `archive/docs-superpowers/specs/2026-07-01-evergreen-docs-site-design.md` | full rationale |
 | Live site | https://docs.aegismark.ai |

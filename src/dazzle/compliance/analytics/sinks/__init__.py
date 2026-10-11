@@ -12,7 +12,7 @@ but targets a different boundary:
     Client side:  framework template → dataLayer → GTM / Plausible / …
     Server side:  event bus → AnalyticsSink.emit() → GA4 MP / Plausible API / …
 
-See ``docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`` §2.5.
+See ``archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md`` §2.5.
 """
 
 from __future__ import annotations

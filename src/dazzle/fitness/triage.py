@@ -5,7 +5,7 @@ findings) into a ``fitness-queue.md`` that surfaces ~10-25 distinct
 clusters in priority order. Agents and humans read the queue to pick
 their next action.
 
-Design: docs/superpowers/specs/2026-04-14-fitness-triage-design.md
+Design: archive/docs-superpowers/specs/2026-04-14-fitness-triage-design.md
 """
 
 from __future__ import annotations

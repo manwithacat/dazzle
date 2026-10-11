@@ -13,7 +13,7 @@ Framework-provided subprocessors (GA4, GTM, Stripe, Twilio, SendGrid, AWS
 SES, Firebase) ship in a default registry. App-level declarations override
 or extend it.
 
-See docs/superpowers/specs/2026-04-24-analytics-privacy-design.md §2.3.
+See archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md §2.3.
 """
 
 from __future__ import annotations

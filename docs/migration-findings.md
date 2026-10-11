@@ -8,7 +8,7 @@ diverged from the recon's predictions).
 **Source plan:** `/Users/james/Desktop/python-version-support-plan.md`
 
 > Location: `docs/migration-findings.md` — tracked. Companion reports: `docs/python-3.14-primary-target.md`
-> (perf/primary-target), `docs/superpowers/specs|plans/2026-06-09-pep695-adoption*` (PEP 695).
+> (perf/primary-target), `archive/docs-superpowers/specs|plans/2026-06-09-pep695-adoption*` (PEP 695).
 
 ---
 

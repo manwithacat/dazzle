@@ -11,7 +11,7 @@ Hub:  http://dazzle.local:9080/   (after DNS)
 Apps: http://simple_task.dazzle.local:9080/
 Fallback without DNS: http://127.0.0.1:9080/
 
-See docs/superpowers/specs/2026-07-21-example-eval-hub-design.md
+See archive/docs-superpowers/specs/2026-07-21-example-eval-hub-design.md
 and scripts/example_hub/README.md
 """
 

@@ -126,7 +126,7 @@ Pass line for “keep watching a sales demo” = **7.0** commercial; P0 fleet ta
 = **≥ 5.5**. Tracking: GitHub **#1626**.
 
 **Agent residual queue (R1–R6, hero stills, messaging):**
-[`docs/reference/antagonist-agent-brief-1626.md`](./antagonist-agent-brief-1626.md)
+`archive/docs-reference/antagonist-agent-brief-1626.md` (archived; see the `archive` branch)
 
 | P0 | Failure | Owner altitude |
 |----|---------|----------------|
@@ -180,7 +180,7 @@ efficient **maps** (context). Only some are **outcome residual** sensors today.
 Design for dig contracts (must cite maps + fire CLI/MCP actuators), divergence
 pairs, and epistemic “unproven” residual—without premature “SPEC truth” or full
 still-quality bars—lives in
-[`docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`](../superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md).
+`archive/docs-superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md` (archived; see the `archive` branch).
 
 ## Agent-first customer acceptance
 
@@ -217,7 +217,7 @@ pilot would run a two-week trial.”
 | `capture_desk_timeout` | Default desks never still (pay_desk / my_invoices hang) | Capture readiness + per-persona recapture (**R4**) |
 
 Human residual order and hero still paths:
-[`antagonist-agent-brief-1626.md`](./antagonist-agent-brief-1626.md).
+`archive/docs-reference/antagonist-agent-brief-1626.md` (archived; see the `archive` branch).
 
 **Acceptance (showcase ready, per app):** no builder chrome on business desks;
 human singular CTAs; no raw JSON errors in browser; no platform-only nav for

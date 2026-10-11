@@ -3,7 +3,7 @@
 
 When residual=0, agents must not fleet-fill the same depth_id with the same
 surface recipe. This module is the machine surface for that doctrine
-(docs/reference/interesting-saas-context.md §6 + portfolio pick).
+(archive/docs-reference/interesting-saas-context.md §6 + portfolio pick).
 
 Usage::
 

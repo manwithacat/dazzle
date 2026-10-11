@@ -94,5 +94,5 @@ auto-correct.
 
 ## Further reading
 
-- Design spec: `docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md`
+- Design spec: `archive/docs-superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md`
 - Lifecycle prerequisite: ADR-0020

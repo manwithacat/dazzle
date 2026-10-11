@@ -67,8 +67,8 @@ Also enforced by: the opt-in `composition analyze` taste focus (`focus=["taste"]
 and the per-rule gates listed below. The blind taste panel remains available for
 parity campaigns when credits exist — not the default ship gate.
 
-- Spec: `docs/superpowers/specs/2026-07-02-taste-house-aesthetic-design.md`
-- Baseline: `dev_docs/taste/baseline-2026-07-02.md` (all six dimensions
+- Spec: `archive/docs-superpowers/specs/2026-07-02-taste-house-aesthetic-design.md`
+- Baseline: `archive/dev_docs/taste/baseline-2026-07-02.md` (all six dimensions
   FAIL; fleet 2.4–3.2 vs references 5.1–5.8 on a 10-point scale)
 - Rubric source of truth: `src/dazzle/core/taste_rubric.py` (this document
   is drift-gated against it by `tests/unit/test_taste_doc_drift.py`)

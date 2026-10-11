@@ -24,7 +24,7 @@ Persistent catalogue under **`dazzle.local`** with per-app hosts
 ```
 
 See `scripts/example_hub/README.md` and
-`docs/superpowers/specs/2026-07-21-example-eval-hub-design.md`.
+`archive/docs-superpowers/specs/2026-07-21-example-eval-hub-design.md`.
 
 ### Stems
 

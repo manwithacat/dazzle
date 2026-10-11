@@ -12,7 +12,7 @@ on the apps that already ship guides). This module:
 Concordance itself is enforced for free: ``load_project_appspec`` raises
 ``LinkError`` if any guide's target/event/field/CTA-permit fails to resolve.
 
-Design: docs/superpowers/specs/2026-06-13-example-app-guides-design.md
+Design: archive/docs-superpowers/specs/2026-06-13-example-app-guides-design.md
 """
 
 from __future__ import annotations

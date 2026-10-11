@@ -177,7 +177,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
 ## Plan
 
-See `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md`.
+See `archive/docs-superpowers/plans/2026-07-11-hm-sophistication-plan.md`.
 
 ## Improve loop
 

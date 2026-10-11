@@ -119,7 +119,7 @@ tracks the accept/reject ratio per model.
 
 ## Design
 
-See `docs/superpowers/specs/2026-04-14-fitness-investigator-design.md`
+See `archive/docs-superpowers/specs/2026-04-14-fitness-investigator-design.md`
 for the full design spec and
-`docs/superpowers/plans/2026-04-14-fitness-investigator-plan.md`
+`archive/docs-superpowers/plans/2026-04-14-fitness-investigator-plan.md`
 for the implementation plan.

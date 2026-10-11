@@ -1,6 +1,6 @@
 """Parser for the `lifecycle:` block inside an entity declaration (ADR-0020).
 
-See docs/superpowers/plans/2026-04-13-lifecycle-evidence-predicates-plan.md
+See archive/docs-superpowers/plans/2026-04-13-lifecycle-evidence-predicates-plan.md
 for the full design.
 
 The `lifecycle:` block is orthogonal to the (auto-derived) state_machine on

@@ -17,7 +17,7 @@ CSP, consent gating). Most providers have both, and the framework ships
 matched pairs — e.g. the ``gtm`` provider aligns with the
 ``google_tag_manager`` subprocessor by ``linked_subprocessor_name``.
 
-See ``docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`` §2.2.
+See ``archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md`` §2.2.
 """
 
 from __future__ import annotations

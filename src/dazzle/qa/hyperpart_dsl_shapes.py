@@ -122,7 +122,7 @@ def shapes_snapshot() -> dict[str, Any]:
         "scenario_missing": len(scenario_missing_ids),
         "next_scenario_missing": scenario_missing_ids[0] if scenario_missing_ids else None,
         "doctrine": (
-            "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
+            "archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md"
         ),
     }
 

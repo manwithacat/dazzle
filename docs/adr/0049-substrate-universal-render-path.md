@@ -19,7 +19,7 @@ ADR-0048 already converged the list **row** engine: the legacy list path's rows 
 
 **The typed Fragment substrate is the single, universal server-side render path.** The legacy direct-template renderers are deprecated and **deleted mode-by-mode** as each mode reaches parity. After migration there is one render model: AppSpec → Fragment primitives → HTML.
 
-Load-bearing decisions (rationale in the design spec `docs/superpowers/specs/2026-06-29-substrate-universal-render-path-design.md`):
+Load-bearing decisions (rationale in the design spec `archive/docs-superpowers/specs/2026-06-29-substrate-universal-render-path-design.md`):
 
 1. **Visual parity, not byte parity.** The substrate's DOM/CSS becomes canonical; we do **not** contort it to byte-match the legacy output. Each mode's goldens are re-baselined deliberately and verified for **visual + a11y + card-safety** parity. (Byte-matching a fossil would import its shape — the opposite of the goal.)
 2. **List keeps skeleton+hydrate; `render_data_row` stays the sole row source.** The substrate list path emits chrome + an empty `<tbody hx-trigger="load">` pointing at `/api` — so rows always come from `render_data_row` (ADR-0048), the substrate only needs **chrome** parity, and fast time-to-first-paint is preserved. Inline-rows remains a future per-surface option, not the default.
@@ -37,4 +37,4 @@ Load-bearing decisions (rationale in the design spec `docs/superpowers/specs/202
 
 ## Follow-ons
 
-Phased design + per-mode parity gap-lists: `docs/superpowers/specs/2026-06-29-substrate-universal-render-path-design.md`. Phase 1 (list) gets the first implementation plan.
+Phased design + per-mode parity gap-lists: `archive/docs-superpowers/specs/2026-06-29-substrate-universal-render-path-design.md`. Phase 1 (list) gets the first implementation plan.

@@ -1,4 +1,4 @@
-"""Icon-system contract gates (docs/superpowers/plans/2026-07-04-hm-icon-system-*).
+"""Icon-system contract gates (archive/docs-superpowers/plans/2026-07-04-hm-icon-system-*).
 
 Phase 1: the canonical `.dz-icon` base contract in the built CSS.
 Later phases append: label a11y, sprite sheet, sprite-use helpers.

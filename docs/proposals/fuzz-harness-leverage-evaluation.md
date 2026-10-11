@@ -1,7 +1,7 @@
 # Giving Fuzz Testing More To Work With — Evaluation
 
 **Date:** 2026-06-07
-**Prompted by:** the fuzz catch in [2026-06-07-fuzz-catch-foreign-constraint-kind](../history/2026-06-07-fuzz-catch-foreign-constraint-kind.md) (a real parser bug the Hypothesis suite found during an unrelated pre-ship run).
+**Prompted by:** the fuzz catch in 2026-06-07-fuzz-catch-foreign-constraint-kind (archived; see the `archive` branch) (a real parser bug the Hypothesis suite found during an unrelated pre-ship run).
 **Companion to:** [Suite Distillation Strategy](./Suite%20Distillation%20Strategy.md).
 **Status:** evaluation + prioritised menu. No code yet — pick the slices to build.
 

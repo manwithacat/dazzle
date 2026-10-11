@@ -5,7 +5,7 @@ profile. The registry is first-class data so MCP consumers can enumerate
 available modes without hardcoded strings.
 
 v1 ships mode_a only. Modes B/C/D are specced in
-docs/superpowers/specs/2026-04-14-e2e-environment-strategy-design.md but
+archive/docs-superpowers/specs/2026-04-14-e2e-environment-strategy-design.md but
 not wired — adding them is ~40 lines here plus CLI wiring.
 """
 

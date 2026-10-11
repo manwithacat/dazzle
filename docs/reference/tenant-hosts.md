@@ -50,7 +50,7 @@ the framework's tenant middleware. `request.state.tenant` carries a typed
 | `membership_gated:` | `true` | `false` decouples host resolution from membership-gated login (#1418): the host + `current_tenant` lens work without the enterprise-auth membership table — a host-pinned login with no membership proceeds (the app self-authorizes) instead of 403. Leave `true` for the membership-gated model. |
 
 See the design spec at
-[`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md)
+`archive/docs-superpowers/specs/2026-05-28-tenant-host-keyword-design.md` (archived; see the `archive` branch)
 for the full truth table and lifecycle.
 
 ## Cookies (planned)

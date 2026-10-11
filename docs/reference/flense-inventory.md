@@ -4,7 +4,7 @@
 > Do not edit; rerun the script. This table is the only admissible evidence for a keep or a
 > removal under [ADR-0057](../adr/0057-consumer-forced-growth-and-mass-ratchet.md).
 
-Snapshot: 2026-10-11. Consumers absent on this machine: none (absent means *unknown*, never *unused*).
+Snapshot: 2026-10-12. Consumers absent on this machine: none (absent means *unknown*, never *unused*).
 
 **How to read.** DSL declarations are one signal among seven. Consumers also reach the
 framework through CLI calls in scripts and docs, Python imports, `dazzle.toml` sections,
@@ -19,7 +19,7 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 |---|---:|
 | Framework source lines (`src/dazzle`) | 465,791 |
 | Test lines (`tests/`) | 420,335 |
-| Documentation lines (`docs/**/*.md`) | 249,410 |
+| Documentation lines (`docs/**/*.md`) | 50,684 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
 
@@ -458,19 +458,16 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/superpowers/` | 193,364 |
-| `docs/reference/` | 20,894 |
+| `docs/reference/` | 19,958 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
 | `docs/guides/` | 3,671 |
-| `docs/history/` | 3,588 |
 | `docs/counter-priors/` | 3,112 |
-| `docs/architecture/` | 2,696 |
+| `docs/architecture/` | 2,669 |
 | `docs/evaluation/` | 1,662 |
 | `docs/contributing/` | 1,414 |
 | `docs/examples/` | 819 |
-| `docs/research/` | 811 |
 | `docs/getting-started/` | 665 |
 | `docs/recipes/` | 501 |
 | `docs/decisions/` | 239 |
@@ -479,4 +476,5 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `docs/api-reference/` | 0 |
 | `docs/api-surface/` | 0 |
 | `docs/assets/` | 0 |
+| `docs/superpowers/` | 0 |
 | `docs/ux-architect/` | 0 |

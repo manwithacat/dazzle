@@ -64,4 +64,4 @@ you need defence-in-depth or compliance evidence.
 ## See Also
 
 - [Access Control](access-control.md) — entity and surface permissions
-- [Admin Workspace](../superpowers/specs/2026-03-26-admin-workspace-design.md) — design spec
+- Admin Workspace (archived; see the `archive` branch) — design spec

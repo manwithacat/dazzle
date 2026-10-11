@@ -120,7 +120,7 @@ only `feature_use`/`action` capture, on a lean typed table built for the inferen
 
 ## Implementation plan (phased)
 
-Anchors verified 2026-07-01. Full plan: `docs/superpowers/plans/2026-07-01-first-party-usage-signal.md`.
+Anchors verified 2026-07-01. Full plan: `archive/docs-superpowers/plans/2026-07-01-first-party-usage-signal.md`.
 
 - **Phase 1 — Capture foundation (Postgres, registered).** Lean `_dazzle_usage_events` table +
   `ensure_usage_events_table` creator, registered in `dazzle.db.artifact_registry` and called by

@@ -17,7 +17,7 @@ DSL Syntax:
       cookies: [_ga, _ga_*, _gid]
       purpose: "Product and web usage analytics."
 
-See docs/superpowers/specs/2026-04-24-analytics-privacy-design.md §2.3.
+See archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md §2.3.
 """
 
 from __future__ import annotations

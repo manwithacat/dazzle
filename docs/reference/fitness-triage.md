@@ -108,7 +108,7 @@ and the queue re-ranks naturally.
 
 ## Design notes
 
-See `docs/superpowers/specs/2026-04-14-fitness-triage-design.md` for
+See `archive/docs-superpowers/specs/2026-04-14-fitness-triage-design.md` for
 the full design, including the rationale for the dedupe key choice,
 the ranking formula, and what's deferred to future investigator and
 actor subsystems.

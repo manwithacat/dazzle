@@ -190,7 +190,7 @@ CSS classes follow `dz-<primitive>` (e.g. `.dz-ref-picker`, `.dz-region--kind-fo
 | `src/dazzle/http/runtime/renderers/fragment_adapter.py` | `_field_to_primitive` — the type→primitive map |
 | `src/dazzle/page/runtime/static/css/components/fragment-primitives.css` | per-primitive CSS rules |
 | `scripts/flip_to_fragment.py` | the idempotent flip helper |
-| `docs/superpowers/plans/migration-roadmap.md` | the framework's own migration history |
+| `archive/docs-superpowers/plans/migration-roadmap.md` | the framework's own migration history |
 | `CHANGELOG.md` | per-release agent guidance |
 
 ---

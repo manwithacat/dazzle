@@ -1,7 +1,7 @@
 """Byte anchors for the folded `embedded` + `list-region` row archetypes (#1511).
 
 Phase 3 of the list-render convergence (design
-`docs/superpowers/specs/2026-06-28-list-render-convergence-design.md` §3) folds
+`archive/docs-superpowers/specs/2026-06-28-list-render-convergence-design.md` §3) folds
 `_emit_table` (embedded) and `_emit_list_region` (region) onto the one shared
 `assemble_list_row` seam. The data-table archetype is pinned byte-for-byte by
 `test_data_row_characterization_1505.py`; these tests are the equivalent anchors

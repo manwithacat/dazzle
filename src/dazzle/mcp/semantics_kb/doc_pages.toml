@@ -1716,68 +1716,12 @@ order = 120.6
 handwritten = true
 intro = "Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps."
 
-[pages.antagonist-agent-brief-1626]
-title = "Antagonist Agent Brief (#1626)"
-slug = "antagonist-agent-brief-1626"
-order = 120.7
-handwritten = true
-intro = "Agent residual queue R1–R6 for the demo-fleet antagonist bake-off — stills floors, recapture recipe, messaging constraints."
-
-[pages.antagonist-rescore-handoff-1626]
-title = "Antagonist Re-score Handoff (#1626)"
-slug = "antagonist-rescore-handoff-1626"
-order = 120.8
-handwritten = true
-intro = "Hand-back pack for human/antagonist re-score after agent R1–R6 + partial P1 drain — hero still paths, OCR spot-check, deferred items."
-
 [pages.hyperpart-presentation]
 title = "Hyperpart Presentation Process"
 slug = "hyperpart-presentation"
 order = 120.9
 handwritten = true
 intro = "Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). Antagonist doctrine 2026-08-01."
-
-[pages.antagonist-rescore-handoff-2026-08-01b]
-title = "Antagonist Re-score Handoff (2026-08-01b)"
-slug = "antagonist-rescore-handoff-2026-08-01b"
-order = 120.95
-handwritten = true
-intro = "Post presentation-process first slice + S1–S5 still recapture handoff for human re-score after fleet ~5.6 pass."
-
-[pages.antagonist-investigation-2026-08-02]
-title = "Antagonist Investigation (2026-08-02)"
-slug = "antagonist-investigation-2026-08-02"
-order = 120.96
-handwritten = true
-intro = "Agent response to still-freeze investigation — dual-open not bake-off proof; F1 project board recapture."
-
-[pages.antagonist-rescore-handoff-2026-08-02]
-title = "Antagonist Re-score Handoff (2026-08-02 F1)"
-slug = "antagonist-rescore-handoff-2026-08-02"
-order = 120.97
-handwritten = true
-intro = "F1 project_tracker board recapture — no 150% delta theater; dual-open still unproven for fleet score."
-
-[pages.interesting-saas-context]
-title = "Interesting SaaS Context (Post-5.8)"
-slug = "interesting-saas-context"
-order = 120.98
-handwritten = true
-intro = "Goal A harness vs Goal B interesting product; depth menu + portfolio pick + still proof when residual=0. Antagonist doctrine 2026-08-02."
-
-[pages.antagonist-report-post-5-8]
-title = "Antagonist Report Post-5.8"
-slug = "antagonist-report-post-5-8"
-order = 120.99
-handwritten = true
-intro = "Short handoff: demote residual farming; force interesting_product depth pack under residual=0."
-
-[pages.agent-harness-distill]
-title = "Agent harness distill"
-slug = "agent-harness-distill"
-order = 120.991
-handwritten = true
-intro = "Overspecification evaluation: stems/ADRs/capability-map diet; oral history surfacing."
 
 [pages.mcp-2026-07-28-opportunity]
 title = "MCP 2026-07-28 opportunity"

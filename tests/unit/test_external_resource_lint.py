@@ -1,7 +1,7 @@
 """External-resource lint — prevents surprise CDN loads in templates.
 
 Cycle 324 — 6th horizontal-discipline lint. Implements Phase 4 of the
-cycle 300 external-resource-integrity gap doc (see `docs/history/
+cycle 300 external-resource-integrity gap doc (see `archive/docs-history/
 framework-gaps/2026-04-20-external-resource-integrity.md`). Cycles 301
 and 323 filed issues #830 (SRI hashes) and #832 (vendor Tailwind +
 Dazzle own dist); this lint prevents the inverse regression — a new
@@ -88,7 +88,7 @@ ALLOWED_EXTERNAL_ORIGINS: dict[str, str] = {
     # to server-side GTM container (Phase 5 server-side sinks, spec
     # 2026-04-24-analytics-privacy-design.md). Until then, inline GTM
     # snippet is the documented approach. Tracked under the analytics
-    # gap doc (docs/superpowers/specs/2026-04-24-analytics-privacy-design.md
+    # gap doc (archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md
     # — note this is a spec rather than a gap doc; the text `gap doc` below
     # is kept for lint-citation compliance).
     "www.googletagmanager.com": (
@@ -273,7 +273,7 @@ class TestExternalResourceLint:
             "citing a GitHub issue / gap doc / deferral rationale, OR "
             "(c) migrate via the existing work in #830 (SRI) or #832 "
             "(vendor Tailwind + Dazzle own dist).\n"
-            "See docs/history/framework-gaps/2026-04-20-external-resource-integrity.md."
+            "See archive/docs-history/framework-gaps/2026-04-20-external-resource-integrity.md."
         )
 
     def test_every_allowlist_entry_has_hits(self) -> None:

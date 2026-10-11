@@ -12,7 +12,7 @@ one org, and gated by **domain verification**.
     `/auth/connections` admin surface mounts. A greenfield app sees none of this, even if
     the `[sso]`/`[saml]` extras happen to be installed. Capability ids:
     `auth.enterprise.oidc`, `auth.enterprise.saml`, `auth.enterprise.scim`. See the
-    capability model in `docs/superpowers/specs/2026-06-06-capability-opt-in-model-design.md`.
+    capability model in `archive/docs-superpowers/specs/2026-06-06-capability-opt-in-model-design.md`.
 
     **Cognition (Phase 2):** the agent won't *proactively* suggest enterprise SSO
     while building a simple app. If your spec states the need ("staff sign in via

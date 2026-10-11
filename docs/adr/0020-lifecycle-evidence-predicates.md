@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-04-13
-**Context:** `docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md`
+**Context:** `archive/docs-superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md`
 **Deciders:** Dazzle team
 **Blocks:** Fitness methodology v1 (progress_evaluator.py)
 
@@ -136,5 +136,5 @@ Evidence predicates could be "hints" that produce fitness findings but not fatal
 
 - `src/dazzle/core/dsl_parser_impl/process.py` — existing process parser
 - `src/dazzle/core/ir/process.py` — existing IR
-- `docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md` §5.2 (progress_evaluator.py) — consumer of this ADR
+- `archive/docs-superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md` §5.2 (progress_evaluator.py) — consumer of this ADR
 - CLAUDE.md DSL Quick Reference — predicate algebra

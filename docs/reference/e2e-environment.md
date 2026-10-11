@@ -98,7 +98,7 @@ PATH. Install with `brew install postgresql@16` (macOS) or
 
 ## Design notes
 
-See `docs/superpowers/specs/2026-04-14-e2e-environment-strategy-design.md`
+See `archive/docs-superpowers/specs/2026-04-14-e2e-environment-strategy-design.md`
 for the full design, including Modes B/C/D (sketched but not wired in v1).
 
 - **Mode B** (CI gate) — planned for v0.55.x

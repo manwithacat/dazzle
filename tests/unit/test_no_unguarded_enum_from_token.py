@@ -2,7 +2,7 @@
 
 Constructing an IR enum directly from a token value leaks the enum's ``ValueError``
 out of the parser, which only ever promises ``ParseError`` — a fuzz-discoverable crash
-class (see #1342 / `docs/history/2026-06-07-fuzz-catch-foreign-constraint-kind.md`). The
+class (see #1342 / `archive/docs-history/2026-06-07-fuzz-catch-foreign-constraint-kind.md`). The
 guarded path is ``self.enum_from_token(ir.SomeKind, token)`` (BaseParser), which converts
 the ValueError into a clean ParseError listing the valid values.
 

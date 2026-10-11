@@ -1,7 +1,7 @@
 # PII & Privacy Primitives
 
 **Added**: v0.61.0 (Phase 1 of the analytics / consent / privacy design —
-see `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`.)
+see `archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md`.)
 
 Dazzle treats personal data as a first-class DSL concept. Two primitives
 carry the weight:
@@ -376,5 +376,5 @@ your caching layer. The resolver callable is the boundary. If you add a
 database-backed tenant lookup, wrap it with your own cache — the
 framework calls the resolver on every analytics-touching request.
 
-See the design spec at `docs/superpowers/specs/2026-04-24-analytics-privacy-design.md`
+See the design spec at `archive/docs-superpowers/specs/2026-04-24-analytics-privacy-design.md`
 for the full roadmap.

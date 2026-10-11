@@ -117,7 +117,7 @@ def _default_completion(action: AgentAction, history: list[Step]) -> bool:
 # text-protocol JSON instructions in the system prompt. The LLM, obediently
 # emitting a navigate action as text, left the tool-use path with a
 # text-only response which was treated as DONE, stopping the agent after
-# 1 step. See dev_docs/ux-log.md cycle 193 for the full diagnosis.
+# 1 step. See archive/dev_docs/ux-log.md cycle 193 for the full diagnosis.
 #
 # Cycle 194 fix: declare page actions as synthetic SDK tools so the
 # tools=[...] parameter carries the full action contract uniformly. The

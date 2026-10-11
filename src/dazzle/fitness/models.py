@@ -5,7 +5,7 @@ front avoids circular imports between ledger, progress evaluator,
 adversary, and finding-producer subsystems.
 
 The shapes mirror the design in
-``docs/superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md``.
+``archive/docs-superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md``.
 """
 
 from __future__ import annotations

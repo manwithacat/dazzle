@@ -136,7 +136,7 @@ def render_md(rows: list[dict[str, str]]) -> str:
             "",
             "## Plan",
             "",
-            "See `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md`.",
+            "See `archive/docs-superpowers/plans/2026-07-11-hm-sophistication-plan.md`.",
             "",
             "## Improve loop",
             "",

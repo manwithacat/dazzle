@@ -64,7 +64,7 @@ def validate_tenant_host_blocks(
 ) -> tuple[list[str], list[str]]:
     """Hard-error rules for tenant_host: blocks (#1289).
 
-    Rules 1-6 from docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md.
+    Rules 1-6 from archive/docs-superpowers/specs/2026-05-28-tenant-host-keyword-design.md.
     Returns (errors, warnings).
     """
     import importlib.util

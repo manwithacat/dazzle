@@ -51,7 +51,7 @@ class SessionRecord(BaseModel):
     user_agent: str | None = None
     # Declarative-CSRF Phase 1: the CSRF token is the session's own secret,
     # minted with the session and rotated only on session lifecycle events
-    # (login/logout). See docs/superpowers/specs/2026-06-03-declarative-csrf-design.md.
+    # (login/logout). See archive/docs-superpowers/specs/2026-06-03-declarative-csrf-design.md.
     csrf_secret: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     # auth Plan 1a: pins the session's active organization (membership). Nullable
     # during the transition — legacy sessions predate memberships.

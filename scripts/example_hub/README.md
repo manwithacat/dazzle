@@ -8,7 +8,7 @@ Local multi-host harness for evaluating Dazzle examples.
 | `http://simple_task.dazzle.local:9080/` | simple_task app |
 | `http://contact_manager.dazzle.local:9080/` | contact_manager app |
 
-Design: [`docs/superpowers/specs/2026-07-21-example-eval-hub-design.md`](../../docs/superpowers/specs/2026-07-21-example-eval-hub-design.md)
+Design: `archive/docs-superpowers/specs/2026-07-21-example-eval-hub-design.md` (archived; see the `archive` branch)
 
 ## Quick start
 

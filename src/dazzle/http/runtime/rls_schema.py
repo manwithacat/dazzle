@@ -8,7 +8,7 @@ business logic never lives in the engine: the policy bodies are a fixed
 construction (tenant fence + permissive baseline), not a compiled predicate.
 
 The authoritative artefact spec is
-``docs/superpowers/specs/2026-06-04-rls-tenancy-generation-rules.md``:
+``archive/docs-superpowers/specs/2026-06-04-rls-tenancy-generation-rules.md``:
 
   * §1.2 — ``ENABLE`` + ``FORCE ROW LEVEL SECURITY`` (FORCE subjects the table
     owner to the policies, closing the owner-bypass hole).

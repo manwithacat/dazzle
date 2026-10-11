@@ -1,7 +1,7 @@
 # ADR-0033 — CSRF as an Auth-Class-Derived Disposition
 
 **Status:** Accepted 2026-06-03 — **implemented (Phases 1–3)** (#1337). Phase 1 (session-bound token, v0.81.15), Phase 2 (origin-primary admission gate, v0.81.16), Phase 3 (disposition predicate + auditable policy, v0.81.17). Phase 4 governance items deliberately scoped down — see *Deferred*.
-**Issue:** #1337 (the 403-on-every-write bug that prompted the rework), follow-on to #1336. Design + 4-phase plan brainstormed with the maintainer: `docs/superpowers/specs/2026-06-03-declarative-csrf-design.md`.
+**Issue:** #1337 (the 403-on-every-write bug that prompted the rework), follow-on to #1336. Design + 4-phase plan brainstormed with the maintainer: `archive/docs-superpowers/specs/2026-06-03-declarative-csrf-design.md`.
 **Relates:** ADR-0028 (guarded transactional actions — the precondition substrate a future CSRF seam could join), ADR-0029 (atomic flows), ADR-0008 (PostgreSQL-only runtime — the server-side session store this binds to). Supersedes the ad-hoc hardcoded-exempt-path-list model that preceded it.
 
 ## Context

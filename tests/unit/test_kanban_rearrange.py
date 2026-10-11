@@ -1,6 +1,6 @@
 """Linear-class kanban rearrange — permit gate, SM edges, dual-lock attrs.
 
-Design: docs/superpowers/specs/2026-07-28-kanban-rearrange-htmx-design.md
+Design: archive/docs-superpowers/specs/2026-07-28-kanban-rearrange-htmx-design.md
 """
 
 from __future__ import annotations

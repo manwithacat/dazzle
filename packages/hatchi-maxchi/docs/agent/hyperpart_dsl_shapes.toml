@@ -4,7 +4,7 @@
 # modelling a business domain — live path, planned emitter, or explicit
 # chrome/refuse (no freeform invent).
 #
-# Doctrine: docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md
+# Doctrine: archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md
 # Fleet: tests/unit/test_hyperpart_fleet_coverage.py SIGNALS
 # Scenarios: packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml
 #

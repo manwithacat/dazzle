@@ -1,6 +1,6 @@
 """Structural gates for the multi-harness agent-instruction layout.
 
-AGENTS.md is canonical (see docs/superpowers/specs/
+AGENTS.md is canonical (see archive/docs-superpowers/specs/
 2026-07-10-multi-agent-instruction-consistency-design.md). History: the
 pre-#1367 full-content AGENTS.md rotted 21 minor versions behind the
 codebase because nothing watched it; the durable fix is single-source +

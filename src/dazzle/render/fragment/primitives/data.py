@@ -88,7 +88,7 @@ _METRIC_DELTA_SENTIMENTS = ("", "positive_up", "positive_down")
 @dataclass(frozen=True, slots=True)
 class RowCapabilities:
     """Orthogonal per-row capability vector for the converged list row-core
-    (#1505 — `docs/superpowers/specs/2026-06-28-list-render-convergence-design.md`
+    (#1505 — `archive/docs-superpowers/specs/2026-06-28-list-render-convergence-design.md`
     §3). Each flag honours the one composition rule: *the row owns the bare
     click (`drill`); every interactive sub-element stops propagation*.
 

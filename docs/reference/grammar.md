@@ -1403,7 +1403,7 @@ callable), `expired_template:` (dotted-path callable), `order:` (required
 when 2+ entities share a `domain:`), `membership_gated:`, `parent:`.
 
 See the full design in
-[`docs/superpowers/specs/2026-05-28-tenant-host-keyword-design.md`](../superpowers/specs/2026-05-28-tenant-host-keyword-design.md).
+`archive/docs-superpowers/specs/2026-05-28-tenant-host-keyword-design.md` (archived; see the `archive` branch).
 
 ```ebnf
 entity_tenant_host_block = "tenant_host" ":" NEWLINE INDENT

@@ -10,7 +10,7 @@
 **shadcn parity:** `python packages/hatchi-maxchi/tools/shadcn_parity.py --write`
 → `SHADCN_PARITY.md`. Gaps are improve placeholders
 (`/improve hm-convergence shadcn_parity`). Sophistication plan:
-`docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md` (epic #1580).
+`archive/docs-superpowers/plans/2026-07-11-hm-sophistication-plan.md` (epic #1580).
 
 **Visual smoke (subscription, never a ship gate):** after dual-locking a part,
 `python scripts/hm_visual_smoke.py --dazzle-emit` writes PNGs under

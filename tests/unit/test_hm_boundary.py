@@ -1,5 +1,5 @@
 """Dazzle-side HM boundary gates (Phase 3 of the boundary design,
-docs/superpowers/specs/2026-07-03-hm-boundary-and-wcag-gate-design.md).
+archive/docs-superpowers/specs/2026-07-03-hm-boundary-and-wcag-gate-design.md).
 
 Dazzle is DOWNSTREAM of the HaTchi-MaXchi package: it may consume the
 package only through sanctioned seams. Two invariants:

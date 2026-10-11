@@ -1,7 +1,7 @@
 # ADR-0035 — QA-Auth Containment Invariant
 
 **Status:** Accepted 2026-06-05 — **implemented** (#1339). RLS Phase E.2. Completes RLS Phase E (excision was E.1, #1338).
-**Issue:** #1339 (signed/contained QA auth + ephemeral test-tenant provisioning), from AegisMark's QA harness. Spec: `docs/superpowers/specs/2026-06-04-tenant-lifecycle-design.md` §5; plan: `docs/superpowers/plans/2026-06-05-rls-phase-e2-qa-auth-containment.md`.
+**Issue:** #1339 (signed/contained QA auth + ephemeral test-tenant provisioning), from AegisMark's QA harness. Spec: `archive/docs-superpowers/specs/2026-06-04-tenant-lifecycle-design.md` §5; plan: `archive/docs-superpowers/plans/2026-06-05-rls-phase-e2-qa-auth-containment.md`.
 **Relates:** ADR-0033 (CSRF-as-auth-class — the HMAC channel is `NA_SIGNATURE`, structurally CSRF-immune), ADR-0008 (PostgreSQL-only), the auth identity model (Plan 1a–1c: global Identity + fenced Membership + Session(active_membership)) and its RLS fence (Phase B, `dazzle.tenant_id`). Builds on the Slice-0 `is_test` column + reserved `qa-`/`qa_` namespace.
 
 ## Context

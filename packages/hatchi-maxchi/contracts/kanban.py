@@ -8,7 +8,7 @@ or badges). Attention is never colour-only — message text rides with
 ``data-dz-attn`` when set.
 
 Rearrange (Linear-class status move — design
-``docs/superpowers/specs/2026-07-28-kanban-rearrange-htmx-design.md``):
+``archive/docs-superpowers/specs/2026-07-28-kanban-rearrange-htmx-design.md``):
 when the host permits UPDATE, SSR may stamp ``row_id``, ``from_state``,
 ``allowed_to``, and ``draggable``. Absent those attrs the card is
 presentation-only (read-only personas, no SM edge).

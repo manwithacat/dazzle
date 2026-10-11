@@ -447,7 +447,6 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
 - **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
 
-- **[Research notes](docs/research/INDEX.md)** — reproducible empirical investigations (agent-era counter-priors, predicting task context from a code graph)
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
 - **[Examples](examples/)** — runnable example applications (each may carry `examples/<app>/stems/`)

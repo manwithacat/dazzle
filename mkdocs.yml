@@ -58,11 +58,6 @@ nav:
   - Harness:
       - Overview: harness/index.md
       - Tool floor: harness/tool-floor.md
-  - Research:
-      - Overview: research/INDEX.md
-      - Context-Bounds Prediction: research/context-bounds-prediction.md
-      - Epoch Stratification: research/epoch-stratification.md
-      - Reuse Detection: research/reuse-detection.md
   - DSL Reference:
       - Overview: reference/index.md
       - Entities: reference/entities.md
@@ -179,7 +174,6 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 exclude_docs: |
-  superpowers/
   proposals/
 
 plugins:

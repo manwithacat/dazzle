@@ -173,5 +173,5 @@ never expose it as a placeholder the user can populate.
 - v0.67.92 / #1042 — `jinja2` dropped from `pyproject.toml`.
 - v0.67.93 — theme support restored via typed `AppChrome`.
 - v0.67.94 — this convergence shipped (shared `esc` helper).
-- [`2026-05-12-jinja2-retirement-postmortem.md`](../history/2026-05-12-jinja2-retirement-postmortem.md) — the
+- `2026-05-12-jinja2-retirement-postmortem.md` (archived; see the `archive` branch) — the
   agent-cognition hypothesis evaluation that motivated this ADR.

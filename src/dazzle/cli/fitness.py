@@ -5,7 +5,7 @@ Thin wrappers over ``dazzle.fitness.triage``. ``triage`` regenerates
 ``fitness-backlog.md``; ``queue`` is read-only and prints the existing
 queue for humans or agents.
 
-Design: docs/superpowers/specs/2026-04-14-fitness-triage-design.md
+Design: archive/docs-superpowers/specs/2026-04-14-fitness-triage-design.md
 """
 
 from __future__ import annotations

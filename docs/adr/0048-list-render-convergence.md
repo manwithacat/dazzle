@@ -3,7 +3,7 @@
 **Status:** Accepted (2026-06-28); **Phase 1+2 implemented** — the rich `dz-tr-row` data-table row now renders solely via `render/fragment/renderer/_data_row.py` (`render_data_row` / `render_data_table_rows`); the duplicate `http/runtime/htmx_render.py::_render_table_row` family is deleted. Phases 3 (fold `list-region`/`embedded` archetypes onto the shared core) and 4 (#1494 `peek:`/`when_empty:`) are planned follow-ons.
 **Completes:** ADR-0038 (rendering-layer boundary — its htmx-4 evaluation found "~5,400 LOC of rendering in the HTTP package" and relocated `region_adapter`/`workspace_card_bodies` into `render/`, but never addressed the parallel `htmx_render.py` row renderer). Builds on ADR-0011 (SSR + htmx, no SPA), ADR-0023 (typed Fragment emission, no Jinja).
 **Origin:** #1505 — surfaced while implementing #1494's `peek:` render, which would have had to add a chevron in two (then three) places.
-**Design + plan:** `docs/superpowers/specs/2026-06-28-list-render-convergence-design.md`; `docs/superpowers/plans/2026-06-28-list-render-convergence-p1p2.md`.
+**Design + plan:** `archive/docs-superpowers/specs/2026-06-28-list-render-convergence-design.md`; `archive/docs-superpowers/plans/2026-06-28-list-render-convergence-p1p2.md`.
 
 ## Context
 

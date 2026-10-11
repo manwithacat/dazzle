@@ -51,34 +51,7 @@ A few overlapping arcs account for most of the archive:
 
 ## The archive
 
-These pages are **searchable but deliberately kept out of the main navigation**. They
-are reachable from here and from search — not from the learning path.
-
-### Framework-gap analyses (autonomous-improvement cycles, April 2026)
-
-Synthesised output of the `/ux-cycle` → `/improve` loop, in cycle order:
-
-- [Component Menagerie Roadmap](../history/framework-gaps/2026-04-15-component-menagerie-roadmap.md)
-- [Error-Page Navigation Dead-End](../history/framework-gaps/2026-04-15-error-page-navigation-dead-end.md)
-- [Persona-Unaware Affordances](../history/framework-gaps/2026-04-15-persona-unaware-affordances.md)
-- [Resumed /ux-cycle Arc — Closing Retrospective (Cycles 220–235)](../history/framework-gaps/2026-04-15-resumed-arc-retrospective.md)
-- [Silent Form Submit](../history/framework-gaps/2026-04-15-silent-form-submit.md)
-- [Widget Selection for Ref and Typed Form Fields](../history/framework-gaps/2026-04-15-widget-selection-gap.md)
-- [Workspace Region Naming Drift](../history/framework-gaps/2026-04-15-workspace-region-naming-drift.md)
-- [DaisyUI Residuals in Uncontracted Templates](../history/framework-gaps/2026-04-19-daisyui-residuals-in-uncontracted-templates.md)
-- [Trial Harness Maturation](../history/framework-gaps/2026-04-19-trial-harness-maturation.md)
-- [Attention-Tier Taxonomy Drift Across Workspace Regions](../history/framework-gaps/2026-04-20-attention-tier-taxonomy-drift.md)
-- [External Resource Integrity Gap](../history/framework-gaps/2026-04-20-external-resource-integrity.md)
-- [PR #600 Dormant Alpine Primitives](../history/framework-gaps/2026-04-20-pr600-dormant-alpine-primitives.md)
-- [Row-Click Keyboard Affordance Gap](../history/framework-gaps/2026-04-20-row-click-keyboard-affordance-gap.md)
-- [Template-Ship-Without-Wiring Gap](../history/framework-gaps/2026-04-20-template-ship-without-wiring.md)
-- [Silent-Drift Classes in the `/ux-cycle` Loop](../history/framework-gaps/2026-04-20-ux-cycle-silent-drift-classes.md)
-- [IR Policy-Field Drift: DSL Vocabulary Ahead of Runtime](../history/framework-gaps/2026-04-21-ir-policy-field-drift.md)
-
-### Snapshots, briefings & retrospectives
-
-- [Jinja2 Retirement — Postmortem & Hypothesis Evaluation (2026-05-12)](../history/2026-05-12-jinja2-retirement-postmortem.md)
-- [Framework Maturity Assessment — 2026-04-15](../history/framework-maturity-2026-04-15.md)
-- [Frontier Agent Briefing — v0.55.47](../history/frontier-agent-briefing-v0.55.47.md)
-- [/ux-cycle Session Retrospective — 2026-04-21](../history/ux-session-retro-2026-04-21.md)
-- [v1.0.3 Anchor Backfill](../history/v1.0.3-anchor-backfill.md)
+The dated framework-gap analyses (April 2026 `/ux-cycle` → `/improve` output) and the
+snapshots, briefings and retrospectives that used to be linked here were moved out of the
+working tree under ADR-0057. They live under `archive/docs-history/` on the `archive`
+branch, alongside the superpowers plans and specs and the research notes.

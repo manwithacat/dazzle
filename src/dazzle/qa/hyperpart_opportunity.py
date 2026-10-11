@@ -17,7 +17,7 @@ Emits opportunity rows + trial-friction-compatible ``auto_seed`` candidates
 Scenario catalogue (jobs → hyperpart → authoring class):
 ``packages/hatchi-maxchi/docs/agent/hyperpart_scenarios.toml`` via
 ``dazzle.qa.hyperpart_scenarios``. Doctrine:
-``docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md``.
+``archive/docs-superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md``.
 """
 
 from __future__ import annotations

@@ -6,7 +6,7 @@ the page layer self-fetching its own REST endpoint over loopback HTTP.
 
 Scope (tenant isolation) is already compiled into Repository SQL via the
 ``__scope_predicate`` filter key; permit (Cedar) is relocated here from the route
-closures. See docs/superpowers/specs/2026-06-20-page-rest-inprocess-core-design.md.
+closures. See archive/docs-superpowers/specs/2026-06-20-page-rest-inprocess-core-design.md.
 """
 
 from dataclasses import dataclass
