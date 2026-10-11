@@ -98,7 +98,6 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 | Command | Description |
 |---------|-------------|
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
-| `dazzle pitch` | Generate investor pitch materials from DSL |
 
 ### Vocabulary & Stubs
 
@@ -152,7 +151,7 @@ there requires a row here.
 | `dazzle docs` | Documentation generation, validation, and maintenance |
 | `dazzle events` | Event system commands |
 | `dazzle feedback` | Feedback reports — list, triage, resolve |
-| `dazzle fitness` | Agent-Led Fitness Methodology queries and triage |
+| `dazzle fitness` | Framework structural-fitness ratchets (complexity, clones) |
 | `dazzle guide` | Inspect onboarding guides declared in the project DSL |
 | `dazzle inspect` | Introspect framework extension points and the public API surface |
 | `dazzle kg` | Knowledge graph management |
@@ -164,7 +163,6 @@ there requires a row here.
 | `dazzle param` | Runtime parameter management |
 | `dazzle perf` | On-demand local OpenTelemetry tracing |
 | `dazzle pipeline` | Run the deterministic quality pipeline |
-| `dazzle pitch` | Generate investor pitch materials from DSL |
 | `dazzle process` | Process proposal, storage, and diagramming |
 | `dazzle process-migrate` | Process migration commands for safe DSL version deployments |
 | `dazzle prove` | Static story binding evidence (agent closed loop #1605) + representation prove (#1617) |

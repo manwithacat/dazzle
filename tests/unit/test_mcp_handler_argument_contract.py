@@ -539,7 +539,7 @@ def test_walk_sees_through_a_one_line_delegating_wrapper() -> None:
 # Tools whose operations genuinely take no arguments beyond `operation`, so an
 # empty read set is the truth and not a walk failure. Named rather than
 # tolerated silently — #1751 asked for coverage to be reported, not implied.
-ARGUMENT_LESS_TOOLS = {"db", "demo_data", "pitch", "semantics"}
+ARGUMENT_LESS_TOOLS = {"db", "demo_data", "semantics"}
 
 
 def test_walk_finds_a_handler_for_every_registered_tool() -> None:

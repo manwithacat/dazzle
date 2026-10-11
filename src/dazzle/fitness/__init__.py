@@ -1,4 +1,5 @@
-"""Agent-Led Fitness Methodology — subsystem root.
+"""Framework structural fitness — the code ratchets' measurement modules.
 
-See archive/docs-superpowers/specs/2026-04-13-agent-led-fitness-methodology-design.md
+``code`` (complexity), ``clones`` (re-implemented capability) and ``swallows``
+(broad-exception swallows) back the ratchets in ``tests/unit/``.
 """

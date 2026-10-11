@@ -116,7 +116,7 @@ format-check:
 type-check:
 	$(UV) run mypy src/dazzle
 
-# CI type-check job uses Python 3.12 + maximal extras (pitch/i18n/viewport/…).
+# CI type-check job uses Python 3.12 + maximal extras (i18n/viewport/…).
 # A thin local venv lies — missing stubs flip warn_return_any / unused-ignores.
 type-check-ci: sync-ci-type
 	bash scripts/ci_local.sh type-check

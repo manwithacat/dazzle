@@ -285,11 +285,6 @@ messaging = [
 events = [
     "psycopg[binary]>=3.2",
 ]
-# Pitch deck generation
-pitch = [
-    "python-pptx>=0.6.21",
-    "matplotlib>=3.7.0",
-]
 # Viewport visual regression testing
 viewport = [
     "Pillow>=12.3.0",
@@ -383,8 +378,8 @@ dazzle = "dazzle.cli:main"
 [tool.uv]
 python-preference = "only-managed"
 
-# Transitive floor, not a dependency claim. matplotlib, python-pptx,
-# weasyprint and fpdf2 also pull pillow. The Oct 2026 collection scatter
+# Transitive floor, not a dependency claim. weasyprint and fpdf2 also
+# pull pillow. The Oct 2026 collection scatter
 # (ImageColor, ImageFile, jwt, hypothesis — 3.12 and 3.13 only) was the uv
 # runner deleting the job venv. Linux wheels of 12.3.0 import ImageColor and
 # ImageFile on 3.12, 3.13, and 3.14 (Actions run 37811834250), so the <12

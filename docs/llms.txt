@@ -172,7 +172,6 @@ When connected via Claude Code, these tools are available:
 | `graph` | query, dependencies, neighbourhood, concept, inference | Knowledge |
 | `knowledge` | concept, examples, workflow, inference | Knowledge |
 | `sitespec` | get, validate, scaffold, coherence, themes, copy, tokens | Site & Brand |
-| `pitch` | scaffold, generate, validate, review, enrich | Stakeholder |
 | `status` | mcp, logs, telemetry, activity | Operations |
 | `db` | status, verify | Operations |
 | `mock` | status, request_log | Operations |

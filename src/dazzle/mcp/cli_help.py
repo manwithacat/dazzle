@@ -33,7 +33,6 @@ CATEGORY_MAP: dict[str, str] = {
     "mcp": "MCP Server",
     "outbox": "Events",
     "pipeline": "Pipeline",
-    "pitch": "Pitch Deck",
     "process-migrate": "Process Migration",
     "specs": "API Specs",
     "story": "Stories",
@@ -99,9 +98,6 @@ MCP_TOOL_MAP: dict[str, str] = {
     "test run-all": "dsl_test(operation='run_all')",
     "test diff-personas": "dsl_test(operation='diff_personas')",
     "specs openapi": "dsl(operation='export_frontend_spec')",
-    "pitch scaffold": "pitch(operation='scaffold')",
-    "pitch generate": "pitch(operation='generate')",
-    "pitch validate": "pitch(operation='validate')",
     "kg export": "graph(operation='export')",
     "kg import": "graph(operation='import')",
 }
@@ -966,53 +962,6 @@ entity Task "Task":
                 "integration": "External API calls (payment, email, SMS)",
                 "workflow": "Multi-step processes (approvals, fulfillment)",
             },
-        },
-        "pitch_deck": {
-            "name": "Create Pitch Deck",
-            "description": "Generate an investor pitch deck from your DSL project",
-            "steps": [
-                {
-                    "step": 1,
-                    "action": "Scaffold pitchspec",
-                    "command": "pitch(operation='scaffold')",
-                    "notes": "Creates pitchspec.yaml with template sections",
-                },
-                {
-                    "step": 2,
-                    "action": "Fill in company details",
-                    "file": "pitchspec.yaml",
-                    "notes": "Add company name, tagline, funding_ask, problem, solution, market sizing, team, and financials",
-                },
-                {
-                    "step": 3,
-                    "action": "Validate the pitchspec",
-                    "command": "pitch(operation='validate')",
-                    "notes": "Checks for structural errors and missing required fields",
-                },
-                {
-                    "step": 4,
-                    "action": "Generate the deck",
-                    "command": "pitch(operation='generate', format='all')",
-                    "notes": "Creates pitch_deck.pptx and pitch_narrative.md",
-                },
-                {
-                    "step": 5,
-                    "action": "Review content quality",
-                    "command": "pitch(operation='review')",
-                    "notes": "Analyzes each section for investor-readiness and gives specific improvement suggestions",
-                },
-                {
-                    "step": 6,
-                    "action": "Iterate on content",
-                    "notes": "Address review suggestions, then re-run validate \u2192 generate \u2192 review until satisfied",
-                },
-            ],
-            "next_steps": [
-                "Use pitch(operation='get') to inspect current pitchspec contents",
-                "Use pitch(operation='review') after each edit cycle to track improvement",
-                "Add speaker_notes to sections for presenter guidance",
-                "Add extra_slides for appendix material (case studies, technical architecture)",
-            ],
         },
         "run_discovery": {
             "name": "Run Capability Discovery",

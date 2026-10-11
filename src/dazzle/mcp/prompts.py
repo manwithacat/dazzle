@@ -123,8 +123,6 @@ When helping users, use these MCP tools:
 - "What patterns exist?" → lookup_concept("patterns")
 - "Run the app" → get_cli_help("serve")
 - "Something is broken" → get_workflow_guide("troubleshoot")
-- "Create a pitch deck" → get_workflow_guide("pitch_deck") or pitch(operation='scaffold')
-- "Review my pitch" → pitch(operation='review')
 - "Find gaps in my app" → discovery(operation="run", mode="entity_completeness")
 - "Check CRUD coverage" → discovery(operation="run", mode="entity_completeness")
 - "Validate workflows" → discovery(operation="run", mode="workflow_coherence")

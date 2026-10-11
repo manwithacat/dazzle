@@ -68,6 +68,7 @@ below, link from the issue body (not only a comment).
 | ID | Title | Status | Issues | Notes |
 |----|-------|--------|--------|-------|
 | [DD-001](DD-001-1617-poly-ref-and-sti-eav.md) | #1617 residuals: poly_ref polish + STI/EAV-as-JSONB | PARKED | #1621, #1622 | Substrate shipped; consumer-forced only |
+| [DD-002](DD-002-pitch-generator.md) | Pitch deck generator (`dazzle pitch`) | PARKED | — | Removed under ADR-0057; restore from 82c9a8571 when AegisMark regenerates a deck |
 
 ## Related
 

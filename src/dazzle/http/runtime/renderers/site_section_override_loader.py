@@ -1,7 +1,6 @@
 """Project-local override loader for sitespec section builders (#1110 Part A).
 
-Mirrors the pattern proven in :mod:`dazzle.pitch.generators.plugin_loader`:
-scan a project-local directory (``<project_root>/site_sections/``) for
+Project-local plugin pattern: scan a project-local directory (``<project_root>/site_sections/``) for
 Python files that expose builder functions, register them by name, and
 hand the registry to the dispatch path.
 

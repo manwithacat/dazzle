@@ -144,8 +144,7 @@ uv run dazzle search <keyword>
 Full CLI reference: `docs/reference/cli.md`. API specs: `dazzle specs openapi|asyncapi`.
 Inspect extension points and public surface: `dazzle inspect <renderers|primitives|routes|page <URL>|oauth-providers|db-artifacts|api <baseline>>`
 (manifest-only by default, `--runtime` boots the app; `docs/reference/page-inspection.md`).
-LSP: `dazzle lsp run|check|grammar-path`. Fitness: `dazzle fitness investigate --top 1`
-(`docs/reference/fitness-investigator.md`).
+LSP: `dazzle lsp run|check|grammar-path`. Ratchet baselines: `dazzle fitness code|clones --write-baseline`.
 
 ## DSL Quick Reference
 
@@ -221,7 +220,7 @@ MCP = fast knowledge/query (prefer no side effects); CLI = process, writes, long
   point for "build me an app"; `knowledge` (concept, examples, cli_help, workflow,
   counter_prior, search_commands) is the fastest orientation call.
 - **CLI process groups**: `discovery`, `e2e`, `story`, `rhythm`, `process`, `test-design`,
-  `test`, `pulse`, `pitch`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock`,
+  `test`, `pulse`, `sentinel`, `db`, `tenant`, `demo`, `api-pack`, `mock`,
   `contribution`, `spec brief` — `dazzle <group> --help` or `dazzle search <keyword>`.
 
 ## Autonomous Loops (awareness)

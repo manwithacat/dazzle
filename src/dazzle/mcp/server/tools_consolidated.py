@@ -769,28 +769,6 @@ def _tool_knowledge() -> Tool:
     )
 
 
-def _tool_pitch() -> Tool:
-    """Pitch (investor pitch deck generation)."""
-    return Tool(
-        name="pitch",
-        description="Pitch deck operations: get. Retrieve the current pitchspec.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "get",
-                    ],
-                    "description": "Operation to perform",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
 def _tool_user_management() -> Tool:
     """User management (auth user/session CRUD)."""
     return Tool(
@@ -1366,40 +1344,6 @@ def _tool_e2e() -> Tool:
                 **PROJECT_PATH_SCHEMA,
             },
             "required": ["operation"],
-        },
-    )
-
-
-def _tool_fitness() -> Tool:
-    """Fitness triage (read-only)."""
-    return Tool(
-        name="fitness",
-        description=(
-            "Agent-Led Fitness Methodology queries (read-only). "
-            "Operations: queue (ranked deduped finding clusters for "
-            "a project). To regenerate the queue, use CLI: "
-            "dazzle fitness triage."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["queue"],
-                    "description": "Operation to perform",
-                },
-                "project_root": {
-                    "type": "string",
-                    "description": "Path to an example app project",
-                },
-                "top": {
-                    "type": "integer",
-                    "description": "Max clusters to return (default 10)",
-                    "default": 10,
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation", "project_root"],
         },
     )
 
@@ -2039,7 +1983,6 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_process(),
         _tool_status(),
         _tool_knowledge(),
-        _tool_pitch(),
         _tool_user_management(),
         _tool_user_profile(),
         _tool_bootstrap(),
@@ -2051,7 +1994,6 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_graph(),
         _tool_discovery(),
         _tool_e2e(),
-        _tool_fitness(),
         _tool_product_quality(),
         _tool_policy(),
         _tool_composition(),

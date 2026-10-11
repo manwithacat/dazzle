@@ -77,15 +77,6 @@
     ]
   },
   {
-    "signature": "d51eaf2f6b30eea1e52a13a38d31b098",
-    "count": 3,
-    "names": [
-      "dazzle/cli/pitch.py::pitch_enrich",
-      "dazzle/cli/pitch.py::pitch_init_assets",
-      "dazzle/cli/pitch.py::pitch_review"
-    ]
-  },
-  {
     "signature": "c17177babd761b1708355c78a36ac086",
     "count": 4,
     "names": [
@@ -109,17 +100,6 @@
     "names": [
       "dazzle/cli/runtime_impl/build.py::_generate_asyncapi_target",
       "dazzle/cli/runtime_impl/build.py::_generate_openapi_target"
-    ]
-  },
-  {
-    "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
-    "count": 5,
-    "names": [
-      "dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py::findings",
-      "dazzle/http/events/null.py::get_recent_outbox_entries",
-      "dazzle/http/events/null.py::list_consumer_groups",
-      "dazzle/http/events/null.py::list_topics",
-      "dazzle/http/runtime/workspace_card_fetchers.py::_empty_list_coro"
     ]
   },
   {
@@ -833,22 +813,6 @@
     ]
   },
   {
-    "signature": "exact:c94dd382d7a281cdd3b61436bfc7f802",
-    "count": 2,
-    "names": [
-      "dazzle/fitness/code.py::_py_files",
-      "dazzle/fitness/vitality.py::_py_files"
-    ]
-  },
-  {
-    "signature": "exact:7b1a45ef3106a90dc8dada8cca336ada",
-    "count": 2,
-    "names": [
-      "dazzle/fitness/vitality.py::visit_AsyncFunctionDef",
-      "dazzle/fitness/vitality.py::visit_FunctionDef"
-    ]
-  },
-  {
     "signature": "exact:3d4d16185bc18804deb536fe2df5a1e4",
     "count": 2,
     "names": [
@@ -1009,6 +973,16 @@
       "dazzle/http/events/framework.py::__aexit__",
       "dazzle/http/events/null.py::__aexit__",
       "dazzle/http/events/publisher.py::__aexit__"
+    ]
+  },
+  {
+    "signature": "exact:80d81c206dc465d8a2b945a4acfadd1c",
+    "count": 4,
+    "names": [
+      "dazzle/http/events/null.py::get_recent_outbox_entries",
+      "dazzle/http/events/null.py::list_consumer_groups",
+      "dazzle/http/events/null.py::list_topics",
+      "dazzle/http/runtime/workspace_card_fetchers.py::_empty_list_coro"
     ]
   },
   {
@@ -1303,12 +1277,10 @@
   },
   {
     "signature": "1ab2b34f8eb73ec30edb98ae4b18b286",
-    "count": 4,
+    "count": 2,
     "names": [
       "dazzle/http/runtime/handlers/graph_handlers.py::_check_networkx",
-      "dazzle/http/runtime/richtext_processor.py::is_available",
-      "dazzle/pitch/generators/charts.py::_check_matplotlib_available",
-      "dazzle/pitch/generators/pptx_gen.py::_check_pptx_available"
+      "dazzle/http/runtime/richtext_processor.py::is_available"
     ]
   },
   {
@@ -1405,14 +1377,6 @@
     "names": [
       "dazzle/http/runtime/renderers/site_section_builder.py::_build_faq_section",
       "dazzle/http/runtime/renderers/site_section_builder.py::_build_stats_section"
-    ]
-  },
-  {
-    "signature": "exact:c881bf376dad13be2584cfafc595b526",
-    "count": 2,
-    "names": [
-      "dazzle/http/runtime/renderers/site_section_override_loader.py::list_overrides",
-      "dazzle/pitch/generators/plugin_loader.py::list_builders"
     ]
   },
   {
@@ -1590,14 +1554,6 @@
     "names": [
       "dazzle/perf/storage.py::iter_events",
       "dazzle/perf/storage.py::iter_spans"
-    ]
-  },
-  {
-    "signature": "c226f1e4225b046145b681dee207d8d5",
-    "count": 2,
-    "names": [
-      "dazzle/pitch/generators/pptx_primitives.py::_create_dark_slide",
-      "dazzle/pitch/generators/pptx_primitives.py::_create_light_slide"
     ]
   },
   {

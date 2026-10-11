@@ -275,18 +275,6 @@ RBAC access control analysis.
 | `coverage` | Measure RBAC coverage gaps |
 | `simulate` | Simulate access for a persona/route |
 
-### pitch
-
-Generate investor pitch materials from DSL.
-
-| Operation | Purpose |
-|-----------|---------|
-| `scaffold` | Create pitch structure |
-| `generate` | Generate pitch deck content |
-| `validate` | Validate pitch completeness |
-| `review` | Review and improve pitch |
-| `enrich` | Enrich with market data |
-
 ### contribution
 
 Package contributions for sharing.

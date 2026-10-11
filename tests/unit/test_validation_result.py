@@ -14,9 +14,8 @@ from typing import ClassVar
 from dazzle.core.sitespec_loader import SiteSpecValidationResult
 from dazzle.core.themespec_loader import ThemeSpecValidationResult
 from dazzle.core.validation_result import ValidationResult
-from dazzle.pitch.loader import PitchSpecValidationResult
 
-LOADERS = (SiteSpecValidationResult, ThemeSpecValidationResult, PitchSpecValidationResult)
+LOADERS = (SiteSpecValidationResult, ThemeSpecValidationResult)
 
 
 class TestAccumulator:
@@ -77,7 +76,7 @@ class TestRepr:
 
 
 class TestLoaderParity:
-    """The three loaders must not drift back into independent accumulators."""
+    """The loaders must not drift back into independent accumulators."""
 
     def test_every_loader_derives_from_the_shared_base(self) -> None:
         for cls in LOADERS:

@@ -127,7 +127,7 @@ The framework's job in the agent-driven era is to be that something. Dazzle impl
 
 2. **Inference-time bias correction.** Agent instruction files (`AGENTS.md`), the ADR index (each line a "decision that prevents a wrong proposal"), and the **counter-prior catalogue** at [`docs/counter-priors/`](docs/counter-priors/INDEX.md) are versioned engineering artefacts that name specific corpus pathologies and route the agent toward the right shape. The catalogue is queryable via the MCP server (`knowledge counter_prior query=...`) and is auto-surfaced at the bootstrap step when an agent's spec text contains matching triggers.
 
-3. **Post-hoc filtering.** Drift gates, the conformance engine, the fitness investigator, RBAC matrix verification, and the broader test sweep catch whatever slips past the first two layers. Each gate pins a specific corpus pattern: `test_no_bare_except_pass.py`, `test_no_regex_in_parser.py`, `test_shell_strict_mode.py`, the API surface drift baselines.
+3. **Post-hoc filtering.** Drift gates, the conformance engine, RBAC matrix verification, and the broader test sweep catch whatever slips past the first two layers. Each gate pins a specific corpus pattern: `test_no_bare_except_pass.py`, `test_no_regex_in_parser.py`, `test_shell_strict_mode.py`, the API surface drift baselines.
 
 The catalogue is itself a deliverable. Each entry — *exceptions-as-control-flow*, *polymorphic associations*, *hand-rolled soft-delete*, *raw SQL string-building*, *shell without strict mode*, and the rest — is a small permanent inoculation against a recurring drift. As LLM-emitted code re-enters training corpora at scale, this counter-biasing grows in value over time: a framework that does this work today is investing in an asset that compounds across model generations.
 
@@ -368,7 +368,7 @@ When connected to an agent host through MCP, you get tools across the full lifec
 | **Test and Verify** | Generate stories, design tests, execute at three tiers (API, browser, LLM-guided), seed demo data |
 | **Analyze and Audit** | Quality pipeline, agent-powered gap discovery, visual composition analysis, RBAC policy verification |
 | **Site and Brand** | Manage public site structure, copy, theme, and design tokens from spec files |
-| **Stakeholder Ops** | Launch readiness scores, investor pitch generation, user/session management |
+| **Stakeholder Ops** | Launch readiness scores, user/session management |
 
 The agent framework uses an **observe-decide-act-record** loop to autonomously explore running applications, discover gaps, and propose DSL fixes. Discovery modes include persona-based exploration, CRUD completeness analysis, workflow coherence checks, and headless DSL/KG analysis.
 

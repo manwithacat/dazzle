@@ -1046,17 +1046,8 @@
   },
   "dazzle/cli/fitness.py": {
     "functions": {
-      "_backlog_path": 1,
-      "_build_llm_client": 3,
-      "_find_examples": 5,
-      "_header_int": 4,
-      "_queue_path": 1,
       "clones_command": 8,
-      "code_command": 4,
-      "investigate_command": 10,
-      "queue_command": 6,
-      "triage_command": 11,
-      "vitality": 4
+      "code_command": 4
     },
     "mi_rank": "A"
   },
@@ -1227,18 +1218,6 @@
     "functions": {
       "_print_pipeline_table": 11,
       "pipeline_run": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/pitch.py": {
-    "functions": {
-      "pitch_enrich": 1,
-      "pitch_generate": 13,
-      "pitch_init_assets": 1,
-      "pitch_review": 1,
-      "pitch_scaffold": 2,
-      "pitch_update": 2,
-      "pitch_validate": 7
     },
     "mi_rank": "A"
   },
@@ -1491,36 +1470,6 @@
   },
   "dazzle/cli/runtime_impl/ux_cycle_impl/__init__.py": {
     "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/ux_cycle_impl/_playwright_helpers.py": {
-    "functions": {
-      "PlaywrightBundle": 2,
-      "PlaywrightBundle.close": 1,
-      "login_as_persona": 4,
-      "setup_playwright": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py": {
-    "functions": {
-      "StrategyOutcome": 1,
-      "_BlockedProfile": 1,
-      "_BlockedRunResult": 2,
-      "_BlockedRunResult.findings": 1,
-      "_BlockedRunResult.independence_jaccard": 1,
-      "_BlockedRunResult.profile": 1,
-      "_BlockedRunResult.run_metadata": 1,
-      "_ContractObserver": 2,
-      "_ContractObserver.__init__": 1,
-      "_ContractObserver.snapshot": 1,
-      "_EngineProxy": 2,
-      "_EngineProxy.__init__": 1,
-      "_EngineProxy.run": 1,
-      "_aggregate_outcomes": 10,
-      "_build_engine": 7,
-      "run_fitness_strategy": 8
-    },
     "mi_rank": "A"
   },
   "dazzle/cli/runtime_impl/ux_cycle_impl/subagent_explore.py": {
@@ -7618,36 +7567,6 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/fitness/adversary.py": {
-    "functions": {
-      "_LlmClient": 2,
-      "_LlmClient.complete": 1,
-      "_render_stories": 3,
-      "synthesize_from_stories": 8
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/backlog.py": {
-    "functions": {
-      "_finding_envelope": 1,
-      "_finding_to_row": 1,
-      "_payload_to_finding": 5,
-      "_reconstruct_row_change": 4,
-      "read_backlog": 5,
-      "read_backlog_findings": 4,
-      "upsert_findings": 9
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/budget.py": {
-    "functions": {
-      "BudgetController": 4,
-      "BudgetController.__init__": 1,
-      "BudgetController.plan": 5,
-      "CycleProfile": 1
-    },
-    "mi_rank": "A"
-  },
   "dazzle/fitness/clones.py": {
     "functions": {
       "_arg_arity": 4,
@@ -7673,381 +7592,9 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/fitness/comparator.py": {
-    "functions": {
-      "RegressionReport": 1,
-      "_key": 1,
-      "compare_cycles": 7
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/config.py": {
-    "functions": {
-      "FitnessConfig": 1,
-      "load_fitness_config": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/corrector.py": {
-    "functions": {
-      "Fix": 1,
-      "_LlmClient": 2,
-      "_LlmClient.complete": 1,
-      "_build_user_prompt": 1,
-      "_generate_one": 5,
-      "generate_fix": 4,
-      "materially_same": 2,
-      "route_finding": 5
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/cross_check.py": {
-    "functions": {
-      "_similar": 3,
-      "_tokens": 3,
-      "cross_check_capabilities": 7
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/engine.py": {
-    "functions": {
-      "FitnessEngine": 8,
-      "FitnessEngine.__init__": 2,
-      "FitnessEngine._collect_repr_fields": 4,
-      "FitnessEngine.run": 14,
-      "FitnessRunResult": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/extractor.py": {
-    "functions": {
-      "_context_window": 2,
-      "extract_findings_from_diff": 8
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/independence.py": {
-    "functions": {
-      "IndependenceReport": 1,
-      "_as_set": 2,
-      "measure_independence": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/interlock.py": {
-    "functions": {
-      "InterlockError": 1,
-      "_LedgerLike": 2,
-      "_LedgerLike.current_step": 1,
-      "interlocked_tool_call": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/agent_backends.py": {
-    "functions": {
-      "NullExecutor": 2,
-      "NullExecutor.execute": 1,
-      "NullObserver": 2,
-      "NullObserver.current_url": 1,
-      "NullObserver.navigate": 1,
-      "NullObserver.observe": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/attempted.py": {
-    "functions": {
-      "AttemptedEntry": 1,
-      "AttemptedIndex": 1,
-      "_deserialise": 5,
-      "_index_path": 1,
-      "_serialise": 2,
-      "load_attempted": 4,
-      "mark_attempted": 3,
-      "rebuild_attempted": 8,
-      "save_attempted": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/case_file.py": {
-    "functions": {
-      "BacklogReader": 2,
-      "BacklogReader.findings_in": 1,
-      "CaseFile": 9,
-      "CaseFile.to_prompt_text": 8,
-      "CaseFileBuildError": 1,
-      "CaseFileTraversalError": 1,
-      "LocusExcerpt": 1,
-      "_DefaultBacklogReader": 2,
-      "_DefaultBacklogReader.findings_in": 1,
-      "_check_evidence_for_traversal": 8,
-      "_extract_evidence_lines": 8,
-      "_extract_file_path": 6,
-      "_levenshtein": 7,
-      "_load_locus": 16,
-      "_load_sample": 7,
-      "_merge_and_trim_windows": 8,
-      "_pick_siblings": 10,
-      "_render_evidence": 7,
-      "_render_finding_block": 2,
-      "_resolve_example_root": 3,
-      "_summary_text": 1,
-      "build_case_file": 5
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/metrics.py": {
-    "functions": {
-      "append_metric": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/mission.py": {
-    "functions": {
-      "_render_system_prompt": 1,
-      "build_investigator_mission": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/proposal.py": {
-    "functions": {
-      "Proposal": 1,
-      "ProposalError": 1,
-      "ProposalParseError": 1,
-      "ProposalValidationError": 1,
-      "ProposalWriteError": 1,
-      "ProposedFix": 1,
-      "_blocked_dir": 1,
-      "_proposals_dir": 1,
-      "_serialise_proposal": 4,
-      "_validate": 12,
-      "list_proposals": 5,
-      "load_proposal": 11,
-      "save_proposal": 3,
-      "write_blocked_artefact": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/runner.py": {
-    "functions": {
-      "LlmClient": 1,
-      "_drive_mission": 2,
-      "_drive_real": 1,
-      "_drive_stub": 8,
-      "_find_existing_proposal": 2,
-      "run_investigation": 9,
-      "walk_queue": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/tools.py": {
-    "functions": {
-      "ToolState": 1,
-      "build_investigator_tools": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/tools_read.py": {
-    "functions": {
-      "_collect_ir_names": 5,
-      "_field_to_dict": 6,
-      "_find_similar_files": 7,
-      "_finding_to_dict": 1,
-      "_get_cluster_findings_tool": 1,
-      "_get_related_clusters_tool": 1,
-      "_lookup_ir_node": 5,
-      "_python_search": 7,
-      "_query_dsl_tool": 1,
-      "_read_file_tool": 1,
-      "_relativise": 2,
-      "_resolve_path": 3,
-      "_rg_search": 8,
-      "_search_spec_tool": 1,
-      "_serialise_ir_node": 11
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/investigator/tools_write.py": {
-    "functions": {
-      "_block_and_record": 2,
-      "_propose_fix_tool": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/ledger.py": {
-    "functions": {
-      "FitnessLedger": 2,
-      "FitnessLedger.close": 1,
-      "FitnessLedger.current_step": 1,
-      "FitnessLedger.observe_step": 1,
-      "FitnessLedger.open": 1,
-      "FitnessLedger.record_intent": 1,
-      "FitnessLedger.summarize": 1,
-      "SnapshotSource": 2,
-      "SnapshotSource.fetch_rows": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/ledger_snapshot.py": {
-    "functions": {
-      "SnapshotLedger": 4,
-      "SnapshotLedger.__init__": 1,
-      "SnapshotLedger._diff": 15,
-      "SnapshotLedger._repr": 2,
-      "SnapshotLedger._snapshot": 2,
-      "SnapshotLedger.close": 1,
-      "SnapshotLedger.current_step": 2,
-      "SnapshotLedger.observe_step": 7,
-      "SnapshotLedger.open": 1,
-      "SnapshotLedger.record_intent": 3,
-      "SnapshotLedger.summarize": 2,
-      "_PendingIntent": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/maturity.py": {
-    "functions": {
-      "read_maturity": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/missions/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/missions/contract_walk.py": {
-    "functions": {
-      "_LedgerLike": 2,
-      "_LedgerLike.observe_step": 1,
-      "_LedgerLike.record_intent": 1,
-      "_ObserverLike": 2,
-      "_ObserverLike.snapshot": 1,
-      "walk_contract": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/missions/free_roam.py": {
-    "functions": {
-      "build_free_roam_mission": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/missions/story_walk.py": {
-    "functions": {
-      "run_pass1_for_stories": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/models.py": {
-    "functions": {
-      "EvidenceEmbedded": 1,
-      "Finding": 1,
-      "FitnessDiff": 1,
-      "LedgerStep": 4,
-      "LedgerStep.__post_init__": 3,
-      "ProgressRecord": 1,
-      "RowChange": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/paraphrase.py": {
-    "functions": {
-      "ParaphraseRequest": 1,
-      "_LlmClient": 2,
-      "_LlmClient.complete": 1,
-      "build_spec_revision_prompt": 1,
-      "paraphrase_story": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/pg_snapshot_source.py": {
-    "functions": {
-      "PgSnapshotSource": 3,
-      "PgSnapshotSource.__init__": 1,
-      "PgSnapshotSource.fetch_rows": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/progress_evaluator.py": {
-    "functions": {
-      "_evaluate_evidence": 12,
-      "evaluate_progress": 12
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/proxy.py": {
-    "functions": {
-      "run_proxy_mission": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/spec_extractor.py": {
-    "functions": {
-      "Capability": 1,
-      "_LlmClient": 2,
-      "_LlmClient.complete": 1,
-      "extract_spec_capabilities": 7
-    },
-    "mi_rank": "A"
-  },
   "dazzle/fitness/swallows.py": {
     "functions": {
       "count_swallows": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/triage.py": {
-    "functions": {
-      "Cluster": 2,
-      "Cluster.sort_key": 1,
-      "DedupeKey": 1,
-      "_aggregate_severity": 2,
-      "_parse_created": 2,
-      "_queue_row": 1,
-      "canonicalize_summary": 1,
-      "cluster_findings": 5,
-      "compute_cluster_id": 1,
-      "dedupe_key_for": 1,
-      "read_queue_file": 6,
-      "write_queue_file": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/vitality.py": {
-    "functions": {
-      "ConnectednessReport": 1,
-      "_ModuleFacts": 1,
-      "_build_call_edges": 7,
-      "_candidate_staleness": 8,
-      "_class_of": 3,
-      "_coverage_split": 6,
-      "_covered_candidates": 10,
-      "_dispatch_reference_names": 12,
-      "_git_last_touch_days": 4,
-      "_import_prefix": 5,
-      "_module_name": 3,
-      "_py_files": 3,
-      "_resolve_call": 11,
-      "_scan_module": 19,
-      "analyze_connectedness": 23,
-      "render_report_md": 12
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/fitness/walker.py": {
-    "functions": {
-      "WalkResult": 1,
-      "_ExecutorLike": 2,
-      "_ExecutorLike.click": 1,
-      "_ExecutorLike.fill": 1,
-      "_ExecutorLike.goto": 1,
-      "_LedgerLike": 2,
-      "_LedgerLike.observe_step": 1,
-      "_LedgerLike.record_intent": 1,
-      "walk_story": 6
     },
     "mi_rank": "A"
   },
@@ -15628,13 +15175,6 @@
     },
     "mi_rank": "A"
   },
-  "dazzle/mcp/server/handlers/fitness.py": {
-    "functions": {
-      "_parse_raw_findings": 3,
-      "fitness_queue_handler": 4
-    },
-    "mi_rank": "A"
-  },
   "dazzle/mcp/server/handlers/guide.py": {
     "functions": {
       "_step_to_row": 5,
@@ -15741,30 +15281,6 @@
       "run_pipeline_handler": 4
     },
     "mi_rank": "A"
-  },
-  "dazzle/mcp/server/handlers/pitch.py": {
-    "functions": {
-      "_completeness_score": 2,
-      "_get_missing_sections": 3,
-      "_has_placeholder_content": 13,
-      "_section_quality_scores": 35,
-      "enrich_pitchspec_handler": 1,
-      "enrich_pitchspec_impl": 20,
-      "generate_pitch_handler": 1,
-      "generate_pitch_impl": 16,
-      "get_pitchspec_handler": 3,
-      "init_assets_handler": 1,
-      "init_assets_impl": 1,
-      "review_pitchspec_handler": 1,
-      "review_pitchspec_impl": 54,
-      "scaffold_pitchspec_handler": 1,
-      "scaffold_pitchspec_impl": 2,
-      "update_pitchspec_handler": 3,
-      "update_pitchspec_impl": 2,
-      "validate_pitchspec_handler": 1,
-      "validate_pitchspec_impl": 4
-    },
-    "mi_rank": "B"
   },
   "dazzle/mcp/server/handlers/policy.py": {
     "functions": {
@@ -16402,7 +15918,6 @@
       "_tool_dsl": 1,
       "_tool_e2e": 1,
       "_tool_feedback": 1,
-      "_tool_fitness": 1,
       "_tool_graph": 1,
       "_tool_guide": 1,
       "_tool_knowledge": 1,
@@ -16410,7 +15925,6 @@
       "_tool_mock": 1,
       "_tool_param": 1,
       "_tool_perf": 1,
-      "_tool_pitch": 1,
       "_tool_policy": 1,
       "_tool_presentation": 1,
       "_tool_process": 1,
@@ -17281,171 +16795,6 @@
       "current_provider": 1,
       "dazzle_span": 5,
       "reset_tracer": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/extractor.py": {
-    "functions": {
-      "PitchContext": 1,
-      "extract_pitch_context": 24
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/charts.py": {
-    "functions": {
-      "_check_matplotlib_available": 2,
-      "generate_funds_chart": 7,
-      "generate_market_chart": 8,
-      "generate_revenue_chart": 12
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/narrative.py": {
-    "functions": {
-      "generate_narrative": 64
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/plugin_loader.py": {
-    "functions": {
-      "PluginRegistry": 2,
-      "PluginRegistry.__init__": 1,
-      "PluginRegistry.get": 1,
-      "PluginRegistry.list_builders": 1,
-      "PluginRegistry.register": 1,
-      "_readme_content": 1,
-      "discover_plugins": 12,
-      "generate_plugin_readme": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/pptx_gen.py": {
-    "functions": {
-      "GeneratorResult": 1,
-      "_always": 1,
-      "_audit_slide_bounds": 4,
-      "_check_pptx_available": 2,
-      "_has_competitors": 1,
-      "_has_dsl": 2,
-      "_has_funding_ask": 1,
-      "_has_market": 1,
-      "_has_milestones": 1,
-      "_has_personas": 1,
-      "_has_problem": 1,
-      "_has_projections": 2,
-      "_has_solution": 1,
-      "_has_team": 1,
-      "_has_tiers": 2,
-      "generate_pptx": 23
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/pptx_primitives.py": {
-    "functions": {
-      "ContentRegion": 2,
-      "ContentRegion.advance": 1,
-      "ContentRegion.fits": 1,
-      "ContentRegion.remaining": 1,
-      "LayoutResult": 1,
-      "_add_bullet_list": 8,
-      "_add_callout_box": 1,
-      "_add_card": 3,
-      "_add_columns": 3,
-      "_add_divider": 1,
-      "_add_rich_text_box": 10,
-      "_add_slide_heading": 4,
-      "_add_speaker_notes": 2,
-      "_add_stat_box": 6,
-      "_add_table": 14,
-      "_add_text_box": 4,
-      "_add_timeline": 4,
-      "_create_dark_slide": 1,
-      "_create_light_slide": 1,
-      "_estimate_text_height": 3,
-      "_fmt_currency": 4,
-      "_resolve_colors": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/generators/pptx_slides.py": {
-    "functions": {
-      "_build_ask_slide": 9,
-      "_build_business_model_slide": 10,
-      "_build_closing_slide": 4,
-      "_build_competition_slide": 5,
-      "_build_extra_slide": 41,
-      "_build_financials_slide": 10,
-      "_build_market_slide": 13,
-      "_build_milestones_content": 7,
-      "_build_milestones_slide": 6,
-      "_build_personas_slide": 5,
-      "_build_platform_slide": 11,
-      "_build_problem_slide": 4,
-      "_build_solution_slide": 9,
-      "_build_team_content": 22,
-      "_build_team_slide": 7,
-      "_build_title_slide": 7,
-      "_estimate_team_height": 6,
-      "_render_team_member": 2
-    },
-    "mi_rank": "C"
-  },
-  "dazzle/pitch/ir.py": {
-    "functions": {
-      "BrandColors": 1,
-      "BusinessModelSpec": 1,
-      "CompanySpec": 1,
-      "Competitor": 1,
-      "ExtraSlide": 1,
-      "ExtraSlideLayout": 1,
-      "FinancialsSpec": 1,
-      "FundAllocation": 1,
-      "FundingStage": 1,
-      "KeyHire": 1,
-      "MarketSize": 1,
-      "MarketSpec": 1,
-      "MilestonesSpec": 1,
-      "PitchSpec": 1,
-      "PricingTier": 1,
-      "ProblemSpec": 1,
-      "SolutionSpec": 1,
-      "TeamMember": 1,
-      "TeamSpec": 1,
-      "YearProjection": 1,
-      "create_default_pitchspec": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/pitch/loader.py": {
-    "functions": {
-      "PitchSpecError": 1,
-      "PitchSpecValidationResult": 2,
-      "PitchSpecValidationResult.__init__": 1,
-      "PitchSpecValidationResult.add_error": 1,
-      "PitchSpecValidationResult.add_warning": 1,
-      "PitchSpecValidationResult.is_valid": 1,
-      "_deep_merge": 5,
-      "_get_known_slide_names": 1,
-      "_get_scaffold_template": 1,
-      "_parse_pitchspec_data": 30,
-      "ensure_pitch_assets": 3,
-      "get_pitchspec_path": 1,
-      "load_asset_manifest": 3,
-      "load_pitchspec": 6,
-      "merge_pitchspec": 4,
-      "pitchspec_exists": 1,
-      "save_asset_manifest": 1,
-      "save_pitchspec": 1,
-      "scaffold_pitchspec": 3,
-      "validate_pitchspec": 34
     },
     "mi_rank": "A"
   },

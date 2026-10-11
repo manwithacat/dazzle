@@ -100,7 +100,7 @@ constants in the same change.
 
 **mypy command** is always `mypy src/dazzle` (same as CI type-check job). The
 local↔CI divergence is **installed extras**, not flags: Tier 1 syncs the
-type-check extras superset (`dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp`).
+type-check extras superset (`dev,llm,mcp,mobile,postgres,i18n,viewport,perf,lsp`).
 Tier 0 may warn if the active interpreter ≠ 3.12 — for release tags, prefer
 Tier 1.
 

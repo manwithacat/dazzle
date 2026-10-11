@@ -708,20 +708,6 @@ handle_test_design: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
-# Pitch Handler
-# =============================================================================
-
-_MOD_PITCH = "dazzle.mcp.server.handlers.pitch"
-
-handle_pitch: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "pitch",
-    {
-        "get": f"{_MOD_PITCH}:get_pitchspec_handler",
-    },
-)
-
-
-# =============================================================================
 # Bootstrap Handler
 # =============================================================================
 
@@ -1190,20 +1176,6 @@ handle_e2e: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 
 
 # =============================================================================
-# Fitness Triage Handler
-# =============================================================================
-
-_MOD_FITNESS = "dazzle.mcp.server.handlers.fitness"
-
-handle_fitness: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
-    "fitness",
-    {
-        "queue": f"{_MOD_FITNESS}:fitness_queue_handler",
-    },
-)
-
-
-# =============================================================================
 # Product Quality Handler (#1626)
 # =============================================================================
 
@@ -1479,7 +1451,6 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "process": handle_process,
     "status": handle_status,
     "knowledge": handle_knowledge,
-    "pitch": handle_pitch,
     "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
     "domain": handle_domain,
@@ -1487,7 +1458,6 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "graph": handle_graph,
     "discovery": handle_discovery,
     "e2e": handle_e2e,
-    "fitness": handle_fitness,
     "product_quality": handle_product_quality,
     "user_profile": handle_user_profile,
     "policy": handle_policy,

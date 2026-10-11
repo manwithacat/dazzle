@@ -1,1 +1,0 @@
-"""Pitch deck generators."""

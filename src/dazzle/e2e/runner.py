@@ -2,7 +2,7 @@
 
 Workflow:
     async with ModeRunner(mode_spec, project_root, personas=...) as conn:
-        await run_fitness_strategy(conn, ...)
+        ...  # drive the app via conn
 
 On enter:
     1. Acquire PID lock file (with stale detection).

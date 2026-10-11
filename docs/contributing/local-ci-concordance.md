@@ -194,7 +194,7 @@ Copied into `scripts/ci_local.sh` — do not invent a third list.
 
 | Job | Extras |
 |-----|--------|
-| type-check | `dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp` |
+| type-check | `dev,llm,mcp,mobile,postgres,i18n,viewport,perf,lsp` |
 | python-tests | `dev,llm,mcp,mobile,postgres,perf,saml,lsp,test-full` |
 | lint | `dev,llm,mcp,postgres,perf` |
 | security-tests | `dev,mobile,postgres,perf` |

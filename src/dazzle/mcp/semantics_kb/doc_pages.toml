@@ -606,15 +606,15 @@ Two things to know before deleting anything the gate names:
 
 | family | n | retires when |
 |---|---|---|
-| `superseded-runtime-path` | 16 | each entry is re-wired, or confirmed superseded by name — the leftovers of ADR-0023 (Jinja2 → typed Fragments), ADR-0038's four-layer split, and the tenant-hierarchy work |
+| `superseded-runtime-path` | 15 | each entry is re-wired, or confirmed superseded by name — the leftovers of ADR-0023 (Jinja2 → typed Fragments), ADR-0038's four-layer split, and the tenant-hierarchy work |
 | `qa-and-testing-helpers` | 10 | the UX contract suite stops referencing them, or they fold into the runner that does |
 | `error-and-report-helpers` | 8 | the callers are gone and no dynamic use remains — error constructors and introspection helpers |
-| `agent-and-loop-legacy` | 7 | the legacy agent entrypoints are deleted in favour of the current loop |
+| `agent-and-loop-legacy` | 5 | the legacy agent entrypoints are deleted in favour of the current loop |
 | `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
 | `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
 | `cli-parity-helpers` | 3 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
 | `optional-extra-plumbing` | 3 | **the wiring lands, or the capability is formally dropped** — see below |
-| `domain-brief-and-llm-legacy` | 3 | the pitch asset path is confirmed dead or re-wired |
+| `domain-brief-and-llm-legacy` | 1 | `llm/spec_analyzer.analyze_spec_file` is confirmed dead or re-wired |
 
 `optional-extra-plumbing` (`create_kafka_bus`, `create_s3_file_service`,
 `create_jwt_service`) is the family to worry about: these are
@@ -1729,27 +1729,6 @@ slug = "mcp-2026-07-28-opportunity"
 order = 120.992
 handwritten = true
 intro = "Python mcp SDK v2 / protocol 2026-07-28 stateless core — adoption notes for Dazzle MCP."
-
-[pages.fitness-methodology]
-title = "Fitness Methodology"
-slug = "fitness-methodology"
-order = 121
-handwritten = true
-intro = "The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent."
-
-[pages.fitness-investigator]
-title = "Fitness Investigator"
-slug = "fitness-investigator"
-order = 122
-handwritten = true
-intro = "Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals."
-
-[pages.fitness-triage]
-title = "Fitness Triage"
-slug = "fitness-triage"
-order = 123
-handwritten = true
-intro = "Turning a flat fitness backlog into ranked, actionable clusters for investigation."
 
 [pages.performance-envelope]
 title = "Performance Envelope"

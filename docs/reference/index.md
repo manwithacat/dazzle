@@ -64,9 +64,6 @@
 | [Product Maturity](product-maturity.md) | Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps. |
 | [Hyperpart Presentation Process](hyperpart-presentation.md) | Closed role×host presentation matrix and shared present() seam — person→Avatar on all hosts (queue_meta first). |
 | [MCP 2026-07-28 opportunity](mcp-2026-07-28-opportunity.md) | Python mcp SDK v2 / protocol 2026-07-28 stateless core — adoption notes for Dazzle MCP. |
-| [Fitness Methodology](fitness-methodology.md) | The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent. |
-| [Fitness Investigator](fitness-investigator.md) | Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals. |
-| [Fitness Triage](fitness-triage.md) | Turning a flat fitness backlog into ranked, actionable clusters for investigation. |
 | [Performance Envelope](performance-envelope.md) | Where the Dazzle runtime is fast, where it degrades, and by how much — measured. |
 | [Performance Observability](perf-observability.md) | Local on-demand OpenTelemetry tracing for any Dazzle project via `dazzle perf`. |
 | [Perf Findings Schema](perf-findings-schema.md) | The JSON schema emitted by `dazzle perf report --format json` (FindingsReport). |

@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 39 tools, 177 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 37 tools, 175 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -27,7 +27,6 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`dsl`](#dsl) | 11 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
 | [`e2e`](#e2e) | 4 | E2E environment operations (read-only) |
 | [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
-| [`fitness`](#fitness) | 1 | Agent-Led Fitness Methodology queries (read-only) |
 | [`graph`](#graph) | 14 | Knowledge graph operations for codebase understanding |
 | [`guide`](#guide) | 4 | Inspect declared onboarding guides |
 | [`knowledge`](#knowledge) | 9 | Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, counter_prior, get_spec, search_commands |
@@ -35,7 +34,6 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`mock`](#mock) | 2 | Vendor mock server management: status, request_log |
 | [`param`](#param) | 2 | Query runtime parameter declarations |
 | [`perf`](#perf) | 3 | Local OpenTelemetry trace findings for the current project (read-only) |
-| [`pitch`](#pitch) | 1 | Pitch deck operations: get |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
 | [`presentation`](#presentation) | 4 | Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam |
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
@@ -282,20 +280,6 @@ Feedback operations: list, get, triage, resolve. Query and manage user-submitted
 
 ---
 
-### `fitness`
-
-Agent-Led Fitness Methodology queries (read-only). Operations: queue (ranked deduped finding clusters for a project). To regenerate the queue, use CLI: dazzle fitness triage.
-
-**Operations (1):** `queue`
-
-**Parameters:**
-
-- `project_root` *(string)* *(required)* — Path to an example app project
-- `top` *(integer)* — Max clusters to return (default 10)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
 ### `graph`
 
 Knowledge graph operations for codebase understanding. Operations: query (search entities by text), dependencies (what does X depend on?), dependents (what depends on X?), neighbourhood (entities within N hops), paths (find paths between entities), stats (graph statistics), populate (refresh graph from source), concept (look up a framework concept by name), inference (find inference patterns matching a query), related (get related concepts for an entity), export (export project KG data to JSON), import (import KG data from JSON), triggers (show what fires when an entity event occurs), topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)
@@ -414,18 +398,6 @@ Local OpenTelemetry trace findings for the current project (read-only). list: en
 **Parameters:**
 
 - `run` *(string)* — Run id (default: latest).
-
----
-
-### `pitch`
-
-Pitch deck operations: get. Retrieve the current pitchspec.
-
-**Operations (1):** `get`
-
-**Parameters:**
-
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
 

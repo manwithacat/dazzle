@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 40 tools
+# Count: 38 tools
 
 tool: agent
   description_hash: 644a118f9248
@@ -649,39 +649,6 @@ tool: feedback
     "type": "object"
   }
 
-tool: fitness
-  description_hash: d8ca4ec46996
-  description_len: 174
-  {
-    "properties": {
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "queue"
-        ],
-        "type": "string"
-      },
-      "project_path": {
-        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
-        "type": "string"
-      },
-      "project_root": {
-        "description": "Path to an example app project",
-        "type": "string"
-      },
-      "top": {
-        "default": 10,
-        "description": "Max clusters to return (default 10)",
-        "type": "integer"
-      }
-    },
-    "required": [
-      "operation",
-      "project_root"
-    ],
-    "type": "object"
-  }
-
 tool: graph
   description_hash: ca6de56ab378
   description_len: 736
@@ -1045,29 +1012,6 @@ tool: perf
       },
       "run": {
         "description": "Run id (default: latest).",
-        "type": "string"
-      }
-    },
-    "required": [
-      "operation"
-    ],
-    "type": "object"
-  }
-
-tool: pitch
-  description_hash: 62b13cf6d41f
-  description_len: 59
-  {
-    "properties": {
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "get"
-        ],
-        "type": "string"
-      },
-      "project_path": {
-        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
         "type": "string"
       }
     },

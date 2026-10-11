@@ -16,7 +16,6 @@ This package contains the main CLI application and modularized sub-commands:
 - events.py: Event system commands
 - migrate.py: Migration commands
 - db.py: Database migration commands (Alembic)
-- pitch.py: Pitch deck commands
 - utils.py: Shared utilities
 """
 
@@ -296,7 +295,6 @@ from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.param import param_app  # noqa: E402
 from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
-from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
 from dazzle.cli.prove import prove_app  # noqa: E402
 from dazzle.cli.pulse import pulse_app  # noqa: E402
@@ -361,7 +359,6 @@ app.add_typer(migrate_app, name="process-migrate")
 app.add_typer(nightly_app, name="nightly")
 app.add_typer(pipeline_app, name="pipeline")
 app.add_typer(perf_app, name="perf")
-app.add_typer(pitch_app, name="pitch")
 app.add_typer(pulse_app, name="pulse")
 app.add_typer(quality_app, name="quality")
 app.add_typer(rbac_app, name="rbac")

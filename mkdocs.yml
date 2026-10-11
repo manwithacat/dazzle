@@ -108,9 +108,6 @@ nav:
       - Card-Safety Invariants: reference/card-safety-invariants.md
       - E2E Environment: reference/e2e-environment.md
       - QA Trial Patterns: reference/qa-trial-patterns.md
-      - Fitness Methodology: reference/fitness-methodology.md
-      - Fitness Investigator: reference/fitness-investigator.md
-      - Fitness Triage: reference/fitness-triage.md
       - Performance Observability: reference/perf-observability.md
       - Perf Findings Schema: reference/perf-findings-schema.md
       - Implicitness Audit: reference/implicitness-audit.md
