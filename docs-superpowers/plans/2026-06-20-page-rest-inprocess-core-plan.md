@@ -1,0 +1,474 @@
+# In-process data-access core (page→REST self-fetch elimination) — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the page handlers' HTTP self-fetch-to-their-own-REST-API with direct in-process `gated_*` calls that apply scope + permit identically, eliminating the #1421 loopback/Host-forward failure class.
+
+**Architecture:** A new transport-agnostic core (`access/gated.py`) holds the enforcement+data logic *relocated* (not rewritten) out of the existing route-handler closures. REST routes and page handlers both become thin adapters that call the same `gated_*` functions. Enforcement (scope already in the repository SQL; permit relocated from the route closures into `gated_*`) lives in exactly one place.
+
+**Tech Stack:** Python 3.12, FastAPI, async/await, Pydantic, PostgreSQL, pytest. Cedar-style access via `dazzle.render.access_evaluator.evaluate_permission`; scope via `dazzle.http.runtime.scope_filters`.
+
+## Global Constraints
+
+- **Relocate, do not rewrite.** Each `gated_*` body is lifted verbatim from the named route closure; reuse the same `_scoped_pre_read` / `evaluate_permission` / `_resolve_scope_filters` calls. No new enforcement logic.
+- **Parity gate before removal.** A scope+permit parity test must pass *before* a self-fetch site is deleted. Order within each phase: add `gated_*` + parity test → REST delegates → page delegates → only then remove the fetch.
+- **Behavior parity, not redesign.** No change to rendered HTML, JSON shapes, or status codes. Permit-denied READ stays **404** ("row-existence opaque to the caller", per `read_handlers.py:194`), not 403 — preserve this.
+- **Co-located only.** `DAZZLE_BACKEND_URL` + the loopback/Host-forward machinery are removed (clean break, ADR-0003). `--backend-only` / `--ui-only` serve modes untouched.
+- **Audit parity.** `gated_*` takes an optional `audit_logger`; the REST adapter passes its logger (unchanged auditing), the page adapter passes `None` (pages don't audit today — preserve that; broadening audit to pages is out of scope).
+- **Pre-ship:** `ruff check src/ tests/ && mypy src/dazzle && pytest tests/ -m "not e2e"`; when touching scope/tenancy run `DATABASE_URL=… pytest -m postgres`. `/bump patch` + commit each shippable task.
+
+## File Structure
+
+| File | Responsibility |
+|------|----------------|
+| `src/dazzle/http/runtime/access/__init__.py` (create) | Package marker; re-export `gated_read/list/aggregate/create/update/delete`, `AccessContext`, `AccessForbidden`, `RecordNotFound`. |
+| `src/dazzle/http/runtime/access/gated.py` (create) | The transport-agnostic core: typed errors, `AccessContext`, `access_context_from`, and the `gated_*` functions. |
+| `src/dazzle/http/runtime/handlers/read_handlers.py` (modify) | `_read_cedar` closure delegates to `gated_read`. |
+| `src/dazzle/http/runtime/handlers/list_handlers.py` (modify) | `_list_handler_body` delegates to `gated_list`. |
+| `src/dazzle/http/runtime/audit_wrap.py` (modify) | `_build_cedar_handler` delegates to `gated_create/update/delete`. |
+| `src/dazzle/http/runtime/page_routes.py` (modify) | `_handle_detail` / `_handle_edit_form` / `_handle_table` call `gated_*`; delete `_resolve_backend_url`, `_resolve_host_to_forward`, `_sync_fetch`, `_fetch_url`, `_fetch_json`, the `host`/`effective_backend_url` fields of `_PageRequestContext`. |
+| `src/dazzle/http/runtime/experience_routes.py` (modify) | `_experience_step_post` calls `gated_create/update`; delete `_sync_post`, `_proxy_to_backend`. |
+| `tests/integration/test_gated_access_parity.py` (create) | The scope+permit parity gate (REST result == `gated_*` result; permit-denied parity). |
+
+---
+
+## Task 1: Access package — typed errors, `AccessContext`, builder
+
+**Files:**
+- Create: `src/dazzle/http/runtime/access/__init__.py`
+- Create: `src/dazzle/http/runtime/access/gated.py`
+- Test: `tests/unit/test_access_context.py`
+
+**Interfaces:**
+- Produces:
+  - `class AccessForbidden(Exception)` — permit denied.
+  - `class RecordNotFound(Exception)` — missing or scope-denied row.
+  - `@dataclass(frozen=True) class AccessContext` with fields: `auth_context: Any`, `entity_name: str`, `cedar_access_spec: Any | None`, `fk_graph: Any | None`, `admin_personas: list[str] | None`.
+  - `def access_context_from(request, *, entity_name, cedar_access_spec, fk_graph, admin_personas) -> AccessContext` — pulls `auth_context` from the resolved auth dependency value passed in (the caller supplies it; the builder just bundles).
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/unit/test_access_context.py
+from dazzle.http.runtime.access.gated import AccessContext, access_context_from
+
+def test_access_context_bundles_inputs():
+    sentinel_auth = object()
+    ac = access_context_from(
+        auth_context=sentinel_auth,
+        entity_name="Project",
+        cedar_access_spec="SPEC",
+        fk_graph="FK",
+        admin_personas=["admin"],
+    )
+    assert ac.auth_context is sentinel_auth
+    assert ac.entity_name == "Project"
+    assert ac.cedar_access_spec == "SPEC"
+    assert ac.fk_graph == "FK"
+    assert ac.admin_personas == ["admin"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/unit/test_access_context.py -v`
+Expected: FAIL with `ModuleNotFoundError: dazzle.http.runtime.access`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+```python
+# src/dazzle/http/runtime/access/gated.py
+"""Transport-agnostic data-access core (#1422 option b).
+
+The enforcement+data logic relocated out of the REST route-handler closures so
+both the REST API and the HTML page layer call ONE core, in-process, instead of
+the page layer self-fetching its own REST endpoint over loopback HTTP.
+
+Scope (tenant isolation) is already compiled into Repository SQL via the
+``__scope_predicate`` filter key; permit (Cedar) is relocated here from the route
+closures. See docs/superpowers/specs/2026-06-20-page-rest-inprocess-core-design.md.
+"""
+
+from dataclasses import dataclass
+from typing import Any
+
+
+class AccessForbidden(Exception):
+    """Permit (Cedar) denied the operation."""
+
+
+class RecordNotFound(Exception):
+    """Row is missing or hidden by a scope predicate."""
+
+
+@dataclass(frozen=True)
+class AccessContext:
+    """Everything enforcement needs, bundled once per request."""
+
+    auth_context: Any
+    entity_name: str
+    cedar_access_spec: Any | None
+    fk_graph: Any | None
+    admin_personas: list[str] | None
+
+
+def access_context_from(
+    *,
+    auth_context: Any,
+    entity_name: str,
+    cedar_access_spec: Any | None,
+    fk_graph: Any | None,
+    admin_personas: list[str] | None,
+) -> AccessContext:
+    """Bundle the per-request enforcement inputs into an AccessContext."""
+    return AccessContext(
+        auth_context=auth_context,
+        entity_name=entity_name,
+        cedar_access_spec=cedar_access_spec,
+        fk_graph=fk_graph,
+        admin_personas=admin_personas,
+    )
+```
+
+```python
+# src/dazzle/http/runtime/access/__init__.py
+from dazzle.http.runtime.access.gated import (
+    AccessContext,
+    AccessForbidden,
+    RecordNotFound,
+    access_context_from,
+)
+
+__all__ = [
+    "AccessContext",
+    "AccessForbidden",
+    "RecordNotFound",
+    "access_context_from",
+]
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/unit/test_access_context.py -v`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/dazzle/http/runtime/access/ tests/unit/test_access_context.py
+git commit -m "feat(access): scaffold transport-agnostic access core (errors + AccessContext) (#1422)"
+```
+
+---
+
+## Task 2: `gated_read` + REST read route delegates
+
+**Files:**
+- Modify: `src/dazzle/http/runtime/access/gated.py` (add `gated_read`)
+- Modify: `src/dazzle/http/runtime/handlers/read_handlers.py:110-199` (`_read_cedar` delegates)
+- Test: `tests/integration/test_gated_access_parity.py` (create — read parity)
+
+**Interfaces:**
+- Consumes: `AccessContext`, `AccessForbidden`, `RecordNotFound` (Task 1); `_scoped_pre_read`, `_build_access_context`, `_record_to_dict` (`scope_filters.py` / `read_handlers.py`); `evaluate_permission` (`dazzle.render.access_evaluator`).
+- Produces: `async def gated_read(service, access: AccessContext, entity_id, *, include=None, audit_logger=None, request=None) -> dict` — returns the record dict; raises `RecordNotFound` (missing/scope-denied) or `AccessForbidden` (permit-denied).
+
+**Relocation recipe:** `gated_read`'s body is lines `read_handlers.py:125-194` (the `_read_cedar` body *minus* the final `_render_detail_html` call at 195-196, which is HTTP-shaping that stays in the REST adapter). Replace `raise HTTPException(404)` with `raise RecordNotFound` and the permit-denied branch with `raise AccessForbidden`. Keep `_scoped_pre_read`, the `auto_include` re-hydration, `_build_access_context`, and `evaluate_permission` calls verbatim. Audit only when `audit_logger` is provided.
+
+- [ ] **Step 1: Write the failing parity test**
+
+```python
+# tests/integration/test_gated_access_parity.py
+import pytest
+from dazzle.http.runtime.access.gated import gated_read, AccessForbidden, RecordNotFound, access_context_from
+
+@pytest.mark.postgres
+@pytest.mark.asyncio
+async def test_gated_read_matches_rest_for_in_scope_row(scope_runtime_app):
+    """gated_read returns the same record the REST detail endpoint returns,
+    for a user whose scope+permit allow the row."""
+    app = scope_runtime_app  # fixture: booted scope_runtime fixture app + seeded rows
+    user, row_id, entity = app.member_user, app.member_visible_row_id, app.entity_name
+    # REST path (over the test client):
+    rest = app.client.get(f"/{app.plural(entity)}/{row_id}", headers=app.auth_headers(user)).json()
+    # in-process path:
+    access = access_context_from(
+        auth_context=app.auth_context_for(user),
+        entity_name=entity,
+        cedar_access_spec=app.cedar_spec(entity),
+        fk_graph=app.fk_graph,
+        admin_personas=app.admin_personas(entity),
+    )
+    got = await gated_read(app.service(entity), access, row_id, include=app.auto_include(entity))
+    assert got == rest
+
+@pytest.mark.postgres
+@pytest.mark.asyncio
+async def test_gated_read_scope_denied_row_raises_not_found(scope_runtime_app):
+    app = scope_runtime_app
+    access = access_context_from(
+        auth_context=app.auth_context_for(app.member_user),
+        entity_name=app.entity_name,
+        cedar_access_spec=app.cedar_spec(app.entity_name),
+        fk_graph=app.fk_graph,
+        admin_personas=app.admin_personas(app.entity_name),
+    )
+    with pytest.raises(RecordNotFound):
+        await gated_read(app.service(app.entity_name), access, app.other_tenant_row_id)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `DATABASE_URL=$TEST_DB pytest tests/integration/test_gated_access_parity.py -m postgres -v`
+Expected: FAIL with `ImportError: cannot import name 'gated_read'`. (If the `scope_runtime_app` fixture does not yet exist, build it in this step from `fixtures/scope_runtime` + the existing `tests/integration/test_scope_runtime_pg.py` boot helpers — reuse, do not duplicate.)
+
+- [ ] **Step 3: Implement `gated_read`**
+
+Add to `src/dazzle/http/runtime/access/gated.py` (body relocated from `read_handlers.py:125-194`):
+
+```python
+async def gated_read(
+    service: Any,
+    access: AccessContext,
+    entity_id: Any,
+    *,
+    include: list[str] | None = None,
+    audit_logger: Any = None,
+    request: Any = None,
+) -> dict[str, Any]:
+    from dazzle.core.access import AccessDecision, AccessOperationKind
+    from dazzle.http.runtime.audit_log import measure_evaluation_time
+    from dazzle.http.runtime.handlers.read_handlers import (
+        _build_access_context,
+        _log_audit_decision,
+        _record_to_dict,
+        _SCOPE_DENY_EFFECT,
+    )
+    from dazzle.http.runtime.scope_filters import _scoped_pre_read
+    from dazzle.render.access_evaluator import evaluate_permission
+
+    assert access.cedar_access_spec is not None
+    result = await _scoped_pre_read(
+        service=service,
+        operation="read",
+        id=entity_id,
+        cedar_access_spec=access.cedar_access_spec,
+        auth_context=access.auth_context,
+        entity_name=access.entity_name,
+        fk_graph=access.fk_graph,
+        admin_personas=access.admin_personas,
+    )
+    if result is None:
+        if audit_logger and request is not None:
+            _u, _ = _build_access_context(access.auth_context)
+            await _log_audit_decision(
+                audit_logger, request, operation="read", entity_name=access.entity_name,
+                entity_id=str(entity_id), decision="deny", matched_policy=_SCOPE_DENY_EFFECT,
+                policy_effect=_SCOPE_DENY_EFFECT, user=_u,
+            )
+        raise RecordNotFound(access.entity_name)
+
+    if include:
+        hydrated = await service.execute(operation="read", id=entity_id, include=include)
+        if hydrated is not None:
+            result = hydrated
+
+    user, ctx = _build_access_context(access.auth_context)
+    decision: AccessDecision
+    decision, eval_us = measure_evaluation_time(
+        lambda: evaluate_permission(
+            access.cedar_access_spec, AccessOperationKind.READ,
+            _record_to_dict(result), ctx, entity_name=access.entity_name,
+        )
+    )
+    if audit_logger and request is not None:
+        await _log_audit_decision(
+            audit_logger, request, operation="read", entity_name=access.entity_name,
+            entity_id=str(entity_id), decision="allow" if decision.allowed else "deny",
+            matched_policy=decision.matched_policy, policy_effect=decision.effect,
+            user=user, evaluation_time_us=eval_us,
+        )
+    if not decision.allowed:
+        raise RecordNotFound(access.entity_name)  # permit-denied READ is opaque (404), per read_handlers.py:194
+    return result
+```
+
+Re-export from `access/__init__.py` (`gated_read`).
+
+- [ ] **Step 4: Make `_read_cedar` delegate**
+
+Replace `read_handlers.py:110-196` body with a thin adapter: build `AccessContext` from the closure's captured `cedar_access_spec`/`entity_name`/`fk_graph`/`admin_personas` + the `auth_context` dep, call `gated_read(service, access, id, include=auto_include, audit_logger=audit_logger, request=request)` inside `try/except (RecordNotFound,) → raise HTTPException(404)`, then `_render_detail_html(request, result, entity_name)` and return. (Permit-denied surfaces as `RecordNotFound` → 404, identical to today.)
+
+- [ ] **Step 5: Run tests**
+
+Run: `DATABASE_URL=$TEST_DB pytest tests/integration/test_gated_access_parity.py tests/integration/test_scope_runtime_pg.py -m postgres -v`
+Expected: PASS (parity + the existing scope-runtime suite unchanged).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/dazzle/http/runtime/access/ src/dazzle/http/runtime/handlers/read_handlers.py tests/integration/test_gated_access_parity.py
+git commit -m "feat(access): gated_read; REST read route delegates to in-process core (#1422)"
+```
+
+---
+
+## Task 3: Page detail handler calls `gated_read`
+
+**Files:**
+- Modify: `src/dazzle/http/runtime/page_routes.py:1275-1399` (`_handle_detail`)
+- Test: `tests/integration/test_gated_access_parity.py` (add page-vs-REST detail parity)
+
+**Interfaces:**
+- Consumes: `gated_read`, `access_context_from`, `AccessForbidden`, `RecordNotFound` (Task 2); `prc.auth_ctx`, `prc.deps` (service + cedar_access_spec + fk_graph for the entity), `prc.path_id`, `prc.request` (`_PageRequestContext`, `page_routes.py:639`).
+
+- [ ] **Step 1: Write the failing test** — assert the page's prepared `req_detail.item` equals the REST detail JSON for the same user, and that a forbid-detail persona yields the forbid-detail render (not a row). (Add to `test_gated_access_parity.py`, mirroring Task 2's fixture usage but driving `_handle_detail` via a booted page request.)
+
+- [ ] **Step 2: Run — Expected:** FAIL (page still self-fetches; assertion on in-process path import fails or the item differs in error-shape).
+
+- [ ] **Step 3: Implement** — replace the `_fetch_json(...)` call (`page_routes.py:1280-1286`) with:
+
+```python
+from dazzle.http.runtime.access.gated import gated_read, access_context_from, AccessForbidden, RecordNotFound
+
+svc = prc.deps.service_for(prc.ctx.detail.entity_name)          # existing service lookup on deps
+access = access_context_from(
+    auth_context=prc.auth_ctx,
+    entity_name=prc.ctx.detail.entity_name,
+    cedar_access_spec=prc.deps.cedar_spec_for(prc.ctx.detail.entity_name),
+    fk_graph=prc.deps.fk_graph,
+    admin_personas=prc.deps.admin_personas_for(prc.ctx.detail.entity_name),
+)
+try:
+    req_detail.item = await gated_read(svc, access, prc.path_id, include=prc.deps.auto_include_for(prc.ctx.detail.entity_name))
+except RecordNotFound:
+    req_detail.item = {"error": "not_found"}     # preserves the existing error-state shape consumed below
+except AccessForbidden:
+    req_detail.item = {"error": "forbidden"}     # routes into the existing forbid-detail render branch
+```
+
+**Execution findings (2026-06-20, refines this task):**
+
+1. **Boot-state plumbing (DONE, prep).** The per-entity service map + `fk_graph` + `admin_personas` are NOT on `_PageRouterConfig` (only `entity_cedar_specs` is). They live on the route_generator at boot. Wired them onto `app.state` at `server.py:~1815` (right after `RouteGenerator(...)`): `app.state.entity_services = self._services`, `entity_fk_graph = _fk_graph`, `entity_admin_personas = _admin_personas`, `entity_auto_includes = self._entity_auto_includes`. The page handler reads them via `prc.request.app.state`; the cedar spec via `prc.deps.entity_cedar_specs.get(entity)`.
+
+2. **Serialization parity (the real subtlety — build the parity test FIRST).** The original `_fetch_json` returned the **FastAPI-serialized JSON dict** (UUIDs→str, dates→ISO, FK dicts). `gated_read` returns the **pre-serialization** object (a Pydantic model, or a relations-hydrated dict). The page's downstream code (`_inject_display_names`, `when_expr` eval at `1300-1306`, FK display) depends on the JSON shape. So the swap MUST serialize the `gated_read` result to the same dict the REST detail response produces *before* assigning `req_detail.item`. Determine the REST detail serialization (the response model / `model_dump(mode="json")` vs the dict-passthrough when relations are included) and apply it in-process. The page-vs-REST parity test is what proves this — write it before the swap and make it assert deep-equality of the prepared `req_detail.item` against the REST detail JSON.
+
+3. **Cedar / non-cedar branch.** Entities with a cedar spec → `gated_read`; entities without → plain `service.execute("read", id, include=auto_include)` (matches the REST `_core` path, which has no permit eval). Map a missing/None result and `RecordNotFound` → `{"error": "not_found"}` so the existing `"error" in req_detail.item` → 404 branch (`page_routes.py:1291-1298`) is preserved.
+
+4. **Serialization SETTLED.** The REST READ route registers `response_model=None` (`route_generator.py:471`), so FastAPI serializes the handler return via `jsonable_encoder(result)`. Therefore the in-process swap is faithful by construction: `req_detail.item = jsonable_encoder(gated_read_result)` produces the *identical* dict `_fetch_json` received. No empirical guessing needed. The detail+edit swaps share one helper `_read_entity_in_process(prc, entity_name, path_id)` (built, then reverted — see finding 5).
+
+5. **BLOCKER — boot-path fragmentation (why Task 3 was reverted, not shipped).** The handler swaps were written and pass ruff+mypy, but `test_examples_fragment_http::test_simple_task_detail_url_renders_via_fragment_or_404` failed: `AttributeError: 'State' object has no attribute 'entity_services'`. Root cause: there are **two app-construction paths** — `DazzleServer`/`DazzleBackendApp` setup (`server.py`, where the P2-prep wiring at ~1815 set `builder._app.state`) and **`app_factory.create_app` (`app_factory.py:344`), which builds a SEPARATE `app` object** (it uses a `DazzleBackendApp` only as a `builder` for `.services`, then mounts routes onto its own `app`). The prep wiring set state on `builder._app`, not on the served `app`. `DazzleBackendApp` exposes `.services` (server.py:2295) but NOT `fk_graph`/`admin_personas` (those are locals in setup, never stored on `self`). **Fix options for the continuation (pick one, boot-path-independent):** (a) thread `entity_services` + derive `fk_graph`/`admin_personas`/`auto_includes`/`cedar_specs` from the appspec INSIDE `create_page_routes` → store on `_PageRouterConfig`; the page handler reads `prc.deps.*` (no app.state dependency — both call sites get it for free since both call `create_page_routes`). This is the cleanest — `entity_cedar_specs` is ALREADY derived this way in `create_page_routes`. Only `entity_services` (runtime instances) must be threaded as a new `create_page_routes` arg, passed by both server.py and app_factory call sites. OR (b) expose `fk_graph`/`admin_personas`/`entity_auto_includes` as `DazzleBackendApp` properties + set the 4 `app.state` fields on the SERVED `app` in `app_factory.create_app` (near the `create_page_routes` call, ~line 935) — but first confirm which path `dazzle serve` actually serves. **Recommend (a).** The reverted helper `_read_entity_in_process` + the detail/edit swaps are correct modulo where they source the handles — re-apply reading from `prc.deps.*` instead of `prc.request.app.state.*`. Also verify `path_id` type: the REST route coerces the URL str → `UUID` (`id: UUID`); the page `prc.path_id` is a str — confirm the in-process repository read tolerates a str id (psycopg `uuid = text`), and coerce if the parity/render test shows a mismatch.
+
+(Original sketch — superseded by the findings above: "add thin accessors on `_PageRouterConfig`" — the data wasn't there; it's on app.state now.)
+
+- [ ] **Step 4: Run** `pytest tests/integration/test_gated_access_parity.py -m postgres -v` and the existing page/detail suite (`pytest tests/ -m "not e2e" -k "detail or page_route" -q`). Expected: PASS.
+
+- [ ] **Step 5: Commit** `feat(page): detail handler reads in-process via gated_read, no self-fetch (#1422)`
+
+---
+
+## Task 4: Page edit-form handler calls `gated_read`
+
+**Files:** Modify `src/dazzle/http/runtime/page_routes.py:1402-1430` (`_handle_edit_form`). Test: extend parity test for the edit/initial-values path.
+
+Same swap as Task 3: replace the `_fetch_json(...)` at `page_routes.py:1407` with a `gated_read(...)` call (entity from `prc.ctx.form`), map `RecordNotFound`→ existing not-found handling, keep the `initial_values` + `PersonaVariant` logic at `1410-1424` unchanged. TDD steps mirror Task 3. Commit: `feat(page): edit-form handler reads in-process via gated_read (#1422)`.
+
+---
+
+## Task 5: `gated_list` + REST list route delegates
+
+**Files:**
+- Modify: `src/dazzle/http/runtime/access/gated.py` (add `gated_list`)
+- Modify: `src/dazzle/http/runtime/handlers/list_handlers.py:263-669` (`_list_handler_body` delegates)
+- Test: `tests/integration/test_gated_access_parity.py` (list parity, incl. scope-filtered + pagination)
+
+**Interfaces:**
+- Produces: `async def gated_list(service, access: AccessContext, *, page, page_size, filters=None, sort=None, search=None, include=None, audit_logger=None, request=None) -> dict` — returns `{"items", "total", "page", "page_size"}`; applies the list permit gate then scope-filtered `service.list`.
+
+**Relocation recipe:** the enforcement is `list_handlers.py:302-373` — the Cedar LIST gate (302-332, raises 403 on deny → here raise `AccessForbidden`) + `_resolve_scope_filters` merge (340-373). The data call is `service.list(...)` (646). `gated_list` = {permit gate → scope merge → `service.list`}. The HTTP-shaping tail (audit 444-456, `__display__` 477-490, graph format 492-562, json_projection 649-669, HTMX/HTML 564-647) **stays in the REST adapter** — the page doesn't need it (the page renders from `items`/`total`). Note: list permit-deny is **403** in REST today; `gated_list` raises `AccessForbidden`, the REST adapter maps to 403, the page adapter maps to the forbid render.
+
+TDD: parity test asserting `gated_list(...).items/total` equals the REST list JSON `items/total` for an in-scope user across (no-filter, filtered, paginated) cases, and `AccessForbidden` for a list-denied role. Then `_list_handler_body` delegates: build `AccessContext`, `result = await gated_list(...)`, then run the existing shaping tail on `result`. Commit: `feat(access): gated_list; REST list delegates to in-process core (#1422)`.
+
+**Execution scoping (2026-06-20 — read in full; this is the riskiest extraction).** `_list_handler_body` (list_handlers.py:263-660+) interleaves enforcement with HTTP parsing and has a post-fetch enforcement step:
+- **Enforcement to relocate into `gated_list`:** (1) Cedar LIST permit gate `303-332` — raises `HTTPException(403)` today → must raise `AccessForbidden`; only gates when all list rules are pure role checks (`has_field_conditions` branch — preserve exactly). (2) `build_visibility_filter(access_spec, …)` `335` → `(sql_filters, post_filter)`. (3) Cedar scope merge `340-373` — `_resolve_scope_filters("list", …)`; **`None` → default-deny: return `{"items":[],"total":0,"page","page_size"}`** (NOT an error — preserve this shape); truthy → merge into `sql_filters`. (4) the `post_filter` OR-condition step `459-467` runs on the RESULT (`filter_records_by_condition`) — enforcement, must move with the data call.
+- **HTTP parsing that STAYS in the adapter (passed into `gated_list` as parsed inputs):** `filter[field]`/bare-field extraction `376-384`; temporal `?as_of=`/`?include_closed=` `396-426` (build the `__as_of` / `<end>__isnull` filter keys in the adapter, pass as part of `user_filters`); `sort_list` `429`; pagination/search are already params.
+- **Shaping that STAYS in the adapter (runs on `gated_list`'s return):** audit `445-456`, `__display__` `469+`, graph-format, json_projection, HTMX/HTML negotiation.
+- **`gated_list` signature:** `gated_list(service, access, *, page, page_size, sort_list, search, user_filters=None, select_fields=None, auto_include=None, search_fields=None, access_spec=None, audit_logger=None, request=None) -> dict` where it does {permit gate → `build_visibility_filter` → scope merge (default-deny → empty page) → merge `user_filters` → `service.execute("list", merged, …)` → `post_filter`} and returns `{items,total,page,page_size}`. The data call is `service.execute(operation="list", …)` at `432-442` (NOT `service.list` — use `execute`). REST adapter parity test: feasible on `scope_runtime` (REST list `/enrolments?...` is mounted, like the read test) — assert list `items/total` parity + `AccessForbidden`→403 for a list-denied role. Then both `_list_handler_body` (REST) and `_handle_table` (page, Task 6) call `gated_list`.
+
+---
+
+## Task 6: Page table + related-tabs call `gated_list`
+
+**Files:** Modify `src/dazzle/http/runtime/page_routes.py:1449-1565` (`_handle_table`) and the related-tabs fetch at `page_routes.py:1378-1397`. Test: page-list parity + related-tabs parity.
+
+Replace `_fetch_url(fetch_url, ...)` (`page_routes.py:1533`) with `gated_list(svc, access, page=…, page_size=…, filters=…, sort=…, search=…)`, deriving params from the request query as today (`1499-1530`), keeping the empty-state logic (`1534-1563`) unchanged. Replace the related-tab `_fetch_url` (`1378`) with `gated_list` filtered by the FK field. The `asyncio.gather` over tabs stays (now gathering in-process coroutines). TDD mirrors Task 3/5. Commit: `feat(page): table + related-tabs read in-process via gated_list (#1422)`.
+
+---
+
+## Task 7: `gated_create` / `gated_update` / `gated_delete`
+
+**Files:**
+- Modify: `src/dazzle/http/runtime/access/gated.py` (add write functions)
+- Modify: `src/dazzle/http/runtime/audit_wrap.py:260-443` (`_build_cedar_handler` delegates)
+- Test: `tests/integration/test_gated_access_parity.py` (write parity: create/update/delete permit + scope)
+
+**Interfaces:**
+- Produces: `async def gated_create(service, access, data, *, audit_logger=None, request=None) -> dict`; `async def gated_update(service, access, entity_id, data, *, audit_logger=None, request=None) -> dict`; `async def gated_delete(service, access, entity_id, *, audit_logger=None, request=None) -> None`. Permit-denied → `AccessForbidden`; scope-denied destination (update/delete pre-read) → `RecordNotFound`.
+
+**COMPLETE write-path recipe (2026-06-20 — fully traced; correctness-first, parity-test-gated).**
+
+The create core `write_handlers.py::_core` orchestration (DO NOT hand-replica — reuse it):
+`body = await _parse_request_body(request)` → storage-verify (`verify_storage_field_keys`, needs `request.app.state.storage_registry` + `storage_bindings`) → idempotency-key (`request.headers["x-idempotency-key"]`) → `inject_current_user_refs(body, input_schema, user_ref_fields, current_user)` → `resolve_backed_entity_refs(…, persona_ref_map, current_user)` → `_enforce_create_scope(cedar_access_spec, payload=body, user_id, user_roles, entity_name, auth_context, service, fk_graph)` (raises `HTTPException(403)`) → `service.execute("create", body, …)`. Permit gate is in `_cedar_impl` wrapping it.
+
+**Chosen approach — thread a pre-parsed body through, no orchestration duplication (lowest drift):**
+1. `write_handlers._core`: add `body: dict | None = None`; `if body is None: body = await _parse_request_body(request)`. Everything else unchanged. (Storage-verify + headers still read `request`, which the experience handler HAS as `prc.request`.)
+2. `audit_wrap._build_cedar_handler` / `_cedar_impl`: add an optional `body` param threaded to `core_fn(…, body=body)`. The permit gate + audit are unchanged.
+3. Expose an **in-process create invoker registry**: at boot (where `_build_cedar_handler` is built per entity, `route_generator`), also register the create invoker (a callable `(auth_context, request, body) -> result` = `_cedar_impl` with `id=None`) onto `app.state.entity_create_invokers[entity]` — OR thread it onto `_PageRouterConfig`/experience deps. This reuses the EXACT REST create path (permit + scope + injection + audit), so it cannot drift.
+4. `experience_routes._experience_step_post:550`: replace `_proxy_to_backend(…)` with the in-process invoker `await invoker(prc.auth_ctx, prc.request, body=form_data)`; map an `HTTPException(403)`/validation failure to the existing error re-render (557-582), success advances as today.
+5. The transport-agnostic `gated_create/update/delete` in `access/gated.py` (for non-experience in-process callers + future REST delegation) wrap the same invoker / helpers; `AccessForbidden`/`RecordNotFound` taxonomy as read/list.
+
+**Parity test (the correctness oracle — REQUIRED before wiring):** on `scope_runtime` (has REST create + create-scope #1311), create an Enrolment two ways for the same teacher — via the REST POST `/enrolments` and via the in-process invoker with the same body — assert identical persisted row (same id-shape, same injected refs) AND identical enforcement (in-department teacher succeeds; foreign-department create → 403/rejected, no row written). Also a `User`-ref-injection entity to lock `inject_current_user_refs` parity. Only wire the experience-POST after parity is green.
+
+**Storage caveat:** form-step creates of entities with `storage_bindings` (file uploads) are out of scope for the experience path; assert/skip rather than silently mishandle.
+
+---
+
+**(superseded) Relocation recipe:** body is `audit_wrap.py:305-382` — the `_scoped_pre_read` for update/delete (305-314 → `RecordNotFound`), `evaluate_permission` (339-342), deny→raise (374-382 → `AccessForbidden`), then the core `service.create/update/delete`. The audit + response shaping stay in the REST adapter. TDD: write-parity test (a permit-denied create raises `AccessForbidden` just as REST returns 403; an out-of-scope update raises `RecordNotFound`/404). Then `_build_cedar_handler` delegates. Commit: `feat(access): gated_create/update/delete; REST write routes delegate (#1422)`.
+
+**Execution scoping (2026-06-20 — read `_build_cedar_handler`/`_cedar_impl` in full).** This is more entangled than read/list and splits into a tractable core + a hard tail:
+- **The enforcement primitives are all reusable callable helpers** (NOT request-coupled): `_scoped_pre_read` (update/delete scope → 404, `scope_filters.py`, already used by `gated_read`); `evaluate_permission` (permit, `render.access_evaluator`); and **`_enforce_create_scope`** (CREATE-scope #1174, `scope_filters.py`) — which `atomic_flow_executor.py:341-366` ALREADY calls in-process (proven precedent). So `gated_create/update/delete` = compose {permit gate via `evaluate_permission` → `_scoped_pre_read`(update/delete) or `_enforce_create_scope`(create) → `service.execute(op, …)`}, raising `AccessForbidden`/`RecordNotFound`. Build these in `access/gated.py` reusing the SAME helpers `_cedar_impl` uses → minimal drift even before the REST routes delegate.
+- **The HARD tail (defer / optional): making the REST write routes (`_cedar_impl`) delegate.** `_cedar_impl` (audit_wrap.py:286-424) wraps a **request-coupled mutation `core_fn(id, request, current_user, user_email, existing, user_roles, is_superuser, auth_context)`** (388-401) plus interleaved create-vs-update audit (346-358 allow+deny for create; 360-373 deny + 404-422 post-op allow for update/delete) and `_compute_field_changes`. Untangling this to delegate to `gated_*` is real surgery; it can stay on `_cedar_impl` (which shares the same enforcement helpers, so no drift) while `gated_*` serves the in-process callers.
+- **Minimal path to unblock Task 9:** Task 8 (experience-POST) only needs **`gated_create`** (the form POST is a create; `gated_update` when a step targets an existing id). Build `gated_create` (+ update/delete for completeness), point `_experience_step_post:550` at it (replacing `_proxy_to_backend`), then Task 9 can delete the self-fetch machinery. The REST-route-delegation untangle is a separate, optional follow-on (the REST routes already enforce correctly via `_cedar_impl`). **Recommend: gated_create/update/delete reusing the shared helpers + experience-POST → gated_create + adversarial review, then Task 9.** Note: a permit-denied CREATE on the experience path should surface as the existing form re-render with an error (experience_routes.py:557-582), not a bare 403.
+
+---
+
+## Task 8: Experience-POST calls `gated_create`/`gated_update`
+
+**Files:** Modify `src/dazzle/http/runtime/experience_routes.py:483-670` (`_experience_step_post`). Test: experience-form submission parity (created entity == REST-created; validation error path preserved).
+
+Replace `_proxy_to_backend(effective_backend_url, entity_ref, body, _cookies)` (`experience_routes.py:550`) with `gated_create(svc, access, body)` (or `gated_update` when the step targets an existing id). Map `AccessForbidden`/validation to the existing error re-render (`557-582`); keep the success/advance logic (`584-641`) unchanged. TDD mirrors prior tasks. Commit: `feat(experience): form POST mutates in-process via gated_create, no self-fetch (#1422)`.
+
+---
+
+## Task 9: Delete the loopback machinery + `DAZZLE_BACKEND_URL`
+
+**Files:**
+- Modify: `src/dazzle/http/runtime/page_routes.py` — delete `_resolve_backend_url` (157-184), `_resolve_host_to_forward` (190-208), `_sync_fetch` (100-122), `_fetch_url` (125-152), `_fetch_json` (211-236), and the `effective_backend_url`/`host` fields of `_PageRequestContext` (647-651) + their construction in `_page_handler` (2115-2132).
+- Modify: `src/dazzle/http/runtime/experience_routes.py` — delete `_sync_post` (35-52), `_proxy_to_backend` (55-77), `_resolve_backend_url` import/use (517).
+- Delete: `tests/unit/test_page_route_internal_fetch_host_1421.py`; prune the `DAZZLE_BACKEND_URL` cases in `tests/unit/test_url_consistency.py:589-649`.
+- Grep gate: `grep -rn "DAZZLE_BACKEND_URL\|_resolve_backend_url\|_fetch_json\|_proxy_to_backend" src/ tests/` returns nothing.
+
+- [ ] **Step 1:** Verify Tasks 3/4/6/8 removed every caller — `grep -rn "_fetch_json\|_fetch_url\|_proxy_to_backend\|effective_backend_url" src/dazzle/http/runtime/` returns only the definitions about to be deleted.
+- [ ] **Step 2:** Delete the functions, fields, construction, and the `host`/`effective_backend_url` threading. Update `_PageRequestContext` callers.
+- [ ] **Step 3:** Delete `test_page_route_internal_fetch_host_1421.py`; remove `DAZZLE_BACKEND_URL` cases from `test_url_consistency.py`. Remove the `/ship` pinned-regression line for `test_page_route_internal_fetch_host_1421.py` if present.
+- [ ] **Step 4:** Run full gate: `ruff check src/ tests/ && mypy src/dazzle && pytest tests/ -m "not e2e" -q` and `DATABASE_URL=$TEST_DB pytest -m postgres -q`. Expected: PASS; grep gate empty.
+- [ ] **Step 5:** CHANGELOG under `### Removed` (DAZZLE_BACKEND_URL + loopback self-fetch) and `### Changed` (page layer reads/writes in-process); note the #1421 class is structurally eliminated. `/bump patch`.
+- [ ] **Step 6: Commit** `refactor(page)!: remove page→REST loopback self-fetch + DAZZLE_BACKEND_URL — in-process core only (#1422)`.
+
+---
+
+## Self-Review (completed)
+
+**Spec coverage:** §4.1 core → Tasks 1,2,5,7. §4.2 permit relocation → Tasks 2,5,7 (relocation recipes cite exact anchors). §4.3 adapters → Tasks 2–8. §5 error taxonomy → Task 1 errors + adapter mapping in 2/5/7. §6 migration order → Tasks 2→3/4→5/6→7/8→9 (matches P1–P5). §7 parity gate → `test_gated_access_parity.py`, gating every removal. §3 drop DAZZLE_BACKEND_URL → Task 9. §9 audit follow-on → out of scope (post-implementation, not a task). No gaps.
+
+**Placeholder scan:** Tasks 1–2 carry full code; Tasks 3–9 carry exact anchors + relocation recipes + concrete signatures (the body is being *moved* from a cited line range, so the anchor is the source of truth — not a placeholder). The parity test is concrete.
+
+**Type consistency:** `gated_read/list/create/update/delete` signatures, `AccessContext` fields, and `AccessForbidden`/`RecordNotFound` names are consistent across Tasks 1–9. Permit-denied is 404 for READ (opaque) and 403 for LIST/writes — matched to current REST behavior per task.
