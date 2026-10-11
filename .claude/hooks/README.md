@@ -64,7 +64,8 @@ camelCase payloads.
 | `subagent_context.py` | Three-line live orientation (branch, dirty count, toolchain rule). AGENTS.md already reaches subagents; this adds only live state |
 | `subagent_stop.py` | `ruff check` `.py` files modified in the last 2 min under `src/ tests/ scripts/` |
 | `compact_context.py` | Preserve branch, HEAD, and `git status --porcelain` across compaction |
-| `worktree_setup.sh` | `uv sync --frozen` with the dev extras in a new worktree (never pip/venv) |
+| `worktree_setup.sh` | **Creates** the worktree (`.claude/worktrees/<name>`, branch `worktree-<name>`, from current HEAD — the harness does not create it when a hook exists), runs `uv sync --frozen` with the dev extras, copies `.env*`, prints the path as the last stdout line |
+| `worktree_remove.sh` | Removes the worktree directory and its `worktree-<name>` branch (the harness deletes neither) |
 | `session_cleanup.sh` | Prune `.dazzle/tmp`, log session end |
 
 ## Compatibility notes

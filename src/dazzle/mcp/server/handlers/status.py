@@ -13,7 +13,7 @@ from dazzle._version import get_version
 from dazzle.core.manifest import load_manifest
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
 from dazzle.core.version_cognition import framework_version_cognition
-from dazzle.db.connection import resolve_db_url
+from dazzle.db.connection import resolve_live_project_db_url
 from dazzle.demo_data.test_mode_load import demo_ops_playbook
 from dazzle.mcp.semantics_kb import get_mcp_version
 from dazzle.product_quality.persona_homes import (
@@ -125,7 +125,7 @@ def get_demo_world_handler(project_path: Path, args: dict[str, Any]) -> str:
 
 def _safe_db_url(root: Path) -> str:
     try:
-        return resolve_db_url(project_root=root)
+        return resolve_live_project_db_url(root)
     except (OSError, ValueError, TypeError, RuntimeError, KeyError):
         logger.debug("demo_world db resolve failed", exc_info=True)
         return ""

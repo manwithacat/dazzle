@@ -33,7 +33,7 @@ def test_policy_consolidated_map_includes_access_matrix() -> None:
 
 
 def test_project_local_db_url_prefers_runtime_json(tmp_path: Path) -> None:
-    from dazzle.db.connection import resolve_db_url
+    from dazzle.db.connection import resolve_live_project_db_url
 
     daz = tmp_path / ".dazzle"
     daz.mkdir()
@@ -46,7 +46,7 @@ def test_project_local_db_url_prefers_runtime_json(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    url = resolve_db_url(project_root=tmp_path)
+    url = resolve_live_project_db_url(tmp_path)
     assert "app_live_db" in url
     assert "secret" in url  # raw for connection; masked only in MCP payloads
 
@@ -54,7 +54,7 @@ def test_project_local_db_url_prefers_runtime_json(tmp_path: Path) -> None:
 def test_project_local_db_url_prefers_dotenv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from dazzle.db.connection import resolve_db_url
+    from dazzle.db.connection import resolve_live_project_db_url
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
     (tmp_path / ".env").write_text(
@@ -63,7 +63,7 @@ def test_project_local_db_url_prefers_dotenv(
     )
     # Ambient wrong DB must not win over project .env
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/ambient_wrong")
-    url = resolve_db_url(project_root=tmp_path)
+    url = resolve_live_project_db_url(tmp_path)
     assert "from_dotenv" in url
 
 

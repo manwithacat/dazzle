@@ -1,6 +1,6 @@
 {
-  "src_lines": 476741,
-  "test_lines": 425935,
+  "src_lines": 476824,
+  "test_lines": 426049,
   "docs_lines": 352450,
   "construct_count": 57,
   "written": "2026-10-11",
@@ -12,6 +12,14 @@
         "docs_lines"
       ],
       "reason": "Phase 0 bootstrap: baseline written before docs generate linked the inventory page and ruff formatted the gate"
+    },
+    {
+      "date": "2026-10-11",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "consumer bug fix #1775 (+src/+tests); slack to be recovered by the Phase 1 harness retirement ship"
     }
   ]
 }

@@ -205,8 +205,20 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/worktree_setup.sh",
+            "timeout": 300,
+            "statusMessage": "Creating worktree + uv sync..."
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/worktree_remove.sh",
             "timeout": 60,
-            "statusMessage": "Setting up worktree environment..."
+            "statusMessage": "Removing worktree..."
           }
         ]
       }

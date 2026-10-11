@@ -244,3 +244,32 @@ def clear_runtime_file(project_root: Path) -> None:
     runtime_file = project_root / ".dazzle" / "runtime.json"
     if runtime_file.exists():
         runtime_file.unlink()
+
+
+def register_runtime_file_cleanup(project_root: Path) -> None:
+    """Remove ``runtime.json`` when this ``dazzle serve`` process exits (#1775).
+
+    ``runtime.json`` carries the live ``database_url``; a copy that outlives the
+    server mis-describes the project. ``atexit`` covers normal exit and Ctrl-C
+    (``KeyboardInterrupt`` unwinds through the interpreter's exit path). A plain
+    ``SIGTERM`` (``kill``, process managers) would otherwise terminate without
+    running ``atexit``, so when no handler is installed it is turned into
+    ``SystemExit`` — uvicorn installs its own handler while serving and re-raises
+    the captured signal after graceful shutdown, which then lands here.
+    ``SIGKILL`` cannot be intercepted; stale files are still never read as the
+    ``dazzle db`` target.
+    """
+    import atexit
+    import signal
+    import threading
+
+    atexit.register(clear_runtime_file, project_root)
+
+    if threading.current_thread() is not threading.main_thread():
+        return
+    if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+        signal.signal(signal.SIGTERM, _sigterm_to_system_exit)
+
+
+def _sigterm_to_system_exit(signum: int, _frame: object) -> None:
+    raise SystemExit(128 + signum)

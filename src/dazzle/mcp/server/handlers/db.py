@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from dazzle.db.connection import resolve_db_url
+from dazzle.db.connection import resolve_live_project_db_url
 from dazzle.db.status import db_status_impl
 from dazzle.db.verify import db_verify_impl
 
@@ -16,10 +16,10 @@ from .common import extract_progress, load_project_appspec, wrap_async_handler_e
 
 
 async def get_connection(*, project_root: Path) -> Any:
-    """Get a psycopg3 async connection for the project."""
+    """Get a psycopg3 async connection to the project's live database (#1629 G2)."""
     from dazzle.db.connection import get_connection as _get_conn
 
-    return await _get_conn(project_root=project_root)
+    return await _get_conn(explicit_url=resolve_live_project_db_url(project_root))
 
 
 def _mask_db_url(url: str) -> str:
@@ -45,7 +45,7 @@ async def db_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     appspec = load_project_appspec(project_path)
     entities = appspec.domain.entities
 
-    resolved_url = resolve_db_url(project_root=project_path)
+    resolved_url = resolve_live_project_db_url(project_path)
     conn = await get_connection(project_root=project_path)
     try:
         result = await db_status_impl(entities=entities, conn=conn)

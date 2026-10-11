@@ -13,7 +13,7 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 from rich.console import Console
@@ -24,6 +24,9 @@ from dazzle.core.ir import TenancyMode
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.fk_graph import FKGraph
 
+if TYPE_CHECKING:
+    from dazzle.db.connection import DbTarget
+
 logger = logging.getLogger(__name__)
 
 db_app = typer.Typer(
@@ -32,6 +35,17 @@ db_app = typer.Typer(
 )
 
 console = Console()
+
+#: Shared ``--database-url`` option for every ``dazzle db`` subcommand that
+#: targets a database. Precedence (#1775): this flag > ``DATABASE_URL`` env >
+#: manifest resolution — never ``.dazzle/runtime.json``.
+DatabaseUrlOption = Annotated[
+    str,
+    typer.Option(
+        "--database-url",
+        help="Target database URL (overrides DATABASE_URL and dazzle.toml).",
+    ),
+]
 
 
 def _get_framework_alembic_dir() -> Path:
@@ -54,7 +68,7 @@ def _get_project_versions_dir() -> Path:
     return versions_dir
 
 
-def _get_alembic_cfg() -> Any:
+def _get_alembic_cfg(database_url: str = "") -> Any:
     """Build an Alembic Config with framework env.py + project-local versions.
 
     The framework's alembic directory provides env.py, migration template,
@@ -83,10 +97,11 @@ def _get_alembic_cfg() -> Any:
         "version_locations", os.pathsep.join([framework_versions, project_versions])
     )
 
-    # Override sqlalchemy.url from resolved database URL
-    url = _resolve_url("")
-    if url:
-        cfg.set_main_option("sqlalchemy.url", url)
+    # Override sqlalchemy.url from the resolved target (#1775: flag > env > manifest).
+    target = _resolve_target(database_url)
+    if target.url:
+        cfg.set_main_option("sqlalchemy.url", target.url)
+    cfg.attributes["dazzle_db_target_source"] = target.source
 
     return cfg
 
@@ -643,6 +658,7 @@ def upgrade_command(
         help="Skip applying RLS policies after the upgrade (apply them separately "
         "with `dazzle db apply-rls`).",
     ),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Apply pending migrations (upgrade to target revision).
 
@@ -654,11 +670,13 @@ def upgrade_command(
     """
     from alembic import command
 
-    cfg = _get_alembic_cfg()
-    # #1308: surface the target DB so a misresolved connection (the bug that
-    # made `upgrade` silently hit the wrong database) is immediately visible.
+    cfg = _get_alembic_cfg(database_url)
+    # #1308/#1775: surface the target DB *and which source won* so a misresolved
+    # connection (the bug that made `upgrade` silently hit the wrong database)
+    # is immediately visible.
     target = cfg.get_main_option("sqlalchemy.url") or ""
-    console.print(f"[dim]Target database: {_redact_url(target)}[/dim]")
+    source = cfg.attributes.get("dazzle_db_target_source", "")
+    console.print(f"[dim]Target database: {_redact_url(target)} (from {source})[/dim]")
 
     try:
         revision = _guard_single_head(cfg, revision) or revision
@@ -1067,26 +1085,32 @@ def downgrade_command(
         "-1",
         help="Target revision (default: -1 for one step back)",
     ),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Rollback migrations (downgrade to target revision)."""
+    _downgrade(revision, database_url, done="Downgraded to", failed="Downgrade failed")
+
+
+def _downgrade(revision: str, database_url: str, *, done: str, failed: str) -> None:
+    """Shared body of ``db downgrade`` / ``db rollback``."""
     from alembic import command
 
-    cfg = _get_alembic_cfg()
+    cfg = _get_alembic_cfg(database_url)
 
     try:
         command.downgrade(cfg, revision)
-        console.print(f"[green]Downgraded to: {revision}[/green]")
+        console.print(f"[green]{done}: {revision}[/green]")
     except Exception as e:
-        console.print(f"[red]Downgrade failed: {e}[/red]")
+        console.print(f"[red]{failed}: {e}[/red]")
         raise typer.Exit(1)
 
 
 @db_app.command(name="current")
-def current_command() -> None:
+def current_command(database_url: DatabaseUrlOption = "") -> None:
     """Show the current migration revision."""
     from alembic import command
 
-    cfg = _get_alembic_cfg()
+    cfg = _get_alembic_cfg(database_url)
 
     try:
         command.current(cfg, verbose=True)
@@ -1103,11 +1127,12 @@ def history_command(
         "-v",
         help="Show detailed history",
     ),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Show migration history."""
     from alembic import command
 
-    cfg = _get_alembic_cfg()
+    cfg = _get_alembic_cfg(database_url)
 
     try:
         command.history(cfg, verbose=verbose)
@@ -1120,7 +1145,7 @@ def history_command(
 def audit_atomic_command(
     flow: str = typer.Option("", "--flow", help="Filter by atomic flow name"),
     limit: int = typer.Option(50, "--limit", help="Max rows to show"),
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Show strict in-transaction atomic-flow audit rows (#1317).
 
@@ -1164,6 +1189,7 @@ def stamp_command(
         ...,
         help="Revision to stamp (e.g. 'head' or a specific revision hash)",
     ),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Mark a revision as applied without running its migration.
 
@@ -1172,7 +1198,7 @@ def stamp_command(
     """
     from alembic import command
 
-    cfg = _get_alembic_cfg()
+    cfg = _get_alembic_cfg(database_url)
 
     try:
         command.stamp(cfg, revision)
@@ -1184,7 +1210,7 @@ def stamp_command(
 
 @db_app.command(name="baseline")
 def baseline_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     apply: bool = typer.Option(
         False,
         "--apply",
@@ -1216,10 +1242,7 @@ def baseline_command(
     """
     from alembic import command
 
-    cfg = _get_alembic_cfg()
-    url = _resolve_url(database_url)
-    if url:
-        cfg.set_main_option("sqlalchemy.url", url)
+    cfg = _get_alembic_cfg(database_url)
 
     # Drive the snapshot-diff engine in baseline mode (empty prev, framework
     # tables excluded). env.py's directive hook reads these and stashes the
@@ -1303,7 +1326,7 @@ def baseline_command(
 
 @db_app.command(name="migrate")
 def migrate_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     check: bool = typer.Option(
         False,
@@ -1330,10 +1353,7 @@ def migrate_command(
     """
     from alembic import command
 
-    cfg = _get_alembic_cfg()
-    url = _resolve_url(database_url)
-    if url:
-        cfg.set_main_option("sqlalchemy.url", url)
+    cfg = _get_alembic_cfg(database_url)
 
     # Generate via the snapshot-diff engine (DSL-vs-snapshot), like `db revision`.
     cfg.attributes["dazzle_use_engine"] = True
@@ -1433,7 +1453,7 @@ def rollback_command_wrapper(
         "-1",
         help="Target revision or steps back (default: -1)",
     ),
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
 ) -> None:
     """Revert the last migration (or to a specific revision).
 
@@ -1442,19 +1462,7 @@ def rollback_command_wrapper(
         dazzle db rollback -2          # Undo last 2 migrations
         dazzle db rollback abc123      # Downgrade to specific revision
     """
-    from alembic import command
-
-    cfg = _get_alembic_cfg()
-    url = _resolve_url(database_url)
-    if url:
-        cfg.set_main_option("sqlalchemy.url", url)
-
-    try:
-        command.downgrade(cfg, revision)
-        console.print(f"[green]Rolled back to: {revision}[/green]")
-    except Exception as e:
-        console.print(f"[red]Rollback failed: {e}[/red]")
-        raise typer.Exit(1)
+    _downgrade(revision, database_url, done="Rolled back to", failed="Rollback failed")
 
 
 async def _run_with_connection(
@@ -1548,8 +1556,8 @@ def _default_db_env(project_root: Path) -> str:
     return candidate if candidate in manifest.environments else ""
 
 
-def _resolve_url(database_url: str) -> str:
-    """Resolve database URL from flag, env, or manifest.
+def _resolve_target(database_url: str) -> "DbTarget":
+    """Resolve the target database and its source: flag > ``DATABASE_URL`` > manifest.
 
     Loads ``<cwd>/.env`` before resolution so per-project DATABASE_URL
     values take effect without the user having to export them in their
@@ -1559,26 +1567,34 @@ def _resolve_url(database_url: str) -> str:
     When no environment is explicitly selected (`--env` / ``DAZZLE_ENV``),
     falls back to the app's default environment profile (#1308 — see
     ``_default_db_env``) so db commands hit the same database as `serve`.
+
+    Never reads ``.dazzle/runtime.json`` (#1775) — that file is a running
+    server's port/secret discovery and outlives it.
     """
     from dazzle.cli.dotenv import load_project_dotenv
     from dazzle.cli.env import get_active_env
-    from dazzle.db.connection import resolve_db_url
+    from dazzle.db.connection import resolve_db_target
 
     project_root = Path.cwd().resolve()
     load_project_dotenv(project_root)
 
     env_name = get_active_env() or _default_db_env(project_root)
 
-    return resolve_db_url(
+    return resolve_db_target(
         explicit_url=database_url,
         project_root=project_root,
         env_name=env_name,
     )
 
 
+def _resolve_url(database_url: str) -> str:
+    """Resolved target URL only (see :func:`_resolve_target`)."""
+    return _resolve_target(database_url).url
+
+
 @db_app.command(name="status")
 def status_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
@@ -1616,7 +1632,7 @@ def status_command(
 
 @db_app.command(name="verify")
 def verify_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
     fix_money: bool = typer.Option(
@@ -1831,7 +1847,7 @@ def _is_shared_schema(appspec: Any) -> bool:
 
 @db_app.command(name="apply-rls")
 def apply_rls_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Apply row-level-security policies to the database (production enforcement).
@@ -1902,7 +1918,7 @@ def apply_rls_command(
 
 @db_app.command(name="reset")
 def reset_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be truncated"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
@@ -1965,7 +1981,7 @@ def reset_command(
 
 @db_app.command(name="cleanup")
 def cleanup_command(
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
@@ -2049,7 +2065,7 @@ def cleanup_command(
 @db_app.command(name="snapshot")
 def db_snapshot_command(
     name: str = typer.Argument("baseline", help="Snapshot label (default: baseline)"),
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)"),
 ) -> None:
     """Capture a pg_dump of the project database to a .sql.gz file.
@@ -2085,7 +2101,7 @@ def db_snapshot_command(
 @db_app.command(name="restore")
 def db_restore_command(
     name: str = typer.Argument("baseline", help="Snapshot label to restore"),
-    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    database_url: DatabaseUrlOption = "",
     project: Path | None = typer.Option(None, "--project", help="Project root (default: cwd)"),
 ) -> None:
     """Restore a snapshot into the project database via pg_restore --clean."""

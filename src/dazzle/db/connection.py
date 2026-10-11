@@ -10,20 +10,84 @@ driver across the whole codebase (#1341).
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from dazzle.core.db_url import normalise_postgres_scheme
 from dazzle.core.manifest import load_manifest, resolve_database_url
 
 
-def _read_project_local_database_url(project_root: Path) -> str:
-    """Prefer live serve binding / project .env over ambient MCP process env (#1629 G2).
+class DbTarget(NamedTuple):
+    """A resolved database URL plus the source that supplied it (#1775)."""
+
+    url: str
+    source: str
+
+
+#: Source labels reported by :func:`resolve_db_target`.
+SOURCE_FLAG = "--database-url"
+SOURCE_ENV = "DATABASE_URL"
+SOURCE_MANIFEST = "manifest"
+
+
+def resolve_db_target(
+    *,
+    explicit_url: str = "",
+    project_root: Path | None = None,
+    env_name: str = "",
+) -> DbTarget:
+    """Resolve the database a ``dazzle db`` command targets, and say why.
+
+    Priority: ``explicit_url`` (``--database-url``) > ``DATABASE_URL`` env >
+    manifest resolution (an explicitly selected ``[environments.*]`` profile,
+    ``[database].url``, then the default) — see
+    :func:`dazzle.core.manifest.resolve_database_url`.
+
+    ``.dazzle/runtime.json`` is deliberately NOT consulted (#1775): it is
+    port/secret discovery for a running ``dazzle serve`` and outlives the
+    server, so letting it supply the URL made a later
+    ``DATABASE_URL=<other> dazzle db upgrade`` migrate whichever database the
+    last ``serve`` used.
+    """
+    if explicit_url:
+        return DbTarget(
+            resolve_database_url(None, explicit_url=explicit_url, env_name=env_name),
+            SOURCE_FLAG,
+        )
+
+    manifest = None
+    if project_root is not None:
+        toml_path = project_root / "dazzle.toml"
+        if toml_path.exists():
+            manifest = load_manifest(toml_path)
+
+    url = resolve_database_url(manifest, explicit_url="", env_name=env_name)
+    env_url = os.environ.get("DATABASE_URL", "")
+    if env_url and normalise_postgres_scheme(env_url) == url:
+        return DbTarget(url, SOURCE_ENV)
+    return DbTarget(url, SOURCE_MANIFEST)
+
+
+def resolve_db_url(
+    *,
+    explicit_url: str = "",
+    project_root: Path | None = None,
+    env_name: str = "",
+) -> str:
+    """Resolve the database URL (see :func:`resolve_db_target` for priority)."""
+    return resolve_db_target(
+        explicit_url=explicit_url, project_root=project_root, env_name=env_name
+    ).url
+
+
+def _read_live_serve_database_url(project_root: Path) -> str:
+    """The URL a *running* ``dazzle serve`` published, else project ``.env`` (#1629 G2).
 
     MCP often runs with monorepo cwd while ``dazzle serve`` used a different
-    ``DATABASE_URL``. Without project-local resolution, ``db.status`` reports
-    missing tables that the running app can see.
+    ``DATABASE_URL``. Read-only MCP introspection uses this so ``db.status``
+    sees the same database as the live app. ``dazzle serve`` removes
+    ``runtime.json`` on exit, so this reflects a live binding. Never used by
+    the ``dazzle db`` CLI (#1775).
     """
-
     runtime = project_root / ".dazzle" / "runtime.json"
     if runtime.is_file():
         try:
@@ -57,36 +121,14 @@ def _read_project_local_database_url(project_root: Path) -> str:
     return ""
 
 
-def resolve_db_url(
-    *,
-    explicit_url: str = "",
-    project_root: Path | None = None,
-    env_name: str = "",
-) -> str:
-    """Resolve the database URL.
+def resolve_live_project_db_url(project_root: Path) -> str:
+    """Database URL for read-only MCP introspection of a project (#1629 G2).
 
-    Priority: explicit_url > project runtime.json / .env > env profile >
-    DATABASE_URL env > dazzle.toml > default.
-
-    Project-local sources rank above ambient process ``DATABASE_URL`` so MCP
-    ``db.*`` tools bound to ``project_path`` see the same DB as a project-scoped
-    ``dazzle serve`` (#1629 G2).
+    Prefers the live ``dazzle serve`` binding / project ``.env`` over the MCP
+    process's ambient ``DATABASE_URL``; falls back to :func:`resolve_db_url`.
+    Mutating ``dazzle db`` commands must use :func:`resolve_db_target` instead.
     """
-    if explicit_url:
-        return resolve_database_url(None, explicit_url=explicit_url, env_name=env_name)
-
-    if project_root is not None:
-        local = _read_project_local_database_url(project_root)
-        if local:
-            return local
-
-    manifest = None
-    if project_root is not None:
-        toml_path = project_root / "dazzle.toml"
-        if toml_path.exists():
-            manifest = load_manifest(toml_path)
-
-    return resolve_database_url(manifest, explicit_url="", env_name=env_name)
+    return _read_live_serve_database_url(project_root) or resolve_db_url(project_root=project_root)
 
 
 async def get_connection(

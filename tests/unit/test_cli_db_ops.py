@@ -605,3 +605,49 @@ class TestSnapshotBaselineReStampGuard:
         assert result.exit_code == 0, result.output
         assert "already carries SCHEMA_SNAPSHOT" not in result.output
         mock_revision.assert_called_once()
+
+
+class TestDbUpgradeTarget:
+    """#1775: `db upgrade` targets flag > DATABASE_URL, never runtime.json, and says which."""
+
+    @pytest.mark.parametrize(
+        ("args", "expected_db", "expected_source"),
+        [
+            ([], "app_test", "DATABASE_URL"),
+            (["--database-url", "postgresql://localhost/app_flag"], "app_flag", "--database-url"),
+        ],
+        ids=["env_over_runtime_json", "flag_over_env"],
+    )
+    @patch("dazzle.cli.db._safe_current_revision", return_value="head")
+    @patch("dazzle.cli.db._validate_revision_widths")
+    @patch("dazzle.cli.db._guard_single_head", return_value="head")
+    @patch("alembic.command.upgrade")
+    def test_upgrade_target_and_source(
+        self,
+        mock_upgrade: MagicMock,
+        _guard: MagicMock,
+        _widths: MagicMock,
+        _rev: MagicMock,
+        args: list[str],
+        expected_db: str,
+        expected_source: str,
+        tmp_path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import json
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("DAZZLE_ENV", raising=False)
+        monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/app_test")
+        (tmp_path / ".dazzle").mkdir()
+        (tmp_path / ".dazzle" / "runtime.json").write_text(
+            json.dumps({"database_url": "postgresql://localhost/app_dev"})
+        )
+
+        result = runner.invoke(db_app, ["upgrade", "--no-rls", *args])
+
+        assert result.exit_code == 0, result.output
+        cfg = mock_upgrade.call_args.args[0]
+        assert cfg.get_main_option("sqlalchemy.url").endswith(f"/{expected_db}")
+        assert f"/{expected_db} (from {expected_source})" in result.output
+        assert "app_dev" not in result.output

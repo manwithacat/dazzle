@@ -16,6 +16,7 @@ import pytest
 from dazzle.cli.runtime_impl.ports import (
     PortAllocation,
     read_runtime_test_secret,
+    register_runtime_file_cleanup,
     write_runtime_file,
 )
 
@@ -42,6 +43,32 @@ class TestWriteRuntimeFile:
         write_runtime_file(tmp_path, allocation, test_secret="")
         data = json.loads((tmp_path / ".dazzle" / "runtime.json").read_text())
         assert "test_secret" not in data
+
+
+class TestServeExitCleanup:
+    """#1775: a serve that exits (atexit / Ctrl-C / SIGTERM) leaves no runtime.json."""
+
+    def test_exit_removes_runtime_file_and_sigterm_exits(
+        self, tmp_path: Path, allocation: PortAllocation, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import signal
+
+        callbacks: list[tuple[object, tuple[object, ...]]] = []
+        monkeypatch.setattr("atexit.register", lambda fn, *a: callbacks.append((fn, a)))
+        previous = signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        try:
+            write_runtime_file(tmp_path, allocation, database_url="postgresql://h/app_dev")
+            register_runtime_file_cleanup(tmp_path)
+            handler = signal.getsignal(signal.SIGTERM)
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+
+        assert callable(handler)
+        with pytest.raises(SystemExit):  # SIGTERM unwinds through atexit
+            handler(signal.SIGTERM, None)
+        for fn, args in callbacks:
+            fn(*args)  # type: ignore[operator]
+        assert not (tmp_path / ".dazzle" / "runtime.json").exists()
 
 
 class TestReadRuntimeTestSecret:

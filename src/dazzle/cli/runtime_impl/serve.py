@@ -11,7 +11,6 @@ Port Allocation:
     Override with --port and --api-port for explicit control.
 """
 
-import atexit
 import http.server
 import os
 import socketserver
@@ -38,8 +37,8 @@ from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
 
 from .ports import (
     PortAllocation,
-    clear_runtime_file,
     find_available_ports,
+    register_runtime_file_cleanup,
     write_runtime_file,
 )
 from .production import configure_production_logging, validate_production_env
@@ -398,10 +397,7 @@ def _allocate_ports_and_runtime(ctx: _ServeContext) -> None:
         database_url=os.environ.get("DATABASE_URL") or getattr(ctx, "database_url", None),
     )
 
-    def cleanup_runtime() -> None:
-        clear_runtime_file(ctx.project_root)
-
-    atexit.register(cleanup_runtime)
+    register_runtime_file_cleanup(ctx.project_root)
 
     if ctx.watch_source:
         ctx.watch = True
