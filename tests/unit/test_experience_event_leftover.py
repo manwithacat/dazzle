@@ -46,7 +46,6 @@ _ROUTES = (
     / "runtime"
     / "experience_routes.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "ops_dashboard" / "dsl" / "app.dsl"
 
 
 def _make_appspec() -> AppSpec:
@@ -201,10 +200,3 @@ def test_post_source_pins_experience_event_leftover() -> None:
     assert "leftover_honest_experience_event" in src
     assert "_experience_stay_response" in src
     assert "declared_events" in src
-
-
-def test_live_ops_dashboard_incident_response_declares_success() -> None:
-    src = _LIVE.read_text()
-    assert "experience incident_response" in src
-    assert "on success -> step investigate" in src
-    assert "on success -> step acknowledge" in src

@@ -30,7 +30,6 @@ _ROUTES = (
     Path(__file__).resolve().parents[2] / "src" / "dazzle" / "http" / "runtime" / "file_routes.py"
 )
 _SERVER = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "http" / "runtime" / "server.py"
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "project_tracker" / "dsl" / "app.dsl"
 
 
 @pytest.mark.parametrize(
@@ -176,9 +175,3 @@ def test_helper_source_pins_file_entity_leftover() -> None:
     assert 'return JSONResponse(content={"error": "invalid entity"}, status_code=400)' in routes
     assert "Response(\n            status_code=400,\n            content=" not in routes
     assert "declared_entities=_declared_entities" in _SERVER.read_text()
-
-
-def test_live_project_tracker_attachment_file() -> None:
-    dsl = _LIVE.read_text()
-    assert 'entity Attachment "Attachment":' in dsl
-    assert "file: file required" in dsl

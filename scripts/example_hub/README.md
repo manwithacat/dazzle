@@ -6,7 +6,7 @@ Local multi-host harness for evaluating Dazzle examples.
 |-----|---------|
 | `http://dazzle.local:9080/` | Fleet directory |
 | `http://simple_task.dazzle.local:9080/` | simple_task app |
-| `http://contact_manager.dazzle.local:9080/` | contact_manager app |
+| `http://support_tickets.dazzle.local:9080/` | support_tickets app |
 
 Design: `archive/docs-superpowers/specs/2026-07-21-example-eval-hub-design.md` (archived; see the `archive` branch)
 

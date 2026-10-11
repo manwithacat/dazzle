@@ -2,7 +2,7 @@
 
 ## Claim
 
-Keystone example: **shared_schema tenancy**, invoice state machine, maker-checker approvals, HLESS events, payment service. Built to surface framework friction under realistic ops load.
+Keystone example: **shared_schema tenancy**, invoice state machine, maker-checker approvals, payment service. Built to surface framework friction under realistic ops load.
 
 ## Reconstruct
 

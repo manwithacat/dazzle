@@ -12,7 +12,6 @@ from dazzle.render.fragment.region._context import RegionContext
 
 ROOT = Path(__file__).resolve().parents[2]
 SIMPLE = ROOT / "examples" / "simple_task"
-DESIGN = ROOT / "examples" / "design_studio"
 
 
 def test_carousel_emit_mounts_dz_spine() -> None:
@@ -133,26 +132,6 @@ def test_simple_task_appspec_sample_gallery_region() -> None:
     assert len(entries) >= 2
     assert getattr(entries[0], "title", None)
     assert getattr(entries[0], "caption", None) or getattr(entries[0], "body", None)
-
-
-def test_design_studio_declares_asset_carousel() -> None:
-    text = (DESIGN / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert "asset_carousel:" in text
-    assert "display: carousel" in text
-
-
-def test_design_studio_appspec_asset_carousel_region() -> None:
-    appspec = load_project_appspec(DESIGN)
-    workspaces = list(getattr(appspec, "workspaces", None) or [])
-    desk = next((w for w in workspaces if getattr(w, "name", None) == "brand_desk"), None)
-    assert desk is not None
-    regions = list(getattr(desk, "regions", None) or [])
-    by_name = {getattr(r, "name", None): r for r in regions}
-    region = by_name.get("asset_carousel")
-    assert region is not None, f"asset_carousel missing; regions={list(by_name)}"
-    display = getattr(region, "display", None)
-    display_v = getattr(display, "value", display)
-    assert display_v == "carousel"
 
 
 def test_dsl_shapes_carousel_live() -> None:

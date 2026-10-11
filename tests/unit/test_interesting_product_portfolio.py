@@ -19,12 +19,10 @@ def test_covered_from_unit_pins_parses_goal_b_names(tmp_path: Path) -> None:
     unit.mkdir()
     (unit / "test_simple_task_media_goal_b.py").write_text("# pin\n", encoding="utf-8")
     (unit / "test_hr_records_empty_region_goal_b.py").write_text("# pin\n", encoding="utf-8")
-    (unit / "test_llm_classifier_document_goal_b.py").write_text("# pin\n", encoding="utf-8")
     (unit / "test_media_thumb_goal_b.py").write_text("# framework\n", encoding="utf-8")
     covered = covered_from_unit_pins(unit_dir=unit)
     assert ("simple_task", "media") in covered
     assert ("hr_records", "empty_region_honesty") in covered
-    assert ("llm_ticket_classifier", "document") in covered
     assert not any(a == "media_thumb" for a, _ in covered)
 
 
@@ -279,50 +277,6 @@ def test_all_icon_cells_saturated_stops() -> None:
     assert any("stop" in n for n in notes)
 
 
-def test_live_fieldtest_media_not_recommended() -> None:
-    """Two exclusive photo desks saturate fieldtest media (oral #20)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["fieldtest_hub", "media"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "media")
-
-
-def test_live_domain_join_org_not_recommended() -> None:
-    """pending_joins queue saturates domain_join org (oral #26)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["domain_join_co", "org_structure"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "domain_join_co" and rec["depth_id"] == "org_structure")
-
-
-def test_live_acme_billing_document_not_recommended() -> None:
-    """Line composition + kind queues saturate acme document (peer pack)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["acme_billing", "document"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "acme_billing" and rec["depth_id"] == "document")
-
-
-def test_live_fieldtest_document_not_recommended() -> None:
-    """Protocol vs acceptance queues saturate fieldtest document (oral #25)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["fieldtest_hub", "document"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "document")
-
-
 def test_live_support_tickets_empty_region_not_recommended() -> None:
     """Staff-only context_selector saturates support empty_region (oral #24)."""
     from scripts.interesting_product_portfolio import snapshot
@@ -343,17 +297,6 @@ def test_live_support_tickets_org_not_recommended() -> None:
     rec = snap.recommend
     if rec is not None:
         assert not (rec["app"] == "support_tickets" and rec["depth_id"] == "org_structure")
-
-
-def test_live_project_tracker_empty_region_not_recommended() -> None:
-    """User identity chips saturate project_tracker empty_region (oral #27)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["project_tracker", "empty_region_honesty"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "project_tracker" and rec["depth_id"] == "empty_region_honesty")
 
 
 def test_live_hr_records_empty_region_not_recommended() -> None:
@@ -378,17 +321,6 @@ def test_live_hr_records_org_not_recommended() -> None:
         assert not (rec["app"] == "hr_records" and rec["depth_id"] == "org_structure")
 
 
-def test_live_fieldtest_conversation_not_recommended() -> None:
-    """note_kind chrome saturates fieldtest conversation (oral #22)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["fieldtest_hub", "conversation"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "fieldtest_hub" and rec["depth_id"] == "conversation")
-
-
 def test_live_invoice_ops_document_not_recommended() -> None:
     """FREEZE document_rails keeps invoice_ops/document saturated after distill."""
     from scripts.interesting_product_portfolio import snapshot
@@ -400,17 +332,6 @@ def test_live_invoice_ops_document_not_recommended() -> None:
         assert not (rec["app"] == "invoice_ops" and rec["depth_id"] == "document")
 
 
-def test_live_design_studio_media_not_recommended() -> None:
-    """Review + approved stamp pair saturates design_studio media (oral #12)."""
-    from scripts.interesting_product_portfolio import snapshot
-
-    snap = snapshot()
-    assert ["design_studio", "media"] in snap.saturated_cells
-    rec = snap.recommend
-    if rec is not None:
-        assert not (rec["app"] == "design_studio" and rec["depth_id"] == "media")
-
-
 def test_live_portfolio_status_runs() -> None:
     """Smoke against the real repo matrix (no assert on recommend identity)."""
     from scripts.interesting_product_portfolio import format_status, snapshot
@@ -418,7 +339,7 @@ def test_live_portfolio_status_runs() -> None:
     text = format_status()
     assert "interesting_product_portfolio" in text
     snap = snapshot()
-    assert len(snap.apps) >= 8
+    assert len(snap.apps) >= 4
     # Digs/.git tip history may be empty in CI — still need a coherent matrix.
     assert len(snap.covered) > 0
     # Full + saturated matrix may recommend None (stop).

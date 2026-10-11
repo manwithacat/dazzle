@@ -6,7 +6,6 @@ They are **not run in CI** — use them for local development and manual verific
 ## Contents
 
 - `test_playwright_smoke.py` — Playwright browser tests (page load, JS errors, screenshots)
-- `test_fieldtest_hub_screenshots.py` — Screenshot generation for the fieldtest_hub example
 
 ## Running Locally
 

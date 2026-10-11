@@ -13,7 +13,7 @@ Confirmed route paths (via `dazzle inspect routes --runtime`):
   /paymentattempts/{id:uuid} GET DELETE
 
   No PATCH/PUT on invoice surface routes (surface is GET/POST/DELETE only).
-  No dedicated audit-export, search, or projection routes — those vectors
+  No dedicated audit-export or search routes — those vectors
   are tested via the internal /_dazzle/ endpoints or skipped with rationale.
 """
 
@@ -149,7 +149,7 @@ async def test_admin_positive_control(app) -> None:
 
 
 # ===========================================================================
-# Step 4: Extended vectors (search / export / events / config)
+# Step 4: Extended vectors (search / export / config)
 # ===========================================================================
 
 
@@ -200,39 +200,6 @@ async def test_audit_export_excludes_other_tenant(app) -> None:
     assert app.contoso_supplier_id not in body, (
         "audit log leak: contoso supplier id visible to northwind auditor"
     )
-
-
-async def test_event_log_excludes_other_tenant(app) -> None:
-    """Northwind user querying the invoice_events topic sees no contoso tenant_id.
-
-    The projection InvoiceStatusView is not exposed as a surface route.
-    The internal events endpoint /_dazzle/events/topics/invoice_events IS
-    mounted — we probe it as a northwind requester. If the endpoint is
-    inaccessible (403/404) we skip. If accessible, contoso tenant_id must
-    be absent."""
-    client = await app.client_as("requester", "northwind")
-    resp = await client.get("/_dazzle/events/topics/invoice_events")
-    if resp.status_code in (403, 404, 500):
-        # 403/404: endpoint gated. 500: the events subsystem is not functional
-        # under the in-process ASGITransport boot — httpx.ASGITransport does
-        # not run FastAPI lifespan events, so the event store / process
-        # manager (which require REDIS_URL) are never initialised. The
-        # endpoint 500s unconditionally regardless of tenant, so it cannot
-        # be used as an isolation vector here.
-        pytest.skip(
-            f"/_dazzle/events/topics/invoice_events not testable "
-            f"(status {resp.status_code}) — events subsystem not wired under "
-            f"in-process transport (no lifespan, no REDIS_URL)"
-        )
-    assert resp.status_code == 200, (
-        f"/_dazzle/events/topics/invoice_events returned {resp.status_code}"
-    )
-    body = resp.text
-    contoso_tenant_id = app.tenant_ids.get("contoso", "")
-    if contoso_tenant_id:
-        assert contoso_tenant_id not in body, (
-            f"event log leak: contoso tenant_id {contoso_tenant_id!r} visible to northwind user"
-        )
 
 
 async def test_read_other_tenant_bank_account_is_404(app) -> None:

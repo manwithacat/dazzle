@@ -2,49 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import (
-    build_surface_columns,
-    field_kind_to_col_type,
-)
 from dazzle.http.runtime.workspace_csv import _csv_cell
 from dazzle.render.fragment.region._shared import _render_typed_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.tags_cell import clerk_tags_cell_html, clerk_tags_join, clerk_tags_tokens
-
-
-def _asset_tags_field():
-    spec = load_project(Path("examples/design_studio"))
-    asset = spec.get_entity("Asset")
-    assert asset is not None
-    tags = next(f for f in asset.fields if f.name == "tags")
-    surface = next(s for s in spec.surfaces if s.name == "asset_list")
-    return spec, asset, tags, surface
-
-
-def _task_labels_field():
-    spec = load_project(Path("examples/project_tracker"))
-    task = spec.get_entity("Task")
-    assert task is not None
-    labels = next(f for f in task.fields if f.name == "labels")
-    surface = next(s for s in spec.surfaces if s.name == "task_list")
-    return spec, task, labels, surface
-
-
-def test_asset_list_tags_are_tag_cells() -> None:
-    spec, asset, tags, surface = _asset_tags_field()
-    assert field_kind_to_col_type(tags, asset) == "tags"
-    col = next(c for c in build_surface_columns(asset, surface, spec.enums) if c["key"] == "tags")
-    assert col["type"] == "tags"
-
-
-def test_task_list_labels_are_tag_cells() -> None:
-    spec, task, labels, surface = _task_labels_field()
-    assert field_kind_to_col_type(labels, task) == "tags"
-    col = next(c for c in build_surface_columns(task, surface, spec.enums) if c["key"] == "labels")
-    assert col["type"] == "tags"
 
 
 def test_clerk_tags_split_leftover_and_empty() -> None:

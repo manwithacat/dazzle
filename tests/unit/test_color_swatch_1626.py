@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.appspec_loader import load_project_appspec
-from dazzle.http.runtime.workspace_columns import build_surface_columns
 from dazzle.render.cell_chrome import _render_color_swatch_html
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 
@@ -25,14 +21,3 @@ def test_color_swatch_rejects_non_hex() -> None:
 def test_cell_display_color_type() -> None:
     html = _render_cell_display({"type": "color", "key": "primary_color"}, "#AABBCC")
     assert "dz-color-swatch" in html
-
-
-def test_design_studio_brand_list_columns_are_color() -> None:
-    spec = load_project_appspec(Path("examples/design_studio"))
-    entity = next(e for e in spec.domain.entities if e.name == "Brand")
-    surface = next(s for s in spec.surfaces if s.name == "brand_list")
-    cols = build_surface_columns(entity, surface)
-    by = {c["key"]: c["type"] for c in cols}
-    assert by["primary_color"] == "color"
-    assert by["secondary_color"] == "color"
-    assert by["accent_color"] == "color"

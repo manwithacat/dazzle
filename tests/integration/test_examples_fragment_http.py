@@ -30,10 +30,7 @@ _EXAMPLES = _REPO_ROOT / "examples"
 
 _APPS: tuple[tuple[str, str], ...] = (
     ("simple_task", "/task"),
-    ("contact_manager", "/contact"),
     ("support_tickets", "/user"),
-    ("ops_dashboard", "/system"),
-    ("fieldtest_hub", "/device"),
 )
 
 _FRAGMENT_LIST_MARKERS: tuple[str, ...] = (

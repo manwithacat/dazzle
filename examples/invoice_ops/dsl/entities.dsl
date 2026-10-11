@@ -163,7 +163,7 @@ entity SupplierBankAccount "Supplier Bank Account":
   audit: all
 
 # =============================================================================
-# INVOICE — the lifecycle entity. State machine + event publishing live here.
+# INVOICE — the lifecycle entity. The state machine lives here.
 # =============================================================================
 
 entity Invoice "Invoice":
@@ -222,9 +222,6 @@ entity Invoice "Invoice":
     paid -> disputed: role(finance) requires dispute_reason
     disputed -> approved: role(finance)
     disputed -> rejected: role(approver) requires rejection_reason
-
-  publish InvoiceSubmitted when status changed
-  publish InvoicePaid when status changed
 
   # Goal B document peer-pack (cycle 1921): Bill.com / Melio / Tipalti put
   # dispute reason prose on disputed work rows — not status-only queue meta.

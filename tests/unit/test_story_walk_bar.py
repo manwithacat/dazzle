@@ -77,32 +77,24 @@ class TestStoryWalkBar:
             # Cycle 1278: all showcase landings live-green → residual=0 is ok.
             assert all(r.tier == "ok" for r in rows if r.landing_stories > 0)
 
-    def test_contact_manager_walks_cover_landings(self, story_bar) -> None:
-        """contact_manager dig (cycle 1260): covered landings; residual may be epistemic."""
-        row = story_bar.score_app("contact_manager")
-        assert row.walk_count >= 1
-        assert row.covered >= min(2, row.landing_stories) or row.landing_stories == 0
-        # May still residual via live_unproven / deepen — not critical no_walks
-        assert "no_walks" not in row.issues
-
     def test_scan_fleet_has_residual(self, story_bar) -> None:
         """Fleet scan is non-empty; residual may be empty after live-prove drain."""
         rows = story_bar.scan()
-        assert len(rows) >= 5
+        assert len(rows) >= 4
         residual = [r for r in rows if r.is_residual]
         if residual:
             assert residual[0].score >= residual[-1].score or residual[0].is_residual
         else:
-            # All showcase apps live-green (cycle 1278 project_tracker close-out).
+            # All showcase apps live-green.
             assert all(not r.is_residual for r in rows)
             assert story_bar.format_status(rows).startswith("story_walk apps=")
 
     def test_write_stub_creates_yaml(self, story_bar, tmp_path: Path, monkeypatch) -> None:
         # Use real support_tickets landings but write into tmp by patching EXAMPLES
-        app = "contact_manager"
+        app = "support_tickets"
         root = story_bar.EXAMPLES / app
         if not root.is_dir():
-            pytest.skip("contact_manager missing")
+            pytest.skip("support_tickets missing")
         landings = story_bar.collect_landing_stories(root)
         assert landings
         L = landings[0]
@@ -124,16 +116,3 @@ class TestTrialVerdictBar:
         assert len(rows) >= 1
         line = trial_bar.format_status(rows)
         assert "trial_verdict" in line
-
-    def test_no_toml_no_residual(self, trial_bar, tmp_path: Path) -> None:
-        # score_app only looks under EXAMPLES — use an app without trial if any
-        row = (
-            trial_bar.score_app("domain_join_co")
-            if (trial_bar.EXAMPLES / "domain_join_co").is_dir()
-            else None
-        )
-        if row is None:
-            pytest.skip("no non-showcase app")
-        # domain_join may not be in SHOWCASE; score_app still works
-        if not row.has_trial_toml:
-            assert not row.is_residual

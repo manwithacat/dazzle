@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 444,263 |
-| Test lines (`tests/`) | 409,272 |
-| Documentation lines (`docs/**/*.md`) | 50,025 |
+| Framework source lines (`src/dazzle`) | 444,168 |
+| Test lines (`tests/`) | 399,589 |
+| Documentation lines (`docs/**/*.md`) | 49,528 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
 
@@ -38,62 +38,62 @@ Counts are top-level declarations in `.dsl` files.
 | Construct | AegisMark | cyfuture | pennydreadful | examples | Disposition hint |
 |---|---:|---:|---:|---:|---|
 | `analytics` | 1 | 1 | 0 | 0 | consumer-used |
-| `app` | 1 | 1 | 1 | 13 | consumer-used |
-| `approval` | 0 | 0 | 0 | 3 | examples only |
+| `app` | 1 | 1 | 1 | 5 | consumer-used |
+| `approval` | 0 | 0 | 0 | 2 | examples only |
 | `archetype` | 3 | 0 | 0 | 2 | consumer-used |
 | `asset` | 0 | 0 | 0 | 0 | unused |
 | `atomic` | 0 | 0 | 0 | 0 | unused |
 | `audit` | 0 | 0 | 0 | 2 | examples only |
-| `channel` | 0 | 0 | 0 | 6 | examples only |
+| `channel` | 0 | 0 | 0 | 3 | examples only |
 | `data_products` | 0 | 0 | 0 | 0 | unused |
 | `demo` | 0 | 0 | 0 | 0 | unused |
 | `document` | 0 | 0 | 0 | 0 | unused |
-| `entity` | 68 | 60 | 41 | 74 | consumer-used |
-| `enum` | 0 | 0 | 0 | 1 | examples only |
-| `event_model` | 0 | 0 | 0 | 3 | examples only |
-| `experience` | 0 | 2 | 3 | 1 | consumer-used |
-| `feedback_widget` | 0 | 1 | 0 | 4 | consumer-used |
+| `entity` | 68 | 60 | 41 | 28 | consumer-used |
+| `enum` | 0 | 0 | 0 | 0 | unused |
+| `event_model` | 0 | 0 | 0 | 1 | examples only |
+| `experience` | 0 | 2 | 3 | 0 | consumer-used |
+| `feedback_widget` | 0 | 1 | 0 | 2 | consumer-used |
 | `flow` | 0 | 0 | 0 | 0 | unused |
-| `foreign_model` | 0 | 34 | 0 | 1 | consumer-used |
+| `foreign_model` | 0 | 34 | 0 | 0 | consumer-used |
 | `grant_schema` | 2 | 5 | 0 | 0 | consumer-used |
-| `guide` | 0 | 2 | 2 | 30 | consumer-used |
+| `guide` | 0 | 2 | 2 | 13 | consumer-used |
 | `hless` | 0 | 0 | 0 | 0 | unused |
 | `ingest` | 0 | 0 | 0 | 0 | unused |
-| `integration` | 0 | 2 | 0 | 1 | consumer-used |
+| `integration` | 0 | 2 | 0 | 0 | consumer-used |
 | `interfaces` | 0 | 0 | 0 | 0 | unused |
 | `island` | 0 | 2 | 0 | 1 | consumer-used |
-| `job` | 0 | 0 | 0 | 4 | examples only |
-| `ledger` | 0 | 0 | 0 | 2 | examples only |
-| `llm_config` | 1 | 0 | 1 | 3 | consumer-used |
-| `llm_intent` | 5 | 0 | 6 | 12 | consumer-used |
-| `llm_model` | 2 | 0 | 3 | 7 | consumer-used |
-| `message` | 0 | 0 | 0 | 10 | examples only |
-| `nav` | 10 | 6 | 5 | 35 | consumer-used |
+| `job` | 0 | 0 | 0 | 0 | unused |
+| `ledger` | 0 | 0 | 0 | 0 | unused |
+| `llm_config` | 1 | 0 | 1 | 2 | consumer-used |
+| `llm_intent` | 5 | 0 | 6 | 8 | consumer-used |
+| `llm_model` | 2 | 0 | 3 | 4 | consumer-used |
+| `message` | 0 | 0 | 0 | 5 | examples only |
+| `nav` | 10 | 6 | 5 | 17 | consumer-used |
 | `notification` | 0 | 0 | 0 | 0 | unused |
 | `param` | 5 | 32 | 0 | 0 | consumer-used |
-| `persona` | 10 | 6 | 5 | 44 | consumer-used |
+| `persona` | 10 | 6 | 5 | 20 | consumer-used |
 | `policies` | 1 | 0 | 0 | 0 | consumer-used |
-| `process` | 0 | 1 | 0 | 14 | consumer-used |
-| `projection` | 0 | 0 | 0 | 1 | examples only |
+| `process` | 0 | 1 | 0 | 9 | consumer-used |
+| `projection` | 0 | 0 | 0 | 0 | unused |
 | `question` | 0 | 0 | 0 | 0 | unused |
-| `rhythm` | 3 | 2 | 0 | 4 | consumer-used |
+| `rhythm` | 3 | 2 | 0 | 1 | consumer-used |
 | `rule` | 0 | 0 | 0 | 0 | unused |
-| `scenario` | 26 | 3 | 0 | 11 | consumer-used |
+| `scenario` | 26 | 3 | 0 | 9 | consumer-used |
 | `schedule` | 0 | 8 | 0 | 4 | consumer-used |
-| `search` | 1 | 0 | 0 | 1 | consumer-used |
-| `service` | 0 | 11 | 0 | 16 | consumer-used |
+| `search` | 1 | 0 | 0 | 0 | consumer-used |
+| `service` | 0 | 11 | 0 | 15 | consumer-used |
 | `sla` | 0 | 8 | 0 | 1 | consumer-used |
-| `story` | 62 | 214 | 16 | 128 | consumer-used |
+| `story` | 62 | 214 | 16 | 45 | consumer-used |
 | `stream` | 0 | 0 | 0 | 0 | unused |
 | `subprocessor` | 4 | 0 | 0 | 0 | consumer-used |
-| `subscribe` | 0 | 0 | 0 | 4 | examples only |
-| `surface` | 234 | 219 | 46 | 258 | consumer-used |
+| `subscribe` | 0 | 0 | 0 | 2 | examples only |
+| `surface` | 234 | 219 | 46 | 98 | consumer-used |
 | `template` | 0 | 0 | 0 | 0 | unused |
-| `tenancy` | 1 | 1 | 0 | 3 | consumer-used |
+| `tenancy` | 1 | 1 | 0 | 2 | consumer-used |
 | `test` | 0 | 0 | 0 | 0 | unused |
-| `transaction` | 0 | 0 | 0 | 1 | examples only |
-| `webhook` | 0 | 0 | 0 | 1 | examples only |
-| `workspace` | 32 | 7 | 4 | 91 | consumer-used |
+| `transaction` | 0 | 0 | 0 | 0 | unused |
+| `webhook` | 0 | 0 | 0 | 0 | unused |
+| `workspace` | 32 | 7 | 4 | 35 | consumer-used |
 
 **Zero consumer use:** `approval`, `asset`, `atomic`, `audit`, `channel`, `data_products`, `demo`, `document`, `enum`, `event_model`, `flow`, `hless`, `ingest`, `interfaces`, `job`, `ledger`, `message`, `notification`, `projection`, `question`, `rule`, `stream`, `subscribe`, `template`, `test`, `transaction`, `webhook`
 
@@ -103,48 +103,48 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 132,289 | 652 |
+| `http` | 132,289 | 649 |
 | `core` | 96,887 | 2,097 |
-| `mcp` | 40,273 | 6,382 |
-| `render` | 32,981 | 6,157 |
-| `cli` | 32,753 | 9,775 |
+| `mcp` | 40,207 | 6,382 |
+| `render` | 32,981 | 6,130 |
+| `cli` | 32,753 | 9,771 |
 | `testing` | 27,704 | 68 |
-| `page` | 14,233 | 2,599 |
+| `page` | 14,233 | 2,501 |
 | `agent` | 10,845 | 9,373 |
-| `qa` | 7,506 | 3,431 |
+| `qa` | 7,501 | 3,214 |
 | `sentinel` | 7,252 | 563 |
 | `db` | 4,404 | 3,779 |
 | `compliance` | 4,286 | 1,417 |
-| `rbac` | 4,243 | 7,853 |
+| `rbac` | 4,243 | 7,242 |
 | `demo_data` | 2,159 | 814 |
-| `signing` | 2,143 | 2,249 |
+| `signing` | 2,143 | 1,969 |
 | `layout` | 1,877 | 2,723 |
 | `conformance` | 1,760 | 4,567 |
-| `llm` | 1,718 | 3,490 |
+| `llm` | 1,718 | 3,046 |
 | `lsp` | 1,632 | 665 |
 | `services` | 1,632 | 274 |
 | `agent_loop` | 1,542 | 154 |
-| `product_quality` | 1,536 | 293 |
+| `product_quality` | 1,512 | 283 |
 | `perf` | 1,217 | 2,357 |
 | `specs` | 1,149 | 466 |
-| `e2e` | 1,095 | 2,440 |
+| `e2e` | 1,095 | 1,865 |
 | `i18n` | 1,086 | 851 |
 | `api_kb` | 1,065 | 552 |
 | `representation` | 1,024 | 279 |
 | `api_surface` | 989 | 160 |
 | `notifications` | 900 | 0 |
 | `docs_update` | 886 | 599 |
-| `examples` | 571 | 1,052 |
-| `tenant` | 537 | 6,998 |
+| `examples` | 571 | 848 |
+| `tenant` | 537 | 6,965 |
 | `stubs` | 517 | 0 |
 | `fitness` | 490 | 186 |
 | `deploy` | 194 | 671 |
 | `seed` | 126 | 1,357 |
-| `quality` | 85 | 761 |
+| `quality` | 85 | 751 |
 | `documents` | 0 | 0 |
 | `domain_brief` | 0 | 0 |
 | `pitch` | 0 | 0 |
-| `risk` | 0 | 196 |
+| `risk` | 0 | 171 |
 | `spec_narrative` | 0 | 0 |
 | `templates` | 0 | 912 |
 
@@ -202,9 +202,9 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `analytics` | 0 | 0 | 0 | 0 |  |
 | `analyze-spec` | 0 | 0 | 0 | 0 |  |
 | `api-pack` | 0 | 0 | 0 | 0 |  |
-| `auth` | 26 | 1 | 1 | 4 | `connection`, `create-user`, `impersonate`, `migrate` |
+| `auth` | 26 | 1 | 1 | 2 | `connection`, `create-user`, `impersonate`, `migrate` |
 | `backup` | 0 | 0 | 0 | 0 |  |
-| `build` | 0 | 0 | 0 | 3 |  |
+| `build` | 0 | 0 | 0 | 2 |  |
 | `build-api` | 0 | 4 | 0 | 0 |  |
 | `build-css` | 0 | 0 | 0 | 0 |  |
 | `build-ui` | 0 | 0 | 0 | 1 |  |
@@ -212,7 +212,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `check` | 0 | 0 | 0 | 0 |  |
 | `clean` | 0 | 0 | 0 | 0 |  |
 | `commands` | 0 | 0 | 0 | 2 |  |
-| `compliance` | 3 | 2 | 0 | 17 | `compile`, `evidence`, `gaps`, `privacy` |
+| `compliance` | 3 | 2 | 0 | 6 | `compile`, `privacy` |
 | `composition` | 0 | 0 | 0 | 0 |  |
 | `conformance` | 0 | 0 | 0 | 0 |  |
 | `coverage` | 1 | 0 | 0 | 0 |  |
@@ -248,16 +248,16 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `process` | 0 | 0 | 0 | 0 |  |
 | `process-migrate` | 0 | 0 | 0 | 0 |  |
 | `prove` | 0 | 0 | 0 | 3 | `representation`, `story` |
-| `qa` | 2 | 10 | 0 | 6 | `login`, `taste-panel`, `trial`, `trial-hypotheses` |
+| `qa` | 2 | 10 | 0 | 3 | `login`, `taste-panel`, `trial`, `trial-hypotheses` |
 | `quality` | 0 | 0 | 0 | 0 |  |
-| `rbac` | 12 | 5 | 0 | 1 | `matrix`, `prove`, `routes` |
+| `rbac` | 12 | 5 | 0 | 0 | `matrix`, `prove`, `routes` |
 | `representation` | 0 | 0 | 0 | 0 |  |
 | `rhythm` | 0 | 0 | 0 | 0 |  |
 | `scaffold` | 1 | 1 | 0 | 1 |  |
 | `schema` | 0 | 0 | 0 | 0 |  |
 | `search` | 0 | 0 | 0 | 0 |  |
 | `sentinel` | 2 | 3 | 0 | 0 | `scan` |
-| `serve` | 103 | 11 | 44 | 33 |  |
+| `serve` | 103 | 11 | 44 | 20 |  |
 | `signing` | 1 | 0 | 0 | 0 | `init` |
 | `spec` | 0 | 0 | 0 | 0 |  |
 | `specs` | 0 | 0 | 0 | 0 |  |
@@ -265,13 +265,13 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `stubs` | 0 | 0 | 0 | 0 |  |
 | `sweep` | 0 | 0 | 0 | 0 |  |
 | `tenant` | 0 | 5 | 0 | 0 | `create` |
-| `test` | 9 | 62 | 0 | 8 | `agent`, `coverage`, `create-sessions`, `diff-personas`, `dsl-run`, `generate`, `pack`, `populate`, `run`, `tier2-generate`, `verify-story`, `walk` |
+| `test` | 9 | 62 | 0 | 5 | `agent`, `coverage`, `create-sessions`, `diff-personas`, `dsl-run`, `generate`, `pack`, `populate`, `run`, `tier2-generate`, `verify-story`, `walk` |
 | `test-design` | 0 | 0 | 0 | 0 |  |
 | `theme` | 0 | 0 | 0 | 0 |  |
-| `ux` | 63 | 12 | 5 | 1 | `explore`, `maturity`, `verify` |
-| `validate` | 46 | 129 | 89 | 21 |  |
+| `ux` | 63 | 12 | 5 | 0 | `explore`, `maturity`, `verify` |
+| `validate` | 46 | 129 | 89 | 15 |  |
 | `version` | 0 | 0 | 0 | 0 |  |
-| `vocab` | 0 | 0 | 0 | 25 | `expand`, `list`, `show` |
+| `vocab` | 0 | 0 | 0 | 16 | `expand`, `list`, `show` |
 | `worker` | 1 | 0 | 0 | 0 |  |
 
 ## Framework modules imported × consumers
@@ -287,11 +287,9 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `dazzle.core` | 0 | 0 | 3 | 0 |
 | `dazzle.core.access` | 1 | 0 | 0 | 0 |
 | `dazzle.core.appspec_loader` | 4 | 3 | 2 | 0 |
-| `dazzle.core.demo_blueprint_persistence` | 0 | 0 | 0 | 1 |
 | `dazzle.core.environment` | 2 | 0 | 0 | 0 |
 | `dazzle.core.ir` | 9 | 5 | 0 | 0 |
 | `dazzle.core.validator` | 1 | 0 | 0 | 0 |
-| `dazzle.demo_data.blueprint_generator` | 0 | 0 | 0 | 1 |
 | `dazzle.http` | 2 | 0 | 0 | 0 |
 | `dazzle.http.runtime` | 78 | 159 | 9 | 0 |
 | `dazzle.i18n.display_locale` | 0 | 2 | 0 | 0 |
@@ -304,7 +302,7 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `dazzle.render.fragment` | 13 | 9 | 7 | 0 |
 | `dazzle.render.onboarding` | 0 | 0 | 1 | 0 |
 | `dazzle.seed.generator` | 0 | 1 | 0 | 0 |
-| `dazzle.signing` | 0 | 0 | 0 | 2 |
+| `dazzle.signing` | 0 | 0 | 0 | 1 |
 | `dazzle.signing.tokens` | 1 | 1 | 0 | 0 |
 | `dazzle.tenant` | 1 | 0 | 0 | 0 |
 | `dazzle.tenant.cache_registry` | 1 | 0 | 0 | 0 |
@@ -325,23 +323,21 @@ Number of `dazzle.toml` files declaring each top-level table (`[[auth.oauth_prov
 | Section | AegisMark | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `audit` | 1 | 0 | 0 | 0 |
-| `auth` | 1 | 1 | 0 | 12 |
+| `auth` | 1 | 1 | 0 | 4 |
 | `database` | 0 | 0 | 1 | 0 |
-| `dsl` | 0 | 0 | 0 | 1 |
 | `environments` | 1 | 1 | 1 | 0 |
 | `extensions` | 0 | 0 | 1 | 0 |
-| `fileset` | 1 | 0 | 0 | 1 |
-| `llm` | 0 | 0 | 0 | 12 |
-| `modules` | 0 | 1 | 1 | 10 |
-| `project` | 1 | 1 | 1 | 12 |
+| `fileset` | 1 | 0 | 0 | 0 |
+| `llm` | 0 | 0 | 0 | 4 |
+| `modules` | 0 | 1 | 1 | 4 |
+| `project` | 1 | 1 | 1 | 4 |
 | `renderers` | 1 | 0 | 1 | 0 |
 | `serve` | 0 | 0 | 1 | 0 |
 | `signing` | 1 | 0 | 0 | 0 |
-| `stack` | 1 | 1 | 0 | 12 |
+| `stack` | 1 | 1 | 0 | 4 |
 | `storage` | 1 | 0 | 0 | 0 |
 | `tenant` | 0 | 1 | 0 | 0 |
-| `theme` | 0 | 0 | 0 | 1 |
-| `ui` | 1 | 1 | 0 | 6 |
+| `ui` | 1 | 1 | 0 | 3 |
 
 ## Framework project files × consumers
 
@@ -350,11 +346,11 @@ Files the framework reads from a project (`*spec.yaml` literals in `src/dazzle`,
 | File | AegisMark | cyfuture | pennydreadful | examples |
 |---|---:|---:|---:|---:|
 | `brandspec.yaml` | 1 | 0 | 0 | 0 |
-| `dazzle.toml` | 1 | 1 | 1 | 12 |
-| `sitespec.yaml` | 1 | 1 | 0 | 12 |
+| `dazzle.toml` | 1 | 1 | 1 | 4 |
+| `sitespec.yaml` | 1 | 1 | 0 | 4 |
 | `test_personas.toml` | 0 | 0 | 0 | 0 |
 | `themespec.yaml` | 1 | 1 | 0 | 1 |
-| `trial.toml` | 1 | 1 | 0 | 11 |
+| `trial.toml` | 1 | 1 | 0 | 4 |
 
 ## Framework endpoints referenced × consumers
 
@@ -364,17 +360,17 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 |---|---:|---:|---:|---:|
 | `2fa` | 0 | 0 | 0 | 0 |
 | `__test__` | 12 | 9 | 51 | 0 |
-| `_dazzle` | 45 | 8 | 2 | 10 |
+| `_dazzle` | 45 | 8 | 2 | 9 |
 | `_dz` | 0 | 0 | 0 | 0 |
 | `_ops` | 0 | 0 | 0 | 0 |
 | `_site` | 0 | 0 | 0 | 0 |
 | `api` | 201 | 94 | 1240 | 27 |
 | `app` | 2216 | 5967 | 74 | 41 |
-| `auth` | 129 | 135 | 71 | 1 |
+| `auth` | 129 | 135 | 71 | 0 |
 | `banner` | 0 | 0 | 0 | 0 |
 | `data` | 1 | 1 | 0 | 6 |
-| `dazzle` | 0 | 0 | 3 | 6 |
-| `devices` | 0 | 0 | 0 | 1 |
+| `dazzle` | 0 | 0 | 3 | 0 |
+| `devices` | 0 | 0 | 0 | 0 |
 | `field` | 0 | 0 | 0 | 0 |
 | `files` | 7 | 21 | 0 | 0 |
 | `forgot-password` | 0 | 1 | 0 | 0 |
@@ -443,19 +439,19 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 19,207 |
+| `docs/reference/` | 19,204 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
-| `docs/guides/` | 3,671 |
+| `docs/guides/` | 3,632 |
 | `docs/counter-priors/` | 3,108 |
 | `docs/architecture/` | 2,608 |
 | `docs/evaluation/` | 1,662 |
-| `docs/contributing/` | 1,411 |
-| `docs/examples/` | 819 |
+| `docs/contributing/` | 1,374 |
 | `docs/getting-started/` | 665 |
-| `docs/recipes/` | 501 |
-| `docs/decisions/` | 400 |
+| `docs/decisions/` | 502 |
+| `docs/recipes/` | 457 |
+| `docs/examples/` | 343 |
 | `docs/harness/` | 47 |
 | `docs/agent-loop/` | 25 |
 | `docs/api-reference/` | 0 |

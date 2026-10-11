@@ -70,7 +70,6 @@ def _parse_signing_outcomes_from_markdown(md_text: str) -> dict[str, bool | str]
 @pytest.mark.parametrize(
     ("app", "scenario"),
     [
-        ("contact_manager", "engagement_letter_happy_path"),
         ("support_tickets", "sla_waiver_happy_path"),
     ],
 )

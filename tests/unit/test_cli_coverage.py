@@ -58,9 +58,11 @@ class TestCategoryCoverage:
 class TestDisplayModeCoverage:
     def test_list_grid_kanban_timeline_are_covered(self) -> None:
         cat = _display_mode_coverage(_repo_root())
-        # These are the modes added explicitly in example apps so far —
-        # they should always be covered.
-        for required in ("list", "grid", "kanban", "timeline"):
+        # Modes the kept example probes declare explicitly — they should always
+        # be covered. `list` left this set in flense ship E (ADR-0057): only the
+        # retired examples declared it; the kept four use story-driven `queue`
+        # regions, and `list` remains the IR default (DisplayMode.LIST).
+        for required in ("grid", "kanban", "timeline"):
             assert cat.coverage[required], (
                 f"DisplayMode '{required}' expected to be covered by at least "
                 f"one example app, got no coverage"

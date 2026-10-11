@@ -41,7 +41,7 @@ class TestParseHost:
     def test_app_subdomain(self, registry) -> None:
         assert registry.parse_host("simple_task.dazzle.local") == "simple_task"
         assert registry.parse_host("Simple_Task.dazzle.local:9080") == "simple_task"
-        assert registry.parse_host("contact_manager.dazzle.local") == "contact_manager"
+        assert registry.parse_host("support_tickets.dazzle.local") == "support_tickets"
 
     def test_unknown_slug(self, registry) -> None:
         assert registry.parse_host("not-a-valid.dazzle.local") == "?unknown:not-a-valid"
@@ -53,7 +53,7 @@ class TestDiscover:
         apps = registry.discover_apps(showcase_only=True)
         names = {a.name for a in apps}
         assert "simple_task" in names
-        assert "contact_manager" in names
+        assert "support_tickets" in names
         assert all(a.port >= 9100 for a in apps)
         # stable ports by index
         by_name = {a.name: a.port for a in apps}

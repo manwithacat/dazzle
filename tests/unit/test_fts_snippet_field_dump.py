@@ -2,23 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.http.runtime.fts_routes import _render_results_html
 from dazzle.render.filters import clerk_fts_snippet_field_label
-
-
-def test_contact_manager_search_box_is_live() -> None:
-    block = Path("examples/contact_manager/dsl/app.dsl").read_text()
-    assert "search on Contact:" in block
-    search = block.split("search on Contact:", 1)[1].split("\n\n", 1)[0]
-    assert "first_name" in search
-    assert "last_name" in search
-    assert "email" in search
-    assert "company" in search
-    assert "display: search_box" in block
-    home = block.split('workspace home "Home":', 1)[1].split("workspace ", 1)[0]
-    assert "display: search_box" in home
 
 
 def test_clerk_fts_snippet_split_leftover_and_empty() -> None:

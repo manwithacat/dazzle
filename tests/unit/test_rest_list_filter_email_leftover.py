@@ -32,8 +32,6 @@ _LIST = (
     / "handlers"
     / "list_handlers.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "acme_billing" / "dsl" / "entities.dsl"
-
 _ALLOWED = frozenset({"id", "title", "status", "email", "contact_email"})
 _SPEC = SimpleNamespace(
     fields=[
@@ -162,9 +160,3 @@ def test_list_handler_source_pins_filter_email_leftover() -> None:
     src = _LIST.read_text(encoding="utf-8")
     assert "leftover_honest_list_filters(" in src
     assert "filter[email]=zzz" in src
-
-
-def test_live_acme_billing_user_email() -> None:
-    src = _LIVE.read_text(encoding="utf-8")
-    assert 'entity User "User":' in src
-    assert "email: email required" in src

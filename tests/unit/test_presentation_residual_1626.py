@@ -34,7 +34,7 @@ def test_find_delta_theater_absurd_pct_and_glue() -> None:
 
 def test_score_presentation_skips_absent_shots(tmp_path: Path) -> None:
     # No screenshots dir → empty
-    assert score_presentation(tmp_path, "fieldtest_hub") == []
+    assert score_presentation(tmp_path, "hr_records") == []
 
 
 def test_score_presentation_ocr_skip_or_detect(tmp_path: Path) -> None:
@@ -42,14 +42,14 @@ def test_score_presentation_ocr_skip_or_detect(tmp_path: Path) -> None:
     shots = tmp_path / ".dazzle" / "qa" / "screenshots"
     shots.mkdir(parents=True)
     # Minimal valid-ish PNG (1x1) — tesseract may fail → ocr_skip, not residual.
-    png = shots / "issue_triage_manager_desktop_light.png"
+    png = shots / "staff_directory_hr_admin_desktop_light.png"
     # Tiny PNG header + IHDR + IEND is enough for file existence; OCR may fail.
     png.write_bytes(
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
         b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
         b"\x01\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
     )
-    scores = score_presentation(tmp_path, "fieldtest_hub")
+    scores = score_presentation(tmp_path, "hr_records")
     assert scores
     # Must not residual on unreadable tiny PNG (ocr_skip or empty ok).
     assert all(not s.residual for s in scores if s.kind in ("ocr_skip", "ok"))

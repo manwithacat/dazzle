@@ -31,12 +31,7 @@ APPS=(
   simple_task
   support_tickets
   invoice_ops
-  contact_manager
-  ops_dashboard
-  project_tracker
-  design_studio
   hr_records
-  fieldtest_hub
 )
 
 DAZZLE_BIN="${DAZZLE_BIN:-$ROOT/.venv/bin/dazzle}"

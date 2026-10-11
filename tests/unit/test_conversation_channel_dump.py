@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.primitives import RelatedTab
 from dazzle.render.fragment.region._builders_timeline import _BuildersTimelineMixin
@@ -12,18 +10,6 @@ from dazzle.render.fragment.renderer._related_conversation import (
     conversation_channel_label,
     related_conversation_messages,
 )
-
-OPS = Path("examples/ops_dashboard/dsl")
-
-
-def test_ops_dashboard_live_conversation_is_live() -> None:
-    block = (OPS / "app.dsl").read_text()
-    assert "entity IncidentNote" in block
-    assert "page_channel: enum[bridge,slack,pager,status_page]=bridge" in block
-    assert "display: conversation" in block
-    assert "live_conversation:" in block
-    seeds = (OPS / "seeds/demo_data/IncidentNote.jsonl").read_text()
-    assert '"page_channel": "status_page"' in seeds
 
 
 def test_clerk_conversation_channel_leftover_and_empty() -> None:

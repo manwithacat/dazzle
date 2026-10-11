@@ -15,7 +15,6 @@ from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.region._builders_cards import _BuildersCardsMixin
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
 SIMPLE_DSL = SIMPLE / "dsl" / "app.dsl"
 
 
@@ -68,14 +67,6 @@ def test_clerk_empty_kanban_lane_splits_pascal_and_catalog() -> None:
 def test_clerk_empty_kanban_lane_leftover_invents_no_collection() -> None:
     for junk in ("zzz", "ghost", "2abc"):
         assert clerk_empty_kanban_lane(junk) == "No items"
-
-
-def test_fieldtest_issue_report_lane_is_issue_reports() -> None:
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_empty_kanban_lane("IssueReport", labels) == "No issue reports"
 
 
 def test_kanban_empty_lane_is_tasks_not_no_items() -> None:

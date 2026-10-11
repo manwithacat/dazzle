@@ -886,14 +886,6 @@ class TestLinkerIntegration:
         appspec = load_project_appspec(Path("examples/simple_task"))
         assert len(appspec.triples) > 0
 
-    def test_fieldtest_hub_has_triples(self) -> None:
-        from pathlib import Path
-
-        from dazzle.core.appspec_loader import load_project_appspec
-
-        appspec = load_project_appspec(Path("examples/fieldtest_hub"))
-        assert len(appspec.triples) > 0
-
     def test_get_triple_getter(self) -> None:
         from pathlib import Path
 
@@ -932,28 +924,3 @@ class TestLinkerIntegration:
 # ---------------------------------------------------------------------------
 # TestContractParity — ensure generate_contracts produces expected output
 # ---------------------------------------------------------------------------
-
-
-class TestContractParity:
-    def test_fieldtest_hub_produces_contracts(self) -> None:
-        from pathlib import Path
-
-        from dazzle.core.appspec_loader import load_project_appspec
-        from dazzle.testing.ux.contracts import generate_contracts
-
-        appspec = load_project_appspec(Path("examples/fieldtest_hub"))
-        contracts = generate_contracts(appspec)
-        assert len(contracts) > 0
-        kinds = {str(c.kind) for c in contracts}
-        assert "list_page" in kinds
-        assert "rbac" in kinds
-
-    def test_simple_task_produces_contracts(self) -> None:
-        from pathlib import Path
-
-        from dazzle.core.appspec_loader import load_project_appspec
-        from dazzle.testing.ux.contracts import generate_contracts
-
-        appspec = load_project_appspec(Path("examples/simple_task"))
-        contracts = generate_contracts(appspec)
-        assert len(contracts) > 0

@@ -9,16 +9,10 @@ from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_render import _stamp_list_entity_catalog
 from dazzle.render.breadcrumbs import (
     clerk_csv_export_label,
-    clerk_entity_download_stem,
-    clerk_entity_noun,
-    clerk_pagination_rows_label,
-    clerk_related_create_noun,
-    entity_path_labels_from_spec,
 )
 from dazzle.render.fragment import URL, CsvExportButton, FragmentRenderer, ListColumn, ListRegion
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
 SIMPLE_DSL = SIMPLE / "dsl" / "app.dsl"
 
 
@@ -55,20 +49,6 @@ def test_simple_task_task_list_is_live() -> None:
     spec = load_project(SIMPLE)
     task = next(e for e in spec.domain.entities if e.name == "Task")
     assert task.title == "Task"
-
-
-def test_clerk_csv_export_label_uses_entity_noun() -> None:
-    assert clerk_csv_export_label("Task") == "Export Task CSV"
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_related_create_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_csv_export_label("IssueReport", labels) == "Export Issue Report CSV"
-    assert clerk_csv_export_label("IssueReport") == "Export Issue Report CSV"
-    assert clerk_entity_download_stem("IssueReport", labels) == "issue-report"
-    assert clerk_pagination_rows_label("IssueReport", labels, total=42) == "issue reports"
 
 
 def test_clerk_csv_export_label_leftover_invents_no_entity() -> None:

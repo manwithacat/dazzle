@@ -44,16 +44,6 @@ def test_platform_admin_landing_is_residual() -> None:
     assert any("platform_admin_landing" in r.reason for r in home.regions)
 
 
-def test_fieldtest_tester_home_seeded() -> None:
-    app = EXAMPLES / "fieldtest_hub"
-    if not app.is_dir():
-        pytest.skip("fieldtest_hub missing")
-    homes = {h.persona: h for h in score_persona_homes(app)}
-    assert "tester" in homes
-    assert not homes["tester"].residual
-    assert any(r.seed_hits >= 1 for r in homes["tester"].regions)
-
-
 def test_persona_homes_simple_task_has_member_desk() -> None:
     app = EXAMPLES / "simple_task"
     if not app.is_dir():
@@ -127,16 +117,16 @@ def test_stills_lfs_pointer_skipped_as_absent(tmp_path: Path) -> None:
 
 
 def test_stills_non_trio_hero_floor(tmp_path: Path) -> None:
-    """31 Jul: project board empty-shell stills must residual."""
+    """31 Jul: non-trio empty-shell stills must residual."""
     from dazzle.product_quality.stills import HERO_MIN_BYTES
 
-    assert "project_tracker" in HERO_MIN_BYTES
+    assert "hr_records" in HERO_MIN_BYTES
     shots = tmp_path / ".dazzle" / "qa" / "screenshots"
     shots.mkdir(parents=True)
-    name = "project_board_manager_desktop_light.png"
+    name = "staff_directory_hr_admin_desktop_light.png"
     tiny = shots / name
     tiny.write_bytes(b"\x89PNG" + b"\x00" * 100)
-    scores = score_stills(tmp_path, "project_tracker")
+    scores = score_stills(tmp_path, "hr_records")
     hero = next(s for s in scores if s.name == name)
     assert hero.residual
     assert "empty_hero" in hero.reason

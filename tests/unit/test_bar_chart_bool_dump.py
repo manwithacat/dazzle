@@ -9,7 +9,6 @@ from dazzle.render.fragment import BarChart, FragmentRenderer
 from dazzle.render.fragment.region._builders_charts import _BuildersChartsMixin
 
 SUPPORT = Path("examples/support_tickets/dsl")
-ACME = Path("examples/acme_billing/dsl")
 
 
 class _A(_BuildersChartsMixin):
@@ -31,13 +30,6 @@ def test_support_tickets_agent_comment_chart_is_live() -> None:
     assert "group_by: is_internal" in region
     comment = block.split('entity Comment "Comment":', 1)[1].split("entity ", 1)[0]
     assert "is_internal: bool" in comment
-
-
-def test_acme_sensitive_share_is_live() -> None:
-    block = (ACME / "surfaces.dsl").read_text()
-    region = block.split("  sensitive_share:", 1)[1].split("\n\n", 1)[0]
-    assert "display: bar_chart" in region
-    assert "group_by: sensitive" in region
 
 
 def test_clerk_stage_label_bool_strings() -> None:

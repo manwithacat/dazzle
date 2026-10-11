@@ -30,10 +30,10 @@ Group `stories.dsl` (or product jobs) by `persona:`. Flag:
 | Readiness / checklist / policy strip | `display: status_list` |
 | Move through states on a board | `display: kanban` |
 | Lifecycle pressure | `funnel_chart` / `progress` |
-| “What needs me” multi-source | `task_inbox` (ops_dashboard dogfood) |
+| “What needs me” multi-source | `task_inbox` |
 | My scoped history | filtered `list` or `queue` |
 
-Dogfood: `examples/ops_dashboard` (`ack_queue`, `ops_inbox`, `health_summary`).
+Dogfood: `examples/support_tickets` (agent queue, `manager_ops`).
 
 ### 3. Freeze the composition before editing DSL
 
@@ -135,16 +135,6 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 - Manager → `team_overview` = metrics + review/unassigned/WIP queues
 - Member → `my_work` = personal metrics + WIP/todo queues
 
-**project_tracker**:
-
-- Admin/manager → `dashboard` = portfolio metrics + open task queue + grid + kanban
-- Member → `project_board` = board metrics + kanban + unassigned queue
-
-**contact_manager**:
-
-- User → `home` = directory metrics + favourites queue + sample list
-- User → `contacts` = search + favourites queue + dual-pane list/detail
-
 **hr_records**:
 
 - HR/manager → `staff_directory` = headcount metrics + directory lists
@@ -154,33 +144,3 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 - Approver/finance → `finance_ops` = metrics + awaiting_approval / ready_to_pay /
   disputed **queues** + funnel + payment chart
-
-**acme_billing**:
-
-- Admin/owner/auditor → `billing` = portfolio metrics + invoice queue + entity lists
-
-**design_studio**:
-
-- Designer/admin → `studio_dashboard` = portfolio metrics + grids
-- Reviewer → `review_desk` = in-review and approved creative previews, then
-  review load and **review queue** (`status = review`)
-
-**fieldtest_hub**:
-
-- Engineer/manager → `engineering_dashboard` = fleet metrics + non-active
-  **device attention** queue + triage/critical queues + open task queue
-  (kanban/map/tree retained as secondary demos)
-- Tester → `tester_dashboard` = personal metrics + assigned device/issue/task queues
-
-**llm_ticket_classifier**:
-
-- Supervisor → `support_dashboard` = classification metrics + open queue
-- Agent → `ticket_management` = non-closed ticket queue + full list
-
-**domain_join_co**:
-
-- Admin/member → `home` = announcement metrics + join readiness status_list + feed
-
-**ops_dashboard** (reference dogfood — already job-shaped):
-
-- Ops engineer → command centre with metrics, `ack_queue`, charts, status_list, task_inbox

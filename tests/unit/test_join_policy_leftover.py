@@ -47,7 +47,6 @@ _VIEWS = (
     / "auth"
     / "connection_admin_views.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "domain_join_co" / "dsl" / "domain.dsl"
 
 
 @pytest.mark.parametrize(
@@ -184,10 +183,3 @@ def test_helper_source_pins_join_policy_leftover() -> None:
     assert '("off",' in views
     assert '("admin_approval",' in views
     assert '("auto_join",' in views
-
-
-def test_live_domain_join_co_declares_join_policy() -> None:
-    src = _LIVE.read_text()
-    assert "domain_join_policy" in src
-    assert "admin_approval" in src
-    assert "sets the join policy" in src

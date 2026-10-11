@@ -2,23 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.core.project import load_project
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.breadcrumbs import (
     clerk_bulk_selection_noun,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
-    entity_path_labels_from_spec,
 )
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import BulkActionToolbar, FragmentRenderer
-
-ACME = Path("examples/acme_billing")
-CONTACT = Path("examples/contact_manager")
 
 
 class _Surface:
@@ -57,37 +48,10 @@ def _render_list(ctx: dict) -> str:
     return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
 
 
-def test_acme_invoice_bulk_actions_is_live() -> None:
-    block = (ACME / "dsl" / "surfaces.dsl").read_text()
-    region = block.split("surface invoice_list", 1)[1].split("surface invoice_detail", 1)[0]
-    assert "uses entity Invoice" in region
-    assert "bulk_actions:" in region
-
-
-def test_clerk_bulk_selection_noun_splits_pascal_and_catalog() -> None:
-    spec = load_project(ACME)
-    invoice = next(e for e in spec.domain.entities if e.name == "Invoice")
-    assert invoice.title == "Invoice"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("Invoice", labels) == "Invoice"
-    assert clerk_entity_confirm_noun("Invoice", labels) == "invoice"
-    assert clerk_bulk_selection_noun("Invoice", labels) == "invoices"
-    assert clerk_bulk_selection_noun("Invoice") == "invoices"
-    assert clerk_bulk_selection_noun("Invoice", labels, plural=False) == "invoice"
-
-
 def test_clerk_bulk_selection_noun_leftover_invents_no_collection() -> None:
     for junk in ("zzz", "ghost", "2abc"):
         assert clerk_bulk_selection_noun(junk) == "items"
         assert clerk_bulk_selection_noun(junk, plural=False) == "item"
-
-
-def test_contact_engagement_letter_bulk_noun_is_live() -> None:
-    spec = load_project(CONTACT)
-    letter = next(e for e in spec.domain.entities if e.name == "EngagementLetter")
-    assert letter.title == "Engagement Letter"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_bulk_selection_noun("EngagementLetter", labels) == "engagement letters"
 
 
 def test_bulk_toolbar_delete_confirm_is_invoices_not_items() -> None:

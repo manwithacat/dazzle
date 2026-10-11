@@ -147,7 +147,7 @@ _INLINE_CORPUS: list[tuple[str, str]] = [
 ]
 
 # A handful of real example apps — diverse, real-world schema shapes.
-_EXAMPLE_APPS: list[str] = ["simple_task", "contact_manager", "support_tickets"]
+_EXAMPLE_APPS: list[str] = ["simple_task", "support_tickets"]
 
 
 # ---------------------------------------------------------------------------

@@ -8,9 +8,7 @@
 # - Business logic: state machines, invariants, access rules
 #
 # Advanced Features (see separate DSL files):
-# - Events: Task lifecycle events (events.dsl)
 # - Services: Domain logic stubs (services.dsl)
-# - Messaging: Email notifications (messaging.dsl)
 # - Processes: Temporal workflows (processes.dsl)
 # - LLM: AI-powered task classification (llm.dsl)
 
@@ -154,12 +152,6 @@ entity Task "Task":
   fitness:
     repr_fields: [title, status, priority, assigned_to, due_date]
 
-  # Event publishing (see events.dsl for event definitions)
-  # TODO: Enable when publish syntax is implemented in parser
-  # publish TaskCreated when created
-  # publish TaskStatusChanged when status changed
-  # publish TaskAssigned when assigned_to changed
-
 # =============================================================================
 # TaskComment Entity - for task collaboration
 # =============================================================================
@@ -181,10 +173,6 @@ entity TaskComment "Task Comment":
   # (not undifferentiated comment meta alone). `kind` is reserved — use note_kind.
   note_kind: enum[note,blocker,question,decision]=note
   created_at: datetime auto_add
-
-  # Publish comment events
-  # TODO: Enable when publish syntax is implemented in parser
-  # publish CommentAdded when created
 
   # Access control
   permit:

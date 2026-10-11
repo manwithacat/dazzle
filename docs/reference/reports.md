@@ -70,7 +70,7 @@ alert_pivot:
     count: count(Alert)
 ```
 
-One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed aliases (`fk_0`, `fk_1`, ...) so two FKs to the same table don't collide. Count for each cell computed in the same query. See `examples/ops_dashboard` for a working reference.
+One row per `(system, severity)` combination. FK columns LEFT JOIN with indexed aliases (`fk_0`, `fk_1`, ...) so two FKs to the same table don't collide. Count for each cell computed in the same query. No kept example declares a multi-dim pivot; for working single-dim `bar_chart` references see `examples/invoice_ops` (`audit_mix`, `group_by: status`) and `examples/hr_records` (`salary_mix`, `group_by: reason`).
 
 ## Time bucketing (v0.60.0)
 

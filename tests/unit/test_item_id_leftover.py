@@ -33,7 +33,6 @@ _FETCH = (
     / "runtime"
     / "workspace_region_fetch.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "contact_manager" / "dsl" / "app.dsl"
 
 _VALID = "550e8400-e29b-41d4-a716-446655440000"
 _VALID_HEX = "550e8400e29b41d4a716446655440000"
@@ -113,11 +112,3 @@ def test_fetch_source_pins_item_id_leftover() -> None:
     assert 'qparams.get("id")' in src
     assert 'out["id"] = item_id' in src
     assert "filters = _apply_leftover_honest_item_id(request, filters)" in src
-
-
-def test_live_contact_manager_dual_pane_detail() -> None:
-    src = _LIVE.read_text(encoding="utf-8")
-    assert 'stage: "dual_pane_flow"' in src
-    assert "contact_detail:" in src
-    assert "display: detail" in src
-    assert "id: uuid pk" in src

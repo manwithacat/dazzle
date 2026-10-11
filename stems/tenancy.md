@@ -63,5 +63,5 @@ default.
 - `src/dazzle/core/ir/domain.py` `TenantHostSpec`; `src/dazzle/core/validation/tenancy.py`
 - `src/dazzle/signing/routes.py` `_signing_rls_tenant` (#1656)
 - `src/dazzle/http/runtime/test_routes.py` `_entity_is_tenant_root` (#1655)
-- Fixtures: `fixtures/tenant_hierarchy`; example: `examples/domain_join_co`
+- Fixtures: `fixtures/tenant_hierarchy`; example: `examples/invoice_ops`
 - CHANGELOG v0.112.1–.4 (#1656, #1655, #1657, ADR-0055)

@@ -1416,16 +1416,6 @@ scenario backlog "Backlog Scenario":
     start_route: "/app/workspaces/manager_ops"
 
 # =============================================================================
-# TOP-LEVEL ENUM — shared severity vocabulary
-# =============================================================================
-
-enum Severity "Severity":
-  blocker
-  high
-  medium
-  low
-
-# =============================================================================
 # SLA — response-time commitments on open tickets
 # =============================================================================
 
@@ -1442,38 +1432,6 @@ sla TicketResponseTime "Ticket Response SLA":
     timezone: "Europe/London"
   on_breach:
     notify: manager
-
-# =============================================================================
-# APPROVAL — manager approval for closing critical tickets
-# =============================================================================
-
-approval CriticalClose "Critical Ticket Close Approval":
-  entity: Ticket
-  trigger: status -> closed
-  approver_role: manager
-  quorum: 1
-  threshold: priority = critical
-  outcomes:
-    approved -> closed
-    rejected -> resolved
-
-# =============================================================================
-# WEBHOOK — outbound notification on ticket lifecycle events
-# =============================================================================
-
-webhook TicketNotify "Ticket Lifecycle Webhook":
-  entity: Ticket
-  events: [created, updated]
-  url: config("TICKET_WEBHOOK_URL")
-  auth:
-    method: hmac_sha256
-    secret: config("TICKET_WEBHOOK_SECRET")
-  payload:
-    include: [id, ticket_number, status, priority]
-    format: json
-  retry:
-    max_attempts: 3
-    backoff: exponential
 
 # =============================================================================
 # RHYTHM — agent daily triage cadence

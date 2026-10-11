@@ -11,7 +11,7 @@ name = "dnr"
 
 [auth]
 # Auth is intentionally disabled — this example is about renderer
-# registration, not authentication. The simple_task / contact_manager
+# registration, not authentication. The simple_task / support_tickets
 # examples cover the auth path.
 enabled = false
 

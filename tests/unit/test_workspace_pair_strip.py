@@ -79,41 +79,6 @@ class TestPairStripDefaultColSpan:
         assert _default_col_span("dual_pane_flow", 0) == 6
 
 
-# ───────────────────────── ops_dashboard demo ──────────────────────────
-
-
-class TestPairStripExampleApp:
-    """The ops_dashboard `incident_review` workspace demonstrates
-    pair_strip with four regions = two pairs. Authors who copy from
-    examples need a working reference."""
-
-    def test_ops_dashboard_has_pair_strip_workspace(self) -> None:
-        path = Path(__file__).resolve().parents[2] / "examples/ops_dashboard/dsl/app.dsl"
-        text = path.read_text()
-        assert 'stage: "pair_strip"' in text, (
-            "ops_dashboard missing pair_strip demo — #5 example anchor lost"
-        )
-
-    def test_pair_strip_example_has_four_regions(self) -> None:
-        """Two pairs = four regions, the canonical pair_strip shape.
-        Fewer means we lose the demonstration; more is fine but the
-        baseline showcase needs at least four."""
-        from dazzle.core.dsl_parser_impl import parse_dsl
-
-        path = Path(__file__).resolve().parents[2] / "examples/ops_dashboard/dsl/app.dsl"
-        # Parse the whole spec, find the incident_review workspace
-        fragment = parse_dsl(path.read_text(), path)[5]
-        ws = next(
-            (w for w in fragment.workspaces if w.name == "incident_review"),
-            None,
-        )
-        assert ws is not None, "incident_review workspace missing from ops_dashboard"
-        assert ws.stage == "pair_strip"
-        assert len(ws.regions) >= 4, (
-            f"pair_strip demo needs at least 4 regions for two pairs; got {len(ws.regions)}"
-        )
-
-
 # ───────────────────────── responsive contract ──────────────────────────
 
 

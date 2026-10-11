@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
-from dazzle.page.converters.template_compiler import compile_appspec_to_templates
 from dazzle.render.cell_chrome import (
     is_risk_title_key,
-    related_queue_columns_omit_identity,
     related_queue_identity_from_record,
     related_queue_title_and_meta,
 )
@@ -95,26 +90,6 @@ def test_related_queue_leftover_html_stays_put() -> None:
     )
     assert ">zzz<" in html or "zzz" in html
     assert "Severity: critical" in html
-
-
-def test_fieldtest_device_issues_columns_omit_description() -> None:
-    spec = load_project(Path("examples/fieldtest_hub"))
-    ctxs = compile_appspec_to_templates(spec)
-    detail = ctxs["/device/{id}"].detail
-    assert detail is not None
-    group = next(g for g in detail.related_groups if g.group_id == "group-issues")
-    assert group.display == "queue"
-    keys = [c.key for c in group.tabs[0].columns]
-    assert keys[0] == "severity"
-    assert "description" not in keys
-    assert related_queue_columns_omit_identity(keys)
-
-
-def test_fieldtest_issue_report_identity_is_description() -> None:
-    spec = load_project(Path("examples/fieldtest_hub"))
-    issue = spec.get_entity("IssueReport")
-    assert issue is not None
-    assert issue.display_field == "description"
 
 
 def test_related_queue_identity_from_record_prefers_description() -> None:

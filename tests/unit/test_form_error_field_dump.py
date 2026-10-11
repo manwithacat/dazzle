@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 from dazzle.http.runtime.htmx import json_or_htmx_error
 from dazzle.render.filters import clerk_form_error_field_label
-
-CONTACT = Path("examples/contact_manager")
 
 
 def _request(method: str, *, htmx: bool = True) -> SimpleNamespace:
@@ -17,14 +14,6 @@ def _request(method: str, *, htmx: bool = True) -> SimpleNamespace:
         headers["HX-Request"] = "true"
         headers["HX-Trigger-Name"] = "first_name"
     return SimpleNamespace(method=method, headers=headers, query_params={})
-
-
-def test_contact_first_name_form_label_is_live() -> None:
-    block = (CONTACT / "dsl" / "app.dsl").read_text()
-    assert 'entity Contact "Contact":' in block
-    assert "first_name: str(100) required" in block
-    create = block.split('surface contact_create "Create Contact":', 1)[1]
-    assert 'field first_name "First Name"' in create.split("surface ", 1)[0]
 
 
 def test_clerk_form_error_field_label_leftover_and_empty() -> None:

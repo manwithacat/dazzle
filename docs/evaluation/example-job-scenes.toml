@@ -13,15 +13,6 @@ themes = ["light", "dark"]
 decision = "Find an overdue invoice, understand its amount and status, and reach the settlement decision."
 
 [[scene]]
-id = "design-review-desk"
-app = "design_studio"
-trial_scenario = "reviewer_queue"
-workspace = "review_desk"
-viewport = "desktop"
-themes = ["light", "dark"]
-decision = "Compare in-review creative work with approved work, then open an asset for critique."
-
-[[scene]]
 id = "hr-staff-directory"
 app = "hr_records"
 trial_scenario = "hr_admin_directory"

@@ -2,7 +2,7 @@
 
 > **Complexity**: Advanced | **Entities**: 6 | **Personas**: 6 | **DSL Lines**: ~600
 
-`invoice_ops` is the **keystone example app** in the Dazzle examples collection — built specifically to prove the framework under realistic multi-tenant, multi-role, workflow-driven pressure. It models a supplier-invoice approval and payment-operations platform for a SaaS product that serves multiple isolated customer tenants. The app exercises `shared_schema` tenancy with `partition_key: tenant_id`, a 6-state role-guarded Invoice state machine, maker-checker `approval` gates, HLESS event publishing with a `InvoiceStatusView` projection, and a `payment_provider` integration service. The build was conducted as an evaluator-briefing improvement round: every friction point encountered was logged, reproduced, and filed as a framework issue.
+`invoice_ops` is the **keystone example app** in the Dazzle examples collection — built specifically to prove the framework under realistic multi-tenant, multi-role, workflow-driven pressure. It models a supplier-invoice approval and payment-operations platform for a SaaS product that serves multiple isolated customer tenants. The app exercises `shared_schema` tenancy with `partition_key: tenant_id`, a 6-state role-guarded Invoice state machine, maker-checker `approval` gates, and a `payment_provider` integration service. The build was conducted as an evaluator-briefing improvement round: every friction point encountered was logged, reproduced, and filed as a framework issue.
 
 ---
 
@@ -124,7 +124,7 @@ DATABASE_URL=postgresql://localhost/postgres \
 
 ### Tenant isolation suite (`test_invoice_ops_tenant_isolation.py`)
 
-11 tests (9 run, 2 skipped):
+10 tests (9 run, 1 skipped):
 
 | Test | What it probes | Notes |
 |------|---------------|-------|
@@ -137,19 +137,17 @@ DATABASE_URL=postgresql://localhost/postgres \
 | `test_admin_positive_control` | Sanity check: northwind requester CAN read a northwind invoice (guards against over-filtering false-greens) | Runs |
 | `test_search_excludes_other_tenant` | Northwind invoice list with search params (`q=`, `search=`) contains no contoso data | Runs |
 | `test_audit_export_excludes_other_tenant` | Northwind auditor's `/_dazzle/audit/logs` view contains no contoso entity ids | **Skipped** — `/_dazzle/audit/logs` not accessible to auditor role; endpoint gated |
-| `test_event_log_excludes_other_tenant` | `/_dazzle/events/topics/invoice_events` contains no contoso tenant_id | **Skipped** — events subsystem not wired under in-process transport (no lifespan, no REDIS_URL); endpoint returns 500 |
 | `test_other_tenant_config_denied` | Northwind `tenant_admin` cannot read or delete the contoso `Tenant` row (per-tenant config container) | Runs |
 
 ### RBAC / transition suite (`test_invoice_ops_rbac.py`)
 
-4 tests (3 run, 1 skipped):
+3 tests (all run):
 
 | Test | What it probes | Notes |
 |------|---------------|-------|
 | `test_requester_cannot_approve` | A requester attempting `submitted → approved` is denied (403/404/422) — approver-only transition | Runs |
 | `test_approver_cannot_pay` | An approver attempting `approved → paid` is denied (403/404/422) — finance-only transition | Runs |
 | `test_approver_can_approve` | Positive control: approver driving `submitted → approved` succeeds (200/204/302) | Runs |
-| `test_projection_agrees_with_status_column` | `InvoiceStatusView` projection status agrees with raw `Invoice.status` column | **Skipped** — no queryable projection route; events subsystem not functional under in-process ASGITransport |
 
 ---
 
@@ -165,7 +163,6 @@ invoice_ops/
 │   ├── personas.dsl                   # 5 persona definitions
 │   ├── surfaces.dsl                   # List / view / create / edit surfaces
 │   ├── workflow.dsl                   # Approval gates, settle_invoice process
-│   ├── events.dsl                     # HLESS event model + InvoiceStatusView projection
 │   ├── services.dsl                   # payment_provider integration service
 │   └── seeds/
 │       └── demo_data/                 # 2-tenant JSONL seed fixtures
@@ -197,7 +194,7 @@ The table below records framework friction encountered during the invoice_ops ke
 | 11 | `dazzle e2e run-viewport` broken | Fails with `ModuleNotFoundError: No module named 'dazzle.core.loader'` — `viewport_testing.py` imports a renamed module. | [#1187](https://github.com/manwithacat/dazzle/issues/1187) |
 | 12 | Transition-guard denials return HTTP 422 | Denied role-guarded transitions return 422 Unprocessable Entity instead of 403 Forbidden. Denial is correct; status code is softer than expected. | Minor |
 | 13 | `Tenant.create` open to `tenant_admin` | The `Tenant` entity's `permit: create: role(tenant_admin)` with `scope: create: all` allows a `tenant_admin` to create new `Tenant` rows without restriction. In a production multi-tenant SaaS, tenant provisioning would be a platform-admin action outside any tenant's trust boundary. `invoice_ops` keeps this simple: tenants are demo seed data and there is no platform-admin persona in the DSL. This is a deliberate simplification, not a bug. | Known limitation |
-| 14 | Event model only partially wired to publishers | `events.dsl` declares 6 events (`InvoiceSubmitted`, `InvoiceApproved`, `InvoiceRejected`, `InvoiceDisputed`, `InvoicePaid`, `PaymentAttemptFailed`), but the `Invoice` entity only has `publish` directives for `InvoiceSubmitted` and `InvoicePaid`. The entity-level `publish … when status changed` trigger fires on coarse state changes and cannot emit a distinct event per target state; fine-grained per-transition events (`InvoiceApproved`, `InvoiceRejected`, `InvoiceDisputed`) are declared in the model but have no publisher wired to them. The events stack is preview-only regardless, so this is a known limitation rather than an actionable gap. | Known limitation — preview |
+| 14 | Event model and projection | Removed in flense ship E (ADR-0057): no consumer app declares `event_model` or `projection`. | Removed |
 
 The rows below were added during the **SP2 migration exercise** (branch `feat/migration-story-sp2`), which evolved the invoice_ops schema through 6 requirement changes (Changes 0–6).
 

@@ -18,7 +18,6 @@ from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarTyp
 from dazzle.render.filters import clerk_form_error_field_label
 
 SIMPLE = Path("examples/simple_task")
-JOIN = Path("examples/domain_join_co")
 
 
 def _request(method: str, *, htmx: bool = True, trigger: str = "title") -> SimpleNamespace:
@@ -96,14 +95,6 @@ def test_simple_task_title_max_length_is_live() -> None:
     assert 'field title "Title"' in create.split("surface ", 1)[0]
     edit = block.split('surface task_edit "Edit Task":', 1)[1]
     assert 'field title "Title"' in edit.split("surface ", 1)[0]
-
-
-def test_domain_join_workspace_slug_is_live() -> None:
-    block = (JOIN / "dsl" / "domain.dsl").read_text()
-    assert 'entity Workspace "Workspace":' in block
-    assert "slug: slug required" in block
-    listing = block.split('surface workspace_list "Workspaces":', 1)[1]
-    assert 'field slug "Slug"' in listing.split("surface ", 1)[0]
 
 
 def test_clerk_constraint_speech_leftover_and_empty() -> None:

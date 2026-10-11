@@ -77,7 +77,6 @@ dazzle agent playbook domain_data_shape
 |-----|-------------|---------------|
 | **simple_task** | task → assignee overview; task hub + related discussion | ST-015 / 017 / 020 / 021 |
 | **support_tickets** | ticket list → ticket hub + discussion; comments → ticket | ST-019 / 021 / 024 / 025 |
-| **project_tracker** | task → project hub; project hub + tasks/milestones | ST-001 … ST-004 |
 
 Warehouse-style lists alone are not enough — open-via + multi-section VIEW
 hubs + `executed_by` bindings must prove green.
@@ -107,27 +106,15 @@ The examples are organized in a progressive learning sequence. Each builds on co
 
 ### Learning sequence
 
+Four apps remain after flense ship E (ADR-0057); the other eight retired
+because the consumer apps now prove their constructs. Each kept app is a probe.
+
 | Level | Example | Key Concepts |
 |-------|---------|--------------|
-| 1. **Beginner** | [simple_task](simple_task/) | Entity basics, CRUD surfaces, workspaces, attention signals |
-| 2. **Beginner+** | [contact_manager](contact_manager/) | DUAL_PANE_FLOW archetype, signal weighting, list+detail pattern |
-| 3. **Intermediate** | [support_tickets](support_tickets/) | Entity relationships (refs), indexes, multi-entity surfaces |
-| 4. **Intermediate+** | [ops_dashboard](ops_dashboard/) | Personas, COMMAND_CENTER archetype, engine hints |
-| 5. **Advanced** | [fieldtest_hub](fieldtest_hub/) | Complex domain, persona scoping, access rules, attention signals |
-
-### Topic-focused demos
-
-These apps each foreground one capability rather than building toward a complete domain. Use them as live references when you reach for a specific construct.
-
-| Demo | Showcases |
-|------|-----------|
-| [project_tracker](project_tracker/) | PM domain + rich form widgets (combobox/tags/date) on HM Hyperparts |
-| [design_studio](design_studio/) | Color pickers, rich text, asset management |
-| [llm_ticket_classifier](llm_ticket_classifier/) | LLM intents (classification + extraction) with deterministic-first integration |
-| [invoice_ops](invoice_ops/) | Invoice workflow keystone — processes, events, services |
-| [acme_billing](acme_billing/) | Multi-tenant billing domain + RBAC / compliance fixtures |
-| [hr_records](hr_records/) | Personnel records / org chart |
-| [domain_join_co](domain_join_co/) | Verified domain-join onboarding flow |
+| 1. **Beginner** | [simple_task](simple_task/) | Entity basics, CRUD surfaces, workspaces, processes, LLM intents |
+| 2. **Intermediate** | [support_tickets](support_tickets/) | Entity relationships (refs), `audit` construct, signing, SLA |
+| 3. **Intermediate+** | [invoice_ops](invoice_ops/) | Tenancy + RLS, approvals, processes, services |
+| 4. **Advanced** | [hr_records](hr_records/) | PII handling, org hierarchy, `process` |
 
 ---
 
@@ -153,25 +140,7 @@ cd simple_task && dazzle serve
 
 ---
 
-### 2. Contact Manager (Beginner+)
-
-**Location**: [`contact_manager/`](contact_manager/)
-
-A contacts application demonstrating the list+detail pattern.
-
-**What You'll Learn**:
-- DUAL_PANE_FLOW archetype (master-detail layout)
-- Signal weighting for layout selection
-- Workspace with paired signals
-
-**Quick Start**:
-```bash
-cd contact_manager && dazzle serve
-```
-
----
-
-### 3. Support Ticket System (Intermediate)
+### 2. Support Ticket System (Intermediate)
 
 **Location**: [`support_tickets/`](support_tickets/)
 
@@ -187,45 +156,6 @@ A multi-entity support system with user, ticket, and comment relationships.
 **Quick Start**:
 ```bash
 cd support_tickets && dazzle serve
-```
-
----
-
-### 4. Operations Dashboard (Intermediate+)
-
-**Location**: [`ops_dashboard/`](ops_dashboard/)
-
-A real-time operations monitoring dashboard for DevOps teams.
-
-**What You'll Learn**:
-- Persona definition with proficiency levels
-- COMMAND_CENTER archetype for expert users
-- Engine hints for layout control
-- Dense, information-rich interfaces
-
-**Quick Start**:
-```bash
-cd ops_dashboard && dazzle serve
-```
-
----
-
-### 5. FieldTest Hub (Advanced)
-
-**Location**: [`fieldtest_hub/`](fieldtest_hub/)
-
-A complex hardware field testing platform with multiple user roles.
-
-**What You'll Learn**:
-- 6-entity domain model with relationships
-- Persona-aware surface scoping (`for engineer`, `for tester`)
-- Access rules for data visibility
-- Complex filtering and aggregations
-- Real-world workflow modeling
-
-**Quick Start**:
-```bash
-cd fieldtest_hub && dazzle serve
 ```
 
 ---

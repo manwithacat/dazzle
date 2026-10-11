@@ -208,42 +208,6 @@ cd examples/simple_task
 pytest tests/e2e/test_simple_task_generated.py -v
 ```
 
-### FieldTest Hub (`examples/fieldtest_hub/tests/e2e/`)
-
-**NEW** - Comprehensive E2E test suite for demo evaluation.
-
-| File | Tests | Description |
-|------|-------|-------------|
-| `test_stories.py` | 18 | User story tests (ST-001 to ST-018) |
-| `test_access_control.py` | 23 | Persona permission tests |
-| `test_state_machines.py` | 20 | State transition tests |
-| `test_invariants.py` | 18 | Business rule validation |
-| `test_dev_controls.py` | 17 | Developer control tests |
-| `test_computed_fields.py` | 11 | Computed field tests |
-
-**Not in CI** - Manual execution for demo evaluation.
-
-```bash
-# Prerequisites
-cd examples/fieldtest_hub
-dazzle serve  # Start the app
-
-# Install test dependencies
-pip install playwright pytest httpx
-playwright install chromium
-
-# Run all FieldTest Hub E2E tests
-pytest tests/e2e/ -v
-
-# Run by category
-pytest tests/e2e/ -m story           # User stories
-pytest tests/e2e/ -m access_control  # Permissions
-pytest tests/e2e/ -m state_machine   # State transitions
-pytest tests/e2e/ -m invariant       # Business rules
-pytest tests/e2e/ -m dev_controls     # Dev controls
-pytest tests/e2e/ -m computed        # Computed fields
-```
-
 ---
 
 ## Execution Contexts
@@ -325,7 +289,7 @@ mapping in [Local CI concordance](local-ci-concordance.md).
 @pytest.mark.low_priority     # P2 - experimental
 ```
 
-### Feature Markers (FieldTest Hub)
+### Feature Markers
 
 ```python
 @pytest.mark.story         # User story tests
@@ -523,7 +487,6 @@ carry an `xdist_group` pin naming that directory's cohort.
 | JavaScript | `*.test.js` | ✅ | ✅ | ✅ |
 | Example E2E (P0) | `examples/*/tests/e2e/` | ✅ | ❌ | ✅ |
 | Example E2E (P1/P2) | `examples/*/tests/e2e/` | ✅ | ❌ | ⚠️ (main only) |
-| FieldTest Hub | `examples/fieldtest_hub/tests/e2e/` | ✅ | ❌ | ❌ (manual) |
 | LLM | `tests/llm/` | ✅ | ❌ | ❌ (manual) |
 
 ---

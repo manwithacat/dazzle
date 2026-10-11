@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 from dazzle.core.ir.workspaces import (
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
 )
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_card_fetchers import _build_entity_card_sections
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.filters import (
@@ -30,26 +28,6 @@ def _halo(fields: list[str]) -> EntityCardConfig:
             )
         ]
     )
-
-
-def test_ops_dashboard_alert_360_halo_flags_are_schema_fields() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    found = False
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name != "alert_360":
-                continue
-            found = True
-            cfg = region.entity_card_config
-            assert cfg is not None
-            names = [s.name for s in (cfg.sections or [])]
-            assert "halo" in names
-            assert "meta" in names
-            halo = next(s for s in cfg.sections if s.name == "halo")
-            flags = next(s for s in cfg.sections if s.name == "meta")
-            assert "severity" in list(halo.fields or [])
-            assert "status" in list(flags.fields or [])
-    assert found
 
 
 def test_entity_card_field_label_humanizes_schema_key() -> None:

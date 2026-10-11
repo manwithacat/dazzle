@@ -53,7 +53,6 @@ _INVITE_ROUTES = (
     / "auth"
     / "invitation_routes.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "domain_join_co" / "dsl" / "domain.dsl"
 
 
 def _appspec(*ids: str) -> SimpleNamespace:
@@ -213,9 +212,3 @@ def test_helper_source_pins_persona_role_leftover() -> None:
     invite = _INVITE_ROUTES.read_text()
     assert "leftover_persona_roles_stay_put" in invite
     assert "leftover_honest_persona_roles" in invite
-
-
-def test_live_domain_join_co_declares_admin_and_member() -> None:
-    src = _LIVE.read_text()
-    assert "persona admin " in src
-    assert "persona member " in src

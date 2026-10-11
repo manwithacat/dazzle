@@ -2,7 +2,7 @@
 
 > **Complexity**: Intermediate | **Entities**: 3 | **DSL Lines**: ~190
 
-A multi-entity support ticket application demonstrating entity relationships and foreign key references. This example builds on `contact_manager` by introducing multiple related entities.
+A multi-entity support ticket application demonstrating entity relationships and foreign key references. This example builds on `simple_task` by introducing multiple related entities.
 
 ## Quick Start
 
@@ -26,7 +26,7 @@ dazzle serve
 | **Multiple Entities** | User, Ticket, Comment |
 | **Full CRUD for All Entities** | 12 surfaces total (4 per entity) |
 
-### Building on contact_manager
+### Building on simple_task
 
 This example adds:
 
@@ -105,9 +105,9 @@ entity Comment "Comment":
 
 ## Learning Path
 
-**Previous**: [Contact Manager](contact-manager.md) (Beginner+) - Single entity, indexes, workspaces
+**Previous**: [Simple Task](simple-task.md) (Beginner) - Entity basics, workspaces
 
-**Next**: [Ops Dashboard](ops-dashboard.md) (Intermediate+) - Personas, COMMAND_CENTER archetype
+**Next**: `examples/invoice_ops` (Intermediate+) - Tenancy, approvals, processes
 
 ## Key Learnings
 

@@ -15,7 +15,6 @@ from dazzle.render.fragment.region._context import RegionContext
 
 ROOT = Path(__file__).resolve().parents[2]
 SIMPLE = ROOT / "examples" / "simple_task"
-FIELDTEST = ROOT / "examples" / "fieldtest_hub"
 
 
 def test_marker_emit_mounts_dz_spine() -> None:
@@ -119,12 +118,6 @@ def test_simple_task_appspec_sample_map_region() -> None:
     display = getattr(region, "display", None)
     display_v = getattr(display, "value", display)
     assert display_v == "map"
-
-
-def test_fieldtest_declares_device_map() -> None:
-    text = (FIELDTEST / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert "device_map:" in text
-    assert "display: map" in text
 
 
 def test_marker_shape_live() -> None:

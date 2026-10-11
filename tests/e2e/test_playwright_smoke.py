@@ -55,7 +55,6 @@ SCREENSHOT_DIR = Path(__file__).parent / "screenshots"
 # Examples to test with Playwright smoke tests
 PLAYWRIGHT_EXAMPLES = [
     "simple_task",
-    "contact_manager",
 ]
 
 
@@ -364,95 +363,3 @@ class TestPlaywrightSmokeSimpleTask:
             assert inputs.count() > 0, "Form should have input fields"
 
             take_screenshot(page, "simple_task", "form_opened")
-
-
-class TestPlaywrightSmokeContactManager:
-    """Playwright smoke tests for contact_manager example."""
-
-    @pytest.fixture(scope="class")
-    def server(self, dazzle_root: Path) -> Iterator[DazzleLocalServer]:
-        """Start Dazzle server for contact_manager."""
-        example_dir = dazzle_root / "examples" / "contact_manager"
-        if not example_dir.exists():
-            pytest.skip("contact_manager example not found")
-
-        with DazzleLocalServer(example_dir) as srv:
-            yield srv
-
-    @pytest.fixture
-    def page(self, browser, server) -> Iterator[Page]:
-        """Create a new page with console logging."""
-        context = browser.new_context(viewport={"width": 1280, "height": 720})
-        page = context.new_page()
-        diagnostics = PageDiagnostics()
-
-        page.on("console", lambda msg: diagnostics.add_console(msg))
-        page.on("pageerror", lambda err: diagnostics.add_error(err))
-
-        yield page
-
-        if diagnostics.has_critical_errors():
-            errors = diagnostics.get_errors()
-            print("\nJavaScript errors detected:\n" + "\n".join(errors[:5]))
-
-        page.close()
-        context.close()
-
-    @pytest.mark.e2e
-    def test_page_loads(self, page: Page, server: DazzleLocalServer) -> None:
-        """Test that the main page loads."""
-        page.goto(server.ui_url)
-        page.wait_for_load_state("networkidle", timeout=10000)
-        page.wait_for_timeout(1000)
-
-        # Runtime UI uses either #app (old) or #dz-site-main (new SiteSpec)
-        app_div = page.locator("#app, #dz-site-main")
-        assert app_div.count() > 0, "Main container should exist in DOM"
-
-        # Page should have loaded
-        body = page.locator("body")
-        assert body.is_visible(), "Body should be visible"
-
-        take_screenshot(page, "contact_manager", "page_loads")
-
-    @pytest.mark.e2e
-    def test_has_content(self, page: Page, server: DazzleLocalServer) -> None:
-        """Test that the page has meaningful content."""
-        page.goto(server.ui_url)
-        page.wait_for_load_state("networkidle", timeout=10000)
-        page.wait_for_timeout(1500)
-
-        body_text = page.locator("body").inner_text()
-        # Allow for minimal content - page may show "Loading" briefly or have an error message
-        # The key is it's not completely empty
-        assert len(body_text.strip()) > 5, f"Page is nearly empty: {body_text[:100]}"
-
-        take_screenshot(page, "contact_manager", "has_content")
-
-    @pytest.mark.e2e
-    def test_no_critical_js_errors(self, page: Page, server: DazzleLocalServer) -> None:
-        """Test that there are no critical JavaScript errors on page load."""
-        diagnostics = PageDiagnostics()
-        page.on("console", lambda msg: diagnostics.add_console(msg))
-        page.on("pageerror", lambda err: diagnostics.add_error(err))
-
-        page.goto(server.ui_url)
-        page.wait_for_load_state("networkidle", timeout=10000)
-        page.wait_for_timeout(1500)
-
-        # Navigate a bit to trigger more JS
-        create_btn = page.locator(
-            "button:has-text('Create'), button:has-text('Add'), button:has-text('New')"
-        ).first
-        if create_btn.count() > 0 and create_btn.is_visible():
-            create_btn.click()
-            page.wait_for_timeout(500)
-
-        if diagnostics.has_critical_errors():
-            errors = diagnostics.get_errors()
-            take_screenshot(page, "contact_manager", "js_errors")
-            pytest.fail("Critical JavaScript errors found:\n" + "\n".join(errors[:5]))
-
-
-# Mark all tests as e2e
-pytestmark = pytest.mark.e2e

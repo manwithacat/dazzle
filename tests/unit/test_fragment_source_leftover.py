@@ -34,8 +34,6 @@ _ROUTES = (
     / "runtime"
     / "fragment_routes.py"
 )
-_LIVE_DSL = Path(__file__).resolve().parents[2] / "examples" / "fieldtest_hub" / "dsl" / "app.dsl"
-_LIVE_CTX = Path(__file__).resolve().parents[2] / "src" / "dazzle" / "render" / "context.py"
 
 
 class _Cache:
@@ -158,8 +156,3 @@ def test_helper_source_pins_fragment_source_leftover() -> None:
     assert "leftover_honest_auth_error" in routes
     assert 'return HTMLResponse("Unknown source", status_code=400)' in routes
     assert "Response(\n            status_code=400,\n            content=" not in routes
-
-
-def test_live_fragment_search_and_fieldtest_source() -> None:
-    assert 'endpoint=f"/_dazzle/fragments/search?source={source_name}"' in _LIVE_CTX.read_text()
-    assert "source=companies_house_lookup.search_companies" in _LIVE_DSL.read_text()

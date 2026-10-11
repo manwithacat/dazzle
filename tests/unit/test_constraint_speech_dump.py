@@ -18,7 +18,6 @@ def clerk_missing_ref_speech(ref_entity: object, ref_id: object, field_name: obj
     return f"Referenced {noun} with ID '{rid}' not found (field: {field_label})"
 
 
-FIELDTEST = Path("examples/fieldtest_hub")
 SUPPORT = Path("examples/support_tickets")
 
 
@@ -28,15 +27,6 @@ def _request(method: str, *, htmx: bool = True) -> SimpleNamespace:
         headers["HX-Request"] = "true"
         headers["HX-Trigger-Name"] = "issue"
     return SimpleNamespace(method=method, headers=headers, query_params={})
-
-
-def test_fieldtest_issue_report_ref_is_live() -> None:
-    block = (FIELDTEST / "dsl" / "app.dsl").read_text()
-    assert 'entity IssueReport "Issue Report":' in block
-    assert 'entity IssueNote "Issue Note":' in block
-    assert "issue: ref IssueReport required" in block
-    create = block.split('surface issue_note_create "Add Issue Note":', 1)[1]
-    assert 'field issue "Issue"' in create.split("surface ", 1)[0]
 
 
 def test_support_ticket_number_unique_is_live() -> None:

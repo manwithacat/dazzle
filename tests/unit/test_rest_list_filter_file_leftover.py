@@ -33,8 +33,6 @@ _LIST = (
     / "handlers"
     / "list_handlers.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "project_tracker" / "dsl" / "app.dsl"
-
 _ALLOWED = frozenset({"id", "title", "status", "file", "attachment"})
 _SPEC = SimpleNamespace(
     fields=[
@@ -184,9 +182,3 @@ def test_list_handler_source_pins_filter_file_leftover() -> None:
     src = _LIST.read_text(encoding="utf-8")
     assert "leftover_honest_list_filters(" in src
     assert "filter[file]=zzz" in src
-
-
-def test_live_project_tracker_attachment_file() -> None:
-    src = _LIVE.read_text(encoding="utf-8")
-    assert 'entity Attachment "Attachment":' in src
-    assert "file: file required" in src

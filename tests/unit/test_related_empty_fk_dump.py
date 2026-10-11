@@ -14,7 +14,6 @@ from dazzle.render.fragment.primitives.data import RelatedGroup
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
 
 
 def _empty_tab(**overrides: object):
@@ -30,14 +29,6 @@ def _empty_tab(**overrides: object):
     }
     base.update(overrides)
     return related_tab_from_ctx(base, "u1", display="queue")
-
-
-def test_clerk_related_empty_title_splits_pascal_and_catalog() -> None:
-    spec = load_project(FIELDTEST)
-    labels = {e.name: str(e.title or "") for e in spec.domain.entities if str(e.title or "")}
-    assert clerk_related_empty_title("IssueNote", labels) == "No issue notes found."
-    assert clerk_related_empty_title("IssueNote") == "No issue notes found."
-    assert clerk_related_empty_title("Task") == "No tasks found."
 
 
 def test_clerk_related_empty_title_leftover_invents_no_collection() -> None:

@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.render.filters import clerk_pipeline_stage_value
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -15,25 +12,6 @@ class _FakePipeline:
     title = "Alert pipeline"
     display = "pipeline_steps"
     empty_message = "No pipeline data available."
-
-
-def _ops_alert_pipeline():
-    spec = load_project(Path("examples/ops_dashboard"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "alert_pipeline":
-                return region
-    raise AssertionError("ops_dashboard alert_pipeline missing")
-
-
-def test_ops_dashboard_alert_pipeline_literal_audit_stage() -> None:
-    region = _ops_alert_pipeline()
-    assert str(getattr(region.display, "value", region.display)) == "pipeline_steps"
-    stages = list(getattr(region, "pipeline_stages", None) or [])
-    assert stages
-    audit = stages[-1]
-    assert str(audit.label) == "Audit"
-    assert audit.value == "Daily 02:00 UTC"
 
 
 def test_clerk_pipeline_stage_value_counts_and_literals() -> None:

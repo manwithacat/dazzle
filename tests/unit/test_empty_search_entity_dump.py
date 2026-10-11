@@ -2,42 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.fts_routes import _render_results_html
 from dazzle.render.breadcrumbs import (
     clerk_empty_search_title,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
     clerk_search_results_label,
-    entity_path_labels_from_spec,
 )
-
-CONTACT = Path("examples/contact_manager")
-FIELDTEST = Path("examples/fieldtest_hub")
-CONTACT_DSL = CONTACT / "dsl" / "app.dsl"
-
-
-def test_contact_manager_search_box_is_live() -> None:
-    block = CONTACT_DSL.read_text()
-    assert "search on Contact:" in block
-    home = block.split('workspace home "Home":', 1)[1].split("workspace ", 1)[0]
-    assert "display: search_box" in home
-    assert "source: Contact" in home
-
-
-def test_clerk_empty_search_title_splits_pascal_and_catalog() -> None:
-    spec = load_project(CONTACT)
-    contact = next(e for e in spec.domain.entities if e.name == "Contact")
-    assert contact.title == "Contact"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("Contact", labels) == "Contact"
-    assert clerk_entity_confirm_noun("Contact", labels) == "contact"
-    assert clerk_empty_search_title("Contact", labels) == "No contacts match"
-    assert clerk_empty_search_title("Contact") == "No contacts match"
-    assert clerk_search_results_label("Contact", labels, total=1) == "contact"
-    assert clerk_search_results_label("Contact", labels, total=2) == "contacts"
 
 
 def test_clerk_empty_search_title_leftover_invents_no_collection() -> None:
@@ -45,15 +14,6 @@ def test_clerk_empty_search_title_leftover_invents_no_collection() -> None:
         assert clerk_empty_search_title(junk) == "No results"
         assert clerk_search_results_label(junk, total=2) == "results"
         assert clerk_search_results_label(junk, total=1) == "result"
-
-
-def test_fieldtest_issue_report_search_noun_is_live() -> None:
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_empty_search_title("IssueReport", labels) == "No issue reports match"
-    assert clerk_search_results_label("IssueReport", labels, total=42) == "issue reports"
 
 
 def test_fts_empty_is_contacts_not_no_results() -> None:

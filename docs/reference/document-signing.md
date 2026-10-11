@@ -412,12 +412,11 @@ on exit.
 ### Validator-rejected scenarios
 
 Set `DAZZLE_QA_SIGNING_REJECT_IDS=<id>` and the project's validator
-hook will consult that list. Both `contact_manager` and
-`support_tickets` ship validator hooks that follow this convention.
+hook will consult that list. `support_tickets` ships a validator hook that
+follows this convention.
 
 ### Reference scenarios
 
-`examples/contact_manager/trial.toml` and
-`examples/support_tickets/trial.toml` each declare 5 signing scenarios
+`examples/support_tickets/trial.toml` declares 5 signing scenarios
 (happy path, declined, token expired, validator-rejected,
 already-signed).

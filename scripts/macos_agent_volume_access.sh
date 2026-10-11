@@ -114,7 +114,7 @@ if [[ -f "$ROOT/.venv/pyvenv.cfg" ]]; then
 else
   echo "  WARN  no .venv/pyvenv.cfg (run uv sync)"
 fi
-for app in invoice_ops ops_dashboard; do
+for app in invoice_ops support_tickets; do
   if [[ -d "$ROOT/examples/$app" ]]; then
     probe_path "$ROOT/examples/$app" "examples/$app" || FAILS=$((FAILS + 1))
   fi

@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.region._builders_charts import _fmt_num
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -15,21 +12,6 @@ class _FakeLeague:
     title = "System league"
     display = "comparison"
     empty_message = "No alerts to rank"
-
-
-def test_ops_dashboard_system_alert_league_ranks_count() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    region = None
-    for ws in spec.workspaces:
-        for r in ws.regions:
-            if r.name == "system_alert_league":
-                region = r
-                break
-    assert region is not None
-    assert str(getattr(region.display, "value", region.display)) == "comparison"
-    assert getattr(region, "rank_by", None) == "count"
-    aggs = getattr(region, "aggregates", None) or {}
-    assert "count" in aggs
 
 
 def test_fmt_num_whole_count_is_bare() -> None:

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_computes import compute_profile_card
 from dazzle.render.filters import clerk_measure_display, clerk_measure_suffix
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
@@ -57,33 +55,6 @@ class _Ref:
     label = "SLA target"
     value = 500.0
     style = "dashed"
-
-
-def test_ops_dashboard_measure_fields_are_ms() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    found: dict[str, str] = {}
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name in {
-                "response_time_distribution",
-                "response_time_spread",
-                "system_response_bullet",
-                "system_identity",
-            }:
-                found[region.name] = region.name
-                if region.name in {"response_time_distribution", "response_time_spread"}:
-                    assert getattr(region, "heatmap_value", None) == "response_time_ms"
-                if region.name == "system_response_bullet":
-                    assert getattr(region, "bullet_actual", None) == "response_time_ms"
-                if region.name == "system_identity":
-                    values = [s.value for s in (region.profile_stats or [])]
-                    assert "response_time_ms" in values
-    assert found.keys() >= {
-        "response_time_distribution",
-        "response_time_spread",
-        "system_response_bullet",
-        "system_identity",
-    }
 
 
 def test_clerk_measure_suffix_from_field() -> None:

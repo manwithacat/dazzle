@@ -70,6 +70,7 @@ below, link from the issue body (not only a comment).
 | [DD-001](DD-001-1617-poly-ref-and-sti-eav.md) | #1617 residuals: poly_ref polish + STI/EAV-as-JSONB | PARKED | #1621, #1622 | Substrate shipped; consumer-forced only |
 | [DD-002](DD-002-pitch-generator.md) | Pitch deck generator (`dazzle pitch`) | PARKED | — | Removed under ADR-0057; restore from 82c9a8571 when AegisMark regenerates a deck |
 | [DD-003](DD-003-domain-brief.md) | Agent-audience domain brief (`domain_brief`) | PARKED | #1629, #1631 | Removed in flense ship C; restore from `003c01392` when a prose-bootstrapped consumer needs it |
+| [DD-004](DD-004-ledger-and-transaction.md) | `ledger` / `transaction` / `atomic` constructs + `fieldtest_hub` | PARKED | — | Reopen on pennydreadful royalties or cyfuture client money |
 
 ## Related
 

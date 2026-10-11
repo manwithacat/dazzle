@@ -9,18 +9,12 @@ from dazzle.core.project import load_project
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
 from dazzle.render.breadcrumbs import (
-    clerk_back_label,
-    clerk_delete_label,
     clerk_edit_label,
-    clerk_entity_noun,
-    clerk_related_create_noun,
-    entity_path_labels_from_spec,
 )
 from dazzle.render.context import DetailContext, FieldContext
 from dazzle.render.fragment import FragmentRenderer
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
 SIMPLE_DSL = SIMPLE / "dsl" / "app.dsl"
 
 
@@ -68,22 +62,6 @@ def test_simple_task_task_detail_is_live() -> None:
     spec = load_project(SIMPLE)
     task = next(e for e in spec.domain.entities if e.name == "Task")
     assert task.title == "Task"
-
-
-def test_clerk_edit_label_uses_entity_noun() -> None:
-    assert clerk_edit_label("Task") == "Edit Task"
-    assert clerk_edit_label("Task", authored="Edit") == "Edit Task"
-    assert clerk_edit_label("Task", authored="Report Issue") == "Report Issue"
-    assert clerk_delete_label("Task") == "Delete Task"
-    assert clerk_back_label("Task") == "← Back to Tasks"
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_related_create_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_edit_label("IssueReport", labels) == "Edit Issue Report"
-    assert clerk_edit_label("IssueReport") == "Edit Issue Report"
 
 
 def test_clerk_edit_label_leftover_invents_no_entity() -> None:

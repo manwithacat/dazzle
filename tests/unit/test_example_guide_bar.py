@@ -87,12 +87,6 @@ def _personas_with_guide(appspec) -> set[str]:  # noqa: ANN001
 # Admins / power users that deliberately get NO onboarding overlay.
 _GUIDE_EXEMPT: dict[str, set[str]] = {
     "support_tickets": {"admin"},
-    "ops_dashboard": {"admin"},
-    "fieldtest_hub": {"admin"},
-    "project_tracker": {"admin"},
-    "design_studio": {"admin"},
-    "llm_ticket_classifier": {"admin"},
-    "acme_billing": {"admin"},
     "hr_records": {"hr_admin"},
     "invoice_ops": {"tenant_admin", "finance_admin"},
 }
@@ -101,8 +95,7 @@ _GUIDE_EXEMPT: dict[str, set[str]] = {
 # Phase 2 completed 2026-06-13 — every example app now carries a guide for
 # each interactive persona (admins exempt above). A new app/persona without a
 # guide must be added here (or to _GUIDE_EXEMPT) or test_guide_coverage_partition
-# fails. llm_ticket_classifier's two guides are intentionally orientation-only
-# pending an optional DSL uplift (the app is view-centric; see PLAN.md).
+# fails.
 _PENDING_GUIDE_AUTHORING: dict[str, set[str]] = {}
 
 

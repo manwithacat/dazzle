@@ -76,7 +76,7 @@ def test_fleet_has_no_product_maturity_residual(pm) -> None:
 
 def test_fleet_scan_returns_rows(pm) -> None:
     rows = pm.scan()
-    assert len(rows) >= 5
+    assert len(rows) >= 4
     apps = {r.app for r in rows}
     assert "support_tickets" in apps
     assert "invoice_ops" in apps

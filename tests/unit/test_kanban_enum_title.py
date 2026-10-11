@@ -2,18 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from types import SimpleNamespace
-
-from dazzle.core.project import load_project
-from dazzle.http.converters.entity_converter import convert_entity
-from dazzle.http.runtime.workspace_columns import build_entity_columns
-from dazzle.http.runtime.workspace_region_render import (
-    _entity_display_field,
-    _entity_text_identity_key,
-    _pick_display_key,
-    _set_display_key,
-)
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
 from dazzle.render.fragment.region._shared import format_primary_display
 
@@ -22,27 +10,6 @@ class _FakeKanban:
     name = "open_work"
     title = "Open work"
     empty_message = "No open tasks"
-
-
-def _task_runtime_columns() -> tuple[object, list[dict[str, object]]]:
-    spec = load_project(Path("examples/fieldtest_hub"))
-    ir_task = spec.get_entity("Task")
-    assert ir_task is not None
-    runtime = convert_entity(ir_task)
-    cols = build_entity_columns(runtime, spec.enums)
-    return runtime, cols
-
-
-def test_task_identity_is_notes_not_type_enum() -> None:
-    runtime, cols = _task_runtime_columns()
-    assert {c["key"] for c in cols} == {"type", "status", "assigned_to", "created_by"}
-    ctx = SimpleNamespace(entity_spec=runtime)
-    assert _entity_display_field(ctx) == ""
-    assert _pick_display_key(cols) == ""
-    assert _entity_text_identity_key(ctx) == "notes"
-    adapter_ctx: dict[str, object] = {}
-    _set_display_key(adapter_ctx, SimpleNamespace(columns=cols), ctx)
-    assert adapter_ctx["display_key"] == "notes"
 
 
 def test_kanban_title_is_notes_not_debugging() -> None:

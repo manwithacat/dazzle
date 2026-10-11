@@ -1,6 +1,7 @@
 """Hyperpart fleet-coverage oracle (#164 — James's requirement).
 
-Every HM Hyperpart must be exercised at least once by the example apps.
+Every HM Hyperpart must be exercised at least once by the example apps
+or the framework-validation fixtures.
 The F4d incident is the motivating case: the wizard was
 registered-but-never-mounted for months — silently broken through every
 fleet walk — because NO example declares multi-section experience
@@ -20,6 +21,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 EXAMPLES = REPO / "examples"
+FIXTURES = REPO / "fixtures"
 
 # ── the coverage map ────────────────────────────────────────────────
 # hyperpart id → ("always" | "exempt:<reason>" | regex over example DSL)
@@ -152,7 +154,24 @@ SIGNALS: dict[str, object] = {
 # SECTIONED edit surface inside an experience) — a single-section
 # stepper, so step NAVIGATION is still unexercised; a multi-section
 # adoption remains desirable but the Hyperpart does render + mount.
-KNOWN_GAPS: set[str] = set()
+# Flense ship E (ADR-0057) retired eight example apps; the Hyperparts below
+# lost their last example/fixture signal with them. They are recorded adoption
+# debt: close each by a kept example or fixture adopting it, or by retiring the
+# Hyperpart when no consumer app uses it.
+KNOWN_GAPS: set[str] = {
+    "action-grid",
+    "avatar",
+    "bar-track",
+    "confirm-panel",
+    "diagram",
+    "menubar",
+    "pdf",
+    "profile-card",
+    "search-box",
+    "search-select",
+    "tabs",
+    "task-inbox",
+}
 
 
 def _wizard_covered() -> bool:
@@ -161,7 +180,7 @@ def _wizard_covered() -> bool:
     stepper. A corpus-wide grep can't express the join (ops_dashboard
     has experiences AND create surfaces, but its steps point at
     list/detail surfaces — no stepper)."""
-    for app_dir in sorted(EXAMPLES.iterdir()):
+    for app_dir in sorted([*EXAMPLES.iterdir(), *FIXTURES.iterdir()]):
         dsl = app_dir / "dsl"
         if not dsl.is_dir():
             continue
@@ -189,7 +208,8 @@ def _wizard_covered() -> bool:
 
 
 def _dsl_corpus() -> str:
-    return "\n".join(p.read_text(encoding="utf-8") for p in sorted(EXAMPLES.glob("*/dsl/*.dsl")))
+    paths = sorted(EXAMPLES.glob("*/dsl/*.dsl")) + sorted(FIXTURES.glob("*/dsl/*.dsl"))
+    return "\n".join(p.read_text(encoding="utf-8") for p in paths)
 
 
 def _registry_ids() -> set[str]:

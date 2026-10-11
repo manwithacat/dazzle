@@ -7,7 +7,7 @@ category = "Widget"
 definition = "Rich text editing via dz-richtext (Dazzle-native, closed-schema HTML editor) for formatted content"
 syntax = 'field description "Description" widget=rich_text'
 applies_to = "text fields on create/edit surfaces"
-demonstrated_in = ["component_showcase", "project_tracker", "design_studio"]
+demonstrated_in = ["component_showcase"]
 related = ["widget_combobox", "widget_picker"]
 
 [concepts.widget_combobox]
@@ -15,7 +15,7 @@ category = "Widget"
 definition = "Searchable single-select dropdown via Tom Select for entity references"
 syntax = 'field assigned_to "Assignee" widget=combobox'
 applies_to = "ref fields on create/edit surfaces"
-demonstrated_in = ["component_showcase", "project_tracker", "design_studio"]
+demonstrated_in = ["component_showcase"]
 related = ["widget_rich_text", "widget_tags"]
 
 [concepts.widget_picker]
@@ -23,7 +23,7 @@ category = "Widget"
 definition = "Date/time picker via Flatpickr for date and datetime fields"
 syntax = 'field due_date "Due Date" widget=picker'
 applies_to = "date and datetime fields on create/edit surfaces"
-demonstrated_in = ["component_showcase", "project_tracker"]
+demonstrated_in = ["component_showcase"]
 related = ["widget_rich_text", "widget_slider"]
 
 [concepts.widget_tags]
@@ -55,7 +55,7 @@ category = "Layout"
 definition = "Kanban board workspace display for entities with state machine transitions"
 syntax = "region tasks source=Task display: kanban"
 applies_to = "entities with transitions: block"
-demonstrated_in = ["project_tracker"]
+demonstrated_in = ["simple_task", "support_tickets", "invoice_ops"]
 related = ["layout_timeline"]
 
 [concepts.layout_timeline]
@@ -63,7 +63,7 @@ category = "Layout"
 definition = "Timeline workspace display for entities with date fields"
 syntax = "region milestones source=Milestone display: timeline"
 applies_to = "entities with date or datetime fields"
-demonstrated_in = ["project_tracker"]
+demonstrated_in = ["simple_task", "support_tickets", "hr_records"]
 related = ["layout_kanban"]
 
 [concepts.layout_related_groups]
@@ -71,7 +71,7 @@ category = "Layout"
 definition = "Grouped display of related entities on detail/view surfaces"
 syntax = "related:\n  group \"Items\":\n    entity Task display: table\n    entity Document display: file_list"
 applies_to = "view surfaces with 3+ related entities"
-demonstrated_in = ["project_tracker"]
+demonstrated_in = ["support_tickets", "hr_records", "invoice_ops"]
 related = ["layout_multi_section"]
 
 [concepts.layout_multi_section]
@@ -87,7 +87,7 @@ category = "Component"
 definition = "Cmd+K command palette for quick navigation across surfaces"
 syntax = "fragment: command_palette"
 applies_to = "apps with 5+ surfaces"
-demonstrated_in = ["project_tracker"]
+demonstrated_in = ["hatchi-maxchi gallery (dz-command)"]
 related = ["component_toggle_group"]
 
 [concepts.component_toggle_group]

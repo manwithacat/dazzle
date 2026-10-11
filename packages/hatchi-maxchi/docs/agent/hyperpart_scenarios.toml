@@ -123,7 +123,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "medium"
 residual_lane = "none"
-example_homes = ["design_studio Brand.logo_url", "fieldtest_hub IssueReport.photo_url"]
+example_homes = []
 scanner = "catalogue_only"
 
 # ── Authoring opt-in (product DSL) ───────────────────────────────────
@@ -302,7 +302,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
 residual_lane = "none"
-example_homes = ["design_studio brand_desk.asset_carousel", "simple_task sample_gallery"]
+example_homes = ["simple_task sample_gallery"]
 scanner = "catalogue_only"
 
 [[scenario]]
@@ -345,7 +345,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
 residual_lane = "none"
-example_homes = ["fieldtest_hub engineering_dashboard.device_map", "simple_task sample_map"]
+example_homes = ["simple_task sample_map"]
 scanner = "catalogue_only"
 
 [[scenario]]
@@ -366,7 +366,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
 residual_lane = "none"
-example_homes = ["design_studio (menubar: true)"]
+example_homes = []
 scanner = "catalogue_only"
 
 [[scenario]]
@@ -389,7 +389,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
 residual_lane = "none"
-example_homes = ["design_studio sitespec layout.nav (and all example site shells)"]
+example_homes = []
 scanner = "catalogue_only"
 
 [[scenario]]
@@ -411,7 +411,7 @@ status_if_fit = "emit_covered"
 ownership = "framework"
 severity = "low"
 residual_lane = "none"
-example_homes = ["contact_manager contacts (contact_list + contact_detail)"]
+example_homes = []
 scanner = "catalogue_only"
 
 [[scenario]]

@@ -28,7 +28,7 @@ from dazzle.core.ir.predicates import (  # noqa: E402
 from dazzle.rbac import prove as P  # noqa: E402
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
-CORPUS = ["acme_billing", "hr_records", "support_tickets", "simple_task"]
+CORPUS = ["hr_records", "support_tickets", "simple_task"]
 
 
 # --------------------------------------------------------------------------- #
@@ -50,40 +50,6 @@ def test_example_app_all_properties_proved(example: str) -> None:
     # scope_satisfiability is the substantive per-app proof.
     sat = next(p for p in report.properties if p.name == "scope_satisfiability")
     assert sat.status is P.Status.PROVED
-
-
-def test_vacuous_properties_are_not_labelled_proved() -> None:
-    """Honesty: role-hierarchy/SoD have nothing to check in Dazzle today, so they
-    must read VACUOUS — never PROVED — so an auditor isn't misled (review M-1)."""
-    report = P.prove_all(load_project_appspec(EXAMPLES / "acme_billing"))
-    for name in ("role_hierarchy_acyclic", "separation_of_duty"):
-        prop = next(p for p in report.properties if p.name == name)
-        assert prop.status is P.Status.VACUOUS, (name, prop.status)
-        assert prop.obligations_discharged == 0
-
-
-def test_deny_overrides_is_disclosed_as_app_independent() -> None:
-    """review C-1: the deny-overrides proof is an operator-level identity, and the
-    summary must say so rather than implying app-specific verification."""
-    report = P.prove_all(load_project_appspec(EXAMPLES / "acme_billing"))
-    deny = next(p for p in report.properties if p.name == "deny_overrides")
-    assert deny.status is P.Status.PROVED
-    assert "app-independent" in deny.summary
-
-
-def test_cli_prove_exits_zero_and_does_not_overclaim() -> None:
-    from typer.testing import CliRunner
-
-    from dazzle.cli.rbac import rbac_app
-
-    result = CliRunner().invoke(
-        rbac_app, ["prove", "-m", str(EXAMPLES / "acme_billing" / "dazzle.toml")]
-    )
-    assert result.exit_code == 0, result.output
-    assert "no violations" in result.output
-    # Vacuous properties must be visibly VACUOUS, not PROVED.
-    assert "[VACUOUS] role_hierarchy_acyclic" in result.output
-    assert "[INFORMATIONAL] least_privilege" in result.output
 
 
 # --------------------------------------------------------------------------- #

@@ -8,16 +8,10 @@ from pathlib import Path
 from dazzle.core.project import load_project
 from dazzle.http.runtime.htmx import htmx_trigger_headers
 from dazzle.render.breadcrumbs import (
-    clerk_delete_label,
-    clerk_entity_noun,
-    clerk_form_submit_label,
     clerk_mutation_toast_title,
-    clerk_related_create_noun,
-    entity_path_labels_from_spec,
 )
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
 SIMPLE_DSL = SIMPLE / "dsl" / "app.dsl"
 
 
@@ -40,26 +34,6 @@ def test_simple_task_task_create_is_live() -> None:
     assert task.title == "Task"
 
 
-def test_clerk_mutation_toast_title_uses_entity_noun() -> None:
-    assert clerk_mutation_toast_title("Task") == "Created Task"
-    assert clerk_mutation_toast_title("Task", action="updated") == "Saved Task"
-    assert clerk_mutation_toast_title("Task", action="deleted") == "Deleted Task"
-    assert clerk_form_submit_label("Task") == "Create Task"
-    assert clerk_delete_label("Task") == "Delete Task"
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_related_create_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_mutation_toast_title("IssueReport", labels) == "Created Issue Report"
-    assert clerk_mutation_toast_title("IssueReport") == "Created Issue Report"
-    assert (
-        clerk_mutation_toast_title("IssueReport", labels, action="updated") == "Saved Issue Report"
-    )
-    assert clerk_mutation_toast_title("Task", authored="Queued") == "Queued"
-
-
 def test_clerk_mutation_toast_title_leftover_invents_no_entity() -> None:
     for junk in ("zzz", "ghost", "2abc"):
         assert clerk_mutation_toast_title(junk) == "Created"
@@ -79,17 +53,3 @@ def test_toast_title_is_created_task_not_created() -> None:
     assert leftover["title"] == "Created"
     assert leftover["title"] != "Created zzz"
     assert leftover["message"] == "zzz was created"
-
-
-def test_toast_title_issue_report_is_not_schema_dump() -> None:
-    spec = load_project(FIELDTEST)
-    labels = entity_path_labels_from_spec(spec)
-    toast = _toast(htmx_trigger_headers("IssueReport", "created", entity_labels=labels))
-    assert toast["title"] == "Created Issue Report"
-    assert toast["message"] == "Issue Report was created"
-    assert "Created IssueReport" not in toast["title"]
-    assert "Created issuereport" not in toast["title"]
-    split = _toast(htmx_trigger_headers("IssueReport", "updated"))
-    assert split["title"] == "Saved Issue Report"
-    deleted = _toast(htmx_trigger_headers("IssueReport", "deleted", entity_labels=labels))
-    assert deleted["title"] == "Deleted Issue Report"

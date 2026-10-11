@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_render import (
     _clerk_series_dim_label,
     _pivot_to_series,
@@ -24,14 +21,6 @@ _DIMS = [
     {"name": "triggered_at", "is_time_bucket": True},
     {"name": "severity", "is_time_bucket": False, "is_fk": False},
 ]
-
-
-def test_ops_dashboard_alert_severity_includes_critical() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    alert = spec.get_entity("Alert")
-    assert alert is not None
-    severity = next(f for f in alert.fields if f.name == "severity")
-    assert list(severity.type.enum_values or []) == ["low", "medium", "high", "critical"]
 
 
 def test_clerk_series_dim_label_humanizes_snake_case() -> None:

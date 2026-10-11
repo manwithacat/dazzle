@@ -104,7 +104,7 @@ stated limits) · **Roadmap** (not yet built).
   assembled by `route_generator.py` — the #1361 god-file split extracted
   these handler/filter clusters out of `route_generator.py`.
 - **Tested where:** `tests/unit/test_row_level_access.py`,
-  `test_scoped_pre_read.py`, `tests/integration/test_acme_billing_rbac.py`.
+  `test_scoped_pre_read.py`, `tests/integration/test_invoice_ops_rbac.py`.
 - **Known gaps:** This surface has had security fixes land recently — bulk-action
   endpoints bypassed permit/scope until #1170; scope-denied UPDATE/DELETE left
   no audit record until #1179 (v0.71.94). Treat the enforcement path as

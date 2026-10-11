@@ -10,7 +10,6 @@ from types import SimpleNamespace
 
 from dazzle.http.runtime.workspace_region_render import (
     _entity_display_field,
-    _entity_text_identity_key,
     _pick_display_key,
 )
 
@@ -100,21 +99,6 @@ def test_pick_display_key_does_not_fallback_to_badge() -> None:
     ]
     assert _pick_display_key(columns) == ""
     assert _pick_display_key(columns, preferred="notes") == "notes"
-
-
-def test_entity_text_identity_key_notes_on_task() -> None:
-    from pathlib import Path
-
-    from dazzle.core.project import load_project
-    from dazzle.http.converters.entity_converter import convert_entity
-
-    spec = load_project(Path("examples/fieldtest_hub"))
-    runtime = convert_entity(spec.get_entity("Task"))
-    ctx = SimpleNamespace(entity_spec=runtime)
-    assert _entity_display_field(ctx) == ""
-    assert _entity_text_identity_key(ctx) == "notes"
-    assert _entity_text_identity_key(SimpleNamespace(entity_spec=None)) == ""
-    assert _entity_text_identity_key(SimpleNamespace()) == ""
 
 
 def test_entity_display_field_from_ctx() -> None:

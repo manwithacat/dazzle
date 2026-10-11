@@ -1,4 +1,4 @@
-# Stem: Multi-entity support tickets with refs — graph step after contact_manager
+# Stem: Multi-entity support tickets with refs — graph step after simple_task
 
 ## Claim
 

@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_computes import (
     compute_heatmap,
     heatmap_from_bucketed_metrics,
@@ -18,21 +15,6 @@ class _FakeHeat:
     title = "Alert heatmap"
     display = "heatmap"
     empty_message = "No alerts"
-
-
-def test_ops_dashboard_alert_heatmap_is_group_by_only() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    region = None
-    for ws in spec.workspaces:
-        for r in ws.regions:
-            if r.name == "alert_heatmap":
-                region = r
-                break
-    assert region is not None
-    assert (getattr(region, "heatmap_rows", None) or "") == ""
-    assert (getattr(region, "heatmap_columns", None) or "") == ""
-    gb = getattr(region, "group_by", None)
-    assert gb == "severity" or getattr(gb, "field", None) == "severity"
 
 
 def test_empty_axes_without_group_by_do_not_invent_display_matrix() -> None:

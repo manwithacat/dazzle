@@ -1,6 +1,5 @@
 """A URL explains the same winning declaration the page compiler uses."""
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +10,7 @@ from dazzle.cli import app
 from dazzle.cli.inspect import _live_page_html
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.page.converters.template_compiler import compile_appspec_to_templates
-from dazzle.page.inspection import explain_page, explain_workspace_region
+from dazzle.page.inspection import explain_page
 from dazzle.page.route_owners import page_route_owners
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,103 +29,6 @@ def test_payment_detail_url_names_its_owner_and_entity() -> None:
     assert result.source is not None and result.source.startswith("dsl/payments.dsl:")
     assert result.module == "invoice_ops.payments"
     assert [(ref.kind, ref.name) for ref in result.dependencies] == [("entity", "PaymentAttempt")]
-
-
-def test_firmware_workspace_url_names_composed_declarations() -> None:
-    project = ROOT / "examples/fieldtest_hub"
-    result = explain_page(load_project_appspec(project), "/app/workspaces/draft_releases", project)
-
-    assert result is not None
-    assert result.name == "draft_releases"
-    assert result.module == "fieldtest_hub.firmware"
-    assert {(ref.kind, ref.name) for ref in result.dependencies} == {
-        ("entity", "FirmwareRelease"),
-        ("surface", "firmware_release_edit"),
-    }
-
-
-def test_workspace_region_traces_data_auth_fragment_and_action() -> None:
-    project = ROOT / "examples/fieldtest_hub"
-    appspec = load_project_appspec(project)
-    page = explain_page(appspec, "/app/workspaces/engineering_dashboard", project)
-    assert page is not None
-
-    trace = explain_workspace_region(appspec, page, "triage_pressure", project)
-
-    assert trace is not None
-    assert trace.endpoint == "/api/workspaces/engineering_dashboard/regions/triage_pressure"
-    assert trace.source_name == "IssueReport"
-    assert trace.source_declaration is not None
-    assert trace.source_declaration.startswith("dsl/app.dsl:")
-    assert trace.display == "queue"
-    assert trace.filter_ir is not None
-    assert trace.sort_ir == [
-        {"field": "severity", "direction": "desc"},
-        {"field": "reported_at", "direction": "desc"},
-    ]
-    assert trace.limit == 4
-    assert trace.workspace_access == "persona"
-    assert trace.allowed_personas == ["engineer", "manager"]
-    assert len(trace.list_permission_ir) == 1
-    assert len(trace.list_scope_ir) == 2
-    assert {persona for rule in trace.list_scope_ir for persona in rule["personas"]} == {
-        "engineer",
-        "manager",
-        "tester",
-    }
-    assert trace.action_surface == "issue_report_edit"
-    assert trace.action_declaration is not None
-    assert trace.action_declaration.startswith("dsl/app.dsl:")
-    assert trace.action_route == "/app/issuereport/{id}/edit"
-    assert trace.mutation_method == "PUT"
-    assert trace.mutation_endpoint == "/issuereports/{id}"
-
-
-def test_region_trace_rejects_unknown_region_and_surface_page() -> None:
-    project = ROOT / "examples/fieldtest_hub"
-    appspec = load_project_appspec(project)
-    workspace = explain_page(appspec, "/app/workspaces/engineering_dashboard", project)
-    surface = explain_page(appspec, f"/app/issuereport/{RECORD_ID}/edit", project)
-    assert workspace is not None and surface is not None
-    assert explain_workspace_region(appspec, workspace, "unknown", project) is None
-    assert explain_workspace_region(appspec, surface, "triage_pressure", project) is None
-
-
-def test_inspect_page_reads_page_and_region_html_when_requested(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    observed: list[str] = []
-
-    def fake_html(url: str, *, origin: str, headers_file: Path | None) -> tuple[str, str]:
-        assert headers_file is None
-        assert origin == "http://localhost:3000"
-        observed.append(url)
-        return ("<html>page</html>" if len(observed) == 1 else "<div>region</div>"), url
-
-    monkeypatch.setattr("dazzle.cli.inspect._live_page_html", fake_html)
-    result = CliRunner().invoke(
-        app,
-        [
-            "inspect",
-            "page",
-            "/app/workspaces/engineering_dashboard",
-            "-p",
-            str(ROOT / "examples/fieldtest_hub"),
-            "--region",
-            "triage_pressure",
-            "--html",
-            "--json",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    assert observed == [
-        "/app/workspaces/engineering_dashboard",
-        "/api/workspaces/engineering_dashboard/regions/triage_pressure",
-    ]
-    payload = json.loads(result.output)
-    assert payload["html"] == "<html>page</html>"
-    assert payload["region_html"] == "<div>region</div>"
 
 
 def test_unknown_url_does_not_invent_a_page_owner() -> None:

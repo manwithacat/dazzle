@@ -4,7 +4,7 @@
 **When:** after L1–L3 agent floor is green (smoke structure=0, auto_seed=0)
 **Doctrine:** [Agent QA ladder](agent-qa-ladder.md) — humans are **L4**, not inventory walkers
 
-**Last machine floor (agent):** 2026-07-26 post-prep smoke-dig (`./scripts/prep_example_fleet_qa.sh --smoke`) — all 9 showcase apps `ok=True` / `auto_seed=0` / fail=0. Magic-link OK under `DAZZLE_QA_MODE=1`. Re-run smoke after any restart before trusting this sheet.
+**Last machine floor (agent):** 2026-07-26 post-prep smoke-dig (`./scripts/prep_example_fleet_qa.sh --smoke`) — all showcase apps `ok=True` / `auto_seed=0` / fail=0. Magic-link OK under `DAZZLE_QA_MODE=1`. Re-run smoke after any restart before trusting this sheet.
 
 ---
 
@@ -23,12 +23,7 @@ for app port in \
   simple_task 9100 \
   support_tickets 9101 \
   invoice_ops 9102 \
-  contact_manager 9103 \
-  ops_dashboard 9104 \
-  project_tracker 9105 \
-  design_studio 9106 \
-  hr_records 9107 \
-  fieldtest_hub 9108
+  hr_records 9107
 do
   : # start each with DAZZLE_QA_MODE=1 DAZZLE_ENV=development
   #   dazzle serve --host 127.0.0.1 --port $port --test-mode
@@ -63,12 +58,7 @@ dazzle qa login manager -u http://127.0.0.1:9100
 | simple_task | http://127.0.0.1:9100 | https://simple_task.dazzle.local/ |
 | support_tickets | http://127.0.0.1:9101 | https://support_tickets.dazzle.local/ |
 | invoice_ops | http://127.0.0.1:9102 | https://invoice_ops.dazzle.local/ |
-| contact_manager | http://127.0.0.1:9103 | https://contact_manager.dazzle.local/ |
-| ops_dashboard | http://127.0.0.1:9104 | https://ops_dashboard.dazzle.local/ |
-| project_tracker | http://127.0.0.1:9105 | https://project_tracker.dazzle.local/ |
-| design_studio | http://127.0.0.1:9106 | https://design_studio.dazzle.local/ |
 | hr_records | http://127.0.0.1:9107 | https://hr_records.dazzle.local/ |
-| fieldtest_hub | http://127.0.0.1:9108 | https://fieldtest_hub.dazzle.local/ |
 
 **Login:** open the app → **Personas** panel on the landing page → “Log in as …”.
 Emails are `{persona_id}@example.test`. Magic-link only (no passwords).
@@ -128,38 +118,10 @@ Emails are `{persona_id}@example.test`. Magic-link only (no passwords).
 | **Pass** | Invoice hub loads; line item drill works; no “Something went wrong” on detail |
 | **Also try** | **finance** — “New Payment Attempt” create form loads (200). **requester** — create invoice + lines. |
 
-### 2.4 contact_manager · **user** · port 9103
-
-| | |
-|--|--|
-| **Job** | Find a contact and open their hub. |
-| **Start** | **user** |
-| **Script** | 1) Home. 2) Search or browse contacts. 3) Open one contact. 4) Related companies/notes if present. |
-| **Pass** | Search or list is obvious; detail is a hub, not a dead form |
-
-### 2.5 project_tracker · **manager** · port 9105
-
-| | |
-|--|--|
-| **Job** | From the board/queue, open a task and see project context. |
-| **Start** | **manager** |
-| **Script** | 1) Dashboard / open task queue. 2) Click a **queue row title** (not only list chrome). 3) Task detail loads (not 404). 4) Hop to project if linked. |
-| **Pass** | Queue drill → task detail works (regression: was 404 without read scope) |
-| **Also try** | **member** — only assigned work |
 
 ---
 
 ## 3. Tier B — showcase density (~10–15 min each)
-
-### 3.1 ops_dashboard · **ops_engineer** · 9104
-
-- Land on ops home: metrics + queues first?
-- Open one alert/incident-style row; confirm drill isn’t empty.
-
-### 3.2 design_studio · **designer** · 9106
-
-- Portfolio / campaign desks feel job-shaped?
-- Open asset or campaign detail; related files make sense?
 
 ### 3.3 hr_records · **hr_admin** · 9107
 
@@ -167,11 +129,6 @@ Emails are `{persona_id}@example.test`. Magic-link only (no passwords).
 - Department / role navigation honest (no fake org-chart claims)?
 - Open one person hub.
 
-### 3.4 fieldtest_hub · **manager** · 9108
-
-- Fleet overview + device attention without Alpine residue?
-- Open a non-active device / issue from queue.
-- Optional: **tester** personal dashboard.
 
 ---
 
@@ -208,8 +165,8 @@ screenshot: (optional)
 | Block | Time | Who | Activity |
 |-------|------|-----|----------|
 | 0 | 20m | Operator | Prep script + smoke-dig green |
-| 1 | 90m | Human | Tier A (5 apps × ~15m) |
-| 2 | 60m | Human | Tier B (4 apps) |
+| 1 | 45m | Human | Tier A (3 apps × ~15m) |
+| 2 | 20m | Human | Tier B (1 app) |
 | 3 | 20m | Human | Narrow viewport pass on one Tier A app |
 | 4 | 30m | Operator | Triage findings → issues / improve backlog |
 
@@ -238,7 +195,6 @@ screenshot: (optional)
 
 ## 8. Out of scope for this pack
 
-- acme_billing, domain_join_co, llm_ticket_classifier (start only after Tier A/B green)
 - Deep multi-day multi-tenant pilots
 - Visual design-system pixel polish (unless blocking trust)
 

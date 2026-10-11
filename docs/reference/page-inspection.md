@@ -4,7 +4,7 @@ Run `dazzle inspect page` from a Dazzle project, or pass `--project`:
 
 ```bash
 dazzle inspect page /app/paymentattempt/123e4567-e89b-12d3-a456-426614174000 --project examples/invoice_ops
-dazzle inspect page /app/workspaces/draft_releases --project examples/fieldtest_hub --json
+dazzle inspect page /app/workspaces/manager_ops --project examples/support_tickets --json
 ```
 
 The command reports the matching route pattern, the winning surface or
@@ -29,9 +29,9 @@ functions shared by pages, not generated per-app HTML templates.
 
 For example, `/app/paymentattempt/<uuid>` resolves to the
 `payment_attempt_detail` surface in `invoice_ops.payments`, which reads the
-`PaymentAttempt` entity. `/app/workspaces/draft_releases` resolves to the
-`draft_releases` workspace in `fieldtest_hub.firmware`, which reads
-`FirmwareRelease` and links to `firmware_release_edit`.
+`PaymentAttempt` entity. `/app/workspaces/manager_ops` resolves to the
+`manager_ops` workspace in `support_tickets.core`, which reads `Ticket` and
+`User` and links to `ticket_edit` and `user_detail`.
 
 ## See the HTML from a running app
 
@@ -54,8 +54,8 @@ non-HTML response as the requested page.
 ## Trace one workspace region
 
 ```bash
-dazzle inspect page /app/workspaces/engineering_dashboard \
-  -p examples/fieldtest_hub --region triage_pressure --json
+dazzle inspect page /app/workspaces/manager_ops \
+  -p examples/support_tickets --region open_stage_queue --json
 ```
 
 `--region` adds the region's source declaration, filter and sort IR, limit,
@@ -72,8 +72,7 @@ filter and entity scope, fetches rows, and renders a typed fragment. The
 action route opens a form whose `hx-post` or `hx-put` submits to the API.
 The output describes declared access, not whether a particular user will
 pass those checks. Compare the two live HTML responses when you need to
-verify the current user's result. See the Fieldtest Hub walkthrough in
-`dev_docs/agent-first-experiments/trace.md`.
+verify the current user's result.
 
 The static explanation describes Dazzle's AppSpec route projection. A custom
 route override can take precedence at runtime; the live HTML response reveals

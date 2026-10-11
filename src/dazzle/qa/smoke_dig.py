@@ -35,12 +35,7 @@ SHOWCASE = (
     "simple_task",
     "support_tickets",
     "invoice_ops",
-    "contact_manager",
-    "ops_dashboard",
-    "project_tracker",
-    "design_studio",
     "hr_records",
-    "fieldtest_hub",
 )
 
 STATE_REL = ".dazzle/qa-smoke-dig-state.json"

@@ -2,15 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import (
-    build_surface_columns,
-    field_kind_to_col_type,
-)
 from dazzle.http.runtime.workspace_csv import _csv_cell
-from dazzle.page.converters.template_compiler import _field_type_to_column_type
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._shared import _render_typed_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
@@ -20,46 +12,6 @@ from dazzle.render.rating_cell import (
     clerk_rating_value,
     rating_field_name,
 )
-
-
-def _feedback_rating_field():
-    spec = load_project(Path("examples/design_studio"))
-    feedback = spec.get_entity("Feedback")
-    assert feedback is not None
-    rating = next(f for f in feedback.fields if f.name == "rating")
-    surface = next(s for s in spec.surfaces if s.name == "feedback_list")
-    return spec, feedback, rating, surface
-
-
-def _asset_quality_field():
-    spec = load_project(Path("examples/design_studio"))
-    asset = spec.get_entity("Asset")
-    assert asset is not None
-    quality = next(f for f in asset.fields if f.name == "quality_score")
-    surface = next(s for s in spec.surfaces if s.name == "asset_list")
-    return spec, asset, quality, surface
-
-
-def test_feedback_list_rating_is_rating_cell() -> None:
-    spec, feedback, rating, surface = _feedback_rating_field()
-    assert rating_field_name("rating")
-    assert field_kind_to_col_type(rating, feedback) == "rating"
-    assert _field_type_to_column_type(rating, "rating") == "rating"
-    col = next(
-        c for c in build_surface_columns(feedback, surface, spec.enums) if c["key"] == "rating"
-    )
-    assert col["type"] == "rating"
-
-
-def test_asset_list_quality_score_is_rating_cell() -> None:
-    spec, asset, quality, surface = _asset_quality_field()
-    assert rating_field_name("quality_score")
-    assert field_kind_to_col_type(quality, asset) == "rating"
-    assert _field_type_to_column_type(quality, "quality_score") == "rating"
-    col = next(
-        c for c in build_surface_columns(asset, surface, spec.enums) if c["key"] == "quality_score"
-    )
-    assert col["type"] == "rating"
 
 
 def test_generic_score_is_not_a_rating_cell() -> None:

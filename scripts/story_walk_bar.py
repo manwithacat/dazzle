@@ -34,12 +34,7 @@ SHOWCASE = (
     "simple_task",
     "support_tickets",
     "invoice_ops",
-    "contact_manager",
-    "ops_dashboard",
-    "project_tracker",
-    "design_studio",
     "hr_records",
-    "fieldtest_hub",
 )
 
 # At least this many landing stories should have a walk (or all if fewer).

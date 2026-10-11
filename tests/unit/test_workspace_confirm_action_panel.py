@@ -253,20 +253,3 @@ workspace dash "Dash":
         # looks up audit on the entity at context-build time.
         region = fragment.workspaces[0].regions[0]
         assert region.source == "Integration"
-
-
-# ───────────────────────── invariants ──────────────────────────
-
-
-class TestConfirmActionPanelExampleApp:
-    """ops_dashboard exercises confirm_action_panel via the
-    `integration_authorise` region against the Integration entity.
-    Authors who copy from examples need a working reference."""
-
-    def test_ops_dashboard_has_panel_region(self) -> None:
-        path = Path(__file__).resolve().parents[2] / "examples/ops_dashboard/dsl/app.dsl"
-        text = path.read_text()
-        assert "display: confirm_action_panel" in text, (
-            "ops_dashboard missing confirm_action_panel demo — #6 example anchor lost"
-        )
-        assert "integration_authorise" in text

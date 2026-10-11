@@ -3,36 +3,10 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from pathlib import Path
 
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import field_kind_to_col_type
-from dazzle.page.converters.template_compiler import compile_appspec_to_templates
 from dazzle.render.filters import clerk_percent_points_display, clerk_percent_points_field
 from dazzle.render.fragment.region._builders_tables import _format_queue_meta_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
-
-
-def test_ops_dashboard_error_rate_is_percentage_column() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    system = next(e for e in spec.domain.entities if e.name == "System")
-    error_rate = next(f for f in system.fields if f.name == "error_rate")
-    cpu = next(f for f in system.fields if f.name == "cpu_usage")
-    memory = next(f for f in system.fields if f.name == "memory_usage")
-    name = next(f for f in system.fields if f.name == "name")
-    assert field_kind_to_col_type(error_rate, system) == "percentage"
-    assert field_kind_to_col_type(cpu, system) == "percentage"
-    assert field_kind_to_col_type(memory, system) == "percentage"
-    assert field_kind_to_col_type(name, system) != "percentage"
-
-
-def test_ops_dashboard_system_list_error_rate_column_type() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    ctxs = compile_appspec_to_templates(spec)
-    table = ctxs["/system"].table
-    assert table is not None
-    col = next(c for c in table.columns if c.key == "error_rate")
-    assert col.type == "percentage"
 
 
 def test_clerk_percent_points_field() -> None:

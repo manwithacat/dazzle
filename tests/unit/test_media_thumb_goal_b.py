@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns,
     field_kind_to_col_type,
@@ -62,22 +61,6 @@ def test_field_kind_palette_and_logo_names() -> None:
     assert field_kind_to_col_type(color) == "color"
 
 
-def test_design_studio_brand_entity_columns_media() -> None:
-    spec = load_project_appspec(Path("examples/design_studio"))
-    brand = next(e for e in spec.domain.entities if e.name == "Brand")
-    by = {c["key"]: c["type"] for c in build_entity_columns(brand)}
-    assert by["logo_url"] == "image"
-    assert by["primary_color"] == "color"
-    assert by["secondary_color"] == "color"
-
-
-def test_design_studio_asset_preview_column() -> None:
-    spec = load_project_appspec(Path("examples/design_studio"))
-    asset = next(e for e in spec.domain.entities if e.name == "Asset")
-    by = {c["key"]: c["type"] for c in build_entity_columns(asset)}
-    assert by.get("preview_url") == "image"
-
-
 def test_related_card_preview_url_is_thumb_not_title() -> None:
     """Related status_cards must not dump preview_url as primary (oral #135)."""
     url = "https://placehold.co/320x200/0F172A/F59E0B/png?text=NW+LOGO+v3"
@@ -101,21 +84,6 @@ def test_related_card_off_allowlist_url_stays_put() -> None:
     thumb, texts = related_card_media_and_text((url, "Primary logo (SVG)"))
     assert thumb == ""
     assert texts[0] == url
-
-
-def test_asset_seeds_have_preview_urls() -> None:
-    path = Path("examples/design_studio/dsl/seeds/demo_data/Asset.jsonl")
-    lines = [ln for ln in path.read_text().splitlines() if ln.strip()]
-    assert len(lines) >= 8
-    import json
-
-    with_preview = 0
-    for ln in lines:
-        row = json.loads(ln)
-        pu = str(row.get("preview_url") or "")
-        if pu.startswith("https://placehold.co/"):
-            with_preview += 1
-    assert with_preview >= 8
 
 
 def test_detail_display_type_promotes_media_keys() -> None:
@@ -152,8 +120,6 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
     """Cycle 1925: fitness.repr_fields projects card columns (not raw schema dump)."""
     from types import SimpleNamespace
 
-    from dazzle.http.runtime.workspace_columns import build_entity_columns
-
     def _field(name: str, kind: str = "str") -> SimpleNamespace:
         return SimpleNamespace(
             name=name,
@@ -188,8 +154,6 @@ def test_fitness_repr_fields_drive_entity_fallback_columns() -> None:
 def test_fitness_repr_fields_skip_column_economy_truncation() -> None:
     """Cycle 1929: economy must not drop ticket_number from 7-field fitness repr."""
     from types import SimpleNamespace
-
-    from dazzle.http.runtime.workspace_columns import build_entity_columns
 
     def _field(name: str, kind: str = "str") -> SimpleNamespace:
         return SimpleNamespace(
@@ -240,7 +204,6 @@ def test_prefer_fitness_repr_helper_documents_card_like_displays() -> None:
 
 def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
     """#1304 agent_tickets queues must keep AAA-001 identity in fitness projection."""
-    from pathlib import Path
 
     text = Path("examples/support_tickets/dsl/app.dsl").read_text(encoding="utf-8")
     start = text.index('entity Ticket "Support Ticket"')
@@ -248,19 +211,8 @@ def test_support_tickets_ticket_repr_includes_ticket_number() -> None:
     assert "ticket_number" in block.split("repr_fields:")[1].split("]")[0]
 
 
-def test_fieldtest_device_repr_includes_serial_number() -> None:
-    """Device queues must keep unique serial in fitness projection (cycle 1928)."""
-    from pathlib import Path
-
-    text = Path("examples/fieldtest_hub/dsl/app.dsl").read_text(encoding="utf-8")
-    start = text.index('entity Device "Device"')
-    block = text[start : text.index("entity Tester")]
-    assert "serial_number" in block.split("repr_fields:")[1].split("]")[0]
-
-
 def test_simple_task_user_repr_excludes_admin_schema_on_roster() -> None:
     """agency_lead: team_roster/by_department use fitness chips, not Photo Url dump."""
-    from pathlib import Path
 
     text = Path("examples/simple_task/dsl/app.dsl").read_text(encoding="utf-8")
     start = text.index('entity User "Team Member"')

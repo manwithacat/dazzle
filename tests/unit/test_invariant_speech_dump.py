@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 from dazzle.http.runtime.htmx import json_or_htmx_error
@@ -20,9 +19,6 @@ from dazzle.http.specs.entity import (
     InvariantSpec,
 )
 from dazzle.render.filters import clerk_form_error_field_label
-
-FIELDTEST = Path("examples/fieldtest_hub")
-CONTACT = Path("examples/contact_manager")
 
 
 def _request(method: str, *, htmx: bool = True) -> SimpleNamespace:
@@ -65,20 +61,6 @@ def _logical(
         logical_op=op,
         logical_right=right,
     )
-
-
-def test_fieldtest_duration_minutes_invariant_is_live() -> None:
-    block = (FIELDTEST / "dsl" / "app.dsl").read_text()
-    assert 'entity TestSession "Test Session":' in block
-    assert "duration_minutes: int" in block
-    assert "invariant: duration_minutes > 0" in block
-    create = block.split("surface test_session_create", 1)[1]
-    assert 'field duration_minutes "Duration' in create.split("surface ", 1)[0]
-
-
-def test_contact_email_or_phone_invariant_is_live() -> None:
-    block = (CONTACT / "dsl" / "app.dsl").read_text()
-    assert "invariant: email != null or phone != null" in block
 
 
 def test_clerk_invariant_expr_is_clerk_not_schema() -> None:

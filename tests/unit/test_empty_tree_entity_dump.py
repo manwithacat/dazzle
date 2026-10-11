@@ -7,16 +7,12 @@ from pathlib import Path
 from dazzle.core.project import load_project
 from dazzle.render.breadcrumbs import (
     clerk_empty_tree_title,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
     entity_path_labels_from_spec,
 )
 from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.region._builders_misc import _BuildersMiscMixin
 
-FIELDTEST = Path("examples/fieldtest_hub")
 HR = Path("examples/hr_records")
-FIELDTEST_DSL = FIELDTEST / "dsl" / "app.dsl"
 
 
 class _A(_BuildersMiscMixin):
@@ -36,25 +32,6 @@ def _region(**overrides: object) -> object:
 
 def _render_tree(region: object, ctx: dict[str, object] | None = None) -> str:
     return FragmentRenderer().render(_A()._build_tree(region, ctx or {}))
-
-
-def test_fieldtest_device_tree_is_live() -> None:
-    block = FIELDTEST_DSL.read_text()
-    region = block.split("  device_tree:", 1)[1].split("  fleet_diagram:", 1)[0]
-    assert "display: tree" in region
-    assert "source: Device" in region
-    assert "group_by: batch_number" in region
-
-
-def test_clerk_empty_tree_title_splits_pascal_and_catalog() -> None:
-    spec = load_project(FIELDTEST)
-    device = next(e for e in spec.domain.entities if e.name == "Device")
-    assert device.title == "Device"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("Device", labels) == "Device"
-    assert clerk_entity_confirm_noun("Device", labels) == "device"
-    assert clerk_empty_tree_title("Device", labels) == "No devices"
-    assert clerk_empty_tree_title("Device") == "No devices"
 
 
 def test_clerk_empty_tree_title_leftover_invents_no_collection() -> None:

@@ -9,22 +9,10 @@
     ]
   },
   "baselines": {
-    "examples/contact_manager": {
-      "expected_errors": 0,
-      "expected_warnings_min": 2
-    },
     "examples/invoice_ops": {
       "expected_errors": 0,
       "expected_warnings_min": 24,
       "rationale": "invoice_ops is the keystone migration-story example. The 11 warnings are: 1 decimal monetary field (LineItem.unit_amount), 2 approval-gate preview notices, 2 audit-enabled info notices (audit+field-changes), and 7 fitness.repr_fields advisory notices (1 per audited/scoped entity). These are known, expected, and tracking the DSL design state."
-    },
-    "examples/fieldtest_hub": {
-      "expected_errors": 0,
-      "expected_warnings_min": 24
-    },
-    "examples/ops_dashboard": {
-      "expected_errors": 0,
-      "expected_warnings_min": 12
     },
     "examples/simple_task": {
       "expected_errors": 0,
@@ -38,14 +26,6 @@
       "expected_errors": 0,
       "expected_warnings_min": 8
     },
-    "examples/design_studio": {
-      "expected_errors": 0,
-      "expected_warnings_min": 27
-    },
-    "examples/llm_ticket_classifier": {
-      "expected_errors": 0,
-      "expected_warnings_min": 8
-    },
     "fixtures/pra": {
       "expected_errors": 14,
       "expected_warnings_min": 350,
@@ -54,15 +34,6 @@
         "resolve to the same route"
       ],
       "rationale": "pra is the largest example, kept as a kitchen-sink exercise of every DSL form including decimal stream-schema fields. The 7 errors are the validator's money-only rule (#1061) firing on the 7 deliberate decimal `amount:` declarations in orders_intent / payments_intent / orders_fact / payments_fact / ledger_fact streams. The 350+ warnings are entities with permit-but-no-scope and adjacent default-deny gates by design plus 15 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 fixing these would lose the example's coverage. PLUS 7 route-collision errors (#1489): the corpus deliberately declares multiple surfaces sharing the same (mode, entity) \u2014 e.g. multiple `view` surfaces on Invoice, list+kanban on Task \u2014 which all resolve to the same auto-route and collide. Real apps must use one surface per (mode, entity) (secondary views go in workspace regions); the corpus keeps them for parser coverage. (Was 12/19 before #1512: 5 of those surfaces are consumed only as experience/process step targets, which render inline by name and never claim the auto-route, so they are no longer flagged.)"
-    },
-    "examples/project_tracker": {
-      "expected_errors": 0,
-      "expected_warnings_min": 37
-    },
-    "examples/acme_billing": {
-      "expected_errors": 0,
-      "expected_warnings_min": 12,
-      "rationale": "Includes 5 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 these are informational nudges, not defects."
     },
     "examples/hr_records": {
       "expected_errors": 0,

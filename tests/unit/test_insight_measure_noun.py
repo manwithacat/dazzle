@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.core.ir import AggregateRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec, DisplayMode, WorkspaceRegion
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_computes import build_insight_inputs
 from dazzle.render.fragment.insight import (
     clerk_insight_group_noun,
@@ -24,24 +21,6 @@ class _FakeInsight:
 
 
 _SPEC = ComparisonOutlierSpec(method="iqr")
-
-
-def test_ops_dashboard_alert_insight_is_count_by_system() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    region = None
-    for ws in spec.workspaces:
-        for r in ws.regions:
-            if r.name == "alert_insight":
-                region = r
-                break
-    assert region is not None
-    gb = getattr(region, "group_by", None)
-    assert gb == "system" or getattr(gb, "field", None) == "system"
-    aggs = getattr(region, "aggregates", None) or {}
-    assert "count" in aggs
-    ref = aggs["count"]
-    assert getattr(ref, "func", None) == "count"
-    assert getattr(ref, "entity", None) == "Alert"
 
 
 def test_count_aggregate_uses_entity_plural_not_key() -> None:

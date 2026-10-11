@@ -397,13 +397,11 @@ dazzle mcp check
 | Example | Complexity | What it demonstrates |
 |---------|-----------|---------------------|
 | `simple_task` | Beginner | 3 entities, state machine, personas, job workspaces (metrics + queues) |
-| `contact_manager` | Beginner | CRM dual-pane + favourites queues, not list-only home |
 | `support_tickets` | Intermediate | Ticket lifecycle; agent queue / manager ops / customer cases |
-| `ops_dashboard` | Intermediate | Command-centre stages: metrics, ack queue, status_list, charts |
-| `fieldtest_hub` | Advanced | Fleet metrics + triage/device attention queues; multi-entity density |
 | `invoice_ops` | Advanced | Approval / pay / dispute queues + four-eyes approvals |
+| `hr_records` | Advanced | PII handling, org hierarchy, staff directory |
 
-A curated ladder — the full set (12 apps) lives in [`examples/`](examples/). Prefer **story → persona → workspace Hyperparts** over entity CRUD lists: [`docs/guides/story-to-composition.md`](docs/guides/story-to-composition.md).
+These four are the whole set in [`examples/`](examples/); the consumer apps prove the rest of the vocabulary (ADR-0057). Prefer **story → persona → workspace Hyperparts** over entity CRUD lists: [`docs/guides/story-to-composition.md`](docs/guides/story-to-composition.md).
 
 ---
 

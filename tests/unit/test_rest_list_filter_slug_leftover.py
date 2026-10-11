@@ -34,8 +34,6 @@ _LIST = (
     / "handlers"
     / "list_handlers.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "domain_join_co" / "dsl" / "domain.dsl"
-
 _ALLOWED = frozenset({"id", "title", "status", "slug", "handle"})
 _SPEC = SimpleNamespace(
     fields=[
@@ -174,9 +172,3 @@ def test_list_handler_source_pins_filter_slug_leftover() -> None:
     src = _LIST.read_text(encoding="utf-8")
     assert "leftover_honest_list_filters(" in src
     assert "filter[slug]=ab" in src
-
-
-def test_live_domain_join_co_workspace_slug() -> None:
-    src = _LIVE.read_text(encoding="utf-8")
-    assert 'entity Workspace "Workspace":' in src
-    assert "slug: slug required" in src

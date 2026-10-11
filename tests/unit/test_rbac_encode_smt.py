@@ -34,14 +34,22 @@ from dazzle.core.ir.predicates import (  # noqa: E402
 from dazzle.rbac import encode_smt as E  # noqa: E402
 from dazzle.rbac.ir import ALL_NODE_KINDS, predicate_kinds  # noqa: E402
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
-# Corpus chosen to exercise every node kind: acme_billing+hr_records cover
-# column/user_attr/path/exists/bool_composite/tautology between them.
-CORPUS = ["acme_billing", "hr_records", "support_tickets", "simple_task", "invoice_ops"]
+REPO = Path(__file__).resolve().parents[2]
+# Corpus chosen to exercise every node kind: the kept example apps cover
+# column/user_attr/exists/bool_composite/tautology between them; the
+# scope_runtime fixture carries the FK-path (path_check) scopes since the
+# retired acme_billing example left (flense ship E, ADR-0057).
+CORPUS = [
+    "examples/hr_records",
+    "examples/support_tickets",
+    "examples/simple_task",
+    "examples/invoice_ops",
+    "fixtures/scope_runtime",
+]
 
 
 def _scope_predicates(example: str) -> list:
-    spec = load_project_appspec(EXAMPLES / example)
+    spec = load_project_appspec(REPO / example)
     preds = []
     for ent in spec.domain.entities:
         acc = getattr(ent, "access", None)

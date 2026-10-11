@@ -32,8 +32,6 @@ _LIST = (
     / "handlers"
     / "list_handlers.py"
 )
-_LIVE = Path(__file__).resolve().parents[2] / "examples" / "acme_billing" / "dsl" / "entities.dsl"
-
 _ALLOWED = frozenset({"id", "title", "status", "preview_url", "logo_url"})
 _SPEC = SimpleNamespace(
     fields=[
@@ -171,9 +169,3 @@ def test_list_handler_source_pins_filter_url_leftover() -> None:
     src = _LIST.read_text(encoding="utf-8")
     assert "leftover_honest_list_filters(" in src
     assert "filter[preview_url]=zzz" in src
-
-
-def test_live_acme_billing_invoice_preview_url() -> None:
-    src = _LIVE.read_text(encoding="utf-8")
-    assert 'entity Invoice "Invoice":' in src
-    assert "preview_url: url" in src

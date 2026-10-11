@@ -11,15 +11,8 @@ PLATFORM_STILL_PREFIX = "_platform_admin_"
 # has no gitignored .dazzle stills). Floors are empty-hero gates only — not
 # human composite scores (#1626 antagonist re-score 2026-07-31).
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
-    "ops_dashboard": {
-        "incident_review_ops_engineer_desktop_light.png": 90000,
-        "command_center_ops_engineer_desktop_light.png": 80000,
-    },
     "hr_records": {
         "staff_directory_hr_admin_desktop_light.png": 100000,
-    },
-    "contact_manager": {
-        "contacts_user_desktop_light.png": 70000,
     },
     "invoice_ops": {
         "my_invoices_requester_desktop_light.png": 60000,
@@ -29,10 +22,6 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         "finance_ops_finance_desktop_light.png": 70000,
         # Post-5.8 Goal B document: composition desk stays line-dense with INV numbers.
         "line_items_desk_finance_desktop_light.png": 100000,
-    },
-    "fieldtest_hub": {
-        "issue_triage_manager_desktop_light.png": 90000,
-        "device_fleet_manager_desktop_light.png": 90000,
     },
     "simple_task": {
         # Above-fold recapture is ~900px; 80k was calibrated on taller composites.
@@ -46,14 +35,6 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         "manager_ops_manager_desktop_light.png": 80000,
         "ticket_queue_agent_desktop_light.png": 90000,
         "my_tickets_customer_desktop_light.png": 60000,
-    },
-    "project_tracker": {
-        "project_board_manager_desktop_light.png": 120000,
-        "dashboard_manager_desktop_light.png": 100000,
-    },
-    "design_studio": {
-        "asset_catalog_designer_desktop_light.png": 100000,
-        "brand_desk_designer_desktop_light.png": 100000,
     },
 }
 

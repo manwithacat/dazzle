@@ -49,12 +49,7 @@ SHOWCASE = [
     "simple_task",
     "support_tickets",
     "invoice_ops",
-    "contact_manager",
-    "ops_dashboard",
-    "project_tracker",
-    "design_studio",
     "hr_records",
-    "fieldtest_hub",
 ]
 # Fixed ports per app to avoid clobbering concurrent work
 _BASE_PORT = 18100
@@ -472,9 +467,7 @@ def _run_app(
     env.setdefault("PYTHONUNBUFFERED", "1")
     # tenant_host apps need host-tenant bind on localhost for current_tenant
     # scopes (see TenantResolutionMiddleware DAZZLE_HOST_TENANT_SLUG).
-    _host_tenant_slugs = {
-        "domain_join_co": "acme",  # Workspace.slug in demo seeds
-    }
+    _host_tenant_slugs = {}
     if app in _host_tenant_slugs:
         env["DAZZLE_HOST_TENANT_SLUG"] = _host_tenant_slugs[app]
         print(

@@ -147,7 +147,6 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2270: kanban must not title tasks as snake_case enum tokens (oral #138)
     "tests/unit/test_kanban_enum_title.py",
     "tests/unit/test_queue_display_key.py::test_pick_display_key_does_not_fallback_to_badge",
-    "tests/unit/test_queue_display_key.py::test_entity_text_identity_key_notes_on_task",
     # cycle 2271: related file_list must not title the uploader (oral #139)
     "tests/unit/test_related_file_list_title.py",
     # cycle 2272: related/workspace queue must not title attempt numbers (oral #140)
@@ -535,49 +534,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
     "tests/unit/test_join_request_view.py::test_join_requested_no_form",
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
-    # #1603 open_via dual-open pins (CI red 2026-08-03 after Goal B document
-    # depth on contact_manager — display_field + home region rename ×3 Pythons)
-    "tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open",
-    # open_via + Goal B conversation (CI red 2026-08-03 after llm_ticket
-    # display_field→suggested_response — pin must ship with product, not lag)
-    "tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open",
-    "tests/unit/test_llm_classifier_conversation_goal_b.py",
-    # llm_ticket_classifier Goal B command_density (high severity + open attention)
-    "tests/unit/test_llm_classifier_command_density_goal_b.py",
-    # llm_ticket_classifier Goal B empty_region_honesty (cycle 1800 prune twin boards/charts)
-    "tests/unit/test_llm_classifier_empty_region_goal_b.py",
-    # llm_ticket_classifier Goal B org_structure (cycle 1869 team title+dept boards)
-    "tests/unit/test_llm_classifier_org_structure_goal_b.py",
-    # llm_ticket_classifier Goal B document (cycle 1876 TicketDocument composition)
-    "tests/unit/test_llm_classifier_document_goal_b.py",
-    "tests/unit/test_design_studio_conversation_goal_b.py",
-    # design_studio Goal B media (cycle 1734 asset_catalog thumbs before palette)
-    "tests/unit/test_design_studio_media_goal_b.py",
-    # design_studio Goal B media home (cycle 1792 studio_dashboard media_shelf)
-    "tests/unit/test_design_studio_media_home_goal_b.py",
-    # design_studio Goal B media campaign creatives wall (cycle 1803)
-    "tests/unit/test_design_studio_campaign_media_goal_b.py",
-    # design_studio Goal B command_density (cycle 1836 dual attention before trail)
-    "tests/unit/test_design_studio_command_density_goal_b.py",
-    # design_studio Goal B document (cycle 1841 DesignDocument composition on Studio/Review)
-    "tests/unit/test_design_studio_document_goal_b.py",
-    # design_studio Goal B empty_region_honesty (cycle 1856 secondary desk prune)
-    "tests/unit/test_design_studio_empty_region_goal_b.py",
-    # design_studio Goal B org_structure (cycle 1865 team title+dept boards)
-    "tests/unit/test_design_studio_org_structure_goal_b.py",
     # simple_task Goal B document (cycle 1656 TaskBrief composition + dual-open)
     "tests/unit/test_simple_task_document_goal_b.py",
     "tests/unit/test_open_via_1603.py::test_simple_task_brief_list_dual_open",
-    # project_tracker Goal B conversation (cycle 1658 Comment display_field + live trail)
-    "tests/unit/test_project_tracker_conversation_goal_b.py",
-    # project_tracker Goal B org_structure (cycle 1730 people_desk by dept + owners)
-    "tests/unit/test_project_tracker_org_structure_goal_b.py",
-    # project_tracker Goal B empty_region_honesty (cycle 1815 prune bar charts / twin dumps)
-    "tests/unit/test_project_tracker_empty_region_goal_b.py",
-    # project_tracker Goal B command_density (cycle 1833 dual attention before trail)
-    "tests/unit/test_project_tracker_command_density_goal_b.py",
-    # project_tracker Goal B document (cycle 1840 ProjectDocument composition on Dashboard)
-    "tests/unit/test_project_tracker_document_goal_b.py",
     # cycle 1714 — person chip + non-person ref Link open discovery (leaf open_discovery)
     "tests/unit/test_ref_link_open_discovery_1714.py",
     # cycle 1719 — create CTA open discovery (CreateButton + empty + related)
@@ -603,14 +562,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_detail_money_related_budget_1646.py",
     # cycle 1712 — presentation residual delta_theater honesty under 100%
     "tests/unit/test_presentation_residual_1626.py",
-    # ops_dashboard Goal B conversation (cycle 1660 IncidentNote + command_center trail)
-    "tests/unit/test_ops_dashboard_conversation_goal_b.py",
-    # ops_dashboard Goal B command_density (cycle 1728 dual attention before trail)
-    "tests/unit/test_ops_dashboard_command_density_goal_b.py",
-    # ops_dashboard Goal B document (cycle 1839 OpsDocument composition on command_center)
-    "tests/unit/test_ops_dashboard_document_goal_b.py",
-    # ops_dashboard Goal B org_structure (cycle 1859 systems_desk service/status boards)
-    "tests/unit/test_ops_dashboard_org_structure_goal_b.py",
     # invoice_ops Goal B conversation (cycle 1662 InvoiceNote + finance desks)
     "tests/unit/test_invoice_ops_conversation_goal_b.py",
     # invoice_ops Goal B document (cycle 1724 composition on finance_ops/my_invoices)
@@ -623,26 +574,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_invoice_ops_media_goal_b.py",
     # invoice_ops Goal B org_structure (cycle 1863 team title+dept + suppliers region boards)
     "tests/unit/test_invoice_ops_org_structure_goal_b.py",
-    # contact_manager Goal B conversation (cycle 1664 ContactNote + home trail)
-    "tests/unit/test_contact_manager_conversation_goal_b.py",
-    # contact_manager Goal B command_density (cycle 1830 dual attention before trail)
-    "tests/unit/test_contact_manager_command_density_goal_b.py",
-    # contact_manager Goal B empty_region_honesty (cycle 1742 Home/Contacts/Companies prune)
-    "tests/unit/test_contact_manager_empty_region_goal_b.py",
-    # contact_manager Goal B document (cycle 1845 EngagementLetter composition pin)
-    "tests/unit/test_contact_manager_document_goal_b.py",
-    # contact_manager Goal B org_structure (cycle 1861 companies title board + multi-person accounts)
-    "tests/unit/test_contact_manager_org_structure_goal_b.py",
-    # domain_join_co Goal B conversation (cycle 1666 AnnouncementNote + home/board)
-    "tests/unit/test_domain_join_conversation_goal_b.py",
-    # domain_join_co Goal B command_density (cycle 1831 dual attention before trail)
-    "tests/unit/test_domain_join_command_density_goal_b.py",
-    # domain_join_co Goal B empty_region_honesty (cycle 1733 Team Board prune)
-    "tests/unit/test_domain_join_empty_region_goal_b.py",
-    # domain_join_co Goal B document (cycle 1844 WorkspaceDocument composition)
-    "tests/unit/test_domain_join_document_goal_b.py",
-    # domain_join_co Goal B org_structure (cycle 1869 team title+dept boards)
-    "tests/unit/test_domain_join_org_structure_goal_b.py",
     # hr_records Goal B conversation (cycle 1668 PersonNote + staff trail)
     "tests/unit/test_hr_records_conversation_goal_b.py",
     # hr_records Goal B org_structure (cycle 1731 my_team level/dept boards)
@@ -654,16 +585,6 @@ SHIP_TESTS: tuple[str, ...] = (
     # hr_records Goal B command_density (cycle 1837 dual attention before trail)
     "tests/unit/test_hr_records_command_density_goal_b.py",
     "tests/unit/test_hr_records_document_goal_b.py",
-    # fieldtest_hub Goal B conversation (cycle 1671 IssueNote + ops/triage trail)
-    "tests/unit/test_fieldtest_conversation_goal_b.py",
-    # fieldtest_hub Goal B command_density (cycle 1726 manager_ops dual attention)
-    "tests/unit/test_fieldtest_command_density_goal_b.py",
-    # fieldtest_hub Goal B document (cycle 1843 TestDocument composition on eng/ops)
-    "tests/unit/test_fieldtest_document_goal_b.py",
-    # fieldtest_hub Goal B org_structure (cycle 1848 tester_roster skill+region)
-    "tests/unit/test_fieldtest_org_structure_goal_b.py",
-    # fieldtest_hub Goal B empty_region_honesty (cycle 1855 secondary desk prune)
-    "tests/unit/test_fieldtest_empty_region_goal_b.py",
     # simple_task Goal B conversation (cycle 1674 TaskComment live trail)
     "tests/unit/test_simple_task_conversation_goal_b.py",
     # simple_task Goal B command_density (cycle 1835 dual attention before trail)
@@ -678,16 +599,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_scope_filters_null_ne.py",
     # framework null-default / null-filter (cycle 1884)
     "tests/unit/test_repository_null_bool_default.py",
-    # acme_billing Goal B conversation (InvoiceNote live trail on billing desks)
-    "tests/unit/test_acme_billing_conversation_goal_b.py",
-    # acme_billing Goal B document (LineItem composition + line_kind_density)
-    "tests/unit/test_acme_billing_document_goal_b.py",
-    # acme_billing Goal B command_density (open+sensitive dual attention)
-    "tests/unit/test_acme_billing_command_density_goal_b.py",
-    # acme_billing Goal B empty_region_honesty (cycle 1828 primary desks prune)
-    "tests/unit/test_acme_billing_empty_region_goal_b.py",
-    # acme_billing Goal B org_structure (cycle 1867 team title+dept boards)
-    "tests/unit/test_acme_billing_org_structure_goal_b.py",
     # Goal B coat freeze (conversation/rail/focus/metric ratchet — must not grow)
     "tests/unit/test_goal_b_coat.py",
     "tests/unit/test_interesting_product_portfolio.py",
@@ -712,10 +623,6 @@ SHIP_TESTS: tuple[str, ...] = (
     # after priority_awaiting_customer focus strip ×3 Pythons — conversation/
     # command_density/empty_region were already in ship-surface; media was not)
     "tests/unit/test_support_tickets_media_goal_b.py",
-    # acme_billing reference drift (CI red 2026-08-03 after Goal B LineItem —
-    # compliance auditspec dsl_hash / RBAC matrix ×3 Pythons; ship-surface
-    # previously green while main matrix red)
-    "tests/unit/test_acme_billing_reference_drift.py",
     # cycle 2378 cimonitor: example_hub supervisor `from registry` shadowed
     # by packages/hatchi-maxchi/site/registry.py under pytest-xdist
     "tests/unit/test_example_eval_hub.py::TestSupervisorOurs::test_load_survives_hm_registry_shadow",
@@ -791,9 +698,7 @@ Remediation by class (run from repo root):
   open_via dual-open pin (Goal B display_field / home region renames)
     # Goal B depth may change display_field / home region names — update
     # tests/unit/test_open_via_1603.py pins with the product ship (same commit).
-    pytest tests/unit/test_open_via_1603.py::test_contact_manager_engagement_letter_list_dual_open -q
-    pytest tests/unit/test_open_via_1603.py::test_llm_classification_list_dual_open -q
-    pytest tests/unit/test_llm_classifier_conversation_goal_b.py tests/unit/test_design_studio_conversation_goal_b.py -q
+    pytest tests/unit/test_open_via_1603.py -q
 
   Preflight recipe recreates .venv (python-tests 3.12/3.13 missing modules)
     # make test-ux-preflight must call .venv/bin/python -m, not $(UV) run.
@@ -804,15 +709,6 @@ Remediation by class (run from repo root):
     # Keep the pip_audit.py invocation on one line, or under `run: |`.
     # A plain multiline run: folds the backslash into a leading space on each flag.
     pytest tests/unit/test_pip_audit.py::test_the_monitor_reports_while_the_gate_still_gates -q
-
-  acme_billing RBAC matrix / compliance auditspec drift
-    # After DSL entity/permit/scope changes on examples/acme_billing:
-    cd examples/acme_billing
-    python -m dazzle rbac matrix --format json > expected/rbac-matrix.json
-    dazzle compliance compile
-    python3 -c "import json; from pathlib import Path; d=json.loads(Path('.dazzle/compliance/output/iso27001/auditspec.json').read_text()); d.pop('generated_at', None); d.pop('dsl_source', None); Path('expected/compliance-auditspec.json').write_text(json.dumps(d, indent=2)+chr(10))"
-    # CHANGELOG under Changed/Fixed; then:
-    pytest tests/unit/test_acme_billing_reference_drift.py -q
 
 Re-run:
   make ship-surface

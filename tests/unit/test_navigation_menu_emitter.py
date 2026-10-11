@@ -5,7 +5,6 @@ Sitespec ``layout.nav`` → shell ``NavigationMenu`` / ``.dz-navigation-menu``.
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
@@ -17,9 +16,6 @@ from dazzle.render.fragment import (
     NavigationMenuLink,
 )
 from dazzle.render.navigation_menu import build_site_navigation_menu
-
-ROOT = Path(__file__).resolve().parents[2]
-DESIGN = ROOT / "examples" / "design_studio"
 
 
 def test_navigation_menu_emit_mounts_dz_spine() -> None:
@@ -85,12 +81,6 @@ def test_build_site_navigation_menu_from_flat_items() -> None:
 def test_build_site_navigation_menu_empty() -> None:
     assert build_site_navigation_menu([]) is None
     assert build_site_navigation_menu(None) is None
-
-
-def test_design_studio_sitespec_declares_public_nav() -> None:
-    text = (DESIGN / "sitespec.yaml").read_text(encoding="utf-8")
-    assert "nav:" in text
-    assert "Home" in text
 
 
 def test_navigation_menu_shape_live() -> None:

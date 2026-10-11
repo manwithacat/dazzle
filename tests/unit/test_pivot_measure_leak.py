@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.render.filters import clerk_pivot_measure_display, clerk_pivot_measure_keys
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -15,24 +12,6 @@ class _FakePivot:
     title = "Alert pivot"
     display = "pivot_table"
     empty_message = "No alerts to pivot"
-
-
-def _ops_alert_pivot():
-    spec = load_project(Path("examples/ops_dashboard"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "alert_pivot":
-                return region
-    raise AssertionError("ops_dashboard alert_pivot missing")
-
-
-def test_ops_dashboard_alert_pivot_is_system_severity_count() -> None:
-    region = _ops_alert_pivot()
-    assert str(getattr(region.display, "value", region.display)) == "pivot_table"
-    group = list(getattr(region, "group_by_dims", None) or [])
-    assert [str(g) for g in group] == ["system", "severity"]
-    aggs = getattr(region, "aggregates", None) or {}
-    assert "count" in aggs
 
 
 def test_clerk_pivot_measure_keys_drops_dims_and_labels() -> None:

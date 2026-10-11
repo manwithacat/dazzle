@@ -27,7 +27,6 @@ from dazzle.http.runtime.search_routes import (
 _ROUTES = (
     Path(__file__).resolve().parents[2] / "src" / "dazzle" / "http" / "runtime" / "search_routes.py"
 )
-_LIVE_DSL = Path(__file__).resolve().parents[2] / "examples" / "contact_manager" / "dsl" / "app.dsl"
 _LIVE_DOCS = Path(__file__).resolve().parents[2] / "docs" / "reference" / "frontend.md"
 
 
@@ -147,8 +146,3 @@ def test_helper_source_pins_search_entity_leftover() -> None:
     assert "leftover_honest_auth_error" in routes
     assert 'return JSONResponse(content={"error": "invalid entity"}, status_code=400)' in routes
     assert "Response(\n            status_code=400,\n            content=" not in routes
-
-
-def test_live_search_surface_and_contact_searchable() -> None:
-    assert 'hx-get="/_dazzle/search"' in _LIVE_DOCS.read_text()
-    assert "patterns: profile, searchable" in _LIVE_DSL.read_text()

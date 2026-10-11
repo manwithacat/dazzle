@@ -30,7 +30,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _EXAMPLES = _REPO_ROOT / "examples"
 _BOGUS_UUID = "00000000-0000-0000-0000-000000000000"
 
-_APPS = ("simple_task", "contact_manager", "support_tickets", "ops_dashboard", "fieldtest_hub")
+_APPS = ("simple_task", "support_tickets")
 
 
 def _client_for_example(app_name: str) -> tuple[TestClient, FastAPI]:

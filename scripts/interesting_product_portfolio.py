@@ -50,12 +50,7 @@ DEPTH_IDS: tuple[str, ...] = (
 )
 
 # Unit pin filename aliases → showcase dir name.
-_APP_ALIASES: dict[str, str] = {
-    "llm_classifier": "llm_ticket_classifier",
-    "domain_join": "domain_join_co",
-    "fieldtest": "fieldtest_hub",
-    "acme": "acme_billing",
-}
+_APP_ALIASES: dict[str, str] = {}
 
 # Soft recipe tags derived from dig notes / commit subjects (closed set).
 _RECIPE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -107,12 +102,12 @@ COAT_FAMILIES: frozenset[str] = frozenset(name for name, _ in _FAMILY_PATTERNS)
 
 # Prefer stacking depth on these icon apps before thin fleet coat.
 ICON_APPS: dict[str, tuple[str, ...]] = {
-    "conversation": ("support_tickets", "simple_task", "fieldtest_hub"),
-    "document": ("invoice_ops", "acme_billing", "fieldtest_hub"),
-    "media": ("design_studio", "fieldtest_hub"),
-    "command_density": ("ops_dashboard", "support_tickets", "invoice_ops"),
-    "org_structure": ("hr_records", "domain_join_co", "support_tickets"),
-    "empty_region_honesty": ("support_tickets", "project_tracker", "hr_records"),
+    "conversation": ("support_tickets", "simple_task"),
+    "document": ("invoice_ops",),
+    "media": ("simple_task",),
+    "command_density": ("support_tickets", "invoice_ops"),
+    "org_structure": ("hr_records", "support_tickets"),
+    "empty_region_honesty": ("support_tickets", "hr_records"),
 }
 
 DEFAULT_MAX_SAME_DEPTH = 3

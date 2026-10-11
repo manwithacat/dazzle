@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import (
-    build_entity_columns_full,
-    field_kind_to_col_type,
-)
 from dazzle.http.runtime.workspace_csv import _csv_cell
 from dazzle.render.file_cell import clerk_file_cell_display
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
@@ -22,28 +15,6 @@ class _FakeTimeline:
     title = "Recent uploads"
     display = "timeline"
     empty_message = "No recent uploads"
-
-
-def _project_tracker_uploads():
-    spec = load_project(Path("examples/project_tracker"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "recent_uploads":
-                return spec, region
-    raise AssertionError("project_tracker recent_uploads missing")
-
-
-def test_recent_uploads_is_attachment_timeline() -> None:
-    spec, region = _project_tracker_uploads()
-    assert str(getattr(region.display, "value", region.display)) == "timeline"
-    assert region.source == "Attachment"
-    att = spec.get_entity("Attachment")
-    assert att is not None
-    file_field = next(f for f in att.fields if f.name == "file")
-    assert field_kind_to_col_type(file_field, att) == "file"
-    file_col = next(c for c in build_entity_columns_full(att) if c["key"] == "file")
-    assert file_col["type"] == "file"
-    assert file_col["entity_name"] == "Attachment"
 
 
 def test_clerk_file_cell_uses_filename_not_uuid() -> None:

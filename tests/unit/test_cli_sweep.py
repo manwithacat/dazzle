@@ -132,14 +132,12 @@ class TestSweepIntegration:
         # example would fail), but we can assert the command runs and
         # produces the header.
         assert "Dazzle example-app sweep" in result.stdout
-        # Every example app name appears in the table. `custom_renderer`
-        # was added in v0.71.15 (#1117 worked example).
+        # Every example app name appears in the table.
         for name in (
-            "contact_manager",
-            "fieldtest_hub",
-            "ops_dashboard",
             "simple_task",
             "support_tickets",
+            "invoice_ops",
+            "hr_records",
         ):
             assert name in result.stdout, f"{name} missing from sweep output"
 
@@ -148,10 +146,6 @@ class TestSweepIntegration:
         payload = json.loads(result.stdout)
         assert "apps" in payload
         assert "coverage" in payload
-        # 12 examples (kayfabe business apps only; pra, custom_renderer,
-        # component_showcase were reclassified to fixtures/ in the 2026-06-13
-        # example-guides Phase 0): contact_manager, fieldtest_hub,
-        # ops_dashboard, simple_task, support_tickets, design_studio,
-        # llm_ticket_classifier, project_tracker, acme_billing (#1174),
-        # invoice_ops (#1184), hr_records (#1217), domain_join_co (#1429).
-        assert len(payload["apps"]) == 12
+        # 4 examples since flense ship E (ADR-0057): simple_task,
+        # support_tickets, invoice_ops (#1184), hr_records (#1217).
+        assert len(payload["apps"]) == 4

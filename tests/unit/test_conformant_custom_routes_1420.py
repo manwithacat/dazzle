@@ -157,15 +157,3 @@ class TestMatrixCompleteness:
         bad = _desc("POST", "/tasks/x", entity="Task", op="frobnicate", via="id")
         v = verify_route_matrix_completeness(self._appspec("Task"), [bad], set())
         assert any("frobnicate" in x for x in v)
-
-    def test_rbac_routes_cli_reports_ok_on_clean_example(self) -> None:
-        """`dazzle rbac routes` wires the gate end-to-end; a no-override example is OK."""
-        from typer.testing import CliRunner
-
-        from dazzle.cli.rbac import rbac_app
-
-        result = CliRunner().invoke(
-            rbac_app, ["routes", "--manifest", "examples/ops_dashboard/dazzle.toml"]
-        )
-        assert result.exit_code == 0
-        assert "OK" in result.stdout

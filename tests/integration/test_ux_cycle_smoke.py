@@ -49,7 +49,7 @@ class TestUxCycleSmokeIntegration:
         mission = build_ux_quality_mission(
             contract=contract,
             persona=persona,
-            example_app="ops_dashboard",
+            example_app="support_tickets",
             base_url="http://localhost:3462",
             results=results,
         )

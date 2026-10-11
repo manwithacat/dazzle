@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_computes import compute_tabbed_slices
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -15,21 +12,6 @@ class _FakeTabs:
     title = "Issue categories"
     display = "tabbed_list"
     empty_message = "No issues reported"
-
-
-def _fieldtest_issue_tabs():
-    spec = load_project(Path("examples/fieldtest_hub"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "issue_tabs":
-                return region
-    raise AssertionError("fieldtest_hub issue_tabs missing")
-
-
-def test_fieldtest_issue_tabs_groups_by_status() -> None:
-    region = _fieldtest_issue_tabs()
-    assert str(getattr(region.display, "value", region.display)) == "tabbed_list"
-    assert region.group_by == "status"
 
 
 def test_scalar_group_by_slices_status_tabs() -> None:

@@ -49,28 +49,6 @@ def test_invoice_jsonl_submitted_per_tenant() -> None:
     assert not thin, f"thin submitted tenants: {thin}"
 
 
-def test_project_tracker_board_column_floors() -> None:
-    """P0-5: Task.jsonl keeps kanban columns non-empty."""
-    path = SEEDS / "project_tracker" / "dsl" / "seeds" / "demo_data" / "Task.jsonl"
-    assert path.is_file()
-    by = Counter(str(r.get("status")) for r in _jsonl(path))
-    assert by["todo"] >= 3
-    assert by["in_progress"] >= 3
-    assert by["review"] >= 2
-
-
-def test_design_studio_brand_hex_swatches() -> None:
-    """P0-8: Brand.jsonl carries hex palettes for color widgets."""
-    path = SEEDS / "design_studio" / "dsl" / "seeds" / "demo_data" / "Brand.jsonl"
-    assert path.is_file()
-    hex_ok = 0
-    for row in _jsonl(path):
-        pc = str(row.get("primary_color") or "")
-        if pc.startswith("#") and len(pc) in (4, 7):
-            hex_ok += 1
-    assert hex_ok >= 3
-
-
 def test_simple_task_member_has_assigned_work() -> None:
     """Re-eval #1: member My Work must have tasks assigned to stable member id."""
     from dazzle.http.runtime.test_routes import STABLE_PERSONA_USER_IDS
@@ -118,20 +96,9 @@ def test_queue_transitions_capped_to_primary_pair() -> None:
 def test_hero_min_bytes_covers_non_trio_showcase() -> None:
     """31 Jul re-score: protect non-trio density via empty-hero floors."""
     mod = _load()
-    for app in (
-        "project_tracker",
-        "contact_manager",
-        "fieldtest_hub",
-        "hr_records",
-        "ops_dashboard",
-        "design_studio",
-    ):
+    for app in ("hr_records",):
         floors = mod.HERO_MIN_BYTES.get(app) or {}
         assert floors, f"missing HERO_MIN_BYTES for {app}"
-    # Project board floor must be high enough to reject empty-shell stills.
-    assert (
-        mod.HERO_MIN_BYTES["project_tracker"]["project_board_manager_desktop_light.png"] >= 100_000
-    )
 
 
 def test_product_quality_stills_aligned_with_demo_fleet_heroes() -> None:

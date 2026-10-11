@@ -2,20 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.project import load_project
 from dazzle.http.runtime.htmx_render import _render_table_empty
 from dazzle.render.breadcrumbs import (
     clerk_empty_filtered_title,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
     clerk_list_empty_kind,
-    entity_path_labels_from_spec,
 )
-
-FIELDTEST = Path("examples/fieldtest_hub")
 
 
 class _Url:
@@ -40,22 +33,6 @@ def _table(**overrides: object) -> dict:
     }
     base.update(overrides)
     return base
-
-
-def test_clerk_empty_filtered_title_splits_pascal_and_catalog() -> None:
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_entity_confirm_noun("IssueReport", labels) == "issue report"
-    assert (
-        clerk_empty_filtered_title("IssueReport", labels)
-        == "No issue reports match the current filters."
-    )
-    assert (
-        clerk_empty_filtered_title("IssueReport") == "No issue reports match the current filters."
-    )
 
 
 def test_clerk_empty_filtered_title_leftover_invents_no_collection() -> None:

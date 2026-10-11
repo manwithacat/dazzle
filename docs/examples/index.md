@@ -7,24 +7,25 @@ Explore complete DAZZLE applications demonstrating various features and complexi
 | Example | Complexity | Key Features |
 |---------|------------|--------------|
 | [Simple Task](simple-task.md) | Beginner | CRUD, surfaces, workspaces |
-| [Contact Manager](contact-manager.md) | Beginner+ | Indexes, search, workspace layouts |
-| [Support Tickets](support-tickets.md) | Intermediate | Foreign keys, entity relationships |
-| [Ops Dashboard](ops-dashboard.md) | Intermediate+ | Personas, dashboards, engine hints |
-| [FieldTest Hub](fieldtest-hub.md) | Advanced | Persona scoping, attention signals, multi-workspace |
+| [Support Tickets](support-tickets.md) | Intermediate | Foreign keys, entity relationships, audit |
+| `invoice_ops` | Intermediate+ | Tenancy, approvals, processes |
+| `hr_records` | Advanced | PII handling, org hierarchy |
 
-### Additional Examples
+Four examples remain; flense ship E (ADR-0057) retired the rest because the
+consumer apps now exercise their constructs.
 
-| Example | Key Features |
+### Framework fixtures
+
+| Fixture | Key Features |
 |---------|--------------|
 | `pra` | Experiences, wizards, multi-step flows |
-| `llm_ticket_classifier` | LLM integration, ticket classification |
 | `rbac_validation` | Role-based access control, permissions |
 
 ## Learning Path
 
 ```
-simple_task → contact_manager → support_tickets → ops_dashboard → fieldtest_hub
-  (Beginner)    (Beginner+)      (Intermediate)   (Intermediate+)   (Advanced)
+simple_task → support_tickets → invoice_ops → hr_records
+  (Beginner)   (Intermediate)   (Intermediate+)  (Advanced)
 ```
 
 ## Running Examples
@@ -54,9 +55,8 @@ Examples are tested in CI with different priority levels:
 
 | Priority | Examples | CI Behavior |
 |----------|----------|-------------|
-| **P0** | simple_task, contact_manager | Blocks PRs |
-| **P1** | support_tickets, ops_dashboard | Warnings only |
-| **P2** | fieldtest_hub | Main branch only |
+| **P0** | simple_task | Blocks PRs |
+| **P1** | support_tickets, invoice_ops, hr_records | Warnings only |
 
 ## Creating Your Own
 

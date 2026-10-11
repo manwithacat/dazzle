@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.render.filters import clerk_list_search_field_label
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
-
-CONTACT = Path("examples/contact_manager/dsl")
 
 
 class _FakeRegion:
@@ -31,16 +27,6 @@ def _render_list(search_fields: list[str]) -> str:
     return FragmentRenderer().render(
         WorkspaceRegionAdapter().build(_FakeRegion("contact_list"), ctx)
     )
-
-
-def test_contact_manager_list_search_is_live() -> None:
-    block = (CONTACT / "app.dsl").read_text()
-    surface = block.split('surface contact_list "Contacts":', 1)[1].split("surface ", 1)[0]
-    assert "search: first_name, last_name, email, company, job_title" in surface
-    assert 'field first_name "First Name"' in surface
-    assert 'field job_title "Job Title"' in surface
-    region = block.split("  contact_list:", 1)[1].split("  contact_detail:", 1)[0]
-    assert "display: list" in region
 
 
 def test_clerk_list_search_leftover_and_empty() -> None:

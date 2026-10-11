@@ -14,7 +14,7 @@ Usage::
     python scripts/agent_workspace_health.py
     python scripts/agent_workspace_health.py --json
     python scripts/agent_workspace_health.py --require-postgres
-    python scripts/agent_workspace_health.py --apps invoice_ops,ops_dashboard
+    python scripts/agent_workspace_health.py --apps invoice_ops,support_tickets
 
 Exit 0 = ready for git + dazzle serve + recapture.
 Exit 1 = blocked (print remediation).
@@ -220,7 +220,7 @@ def main() -> int:
     ap.add_argument("--root", type=Path, default=REPO)
     ap.add_argument(
         "--apps",
-        default="invoice_ops,ops_dashboard",
+        default="invoice_ops,support_tickets",
         help="Example apps to probe for readability (comma-separated)",
     )
     ap.add_argument(

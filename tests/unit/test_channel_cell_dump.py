@@ -2,16 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.ir.fields import FieldTypeKind
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import (
-    build_surface_columns,
-    field_kind_to_col_type,
-)
 from dazzle.http.runtime.workspace_csv import _csv_cell
-from dazzle.page.converters.template_compiler import _field_type_to_column_type
 from dazzle.render.channel_cell import (
     clerk_email_cell_html,
     clerk_email_display,
@@ -25,30 +16,6 @@ from dazzle.render.channel_cell import (
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._shared import _render_typed_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
-
-
-def _contact_fields():
-    spec = load_project(Path("examples/contact_manager"))
-    contact = spec.get_entity("Contact")
-    assert contact is not None
-    email = next(f for f in contact.fields if f.name == "email")
-    phone = next(f for f in contact.fields if f.name == "phone")
-    surface = next(s for s in spec.surfaces if s.name == "contact_list")
-    return spec, contact, email, phone, surface
-
-
-def test_contact_list_email_and_phone_are_channel_cells() -> None:
-    spec, contact, email, phone, surface = _contact_fields()
-    assert email.type.kind == FieldTypeKind.EMAIL
-    assert email_field_name("email")
-    assert phone_field_name("phone")
-    assert field_kind_to_col_type(email, contact) == "email"
-    assert field_kind_to_col_type(phone, contact) == "phone"
-    assert _field_type_to_column_type(email, "email") == "email"
-    assert _field_type_to_column_type(phone, "phone") == "phone"
-    columns = build_surface_columns(contact, surface, spec.enums)
-    assert next(c for c in columns if c["key"] == "email")["type"] == "email"
-    assert next(c for c in columns if c["key"] == "phone")["type"] == "phone"
 
 
 def test_channel_name_heuristics_do_not_map_counts_or_channel_enum() -> None:

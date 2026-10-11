@@ -535,6 +535,5 @@ create route.
 - `docs/reference/rbac-verification.md` — `dazzle rbac matrix` /
   static verification of the access matrix
 - `examples/simple_task/`, `examples/support_tickets/`,
-  `examples/ops_dashboard/`, `examples/fieldtest_hub/` — every
-  framework example demonstrates Pattern A or B with full
-  write-op scope rules as of v0.71.19.
+  `examples/invoice_ops/` — each demonstrates Pattern A or B with full
+  write-op scope rules (gated by `tests/unit/test_examples_rbac_lint_clean.py`).

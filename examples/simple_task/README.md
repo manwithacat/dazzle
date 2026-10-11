@@ -124,10 +124,9 @@ pytest tests/e2e/ -v
 
 After understanding this example, progress to:
 
-1. **contact_manager** (Beginner+) - List+detail pattern, DUAL_PANE_FLOW archetype
-2. **support_tickets** (Intermediate) - Multi-entity relationships, refs
-3. **ops_dashboard** (Intermediate+) - Personas, COMMAND_CENTER archetype
-4. **fieldtest_hub** (Advanced) - Complex domain, access rules, persona scoping
+1. **support_tickets** (Intermediate) - Multi-entity relationships, refs, audit, signing
+2. **invoice_ops** (Intermediate+) - Tenancy, approvals, processes
+3. **hr_records** (Advanced) - PII handling, org hierarchy
 
 ## Key Concepts Illustrated
 

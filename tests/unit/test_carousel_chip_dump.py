@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.render.filters import clerk_carousel_chip_label
 from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.region._builders_metrics import _BuildersMetricsMixin
 from dazzle.render.fragment.region._context import RegionContext
-
-DESIGN = Path("examples/design_studio/dsl")
 
 
 class _A(_BuildersMetricsMixin):
@@ -20,19 +16,6 @@ def _render_items(items: list[dict[str, object]]) -> str:
     region = type("R", (), {"name": "asset_carousel", "title": "Assets", "empty_message": None})()
     ctx: RegionContext = {"items": items, "status_entries": []}
     return FragmentRenderer().render(_A()._build_carousel(region, ctx))
-
-
-def test_design_studio_asset_carousel_is_live() -> None:
-    block = (DESIGN / "app.dsl").read_text()
-    asset = block.split('entity Asset "Design Asset":', 1)[1].split("entity ", 1)[0]
-    assert "asset_type: enum[logo,icon_glyph,illustration,photo,pattern,typography]=logo" in asset
-    region = block.split("  asset_carousel:", 1)[1].split("  campaign_queue:", 1)[0]
-    assert "display: carousel" in region
-    assert "source: Asset" in region
-    seeds = (DESIGN / "seeds/demo_data/Asset.jsonl").read_text()
-    assert '"asset_type":"icon_glyph"' in seeds
-    catalog = block.split('surface asset_list "Assets":', 1)[1].split("surface ", 1)[0]
-    assert 'field asset_type "Type"' in catalog
 
 
 def test_clerk_carousel_chip_leftover_and_empty() -> None:

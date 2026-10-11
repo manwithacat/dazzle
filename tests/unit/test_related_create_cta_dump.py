@@ -15,15 +15,6 @@ from dazzle.render.fragment.primitives.data import RelatedGroup
 from dazzle.render.fragment.renderer import FragmentRenderer
 
 SIMPLE = Path("examples/simple_task")
-FIELDTEST = Path("examples/fieldtest_hub")
-
-
-def test_clerk_related_create_noun_splits_pascal_and_catalog() -> None:
-    spec = load_project(FIELDTEST)
-    labels = {e.name: str(e.title or "") for e in spec.domain.entities if str(e.title or "")}
-    assert clerk_related_create_noun("IssueNote", labels) == "Issue Note"
-    assert clerk_related_create_noun("IssueNote") == "Issue Note"
-    assert clerk_related_create_noun("Task") == "Task"
 
 
 def test_clerk_related_create_noun_leftover_invents_no_entity() -> None:

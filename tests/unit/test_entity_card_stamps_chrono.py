@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 from dazzle.core.ir.workspaces import (
     EntityCardConfig,
     EntityCardSection,
     EntityCardSectionMode,
 )
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_card_fetchers import _build_entity_card_sections
 from dazzle.i18n.display_locale import get_display_locale
 from dazzle.render.fragment.region.workspace_card_bodies import clerk_stamp_chrono_fields
@@ -39,31 +37,6 @@ def _stamps_cfg(fields: list[str] | None = None) -> EntityCardConfig:
             )
         ]
     )
-
-
-def _ops_alert_360_history() -> tuple[EntityCardConfig, int]:
-    spec = load_project(Path("examples/ops_dashboard"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name != "alert_360":
-                continue
-            cfg = region.entity_card_config
-            assert cfg is not None
-            idx = next(
-                i
-                for i, section in enumerate(cfg.sections)
-                if section.mode == EntityCardSectionMode.STAMPS
-            )
-            return cfg, idx
-    raise AssertionError("ops_dashboard alert_360 stamps section missing")
-
-
-def test_ops_dashboard_alert_360_history_omits_fields() -> None:
-    cfg, idx = _ops_alert_360_history()
-    history = cfg.sections[idx]
-    assert history.name == "history"
-    assert list(history.fields or []) == []
-    assert history.source == "Alert"
 
 
 def test_clerk_stamp_chrono_infers_triggered_at_and_message() -> None:
@@ -141,16 +114,3 @@ def test_stamps_no_rows_still_omit() -> None:
     )
     assert out[0]["is_omitted"] is True
     assert out[0]["body"] == ""
-
-
-def test_stamps_section_live_ops_dashboard() -> None:
-    cfg, idx = _ops_alert_360_history()
-    out = _build_entity_card_sections(
-        items=[{"id": "a1", "message": "CPU spike on api-gateway"}],
-        config=cfg,
-        rows_per_section={idx: [_alert_row()]},
-    )
-    stamps = next(section for section in out if section["mode"] == "stamps")
-    assert stamps["is_omitted"] is False
-    assert "CPU spike on api-gateway" in stamps["body"]
-    assert "2026-05-18 14:30:00" not in stamps["body"]

@@ -166,7 +166,7 @@ this pattern.
 ## Things this example deliberately avoids
 
 - **Auth.** The framework auth subsystem is orthogonal to renderer
-  extension. `simple_task` / `contact_manager` cover the auth path.
+  extension. `simple_task` / `support_tickets` cover the auth path.
 - **DB integration.** A production word-cloud renderer would query
   Feedback rows from the repository — this example reads from
   `ctx.get("rows", [])` so it stays focused on the protocol shape.

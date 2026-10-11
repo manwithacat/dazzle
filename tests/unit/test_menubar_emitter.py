@@ -5,16 +5,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.qa.hyperpart_dsl_shapes import shapes_snapshot
 from dazzle.render.fragment import FragmentRenderer, Menubar, MenubarAction, MenubarMenu
 from dazzle.render.menubar import build_shell_menubar
-
-ROOT = Path(__file__).resolve().parents[2]
-DESIGN = ROOT / "examples" / "design_studio"
 
 
 def test_menubar_emit_mounts_dz_spine() -> None:
@@ -90,19 +85,6 @@ def test_build_shell_menubar_from_nav_groups() -> None:
     html = FragmentRenderer().render(bar)
     assert "Dashboard" in html
     assert 'href="/app/studio"' in html
-
-
-def test_design_studio_declares_menubar_opt_in() -> None:
-    text = (DESIGN / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert "menubar: true" in text
-
-
-def test_design_studio_appspec_features_menubar() -> None:
-    appspec = load_project_appspec(DESIGN)
-    cfg = getattr(appspec, "app_config", None)
-    assert cfg is not None
-    features = getattr(cfg, "features", None) or {}
-    assert features.get("menubar") is True
 
 
 def test_menubar_shape_live() -> None:

@@ -158,12 +158,6 @@ def test_single_photo_entity_does_not_saturate_media(tmp_path: Path) -> None:
     assert ("demo", "media") not in sat
 
 
-def test_fieldtest_two_desk_media_saturates() -> None:
-    sat = live_saturated_cells(["fieldtest_hub", "support_tickets"])
-    assert ("fieldtest_hub", "media") in sat
-    assert ("support_tickets", "media") not in sat
-
-
 def test_stamp_pair_grids_saturate_media(tmp_path: Path) -> None:
     app = tmp_path / "demo"
     dsl = app / "dsl"
@@ -310,19 +304,6 @@ def test_line_composition_saturates_document(tmp_path: Path) -> None:
     assert line_composition_document((dsl / "app.dsl").read_text(encoding="utf-8")) is True
 
 
-def test_acme_billing_line_composition_saturates_document() -> None:
-    sat = live_saturated_cells(["acme_billing", "simple_task"])
-    assert ("acme_billing", "document") in sat
-    assert ("simple_task", "document") not in sat
-
-
-def test_fieldtest_protocol_acceptance_saturates_document() -> None:
-    sat = live_saturated_cells(["fieldtest_hub", "acme_billing"])
-    assert ("fieldtest_hub", "document") in sat
-    # acme document may already be sat via other rules
-    assert ("fieldtest_hub", "document") in sat
-
-
 def test_support_tickets_agent_only_selector_saturates() -> None:
     sat = live_saturated_cells(["support_tickets", "acme_billing"])
     assert ("support_tickets", "empty_region_honesty") in sat
@@ -439,12 +420,6 @@ def test_identity_chip_empty_rejects_extra_repr_fields(tmp_path: Path) -> None:
     assert identity_chip_empty((dsl / "app.dsl").read_text(encoding="utf-8")) is False
 
 
-def test_project_tracker_identity_chip_saturates_empty_region() -> None:
-    sat = live_saturated_cells(["project_tracker", "acme_billing"])
-    assert ("project_tracker", "empty_region_honesty") in sat
-    assert ("acme_billing", "empty_region_honesty") not in sat
-
-
 def test_pending_join_org_saturates(tmp_path: Path) -> None:
     app = tmp_path / "demo"
     dsl = app / "dsl"
@@ -460,12 +435,6 @@ def test_pending_join_org_saturates(tmp_path: Path) -> None:
     sat = live_saturated_cells(["demo"], examples=tmp_path)
     assert ("demo", "org_structure") in sat
     assert pending_join_org((dsl / "app.dsl").read_text(encoding="utf-8")) is True
-
-
-def test_domain_join_pending_join_saturates_org() -> None:
-    sat = live_saturated_cells(["domain_join_co", "acme_billing"])
-    assert ("domain_join_co", "org_structure") in sat
-    assert ("acme_billing", "org_structure") not in sat
 
 
 def test_billing_escalations_org_saturates(tmp_path: Path) -> None:
@@ -499,18 +468,6 @@ def test_hr_records_tree_people_saturates_org() -> None:
     sat = live_saturated_cells(["hr_records", "acme_billing"])
     assert ("hr_records", "org_structure") in sat
     assert ("acme_billing", "org_structure") not in sat
-
-
-def test_fieldtest_note_kind_chrome_saturates_conversation() -> None:
-    sat = live_saturated_cells(["fieldtest_hub", "acme_billing"])
-    assert ("fieldtest_hub", "conversation") in sat
-    assert ("acme_billing", "conversation") not in sat
-
-
-def test_design_studio_stamp_pair_media_saturates() -> None:
-    sat = live_saturated_cells(["design_studio", "support_tickets"])
-    assert ("design_studio", "media") in sat
-    assert ("support_tickets", "media") not in sat
 
 
 def test_freeze_detects_growth(tmp_path: Path) -> None:

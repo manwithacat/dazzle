@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 # List of examples to test - these use the Dazzle stack
 DAZZLE_EXAMPLES = [
     "simple_task",
-    "contact_manager",
 ]
 
 # Timeout for server startup (120s for slow CI runners)

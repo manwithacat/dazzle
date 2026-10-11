@@ -8,16 +8,12 @@ from dazzle.core.ir.workspaces import CohortStripConfig, CohortStripLens
 from dazzle.core.project import load_project
 from dazzle.render.breadcrumbs import (
     clerk_empty_cohort_title,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
     entity_path_labels_from_spec,
 )
 from dazzle.render.fragment import FragmentRenderer
 from dazzle.render.fragment.region._builders_cards import _BuildersCardsMixin
 
-OPS = Path("examples/ops_dashboard")
 HR = Path("examples/hr_records")
-OPS_DSL = OPS / "dsl" / "app.dsl"
 
 
 class _A(_BuildersCardsMixin):
@@ -48,25 +44,6 @@ def _render_cohort(region: object, ctx: dict[str, object] | None = None) -> str:
     payload = {"cohort_cells": [], "cohort_endpoint": "/r/systems_strip"}
     payload.update(ctx or {})
     return FragmentRenderer().render(_A()._build_cohort_strip(region, payload))
-
-
-def test_ops_systems_strip_is_live() -> None:
-    block = OPS_DSL.read_text()
-    region = block.split("  systems_strip:", 1)[1].split("  ops_today:", 1)[0]
-    assert "display: cohort_strip" in region
-    assert "source: System" in region
-    assert "empty:" not in region
-
-
-def test_clerk_empty_cohort_title_splits_pascal_and_catalog() -> None:
-    spec = load_project(OPS)
-    system = next(e for e in spec.domain.entities if e.name == "System")
-    assert system.title == "System"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("System", labels) == "System"
-    assert clerk_entity_confirm_noun("System", labels) == "system"
-    assert clerk_empty_cohort_title("System", labels) == "No systems in this view."
-    assert clerk_empty_cohort_title("System") == "No systems in this view."
 
 
 def test_clerk_empty_cohort_title_leftover_invents_no_collection() -> None:

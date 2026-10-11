@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.page.converters.template_compiler import compile_appspec_to_templates
 from dazzle.render.cell_chrome import format_byte_size, related_file_name_and_meta
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.primitives.data import RelatedGroup, RelatedTab
@@ -114,20 +110,6 @@ def test_project_tracker_seed_file_row_titles_filename() -> None:
     assert name == "ia-dropoff-funnel-map-v3.pdf"
     assert metas == ["482 KB"]
     assert "/files/demo/" not in name
-
-
-def test_project_tracker_file_list_columns_type_size_bytes() -> None:
-    spec = load_project(Path("examples/project_tracker"))
-    ctxs = compile_appspec_to_templates(spec)
-    detail = ctxs["/task/{id}"].detail
-    assert detail is not None
-    group = next(g for g in detail.related_groups if g.group_id == "group-task_files")
-    assert group.display == "file_list"
-    tab = group.tabs[0]
-    keys = [c.key for c in tab.columns]
-    assert "filename" in keys
-    size = next(c for c in tab.columns if c.key == "size_bytes")
-    assert size.type == "bytes"
 
 
 def test_list_row_bytes_cell_humanizes() -> None:

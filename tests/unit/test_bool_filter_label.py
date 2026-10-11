@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_columns import (
-    _field_to_entity_column,
     bool_filter_options,
-    build_surface_columns,
 )
 from dazzle.http.runtime.workspace_region_computes import compute_filter_columns_and_active
 from dazzle.render.fragment import URL, FilterBar, FilterColumn, FragmentRenderer
@@ -20,30 +15,6 @@ def test_bool_filter_options_are_yes_no() -> None:
     assert bool_filter_options() == [("true", "Yes"), ("false", "No")]
     assert format_cell(True, "bool") == "Yes"
     assert format_cell(False, "bool") == "No"
-
-
-def test_contact_list_favorite_filter_is_yes_no() -> None:
-    spec = load_project(Path("examples/contact_manager"))
-    contact = spec.get_entity("Contact")
-    assert contact is not None
-    surf = next(s for s in spec.surfaces if s.name == "contact_list")
-    cols = build_surface_columns(contact, surf, spec.enums)
-    fav = next(c for c in cols if c["key"] == "is_favorite")
-    assert fav["type"] == "bool"
-    assert fav["filterable"] is True
-    assert fav["filter_options"] == [("true", "Yes"), ("false", "No")]
-    assert fav["filter_options"] != ["true", "false"]
-
-
-def test_entity_bool_column_filter_is_yes_no() -> None:
-    spec = load_project(Path("examples/contact_manager"))
-    contact = spec.get_entity("Contact")
-    assert contact is not None
-    fav = next(f for f in contact.fields if f.name == "is_favorite")
-    col = _field_to_entity_column(fav, contact, spec.enums)
-    assert col is not None
-    assert col["type"] == "bool"
-    assert col["filter_options"] == [("true", "Yes"), ("false", "No")]
 
 
 def test_bool_filter_query_values_stay_true_false() -> None:

@@ -2,15 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import (
-    build_surface_columns,
-    field_kind_to_col_type,
-)
 from dazzle.http.runtime.workspace_csv import _csv_cell
-from dazzle.page.converters.template_compiler import _field_type_to_column_type
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._shared import _render_typed_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
@@ -20,26 +12,6 @@ from dazzle.render.temperature_cell import (
     clerk_temperature_unit,
     temperature_field_name,
 )
-
-
-def _session_temperature_field():
-    spec = load_project(Path("examples/fieldtest_hub"))
-    session = spec.get_entity("TestSession")
-    assert session is not None
-    temperature = next(f for f in session.fields if f.name == "temperature")
-    surface = next(s for s in spec.surfaces if s.name == "test_session_list")
-    return spec, session, temperature, surface
-
-
-def test_test_session_list_temperature_is_temperature_cell() -> None:
-    spec, session, temperature, surface = _session_temperature_field()
-    assert temperature_field_name("temperature")
-    assert field_kind_to_col_type(temperature, session) == "temperature"
-    assert _field_type_to_column_type(temperature, "temperature") == "temperature"
-    col = next(
-        c for c in build_surface_columns(session, surface, spec.enums) if c["key"] == "temperature"
-    )
-    assert col["type"] == "temperature"
 
 
 def test_generic_decimal_is_not_a_temperature_cell() -> None:

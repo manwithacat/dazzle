@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.render.filters import clerk_chart_axis_label, clerk_stage_label
 from dazzle.render.fragment import BoxPlot, FragmentRenderer, Heatmap, HeatmapRow, Radar
 from dazzle.render.fragment.region._builders_charts import _BuildersChartsMixin
-
-OPS = Path("examples/ops_dashboard/dsl")
 
 
 class _A(_BuildersChartsMixin):
@@ -43,31 +39,6 @@ def _heat_html(columns: list[str], row: str = "Count") -> str:
         "heatmap_col_values": columns,
     }
     return FragmentRenderer().render(_A()._build_heatmap(region, ctx))
-
-
-def test_ops_dashboard_radar_service_type_is_live() -> None:
-    block = (OPS / "app.dsl").read_text()
-    region = block.split("  service_type_profile:", 1)[1].split("\n\n", 1)[0]
-    assert "display: radar" in region
-    assert "group_by: service_type" in region
-    system = block.split("entity System", 1)[1].split("entity ", 1)[0]
-    assert "service_type: enum[web,api,database,cache,queue]=web" in system
-
-
-def test_ops_dashboard_box_plot_service_type_is_live() -> None:
-    block = (OPS / "app.dsl").read_text()
-    region = block.split("  response_time_spread:", 1)[1].split("\n\n", 1)[0]
-    assert "display: box_plot" in region
-    assert "group_by: service_type" in region
-
-
-def test_ops_dashboard_heatmap_severity_is_live() -> None:
-    block = (OPS / "app.dsl").read_text()
-    region = block.split("  alert_heatmap:", 1)[1].split("\n\n", 1)[0]
-    assert "display: heatmap" in region
-    assert "group_by: severity" in region
-    alert = block.split("entity Alert", 1)[1].split("entity ", 1)[0]
-    assert "severity: enum[low,medium,high,critical]=low" in alert
 
 
 def test_clerk_chart_axis_label_schema_not_raw() -> None:

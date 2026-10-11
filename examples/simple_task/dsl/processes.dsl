@@ -36,10 +36,6 @@ process task_auto_assignment "Auto-Assign High Priority Tasks":
           max_attempts: 3
           backoff: exponential
 
-    - step notify_assignee:
-        channel: notifications
-        message: TaskAssignmentNotification
-
   timeout: 5m
 
 # =============================================================================
@@ -88,10 +84,6 @@ process urgent_task_approval "Urgent Task Approval":
             notes: text
           timeout: 4h
 
-    - step notify_decision:
-        channel: notifications
-        message: TaskCompletedNotification
-
   timeout: 24h
 
 # =============================================================================
@@ -123,9 +115,5 @@ schedule weekly_team_report "Weekly Team Report":
     - step generate_report:
         service: generate_team_report
         timeout: 5m
-
-    - step send_digest:
-        channel: digests
-        message: DailyDigest
 
   timeout: 15m

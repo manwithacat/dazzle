@@ -11,12 +11,7 @@ SHOWCASE = (
     "simple_task",
     "support_tickets",
     "invoice_ops",
-    "contact_manager",
-    "ops_dashboard",
-    "project_tracker",
-    "design_studio",
     "hr_records",
-    "fieldtest_hub",
 )
 
 _APP_SLUG = re.compile(r"^[a-z][a-z0-9_]*$")

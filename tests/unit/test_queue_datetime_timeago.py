@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.project import load_project
-from dazzle.http.runtime.workspace_columns import field_kind_to_col_type
 from dazzle.render.filters import _timeago_filter
 from dazzle.render.fragment.region._builders_tables import _format_queue_meta_value
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
@@ -18,16 +15,6 @@ class _FakeQueue:
     title = "Ack"
     display = "queue"
     empty_message = "All alerts acknowledged"
-
-
-def test_ops_dashboard_alert_triggered_at_is_datetime() -> None:
-    spec = load_project(Path("examples/ops_dashboard"))
-    alert = next(e for e in spec.domain.entities if e.name == "Alert")
-    triggered = next(f for f in alert.fields if f.name == "triggered_at")
-    system = next(e for e in spec.domain.entities if e.name == "System")
-    last_check = next(f for f in system.fields if f.name == "last_check")
-    assert field_kind_to_col_type(triggered, alert) == "datetime"
-    assert field_kind_to_col_type(last_check, system) == "datetime"
 
 
 def test_queue_datetime_uses_timeago_not_iso() -> None:

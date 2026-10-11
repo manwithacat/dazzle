@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from dazzle.core.ir.surfaces import SurfaceMode
-from dazzle.core.project import load_project
-from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.page_routes import _build_dispatch_ctx
 from dazzle.http.runtime.renderers.fragment_adapter import (
     FragmentSurfaceAdapter,
@@ -14,15 +10,9 @@ from dazzle.http.runtime.renderers.fragment_adapter import (
 )
 from dazzle.render.breadcrumbs import (
     clerk_empty_collection_title,
-    clerk_entity_confirm_noun,
-    clerk_entity_noun,
-    entity_path_labels_from_spec,
 )
 from dazzle.render.context import ColumnContext, TableContext
 from dazzle.render.fragment import FragmentRenderer
-
-FIELDTEST = Path("examples/fieldtest_hub")
-CONTACT = Path("examples/contact_manager")
 
 
 class _Surface:
@@ -57,26 +47,6 @@ def _table(**overrides) -> TableContext:
 def _render_list(ctx: dict) -> str:
     adapter = FragmentSurfaceAdapter()
     return FragmentRenderer().render(adapter._build_list(_Surface(), ctx))
-
-
-def test_fieldtest_issue_report_empty_title_is_live() -> None:
-    spec = load_project(FIELDTEST)
-    issue = next(e for e in spec.domain.entities if e.name == "IssueReport")
-    assert issue.title == "Issue Report"
-    assert entity_slug("IssueReport") == "issuereport"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_entity_noun("IssueReport", labels) == "Issue Report"
-    assert clerk_entity_confirm_noun("IssueReport", labels) == "issue report"
-    assert clerk_empty_collection_title("IssueReport", labels) == "No issue reports found"
-    assert clerk_empty_collection_title("IssueReport") == "No issue reports found"
-
-
-def test_contact_engagement_letter_empty_title_is_live() -> None:
-    spec = load_project(CONTACT)
-    letter = next(e for e in spec.domain.entities if e.name == "EngagementLetter")
-    assert letter.title == "Engagement Letter"
-    labels = entity_path_labels_from_spec(spec)
-    assert clerk_empty_collection_title("EngagementLetter", labels) == "No engagement letters found"
 
 
 def test_pick_empty_state_splits_pascal_entity() -> None:

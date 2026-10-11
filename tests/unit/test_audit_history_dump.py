@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
-from dazzle.core.project import load_project
 from dazzle.http.runtime.audit_history import HistoryChange, HistoryEntry
 from dazzle.http.runtime.audit_region import _render_history_html
 from dazzle.render.audit_history_cell import (
@@ -18,26 +16,6 @@ from dazzle.render.audit_history_cell import (
 
 _WHEN = datetime(2026, 5, 18, 14, 30, tzinfo=UTC)
 _ISO_BLOB = "2026-05-18 14:30:00+00:00"
-
-
-def _invoice_dunning_field():
-    spec = load_project(Path("examples/acme_billing"))
-    invoice = spec.get_entity("Invoice")
-    assert invoice is not None
-    dunning = next(f for f in invoice.fields if f.name == "dunning_state")
-    return spec, invoice, dunning
-
-
-def test_acme_invoice_audit_history_is_live() -> None:
-    spec, invoice, dunning = _invoice_dunning_field()
-    del spec
-    block = Path("examples/acme_billing/dsl/entities.dsl").read_text()
-    assert "audit: all" in block
-    assert invoice.name == "Invoice"
-    surfaces = Path("examples/acme_billing/dsl/surfaces.dsl").read_text()
-    hub = surfaces.split('surface invoice_detail "Invoice"', 1)[1].split("surface ", 1)[0]
-    assert "show_history: true" in hub
-    assert dunning.name == "dunning_state"
 
 
 def test_clerk_audit_split_leftover_and_empty() -> None:

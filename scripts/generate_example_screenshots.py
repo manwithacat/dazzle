@@ -56,33 +56,6 @@ EXAMPLES = {
             },
         ],
     },
-    "contact_manager": {
-        "routes": ["/", "/contact/list", "/contact/create"],
-        "seed": [
-            {
-                "entity": "Contact",
-                "data": {
-                    "first_name": "Alice",
-                    "last_name": "Johnson",
-                    "email": "alice@example.com",
-                    "phone": "+1-555-0101",
-                    "company": "Acme Corp",
-                    "job_title": "Senior Engineer",
-                },
-            },
-            {
-                "entity": "Contact",
-                "data": {
-                    "first_name": "Bob",
-                    "last_name": "Smith",
-                    "email": "bob@example.com",
-                    "phone": "+1-555-0102",
-                    "company": "TechStart Inc",
-                    "job_title": "Product Manager",
-                },
-            },
-        ],
-    },
     "uptime_monitor": {
         "routes": ["/", "/service/list"],
         "seed": [
@@ -157,29 +130,6 @@ EXAMPLES = {
                     "sender": "calendar@company.com",
                     "preview": "Reminder: Team sync at 10am",
                     "is_read": True,
-                },
-            },
-        ],
-    },
-    "ops_dashboard": {
-        "routes": ["/"],
-        "seed": [
-            {
-                "entity": "Server",
-                "data": {
-                    "name": "prod-web-01",
-                    "status": "healthy",
-                    "cpu_usage": "45.5",
-                    "memory_usage": "62.3",
-                },
-            },
-            {
-                "entity": "Server",
-                "data": {
-                    "name": "prod-db-01",
-                    "status": "healthy",
-                    "cpu_usage": "78.2",
-                    "memory_usage": "85.1",
                 },
             },
         ],

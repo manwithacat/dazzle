@@ -35,7 +35,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Representative matrix, not the full fleet: these three cover the column-shape
 # space (badge/enum + bool + date + ref + file + money across list surfaces)
 # while keeping the gate fast. #1573 was shape-specific, not app-specific.
-_APPS = ("support_tickets", "hr_records", "ops_dashboard")
+_APPS = ("support_tickets", "hr_records", "invoice_ops")
 
 
 def _plausible_value(col: dict[str, Any]) -> Any:

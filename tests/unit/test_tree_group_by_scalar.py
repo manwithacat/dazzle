@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_computes import compute_tree
 from dazzle.render.fragment.region import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer import FragmentRenderer
@@ -15,21 +12,6 @@ class _FakeTree:
     title = "Device tree"
     display = "tree"
     empty_message = "No devices registered"
-
-
-def _fieldtest_device_tree():
-    spec = load_project(Path("examples/fieldtest_hub"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "device_tree":
-                return region
-    raise AssertionError("fieldtest_hub device_tree missing")
-
-
-def test_fieldtest_device_tree_groups_by_batch_number() -> None:
-    region = _fieldtest_device_tree()
-    assert str(getattr(region.display, "value", region.display)) == "tree"
-    assert region.group_by == "batch_number"
 
 
 def test_scalar_group_by_nests_devices_under_batch() -> None:

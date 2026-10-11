@@ -32,12 +32,7 @@ SHOWCASE = (
     "simple_task",
     "support_tickets",
     "invoice_ops",
-    "contact_manager",
-    "ops_dashboard",
-    "project_tracker",
-    "design_studio",
     "hr_records",
-    "fieldtest_hub",
 )
 
 # P0-5 minimums (primary entity → min rows in blueprint)
@@ -45,12 +40,7 @@ MIN_ROWS: dict[str, dict[str, int]] = {
     "simple_task": {"Task": 12},
     "support_tickets": {"Ticket": 8, "Comment": 8},
     "invoice_ops": {"Invoice": 9, "Supplier": 3},
-    "contact_manager": {"Contact": 15},
-    "project_tracker": {"Task": 8, "Project": 1},
-    "ops_dashboard": {"Alert": 5},
-    "design_studio": {"Asset": 6, "Brand": 2},
     "hr_records": {"Person": 8},
-    "fieldtest_hub": {"Device": 6, "IssueReport": 6},
 }
 
 PLATFORM_STILL_PREFIX = "_platform_admin_"
@@ -60,25 +50,14 @@ PLATFORM_STILL_PREFIX = "_platform_admin_"
 # (`dazzle demo quality` uses the module floors for the full felt bar).
 # Absent stills are skipped so CI without gitignored .dazzle/ stills stays green.
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
-    "ops_dashboard": {
-        "incident_review_ops_engineer_desktop_light.png": 90000,
-        "command_center_ops_engineer_desktop_light.png": 80000,
-    },
     "hr_records": {
         "staff_directory_hr_admin_desktop_light.png": 100000,
-    },
-    "contact_manager": {
-        "contacts_user_desktop_light.png": 70000,
     },
     "invoice_ops": {
         "my_invoices_requester_desktop_light.png": 60000,
         "pay_desk_finance_desktop_light.png": 70000,
         "approval_desk_approver_desktop_light.png": 80000,
         "finance_ops_finance_desktop_light.png": 70000,
-    },
-    "fieldtest_hub": {
-        "issue_triage_manager_desktop_light.png": 90000,
-        "device_fleet_manager_desktop_light.png": 90000,
     },
     "simple_task": {
         "task_board_manager_desktop_light.png": 90000,
@@ -87,13 +66,6 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "support_tickets": {
         "manager_ops_manager_desktop_light.png": 80000,
         "ticket_queue_agent_desktop_light.png": 90000,
-    },
-    "project_tracker": {
-        "project_board_manager_desktop_light.png": 120000,
-    },
-    "design_studio": {
-        "asset_catalog_designer_desktop_light.png": 100000,
-        "brand_desk_designer_desktop_light.png": 100000,
     },
 }
 
@@ -211,46 +183,6 @@ def score_app(app: str) -> AppDemoBar:
                     )
         else:
             row.issues.append("seed_desk_thin:missing_Invoice.jsonl")
-
-    # P0-5 project_tracker: kanban columns not empty (todo / in_progress / review)
-    if app == "project_tracker":
-        task = app_dir / "dsl" / "seeds" / "demo_data" / "Task.jsonl"
-        if not task.is_file():
-            row.issues.append("seed_board_thin:missing_Task.jsonl")
-        else:
-            try:
-                by_st: dict[str, int] = {}
-                for line in task.read_text(encoding="utf-8").splitlines():
-                    if not line.strip():
-                        continue
-                    rec = json.loads(line)
-                    st = str(rec.get("status") or "")
-                    by_st[st] = by_st.get(st, 0) + 1
-                for col, need in (("todo", 3), ("in_progress", 3), ("review", 2)):
-                    if by_st.get(col, 0) < need:
-                        row.issues.append(f"seed_board_thin:{col}={by_st.get(col, 0)}<{need}")
-            except (OSError, json.JSONDecodeError) as exc:
-                row.issues.append(f"seed_board_unreadable:{type(exc).__name__}")
-
-    # P0-8 design_studio: explicit Brand.jsonl with hex palettes (swatch seeds)
-    if app == "design_studio":
-        brand = app_dir / "dsl" / "seeds" / "demo_data" / "Brand.jsonl"
-        if not brand.is_file():
-            row.issues.append("seed_swatches:missing_Brand.jsonl")
-        else:
-            try:
-                hex_ok = 0
-                for line in brand.read_text(encoding="utf-8").splitlines():
-                    if not line.strip():
-                        continue
-                    rec = json.loads(line)
-                    pc = str(rec.get("primary_color") or "")
-                    if pc.startswith("#") and len(pc) in (4, 7):
-                        hex_ok += 1
-                if hex_ok < 3:
-                    row.issues.append(f"seed_swatches:hex_brands={hex_ok}<3")
-            except (OSError, json.JSONDecodeError) as exc:
-                row.issues.append(f"seed_swatches_unreadable:{type(exc).__name__}")
 
     # P0-6 stale platform-only stills + empty-hero size floors
     shots = _shot_dir(app_dir)

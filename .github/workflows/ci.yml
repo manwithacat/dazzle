@@ -252,7 +252,7 @@ jobs:
         # advisory while Phase 4A adapter dispatch on display modes
         # lands. Once kanban/timeline/grid/etc. are covered, the
         # gate tightens back to --fail-on-blocked.
-        for dir in examples/simple_task examples/contact_manager examples/support_tickets examples/ops_dashboard examples/fieldtest_hub; do
+        for dir in examples/simple_task examples/support_tickets examples/invoice_ops examples/hr_records; do
           if [ -d "${dir}/dsl" ]; then
             echo "=== fragment-audit: $dir ==="
             python -m dazzle fragment-audit "$dir" || echo "Note: audit reported blockers in $dir (advisory)"
@@ -757,17 +757,9 @@ jobs:
       matrix:
         app:
           - simple_task
-          - contact_manager
           - support_tickets
-          - ops_dashboard
-          - fieldtest_hub
-          - project_tracker
-          - design_studio
-          - llm_ticket_classifier
-          - acme_billing
           - hr_records
           - invoice_ops
-          - domain_join_co
 
     services:
       postgres:

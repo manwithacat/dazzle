@@ -7,8 +7,9 @@ uses), sets a per-tenant join policy, and verified-email users in that domain
 join (or request to join) under it.
 
 It is the password-side complement to invitations and SSO JIT provisioning, and
-is superfluous once SSO is configured. The worked example is
-[`examples/domain_join_co`](https://github.com/manwithacat/dazzle/tree/main/examples/domain_join_co).
+is superfluous once SSO is configured. The `domain_join_co` worked example was
+retired in flense ship E (ADR-0057); the hierarchy + membership shape it relied
+on lives in `fixtures/tenant_hierarchy`.
 
 > **Why this exists.** Password login already routes by *membership*, so a member
 > reaches their org fine. The gap was a verified-email user with *no* membership
@@ -113,4 +114,3 @@ These hold across all paths (proven against real Postgres in
 - [Enterprise SSO & Provisioning](enterprise-sso.md) — OIDC / SAML / SCIM, the
   connection + DNS-TXT machinery this flow reuses.
 - [Multi-Tenant Hosts](tenant-hosts.md) — the `tenant_host:` routing a join lands into.
-- [`examples/domain_join_co`](https://github.com/manwithacat/dazzle/tree/main/examples/domain_join_co) — the worked example app + per-persona guides.

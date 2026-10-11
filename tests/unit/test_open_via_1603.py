@@ -18,9 +18,6 @@ SIMPLE = REPO / "examples" / "simple_task"
 SUPPORT = REPO / "examples" / "support_tickets"
 INVOICE_OPS = REPO / "examples" / "invoice_ops"
 HR = REPO / "examples" / "hr_records"
-OPS = REPO / "examples" / "ops_dashboard"
-LLM = REPO / "examples" / "llm_ticket_classifier"
-CONTACT = REPO / "examples" / "contact_manager"
 
 
 def test_resolve_default_same_entity() -> None:
@@ -381,69 +378,6 @@ def test_hr_managerlink_list_triple_open() -> None:
         "/app/person/{manager}",
     ]
     assert any(s.name == "managerlink_detail" and s.mode.value == "view" for s in appspec.surfaces)
-
-
-def test_ops_dashboard_alert_list_dual_open() -> None:
-    """alert_list dual-open: Alert hub + System parent (cycle 1613 acceptance)."""
-    appspec = load_project_appspec(OPS)
-    surf = next(s for s in appspec.surfaces if s.name == "alert_list")
-    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
-        ("Alert", "id"),
-        ("System", "system"),
-    ]
-    from dazzle.page.open_via import resolve_list_detail_url_candidates
-
-    entity = appspec.get_entity("Alert")
-    cands = resolve_list_detail_url_candidates(surf, entity)
-    assert cands == [
-        "/app/alert/{id}",
-        "/app/system/{system}",
-    ]
-    assert getattr(entity, "display_field", None) == "message"
-
-
-def test_llm_classification_list_dual_open() -> None:
-    """classification_list dual-open: AI run hub + parent Ticket (cycle 1614 journey)."""
-    appspec = load_project_appspec(LLM)
-    surf = next(s for s in appspec.surfaces if s.name == "classification_list")
-    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
-        ("TicketClassification", "id"),
-        ("Ticket", "ticket"),
-    ]
-    from dazzle.page.open_via import resolve_list_detail_url_candidates
-
-    entity = appspec.get_entity("TicketClassification")
-    cands = resolve_list_detail_url_candidates(surf, entity)
-    assert cands == [
-        "/app/ticketclassification/{id}",
-        "/app/ticket/{ticket}",
-    ]
-    # Goal B conversation (cycle 1653): queue titles are AI draft replies, not category shells.
-    assert getattr(entity, "display_field", None) == "suggested_response"
-
-
-def test_contact_manager_engagement_letter_list_dual_open() -> None:
-    """engagement_letter_list dual-open: letter hub + Contact parent (cycle 1615 story_walk)."""
-    appspec = load_project_appspec(CONTACT)
-    surf = next(s for s in appspec.surfaces if s.name == "engagement_letter_list")
-    assert [(t.entity, t.via) for t in (surf.open_via_targets or [])] == [
-        ("EngagementLetter", "id"),
-        ("Contact", "contact"),
-    ]
-    from dazzle.page.open_via import resolve_list_detail_url_candidates
-
-    entity = appspec.get_entity("EngagementLetter")
-    cands = resolve_list_detail_url_candidates(surf, entity)
-    assert cands == [
-        "/app/engagementletter/{id}",
-        "/app/contact/{contact}",
-    ]
-    # Goal B document depth: scope_summary is the document title buyers scan
-    # (MSA/NDA/retainer), not only the counterparty party string.
-    assert getattr(entity, "display_field", None) == "scope_summary"
-    # Home composition queue (draft|sent) is product path for ST-009 / Goal B.
-    home = next(w for w in appspec.workspaces if w.name == "home")
-    assert any(r.name == "composition" for r in home.regions)
 
 
 def test_resolve_first_non_null_candidates() -> None:

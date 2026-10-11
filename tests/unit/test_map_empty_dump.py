@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
-from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_region_render import (
     _LIST_FAMILY,
     _TYPED_REGION_DISPLAYS,
@@ -23,21 +21,6 @@ class _FakeMap:
     title = "Device map"
     display = "map"
     empty_message = "No devices registered"
-
-
-def _fieldtest_device_map():
-    spec = load_project(Path("examples/fieldtest_hub"))
-    for ws in spec.workspaces:
-        for region in ws.regions:
-            if region.name == "device_map":
-                return spec, region
-    raise AssertionError("fieldtest_hub device_map missing")
-
-
-def test_fieldtest_device_map_is_map() -> None:
-    _spec, region = _fieldtest_device_map()
-    assert str(getattr(region.display, "value", region.display)) == "map"
-    assert region.source == "Device"
 
 
 def test_map_is_on_typed_http_whitelist() -> None:

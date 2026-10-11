@@ -121,5 +121,4 @@ When running, the following endpoints are available:
 
 ## Related Examples
 
-- [Contact Manager](contact-manager.md) - Multi-entity with relationships
-- [Ops Dashboard](ops-dashboard.md) - COMMAND_CENTER workspace archetype
+- [Support Tickets](support-tickets.md) - Multi-entity with relationships

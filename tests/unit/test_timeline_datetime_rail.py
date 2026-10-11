@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from dazzle.core.project import load_project
-from dazzle.http.converters.entity_converter import convert_entity
-from dazzle.http.runtime.workspace_columns import build_surface_columns
 from dazzle.render.filters import _timeago_filter
 from dazzle.render.fragment.region._builders_timeline import _timeline_when_col_key
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
@@ -16,24 +11,6 @@ class _FakeTimeline:
     name = "tester_activity"
     title = "Tester activity"
     empty_message = "No recent test sessions logged"
-
-
-def _session_runtime_columns() -> tuple[object, list[dict[str, object]]]:
-    spec = load_project(Path("examples/fieldtest_hub"))
-    ir_session = spec.get_entity("TestSession")
-    assert ir_session is not None
-    runtime = convert_entity(ir_session)
-    surface = spec.get_surface("test_session_list")
-    cols = build_surface_columns(runtime, surface, spec.enums)
-    return runtime, cols
-
-
-def test_session_logged_at_is_datetime_not_date() -> None:
-    _, cols = _session_runtime_columns()
-    by = {str(c.get("key") or ""): c for c in cols}
-    assert "logged_at" in by
-    assert by["logged_at"].get("type") == "datetime"
-    assert _timeline_when_col_key(cols) == "logged_at"
 
 
 def test_timeline_when_col_prefers_datetime_over_skipping() -> None:

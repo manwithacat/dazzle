@@ -51,45 +51,6 @@ def test_explicit_toggle_widget_skips_switch_author_action() -> None:
     assert not any(o.field == "is_starred" for o in switch_rows)
 
 
-def test_contact_manager_favorite_switch() -> None:
-    app = ROOT / "examples" / "contact_manager"
-    text = (app / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert "field is_favorite" in text and "widget=switch" in text
-    appspec = load_project_appspec(app)
-    opps = scan_appspec(appspec)
-    switches = [o for o in opps if o.hyperpart == "switch"]
-    assert switches
-    assert all(o.status == "emit_covered" for o in switches), [
-        (o.surface, o.field, o.status) for o in switches
-    ]
-
-
-def test_project_tracker_user_active_switch() -> None:
-    app = ROOT / "examples" / "project_tracker"
-    text = (app / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert "field is_active" in text and "widget=switch" in text
-    appspec = load_project_appspec(app)
-    opps = scan_appspec(appspec)
-    switches = [o for o in opps if o.hyperpart == "switch" and o.field == "is_active"]
-    assert switches
-    assert all(o.status == "emit_covered" for o in switches), [
-        (o.surface, o.field, o.status) for o in switches
-    ]
-
-
-def test_fieldtest_hub_tester_active_switch() -> None:
-    app = ROOT / "examples" / "fieldtest_hub"
-    text = (app / "dsl" / "app.dsl").read_text(encoding="utf-8")
-    assert text.count("widget=switch") >= 2
-    appspec = load_project_appspec(app)
-    opps = scan_appspec(appspec)
-    switches = [o for o in opps if o.hyperpart == "switch" and o.field == "active"]
-    assert switches
-    assert all(o.status == "emit_covered" for o in switches), [
-        (o.surface, o.field, o.status) for o in switches
-    ]
-
-
 def test_simple_task_starred_toggle_not_switch_residual() -> None:
     app = ROOT / "examples" / "simple_task"
     appspec = load_project_appspec(app)

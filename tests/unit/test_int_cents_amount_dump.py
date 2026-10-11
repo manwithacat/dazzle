@@ -8,38 +8,13 @@ from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.money import is_money_field_name
 from dazzle.core.project import load_project
 from dazzle.http.runtime.workspace_columns import (
-    build_surface_columns,
     field_kind_to_col_type,
 )
 from dazzle.http.runtime.workspace_csv import _csv_cell
-from dazzle.page.converters.template_compiler import _field_type_to_column_type
 from dazzle.render.filters import _currency_filter
 from dazzle.render.fragment.format_cell import format_cell
 from dazzle.render.fragment.region._shared import _render_typed_value
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
-
-
-def _acme_invoice_amount():
-    spec = load_project(Path("examples/acme_billing"))
-    invoice = spec.get_entity("Invoice")
-    assert invoice is not None
-    amount = next(f for f in invoice.fields if f.name == "amount")
-    surface = next(s for s in spec.surfaces if s.name == "invoice_list")
-    return spec, invoice, amount, surface
-
-
-def test_acme_invoice_list_amount_is_currency_cell() -> None:
-    spec, invoice, amount, surface = _acme_invoice_amount()
-    assert amount.type.kind == FieldTypeKind.INT
-    assert is_money_field_name("amount")
-    assert is_money_field_name("unit_amount")
-    assert field_kind_to_col_type(amount, invoice) == "currency"
-    assert _field_type_to_column_type(amount, "amount") == "currency"
-    col = next(
-        c for c in build_surface_columns(invoice, surface, spec.enums) if c["key"] == "amount"
-    )
-    assert col["type"] == "currency"
-    assert col.get("currency_code") == "GBP"
 
 
 def test_generic_ints_are_not_cents_cells() -> None:
