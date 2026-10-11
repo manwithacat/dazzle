@@ -4,13 +4,11 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'src/dazzle/http/pra/tigerbeetle*.py'
       - 'tests/integration/test_tigerbeetle.py'
       - '.github/workflows/tigerbeetle.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'src/dazzle/http/pra/tigerbeetle*.py'
       - 'tests/integration/test_tigerbeetle.py'
       - '.github/workflows/tigerbeetle.yml'
   # Allow manual trigger
@@ -98,41 +96,6 @@ jobs:
       run: |
         pytest tests/integration/test_tigerbeetle.py -v -m tigerbeetle --timeout=60
       timeout-minutes: 5
-
-    - name: Test TigerBeetle client wrapper
-      env:
-        TIGERBEETLE_ADDRESSES: "127.0.0.1:3000"
-        TIGERBEETLE_CLUSTER_ID: "0"
-      run: |
-        # Basic smoke test for the PRA client
-        # Note: The PRA wrapper uses ClientAsync which may not exist in current TB package
-        python -c "
-        try:
-            from tigerbeetle import client as tb
-            if not hasattr(tb, 'ClientAsync'):
-                print('SKIP: TigerBeetle ClientAsync not available - PRA wrapper needs update')
-                print('      The PRA wrapper was designed for an older/different API version')
-                exit(0)
-
-            from dazzle.http.pra.tigerbeetle_client import TigerBeetleConfig, TigerBeetleClient
-            import asyncio
-
-            async def test():
-                config = TigerBeetleConfig(addresses=['127.0.0.1:3000'])
-                async with TigerBeetleClient.connect(config) as client:
-                    stats = client.stats
-                    print(f'Client stats: {stats}')
-                    print('TigerBeetle client wrapper works!')
-
-            asyncio.run(test())
-        except ImportError as e:
-            print(f'SKIP: TigerBeetle import error: {e}')
-            exit(0)
-        except Exception as e:
-            print(f'SKIP: TigerBeetle client test failed: {e}')
-            # Don''t fail the build for API incompatibilities
-            exit(0)
-        "
 
   tigerbeetle-performance:
     name: TigerBeetle Performance Smoke Test

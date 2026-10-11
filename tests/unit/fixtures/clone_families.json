@@ -32,7 +32,6 @@
   "exact:633f2e6625793bf43df5ed92d865cc1d": "dataclass-and-store-boilerplate",
   "exact:65ae4d9d8f12b04e9640acac87d7fcd7": "per-class-constant-accessors",
   "exact:69768201c3d835ce0fed474edd6f992b": "ast-visitor-and-clear-protocols",
-  "exact:7241dadfb2aa00b5c7de6bff93a81cf3": "sql-identifier-and-quoting",
   "exact:748c91ca3eacb4bf9ebcbce07014f56c": "auth-domain-and-connection-helpers",
   "exact:758f47c2cfff5aabaee28af86f2a7d18": "parser-keyword-error-helpers",
   "exact:76c47956d364b2dbea58447a6afdf1c3": "registry-and-lookup-tables",
@@ -107,6 +106,5 @@
   "exact:f9143004466b041d84066d35ec87c367": "module-singleton-resolvers",
   "exact:faa745ef6d2a5a29be4f696f4e70f594": "dataclass-and-store-boilerplate",
   "exact:fb48fdc89cb00cff6c89fde7cbdfa9a0": "module-singleton-resolvers",
-  "exact:fb9df53cc8d744f99618163137750474": "dataclass-and-store-boilerplate",
   "exact:fe0a9e72aa37976378c0cef9275732b4": "naming-and-slug-helpers"
 }

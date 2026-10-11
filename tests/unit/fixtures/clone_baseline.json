@@ -874,11 +874,10 @@
   },
   {
     "signature": "exact:1a7d33391918e213cd33f013a8fb9946",
-    "count": 3,
+    "count": 2,
     "names": [
       "dazzle/http/channels/adapters/email.py::provider_name",
-      "dazzle/http/channels/providers/email.py::provider_name",
-      "dazzle/http/email/inbound.py::provider_name"
+      "dazzle/http/channels/providers/email.py::provider_name"
     ]
   },
   {
@@ -963,14 +962,6 @@
     ]
   },
   {
-    "signature": "exact:fb9df53cc8d744f99618163137750474",
-    "count": 2,
-    "names": [
-      "dazzle/http/demo_data/loader.py::__init__",
-      "dazzle/mcp/server/__init__.py::__init__"
-    ]
-  },
-  {
     "signature": "exact:c16f7dea32e8375eebb672851acc25dd",
     "count": 2,
     "names": [
@@ -996,14 +987,10 @@
   },
   {
     "signature": "exact:b4fa590ddf56a9ad51221dfec1cce9d0",
-    "count": 6,
+    "count": 2,
     "names": [
       "dazzle/http/events/consumer.py::stats",
-      "dazzle/http/events/publisher.py::stats",
-      "dazzle/http/pra/consumers.py::stats",
-      "dazzle/http/pra/generator.py::stats",
-      "dazzle/http/pra/tigerbeetle_client.py::stats",
-      "dazzle/http/pra/tigerbeetle_generator.py::stats"
+      "dazzle/http/events/publisher.py::stats"
     ]
   },
   {
@@ -1034,11 +1021,9 @@
   },
   {
     "signature": "exact:0b2fa79456377126e1980ad0895602b2",
-    "count": 4,
+    "count": 2,
     "names": [
       "dazzle/http/events/publisher.py::is_running",
-      "dazzle/http/pra/generator.py::is_running",
-      "dazzle/http/pra/tigerbeetle_generator.py::is_running",
       "dazzle/testing/vendor_mock/orchestrator.py::is_running"
     ]
   },
@@ -1065,22 +1050,6 @@
     "names": [
       "dazzle/http/graphql/schema_generator.py::get_type",
       "dazzle/render/fragment/registry.py::resolve"
-    ]
-  },
-  {
-    "signature": "exact:7241dadfb2aa00b5c7de6bff93a81cf3",
-    "count": 2,
-    "names": [
-      "dazzle/http/pra/data_factory.py::ledger_credited",
-      "dazzle/http/pra/data_factory.py::ledger_debited"
-    ]
-  },
-  {
-    "signature": "c6a4a3cdf7a55e706a282b6ac0759750",
-    "count": 2,
-    "names": [
-      "dazzle/http/pra/harness.py::generate_report",
-      "dazzle/http/pra/tigerbeetle_harness.py::generate_report"
     ]
   },
   {

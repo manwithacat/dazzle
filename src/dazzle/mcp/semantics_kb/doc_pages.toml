@@ -613,11 +613,11 @@ Two things to know before deleting anything the gate names:
 | `semantics-and-kb-residue` | 5 | the user-profile / session surface settles (`_session_to_dict` is the largest single item) |
 | `doc-generation-residue` | 5 | the docs generator is wired again, or the surface is dropped |
 | `cli-parity-helpers` | 3 | `cli/project.py` absorbs the last caller, or the entry has zero callers and retires outright — the taxonomy has no column for "no caller left", which the fresh benchmark run hit |
-| `optional-extra-plumbing` | 4 | **the wiring lands, or the capability is formally dropped** — see below |
+| `optional-extra-plumbing` | 3 | **the wiring lands, or the capability is formally dropped** — see below |
 | `domain-brief-and-llm-legacy` | 3 | the pitch asset path is confirmed dead or re-wired |
 
 `optional-extra-plumbing` (`create_kafka_bus`, `create_s3_file_service`,
-`create_jwt_service`, `SMTPInboundAdapter`) is the family to worry about: these are
+`create_jwt_service`) is the family to worry about: these are
 meant to be reachable when the matching extra is installed, and nothing
 constructs them. That is either missing wiring — a bug report — or a dropped
 feature, and the answer changes what the fix is.

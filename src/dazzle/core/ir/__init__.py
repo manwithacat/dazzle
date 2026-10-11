@@ -149,20 +149,6 @@ from .e2e import (
     UsabilityRule,
 )
 
-# Email Events (v0.18.0 Phase F)
-from .email import (
-    BusinessReference,
-    EmailAttachmentRef,
-    EmailBouncedEvent,
-    EmailFailedEvent,
-    EmailProvider,
-    EmailSendRequestedEvent,
-    EmailSentEvent,
-    NormalizedMailEvent,
-    RawMailEvent,
-    get_email_stream_definitions,
-)
-
 # Shared Enums (v0.25.0)
 from .enums import (
     EnumSpec,

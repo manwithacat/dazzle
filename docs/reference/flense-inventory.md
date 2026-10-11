@@ -17,8 +17,8 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 475,420 |
-| Test lines (`tests/`) | 422,387 |
+| Framework source lines (`src/dazzle`) | 465,791 |
+| Test lines (`tests/`) | 420,335 |
 | Documentation lines (`docs/**/*.md`) | 249,410 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
@@ -103,12 +103,12 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 143,792 | 652 |
-| `core` | 97,228 | 2,097 |
+| `http` | 135,321 | 652 |
+| `core` | 96,887 | 2,097 |
 | `mcp` | 44,145 | 6,382 |
-| `cli` | 34,425 | 10,319 |
+| `cli` | 34,425 | 9,971 |
 | `render` | 32,981 | 6,157 |
-| `testing` | 27,706 | 68 |
+| `testing` | 27,704 | 68 |
 | `page` | 14,233 | 2,599 |
 | `agent` | 10,845 | 9,573 |
 | `qa` | 7,506 | 3,431 |
@@ -119,7 +119,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `rbac` | 4,243 | 7,853 |
 | `pitch` | 4,069 | 1,893 |
 | `domain_brief` | 2,634 | 1,017 |
-| `demo_data` | 2,159 | 1,129 |
+| `demo_data` | 2,159 | 814 |
 | `signing` | 2,143 | 2,249 |
 | `layout` | 1,877 | 2,723 |
 | `conformance` | 1,760 | 4,567 |
@@ -141,13 +141,11 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `examples` | 571 | 1,052 |
 | `tenant` | 537 | 6,998 |
 | `stubs` | 517 | 0 |
-| `risk` | 344 | 294 |
-| `documents` | 212 | 207 |
-| `process` | 203 | 5,453 |
 | `deploy` | 194 | 671 |
 | `seed` | 126 | 1,357 |
 | `quality` | 85 | 761 |
-| `stdlib` | 56 | 0 |
+| `documents` | 0 | 0 |
+| `risk` | 0 | 196 |
 | `templates` | 0 | 912 |
 
 ## MCP tools

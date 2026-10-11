@@ -19,7 +19,6 @@
   "src/dazzle/core/vocab.py::create_empty_manifest",
   "src/dazzle/fitness/investigator/runner.py::LlmClient",
   "src/dazzle/fitness/missions/story_walk.py::run_pass1_for_stories",
-  "src/dazzle/http/email/inbound.py::SMTPInboundAdapter",
   "src/dazzle/http/events/kafka_bus.py::create_kafka_bus",
   "src/dazzle/http/runtime/auth/scim_routes.py::_coerce_active",
   "src/dazzle/http/runtime/consent_routes.py::resolve_consent_state_json",

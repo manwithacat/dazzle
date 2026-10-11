@@ -59,8 +59,8 @@ dependencies = [
     "sqlalchemy>=2.0",
     "alembic>=1.14",
     "slowapi>=0.1.9",
-    # faker is used by demo_data.DemoDataGenerator (realistic seed
-    # fixtures) AND by testing.ux seed/form-fill paths (see #809).
+    # faker is used by dazzle.demo_data (realistic seed fixtures)
+    # AND by testing.ux seed/form-fill paths (see #809).
     # Was previously guarded with a try/except — promoted to a
     # required dep so qualitative trials and demo boots produce
     # realistic strings instead of "UX first_name 2f828c".
@@ -470,7 +470,6 @@ markers = [
     "data_management: Data reset/regenerate tests (FieldTest Hub)",
     "state: State persistence tests (FieldTest Hub)",
     "display: Display/UI element tests (FieldTest Hub)",
-    "pra: Performance Reference App stress tests",
     "corpus: Parser corpus golden snapshot tests",
     "visual: Playwright-driven visual smoke tests (requires Chromium)",
     "tigerbeetle: TigerBeetle integration tests (requires running TigerBeetle)",

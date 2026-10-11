@@ -471,26 +471,3 @@ class TestTemporalAdapterIntegration:
 
         finally:
             await adapter.shutdown()
-
-
-class TestWorkerModule:
-    """Tests for the worker entry point module."""
-
-    def test_worker_module_import(self) -> None:
-        """Test worker module can be imported."""
-        from dazzle.process import worker
-
-        assert hasattr(worker, "main")
-        assert hasattr(worker, "run")
-
-    def test_process_module_exports(self) -> None:
-        """Test process module exports factory functions."""
-        from dazzle.process import (
-            ProcessConfig,
-            create_adapter,
-            get_backend_info,
-        )
-
-        assert ProcessConfig is not None
-        assert create_adapter is not None
-        assert get_backend_info is not None

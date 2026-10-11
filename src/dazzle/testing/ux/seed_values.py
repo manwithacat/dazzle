@@ -9,11 +9,9 @@ artificial strings like ``"Test first_name 1"`` and
 
 This helper uses :mod:`faker` with field-name hints so the same field
 name (``first_name``, ``email``, ``title``, …) gets the same kind of
-realistic value across seed and form-fill paths. The mapping is a
-subset of the one in :class:`dazzle.http.demo_data.generator.DemoDataGenerator`
-— we deliberately don't share code with that module because it takes
-full ``FieldSpec`` objects while the UX paths only have ``(name,
-max_length)`` by the time they need a value.
+realistic value across seed and form-fill paths. The UX paths only
+have ``(name, max_length)`` by the time they need a value, so the
+mapping keys on field name rather than on a full ``FieldSpec``.
 """
 
 from __future__ import annotations

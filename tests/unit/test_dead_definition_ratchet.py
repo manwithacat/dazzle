@@ -483,6 +483,6 @@ def test_ordinary_code_is_still_a_use_site() -> None:
 def test_a_name_documented_only_in_prose_is_still_dead() -> None:
     """The behavioural assertion behind the two above: writing a residue page
     must not resurrect what it describes."""
-    names = {"create_kafka_bus", "create_s3_file_service", "SMTPInboundAdapter"}
+    names = {"create_kafka_bus", "create_s3_file_service"}
     counts = _reference_counts(names)
     assert counts["create_kafka_bus"] == 0, counts
