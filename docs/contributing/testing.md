@@ -489,6 +489,28 @@ class TestMyExample:
 
 ---
 
+## Suite Distillation (test authoring feedback loop)
+
+`tests/audit/` holds the suite-distillation artifacts (strategy:
+`docs/proposals/Suite Distillation Strategy.md`). Before adding non-trivial tests,
+check `redundancy_report.md` (extend an existing `@pytest.mark.parametrize` cluster
+rather than adding a standalone test), `cross_file_report.md` (copy-pasted shapes
+spanning handler/parser files) and `taxonomy_report.md` (do not add implementation
+mirrors or tautologies). The suite runs ~20k tests at ~7 ms each, so count is cheap
+but attention-per-failure and cluster bloat are not.
+
+Regenerate after large test additions:
+
+```bash
+python scripts/distill/classify.py && python scripts/distill/cluster.py && python scripts/distill/cross_file.py
+```
+
+The 19 MB `classification.json` stays gitignored; the five summary artifacts are
+committed. Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"`
+(~2 min; per-worker Postgres databases are provisioned automatically when a DB URL is
+set). Tests that boot an app subprocess against a repo directory (not `tmp_path`) must
+carry an `xdist_group` pin naming that directory's cohort.
+
 ## Summary
 
 | Layer | Location | Local | Pre-commit | CI |

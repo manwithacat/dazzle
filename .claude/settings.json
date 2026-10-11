@@ -4,6 +4,8 @@
       "WebSearch",
 
       "Bash(dazzle:*)",
+      "Bash(uv:*)",
+      "Bash(make:*)",
       "Bash(python -m dazzle:*)",
 
       "Bash(pytest:*)",
@@ -27,8 +29,6 @@
       "Bash(node:*)",
       "Bash(npx:*)",
       "Bash(npm:*)",
-
-      "Bash(pip:*)",
 
       "Bash(git:*)",
       "Bash(gh:*)",

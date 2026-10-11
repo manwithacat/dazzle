@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""PreToolUse hook: Block dangerous bash commands and rewrite dazzle commands.
+"""PreToolUse hook: block destructive bash commands.
 
-Hard-blocks destructive operations. Rewrites bare `dazzle` commands to
-`python -m dazzle` to avoid PATH issues (input-modifying hook, v2.0.10+).
+Hard-blocks a short list of catastrophic shell patterns. Everything else is
+allowed unchanged. (The former bare-`dazzle` → `python -m dazzle` rewrite was
+removed: it corrupted paths such as `src/dazzle/` and `.dazzle/`, and the
+SessionStart hook now puts `.venv/bin` first on PATH so bare `dazzle` is the
+repo's own CLI.)
 """
 
 from __future__ import annotations
@@ -23,10 +26,11 @@ BLOCK_RULES = [
     (r"\brm\s+-rf\s+/\*", "Dangerous: Recursive wildcard delete from root"),
     (r"\brm\s+-rf\s+\*(?:\s|$)", "Dangerous: Recursive wildcard delete"),
     (r">\s*/dev/sd[a-z]", "Dangerous: Writing to block device"),
+    (
+        r"\bgit\s+push\s+(?:\S+\s+)*--force\b(?!-with-lease)",
+        "Dangerous: force push (use --force-with-lease)",
+    ),
 ]
-
-DAZZLE_BARE_RE = re.compile(r"(?<!-m )(?<!\w)dazzle\b")
-ALREADY_MODULE_RE = re.compile(r"python[3]?\s+-m\s+dazzle\b")
 
 
 def main() -> None:
@@ -38,8 +42,7 @@ def main() -> None:
     if tool_name(input_data) not in BASH_TOOLS:
         sys.exit(0)
 
-    inp = tool_input(input_data)
-    command = str(inp.get("command") or "")
+    command = str(tool_input(input_data).get("command") or "")
     if not command:
         sys.exit(0)
 
@@ -47,22 +50,6 @@ def main() -> None:
         if re.search(pattern, command):
             print(f"BLOCKED: {message}", file=sys.stderr)
             sys.exit(2)
-
-    if DAZZLE_BARE_RE.search(command) and not ALREADY_MODULE_RE.search(command):
-        new_command = DAZZLE_BARE_RE.sub("python -m dazzle", command)
-        # Claude Code: dump updated tool_input on stdout (input-modifying hook).
-        # Grok: decision+updatedInput is also recognized; include both shapes.
-        updated = {**inp, "command": new_command}
-        print(
-            json.dumps(
-                {
-                    "decision": "allow",
-                    "updatedInput": updated,
-                    **updated,  # Claude legacy: top-level tool_input fields
-                }
-            )
-        )
-        sys.exit(0)
 
     sys.exit(0)
 

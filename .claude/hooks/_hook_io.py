@@ -15,8 +15,10 @@ Never let uncaught exceptions become exit 1: use ``safe_main``.
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 # Edit/write family — PreToolUse matcher Edit|Write maps to these under Grok
@@ -53,6 +55,27 @@ def file_path_from(inp: dict[str, Any]) -> str:
         or inp.get("target_file")
         or ""
     )
+
+
+def project_root() -> Path:
+    """Repo root: CLAUDE_PROJECT_DIR / GROK_WORKSPACE_ROOT, else two dirs up."""
+    env_root = os.environ.get("CLAUDE_PROJECT_DIR") or os.environ.get("GROK_WORKSPACE_ROOT")
+    if env_root:
+        return Path(env_root)
+    return Path(__file__).resolve().parents[2]
+
+
+def venv_tool(name: str) -> str:
+    """Path to ``name`` in the repo's uv-managed .venv, else the bare name.
+
+    Hooks run under the harness's PATH, where ``ruff`` / ``python`` may be
+    pyenv shims (observed: Python 3.9 shims broken by the 3.14 pin). Always
+    prefer the repo venv so hook results match ``uv run``.
+    """
+    candidate = project_root() / ".venv" / "bin" / name
+    if candidate.is_file() and os.access(candidate, os.X_OK):
+        return str(candidate)
+    return name
 
 
 def safe_main(main_fn: Callable[[], None]) -> None:

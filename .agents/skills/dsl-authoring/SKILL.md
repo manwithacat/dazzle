@@ -1,6 +1,6 @@
 ---
 name: dsl-authoring
-description: Use when writing or editing Dazzle .dsl files — syntax rules, the mistakes agents actually make, and pointers to the drift-gated references. Complements (never replaces) CLAUDE.md's DSL Quick Reference.
+description: Use when writing or editing Dazzle .dsl files — syntax rules, the mistakes agents actually make, and pointers to the drift-gated references. Complements (never replaces) AGENTS.md's DSL Quick Reference.
 ---
 
 # DSL Authoring
@@ -36,12 +36,35 @@ drift-gated home is *pointed to*, not duplicated.
 
 ## Where the authoritative lists live (drift-gated — do not copy them here)
 
-- **Constructs**: CLAUDE.md "DSL Quick Reference" — gated by `test_docs_drift.py`.
+- **Constructs**: AGENTS.md "DSL Quick Reference" — gated by `test_docs_drift.py`.
 - **Grammar**: `docs/reference/grammar.md`.
-- **Scope-rule forms** (FK paths, EXISTS, poly_ref selectors): CLAUDE.md
-  "Scope rules"; verify any scope with `dazzle db explain-scope <Entity> <verb>`.
-- **Parser extension checklist**: CLAUDE.md "Extending" (grammar → IR → mixin → tests).
+- **Scope-rule forms**: the section below (moved here from AGENTS.md); runtime
+  semantics in `docs/reference/rbac-scope.md`; verify any scope with
+  `dazzle db explain-scope <Entity> <verb>`.
+- **Parser extension checklist**: AGENTS.md "Extending" (grammar → IR → mixin → tests).
 - **Counter-priors** before non-trivial app code: `knowledge counter_prior`.
+
+## Scope-rule forms
+
+Scope rules compile to a formal predicate algebra and are statically validated
+against the FK graph at `dazzle validate` time. Supported forms:
+
+- Direct: `school_id = current_user.school` — column equality check
+- FK path (depth-N): `manuscript.assessment_event.school_id = current_user.school` — nested subquery
+- EXISTS: `via JunctionEntity(field = current_user.attr, field = id)` — junction table check
+- NOT EXISTS: `not via BlockList(user = current_user, resource = id)` — negated junction check
+- Negation: `not (status = archived)` — parenthesised negation
+- Boolean: `realm = current_user.realm or creator = current_user` — AND/OR compile to SQL
+- Polymorphic ref (#1448/#1455): `subject[CohortAssessment].uploaded_by = current_user` —
+  for a typed `poly_ref subject [CohortAssessment, Manuscript]` field (two columns
+  `subject_type text` + `subject_id uuid`, targets uuid-pk). `[Type]` selects the branch,
+  then a normal path/expression on that target. A bare `subject.x` (no selector) is a
+  validation error (`E_POLY_SELECTOR_REQUIRED`). Multi-branch = repeated rules. Supported
+  on all verbs (read/list/delete + create/update via the payload-time probe, #1455).
+
+Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:`
+rule needs a matching `permit:` rule and an `as:` clause naming the personas (`as:`
+replaced the overloaded `for:` keyword in #998).
 
 ## Verify
 

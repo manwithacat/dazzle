@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Stop hook: Batch lint check on modified Python files at end of turn.
+"""Stop hook: batch `ruff check` on Python files changed in the worktree.
 
-Runs ruff check on any unstaged Python files that were modified during the
-session. Reports issues as additionalContext so Claude sees them next turn.
+Covers unstaged, staged and untracked files (git status), using the repo
+venv's ruff so results match `make lint`. Reports as systemMessage; never
+blocks the turn.
 """
 
 from __future__ import annotations
@@ -12,45 +13,50 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _hook_io import project_root, safe_main, venv_tool  # noqa: E402
 
-def _get_modified_py_files(cwd: Path) -> list[str]:
-    """Get Python files with unstaged changes."""
+MAX_LINES = 15
+
+
+def _changed_py_files(cwd: Path) -> list[str]:
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=ACM"],
+            ["git", "status", "--porcelain", "--untracked-files=all"],
             cwd=cwd,
             capture_output=True,
             text=True,
             timeout=5,
         )
-        if result.returncode != 0:
-            return []
-        return [
-            f
-            for f in result.stdout.strip().splitlines()
-            if f.endswith(".py") and (cwd / f).exists()
-        ]
     except Exception:
         return []
+    if result.returncode != 0:
+        return []
+    files: list[str] = []
+    for line in result.stdout.splitlines():
+        if len(line) < 4 or line[:2] == " D" or line[:2] == "D ":
+            continue
+        path = line[3:].split(" -> ")[-1].strip()
+        if path.endswith(".py") and (cwd / path).exists():
+            files.append(path)
+    return files[:200]
 
 
-def main():
+def main() -> None:
     try:
         json.load(sys.stdin)
     except json.JSONDecodeError:
         pass
 
-    project_dir = Path.cwd()
-    py_files = _get_modified_py_files(project_dir)
-
+    cwd = project_root()
+    py_files = _changed_py_files(cwd)
     if not py_files:
         sys.exit(0)
 
-    # Batch lint all modified Python files
     try:
         result = subprocess.run(
-            ["ruff", "check", "--no-fix", "--output-format=concise"] + py_files,
-            cwd=project_dir,
+            [venv_tool("ruff"), "check", "--no-fix", "--output-format=concise", *py_files],
+            cwd=cwd,
             capture_output=True,
             text=True,
             timeout=20,
@@ -59,26 +65,16 @@ def main():
         sys.exit(0)
 
     if result.returncode != 0 and result.stdout.strip():
-        issues = result.stdout.strip()
-        # Cap output to avoid flooding context
-        lines = issues.splitlines()
-        if len(lines) > 15:
-            issues = "\n".join(lines[:15]) + f"\n... and {len(lines) - 15} more issues"
-
-        # Stop-hook output schema doesn't include `hookSpecificOutput`
-        # (that field is only for PreToolUse / UserPromptSubmit /
-        # PostToolUse / PostToolBatch). Use `systemMessage` to surface
-        # lint warnings to the agent without blocking the turn.
-        output = {
-            "systemMessage": f"Lint issues in modified files:\n{issues}",
-        }
-        print(json.dumps(output))
+        lines = result.stdout.strip().splitlines()
+        issues = "\n".join(lines[:MAX_LINES])
+        if len(lines) > MAX_LINES:
+            issues += f"\n... and {len(lines) - MAX_LINES} more issues"
+        # Stop-hook schema has no hookSpecificOutput; systemMessage surfaces
+        # the warning to the agent without blocking.
+        print(json.dumps({"systemMessage": f"Lint issues in modified files:\n{issues}"}))
 
     sys.exit(0)
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from _hook_io import safe_main
-
     safe_main(main)

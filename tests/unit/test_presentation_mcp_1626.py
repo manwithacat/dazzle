@@ -75,10 +75,17 @@ def test_presentation_shapes_handler() -> None:
     assert one.get("scenarios")
 
 
-def test_agents_md_lists_presentation_ops() -> None:
-    text = (REPO / "AGENTS.md").read_text(encoding="utf-8")
-    assert "`presentation`" in text
-    assert "cognition, opportunities, residual, shapes" in text
+def test_registry_lists_presentation_ops() -> None:
+    """The consolidated registry (what the MCP client loads, and what the
+    `mcp-tools` API baseline gates) must expose the four #1626 operations."""
+    from unittest.mock import patch
+
+    from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+
+    with patch("dazzle.mcp.server.tools_consolidated.is_dev_mode", return_value=False):
+        tools = {t.name: t for t in get_all_consolidated_tools()}
+    enum = tools["presentation"].input_schema["properties"]["operation"]["enum"]
+    assert set(enum) == {"cognition", "opportunities", "residual", "shapes"}
 
 
 def test_counter_prior_ref_as_repr_loads() -> None:

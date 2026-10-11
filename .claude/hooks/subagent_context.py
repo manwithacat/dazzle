@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""SubagentStart hook: Inject Dazzle project context into subagents.
+"""SubagentStart hook: inject a short, always-correct orientation line.
 
-Reads the project's dazzle.toml and DSL files to build a context summary,
-then returns it as additionalContext so every subagent is oriented to the
-Dazzle codebase.
+Subagents already receive the project instructions (.claude/CLAUDE.md →
+AGENTS.md). This hook only adds live state that AGENTS.md cannot carry:
+branch, dirty files, and the toolchain rule. It deliberately does NOT scan
+DSL files or enumerate MCP tools — those lists went stale (wrong extension,
+root is not a Dazzle project) and cost ~0.7s per subagent.
 """
 
 from __future__ import annotations
@@ -13,112 +15,47 @@ import subprocess
 import sys
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib  # type: ignore[no-redef]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _hook_io import project_root, safe_main  # noqa: E402
 
 
-def _get_project_name(project_root: Path) -> str:
-    """Read project name from dazzle.toml."""
-    toml_path = project_root / "dazzle.toml"
-    if not toml_path.exists():
-        return "unknown"
+def _git(root: Path, *args: str) -> str:
     try:
-        with open(toml_path, "rb") as f:
-            data = tomllib.load(f)
-        return data.get("project", {}).get("name", "unknown")
+        result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=5)
+        return result.stdout.strip() if result.returncode == 0 else ""
     except Exception:
-        return "unknown"
+        return ""
 
 
-def _get_git_branch(project_root: Path) -> str:
-    """Get current git branch."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return result.stdout.strip() if result.returncode == 0 else "unknown"
-    except Exception:
-        return "unknown"
-
-
-def _get_dsl_names(project_root: Path) -> dict[str, list[str]]:
-    """Extract entity and surface names from DSL files."""
-    entities: list[str] = []
-    surfaces: list[str] = []
-
-    # Search only common DSL locations to avoid slow full-tree scan
-    search_dirs = [project_root / "dsl", project_root / "src", project_root / "examples"]
-    dsl_files = []
-    for d in search_dirs:
-        if d.exists():
-            dsl_files.extend(d.rglob("*.dazzle"))
-    # Also check project root directly
-    dsl_files.extend(project_root.glob("*.dazzle"))
-
-    for dsl_file in dsl_files[:50]:
-        try:
-            content = dsl_file.read_text()
-            for line in content.splitlines():
-                stripped = line.strip()
-                if stripped.startswith("entity "):
-                    parts = stripped.split('"')
-                    if len(parts) >= 2:
-                        entities.append(parts[1])
-                elif stripped.startswith("surface "):
-                    parts = stripped.split('"')
-                    if len(parts) >= 2:
-                        surfaces.append(parts[1])
-        except Exception:
-            continue
-
-    return {"entities": entities[:20], "surfaces": surfaces[:20]}
-
-
-def main():
+def main() -> None:
     try:
         json.load(sys.stdin)
     except json.JSONDecodeError:
-        sys.exit(0)
+        pass
 
-    project_root = Path.cwd()
-    project_name = _get_project_name(project_root)
-    branch = _get_git_branch(project_root)
-    dsl_names = _get_dsl_names(project_root)
+    root = project_root()
+    branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD") or "unknown"
+    dirty = [ln for ln in _git(root, "status", "--porcelain").splitlines() if ln.strip()]
 
-    context_parts = [
-        f"Dazzle project: {project_name} (branch: {branch})",
-        "Key dirs: src/dazzle/core/ (parser+IR), src/dazzle/mcp/ (MCP server), "
-        "src/dazzle/http/ (FastAPI runtime), src/dazzle/page/ (UI runtime)",
-        "Commands: dazzle serve|validate|lint|mcp|lsp",
-        "Quality: ruff check src/ tests/ --fix && ruff format src/ tests/ | mypy src/dazzle | pytest tests/ -m 'not e2e'",
-        "MCP tools: dsl, story, rhythm, process, test_design, discovery, graph, knowledge, "
-        "semantics, composition, policy, sentinel, test_intelligence, api_pack, mock, "
-        "demo_data, pitch, sitespec, status, spec_analyze, bootstrap, pulse",
+    parts = [
+        f"Dazzle framework repo (branch: {branch}; {len(dirty)} dirty path(s)).",
+        "Toolchain: uv only — `.venv/bin` is first on PATH, so bare `dazzle`, `ruff`, "
+        "`pytest`, `python` are the repo venv. Never pip/pyenv. The repo root is NOT a "
+        "Dazzle project: pass `-p examples/<app>` to `dazzle validate|lint`.",
+        "Before inventing structure read stems/INDEX.md; commands and gates are in AGENTS.md.",
     ]
-
-    if dsl_names["entities"]:
-        context_parts.append(f"Entities: {', '.join(dsl_names['entities'])}")
-    if dsl_names["surfaces"]:
-        context_parts.append(f"Surfaces: {', '.join(dsl_names['surfaces'])}")
-
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "SubagentStart",
-            "additionalContext": "\n".join(context_parts),
-        }
-    }
-    print(json.dumps(output))
+    print(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "SubagentStart",
+                    "additionalContext": "\n".join(parts),
+                }
+            }
+        )
+    )
     sys.exit(0)
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from _hook_io import safe_main
-
     safe_main(main)

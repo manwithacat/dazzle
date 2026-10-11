@@ -1,18 +1,45 @@
 # Project hooks (agent harnesses)
 
 Configured in `.claude/settings.json`. The harness loads these when the folder is trusted.
+All Python hooks run through `run_hook.sh` (repo `.venv/bin/python`, else `python3`)
+and resolve tools via `_hook_io.venv_tool()` — never the harness PATH.
+
+## Why venv-first matters here
+
+The harness shell inherits the operator's login PATH, where `python`, `ruff`,
+`pytest` are **pyenv shims** (observed: Python 3.9 shims that fail because the
+`.python-version` pin is uv-managed 3.14) and bare `dazzle` was a stale
+`~/.local/bin` wrapper onto a pyenv virtualenv. `session_start.sh` therefore
+prepends `.venv/bin` to PATH through `CLAUDE_ENV_FILE`, and every hook that
+shells out uses the venv binary explicitly.
+
+## SessionStart
+
+| Hook | Purpose |
+|------|---------|
+| `session_start.sh` | Export `DAZZLE_PROJECT_ROOT`, `VIRTUAL_ENV`, and `PATH=.venv/bin:$PATH` via `CLAUDE_ENV_FILE`; verify `import dazzle` |
 
 ## PreToolUse (blocking)
 
 | Hook | Matcher | Purpose |
 |------|---------|---------|
-| `bash_validator.py` | `Bash\|run_terminal_command` | Block destructive shell; rewrite bare `dazzle` → `python -m dazzle` |
+| `bash_validator.py` | `Bash\|run_terminal_command` | Block `rm -rf /`, wildcard root deletes, block-device writes, and forced pushes (`--force-with-lease` is allowed) |
 | `file_protection.py` | `Edit\|Write\|search_replace\|write` | Block auto-generated / secret paths |
 
-Exit codes: `0` allow, `2` deny. **Never exit 1** — Grok/Claude log that as
+Exit codes: `0` allow, `2` deny. **Never exit 1** — harnesses log that as
 `pre_tool_use[N] failed with exit code 1` while still fail-opening the tool.
 Hooks use `from __future__ import annotations` (system Python 3.9) and
 `_hook_io.safe_main` so runtime bugs also exit 0 instead of spamming the TUI.
+
+The validator scans the **whole** command text, including heredoc bodies.
+If a file you are writing via heredoc contains a blocked phrase, the write
+is refused; use the harness's Write/Edit tool or split the literal.
+
+**Removed (2026-10-11):** the bare-`dazzle` → `python -m dazzle` rewrite. It
+matched `dazzle` inside paths (`src/dazzle/`, `.dazzle/`) and emitted
+`src/python -m dazzle/`; Claude Code also ignored its legacy output shape, so
+it was either a no-op or a corruption. Regression test:
+`test_bash_validator_never_rewrites_commands`.
 
 ### Known regression (fixed 2026-07-16)
 
@@ -27,11 +54,18 @@ camelCase payloads.
 | Hook | Purpose |
 |------|---------|
 | `dsl_validator.py` | After `.dsl`/`.dazzle` edits, run `dazzle validate` in nearest `dazzle.toml` root |
-| `code_formatter.py` | `ruff format` / prettier on edited sources |
+| `code_formatter.py` | `ruff format` on edited `.py` (async). No JS/TS formatter — the repo configures none |
 
-## Runner
+## Stop / Subagent / Compact
 
-`run_hook.sh <script.py>` — prefers `$CLAUDE_PROJECT_DIR/.venv/bin/python`, else `python3`.
+| Hook | Purpose |
+|------|---------|
+| `stop_lint.py` | `ruff check` every changed `.py` (staged, unstaged, untracked) at end of turn → `systemMessage` |
+| `subagent_context.py` | Three-line live orientation (branch, dirty count, toolchain rule). AGENTS.md already reaches subagents; this adds only live state |
+| `subagent_stop.py` | `ruff check` `.py` files modified in the last 2 min under `src/ tests/ scripts/` |
+| `compact_context.py` | Preserve branch, HEAD, and `git status --porcelain` across compaction |
+| `worktree_setup.sh` | `uv sync --frozen` with the dev extras in a new worktree (never pip/venv) |
+| `session_cleanup.sh` | Prune `.dazzle/tmp`, log session end |
 
 ## Compatibility notes
 
@@ -50,4 +84,7 @@ export CLAUDE_PROJECT_DIR="$(pwd)"
 printf '%s\n' '{"toolName":"search_replace","toolInput":{"file_path":"README.md"}}' \
   | .claude/hooks/run_hook.sh file_protection.py
 # expect exit 0
+printf '%s\n' '{"tool_name":"Bash","tool_input":{"command":"ls src/dazzle"}}' \
+  | .claude/hooks/run_hook.sh bash_validator.py
+# expect exit 0 and no stdout
 ```

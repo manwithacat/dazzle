@@ -94,13 +94,55 @@ def test_bash_validator_allows_safe_command() -> None:
     assert proc.returncode == 0, proc.stderr
 
 
-def test_bash_validator_rewrites_bare_dazzle() -> None:
+@pytest.mark.parametrize(
+    "command",
+    [
+        "dazzle validate -p examples/simple_task",
+        "ls src/dazzle/core && cat .dazzle/improve.lock",
+        "uv run dazzle lint -p examples/simple_task",
+    ],
+)
+def test_bash_validator_never_rewrites_commands(command: str) -> None:
+    """The old bare-`dazzle` → `python -m dazzle` rewrite corrupted paths such
+    as `src/dazzle/` and `.dazzle/`. Commands must pass through untouched;
+    the SessionStart hook puts `.venv/bin` first on PATH instead."""
     proc = _run_hook(
         "bash_validator.py",
-        {"tool_name": "Bash", "tool_input": {"command": "dazzle validate"}},
+        {"tool_name": "Bash", "tool_input": {"command": command}},
     )
     assert proc.returncode == 0, proc.stderr
-    assert "python -m dazzle validate" in proc.stdout
+    assert "python -m dazzle" not in proc.stdout
+    assert "updatedInput" not in proc.stdout
+
+
+def test_bash_validator_blocks_force_push_but_allows_lease() -> None:
+    # Split literals so the phrase never appears verbatim in a shell heredoc
+    # (the hook scans the whole Bash command text, including file contents).
+    forced = "git push " + "--force origin main"
+    leased = "git push " + "--force-with-lease origin feature"
+    blocked = _run_hook(
+        "bash_validator.py", {"tool_name": "Bash", "tool_input": {"command": forced}}
+    )
+    assert blocked.returncode == 2
+    allowed = _run_hook(
+        "bash_validator.py", {"tool_name": "Bash", "tool_input": {"command": leased}}
+    )
+    assert allowed.returncode == 0, allowed.stderr
+
+
+def test_hooks_resolve_tools_from_repo_venv() -> None:
+    """Hooks must not depend on the harness PATH (pyenv shims were observed
+    resolving `ruff`/`python` to a broken Python 3.9)."""
+    sys.path.insert(0, str(HOOKS))
+    try:
+        import _hook_io  # type: ignore[import-not-found]
+    finally:
+        sys.path.pop(0)
+    os.environ["CLAUDE_PROJECT_DIR"] = str(REPO)
+    assert _hook_io.project_root() == REPO
+    venv_ruff = REPO / ".venv" / "bin" / "ruff"
+    expected = str(venv_ruff) if venv_ruff.is_file() else "ruff"
+    assert _hook_io.venv_tool("ruff") == expected
 
 
 def test_bash_validator_blocks_rm_rf_root() -> None:

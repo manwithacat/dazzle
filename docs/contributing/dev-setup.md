@@ -34,7 +34,7 @@ make dev-install
 #   uv python install          # reads .python-version → 3.14
 #   uv sync --extra dev --extra llm --extra mcp --extra mobile \
 #           --extra postgres --extra perf --extra saml --extra lsp
-#   uv run pre-commit install && uv run pre-commit install --hook-type pre-push
+#   uvx pre-commit install && uvx pre-commit install --hook-type pre-push
 
 source .venv/bin/activate   # optional; or prefix with `uv run` / use make targets
 
@@ -147,7 +147,7 @@ To run manually:
 
 ```bash
 make pre-commit
-# or: uv run pre-commit run --all-files
+# or: uvx pre-commit run --all-files
 ```
 
 ## Code Style
@@ -219,7 +219,7 @@ extra and `uv lock`.
 ### Pre-commit failures
 
 ```bash
-uv run pre-commit run --all-files -v
+uvx pre-commit run --all-files -v
 ```
 
 ### JavaScript type errors

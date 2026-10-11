@@ -1,40 +1,36 @@
 #!/bin/bash
-# SessionStart hook: Environment setup for Dazzle development
+# SessionStart hook: environment setup for Dazzle development.
 #
-# This hook runs at the start of each Claude Code session and:
-# 1. Ensures the Python virtual environment is activated
-# 2. Validates the Dazzle installation
-# 3. Injects useful context for the session
+# 1. Puts the repo's uv-managed .venv/bin first on PATH for every later Bash
+#    call (via CLAUDE_ENV_FILE), so bare `dazzle`, `ruff`, `pytest`, `python`
+#    resolve to the repo toolchain — not pyenv shims or a stale global wrapper.
+# 2. Verifies the venv's dazzle imports.
+# 3. Exports DAZZLE_PROJECT_ROOT.
 
-set -e
-
-# Get project directory
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-cd "$PROJECT_DIR"
+cd "$PROJECT_DIR" || exit 0
 
-# Check for virtual environment
-if [ -d ".venv" ]; then
-    source .venv/bin/activate 2>/dev/null || true
-fi
+VENV_BIN="$PROJECT_DIR/.venv/bin"
 
-# Verify dazzle is available
-if ! python -m dazzle --help &> /dev/null; then
-    echo "Warning: dazzle module not available" >&2
-    exit 0  # Non-blocking
-fi
-
-# Quick validation of the project
-if [ -f "dazzle.toml" ]; then
-    if ! python -m dazzle validate --quiet 2>/dev/null; then
-        echo "Note: DSL validation issues detected. Run 'dazzle validate' for details."
-    fi
-fi
-
-# Inject context about the environment
 if [ -n "$CLAUDE_ENV_FILE" ]; then
-    echo 'export DAZZLE_PROJECT_ROOT='"$PROJECT_DIR" >> "$CLAUDE_ENV_FILE"
+    {
+        echo "export DAZZLE_PROJECT_ROOT='$PROJECT_DIR'"
+        if [ -x "$VENV_BIN/python" ]; then
+            echo "export VIRTUAL_ENV='$PROJECT_DIR/.venv'"
+            echo "export PATH='$VENV_BIN':\"\$PATH\""
+        fi
+    } >> "$CLAUDE_ENV_FILE"
 fi
 
-# Success message (shown in verbose mode)
-echo "Dazzle environment initialized"
+if [ ! -x "$VENV_BIN/python" ]; then
+    echo "Warning: no .venv — run 'make dev-install' (uv is the only supported toolchain)" >&2
+    exit 0
+fi
+
+if ! "$VENV_BIN/python" -c "import dazzle" 2>/dev/null; then
+    echo "Warning: dazzle not importable from .venv — run 'uv sync'" >&2
+    exit 0
+fi
+
+echo "Dazzle environment initialized (.venv/bin on PATH)"
 exit 0

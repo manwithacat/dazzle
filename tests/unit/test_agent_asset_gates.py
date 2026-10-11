@@ -89,7 +89,8 @@ def test_operator_playbooks_have_one_open_home() -> None:
         assert canonical.read_text().startswith(f"---\nname: {name}\n")
         shim_text = shim.read_text()
         assert f".agents/skills/{name}/SKILL.md" in shim_text
-        assert len(shim_text.splitlines()) <= 5
+        # frontmatter (description + model-invocation policy) + pointer + args
+        assert len(shim_text.splitlines()) <= 8
 
     improve = REPO_ROOT / ".agents" / "skills" / "improve"
     assert (improve / "capability-map.md").is_file()

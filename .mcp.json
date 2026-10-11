@@ -2,19 +2,23 @@
   "mcpServers": {
     "dazzle": {
       "type": "stdio",
-      "command": "/Volumes/SSD/Dazzle/.venv/bin/python",
+      "command": "${CLAUDE_PROJECT_DIR:-/Volumes/SSD/Dazzle}/.venv/bin/python",
       "args": [
         "-m",
         "dazzle.mcp",
         "--working-dir",
-        "/Volumes/SSD/Dazzle"
+        "${CLAUDE_PROJECT_DIR:-/Volumes/SSD/Dazzle}"
       ],
       "env": {}
     },
     "semgrep": {
       "type": "stdio",
       "command": "semgrep",
-      "args": ["mcp", "--transport", "stdio"]
+      "args": [
+        "mcp",
+        "--transport",
+        "stdio"
+      ]
     }
   }
 }

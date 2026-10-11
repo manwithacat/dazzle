@@ -14,6 +14,9 @@
 # `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
 # not installed *in pyenv* — even for non-Python tools on the shim path.
 UV := $(firstword $(wildcard $(HOME)/.local/bin/uv) $(shell command -v uv 2>/dev/null))
+# pre-commit is not a project dependency; uvx runs it in its own cached env so
+# `make dev-install` never falls through to a PATH/pyenv `pre-commit`.
+UVX := $(firstword $(wildcard $(HOME)/.local/bin/uvx) $(shell command -v uvx 2>/dev/null))
 ifeq ($(UV),)
 $(error uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh)
 endif
@@ -90,8 +93,8 @@ install:
 dev-install:
 	$(UV) python install
 	$(UV) sync $(DEV_EXTRAS)
-	$(UV) run pre-commit install
-	$(UV) run pre-commit install --hook-type pre-push
+	$(UVX) pre-commit install
+	$(UVX) pre-commit install --hook-type pre-push
 	@echo ""
 	@echo "Development environment ready (uv-managed Python + full local extras)."
 	@echo "Pre-commit hooks installed for commit and push."
@@ -316,7 +319,7 @@ ci: lint format-check type-check security test-all examples
 	@echo "=== Legacy make ci finished. Prefer 'make ci-core' for GitHub concordance. ==="
 
 pre-commit:
-	$(UV) run pre-commit run --all-files
+	$(UVX) pre-commit run --all-files
 
 # =============================================================================
 # Maintenance
@@ -330,5 +333,5 @@ clean:
 	@echo "Cleaned build artifacts"
 
 update-deps:
-	$(UV) run pre-commit autoupdate
+	$(UVX) pre-commit autoupdate
 	$(UV) pip list --outdated
