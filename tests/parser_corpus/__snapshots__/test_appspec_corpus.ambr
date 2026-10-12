@@ -395,7 +395,6 @@
               'display': 'list',
               'name': 'sidebar',
               'order': 'desc',
-              'show_outliers': True,
               'source': 'Task',
             }),
             dict({
@@ -413,7 +412,6 @@
               }),
               'name': 'main',
               'order': 'desc',
-              'show_outliers': True,
               'source': 'Task',
             }),
           ]),
@@ -444,7 +442,6 @@
               }),
               'name': 'main',
               'order': 'desc',
-              'show_outliers': True,
               'source': 'Task',
             }),
           ]),
