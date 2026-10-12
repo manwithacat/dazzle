@@ -10,8 +10,8 @@ Agent-facing priors for commercial demos: STABLE persona identities, reset-and-l
 ## Demo Identity
 
 How demo principals, emails, and assignment seeds share UUIDs so persona desks
-populate after seed. The closed map is STABLE_PERSONA_USER_IDS (framework
-test routes + product_quality.persona_homes).
+populate after seed. The closed map is STABLE_PERSONA_USER_IDS
+(`dazzle.core.demo_identity`, read by the framework test routes).
 
 **Keys (persona *id*, not display title):** member, manager, admin, agent,
 customer, requester, approver, finance, auditor, user, designer, reviewer,
@@ -80,11 +80,10 @@ Alias of demo_identity focused on the closed STABLE principal map used by
 
 ## Empty Desk False Green
 
-**False green:** validate green + static persona_homes residual=0 while a
-persona default workspace is empty under session.
-
-Static residual checks seed assignment vs filter *text*. It does not prove
-live RBAC (`as:` roles), STABLE principal bind, or region filter runtime.
+**False green:** validate green while a persona default workspace is empty
+under session. Static checks read seed assignment vs filter *text*; they do
+not prove live RBAC (`as:` roles), STABLE principal bind, or region filter
+runtime.
 
 **live_desk probe:** tries list/queue sources on the default workspace until
 one has rows. An empty satellite entity (e.g. PaymentAttempt with no story
@@ -97,8 +96,7 @@ CI residual does not prove stills — re-run recapture after seed changes.
 1. `reset-and-load` report `live_desk_residual` (if present)
 2. Authenticate `role=` after reset; open default workspace with browser/HTMX settle
 3. `dazzle qa capture` (curl HTML is skeleton only — regions `hx-trigger=load`)
-4. `dazzle demo quality` / product_quality residual
-5. On empty: check scope `as:` tokens, STABLE persona ids, region filters, story seeds
+4. On empty: check scope `as:` tokens, STABLE persona ids, region filters, story seeds
 
 ### Best Practices
 
@@ -123,9 +121,9 @@ Closed-loop workflow from cold project to persona stills without tribal SQL.
 7. `dazzle demo reset-and-load --project <app> -y` (story seeds / demo_spine)
 8. Authenticate with `role=<stable_id>` **after** reset
 9. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
-10. `status(operation=demo_world)` / `dazzle demo quality` for residual
+10. `status(operation=demo_world)` for the world model
 
-**MCP:** knowledge, status demo_world, product_quality.
+**MCP:** knowledge, status demo_world.
 **CLI writes:** serve, reset-and-load, capture.
 **Do not** use bootstrap entities as SSOT (bootstrap_pollution).
 
@@ -169,14 +167,12 @@ Counter-prior: bootstrap_pollution.
 
 When workspace metrics use count(... = current_user) and sibling lists for
 the same persona have rows, trust **lists and stills over KPI tiles** (F10).
-product_quality reports metric_list residual for this pattern (#1632).
 Counter-prior: metric_current_user_lie.
 
 ### Best Practices
 
 - Trust order: list/queue → stills → metrics last
 - knowledge counter_prior metric_current_user_lie
-- product_quality score / dazzle demo quality for metric_list residual
 
 **Related:** [Empty Desk False Green](demo.md#empty-desk-false-green), [Demo Identity](demo.md#demo-identity)
 

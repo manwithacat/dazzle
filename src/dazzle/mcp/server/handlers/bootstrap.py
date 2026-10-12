@@ -369,7 +369,7 @@ def _generation_steps(
         ),
         (
             "18. Demo close: dazzle serve → re-read runtime.json → "
-            "demo reset-and-load -y → auth role= after reset → product_quality / "
+            "demo reset-and-load -y → auth role= after reset → "
             "status(demo_world). Workflow: knowledge first_principles_demo."
         ),
     ]

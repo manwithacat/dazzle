@@ -74,7 +74,7 @@ Not: `Assigned To: Support Agent · Created At: …`
 
 ## Agent loop (required order)
 
-0. **Preflight** — `dazzle demo quality` / workspace health if recapturing
+0. **Preflight** — workspace health if recapturing
 1. **OBSERVE** — hero still + `dazzle qa hyperpart-opportunities --app <app> --table`
 2. **MAP** — field → role → hosts → current emit vs matrix
 3. **SELECT** — matrix density only (or `matrix_miss` + plain)
@@ -95,10 +95,9 @@ Not: `Assigned To: Support Agent · Created At: …`
 
 Suggested residual ids: `person_as_text`, `ref_as_repr`, `host_emit_skew`, `hyperpart_matrix_miss`, `person_in_metrics` (plus existing `label_glue`, `cta_add_double`).
 
-**Machine residual (T2):** `product_quality` OCR-scans present hero stills (when
-`tesseract` is available) for dict/UUID chrome (`ref_as_repr`) and queue pilot
-`Assigned To:` prose (`person_as_text` on `ticket_queue_*`). Floors alone cannot
-catch presentation honesty.
+**Stills are the residual (T2):** open the hero PNG and look for dict/UUID chrome
+(`ref_as_repr`) and queue pilot `Assigned To:` prose (`person_as_text` on
+`ticket_queue_*`). Floors alone cannot catch presentation honesty.
 
 **Never** report full green for person refs while `queue_meta` still stringifies them.
 
@@ -111,8 +110,8 @@ catch presentation honesty.
 | HM pick-a-surface / work_surface_utility | Authoring region **mode** |
 | `user_chip` + `present()` | Product **emit** |
 | `qa hyperpart-opportunities` | Observe host coverage |
-| `demo_fleet` / `product_quality` | Floors + **presentation residual** (OCR stills) |
-| MCP `presentation` | cognition / opportunities / residual / shapes for agents |
+| `demo_fleet` | Floors (seed / still bytes) |
+| MCP `presentation` | cognition / opportunities / shapes for agents |
 | counter-prior `ref_as_repr` | KG inoculation vs dict/UUID chrome |
 | Mid-dot R1 separators | Between segments; not a substitute for Avatar |
 
@@ -126,13 +125,12 @@ presentation process. Use the published surfaces:
 | Surface | How to find / invoke | What it answers |
 |---------|----------------------|-----------------|
 | Doctrine | `docs/reference/hyperpart-presentation.md` · KG doc page `hyperpart-presentation` | Rules + matrix |
-| Felt bar | CLI `dazzle demo quality` · MCP `product_quality(operation=score)` | residual_total + force path |
-| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|residual\|shapes)` | Matrix honesty + still OCR residual + rational DSL shapes |
+| Presentation tool | MCP `presentation(operation=cognition\|opportunities\|shapes)` | Matrix honesty + rational DSL shapes |
 | Opportunity scan | CLI `dazzle qa hyperpart-opportunities` · MCP `presentation(opportunities)` | Host emit coverage |
 | Counter-prior | MCP `knowledge(operation=counter_prior, id=ref_as_repr)` | Wrong vs right shape |
 | Recapture | `scripts/recapture_demo_fleet_1626.py --apps <app>` | Still proof after emit |
 
-**Force routing:** when `product_quality` reports presentation residual, next force is
+**Force routing:** when stills show presentation residual, next force is
 `framework-ux hyperpart_presentation` (framework emit fix). Use `example-apps
 hyperpart_presentation` only for recapture/prove after emit is fixed.
 

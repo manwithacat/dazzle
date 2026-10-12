@@ -1745,7 +1745,6 @@
     ]),
     'triples': list([
     ]),
-    'ux': None,
     'version': '0.1.0',
     'views': list([
     ]),

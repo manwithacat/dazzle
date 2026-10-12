@@ -9,7 +9,6 @@ Commands:
   dazzle demo propose        — Propose a demo data blueprint from DSL
   dazzle demo save           — Save a blueprint JSON file
   dazzle demo generate       — Generate demo data files from the blueprint
-  dazzle demo quality        — Score felt product/demo quality (#1626)
 """
 
 import json
@@ -21,7 +20,6 @@ import typer
 
 from dazzle.core.demo_blueprint_persistence import load_blueprint
 from dazzle.demo_data.test_mode_load import demo_ops_playbook, reset_and_load
-from dazzle.product_quality import score_project, score_status_lines
 
 demo_app = typer.Typer(help="Demo data management commands.", no_args_is_help=True)
 
@@ -266,14 +264,14 @@ def reset_and_load_command(
     skip_verify: bool = typer.Option(
         False,
         "--skip-verify",
-        help="Do not score persona_homes residual after seed",
+        help="Do not probe live persona desks after seed",
     ),
 ) -> None:
     """Reset + seed via /__test__/* with STABLE persona ids (#1627).
 
     Prefer this over ``dazzle demo load`` for agent demos: it uses the
     same path as QA (no CSRF entity POSTs), reads ports/secret from
-    runtime.json, and verifies assignment-aware persona homes.
+    runtime.json, and probes each persona's live default desk.
 
     Order after this command: authenticate with role= (never before reset).
     """
@@ -293,7 +291,7 @@ def reset_and_load_command(
         project_root,
         base_url=base_url,
         data_dir=data_dir,
-        verify_persona_homes=not skip_verify,
+        verify_live_desks=not skip_verify,
     )
 
     if json_output:
@@ -306,9 +304,6 @@ def reset_and_load_command(
                 f"OK reset-and-load: {report.get('fixture_count', 0)} fixtures → "
                 f"{report.get('api_url')}"
             )
-            residual = report.get("persona_homes_residual")
-            if residual is not None:
-                typer.echo(f"  persona_homes residual: {residual}")
             if report.get("warning"):
                 typer.echo(f"  warning: {report['warning']}", err=True)
             typer.echo(f"  next: {report.get('next')}")
@@ -678,55 +673,3 @@ def generate_command(
         raise typer.Exit(code=1)
 
     typer.echo(format_output(result, as_json=json_output))
-
-
-@demo_app.command(name="quality")
-def quality_command(
-    project_root: Path = typer.Option(
-        Path("."),
-        "--project",
-        "-p",
-        help="App root (dazzle.toml) or examples/ for the showcase fleet",
-    ),
-    app: str | None = typer.Option(
-        None,
-        "--app",
-        "-a",
-        help="When scoring examples/, limit persona-home/stills to this app",
-    ),
-    min_home_hits: int = typer.Option(
-        1,
-        "--min-home-hits",
-        help="Minimum seed rows per current_user region (default 1)",
-    ),
-    json_output: bool = typer.Option(False, "--json", help="Output full report as JSON"),
-    strict: bool = typer.Option(
-        False,
-        "--strict",
-        help="Exit 1 when residual_total > 0",
-    ),
-) -> None:
-    """Score felt product/demo quality (persona homes, metric/list, stills, maturity).
-
-    Structural residual (validate/lint) can be green while persona desks are
-    empty — this bar catches assignment-aware seed residual, metric↔list
-    current_user footguns (F10/#1632), and empty-hero still floors (#1626).
-    Same payload as MCP product_quality(operation=score).
-    """
-    root = project_root.resolve()
-    report = score_project(root, app=app, min_home_hits=min_home_hits)
-
-    if json_output:
-        payload = report.to_dict()
-        payload["status_lines"] = score_status_lines(report)
-        typer.echo(json.dumps(payload, indent=2))
-    else:
-        for line in score_status_lines(report):
-            typer.echo(line)
-        for rec in report.recommended:
-            typer.echo(f"  → {rec}")
-        if report.force:
-            typer.echo(f"force: {report.force}")
-
-    if strict and report.residual_total > 0:
-        raise typer.Exit(code=1)

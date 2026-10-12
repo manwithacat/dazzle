@@ -1151,20 +1151,6 @@ handle_e2e: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 
 
 # =============================================================================
-# Product Quality Handler (#1626)
-# =============================================================================
-
-_MOD_PQ = "dazzle.mcp.server.handlers.product_quality"
-
-handle_product_quality: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "product_quality",
-    {
-        "score": f"{_MOD_PQ}:product_quality_score_handler",
-    },
-)
-
-
-# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1195,25 +1181,6 @@ handle_policy: Callable[[dict[str, Any]], str] = _make_project_handler(
         # #1629 G6 — schema advertised these; consolidated map omitted them
         "access_matrix": _policy_inner,
         "verify_status": _policy_inner,
-    },
-)
-
-
-# =============================================================================
-# Composition Handler
-# =============================================================================
-
-_MOD_COMP = "dazzle.mcp.server.handlers.composition"
-
-handle_composition: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
-    "composition",
-    {
-        "audit": f"{_MOD_COMP}:audit_composition_handler",
-        "capture": f"{_MOD_COMP}:capture_composition_handler",
-        "analyze": f"{_MOD_COMP}:analyze_composition_handler",
-        "report": f"{_MOD_COMP}:report_composition_handler",
-        "bootstrap": f"{_MOD_COMP}:bootstrap_composition_handler",
-        "inspect_styles": f"{_MOD_COMP}:inspect_styles_handler",
     },
 )
 
@@ -1386,7 +1353,7 @@ def handle_representation(arguments: dict[str, Any]) -> str:
 
 
 def handle_presentation(arguments: dict[str, Any]) -> str:
-    """#1626 hyperpart presentation cognition / opportunities / residual / shapes."""
+    """#1626 hyperpart presentation cognition / opportunities / shapes."""
     from .handlers.presentation import handle_presentation as _handle
 
     return _handle(arguments)
@@ -1413,10 +1380,8 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "graph": handle_graph,
     "discovery": handle_discovery,
     "e2e": handle_e2e,
-    "product_quality": handle_product_quality,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
-    "composition": handle_composition,
     "sentinel": handle_sentinel,
     "test_intelligence": handle_test_intelligence,
     "llm": handle_llm,

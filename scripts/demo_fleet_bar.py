@@ -46,8 +46,6 @@ MIN_ROWS: dict[str, dict[str, int]] = {
 PLATFORM_STILL_PREFIX = "_platform_admin_"
 
 # P0-6 ship-gate floors (jobs already recaptured with story data).
-# Keep aligned with dazzle.product_quality.stills.HERO_MIN_BYTES where possible
-# (`dazzle demo quality` uses the module floors for the full felt bar).
 # Absent stills are skipped so CI without gitignored .dazzle/ stills stays green.
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "hr_records": {
@@ -127,21 +125,6 @@ def score_app(app: str) -> AppDemoBar:
     if not app_dir.is_dir():
         row.issues.append("missing_app")
         return row
-
-    # P0-3/4: product personas must not land on framework platform chrome
-    try:
-        from dazzle.product_quality.persona_homes import score_persona_homes
-
-        for home in score_persona_homes(app_dir):
-            for reg in home.regions:
-                if reg.residual and reg.reason.startswith("platform_admin_landing"):
-                    row.issues.append(f"platform_landing:{home.persona}:{home.default_workspace}")
-                elif reg.residual and reg.reason.startswith("seed_hits="):
-                    row.issues.append(f"persona_home:{home.persona}:{reg.region}:{reg.reason}")
-                elif reg.residual and reg.reason.startswith("missing_seed_jsonl"):
-                    row.issues.append(f"persona_home:{home.persona}:{reg.reason}")
-    except Exception as exc:  # noqa: BLE001
-        row.issues.append(f"persona_home_check_failed:{type(exc).__name__}")
 
     # P0-5 seed mins
     mins = MIN_ROWS.get(app) or {}

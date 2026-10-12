@@ -223,21 +223,6 @@ def _extract_fidelity_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _extract_composition_audit_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
-    pages = step_output.get("pages", [])
-    total_violations: dict[str, int] = {}
-    for page in pages if isinstance(pages, list) else []:
-        if not isinstance(page, dict):
-            continue
-        for sev, count in page.get("violations_count", {}).items():
-            total_violations[sev] = total_violations.get(sev, 0) + count
-    return {
-        "overall_score": step_output.get("overall_score", 100),
-        "pages_audited": len(pages) if isinstance(pages, list) else 0,
-        "violations": total_violations,
-    }
-
-
 def _extract_test_generate_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     tests = step_output.get("tests", [])
     categories: dict[str, int] = {}
@@ -344,7 +329,6 @@ _METRICS_EXTRACTORS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "dsl(validate)": _extract_validate_metrics,
     "dsl(lint)": _extract_lint_metrics,
     "dsl(fidelity)": _extract_fidelity_metrics,
-    "composition(audit)": _extract_composition_audit_metrics,
     "dsl_test(generate)": _extract_test_generate_metrics,
     "dsl_test(coverage)": _extract_test_coverage_metrics,
     "story(coverage)": _extract_story_coverage_metrics,
@@ -412,41 +396,6 @@ def collect_top_issues(
                         "message": warn if isinstance(warn, str) else str(warn),
                     }
                 )
-
-        if op == "composition(audit)":
-            for page in result.get("pages", []) if isinstance(result.get("pages"), list) else []:
-                if not isinstance(page, dict):
-                    continue
-                route = page.get("route", "/")
-                for v in (
-                    page.get("page_violations", [])
-                    if isinstance(page.get("page_violations"), list)
-                    else []
-                ):
-                    if isinstance(v, dict):
-                        issues.append(
-                            {
-                                "source": "composition",
-                                "severity": v.get("severity", "minor"),
-                                "message": f"{route}: {v.get('message', str(v))}",
-                            }
-                        )
-                for sec in (
-                    page.get("sections", []) if isinstance(page.get("sections"), list) else []
-                ):
-                    if not isinstance(sec, dict):
-                        continue
-                    for v in (
-                        sec.get("violations", []) if isinstance(sec.get("violations"), list) else []
-                    ):
-                        if isinstance(v, dict):
-                            issues.append(
-                                {
-                                    "source": "composition",
-                                    "severity": v.get("severity", "minor"),
-                                    "message": f"{route}: {v.get('message', str(v))}",
-                                }
-                            )
 
         if op == "dsl(fidelity)":
             for rec in result.get("top_recommendations", []):
@@ -520,10 +469,6 @@ def step_has_issues(operation: str, step_result: Any) -> bool:
         total_gaps: int = step_result.get("total_gaps", 0) or 0
         return total_gaps > 0
 
-    if operation == "composition(audit)":
-        score: int = step_result.get("overall_score", 100) or 100
-        return score < 100
-
     if operation == "story(scope_fidelity)":
         scope_gaps: int = step_result.get("total_scope_gaps", 0) or 0
         return scope_gaps > 0
@@ -593,10 +538,6 @@ def filter_issues_result(operation: str, step_result: Any) -> Any:
             step_result.pop("offset", None)
             step_result.pop("has_more", None)
             step_result.pop("guidance", None)
-        return step_result
-
-    if operation == "composition(audit)":
-        step_result = {k: v for k, v in step_result.items() if k != "markdown"}
         return step_result
 
     return step_result

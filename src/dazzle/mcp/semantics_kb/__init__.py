@@ -87,7 +87,6 @@ ALIASES = {
     "stable_personas": "demo_identity",
     "demo_ops": "first_principles_demo",
     "reset_and_load": "first_principles_demo",
-    "persona_homes": "empty_desk_false_green",
     "false_green": "empty_desk_false_green",
     "region_filter": "workspace_region_filters",
     "filter_or": "workspace_region_filters",

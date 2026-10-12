@@ -65,17 +65,15 @@ v0_5_changes = "NEW in v0.5"
 category = "Extensibility (v0.5)"
 doc_page = "services"
 doc_order = 2
-definition = "Turing-complete implementation of a domain service. Stubs are auto-generated from DSL with typed function signatures."
+definition = "Turing-complete implementation of a domain service. Stubs are hand-written against the typed signature the DSL service declares."
 # parse_check: mixed-content (Python service-stub implementation, not DSL)
 parse_check = false
 example = '''
-# stubs/calculate_vat.py (auto-generated header)
-# === AUTO-GENERATED HEADER - DO NOT MODIFY ===
+# stubs/calculate_vat.py — signature follows the DSL service declaration
 # Service ID: calculate_vat
 # Kind: domain_logic
 # Input: invoice_id (uuid required), country_code (str(2) optional)
 # Output: vat_amount (decimal), breakdown (json)
-# ============================================
 
 from typing import TypedDict
 

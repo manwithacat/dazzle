@@ -21,7 +21,6 @@ from typing import Any
 CATEGORY_MAP: dict[str, str] = {
     # --- sub-app names → display category ---
     "auth": "Authentication",
-    "composition": "Visual Composition",
     "db": "Database",
     "deploy": "Deploy",
     "discovery": "Discovery",
@@ -36,7 +35,6 @@ CATEGORY_MAP: dict[str, str] = {
     "process-migrate": "Process Migration",
     "specs": "API Specs",
     "story": "Stories",
-    "stubs": "Stubs",
     "test": "Testing",
     "vocab": "Vocabulary",
     "feedback": "Feedback",
@@ -70,7 +68,6 @@ CATEGORY_MAP: dict[str, str] = {
     "validate": "Validation",
     "lint": "Validation",
     "inspect": "Validation",
-    "layout-plan": "Validation",
     "analyze-spec": "Validation",
     "example": "Project",
     "doctor": "Project",
@@ -83,8 +80,6 @@ MCP_TOOL_MAP: dict[str, str] = {
     "inspect": "dsl(operation='inspect_entity')",
     "analyze-spec": "spec_analyze(operation='discover_entities')",
     "pipeline run": "pipeline(operation='run')",
-    "composition audit": "composition(operation='audit')",
-    "composition report": "composition(operation='report')",
     "discovery coherence": "discovery(operation='coherence')",
     "story propose": "story(operation='propose')",
     "story list": "story(operation='get')",
@@ -133,14 +128,6 @@ ENRICHMENTS: dict[str, dict[str, Any]] = {
             "App running with: dazzle serve --test-mode",
             "Playwright installed: pip install playwright && playwright install chromium",
         ],
-    },
-    "stubs list": {
-        "output": {
-            "service_name": "Name of the domain service",
-            "kind": "Service kind (domain_logic, validation, integration, workflow)",
-            "stub_language": "Target language (python, typescript)",
-            "status": "implemented | not_implemented | missing",
-        },
     },
     "test generate": {
         "generates": [
@@ -331,7 +318,6 @@ dazzle init --from simple_task  # Copy from example
 ```bash
 dazzle validate            # Check DSL syntax
 dazzle lint                # Extended checks
-dazzle layout-plan         # Visualize workspaces
 ```
 
 ## E2E Testing
@@ -710,12 +696,6 @@ surface customer_create "New Customer":
                     "action": "Validate",
                     "command": "dazzle validate",
                 },
-                {
-                    "step": 3,
-                    "action": "Preview layout",
-                    "command": "dazzle layout-plan --explain",
-                    "notes": "See which archetype is selected and why",
-                },
             ],
             "archetypes": [
                 "FOCUS_METRIC - Single KPI with supporting data",
@@ -915,9 +895,9 @@ entity Task "Task":
                 },
                 {
                     "step": 3,
-                    "action": "Generate stub file",
-                    "command": "dazzle stubs generate --service calculate_discount",
-                    "creates": "stubs/calculate_discount.py",
+                    "action": "Create stub file",
+                    "file": "stubs/calculate_discount.py",
+                    "notes": "Hand-write the module; signature follows the service input/output",
                 },
                 {
                     "step": 4,
@@ -1266,7 +1246,7 @@ entity Task "Task":
                     "step": 9,
                     "action": "Read world model",
                     "mcp_tool": "status(operation='demo_world')",
-                    "notes": "Also product_quality / dazzle demo quality (metric_list risk)",
+                    "notes": "Metrics filtered by current_user can read 0 while lists show rows",
                 },
             ],
             "next_steps": [
@@ -1275,7 +1255,7 @@ entity Task "Task":
                 "Prefer same-field OR or split regions for filters",
                 "status.mcp version_cognition for pin decisions (not banner alone)",
                 "Default path: founder brief → questions → hand-authored DSL (not bootstrap)",
-                "If stills show dict/UUID chrome: presentation(operation=residual) + force framework-ux hyperpart_presentation",
+                "If stills show dict/UUID chrome: force framework-ux hyperpart_presentation",
             ],
         },
         "hyperpart_presentation": {
@@ -1294,30 +1274,17 @@ entity Task "Task":
                 },
                 {
                     "step": 2,
-                    "action": "Score felt quality",
-                    "mcp_tool": "product_quality(operation='score')",
-                    "command": "dazzle demo quality -p <app>",
-                    "notes": "presentation residual folds into residual_total",
-                },
-                {
-                    "step": 3,
                     "action": "Scan opportunities",
                     "mcp_tool": "presentation(operation='opportunities', app='…')",
                     "command": "dazzle qa hyperpart-opportunities --table",
                 },
                 {
-                    "step": 4,
-                    "action": "OCR residual on stills",
-                    "mcp_tool": "presentation(operation='residual', app='…')",
-                    "notes": "ref_as_repr / person_as_text; needs tesseract + stills",
-                },
-                {
-                    "step": 5,
+                    "step": 3,
                     "action": "Implement via present() matrix",
                     "notes": "framework emit only; force /improve framework-ux hyperpart_presentation",
                 },
                 {
-                    "step": 6,
+                    "step": 4,
                     "action": "Recapture + open PNG",
                     "command": ".venv/bin/python scripts/recapture_demo_fleet_1626.py --apps <app>",
                 },

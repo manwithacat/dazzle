@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 35 tools, 167 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 33 tools, 159 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -18,7 +18,6 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`api_pack`](#api_pack) | 3 | API pack operations: list, search, get |
 | [`bootstrap`](#bootstrap) | — | Entry point for 'build me an app' requests |
 | [`compliance`](#compliance) | 5 | Compliance documentation operations |
-| [`composition`](#composition) | 6 | Composition analysis: audit (DOM-level visual hierarchy audit), capture (Playwright section-level screenshots), analyze (LLM visual evaluation of captured screenshots), report (combined audit+capture+analyze with merged scoring), bootstrap (generate synthetic reference library for few-shot evaluation) |
 | [`conformance`](#conformance) | 4 | DSL conformance testing operations |
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
 | [`demo_data`](#demo_data) | 1 | Demo data operations: get |
@@ -34,9 +33,8 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`param`](#param) | 2 | Query runtime parameter declarations |
 | [`perf`](#perf) | 3 | Local OpenTelemetry trace findings for the current project (read-only) |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
-| [`presentation`](#presentation) | 4 | Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam |
+| [`presentation`](#presentation) | 3 | Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam |
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
-| [`product_quality`](#product_quality) | 1 | Felt product/demo quality for commercial showcase apps (#1626) |
 | [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
 | [`rhythm`](#rhythm) | 3 | Rhythm operations: get, list, coverage |
 | [`semantics`](#semantics) | 6 | Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards |
@@ -119,27 +117,6 @@ Compliance documentation operations. compile: compile taxonomy + evidence into A
 - `framework` *(string)* — Framework ID: iso27001 or soc2 (default: iso27001)
 - `status_filter` *(array)* — Control states to include (for gaps). Default: [gap, partial].
 - `tier_filter` *(array)* — Control tiers to include (for gaps), e.g. [1, 2] for the controls that matter most.
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `composition`
-
-Composition analysis: audit (DOM-level visual hierarchy audit), capture (Playwright section-level screenshots), analyze (LLM visual evaluation of captured screenshots), report (combined audit+capture+analyze with merged scoring), bootstrap (generate synthetic reference library for few-shot evaluation). Audit computes attention weights using a 5-factor model and evaluates composition rules. Capture takes section-level screenshots from a running app. Analyze uses Claude vision to evaluate screenshots for rendering fidelity, icon/media issues, color consistency, layout overflow, visual hierarchy, and responsive fidelity. Report runs audit (always) + visual pipeline (when base_url given) and merges into a combined score. Bootstrap generates synthetic reference images for few-shot visual evaluation prompts. Inspect_styles extracts computed CSS styles via Playwright getComputedStyle() for agent-driven layout diagnosis (zero LLM tokens).
-
-**Operations (6):** `audit`, `capture`, `analyze`, `report`, `bootstrap`, `inspect_styles`
-
-**Parameters:**
-
-- `base_url` *(string)* — Server URL (required for capture, e.g. http://localhost:3000)
-- `pages` *(array)* — Filter to specific page routes (e.g. ["/", "/about"])
-- `viewports` *(array)* — Viewport names for capture (default: ["desktop"]). Options: desktop, mobile
-- `focus` *(array)* — Visual eval dimensions to focus on (for analyze). Options: content_rendering, icon_media, color_consistency, layout_overflow, visual_hierarchy, responsive_fidelity
-- `token_budget` *(integer)* — Max tokens for visual analysis (default: 50000)
-- `route` *(string)* — Page route to inspect (for inspect_styles, default: "/")
-- `selectors` *(object)* — Label-to-CSS-selector mapping (for inspect_styles). E.g. {"hero": ".dz-hero-with-media", "media": ".dz-hero-media"}
-- `properties` *(array)* — CSS properties to inspect (for inspect_styles). Defaults to layout properties: display, flex-direction, position, width, height, overflow, gap, etc.
-- `overwrite` *(boolean)* — Overwrite existing reference library (for bootstrap, default: false)
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -390,9 +367,9 @@ Policy analysis operations for RBAC access control. Operations: analyze (find en
 
 ### `presentation`
 
-Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam. Operations: cognition (matrix hosts audited vs wired; how_to_extend), opportunities (static person/queue scan + presentation_cognition; CLI: dazzle qa hyperpart-opportunities), residual (OCR hero stills for ref_as_repr dict/UUID chrome and person_as_text Assigned To: prose when tesseract available), shapes (rational DSL authoring shapes + scenario_missing residual for domain-modelling agents; optional id=/status= filters). Doctrine: docs/reference/hyperpart-presentation.md + docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. Force: /improve framework-ux hyperpart_presentation (OCR) or hyperpart_emitter (planned shapes / scenario_missing). Prefer before claiming person/refs 'done' from residual floors alone. Complements product_quality(score) which folds presentation residual into residual_total.
+Hyperpart presentation process (#1626): closed role×host → density matrix + present() seam. Operations: cognition (matrix hosts audited vs wired; how_to_extend), opportunities (static person/queue scan + presentation_cognition; CLI: dazzle qa hyperpart-opportunities), shapes (rational DSL authoring shapes + scenario_missing residual for domain-modelling agents; optional id=/status= filters). Doctrine: docs/reference/hyperpart-presentation.md + docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. Force: /improve framework-ux hyperpart_emitter (planned shapes / scenario_missing).
 
-**Operations (4):** `cognition`, `opportunities`, `residual`, `shapes`
+**Operations (3):** `cognition`, `opportunities`, `shapes`
 
 **Parameters:**
 
@@ -418,21 +395,6 @@ Process operations: list, inspect, list_runs, get_run, coverage
 - `status_filter` *(string)* — Filter by coverage status (for coverage, default: all)
 - `limit` *(integer)* — Max results (for list_runs, coverage; default: 50)
 - `offset` *(integer)* — Skip N results for pagination (for coverage, default: 0)
-- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
-
----
-
-### `product_quality`
-
-Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), metric_list residual when metrics aggregates use current_user while sibling list/queue regions have seed hits (F10 / #1632 / metric_current_user_lie; trust lists/stills over KPI tiles), empty-hero still byte floors, and presentation residual (ref_as_repr / person_as_text OCR on hero stills when tesseract available) into one residual_total + next force path (hyperpart_presentation when presentation residual > 0). Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk or dict-repr theater. CLI: dazzle demo quality. Related MCP: presentation (cognition/opportunities/residual).
-
-**Operations (1):** `score`
-
-**Parameters:**
-
-- `project_root` *(string)* — Path to one example app (with dazzle.toml) or to examples/ for the showcase fleet. Defaults to the active MCP project.
-- `app` *(string)* — When project_root is examples/, limit persona-home and still scoring to this showcase app name.
-- `min_home_hits` *(integer)* — Minimum seed rows matching a current_user region filter (default 1).
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
@@ -529,7 +491,7 @@ Low-level narrative analysis (untrusted draft). Operations: discover_entities (e
 
 ### `status`
 
-Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime). demo_world = agent-readable serve ports, test_secret present?, masked DB URL, STABLE persona ids, persona-home seed residual (#1629). activity = real-time MCP tool invocations (cursor polling).
+Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime). demo_world = agent-readable serve ports, test_secret present?, masked DB URL, STABLE persona ids (#1629). activity = real-time MCP tool invocations (cursor polling).
 
 **Operations (7):** `mcp`, `logs`, `active_project`, `telemetry`, `activity`, `demo_world`, `runtime`
 

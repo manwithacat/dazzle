@@ -369,16 +369,7 @@ from .jobs import (
 )
 
 # Layout Engine
-from .layout import (
-    AttentionSignalKind,
-    LayoutPlan,
-    LayoutSignal,
-    LayoutSurface,
-    PersonaLayout,
-    Stage,
-    UXLayouts,
-    WorkspaceLayout,
-)
+from .layout import AttentionSignalKind, Stage
 
 # Ledgers (v0.24.0 TigerBeetle Integration)
 from .ledgers import (
@@ -1088,13 +1079,7 @@ __all__ = [
     "InvariantRhs",
     # Layout
     "AttentionSignalKind",
-    "LayoutSignal",
-    "WorkspaceLayout",
-    "PersonaLayout",
     "Stage",
-    "LayoutSurface",
-    "LayoutPlan",
-    "UXLayouts",
     # Source locations
     "SourceLocation",
     # Module

@@ -18,7 +18,6 @@ Complete reference for the `dazzle` command-line interface.
 | `dazzle validate` | Parse and validate all DSL modules |
 | `dazzle lint` | Extended validation with style checks |
 | `dazzle inspect` | Inspect entities, surfaces, and structure |
-| `dazzle layout-plan` | Show workspace layout plan |
 | `dazzle analyze-spec` | LLM-assisted DSL generation from a spec file |
 | `dazzle info` | Show runtime installation status |
 | `dazzle doctor` | Run environment health checks |
@@ -99,12 +98,11 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 |---------|-------------|
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 
-### Vocabulary & Stubs
+### Vocabulary
 
 | Command | Description |
 |---------|-------------|
 | `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
-| `dazzle stubs` | Manage domain service stubs |
 
 ### Monitoring
 
@@ -139,7 +137,6 @@ there requires a row here.
 | `dazzle capability` | Manage opt-in feature capabilities |
 | `dazzle clean` | Local hygiene — reclaim gitignored snapshot trees |
 | `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
-| `dazzle composition` | Visual composition analysis for Dazzle apps |
 | `dazzle conformance` | DSL conformance testing |
 | `dazzle db` | Database migration commands (Alembic) |
 | `dazzle demo` | Demo data management commands |
@@ -174,7 +171,6 @@ there requires a row here.
 | `dazzle spec` | Compare narrative product spec against DSL state — drift detection |
 | `dazzle specs` | Generate API specifications (OpenAPI / AsyncAPI) |
 | `dazzle story` | Story-driven test generation |
-| `dazzle stubs` | Manage domain service stubs |
 | `dazzle sweep` | Run unified health checks across example apps |
 | `dazzle tenant` | Multi-tenant schema management |
 | `dazzle test` | Multi-tier test runner (dsl-run / playwright / agent) |

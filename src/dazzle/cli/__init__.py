@@ -11,7 +11,6 @@ This package contains the main CLI application and modularized sub-commands:
 - mcp.py: MCP server commands
 - specs.py: Specification generation commands (OpenAPI, AsyncAPI)
 - deploy.py: Deploy commands
-- stubs.py: Stub generation commands
 - story.py: Story commands
 - events.py: Event system commands
 - migrate.py: Migration commands
@@ -79,7 +78,6 @@ from dazzle.cli.project import (  # noqa: E402
     example_command,
     init_command,
     inspect_command,
-    layout_plan_command,
     lint_command,
     validate_command,
 )
@@ -94,7 +92,6 @@ app.command(name="lint")(lint_command)
 # the rename moves it under the inspect group alongside `inspect
 # renderers` / `inspect primitives` / etc. so the command tree has
 # a single owner for the `inspect` namespace (#1120 fallout).
-app.command(name="layout-plan")(layout_plan_command)
 app.command(name="analyze-spec")(analyze_spec_command)
 app.command(name="example")(example_command)
 
@@ -272,7 +269,6 @@ from dazzle.cli.backup import backup_app  # noqa: E402
 from dazzle.cli.capability import capability_app  # noqa: E402
 from dazzle.cli.clean import clean_app  # noqa: E402
 from dazzle.cli.compliance import compliance_app  # noqa: E402
-from dazzle.cli.composition import composition_app  # noqa: E402
 from dazzle.cli.conformance import conformance_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
@@ -305,7 +301,6 @@ from dazzle.cli.signing import signing_app  # noqa: E402
 from dazzle.cli.spec import spec_app  # noqa: E402
 from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
-from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
 from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
@@ -322,7 +317,6 @@ app.add_typer(capability_app, name="capability")
 app.add_typer(compliance_app, name="compliance")
 app.add_typer(conformance_app, name="conformance")
 app.add_typer(backup_app, name="backup")
-app.add_typer(composition_app, name="composition")
 app.add_typer(clean_app, name="clean")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
@@ -332,7 +326,6 @@ app.add_typer(fitness_app, name="fitness")
 app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(worker_app, name="worker")
-app.add_typer(stubs_app, name="stubs")
 app.add_typer(scaffold_app, name="scaffold")
 app.add_typer(prove_app, name="prove")
 app.add_typer(representation_app, name="representation")

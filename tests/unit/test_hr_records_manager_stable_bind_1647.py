@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 
 REPO = Path(__file__).resolve().parents[2]
 SEED = REPO / "examples" / "hr_records" / "dsl" / "seeds" / "demo_data" / "Person.jsonl"

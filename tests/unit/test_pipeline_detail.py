@@ -35,9 +35,6 @@ class TestStepHasIssues:
             # --- dsl(fidelity): any gap counts ---
             ("dsl(fidelity)", {"total_gaps": 3}, True),
             ("dsl(fidelity)", {"total_gaps": 0}, False),
-            # --- composition(audit): below 100 expands ---
-            ("composition(audit)", {"overall_score": 85}, True),
-            ("composition(audit)", {"overall_score": 100}, False),
             # --- dsl_test(run_all): any failure expands ---
             ("dsl_test(run_all)", {"failed": 2}, True),
             ("dsl_test(run_all)", {"failed": 0}, False),
@@ -62,8 +59,6 @@ class TestStepHasIssues:
             "lint_clean",
             "fidelity_with_gaps",
             "fidelity_no_gaps",
-            "composition_low_score",
-            "composition_perfect",
             "test_run_failures",
             "test_run_all_passed",
             "semantics_with_errors",
@@ -126,18 +121,6 @@ class TestFilterIssuesResult:
         filtered = _filter_issues_result("process(coverage)", result)
         assert len(filtered["stories"]) == 1
         assert filtered["stories"][0]["story_id"] == "ST-002"
-
-    def test_composition_audit_strips_markdown(self):
-        result = {
-            "pages": [{"route": "/", "score": 85}],
-            "overall_score": 85,
-            "summary": "1 page audited",
-            "markdown": "# Composition Audit: 85/100\n...",
-        }
-        filtered = _filter_issues_result("composition(audit)", result)
-        assert "markdown" not in filtered
-        assert filtered["overall_score"] == 85
-        assert filtered["pages"] == [{"route": "/", "score": 85}]
 
     def test_unknown_operation_passes_through(self):
         result = {"some": "data"}

@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from dazzle.core import ir
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 from dazzle.http.runtime.auth.cookie_name import set_session_cookies
 from dazzle.http.runtime.auth_identity_mirror import mirror_auth_user_to_domain
 from dazzle.http.runtime.http_errors import require_found
@@ -33,32 +34,6 @@ logger = logging.getLogger(__name__)
 
 # Identifier pattern: letters, digits, underscores only (SQL-safe)
 _SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-
-# #1626 re-eval: fixed auth user UUIDs so demo jsonl can assign
-# Task/Ticket/Invoice rows to the same principals QA capture logs in as.
-# Pattern: a1 + persona index in the last hex group (version/variant valid).
-STABLE_PERSONA_USER_IDS: dict[str, str] = {
-    "member": "a1000000-0000-4000-8000-000000000001",
-    "manager": "a1000000-0000-4000-8000-000000000002",
-    "admin": "a1000000-0000-4000-8000-000000000003",
-    "agent": "a1000000-0000-4000-8000-000000000004",
-    "customer": "a1000000-0000-4000-8000-000000000005",
-    "requester": "a1000000-0000-4000-8000-000000000006",
-    "approver": "a1000000-0000-4000-8000-000000000007",
-    "finance": "a1000000-0000-4000-8000-000000000008",
-    "auditor": "a1000000-0000-4000-8000-000000000009",
-    "user": "a1000000-0000-4000-8000-00000000000a",
-    "designer": "a1000000-0000-4000-8000-00000000000b",
-    "reviewer": "a1000000-0000-4000-8000-00000000000c",
-    # Showcase product personas beyond the core set (#1626 re-eval).
-    "tester": "a1000000-0000-4000-8000-00000000000d",
-    "engineer": "a1000000-0000-4000-8000-00000000000e",
-    "ops_engineer": "a1000000-0000-4000-8000-00000000000f",
-    "employee": "a1000000-0000-4000-8000-000000000010",
-    "hr_admin": "a1000000-0000-4000-8000-000000000011",
-    "tenant_admin": "a1000000-0000-4000-8000-000000000012",
-    "finance_admin": "a1000000-0000-4000-8000-000000000013",
-}
 
 
 class _EntitySQL:

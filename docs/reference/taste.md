@@ -63,8 +63,7 @@ python scripts/hm_subscription_vision.py --ingest .dazzle/hm-visual-scores-raw.j
 Avoid for day-to-day agent loops: `dazzle qa taste-panel` / `component-vision`
 (those still use the metered vision client in `taste_panel.score_image`).
 
-Also enforced by: the opt-in `composition analyze` taste focus (`focus=["taste"]`),
-and the per-rule gates listed below. The blind taste panel remains available for
+Also enforced by the per-rule gates listed below. The blind taste panel remains available for
 parity campaigns when credits exist — not the default ship gate.
 
 - Spec: `archive/docs-superpowers/specs/2026-07-02-taste-house-aesthetic-design.md`
@@ -211,9 +210,6 @@ source of truth; this table is drift-gated).
 | `dark_mode_integrity` | Dark-mode integrity | dark |
 | `perceived_craft` | Perceived craft | both |
 
-Composition note: `composition analyze focus=["taste"]` runs the
-theme-agnostic five; `dark_mode_integrity` must be requested by name
-against known-dark captures (composition captures carry no theme info).
 
 ## The parity campaign (advisory unless human-thresholded)
 

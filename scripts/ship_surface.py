@@ -560,8 +560,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_sidebar_nav_open_discovery_1818.py",
     # cycle 1735 — #1646 detail money _minor/_currency + related tab finger budget
     "tests/unit/test_detail_money_related_budget_1646.py",
-    # cycle 1712 — presentation residual delta_theater honesty under 100%
-    "tests/unit/test_presentation_residual_1626.py",
     # invoice_ops Goal B conversation (cycle 1662 InvoiceNote + finance desks)
     "tests/unit/test_invoice_ops_conversation_goal_b.py",
     # invoice_ops Goal B document (cycle 1724 composition on finance_ops/my_invoices)

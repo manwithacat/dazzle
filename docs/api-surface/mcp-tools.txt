@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 36 tools
+# Count: 34 tools
 
 tool: agent
   description_hash: 644a118f9248
@@ -184,85 +184,6 @@ tool: compliance
         "description": "Control tiers to include (for gaps), e.g. [1, 2] for the controls that matter most.",
         "items": {
           "type": "integer"
-        },
-        "type": "array"
-      }
-    },
-    "required": [
-      "operation"
-    ],
-    "type": "object"
-  }
-
-tool: composition
-  description_hash: b463d73bcde5
-  description_len: 944
-  {
-    "properties": {
-      "base_url": {
-        "description": "Server URL (required for capture, e.g. http://localhost:3000)",
-        "type": "string"
-      },
-      "focus": {
-        "description": "Visual eval dimensions to focus on (for analyze). Options: content_rendering, icon_media, color_consistency, layout_overflow, visual_hierarchy, responsive_fidelity",
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
-      },
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "audit",
-          "capture",
-          "analyze",
-          "report",
-          "bootstrap",
-          "inspect_styles"
-        ],
-        "type": "string"
-      },
-      "overwrite": {
-        "description": "Overwrite existing reference library (for bootstrap, default: false)",
-        "type": "boolean"
-      },
-      "pages": {
-        "description": "Filter to specific page routes (e.g. [\"/\", \"/about\"])",
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
-      },
-      "project_path": {
-        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
-        "type": "string"
-      },
-      "properties": {
-        "description": "CSS properties to inspect (for inspect_styles). Defaults to layout properties: display, flex-direction, position, width, height, overflow, gap, etc.",
-        "items": {
-          "type": "string"
-        },
-        "type": "array"
-      },
-      "route": {
-        "description": "Page route to inspect (for inspect_styles, default: \"/\")",
-        "type": "string"
-      },
-      "selectors": {
-        "additionalProperties": {
-          "type": "string"
-        },
-        "description": "Label-to-CSS-selector mapping (for inspect_styles). E.g. {\"hero\": \".dz-hero-with-media\", \"media\": \".dz-hero-media\"}",
-        "type": "object"
-      },
-      "token_budget": {
-        "description": "Max tokens for visual analysis (default: 50000)",
-        "type": "integer"
-      },
-      "viewports": {
-        "description": "Viewport names for capture (default: [\"desktop\"]). Options: desktop, mobile",
-        "items": {
-          "type": "string"
         },
         "type": "array"
       }
@@ -988,8 +909,8 @@ tool: policy
   }
 
 tool: presentation
-  description_hash: 31fe1c476e20
-  description_len: 929
+  description_hash: d2a8811458bf
+  description_len: 613
   {
     "properties": {
       "app": {
@@ -1005,7 +926,6 @@ tool: presentation
         "enum": [
           "cognition",
           "opportunities",
-          "residual",
           "shapes"
         ],
         "type": "string"
@@ -1088,42 +1008,6 @@ tool: process
           "partial",
           "uncovered"
         ],
-        "type": "string"
-      }
-    },
-    "required": [
-      "operation"
-    ],
-    "type": "object"
-  }
-
-tool: product_quality
-  description_hash: 7ff9898ce7f1
-  description_len: 874
-  {
-    "properties": {
-      "app": {
-        "description": "When project_root is examples/, limit persona-home and still scoring to this showcase app name.",
-        "type": "string"
-      },
-      "min_home_hits": {
-        "default": 1,
-        "description": "Minimum seed rows matching a current_user region filter (default 1).",
-        "type": "integer"
-      },
-      "operation": {
-        "description": "Operation to perform",
-        "enum": [
-          "score"
-        ],
-        "type": "string"
-      },
-      "project_path": {
-        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
-        "type": "string"
-      },
-      "project_root": {
-        "description": "Path to one example app (with dazzle.toml) or to examples/ for the showcase fleet. Defaults to the active MCP project.",
         "type": "string"
       }
     },
@@ -1414,8 +1298,8 @@ tool: spec_analyze
   }
 
 tool: status
-  description_hash: 5edef0a3021c
-  description_len: 289
+  description_hash: 7b8bd2571c42
+  description_len: 261
   {
     "properties": {
       "count": {

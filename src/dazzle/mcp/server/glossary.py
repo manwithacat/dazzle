@@ -431,11 +431,7 @@ service calculate_vat "Calculate VAT":
 ```
 
 ### Stub (NEW in v0.5)
-Turing-complete implementation of a domain service. Auto-generated from DSL with typed function signatures.
-
-**Commands:**
-- `dazzle stubs generate` - Generate stub files
-- `dazzle stubs list` - List services and implementation status
+Turing-complete implementation of a domain service, hand-written against the typed signature the DSL declares.
 
 ### Three-Layer Architecture (NEW in v0.5)
 DAZZLE's separation of concerns:

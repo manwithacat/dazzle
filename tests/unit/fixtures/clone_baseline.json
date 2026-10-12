@@ -177,14 +177,6 @@
     ]
   },
   {
-    "signature": "1848999c67de289544fcc7b18f7f82ca",
-    "count": 2,
-    "names": [
-      "dazzle/core/composition_references_bootstrap.py::_gen_good_cta_alt",
-      "dazzle/core/composition_references_bootstrap.py::_gen_good_hero_alt"
-    ]
-  },
-  {
     "signature": "exact:83ea3dd010b7e3aa67aa6b2a667add43",
     "count": 2,
     "names": [

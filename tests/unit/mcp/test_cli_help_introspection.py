@@ -38,7 +38,7 @@ class TestIntrospectionCompleteness:
     # captures leaves, not groups, so `inspect` no longer shows up at
     # the top level — its subcommands live in SUB_COMMANDS below.
     TOP_LEVEL = [
-        "serve", "init", "validate", "lint", "layout-plan",
+        "serve", "init", "validate", "lint",
         "analyze-spec", "example", "doctor", "grammar",
         "build", "info",
     ]
@@ -58,11 +58,7 @@ class TestIntrospectionCompleteness:
         "test agent",
         "test run-all",
         "pipeline run",
-        "composition audit",
-        "composition report",
         "discovery coherence",
-        "stubs generate",
-        "stubs list",
         "story propose",
         "kg export",
         "kg import",
@@ -201,17 +197,9 @@ class TestGetCliHelp:
         assert any(m["command"] == "validate" for m in result["matches"])
 
     def test_new_commands_found(self) -> None:
-        for cmd in ("pipeline run", "composition audit", "discovery coherence"):
+        for cmd in ("pipeline run", "discovery coherence"):
             result = get_cli_help(cmd)
             assert result["found"] is True, f"'{cmd}' should be found"
-
-    def test_sub_command_prefix_suggests(self) -> None:
-        # Querying just "composition" should return suggestions including
-        # "composition audit" and "composition report".
-        result = get_cli_help("composition")
-        if not result.get("found"):
-            matches = result.get("matches", [])
-            assert any("composition" in m["command"] for m in matches)
 
     def test_description_search_matches(self) -> None:
         # "validate" should be found by exact name match

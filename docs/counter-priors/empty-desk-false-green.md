@@ -4,7 +4,7 @@ name: Empty desk with residual green (false green)
 layer: inference
 status: active
 summary: >-
-  Trusting validate green and static persona_homes residual as proof that a
+  Trusting validate green and a static seed residual as proof that a
   persona desk is populated. Residual can be 0 while live lists under session
   are empty (scope as: drift, wrong principal UUID, region filter). Agents
   declare demo success from residual alone; buyers see empty theater.
@@ -12,17 +12,13 @@ triggers_text:
   - "residual"
   - "persona homes"
   - "empty desk"
-  - "product quality"
   - "demo ready"
   - "seed residual"
   - "my work empty"
   - "list is empty"
   - "no rows"
 triggers_code:
-  - 'persona_homes_residual\s*=\s*0'
   - 'residual_total\s*=\s*0'
-  - 'product_quality'
-  - 'score_persona_homes'
 refs:
   adrs: ["0002"]
   memories: []
@@ -37,8 +33,8 @@ detectors: []
 
 ## The corpus prior
 
-Agents optimise **visible green signals**. After seed, `product_quality` /
-`persona_homes residual=0` and `dazzle validate` look like demo success. That
+Agents optimise **visible green signals**. After seed, a static
+`residual=0` and `dazzle validate` look like demo success. That
 matches local-success optimisation: residual is cheap and machine-readable, so
 it becomes the stop condition. The prior is *“if residual is zero, the desk is
 ready for stills / buyers.”*
@@ -69,7 +65,7 @@ RBAC + region under session**.
 3. On empty live desk: re-check every `as:` / permit token against declared
    personas; re-check STABLE persona ids; re-check region filters.
 4. `status(demo_world)` + `knowledge(concept=empty_desk_false_green)` for the
-   checklist; `dazzle demo quality` for the bar.
+   checklist.
 
 ## Why this matters here
 

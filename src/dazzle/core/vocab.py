@@ -261,25 +261,6 @@ def load_manifest(path: Path) -> VocabManifest:
     return VocabManifest(**data)
 
 
-def save_manifest(manifest: VocabManifest, path: Path) -> None:
-    """
-    Save vocabulary manifest to YAML file.
-
-    Args:
-        manifest: VocabManifest to save
-        path: Path to manifest.yml
-    """
-    # Ensure directory exists
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Convert to dict
-    data = manifest.model_dump(mode="json")
-
-    # Write YAML
-    with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-
-
 def create_empty_manifest(app_id: str, dsl_core_version: str = "1.0.0") -> VocabManifest:
     """
     Create an empty vocabulary manifest.

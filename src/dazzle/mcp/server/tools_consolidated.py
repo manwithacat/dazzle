@@ -555,7 +555,7 @@ def _tool_status() -> Tool:
             "Status operations: mcp, logs, active_project, telemetry, activity, "
             "demo_world (alias: runtime). "
             "demo_world = agent-readable serve ports, test_secret present?, "
-            "masked DB URL, STABLE persona ids, persona-home seed residual (#1629). "
+            "masked DB URL, STABLE persona ids (#1629). "
             "activity = real-time MCP tool invocations (cursor polling)."
         ),
         input_schema={
@@ -1230,24 +1230,19 @@ def _tool_presentation() -> Tool:
             "matrix + present() seam. Operations: cognition (matrix hosts audited "
             "vs wired; how_to_extend), opportunities (static person/queue scan + "
             "presentation_cognition; CLI: dazzle qa hyperpart-opportunities), "
-            "residual (OCR hero stills for ref_as_repr dict/UUID chrome and "
-            "person_as_text Assigned To: prose when tesseract available), "
             "shapes (rational DSL authoring shapes + scenario_missing residual "
             "for domain-modelling agents; optional id=/status= filters). "
             "Doctrine: docs/reference/hyperpart-presentation.md + "
             "docs/superpowers/specs/2026-08-07-hyperpart-emitter-scenario-cognition-design.md. "
-            "Force: /improve framework-ux hyperpart_presentation (OCR) or "
-            "hyperpart_emitter (planned shapes / scenario_missing). Prefer before "
-            "claiming person/refs 'done' from residual floors alone. Complements "
-            "product_quality(score) which folds presentation residual into "
-            "residual_total."
+            "Force: /improve framework-ux hyperpart_emitter (planned shapes / "
+            "scenario_missing)."
         ),
         input_schema={
             "type": "object",
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["cognition", "opportunities", "residual", "shapes"],
+                    "enum": ["cognition", "opportunities", "shapes"],
                     "description": "Operation to perform",
                 },
                 "app": {
@@ -1277,63 +1272,6 @@ def _tool_presentation() -> Tool:
                         "Path to one example app (dazzle.toml) or examples/ root. "
                         "Defaults to the active MCP project."
                     ),
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_product_quality() -> Tool:
-    """Felt product / demo quality bar (#1626)."""
-    return Tool(
-        name="product_quality",
-        description=(
-            "Felt product/demo quality for commercial showcase apps (#1626). "
-            "Operations: score — aggregates structural product maturity, demo "
-            "fleet floors, journey maturity, assignment-aware persona-home "
-            "seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), "
-            "metric_list residual when metrics aggregates use current_user "
-            "while sibling list/queue regions have seed hits (F10 / #1632 / "
-            "metric_current_user_lie; trust lists/stills over KPI tiles), "
-            "empty-hero still byte floors, and presentation residual "
-            "(ref_as_repr / person_as_text OCR on hero stills when tesseract "
-            "available) into one residual_total + next force path "
-            "(hyperpart_presentation when presentation residual > 0). Prefer "
-            "this over running probe scripts alone when judging whether a "
-            "sales demo is empty-desk or dict-repr theater. CLI: dazzle demo "
-            "quality. Related MCP: presentation (cognition/opportunities/residual)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": ["score"],
-                    "description": "Operation to perform",
-                },
-                "project_root": {
-                    "type": "string",
-                    "description": (
-                        "Path to one example app (with dazzle.toml) or to "
-                        "examples/ for the showcase fleet. Defaults to the "
-                        "active MCP project."
-                    ),
-                },
-                "app": {
-                    "type": "string",
-                    "description": (
-                        "When project_root is examples/, limit persona-home "
-                        "and still scoring to this showcase app name."
-                    ),
-                },
-                "min_home_hits": {
-                    "type": "integer",
-                    "description": (
-                        "Minimum seed rows matching a current_user region filter (default 1)."
-                    ),
-                    "default": 1,
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1383,101 +1321,6 @@ def _tool_policy() -> Tool:
                     "type": "string",
                     "enum": ["create", "read", "update", "delete", "list"],
                     "description": "CRUD operation to simulate (required for simulate)",
-                },
-                **PROJECT_PATH_SCHEMA,
-            },
-            "required": ["operation"],
-        },
-    )
-
-
-def _tool_composition() -> Tool:
-    """Composition (visual hierarchy audit + LLM evaluation)."""
-    return Tool(
-        name="composition",
-        description=(
-            "Composition analysis: audit (DOM-level visual hierarchy audit), "
-            "capture (Playwright section-level screenshots), "
-            "analyze (LLM visual evaluation of captured screenshots), "
-            "report (combined audit+capture+analyze with merged scoring), "
-            "bootstrap (generate synthetic reference library for few-shot evaluation). "
-            "Audit computes attention weights using a 5-factor model and evaluates "
-            "composition rules. Capture takes section-level screenshots from a "
-            "running app. Analyze uses Claude vision to evaluate screenshots for "
-            "rendering fidelity, icon/media issues, color consistency, layout "
-            "overflow, visual hierarchy, and responsive fidelity. Report runs "
-            "audit (always) + visual pipeline (when base_url given) and merges "
-            "into a combined score. Bootstrap generates synthetic reference images "
-            "for few-shot visual evaluation prompts. Inspect_styles extracts "
-            "computed CSS styles via Playwright getComputedStyle() for agent-driven "
-            "layout diagnosis (zero LLM tokens)."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "operation": {
-                    "type": "string",
-                    "enum": [
-                        "audit",
-                        "capture",
-                        "analyze",
-                        "report",
-                        "bootstrap",
-                        "inspect_styles",
-                    ],
-                    "description": "Operation to perform",
-                },
-                "base_url": {
-                    "type": "string",
-                    "description": "Server URL (required for capture, e.g. http://localhost:3000)",
-                },
-                "pages": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": 'Filter to specific page routes (e.g. ["/", "/about"])',
-                },
-                "viewports": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": 'Viewport names for capture (default: ["desktop"]). Options: desktop, mobile',
-                },
-                "focus": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "Visual eval dimensions to focus on (for analyze). "
-                        "Options: content_rendering, icon_media, color_consistency, "
-                        "layout_overflow, visual_hierarchy, responsive_fidelity"
-                    ),
-                },
-                "token_budget": {
-                    "type": "integer",
-                    "description": "Max tokens for visual analysis (default: 50000)",
-                },
-                "route": {
-                    "type": "string",
-                    "description": 'Page route to inspect (for inspect_styles, default: "/")',
-                },
-                "selectors": {
-                    "type": "object",
-                    "additionalProperties": {"type": "string"},
-                    "description": (
-                        "Label-to-CSS-selector mapping (for inspect_styles). "
-                        'E.g. {"hero": ".dz-hero-with-media", "media": ".dz-hero-media"}'
-                    ),
-                },
-                "properties": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "CSS properties to inspect (for inspect_styles). "
-                        "Defaults to layout properties: display, flex-direction, position, "
-                        "width, height, overflow, gap, etc."
-                    ),
-                },
-                "overwrite": {
-                    "type": "boolean",
-                    "description": "Overwrite existing reference library (for bootstrap, default: false)",
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1865,9 +1708,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_graph(),
         _tool_discovery(),
         _tool_e2e(),
-        _tool_product_quality(),
         _tool_policy(),
-        _tool_composition(),
         _tool_test_intelligence(),
         _tool_sentinel(),
         _tool_llm(),

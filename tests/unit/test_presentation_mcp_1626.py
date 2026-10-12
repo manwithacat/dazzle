@@ -20,12 +20,7 @@ def test_presentation_tool_in_registry() -> None:
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "presentation" in tools
     ops = tools["presentation"].input_schema["properties"]["operation"]["enum"]
-    assert set(ops) == {"cognition", "opportunities", "residual", "shapes"}
-    # product_quality description mentions presentation residual
-    assert "presentation" in tools["product_quality"].description.lower()
-    assert "ref_as_repr" in tools["product_quality"].description or (
-        "presentation residual" in tools["product_quality"].description.lower()
-    )
+    assert set(ops) == {"cognition", "opportunities", "shapes"}
 
 
 def test_presentation_cognition_handler() -> None:
@@ -51,14 +46,6 @@ def test_presentation_opportunities_support_tickets() -> None:
     assert data["schema_version"] >= 2
 
 
-def test_presentation_residual_missing_app_errors() -> None:
-    from dazzle.mcp.server.handlers.presentation import handle_presentation
-
-    raw = handle_presentation({"operation": "residual"})
-    data = json.loads(raw)
-    assert data.get("ok") is False or "error" in data or "required" in raw.lower()
-
-
 def test_presentation_shapes_handler() -> None:
     from dazzle.mcp.server.handlers.presentation import presentation_shapes_handler
 
@@ -77,7 +64,7 @@ def test_presentation_shapes_handler() -> None:
 
 def test_registry_lists_presentation_ops() -> None:
     """The consolidated registry (what the MCP client loads, and what the
-    `mcp-tools` API baseline gates) must expose the four #1626 operations."""
+    `mcp-tools` API baseline gates) must expose the three #1626 operations."""
     from unittest.mock import patch
 
     from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
@@ -85,7 +72,7 @@ def test_registry_lists_presentation_ops() -> None:
     with patch("dazzle.mcp.server.tools_consolidated.is_dev_mode", return_value=False):
         tools = {t.name: t for t in get_all_consolidated_tools()}
     enum = tools["presentation"].input_schema["properties"]["operation"]["enum"]
-    assert set(enum) == {"cognition", "opportunities", "residual", "shapes"}
+    assert set(enum) == {"cognition", "opportunities", "shapes"}
 
 
 def test_counter_prior_ref_as_repr_loads() -> None:

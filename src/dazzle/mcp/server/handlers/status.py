@@ -10,16 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from dazzle._version import get_version
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 from dazzle.core.manifest import load_manifest
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
 from dazzle.core.version_cognition import framework_version_cognition
 from dazzle.db.connection import resolve_live_project_db_url
 from dazzle.demo_data.test_mode_load import demo_ops_playbook
 from dazzle.mcp.semantics_kb import get_mcp_version
-from dazzle.product_quality.persona_homes import (
-    STABLE_PERSONA_USER_IDS,
-    score_persona_homes,
-)
 
 from ..state import (
     get_active_project,
@@ -93,7 +90,6 @@ def get_demo_world_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     db_url = _safe_db_url(root)
     secret = runtime.get("test_secret")
-    personas_out = _persona_homes_payload(root)
     payload = {
         "project_root": str(root),
         "has_dazzle_toml": (root / "dazzle.toml").is_file(),
@@ -110,8 +106,6 @@ def get_demo_world_handler(project_path: Path, args: dict[str, Any]) -> str:
             else ("project .env / resolve" if db_url else None)
         ),
         "stable_persona_user_ids": dict(STABLE_PERSONA_USER_IDS),
-        "persona_homes": personas_out,
-        "persona_home_residual": sum(1 for p in personas_out if p.get("residual")),
         "seed_hint": (
             "Prefer: dazzle demo reset-and-load --project <app> -y "
             "(#1627). Or POST /__test__/reset then /__test__/seed with "
@@ -129,37 +123,6 @@ def _safe_db_url(root: Path) -> str:
     except (OSError, ValueError, TypeError, RuntimeError, KeyError):
         logger.debug("demo_world db resolve failed", exc_info=True)
         return ""
-
-
-def _persona_homes_payload(root: Path) -> list[dict[str, Any]]:
-    try:
-        homes = score_persona_homes(root)
-    except (OSError, ValueError, TypeError, RuntimeError, KeyError) as exc:
-        logger.debug("demo_world persona_homes failed: %s", exc, exc_info=True)
-        return []
-    out: list[dict[str, Any]] = []
-    for h in homes:
-        out.append(
-            {
-                "persona": h.persona,
-                "default_workspace": h.default_workspace,
-                "stable_user_id": h.stable_user_id or STABLE_PERSONA_USER_IDS.get(h.persona),
-                "residual": h.residual,
-                "reasons": h.residual_reasons,
-                "regions": [
-                    {
-                        "region": r.region,
-                        "source": r.source,
-                        "bind_field": r.bind_field,
-                        "seed_hits": r.seed_hits,
-                        "residual": r.residual,
-                        "reason": r.reason,
-                    }
-                    for r in h.regions
-                ],
-            }
-        )
-    return out
 
 
 @wrap_handler_errors

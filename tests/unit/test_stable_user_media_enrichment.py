@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 from dazzle.demo_data.test_mode_load import _stable_user_media_enrichment
-from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
 
 
 def test_enrichment_only_stable_users_with_photo_url() -> None:

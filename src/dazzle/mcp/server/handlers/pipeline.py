@@ -35,16 +35,15 @@ def pipeline_run_impl(
       1. dsl(validate)
       2. dsl(lint)
       3. dsl(fidelity)
-      4. composition(audit)
-      5. dsl_test(generate)
-      6. dsl_test(coverage)
-      7. story(coverage)
-      8. story(scope_fidelity)
-      9. process(coverage)
-     10. test_design(gaps)
-     11. rhythm(gaps)
-     12. semantics(extract)
-     13. semantics(validate_events)
+      4. dsl_test(generate)
+      5. dsl_test(coverage)
+      6. story(coverage)
+      7. story(scope_fidelity)
+      8. process(coverage)
+      9. test_design(gaps)
+     10. rhythm(gaps)
+     11. semantics(extract)
+     12. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON string with per-step results and overall summary.
@@ -106,7 +105,6 @@ def _build_quality_steps(
         (steps, synthetic) — executable steps plus pre-built result entries
         for steps that can't run (import failures, preflight failures).
     """
-    from .composition import audit_composition_handler
     from .dsl import lint_project, validate_dsl
     from .dsl_test import generate_dsl_tests_handler, get_dsl_test_coverage_handler
     from .fidelity import score_fidelity_handler
@@ -129,11 +127,6 @@ def _build_quality_steps(
             name="dsl(fidelity)",
             handler=score_fidelity_handler,
             handler_args=(project_path, {"gaps_only": True}),
-        ),
-        QualityStep(
-            name="composition(audit)",
-            handler=audit_composition_handler,
-            handler_args=(project_path, {}),
         ),
         QualityStep(
             name="dsl_test(generate)",

@@ -124,56 +124,6 @@ class TestPipelineRun:
 
 
 # ---------------------------------------------------------------------------
-# composition audit
-# ---------------------------------------------------------------------------
-
-_AUDIT_RESULT = json.dumps(
-    {
-        "overall_score": 85,
-        "pages": [
-            {
-                "route": "/",
-                "score": 90,
-                "violations_count": {"warning": 1},
-            },
-            {
-                "route": "/tasks",
-                "score": 80,
-                "violations_count": {"error": 1, "warning": 2},
-            },
-        ],
-        "summary": "2 pages audited",
-    }
-)
-
-
-class TestCompositionAudit:
-    def test_json_format(self, tmp_path: Path) -> None:
-        with patch(
-            f"{_HANDLER_MOD}.composition.audit_composition_handler",
-            return_value=_AUDIT_RESULT,
-        ):
-            result = runner.invoke(
-                app, ["composition", "audit", *_manifest_args(tmp_path), "--format", "json"]
-            )
-        assert result.exit_code == 0
-        data = json.loads(result.output)
-        assert data["overall_score"] == 85
-        assert len(data["pages"]) == 2
-
-    def test_exit_code_low_score(self, tmp_path: Path) -> None:
-        low_score = json.dumps({"overall_score": 50, "pages": []})
-        with patch(
-            f"{_HANDLER_MOD}.composition.audit_composition_handler",
-            return_value=low_score,
-        ):
-            result = runner.invoke(
-                app, ["composition", "audit", *_manifest_args(tmp_path), "--format", "json"]
-            )
-        assert result.exit_code == 1
-
-
-# ---------------------------------------------------------------------------
 # discovery coherence
 # ---------------------------------------------------------------------------
 

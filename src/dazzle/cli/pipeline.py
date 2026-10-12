@@ -44,7 +44,7 @@ def pipeline_run(
 ) -> None:
     """Run the full deterministic quality pipeline.
 
-    Chains validation, linting, fidelity, composition, test generation,
+    Chains validation, linting, fidelity, test generation,
     coverage, and semantic checks into a single run.
 
     Examples:

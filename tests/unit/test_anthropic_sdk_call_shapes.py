@@ -87,37 +87,6 @@ def test_llm_api_client_call_shape_is_accepted() -> None:
     )
 
 
-def test_composition_visual_call_shape_is_accepted() -> None:
-    """`_call_vision_api` passes temperature=0.0 through extra_body too.
-
-    The function does `import anthropic` *inside* its body, so the class in the
-    real SDK module is patched rather than a module attribute on
-    `composition_visual` — the local import would shadow that anyway.
-    """
-    import base64
-    from unittest.mock import MagicMock, patch
-
-    from dazzle.core import composition_visual
-
-    messages = MagicMock()
-    messages.create.side_effect = RuntimeError("stop-after-capture")
-    fake_client = MagicMock()
-    fake_client.messages = messages
-
-    with (
-        patch.object(anthropic, "Anthropic", return_value=fake_client),
-        pytest.raises(RuntimeError, match="stop-after-capture"),
-    ):
-        png = base64.b64encode(b"\x89PNG\r\n\x1a\n").decode()
-        composition_visual._call_vision_api([(png, "image/png")], "describe", api_key="k")
-
-    kwargs = messages.create.call_args.kwargs
-    assert "temperature" not in kwargs, (
-        "anthropic 1.x removed the typed `temperature` parameter; it must go through extra_body"
-    )
-    assert kwargs.get("extra_body") == {"temperature": 0.0}
-
-
 def test_typed_temperature_is_not_available_so_extra_body_is_required() -> None:
     """Document *why* extra_body is used, and fail loudly if that changes.
 

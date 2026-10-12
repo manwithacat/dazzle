@@ -1,8 +1,8 @@
 """#1626 MCP thin wrapper — hyperpart presentation process.
 
 Doctrine: ``docs/reference/hyperpart-presentation.md``.
-Logic lives in ``dazzle.render.presentation``, ``dazzle.qa.hyperpart_opportunity``,
-and ``dazzle.product_quality.presentation`` (no circular MCP deps).
+Logic lives in ``dazzle.render.presentation`` and ``dazzle.qa.hyperpart_opportunity``
+(no circular MCP deps).
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.mcp.server.handlers.common import error_response, wrap_handler_errors
-from dazzle.product_quality.presentation import score_presentation
 from dazzle.qa.hyperpart_dsl_shapes import agent_shape_table, load_shapes, shapes_snapshot
 from dazzle.qa.hyperpart_opportunity import build_opportunity_report, scan_appspec
 from dazzle.qa.hyperpart_scenarios import catalogue_snapshot, load_scenarios
@@ -30,13 +29,10 @@ def presentation_cognition_handler(_project_root: Path, _args: dict[str, Any]) -
         "cognition": cognition_snapshot(),
         "cli": {
             "opportunities": "dazzle qa hyperpart-opportunities --table",
-            "felt_bar": "dazzle demo quality -p <app-or-examples>",
             "recapture": ".venv/bin/python scripts/recapture_demo_fleet_1626.py --apps <app>",
         },
         "mcp": {
-            "product_quality": "product_quality(operation=score) — residual_total includes presentation",
             "presentation_opportunities": "presentation(operation=opportunities, app=…)",
-            "presentation_residual": "presentation(operation=residual, app=…)",
             "presentation_shapes": "presentation(operation=shapes) — rational DSL shapes + scenario_missing",
             "knowledge": "knowledge(operation=counter_prior, id=ref_as_repr)",
         },
@@ -72,41 +68,6 @@ def presentation_opportunities_handler(project_root: Path, args: dict[str, Any])
     report["ok"] = True
     report["force"] = "framework-ux hyperpart_presentation"
     return json.dumps(report, indent=2, default=str)
-
-
-@wrap_handler_errors
-def presentation_residual_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """OCR presentation residual (ref_as_repr / person_as_text) for one app."""
-    root = _resolve_app_root(project_root, args)
-    if root is None:
-        return error_response(
-            "project with dazzle.toml required "
-            "(pass project_path to an app, or app= when project_path is examples/)"
-        )
-    scores = score_presentation(root, root.name)
-    residual = sum(1 for s in scores if s.residual)
-    payload = {
-        "ok": True,
-        "app": root.name,
-        "residual": residual,
-        "force": "framework-ux hyperpart_presentation" if residual else None,
-        "scores": [
-            {
-                "name": s.name,
-                "path": s.path,
-                "residual": s.residual,
-                "kind": s.kind,
-                "reason": s.reason,
-                "snippet": s.snippet,
-            }
-            for s in scores
-        ],
-        "notes": (
-            "Absent stills or missing tesseract → ocr_skip (not residual). "
-            "Folded into product_quality residual_total when scoring the fleet."
-        ),
-    }
-    return json.dumps(payload, indent=2, default=str)
 
 
 def _filter_shape_table(
@@ -184,10 +145,6 @@ def handle_presentation(arguments: dict[str, Any]) -> str:
         if root_raw is None and not arguments.get("app"):
             return error_response("project_path (app or examples/) required for opportunities")
         return presentation_opportunities_handler(root, arguments)
-    if op == "residual":
-        if root_raw is None and not arguments.get("app"):
-            return error_response("project_path (app or examples/) required for residual")
-        return presentation_residual_handler(root, arguments)
     if op in ("shapes", "dsl_shapes", "shape"):
         return presentation_shapes_handler(root, arguments)
     return error_response(f"Unknown presentation operation: {op}")

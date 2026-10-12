@@ -50,18 +50,16 @@ service calculate_vat "Calculate VAT":
 
 ## Stub
 
-Turing-complete implementation of a domain service. Stubs are auto-generated from DSL with typed function signatures.
+Turing-complete implementation of a domain service. Stubs are hand-written against the typed signature the DSL service declares.
 
 ### Example
 
 ```dsl
-# stubs/calculate_vat.py (auto-generated header)
-# === AUTO-GENERATED HEADER - DO NOT MODIFY ===
+# stubs/calculate_vat.py — signature follows the DSL service declaration
 # Service ID: calculate_vat
 # Kind: domain_logic
 # Input: invoice_id (uuid required), country_code (str(2) optional)
 # Output: vat_amount (decimal), breakdown (json)
-# ============================================
 
 from typing import TypedDict
 

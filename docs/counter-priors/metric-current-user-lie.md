@@ -7,7 +7,7 @@ summary: >-
   Trusting workspace metric tiles that use count(... = current_user) when
   sibling list regions show rows for the same persona. Aggregate materialization
   can disagree with list filters (F10 / #1629 G5). Trust lists + stills +
-  live_desk residual until product_quality residual covers metric/list pairs.
+  live_desk residual over KPI tiles.
 triggers_text:
   - "metrics all zero"
   - "KPI"
@@ -25,7 +25,7 @@ refs:
   memories: []
   pr_review_agents: []
   kb_patterns: ["empty_desk_false_green", "workspace_region_filters"]
-  tests: ["tests/unit/test_product_quality.py"]
+  tests: ["tests/unit/test_agent_demo_knowledge.py"]
 detectors: []
 ---
 
@@ -49,7 +49,7 @@ my_pipeline:
 # agent: “seed failed” or “metrics prove empty”
 ```
 
-Static persona_homes residual can still be 0.
+A static seed residual can still be 0.
 
 ## Right shape
 
@@ -58,11 +58,6 @@ Static persona_homes residual can still be 0.
 2. On metric 0 + list > 0: assume **aggregate/current_user materialization
    footgun** until disproven (F10, #1629 G5) — not missing seeds.
 3. Prefer list residual / `live_desk` / `qa capture` for demo bar.
-4. **Machine residual (#1632):** `product_quality` / `dazzle demo quality`
-   report `metric_list risk=` when metrics aggregates use `current_user` and
-   sibling lists have seed hits (trust order still lists → stills → metrics).
-   `metric_list residual=` only when seed-level metric filters score 0 while
-   lists have hits (true disagreement). Risk does not thrash residual_total.
 
 ## Why this matters here
 

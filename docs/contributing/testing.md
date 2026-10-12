@@ -62,7 +62,7 @@ Core functionality tests covering:
 | Access Control | `test_access_rules.py`, `test_access_evaluator.py` | Permissions |
 | CLI | `test_cli.py`, `test_cli_bridge.py` | Command-line interface |
 | Code Generation | `test_adapters.py`, `test_ejection.py` | Ejection adapters |
-| Layout | `test_layout_engine.py`, `test_layout_ir.py` | UI layout system |
+| Layout | `test_layout_ir.py` | UI layout IR |
 | Accessibility | `test_accessibility_checker.py`, `test_wcag_mapping.py` | WCAG compliance |
 
 ```bash

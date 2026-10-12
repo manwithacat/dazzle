@@ -43,7 +43,6 @@ from .ingest import IngestSpec
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
 from .jobs import JobSpec
-from .layout import UXLayouts
 from .ledgers import (
     LedgerSpec,
     TransactionSpec,
@@ -111,7 +110,6 @@ class AppSpec(BaseModel):
         e2e_flows: E2E user journey flows (semantic E2E testing)
         fixtures: Test fixtures for E2E testing
         metadata: Additional metadata
-        ux: Semantic layout engine configuration
     """
 
     name: str
@@ -150,7 +148,6 @@ class AppSpec(BaseModel):
     documents: list[DocumentSpec] = Field(default_factory=list)
     templates: list[TemplateSpec] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-    ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
     security: SecurityConfig | None = None  # Security configuration (v0.11.0)
     # v0.61.43 (Phase B Patch 2): mirror the root module's app_config so
     # runtime consumers can read DSL-level theme / multi_tenant / etc.

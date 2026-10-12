@@ -1,8 +1,7 @@
 """Taste rubric — the judged dimensions of the Dazzle house aesthetic.
 
 Single source of truth consumed by the blind judge panel
-(``dazzle.qa.taste_panel``), the composition pipeline (opt-in ``taste``
-focus), and the drift gate on ``docs/reference/taste.md``.
+(``dazzle.qa.taste_panel``) and the drift gate on ``docs/reference/taste.md``.
 
 Dimensions are phrased as generic design quality. They MUST NOT name or
 allude to any specific framework, library, or company aesthetic — the

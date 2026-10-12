@@ -25,13 +25,10 @@ from typing import Any
 import httpx
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.strings import to_api_plural
 from dazzle.demo_data.loader import find_seed_files, read_seed_file, topological_sort_entities
-from dazzle.product_quality.persona_homes import (
-    STABLE_PERSONA_USER_IDS,
-    score_persona_homes,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +62,7 @@ def demo_ops_playbook() -> dict[str, Any]:
             "Canonical persona email domain is @demo.dazzle.local.",
             "Workspace HTML without a browser is skeleton only (hx-trigger=load).",
             "Metrics that filter current_user may read 0 while lists show rows (F10) — "
-            "trust list regions + product_quality score until runtime is fixed.",
+            "trust list regions until runtime is fixed.",
             "After renaming personas, re-check every `as:` / permit role token — "
             "static residual can be 0 while a desk is empty (#1630).",
             "Same-field region OR is OK (`status = held or status = confirmed` → "
@@ -79,7 +76,6 @@ def demo_ops_playbook() -> dict[str, Any]:
         "persona_email_template": f"{{role}}@{PERSONA_EMAIL_DOMAIN}",
         "cli": "dazzle demo reset-and-load --project <app> -y",
         "mcp_read": "status(operation=demo_world, project_path=…)",
-        "verify": "dazzle demo quality --project <app>  # persona_homes residual",
         # Always-on KG entry points (inference layer; ADR-0002 reads)
         "knowledge_concepts": [
             "demo_identity",
@@ -358,32 +354,6 @@ def _created_count(seed_resp: httpx.Response) -> int | None:
         return None
 
 
-def _attach_persona_homes(report: dict[str, Any], project_root: Path) -> None:
-    try:
-        homes = score_persona_homes(project_root)
-        residual = sum(1 for h in homes if h.residual)
-        report["persona_homes_residual"] = residual
-        report["persona_homes"] = [
-            {
-                "persona": h.persona,
-                "default_workspace": h.default_workspace,
-                "residual": h.residual,
-                "reasons": h.residual_reasons,
-            }
-            for h in homes
-        ]
-        report["ok"] = residual == 0
-        if residual:
-            report["warning"] = (
-                f"persona_homes residual={residual} — seed rows may not match "
-                "STABLE ids / current_user filters for some desks."
-            )
-    except (OSError, ValueError, TypeError, RuntimeError, KeyError) as exc:
-        report["persona_homes_residual"] = None
-        report["persona_homes_error"] = str(exc)[:200]
-        report["ok"] = True  # seed HTTP succeeded
-
-
 def _prepare_fixtures(
     project_root: Path, data_dir: Path
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
@@ -468,19 +438,17 @@ def _finalize_verify(
     api_url: str,
     secret: str,
     timeout: float,
-    verify_persona_homes: bool,
+    verify_live_desks: bool,
 ) -> None:
-    if not verify_persona_homes:
-        report["ok"] = True
+    report["ok"] = True
+    if not verify_live_desks:
         return
-    _attach_persona_homes(report, project_root)
-    if report.get("ok"):
-        try:
-            _attach_live_desk_residual(
-                report, project_root, api_url=api_url, secret=secret, timeout=timeout
-            )
-        except Exception as exc:  # noqa: BLE001 — never fail seed on live probe infra
-            report["live_desk_error"] = str(exc)[:200]
+    try:
+        _attach_live_desk_residual(
+            report, project_root, api_url=api_url, secret=secret, timeout=timeout
+        )
+    except Exception as exc:  # noqa: BLE001 — never fail seed on live probe infra
+        report["live_desk_error"] = str(exc)[:200]
 
 
 def reset_and_load(
@@ -489,7 +457,7 @@ def reset_and_load(
     base_url: str | None = None,
     test_secret: str | None = None,
     data_dir: Path | None = None,
-    verify_persona_homes: bool = True,
+    verify_live_desks: bool = True,
     timeout: float = 60.0,
 ) -> dict[str, Any]:
     """POST ``/__test__/reset`` then ``/__test__/seed`` with project jsonl seeds.
@@ -533,7 +501,7 @@ def reset_and_load(
             api_url=api_url,
             secret=secret,
             timeout=timeout,
-            verify_persona_homes=verify_persona_homes,
+            verify_live_desks=verify_live_desks,
         )
         return report
 
@@ -551,7 +519,7 @@ def reset_and_load(
         api_url=api_url,
         secret=secret,
         timeout=timeout,
-        verify_persona_homes=verify_persona_homes,
+        verify_live_desks=verify_live_desks,
     )
     return report
 
@@ -609,8 +577,8 @@ def _attach_live_desk_residual(
 ) -> None:
     """Auth as each persona with a default workspace; flag empty list APIs (#1630).
 
-    Complements static persona_homes: residual 0 with empty live desks is the
-    scope ``as:`` drift failure mode.
+    Catches the scope ``as:`` drift failure mode: seeds load but a persona's
+    default desk lists nothing.
     """
     try:
         appspec = load_project_appspec(project_root)

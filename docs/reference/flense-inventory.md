@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 444,168 |
-| Test lines (`tests/`) | 399,589 |
-| Documentation lines (`docs/**/*.md`) | 49,528 |
+| Framework source lines (`src/dazzle`) | 434,092 |
+| Test lines (`tests/`) | 392,787 |
+| Documentation lines (`docs/**/*.md`) | 49,445 |
 | Top-level DSL constructs | 57 |
 | Constructs with zero consumer use | 27 |
 
@@ -103,28 +103,26 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 132,289 | 649 |
-| `core` | 96,887 | 2,097 |
-| `mcp` | 40,207 | 6,382 |
+| `http` | 132,264 | 649 |
+| `core` | 93,416 | 2,097 |
+| `mcp` | 39,081 | 6,368 |
 | `render` | 32,981 | 6,130 |
-| `cli` | 32,753 | 9,771 |
+| `cli` | 32,123 | 9,709 |
 | `testing` | 27,704 | 68 |
 | `page` | 14,233 | 2,501 |
-| `agent` | 10,845 | 9,373 |
+| `agent` | 10,845 | 9,372 |
 | `qa` | 7,501 | 3,214 |
 | `sentinel` | 7,252 | 563 |
 | `db` | 4,404 | 3,779 |
 | `compliance` | 4,286 | 1,417 |
 | `rbac` | 4,243 | 7,242 |
-| `demo_data` | 2,159 | 814 |
 | `signing` | 2,143 | 1,969 |
-| `layout` | 1,877 | 2,723 |
+| `demo_data` | 2,127 | 814 |
 | `conformance` | 1,760 | 4,567 |
 | `llm` | 1,718 | 3,046 |
 | `lsp` | 1,632 | 665 |
 | `services` | 1,632 | 274 |
 | `agent_loop` | 1,542 | 154 |
-| `product_quality` | 1,512 | 283 |
 | `perf` | 1,217 | 2,357 |
 | `specs` | 1,149 | 466 |
 | `e2e` | 1,095 | 1,865 |
@@ -133,19 +131,21 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `representation` | 1,024 | 279 |
 | `api_surface` | 989 | 160 |
 | `notifications` | 900 | 0 |
-| `docs_update` | 886 | 599 |
 | `examples` | 571 | 848 |
 | `tenant` | 537 | 6,965 |
-| `stubs` | 517 | 0 |
 | `fitness` | 490 | 186 |
 | `deploy` | 194 | 671 |
 | `seed` | 126 | 1,357 |
-| `quality` | 85 | 751 |
+| `quality` | 85 | 468 |
+| `docs_update` | 0 | 0 |
 | `documents` | 0 | 0 |
 | `domain_brief` | 0 | 0 |
+| `layout` | 0 | 1,662 |
 | `pitch` | 0 | 0 |
+| `product_quality` | 0 | 0 |
 | `risk` | 0 | 171 |
 | `spec_narrative` | 0 | 0 |
+| `stubs` | 0 | 0 |
 | `templates` | 0 | 912 |
 
 ## MCP tools
@@ -157,7 +157,6 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `api_pack` | 3 |
 | `bootstrap` | 0 |
 | `compliance` | 5 |
-| `composition` | 6 |
 | `conformance` | 4 |
 | `db` | 2 |
 | `demo_data` | 1 |
@@ -173,9 +172,8 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `param` | 2 |
 | `perf` | 3 |
 | `policy` | 6 |
-| `presentation` | 4 |
+| `presentation` | 3 |
 | `process` | 5 |
-| `product_quality` | 1 |
 | `representation` | 4 |
 | `rhythm` | 3 |
 | `semantics` | 6 |
@@ -190,7 +188,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 ## CLI groups
 
-`agent`, `analytics`, `api-pack`, `auth`, `backup`, `capability`, `clean`, `compliance`, `composition`, `conformance`, `db`, `demo`, `deploy`, `discovery`, `dlq`, `docs`, `events`, `feedback`, `fitness`, `guide`, `inspect`, `kg`, `lsp`, `mcp`, `mock`, `outbox`, `param`, `perf`, `pipeline`, `process`, `process-migrate`, `prove`, `qa`, `quality`, `rbac`, `representation`, `rhythm`, `scaffold`, `sentinel`, `signing`, `spec`, `specs`, `story`, `stubs`, `sweep`, `tenant`, `test`, `test-design`, `theme`, `ux`, `vocab`, `worker`
+`agent`, `analytics`, `api-pack`, `auth`, `backup`, `capability`, `clean`, `compliance`, `conformance`, `db`, `demo`, `deploy`, `discovery`, `dlq`, `docs`, `events`, `feedback`, `fitness`, `guide`, `inspect`, `kg`, `lsp`, `mcp`, `mock`, `outbox`, `param`, `perf`, `pipeline`, `process`, `process-migrate`, `prove`, `qa`, `quality`, `rbac`, `representation`, `rhythm`, `scaffold`, `sentinel`, `signing`, `spec`, `specs`, `story`, `sweep`, `tenant`, `test`, `test-design`, `theme`, `ux`, `vocab`, `worker`
 
 ## CLI groups × consumers
 
@@ -213,7 +211,6 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `clean` | 0 | 0 | 0 | 0 |  |
 | `commands` | 0 | 0 | 0 | 2 |  |
 | `compliance` | 3 | 2 | 0 | 6 | `compile`, `privacy` |
-| `composition` | 0 | 0 | 0 | 0 |  |
 | `conformance` | 0 | 0 | 0 | 0 |  |
 | `coverage` | 1 | 0 | 0 | 0 |  |
 | `db` | 136 | 25 | 83 | 8 | `apply-rls`, `at`, `baseline`, `current`, `downgrade`, `history`, `migrate`, `reconcile-baseline`, `revision`, `snapshot`, `snapshot-baseline`, `stamp`, `status`, `upgrade`, `verify` |
@@ -235,7 +232,6 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `init` | 0 | 0 | 0 | 1 |  |
 | `inspect` | 1 | 0 | 3 | 0 | `renderers`, `rls` |
 | `kg` | 0 | 0 | 0 | 0 |  |
-| `layout-plan` | 0 | 0 | 0 | 0 |  |
 | `lint` | 29 | 14 | 29 | 0 |  |
 | `lsp` | 0 | 0 | 0 | 0 |  |
 | `mcp` | 0 | 0 | 0 | 0 |  |
@@ -262,7 +258,6 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `spec` | 0 | 0 | 0 | 0 |  |
 | `specs` | 0 | 0 | 0 | 0 |  |
 | `story` | 0 | 2 | 0 | 0 | `list` |
-| `stubs` | 0 | 0 | 0 | 0 |  |
 | `sweep` | 0 | 0 | 0 | 0 |  |
 | `tenant` | 0 | 5 | 0 | 0 | `create` |
 | `test` | 9 | 62 | 0 | 5 | `agent`, `coverage`, `create-sessions`, `diff-personas`, `dsl-run`, `generate`, `pack`, `populate`, `run`, `tier2-generate`, `verify-story`, `walk` |
@@ -360,12 +355,12 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 |---|---:|---:|---:|---:|
 | `2fa` | 0 | 0 | 0 | 0 |
 | `__test__` | 12 | 9 | 51 | 0 |
-| `_dazzle` | 45 | 8 | 2 | 9 |
+| `_dazzle` | 45 | 8 | 2 | 3 |
 | `_dz` | 0 | 0 | 0 | 0 |
 | `_ops` | 0 | 0 | 0 | 0 |
 | `_site` | 0 | 0 | 0 | 0 |
-| `api` | 201 | 94 | 1240 | 27 |
-| `app` | 2216 | 5967 | 74 | 41 |
+| `api` | 201 | 94 | 1240 | 21 |
+| `app` | 2216 | 5967 | 74 | 1 |
 | `auth` | 129 | 135 | 71 | 0 |
 | `banner` | 0 | 0 | 0 | 0 |
 | `data` | 1 | 1 | 0 | 6 |
@@ -384,7 +379,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `qa` | 113 | 14 | 0 | 0 |
 | `reset-password` | 0 | 0 | 0 | 0 |
 | `search` | 1 | 2 | 0 | 0 |
-| `select` | 141 | 8 | 11 | 21 |
+| `select` | 141 | 8 | 11 | 4 |
 | `sign` | 28 | 12 | 1 | 0 |
 | `signup` | 236 | 101 | 0 | 2 |
 | `site.js` | 0 | 0 | 0 | 0 |
@@ -404,7 +399,6 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `api_pack` | 0 | 0 | 0 | 0 |
 | `bootstrap` | 0 | 0 | 0 | 0 |
 | `compliance` | 1 | 0 | 0 | 0 |
-| `composition` | 0 | 0 | 0 | 0 |
 | `conformance` | 0 | 1 | 0 | 0 |
 | `db` | 5 | 0 | 2 | 0 |
 | `demo_data` | 0 | 0 | 0 | 0 |
@@ -422,7 +416,6 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `policy` | 5 | 0 | 0 | 0 |
 | `presentation` | 0 | 0 | 0 | 0 |
 | `process` | 0 | 0 | 0 | 0 |
-| `product_quality` | 0 | 0 | 0 | 0 |
 | `representation` | 0 | 0 | 0 | 0 |
 | `rhythm` | 3 | 0 | 0 | 0 |
 | `semantics` | 1 | 4 | 0 | 0 |
@@ -439,12 +432,12 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 19,204 |
+| `docs/reference/` | 19,135 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
-| `docs/guides/` | 3,632 |
-| `docs/counter-priors/` | 3,108 |
+| `docs/guides/` | 3,631 |
+| `docs/counter-priors/` | 3,095 |
 | `docs/architecture/` | 2,608 |
 | `docs/evaluation/` | 1,662 |
 | `docs/contributing/` | 1,374 |

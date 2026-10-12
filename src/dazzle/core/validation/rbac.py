@@ -5,8 +5,8 @@ Split verbatim from dazzle.core.validator per #1361.
 
 from typing import Any
 
+from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
 from dazzle.core.ir.identity import spec_display_id
-from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
 
 from .. import ir
 from .conditions import _condition_field_references, _walk_role_names

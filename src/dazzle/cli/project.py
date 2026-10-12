@@ -6,7 +6,6 @@ Commands for creating, validating, and working with DAZZLE projects:
 - validate: Parse and validate DSL
 - lint: Extended validation checks
 - inspect: Inspect entities and surfaces
-- layout-plan: Preview layout changes
 - analyze-spec: LLM-powered spec analysis
 - example: Create project from example
 
@@ -718,42 +717,6 @@ def inspect_command(
         raise typer.Exit(code=1)
 
 
-def layout_plan_command(
-    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Specific workspace"),
-    format: str = typer.Option("tree", "--format", "-f", help="Output format"),
-) -> None:
-    """
-    Show the layout plan for workspaces.
-    """
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    try:
-        appspec = load_project_appspec(root)
-
-        workspaces = appspec.workspaces or []
-        if workspace:
-            workspaces = [w for w in workspaces if w.name == workspace]
-            if not workspaces:
-                typer.echo(f"Workspace not found: {workspace}", err=True)
-                raise typer.Exit(code=1)
-
-        for ws in workspaces:
-            typer.echo(f"\n📁 Workspace: {ws.name}")
-            typer.echo(f"   Title: {ws.title}")
-            if ws.stage:
-                typer.echo(f"   Stage: {ws.stage}")
-            if ws.regions:
-                typer.echo("   Regions:")
-                for region in ws.regions:
-                    typer.echo(f"     • {region.name}: {region.source}")
-
-    except (ParseError, DazzleError) as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1)
-
-
 def _resolve_analyze_spec_input(spec_file: str | None) -> tuple[str, str]:
     """Load spec content + display label for analyze-spec (raises typer.Exit)."""
     if spec_file:
@@ -1169,7 +1132,6 @@ __all__ = [
     "validate_command",
     "lint_command",
     "inspect_command",
-    "layout_plan_command",
     "analyze_spec_command",
     "example_command",
 ]

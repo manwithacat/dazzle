@@ -51,7 +51,7 @@ def test_reset_and_load_fails_loud_without_secret(
         json.dumps({"id": "t1", "name": "x"}) + "\n",
         encoding="utf-8",
     )
-    report = reset_and_load(tmp_path, verify_persona_homes=False)
+    report = reset_and_load(tmp_path, verify_live_desks=False)
     assert report["ok"] is False
     assert "test_secret" in report["error"].lower() or "No test_secret" in report["error"]
     assert "playbook" in report
@@ -87,7 +87,7 @@ def test_reset_and_load_http_roundtrip() -> None:
             SIMPLE,
             base_url="http://test.local:9",
             test_secret="sekrit",
-            verify_persona_homes=True,
+            verify_live_desks=True,
         )
     assert report["fixture_count"] > 0
     assert mock_client.post.call_count >= 2

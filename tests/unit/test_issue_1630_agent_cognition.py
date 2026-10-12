@@ -13,10 +13,10 @@ SIMPLE = REPO / "examples" / "simple_task"
 
 
 def test_skip_stable_user_fixtures() -> None:
+    from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS as SID
     from dazzle.demo_data.test_mode_load import (
         jsonl_dir_to_fixtures,
     )
-    from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS as SID
 
     member = SID["member"]
     tmp = SIMPLE / "dsl" / "seeds" / "demo_data"
@@ -38,8 +38,8 @@ def test_skip_stable_user_fixtures() -> None:
 
 
 def test_reset_and_load_skips_stable_users_before_seed() -> None:
+    from dazzle.core.demo_identity import STABLE_PERSONA_USER_IDS
     from dazzle.demo_data.test_mode_load import reset_and_load
-    from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
 
     class _Resp:
         def __init__(self, code: int, body: dict | str = ""):
@@ -84,7 +84,7 @@ def test_reset_and_load_skips_stable_users_before_seed() -> None:
             SIMPLE,
             base_url="http://test.local:9",
             test_secret="sekrit",
-            verify_persona_homes=True,
+            verify_live_desks=True,
         )
     seed_calls = [p for p in posted if p[0] == "/__test__/seed"]
     assert seed_calls, posted

@@ -78,7 +78,6 @@ def test_demo_world_handler_shape() -> None:
     assert data["has_dazzle_toml"] is True
     assert "test_mode_secret_present" in data
     assert "stable_persona_user_ids" in data
-    assert "persona_homes" in data
     assert "seed_hint" in data
     assert "member" in data["stable_persona_user_ids"]
 

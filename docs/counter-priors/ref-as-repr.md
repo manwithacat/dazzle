@@ -25,8 +25,6 @@ triggers_code:
   - "person_as_text"
   - "_format_queue_meta_value"
   - "str\\(raw\\)"
-  - "product_quality"
-  - "score_presentation"
 refs:
   adrs: []
   memories: []
@@ -34,7 +32,6 @@ refs:
   kb_patterns: ["hyperpart_presentation", "empty_desk_false_green"]
   tests:
     - "tests/unit/test_queue_meta_density_1626.py"
-    - "tests/unit/test_presentation_residual_1626.py"
     - "tests/unit/test_presentation_mcp_1626.py"
 detectors: []
 ---
@@ -56,7 +53,7 @@ is honest.”*
 # Prefer any FK dict for queue meta
 raw = item["device_id"]  # {"id": UUID(...)}  id-only join
 value = str(raw)         # "{'id': UUID('…')}"
-# product_quality residual_total = 0  (bytes + seeds only)
+# seed / byte-floor residual = 0  (no OCR of still text)
 ```
 
 while `issue_triage_*` still shows Python repr and Trust collapses.
@@ -68,10 +65,9 @@ while `issue_triage_*` still shows Python repr and Trust collapses.
 2. Route person through `present(person, queue_meta)` → Avatar; non-person refs
    through human display names.
 3. OBSERVE with:
-   - MCP `product_quality(operation=score)` — residual_total includes presentation
-   - MCP `presentation(operation=residual|opportunities|cognition)`
-   - CLI `dazzle demo quality` / `dazzle qa hyperpart-opportunities`
-4. Force `/improve framework-ux hyperpart_presentation` when presentation residual > 0.
+   - MCP `presentation(operation=opportunities|cognition)`
+   - CLI `dazzle qa hyperpart-opportunities`
+4. Force `/improve framework-ux hyperpart_presentation` when stills show dict/UUID chrome.
 5. Recapture hero stills after emit fix; open the PNG (stills beat claims).
 
 ## Why this matters here

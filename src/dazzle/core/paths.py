@@ -20,9 +20,6 @@ PROCESSES_DB_FILE = "processes.db"
 
 # -- Subdirectory names under .dazzle ----------------------------------------
 DISCOVERY_DIR = "discovery"
-COMPOSITION_DIR = "composition"
-CAPTURES_DIR = "captures"
-REFERENCES_DIR = "references"
 LOGS_DIR = "logs"
 TEST_RESULTS_DIR = "test_results"
 STORIES_DIR = "stories"
@@ -66,16 +63,6 @@ def project_processes_db(project_root: Path) -> Path:
 def project_discovery_dir(project_root: Path) -> Path:
     """Return the discovery reports directory for a project."""
     return project_dazzle_dir(project_root) / DISCOVERY_DIR
-
-
-def project_composition_captures(project_root: Path) -> Path:
-    """Return the composition captures directory for a project."""
-    return project_dazzle_dir(project_root) / COMPOSITION_DIR / CAPTURES_DIR
-
-
-def project_composition_references(project_root: Path) -> Path:
-    """Return the composition references directory for a project."""
-    return project_dazzle_dir(project_root) / COMPOSITION_DIR / REFERENCES_DIR
 
 
 def project_log_dir(project_root: Path) -> Path:

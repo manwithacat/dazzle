@@ -102,7 +102,7 @@ not sufficient for utility (see antagonist demo bar / agent acceptance below).
 - Conversation-thread quality vs field form
 - Action cost (≤N clicks) without a browser walk
 - Authored `product_jobs.toml` (future: explicit job registry)
-- Whether seeded data makes desks *useful* at runtime (`demo quality` / trials)
+- Whether seeded data makes desks *useful* at runtime (live desk probe in `demo reset-and-load` / trials)
 - Explicit `uses nav` that lists workspaces ahead of entity lists (probe already
   credits access; authored nav would improve *felt* UX further)
 
@@ -152,22 +152,15 @@ human still re-score (or explicit demotion) says so.
 | Story walk | `story_walk_bar.py` (landing stories ↔ walks) |
 | Agent acceptance | `trial_verdict_bar.py` + `dazzle qa trial` |
 
-Agents should also score **felt** demo quality (persona-home seeds, metric/list
-current_user residual #1632, + still floors) via the single bar — structural
-residual alone can be green while desks are empty or KPIs lie:
+Structural residual alone can be green while desks are empty or KPIs lie —
+`dazzle demo reset-and-load` probes each persona's live default desk after
+seeding (`live_desk_residual`).
 
-```bash
-dazzle demo quality -p examples/simple_task
-dazzle demo quality -p examples --app support_tickets --json
-# MCP: product_quality(operation="score", project_root="examples/invoice_ops")
-```
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → story_walk → trial_verdict / agent_acceptance → Tier 1**.
 
-
-Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality, including presentation residual) → story_walk → trial_verdict / agent_acceptance → Tier 1**.
-
-When felt residual is **presentation** (`ref_as_repr` / `person_as_text`), force
+When stills show **presentation** residual (`ref_as_repr` / `person_as_text`), force
 **`framework-ux hyperpart_presentation`** (not `demo_fleet`). MCP:
-`presentation(operation=cognition|opportunities|residual|shapes)`; doctrine
+`presentation(operation=cognition|opportunities|shapes)`; doctrine
 `hyperpart-presentation.md`; counter-prior `ref_as_repr`.
 
 **Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify
@@ -261,11 +254,6 @@ python scripts/example_product_maturity.py --strict   # CI / improve gate (exit 
 # Demo fleet (#1626 floors)
 python scripts/demo_fleet_bar.py --status
 python scripts/demo_fleet_bar.py --strict
-
-# Felt product quality (probes + persona homes + stills)
-dazzle demo quality -p examples
-dazzle demo quality -p examples/simple_task --strict
-dazzle demo quality -p examples --app invoice_ops --json
 ```
 
 ## Design intent (reward structure)
