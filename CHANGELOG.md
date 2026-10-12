@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Changed
+- **CI type-check job no longer requests the removed `lsp` extra** (ship D removed it; the setup action refused to sync).
 - **Framework artefact coverage is measured against the consumer apps, not only the example probes (ADR-0057).** `dazzle coverage` gains a repeatable `--app PATH` option and a `--consumers` flag that reads `flense_consumers.toml`; absent checkouts are reported as absent and never counted as non-use, and every covered artefact lists the apps that use it, so the report doubles as flense evidence. The examples-only run in CI and `scripts/ci_local.sh` is advisory (it prints and exits 0); the gating run, `dazzle coverage --consumers --fail-on-uncovered`, lives in `make preflight-surface` where the consumer checkouts exist, reports by default while the Phase 3 removal queue lands, and fails with `DAZZLE_FLENSE_COVERAGE=gate`. First consumer-aware result: 50/65 covered; eleven display modes (`action_grid`, `area_chart`, `bar_track`, `box_plot`, `bullet`, `detail`, `diagram`, `heatmap`, `histogram`, `profile_card`, `sparkline`) and `ledger`/`transaction` have no consumer, and eight more display modes are covered only by examples.
 
 ### Removed
