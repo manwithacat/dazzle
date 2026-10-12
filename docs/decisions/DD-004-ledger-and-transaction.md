@@ -74,8 +74,8 @@ restore from `2de583aa741ecc4dfad1f369f6c773fa12f99966`: the parser mixin
 `dsl_parser_impl/atomic_flow.py`, IR `core/ir/atomic_flows.py`, linker
 step-order and invariant-anchor derivation, `validate_atomic_flows`, the
 transition `invoke <flow>(...)` effect, the executor / invariants / routes
-(`POST /api/atomic/<flow>`), the `_dazzle_atomic_audit` table (still present in
-consumer databases — revision 0022 left it in place pending operator sign-off) and `dazzle db audit-atomic`.
+(`POST /api/atomic/<flow>`), the `_dazzle_atomic_audit` table (dropped from consumer
+databases by revision 0022 after operator sign-off on 2026-10-13) and `dazzle db audit-atomic`.
 Atomic flows fed the proof surface, so restoring them also restores:
 
 - the `AtomicFlowProjection` section of `rbac matrix` (JSON key

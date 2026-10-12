@@ -32,7 +32,7 @@ Restore from the commit this DD was parked at
   `restrict_membership_to_verified_domains`; leftover form tokens never
   invent a policy.
 - `auth/join_requests.py` + `join_request_routes.py`, the `join_requests`
-  table (re-add with a new Alembic revision; revision 0022 leaves the table in place pending operator sign-off), the
+  table (dropped by revision 0022 after operator sign-off on 2026-10-13; re-add with a new Alembic revision), the
   `/auth/join-requests` admin queue (approve / deny, `FOR UPDATE`
   serialisation, CSRF-gated) and the `/auth/join-requested` page.
 - Hooks: password login and email verification call `apply_domain_join`

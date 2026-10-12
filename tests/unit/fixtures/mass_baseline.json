@@ -1,9 +1,9 @@
 {
-  "src_lines": 394497,
+  "src_lines": 394547,
   "test_lines": 363407,
-  "docs_lines": 48473,
+  "docs_lines": 48483,
   "construct_count": 31,
-  "written": "2026-10-12",
+  "written": "2026-10-13",
   "exceptions": [
     {
       "date": "2026-10-11",
@@ -65,6 +65,14 @@
         "docs_lines"
       ],
       "reason": "closing ship: coverage gate enforcing, admin-workspace coverage, plan status (+~60 src/test/docs lines after -82k src overall)"
+    },
+    {
+      "date": "2026-10-13",
+      "rose": [
+        "src_lines",
+        "docs_lines"
+      ],
+      "reason": "v0.116.0 release: 0022 drop DDL after operator sign-off (+src), plan \u00a78 decisions and Phase 4 baseline table (+docs)"
     }
   ]
 }

@@ -190,7 +190,7 @@ whatever the pack reveals (today: nobody runs `compliance`, so expect gaps).
 | Top-level constructs | 57 | ≤ 30, all consumer-used or parked |
 | Consumers producing an assurance pack in CI | 0 | 2 |
 
-## 8. Status (2026-10-12, after the first autonomous run)
+## 8. Status (2026-10-13, after the first autonomous run and the operator's decisions)
 
 Phases 0–3 are landed on `main` (sixteen ships between 518c02a6e and the closing ship), run as a
 self-paced loop with Opus worktree agents preparing each ship and this session reviewing,
@@ -211,14 +211,25 @@ Landed: Phase 0 (inventory + mass ratchet); Phase 1 (improve-loop instruments); 
 DD-004 ledger/transaction, DD-005 inbound webhooks, DD-006 events DSL, DD-007 messaging
 DSL, DD-008 background jobs, DD-009 verified domain join.
 
-Still open: the docs and construct targets are met; src and tests are not — the
-remaining mass is the runtime, parser, render and MCP core that consumers use, so the
-next reductions come from the inventory's per-subpackage table (`http/runtime` 103k,
-`core/dsl_parser_impl` 30k, `mcp` 44k), not from whole-subsystem removals. Decisions for
-the operator: (1) migration `0022_flense_park_tables` is a no-op — dropping
-`_dazzle_atomic_audit`, `_dazzle_ingest_fingerprint` and `join_requests` from consumer
-databases needs sign-off; (2) Phase 4 (assurance packs in AegisMark and cyfuture CI)
-needs authorisation to work in the consumer repos; (3) the HaTchi-MaXchi prose-drift
-tests fail when run from the framework root (pre-existing; they pass in the package's own
-gate). Known order-dependent flake: `test_api_surface_drift[ir_types]` after the
-presentation MCP tests in one process.
+Decisions taken on 2026-10-13: (1) the drop of `_dazzle_atomic_audit`,
+`_dazzle_ingest_fingerprint` and `join_requests` is approved — revision
+`0022_flense_park_tables` now performs it (it had shipped as a no-op on `main`, before any
+release carried it); (2) Phase 4 runs inside the consumer repos through hand-off files
+`FLENSE_AEGISMARK.md`, `FLENSE_CYFUTURE.md` and `FLENSE_PENNYDREADFUL.md`, each given to an
+agent working in that checkout; (3) Phases 0–3 are released as v0.116.0 (minor; Breaking
+entries in the CHANGELOG); (4) the strategy for the remaining src and test mass is agreed:
+surgical cuts inside the kept subsystems from the inventory's per-subpackage table
+(`http/runtime` 103k, `core/dsl_parser_impl` 30k, `mcp` 44k), not whole-subsystem removals.
+
+Phase 4 starting point, measured on 2026-10-13 with the v0.116.0 tree against each checkout
+(`rbac prove`, `compliance gaps -f iso27001`, `analytics audit`, `rbac routes`):
+
+| Consumer | `rbac prove` | ISO 27001 gaps | PII hints / subprocessors | Routes outside the matrix | DSL evidence |
+|---|---|---:|---:|---:|---|
+| AegisMark | 2 proved, 1 informational, 2 vacuous, 12 residual notes | 10 (all tier 3) | 31 / 12 | 0 (route scan cannot import `pipeline`) | 111 classify, 354 permit, 612 scope, 10 persona |
+| cyfuture | 2 proved, 1 informational, 2 vacuous, 4 residual notes | 16 (incl. A.5.12/13 classification, A.5.34 PII, A.8.11 masking) | 32 / 8 | 1 (`POST /companycontacts`); 4 `admin` delete permits with no scope rule | 0 classify, 296 permit, 881 scope, 8 sla |
+| pennydreadful | 2 proved, 1 informational, 2 vacuous, 16 residual notes | 10 (all tier 3) | 3 / 8 | 0 | 0 classify, 144 permit, 271 scope; persona `agent` unreferenced |
+
+Known nuisances: the HaTchi-MaXchi prose-drift tests fail when run from the framework root
+(pre-existing; they pass in the package's own gate), and `test_api_surface_drift[ir_types]`
+is order-dependent after the presentation MCP tests in one process.

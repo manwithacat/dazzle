@@ -33,8 +33,8 @@ consumer needs:
   `projection`, `topic`, `hless`, `strict`, `partition_key`,
   `ordering_scope`, `idempotency`, `derives_from`, `t_event`, …).
 - Runtime: `http/runtime/ingest_{engine,routes}.py` (`POST /api/ingest/{name}`,
-  the `_dazzle_ingest_fingerprint` table — re-add it with a new Alembic
-  revision; revision 0022 leaves the table in place pending operator sign-off),
+  the `_dazzle_ingest_fingerprint` table — dropped by revision 0022 after
+  operator sign-off on 2026-10-13; re-add it with a new Alembic revision),
   `http/events/topology_drift.py` and
   `multi_tenancy.py`, `http/events/kafka_bus.py` plus the `kafka` tier in
   `tier.py`, and the `semantics validate_events` MCP op.
