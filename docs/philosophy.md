@@ -41,9 +41,7 @@ AppSpec (frozen Pydantic IR — src/dazzle/core/ir/)
 validated AppSpec
    │
    ├─→ Runtime (src/dazzle/http/, src/dazzle/page/)  — FastAPI + typed Fragments + HTMX
-   ├─→ Specs   (src/dazzle/specs/)                — OpenAPI, AsyncAPI
    ├─→ MCP     (src/dazzle/mcp/)                  — knowledge, validation, queries
-   ├─→ LSP     (src/dazzle/lsp/)                  — editor diagnostics
    └─→ Generated artefacts                        — clients, demo data, fixtures
 ```
 

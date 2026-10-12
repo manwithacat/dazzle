@@ -184,49 +184,6 @@ class TestMT04NoTenantRoot:
 
 
 # =============================================================================
-# MT-05  Cross-tenant data product without anonymization
-# =============================================================================
-
-
-class TestMT05CrossTenantNoAnonymization:
-    def _data_products(self, products: list) -> MagicMock:
-        dp = MagicMock()
-        dp.products = products
-        return dp
-
-    def _product(
-        self, name: str, cross_tenant: bool = True, transforms: list | None = None
-    ) -> MagicMock:
-        p = MagicMock()
-        p.name = name
-        p.cross_tenant = cross_tenant
-        p.transforms = transforms or []
-        return p
-
-    def test_flags_cross_tenant_without_anonymization(self, agent: MultiTenancyAgent) -> None:
-        product = self._product("analytics", transforms=[])
-        appspec = make_appspec(data_products=self._data_products([product]))
-        findings = agent.mt_05_cross_tenant_no_anonymization(appspec)
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.HIGH
-
-    def test_passes_with_pseudonymise(self, agent: MultiTenancyAgent) -> None:
-        from dazzle.core.ir.governance import DataProductTransform
-
-        product = self._product("analytics", transforms=[DataProductTransform.PSEUDONYMISE])
-        appspec = make_appspec(data_products=self._data_products([product]))
-        assert agent.mt_05_cross_tenant_no_anonymization(appspec) == []
-
-    def test_skips_non_cross_tenant(self, agent: MultiTenancyAgent) -> None:
-        product = self._product("internal", cross_tenant=False)
-        appspec = make_appspec(data_products=self._data_products([product]))
-        assert agent.mt_05_cross_tenant_no_anonymization(appspec) == []
-
-    def test_no_data_products(self, agent: MultiTenancyAgent) -> None:
-        assert agent.mt_05_cross_tenant_no_anonymization(make_appspec()) == []
-
-
-# =============================================================================
 # MT-06  Visibility rules without partition key
 # =============================================================================
 
@@ -313,9 +270,9 @@ class TestMultiTenancyAgentRun:
     def test_agent_id(self, agent: MultiTenancyAgent) -> None:
         assert agent.agent_id == AgentId.MT
 
-    def test_has_7_heuristics(self, agent: MultiTenancyAgent) -> None:
-        assert len(agent.get_heuristics()) == 7
+    def test_has_6_heuristics(self, agent: MultiTenancyAgent) -> None:
+        assert len(agent.get_heuristics()) == 6
 
     def test_heuristic_ids(self, agent: MultiTenancyAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"MT-0{i}" for i in range(1, 8)]
+        assert ids == ["MT-01", "MT-02", "MT-03", "MT-04", "MT-06", "MT-07"]

@@ -225,8 +225,7 @@ After installation:
 
 1. **Read the Quick Start** in [Documentation](../index.md)
 2. **Try the Examples** in `examples/`
-3. **Set Up IDE Integration** (LSP server: `dazzle lsp run`)
-4. **Join the Community** on GitHub Discussions
+3. **Join the Community** on GitHub Discussions
 
 ## Getting Help
 

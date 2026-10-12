@@ -62,7 +62,6 @@ def doctor_command() -> None:
     optional = [
         ("mcp", "MCP server"),
         ("anthropic", "LLM support"),
-        ("pygls", "LSP server"),
     ]
     for pkg, purpose in optional:
         try:

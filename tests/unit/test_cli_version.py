@@ -44,10 +44,9 @@ class TestVersionSubcommand:
         assert result.exit_code == 0
         assert "python_available: true" in result.stdout
 
-    def test_version_full_includes_lsp_and_llm_flags(self) -> None:
+    def test_version_full_includes_llm_flag(self) -> None:
         result = runner.invoke(app, ["version", "--full"])
         assert result.exit_code == 0
-        assert "lsp_available:" in result.stdout
         assert "llm_available:" in result.stdout
 
 

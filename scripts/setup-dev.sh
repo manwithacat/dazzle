@@ -23,11 +23,6 @@ echo ""
 echo "Installing DAZZLE in development mode..."
 pip install -e ".[dev,llm]"
 
-# Install optional LSP dependencies
-echo ""
-echo "Installing optional dependencies..."
-pip install pygls || true
-
 # Install pre-commit hooks
 echo ""
 echo "Installing pre-commit hooks..."

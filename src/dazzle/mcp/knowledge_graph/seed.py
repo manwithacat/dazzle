@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 37  # v37: -composition/layout/stubs/product_quality knowledge (ship B2)
+SEED_SCHEMA_VERSION = (
+    38  # v38: composition/layout/product_quality gone (ship B2); unused constructs gone (ship D)
+)
 
 
 def compute_seed_version() -> str:

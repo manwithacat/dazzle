@@ -56,7 +56,6 @@ from .validation import (
     extended_lint,
     is_secret_field_name,
     validate_admin_personas_scope_conflict,
-    validate_approvals,
     validate_appspec,
     validate_atomic_flows,
     validate_audit_config,
@@ -100,7 +99,6 @@ from .validation import (
     validate_transition_invocations,
     validate_ux_specs,
     validate_visibility_bool_field_scope_coverage,
-    validate_webhooks,
     validate_workspace_primary_actions,
     validate_workspace_region_actions,
 )
@@ -159,7 +157,6 @@ __all__ = [
     "extended_lint",
     "is_secret_field_name",
     "validate_admin_personas_scope_conflict",
-    "validate_approvals",
     "validate_appspec",
     "validate_atomic_flows",
     "validate_audit_config",
@@ -203,7 +200,6 @@ __all__ = [
     "validate_transition_invocations",
     "validate_ux_specs",
     "validate_visibility_bool_field_scope_coverage",
-    "validate_webhooks",
     "validate_workspace_primary_actions",
     "validate_workspace_region_actions",
 ]

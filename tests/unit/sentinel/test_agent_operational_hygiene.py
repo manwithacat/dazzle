@@ -71,13 +71,6 @@ def _sla(
     return sla
 
 
-def _approval(name: str, *, escalation: object | None = None) -> MagicMock:
-    approval = MagicMock()
-    approval.name = name
-    approval.escalation = escalation
-    return approval
-
-
 def _service_step(name: str, *, retry: object | None = None) -> MagicMock:
     step = MagicMock()
     step.kind = StepKind.SERVICE
@@ -258,28 +251,6 @@ class TestOP04SlaWithoutBreachAction:
 
 
 # =============================================================================
-# OP-05  Approval without escalation
-# =============================================================================
-
-
-class TestOP05ApprovalWithoutEscalation:
-    def test_flags_approval_with_no_escalation(self, agent: OperationalHygieneAgent) -> None:
-        approval = _approval("purchase_approval", escalation=None)
-        findings = agent.approval_without_escalation(make_appspec(approvals=[approval]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "OP-05"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "purchase_approval" in findings[0].title
-
-    def test_passes_when_escalation_set(self, agent: OperationalHygieneAgent) -> None:
-        approval = _approval("purchase_approval", escalation=MagicMock())
-        assert agent.approval_without_escalation(make_appspec(approvals=[approval])) == []
-
-    def test_passes_when_no_approvals(self, agent: OperationalHygieneAgent) -> None:
-        assert agent.approval_without_escalation(make_appspec(approvals=[])) == []
-
-
-# =============================================================================
 # OP-06  Process without compensation
 # =============================================================================
 
@@ -396,12 +367,12 @@ class TestOperationalHygieneAgentRun:
     def test_agent_id(self, agent: OperationalHygieneAgent) -> None:
         assert agent.agent_id == AgentId.OP
 
-    def test_has_8_heuristics(self, agent: OperationalHygieneAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_7_heuristics(self, agent: OperationalHygieneAgent) -> None:
+        assert len(agent.get_heuristics()) == 7
 
     def test_heuristic_ids(self, agent: OperationalHygieneAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"OP-0{i}" for i in range(1, 9)]
+        assert ids == ["OP-01", "OP-02", "OP-03", "OP-04", "OP-06", "OP-07", "OP-08"]
 
     def test_run_iterates_across_collections(self, agent: OperationalHygieneAgent) -> None:
         # Multiple offenders in multiple collections — exercises the iteration
@@ -410,17 +381,12 @@ class TestOperationalHygieneAgentRun:
             _sla("response_sla", on_breach=None, tiers=[]),
             _sla("resolution_sla", on_breach=None, tiers=[]),
         ]
-        approvals = [
-            _approval("a", escalation=None),
-            _approval("b", escalation=None),
-        ]
         intents = [
             _llm_intent("classify_a", pii=None),
             _llm_intent("classify_b", pii=None),
         ]
-        result = agent.run(make_appspec(slas=slas, approvals=approvals, llm_intents=intents))
+        result = agent.run(make_appspec(slas=slas, llm_intents=intents))
         ids = [f.heuristic_id for f in result.findings]
         assert ids.count("OP-04") == 2  # 2 SLAs without breach
-        assert ids.count("OP-05") == 2  # 2 approvals without escalation
         assert ids.count("OP-02") == 2  # 2 intents without PII
         assert ids.count("OP-08") == 2  # 2 SLAs without tiers

@@ -1,4 +1,4 @@
-"""Business Logic detection agent (BL-01 through BL-08)."""
+"""Business Logic detection agent (BL-01, BL-02, BL-05 to BL-07)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ from dazzle.sentinel.models import (
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
 
-from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.process import ProcessTriggerKind
 from dazzle.core.ir.stories import StoryTrigger
 
@@ -200,152 +199,6 @@ class BusinessLogicAgent(DetectionAgent):
                     ),
                 )
             )
-
-        return findings
-
-    # ------------------------------------------------------------------
-    # BL-03  Entity with invariants but no test designs
-    # ------------------------------------------------------------------
-
-    @heuristic(
-        heuristic_id="BL-03",
-        category="business_logic",
-        subcategory="untested_invariant",
-        title="Entity invariants without test coverage",
-    )
-    def check_invariants_without_tests(self, appspec: AppSpec) -> list[Finding]:
-        """Flag entities that have invariants but no test designs covering them."""
-        findings: list[Finding] = []
-        test_names_lower = [t.name.lower() for t in appspec.tests]
-
-        for entity in appspec.domain.entities:
-            if not entity.invariants:
-                continue
-
-            entity_name_lower = entity.name.lower()
-            has_covering_test = any(entity_name_lower in tn for tn in test_names_lower)
-
-            if not has_covering_test:
-                invariant_strs = [str(inv) for inv in entity.invariants]
-                findings.append(
-                    Finding(
-                        agent=AgentId.BL,
-                        heuristic_id="BL-03",
-                        category="business_logic",
-                        subcategory="untested_invariant",
-                        severity=Severity.LOW,
-                        confidence=Confidence.POSSIBLE,
-                        title=(
-                            f"Entity '{entity.name}' has {len(entity.invariants)} "
-                            f"invariant(s) but no test designs"
-                        ),
-                        description=(
-                            f"Entity '{entity.name}' declares invariants "
-                            f"({', '.join(invariant_strs)}) but no test in the "
-                            f"specification references this entity. Invariants "
-                            f"that are never tested may silently fail in "
-                            f"production."
-                        ),
-                        entity_name=entity.name,
-                        evidence=[
-                            Evidence(
-                                evidence_type="missing_construct",
-                                location=f"entity.{entity.name}.invariants",
-                                context=(
-                                    f"invariant_count={len(entity.invariants)}, matching_tests=0"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Add test designs that exercise the invariants on '{entity.name}'."
-                            ),
-                            effort=RemediationEffort.SMALL,
-                            dsl_example=(
-                                f"test {entity.name}_invariant_test:\n"
-                                f"  action: create {entity.name}\n"
-                                f"  expect: error"
-                            ),
-                        ),
-                    )
-                )
-
-        return findings
-
-    # ------------------------------------------------------------------
-    # BL-04  Approval entity transitions lack role guards
-    # ------------------------------------------------------------------
-
-    @heuristic(
-        heuristic_id="BL-04",
-        category="business_logic",
-        subcategory="approval_role_guard",
-        title="Approval workflow transitions lack role guards",
-    )
-    def check_approval_transitions_without_role_guards(self, appspec: AppSpec) -> list[Finding]:
-        """Flag approval workflows whose backing entity state transitions
-        do not have role-based guards."""
-        findings: list[Finding] = []
-
-        for approval in appspec.approvals:
-            if not approval.entity:
-                continue
-
-            entity = appspec.get_entity(approval.entity)
-            if entity is None or entity.state_machine is None:
-                continue
-
-            unguarded: list[str] = []
-            for transition in entity.state_machine.transitions:
-                has_role_guard = any(g.requires_role for g in transition.guards)
-                if not has_role_guard:
-                    unguarded.append(f"{transition.from_state} -> {transition.to_state}")
-
-            if unguarded:
-                findings.append(
-                    Finding(
-                        agent=AgentId.BL,
-                        heuristic_id="BL-04",
-                        category="business_logic",
-                        subcategory="approval_role_guard",
-                        severity=Severity.HIGH,
-                        confidence=Confidence.CONFIRMED,
-                        title=(
-                            f"Approval '{approval.name}' has transitions "
-                            f"without role guards on entity '{approval.entity}'"
-                        ),
-                        description=(
-                            f"Approval '{approval.name}' targets entity "
-                            f"'{approval.entity}', but the following state "
-                            f"transitions lack a 'requires_role' guard: "
-                            f"{', '.join(unguarded)}. Without role guards, "
-                            f"any authenticated user could advance the "
-                            f"approval workflow."
-                        ),
-                        entity_name=approval.entity,
-                        construct_type="approval",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=(f"entity.{approval.entity}.state_machine"),
-                                context=(
-                                    f"approval={approval.name}, unguarded_transitions={unguarded}"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                "Add 'requires_role' guards to the state "
-                                "transitions that control the approval flow."
-                            ),
-                            effort=RemediationEffort.SMALL,
-                            dsl_example=(
-                                f"  pending_approval -> approved: "
-                                f"role({approval.approver_role or 'approver'})"
-                            ),
-                        ),
-                    )
-                )
 
         return findings
 
@@ -591,74 +444,6 @@ class BusinessLogicAgent(DetectionAgent):
                                 f'"{entity.name} List":\n'
                                 f"  uses entity {entity.name}\n"
                                 f"  mode: list"
-                            ),
-                        ),
-                    )
-                )
-
-        return findings
-
-    # ------------------------------------------------------------------
-    # BL-08  Shared enum not referenced
-    # ------------------------------------------------------------------
-
-    @heuristic(
-        heuristic_id="BL-08",
-        category="business_logic",
-        subcategory="unreferenced_enum",
-        title="Shared enum not referenced by any entity field",
-    )
-    def check_unreferenced_enum(self, appspec: AppSpec) -> list[Finding]:
-        """Flag shared enums that are not referenced by any entity field."""
-        findings: list[Finding] = []
-
-        # Collect all enum names referenced by entity fields.
-        referenced_enums: set[str] = set()
-        for entity in appspec.domain.entities:
-            for field in entity.fields:
-                if field.type.kind == FieldTypeKind.ENUM and field.type.ref_entity:
-                    referenced_enums.add(field.type.ref_entity)
-
-        for enum_spec in appspec.enums:
-            if enum_spec.name not in referenced_enums:
-                findings.append(
-                    Finding(
-                        agent=AgentId.BL,
-                        heuristic_id="BL-08",
-                        category="business_logic",
-                        subcategory="unreferenced_enum",
-                        severity=Severity.LOW,
-                        confidence=Confidence.POSSIBLE,
-                        title=(
-                            f"Shared enum '{enum_spec.name}' is not referenced by any entity field"
-                        ),
-                        description=(
-                            f"Shared enum '{enum_spec.name}' is defined but "
-                            f"no entity field references it. This enum may "
-                            f"be unused dead code or it may be intended for "
-                            f"a field that has not been connected yet."
-                        ),
-                        construct_type="enum",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=f"enum.{enum_spec.name}",
-                                context=(
-                                    f"values={[v.name for v in enum_spec.values]}, "
-                                    f"referenced_by_fields=0"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Reference enum '{enum_spec.name}' from an "
-                                f"entity field or remove it if no longer needed."
-                            ),
-                            effort=RemediationEffort.TRIVIAL,
-                            dsl_example=(
-                                f"entity Example:\n"
-                                f"  status: {enum_spec.name} = "
-                                f"{enum_spec.values[0].name if enum_spec.values else 'value'}"
                             ),
                         ),
                     )

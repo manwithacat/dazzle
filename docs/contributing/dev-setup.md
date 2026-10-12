@@ -33,7 +33,7 @@ make dev-install
 # equivalent:
 #   uv python install          # reads .python-version → 3.14
 #   uv sync --extra dev --extra llm --extra mcp --extra mobile \
-#           --extra postgres --extra perf --extra saml --extra lsp
+#           --extra postgres --extra perf --extra saml
 #   uvx pre-commit install && uvx pre-commit install --hook-type pre-push
 
 source .venv/bin/activate   # optional; or prefix with `uv run` / use make targets

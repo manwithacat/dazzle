@@ -223,7 +223,6 @@ Ratings use the rubric in [`security-claims.md`](security-claims.md#maturity-rub
 | Compliance evidence mapping | **Beta** | ~100 tests; does what the docs claim; `partial` status unimplemented. |
 | Compliance — operational/infra checks | **Roadmap** | Not built. The pipeline reasons about the DSL spec only. |
 | MCP server / AI workflows | **Beta** | 30+ tools, all handlers implemented, ~315 tests; handler tests mock heavily, API still growing. |
-| LSP server | **Alpha** | All major LSP features implemented (~1.6k lines), but the completion handler lacks direct tests and CI does not run `dazzle lsp` end-to-end. |
 | Pitch artifacts | **Beta** | End-to-end DSL→PPTX pipeline, ~99 tests; the DSL-extraction path is thinly tested and no example ships a `pitchspec.yaml`. |
 
 If you are evaluating Dazzle *for security/authorization*, the load-bearing

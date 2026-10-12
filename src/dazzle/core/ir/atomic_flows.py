@@ -111,7 +111,7 @@ class FlowUpdate(BaseModel):
 # A step within an atomic flow — discriminated on ``kind`` so the parser /
 # executor / validator can dispatch uniformly and steps keep declaration order.
 # Named ``AtomicFlowStep`` (not ``FlowStep``) to avoid colliding with the E2E
-# `flow` construct's pre-existing ``FlowStep`` (`FlowStepKind.SNAPSHOT`, ...).
+# test-spec ``FlowStep`` (`FlowStepKind.SNAPSHOT`, ...).
 AtomicFlowStep = Annotated[FlowCreate | FlowUpdate, Field(discriminator="kind")]
 
 

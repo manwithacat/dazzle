@@ -1,26 +1,6 @@
 module shapes_validation
 app shapes "Shapes RBAC Validation"
 
-enum ShapeForm "Shape Form":
-  circle
-  triangle
-  square
-  hexagon
-  star
-
-enum Colour "Colour":
-  red
-  blue
-  green
-  gold
-  void
-
-enum Material "Material":
-  glass
-  stone
-  metal
-  shadow
-
 persona oracle "Oracle":
   description: "Platform admin — sees everything across all realms"
   default_workspace: shapes_dashboard

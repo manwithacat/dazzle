@@ -45,7 +45,6 @@ class TokenType(Enum):
     ON = "on"
     WHEN = "when"
     CALL = "call"
-    WITH = "with"
     MAP = "map"
     RESPONSE = "response"
     INTO = "into"
@@ -80,25 +79,14 @@ class TokenType(Enum):
     EVENT_DRIVEN = "event_driven"
     FOREIGN = "foreign"
 
-    # Test DSL Keywords
-    TEST = "test"
-    SETUP = "setup"
-    DATA = "data"
-    EXPECT = "expect"
+    # CRUD / query keywords
     STATUS = "status"
-    CREATED = "created"
     FILTER = "filter"
     SEARCH = "search"
-    ORDER_BY = "order_by"
     COUNT = "count"
-    ERROR_MESSAGE = "error_message"
-    FIRST = "first"
-    LAST = "last"
-    QUERY = "query"
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
-    GET = "get"
     TRUE = "true"
     FALSE = "false"
 
@@ -327,7 +315,6 @@ class TokenType(Enum):
     RESTRICT = "restrict"
     NULLIFY = "nullify"
     READONLY = "readonly"
-    DENY = "deny"
     SCENARIOS = "scenarios"
     GIVEN = "given"
     THEN = "then"
@@ -355,20 +342,14 @@ class TokenType(Enum):
     PHASE = "phase"
     SCENE = "scene"
 
-    # v0.41.0 Convergent BDD Keywords
-    RULE = "rule"
-    QUESTION_DECL = "question"
-
     # v0.42.0 Grant Schema Keywords
     GRANT_SCHEMA = "grant_schema"
 
     # v0.25.0 Top-Level Construct Keywords
-    ENUM = "enum"
-    WEBHOOK = "webhook"
-    APPROVAL = "approval"
+    APPROVAL = "approval"  # grant-level `approval: required` modifier
     SLA = "sla"
     ISLAND = "island"
-    # VIEW already defined in Flow/E2E Test Keywords
+    # VIEW already defined in Step / visibility keywords
     # Sub-keywords for v0.25.0 constructs (events, payload, include, secret,
     # method, approver_role, quorum, threshold, escalation, auto_approve,
     # starts_when, pauses_when, completes_when, tiers, business_hours,
@@ -436,11 +417,8 @@ class TokenType(Enum):
     # v0.18.0 Governance Keywords (Issue #25)
     POLICIES = "policies"
     TENANCY = "tenancy"
-    INTERFACES = "interfaces"
-    DATA_PRODUCTS = "data_products"
     CLASSIFY = "classify"
     ERASURE = "erasure"
-    DATA_PRODUCT = "data_product"
 
     # v0.19.0 HLESS (High-Level Event Semantics Specification) Keywords.
     # NOTE: the `hless` keyword and `HLESS*` IR class names are deliberate —
@@ -556,36 +534,19 @@ class TokenType(Enum):
     UPSERT = "upsert"
     REGEX = "regex"
 
-    # Flow/E2E Test Keywords (v0.3.2)
+    # Step / visibility keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
     # because they're commonly used as enum values or field names.
-    FLOW = "flow"
-    # #1228 Phase 3c: atomic multi-entity creation block. Distinct keyword
-    # from FLOW (E2E test construct) to avoid ambiguity.
+    # #1228 Phase 3c: atomic multi-entity creation block.
     ATOMIC = "atomic"
     STEPS = "steps"
-    NAVIGATE = "navigate"
-    CLICK = "click"
-    FILL = "fill"
     WAIT = "wait"
-    SNAPSHOT = "snapshot"
-    PRECONDITIONS = "preconditions"
     AUTHENTICATED = "authenticated"
     PUBLIC = "public"
-    USER_ROLE = "user_role"
-    FIXTURES = "fixtures"
     VIEW = "view"
-    ENTITY_EXISTS = "entity_exists"
-    ENTITY_NOT_EXISTS = "entity_not_exists"
-    VALIDATION_ERROR = "validation_error"
     VISIBLE = "visible"
-    NOT_VISIBLE = "not_visible"
-    TEXT_CONTAINS = "text_contains"
-    REDIRECTS_TO = "redirects_to"
-    FIELD_VALUE = "field_value"
     # PRIORITY, HIGH, MEDIUM, LOW are handled as identifiers
-    TAGS = "tags"
 
     # v0.38.0 Workspace Navigation Keywords
     NAV_GROUP = "nav_group"

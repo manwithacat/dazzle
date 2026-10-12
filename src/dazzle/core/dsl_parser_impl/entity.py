@@ -112,8 +112,6 @@ class EntityParserMixin:
         _parse_field_path: Any
         parse_type_spec: Any
         parse_field_modifiers: Any
-        # #1493: shared `semantic:` value=tone map parser from EnumParserMixin
-        _parse_semantic_map: Any
         # v0.10.2: Date/duration methods from TypeParserMixin
         _parse_date_expr: Any
         _parse_duration_literal: Any
@@ -1194,12 +1192,29 @@ class EntityParserMixin:
         self.advance()
         return str(tok.value)
 
+    def _parse_semantic_map(self) -> dict[str, str]:
+        """Parse a `value=tone, value=tone, ...` map (the body of a `semantic:`
+        line, after the colon). Returns raw/lowercased tones keyed by value name;
+        the tone palette + value membership are checked by the validator (#1493).
+        """
+        pairs: dict[str, str] = {}
+        while True:
+            key = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.EQUALS)
+            tone = self.expect_identifier_or_keyword().value
+            pairs[key] = str(tone).lower()
+            if self.match(TokenType.COMMA):
+                self.advance()
+                continue
+            break
+        return pairs
+
     def _maybe_parse_inline_enum_semantics(
         self, field_name: str, field_type: ir.FieldType
     ) -> ir.FieldType:
         """Parse an optional indented ``semantic:`` continuation on an inline enum
         field (#1493 slice 2), returning ``field_type`` augmented with the
-        declared value→tone map. Mirrors the shared-enum ``semantic:`` line::
+        declared value→tone map::
 
             status: enum[open, in_review, done]
               semantic: open=neutral, in_review=warning, done=positive
@@ -1207,7 +1222,7 @@ class EntityParserMixin:
         Tones are stored raw/lowercased (``positive`` etc.); the palette is gated
         downstream by ``validate_enum_semantics`` (E_SEMANTIC_TONE_UNKNOWN). A
         binding to a value not declared in the ``enum[...]`` is a parse error
-        (E_SEMANTIC_VALUE_UNKNOWN), matching the shared-enum form. An inline enum
+        (E_SEMANTIC_VALUE_UNKNOWN). An inline enum
         field has no other continuation block, so a deeper indent here is treated
         as the ``semantic:`` line — anything else is a clear author-time error.
         """

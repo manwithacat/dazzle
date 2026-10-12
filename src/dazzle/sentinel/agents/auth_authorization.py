@@ -1,4 +1,4 @@
-"""Auth & Authorization detection agent (AA-01 through AA-08)."""
+"""Auth & Authorization detection agent (AA-01 through AA-07)."""
 
 from __future__ import annotations
 
@@ -607,67 +607,6 @@ class AuthAuthorizationAgent(DetectionAgent):
                     surface_name=surface.name,
                     entity_name=surface.entity_ref,
                     construct_type="surface",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # AA-08: Webhook without auth
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="AA-08",
-        category="auth",
-        subcategory="webhooks",
-        title="Webhook without auth",
-    )
-    def webhook_without_auth(self, appspec: AppSpec) -> list[Finding]:
-        """Flag webhooks that have no authentication configured."""
-        findings: list[Finding] = []
-        for webhook in appspec.webhooks:
-            if webhook.auth is not None:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.AA,
-                    heuristic_id="AA-08",
-                    category="auth",
-                    subcategory="webhooks",
-                    severity=Severity.HIGH,
-                    confidence=Confidence.CONFIRMED,
-                    title=f"Webhook '{webhook.name}' has no authentication",
-                    description=(
-                        f"Webhook '{webhook.name}' does not define an auth "
-                        f"block. Without authentication (e.g. HMAC signing) "
-                        f"the receiving endpoint cannot verify that payloads "
-                        f"originate from this application, exposing it to "
-                        f"spoofed requests."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"webhook:{webhook.name}",
-                            context="webhook.auth is None",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=(f"Add an auth block to webhook '{webhook.name}'."),
-                        effort=RemediationEffort.SMALL,
-                        guidance=(
-                            "Configure HMAC-SHA256 signing or bearer token "
-                            "authentication so the receiver can verify "
-                            "payload authenticity."
-                        ),
-                        dsl_example=(
-                            f"webhook {webhook.name} "
-                            f'"{webhook.title or webhook.name}":\n'
-                            f"  entity: {webhook.entity}\n"
-                            f'  url: config("WEBHOOK_URL")\n'
-                            f"  auth:\n"
-                            f"    method: hmac_sha256\n"
-                            f'    secret: config("WEBHOOK_SECRET")'
-                        ),
-                    ),
-                    construct_type="webhook",
                 ),
             )
         return findings

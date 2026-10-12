@@ -14,12 +14,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .approvals import ApprovalSpec
     from .appspec import AppSpec
     from .archetype import ArchetypeSpec
     from .domain import EntitySpec
-    from .e2e import FixtureSpec, FlowPriority, FlowSpec
-    from .enums import EnumSpec
+    from .e2e import FixtureSpec
     from .experiences import ExperienceSpec
     from .fields import FieldType
     from .foreign_models import ForeignModelSpec
@@ -38,17 +36,13 @@ if TYPE_CHECKING:
     )
     from .personas import PersonaSpec
     from .process import ProcessSpec, ScheduleSpec
-    from .questions import QuestionSpec
-    from .rules import RuleSpec
     from .scenarios import ScenarioSpec
     from .services import APISpec, DomainServiceSpec
     from .sla import SLASpec
     from .stories import StorySpec
     from .surfaces import SurfaceSpec
-    from .tests import TestSpec
     from .triples import VerifiableTriple
     from .views import ViewSpec
-    from .webhooks import WebhookSpec
     from .workspaces import WorkspaceSpec
 
 __all__ = [
@@ -60,16 +54,12 @@ __all__ = [
     "get_experience",
     "get_api",
     "get_domain_service",
-    "get_test",
     "get_foreign_model",
     "get_integration",
-    "get_flow",
     "get_fixture",
     "get_persona",
     "get_scenario",
     "get_story",
-    "get_rule",
-    "get_question",
     "get_grant_schema",
     "get_message",
     "get_channel",
@@ -83,19 +73,12 @@ __all__ = [
     "get_schedule",
     "get_ledger",
     "get_transaction",
-    "get_enum",
     "get_view",
-    "get_webhook",
-    "get_approval",
     "get_sla",
     "get_island",
     # Filter / multi-result queries
-    "get_flows_by_entity",
-    "get_flows_by_priority",
     "get_stories_by_persona",
     "get_stories_by_entity",
-    "get_rules_by_scope",
-    "get_questions_blocking",
     "get_grant_schemas_by_scope",
     "get_triples_for_entity",
     "get_triples_for_persona",
@@ -168,14 +151,6 @@ def get_domain_service(appspec: AppSpec, name: str) -> DomainServiceSpec | None:
     return None
 
 
-def get_test(appspec: AppSpec, name: str) -> TestSpec | None:
-    """Get test by name."""
-    for test in appspec.tests:
-        if test.name == name:
-            return test
-    return None
-
-
 def get_foreign_model(appspec: AppSpec, name: str) -> ForeignModelSpec | None:
     """Get foreign model by name."""
     for fm in appspec.foreign_models:
@@ -189,14 +164,6 @@ def get_integration(appspec: AppSpec, name: str) -> IntegrationSpec | None:
     for integration in appspec.integrations:
         if integration.name == name:
             return integration
-    return None
-
-
-def get_flow(appspec: AppSpec, flow_id: str) -> FlowSpec | None:
-    """Get E2E flow by ID."""
-    for flow in appspec.e2e_flows:
-        if flow.id == flow_id:
-            return flow
     return None
 
 
@@ -229,22 +196,6 @@ def get_story(appspec: AppSpec, story_id: str) -> StorySpec | None:
     for story in appspec.stories:
         if story.story_id == story_id:
             return story
-    return None
-
-
-def get_rule(appspec: AppSpec, rule_id: str) -> RuleSpec | None:
-    """Get rule by ID."""
-    for rule in appspec.rules:
-        if rule.rule_id == rule_id:
-            return rule
-    return None
-
-
-def get_question(appspec: AppSpec, question_id: str) -> QuestionSpec | None:
-    """Get question by ID."""
-    for question in appspec.questions:
-        if question.question_id == question_id:
-            return question
     return None
 
 
@@ -352,35 +303,11 @@ def get_transaction(appspec: AppSpec, name: str) -> TransactionSpec | None:
     return None
 
 
-def get_enum(appspec: AppSpec, name: str) -> EnumSpec | None:
-    """Get shared enum by name."""
-    for enum in appspec.enums:
-        if enum.name == name:
-            return enum
-    return None
-
-
 def get_view(appspec: AppSpec, name: str) -> ViewSpec | None:
     """Get view by name."""
     for view in appspec.views:
         if view.name == name:
             return view
-    return None
-
-
-def get_webhook(appspec: AppSpec, name: str) -> WebhookSpec | None:
-    """Get webhook by name."""
-    for webhook in appspec.webhooks:
-        if webhook.name == name:
-            return webhook
-    return None
-
-
-def get_approval(appspec: AppSpec, name: str) -> ApprovalSpec | None:
-    """Get approval by name."""
-    for approval in appspec.approvals:
-        if approval.name == name:
-            return approval
     return None
 
 
@@ -405,16 +332,6 @@ def get_island(appspec: AppSpec, name: str) -> IslandSpec | None:
 # ---------------------------------------------------------------------------
 
 
-def get_flows_by_entity(appspec: AppSpec, entity: str) -> list[FlowSpec]:
-    """Get all E2E flows for a given entity."""
-    return [f for f in appspec.e2e_flows if f.entity == entity]
-
-
-def get_flows_by_priority(appspec: AppSpec, priority: FlowPriority) -> list[FlowSpec]:
-    """Get all E2E flows with given priority."""
-    return [f for f in appspec.e2e_flows if f.priority == priority]
-
-
 def get_stories_by_persona(appspec: AppSpec, persona: str) -> list[StorySpec]:
     """Get all stories for a given persona."""
     return [s for s in appspec.stories if s.persona == persona]
@@ -423,16 +340,6 @@ def get_stories_by_persona(appspec: AppSpec, persona: str) -> list[StorySpec]:
 def get_stories_by_entity(appspec: AppSpec, entity_name: str) -> list[StorySpec]:
     """Get all stories involving a specific entity."""
     return [s for s in appspec.stories if entity_name in s.entities]
-
-
-def get_rules_by_scope(appspec: AppSpec, entity_name: str) -> list[RuleSpec]:
-    """Get all rules whose scope includes a specific entity."""
-    return [r for r in appspec.rules if entity_name in r.scope]
-
-
-def get_questions_blocking(appspec: AppSpec, artefact_id: str) -> list[QuestionSpec]:
-    """Get all open questions that block a specific artefact."""
-    return [q for q in appspec.questions if artefact_id in q.blocks]
 
 
 def get_grant_schemas_by_scope(appspec: AppSpec, entity_name: str) -> list[GrantSchemaSpec]:

@@ -551,19 +551,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cattrs"
-version = "26.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/ec/ba18945e7d6e55a58364d9fb2e46049c1c2998b3d805f19b703f14e81057/cattrs-26.1.0.tar.gz", hash = "sha256:fa239e0f0ec0715ba34852ce813986dfed1e12117e209b816ab87401271cdd40", size = 495672, upload-time = "2026-02-18T22:15:19.406Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/56/60547f7801b97c67e97491dc3d9ade9fbccbd0325058fd3dfcb2f5d98d90/cattrs-26.1.0-py3-none-any.whl", hash = "sha256:d1e0804c42639494d469d08d4f26d6b9de9b8ab26b446db7b5f8c2e97f7c3096", size = 73054, upload-time = "2026-02-18T22:15:17.958Z" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.5.20"
 source = { registry = "https://pypi.org/simple" }
@@ -946,10 +933,6 @@ llm = [
     { name = "google-genai" },
     { name = "openai" },
 ]
-lsp = [
-    { name = "lsprotocol" },
-    { name = "pygls" },
-]
 mcp = [
     { name = "mcp" },
 ]
@@ -1080,7 +1063,6 @@ requires-dist = [
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.82" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "itsdangerous", specifier = ">=2.1" },
-    { name = "lsprotocol", marker = "extra == 'lsp'", specifier = ">=2023.0.0" },
     { name = "markdown", specifier = ">=3.5" },
     { name = "markdown", marker = "extra == 'compliance'", specifier = ">=3.5" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2,<3" },
@@ -1102,7 +1084,6 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], marker = "extra == 'events'", specifier = ">=3.2" },
     { name = "psycopg-pool", specifier = ">=3.2" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pygls", marker = "extra == 'lsp'", specifier = ">=1.0.0" },
     { name = "pyhanko", marker = "extra == 'signing'", specifier = ">=0.25.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
     { name = "pyjwt", marker = "extra == 'mobile'", specifier = ">=2.8.0" },
@@ -1137,7 +1118,7 @@ requires-dist = [
     { name = "z3-solver", marker = "extra == 'dev'", specifier = ">=4.13" },
     { name = "z3-solver", marker = "extra == 'proof'", specifier = ">=4.13" },
 ]
-provides-extras = ["llm", "mcp", "lsp", "graph", "proof", "e2e", "compliance", "sso", "saml", "signing", "dev", "perf", "observability", "serve", "postgres", "temporal", "rabbitmq", "redis", "kafka", "messaging", "events", "viewport", "tigerbeetle", "mobile", "social-auth", "push", "mobile-full", "aws", "sendgrid", "i18n", "aws-test", "test-full"]
+provides-extras = ["llm", "mcp", "graph", "proof", "e2e", "compliance", "sso", "saml", "signing", "dev", "perf", "observability", "serve", "postgres", "temporal", "rabbitmq", "redis", "kafka", "messaging", "events", "viewport", "tigerbeetle", "mobile", "social-auth", "push", "mobile-full", "aws", "sendgrid", "i18n", "aws-test", "test-full"]
 
 [[package]]
 name = "defusedxml"
@@ -2313,19 +2294,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/de/88b3be5c31b22333b3ca2f6ff1de4e863d8fe45aaea7485f591970ec1d3e/linkify_it_py-2.1.0-py3-none-any.whl", hash = "sha256:0d252c1594ecba2ecedc444053db5d3a9b7ec1b0dd929c8f1d74dce89f86c05e", size = 19878, upload-time = "2026-03-01T07:48:46.098Z" },
-]
-
-[[package]]
-name = "lsprotocol"
-version = "2025.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "cattrs" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/26/67b84e6ec1402f0e6764ef3d2a0aaf9a79522cc1d37738f4e5bb0b21521a/lsprotocol-2025.0.0.tar.gz", hash = "sha256:e879da2b9301e82cfc3e60d805630487ac2f7ab17492f4f5ba5aaba94fe56c29", size = 74896, upload-time = "2025-06-17T21:30:18.156Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/f0/92f2d609d6642b5f30cb50a885d2bf1483301c69d5786286500d15651ef2/lsprotocol-2025.0.0-py3-none-any.whl", hash = "sha256:f9d78f25221f2a60eaa4a96d3b4ffae011b107537facee61d3da3313880995c7", size = 76250, upload-time = "2025-06-17T21:30:19.455Z" },
 ]
 
 [[package]]
@@ -3581,20 +3549,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/04/e7c1fe4dc78a6fdbfd6c337b1c3732ff543b8a397683ab38378447baa331/pyee-13.0.1.tar.gz", hash = "sha256:0b931f7c14535667ed4c7e0d531716368715e860b988770fc7eb8578d1f67fc8", size = 31655, upload-time = "2026-02-14T21:12:28.044Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/c4/b4d4827c93ef43c01f599ef31453ccc1c132b353284fc6c87d535c233129/pyee-13.0.1-py3-none-any.whl", hash = "sha256:af2f8fede4171ef667dfded53f96e2ed0d6e6bd7ee3bb46437f77e3b57689228", size = 15659, upload-time = "2026-02-14T21:12:26.263Z" },
-]
-
-[[package]]
-name = "pygls"
-version = "2.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "cattrs" },
-    { name = "lsprotocol" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/da/2e/7bbe061d175c0baddde8fc9edb908a4c31ba5d9165b8c68e3439c3a9f138/pygls-2.1.1.tar.gz", hash = "sha256:1da03ba9053201bb337dcdd8d121df70feb2a91e1a0dcc74de5da79755b1a201", size = 55091, upload-time = "2026-03-25T11:19:10.541Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/1a/208293b6c350f5abea6941d5606080d4a492644052504f5312e5de30a902/pygls-2.1.1-py3-none-any.whl", hash = "sha256:510a6dea2476177230c7d851125e5948efdf3fdb9ebfd8543fc434972f8faed4", size = 68975, upload-time = "2026-03-25T11:19:11.374Z" },
 ]
 
 [[package]]

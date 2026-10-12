@@ -1,6 +1,6 @@
 # DSL Grammar Specification
 
-Formal EBNF grammar for DAZZLE DSL v0.82.18.
+Formal EBNF grammar for DAZZLE DSL v0.115.0.
 
 > **Auto-generated** from parser source code by `grammar_gen.py`. Do not edit manually; run `dazzle grammar` to regenerate.
 
@@ -10,9 +10,9 @@ This grammar defines the complete syntax for the DAZZLE Domain-Specific Language
 
 - **Core**: Field Types and Modifiers, Entity and Archetype Definitions, State Machines, Invariants, Access Rules and Governance, Example Data
 - **Surface**: Surface Definitions, UX Semantic Layer, Workspace Definitions, Experience Definitions
-- **Workflow**: Story Definitions, Rule Definitions, Question Definitions, Process Workflows and Schedules
+- **Workflow**: Story Definitions, Process Workflows and Schedules
 - **Integration**: Service Definitions, Foreign Model Definitions, Integration Definitions
-- **Testing**: E2E Test Flows, API Contract Tests, Scenario and Demo Data
+- **Testing**: Scenario and Demo Data
 - **Eventing**: Messaging Channels, Event-First Architecture, HLESS Event Semantics
 - **Financial**: TigerBeetle Ledgers and Transactions
 - **Governance**: Governance Sections
@@ -28,13 +28,13 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 ## Keyword Inventory
 
-**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `related`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `with`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
+**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `related`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `ingest`, `protect`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
 
 **Experience Orchestration Keywords**: `context`, `prefill`, `saves_to`, `creates`, `fields`
 
 **Integration Keywords**: `operation`, `mapping`, `rules`, `scheduled`, `event_driven`, `foreign`
 
-**Test DSL Keywords**: `test`, `setup`, `data`, `expect`, `status`, `created`, `filter`, `search`, `order_by`, `count`, `error_message`, `first`, `last`, `query`, `create`, `update`, `delete`, `get`, `true`, `false`
+**CRUD / query keywords**: `status`, `filter`, `search`, `count`, `create`, `update`, `delete`, `true`, `false`
 
 **Access Control Keywords**: `anonymous`, `permissions`, `access`, `read`, `write`, `permit`, `forbid`, `audit`
 
@@ -42,11 +42,11 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
 
-**v0.34.0 Platform Capability Keywords**: `soft_delete`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `managed_by`, `temporal`, `subtype_of`, `subtype_panel`, `was`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`, `expose`
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `legal_entity`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `membership`, `managed_by`, `expose`, `auth_identity`, `temporal`, `subtype_of`, `was`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
-**v0.3.1 keyword**: `stage` (the `engine_hint` spelling was removed in #1720 — ADR-0003)
+**v0.3.1 keywords**: `engine_hint`, `stage`
 
 **v0.5.0 Domain Service Keywords**: `input`, `output`, `guarantees`, `stub`
 
@@ -64,28 +64,15 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.9.5 Field Type Keywords**: `money`, `file`, `via`
 
-**v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `latest_one`, `descendants_of`, `ancestors_of`, `cascade`, `restrict`, `nullify`, `readonly`, `deny`, `scenarios`, `given`, `then`
+**v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `poly_ref`, `latest_one`, `descendants_of`, `ancestors_of`, `cascade`, `restrict`, `nullify`, `readonly`, `scenarios`, `given`, `then`
 
 **Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed`, `seed_script`, `start_route`
 
-**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`
+**v0.22.0 Story DSL Keywords**: `story`, `trigger`, `unless`
 
 **v0.39.0 Rhythm DSL Keywords**: `rhythm`, `phase`, `scene`
 
-**v0.41.0 Convergent BDD Keywords**: `rule`, `question`
-
-**v0.42.0 Grant Schema Keywords**: `grant_schema`
-
-**v0.25.0 Top-Level Construct Keywords**: `enum`, `webhook`, `approval`, `sla`, `island`
-
-**#1676 Ingest Keywords**: `ingest`, `protect`
-
-```
-ingest_decl = "ingest", identifier, ":", NEWLINE, INDENT, ingest_body, DEDENT ;
-ingest_body = "entity", ":", identifier, NEWLINE,
-              "key", ":", "[", identifier_list, "]", NEWLINE,
-              ["protect", ":", identifier, "=", identifier, NEWLINE] ;
-```
+**v0.42.0 Grant Schema Keywords**: `grant_schema`, `approval`, `sla`, `island`
 
 **v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
 
@@ -93,13 +80,13 @@ ingest_body = "entity", ":", identifier, NEWLINE,
 
 **v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `projection`, `topic`, `retention`
 
-**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `interfaces`, `data_products`, `classify`, `erasure`, `data_product`, `FACT`, `OBSERVATION`, `DERIVATION`
+**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `classify`, `erasure`, `FACT`, `OBSERVATION`, `DERIVATION`
 
 **Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`, `default_provider`, `budget_alert_usd`, `vision`
 
 **v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `render`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
 
-**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `atomic`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`
+**Step / visibility keywords (v0.3.2)**: `atomic`, `steps`, `wait`, `authenticated`, `public`, `view`, `visible`
 
 **v0.38.0 Workspace Navigation Keywords**: `nav_group`, `icon`, `collapsed`, `context_selector`, `nav`, `group`, `companion`, `position`, `below_section`, `on_transition`, `lifecycle`, `fitness`, `external`, `param`, `feedback_widget`, `guide`, `subprocessor`, `analytics`
 
@@ -134,13 +121,13 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
 - `latest_one`
 - `descendants_of`
 - `ancestors_of`
-- `poly_ref` — typed polymorphic reference: `subject: poly_ref [CohortAssessment, Manuscript]` generates two columns (`subject_type text` + `subject_id uuid`; targets must be uuid-pk). Scope it with the branch selector `subject[CohortAssessment].path = current_user…` (ADR-0042); a bare `subject.x` is a validation error. The sanctioned escape from the polymorphic-association counter-prior.
+- `poly_ref`
 
 ## Full Grammar
 
 ```ebnf
 (*
-  DAZZLE DSL v0.82.18 -- EBNF Grammar
+  DAZZLE DSL v0.115.0 -- EBNF Grammar
   ======================================
   Auto-generated by grammar_gen.py from parser source code.
   Do not edit manually; run `dazzle grammar` to regenerate.
@@ -195,13 +182,9 @@ statement     ::= entity_decl
                 | domain_service_decl
                 | foreign_model_decl
                 | integration_decl
-                | flow_decl
-                | test_decl
                 | persona_decl
                 | scenario_decl
                 | story_decl
-                | rule_decl
-                | question_decl
                 | process_decl
                 | schedule_decl
                 | message_decl
@@ -216,8 +199,6 @@ statement     ::= entity_decl
                 | hless_pragma
                 | policies_decl
                 | tenancy_decl
-                | interfaces_decl
-                | data_products_decl
                 | llm_model_decl
                 | llm_config_decl
                 | llm_intent_decl
@@ -255,27 +236,10 @@ scalar_type   ::= "str" "(" NUMBER ")"
                 | "timezone"
                 | "latest_one"
                 | "descendants_of"
-                | "ancestors_of" ;
+                | "ancestors_of"
+                | "poly_ref" ;
 
 enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;
-
-(* #1493 — a shared `enum` block may carry a `semantic:` line binding each
-   value's lifecycle role to a tone. Tones: success | info | warning |
-   destructive | neutral (alias: positive → success). The bound values must be
-   declared in the enum (else E_SEMANTIC_VALUE_UNKNOWN at parse); unknown tones
-   are E_SEMANTIC_TONE_UNKNOWN at validate.
-     enum OrderStatus "Order Status":
-       draft "Draft"
-       approved "Approved"
-       rejected "Rejected"
-       semantic: approved=positive, rejected=destructive, draft=neutral
-
-   Slice 2 (part 1) — an inline `enum[...]` field carries the same binding as an
-   indented `semantic:` continuation line (same tones + error codes):
-     status: enum[open, in_review, done]
-       semantic: open=neutral, in_review=warning, done=positive
-*)
-enum_semantic ::= "semantic" ":" IDENT "=" TONE ("," IDENT "=" TONE)* ;
 
 reference_type ::= "ref" ENTITY_NAME delete_behavior?
                  | "has_many" ENTITY_NAME delete_behavior?
@@ -316,20 +280,13 @@ entity_metadata ::= "intent" ":" STRING NEWLINE
                   | "patterns" ":" IDENT ("," IDENT)* NEWLINE
                   | "extends" ":" IDENT ("," IDENT)* NEWLINE
                   | "subtype_of" ":" IDENT NEWLINE
-                  | "was" ":" IDENT NEWLINE        (* #1431 rename hint *)
                   | "archetype" ":" IDENT NEWLINE
-                  | "legal_entity" NEWLINE ;        (* #1675 reporting grain *)
+                  | "legal_entity" NEWLINE ;
 
 field_line    ::= IDENT ":" field_def NEWLINE ;
 
-field_def     ::= type_spec field_modifier* rename_hint?
+field_def     ::= type_spec field_modifier*
                 | "computed" computed_expr ;
-
-(* #1431 migration engine: `was: old_name` marks a renamed field/entity so the
-   migration planner emits a RENAME instead of drop+add. Transient — never
-   persisted to the schema. On a field it trails the modifiers; on an entity it
-   is a body keyword (entity_metadata above). *)
-rename_hint   ::= "was" ":" IDENT ;
 
 field_modifier ::= "required"
                  | "optional"
@@ -615,7 +572,6 @@ workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
                      ("access" ":" IDENT NEWLINE)?
-                     ("live" ":" ("on" | "off") NEWLINE)?   (* #1399 SSE live push; poll retained as fallback *)
                      workspace_region+
                      ux_block?
                    DEDENT ;
@@ -635,9 +591,6 @@ region_directive
                 | "action" ":" IDENT NEWLINE
                 | "empty" ":" STRING NEWLINE
                 | "stage" ":" STRING NEWLINE
-                | "refresh" ":" "every"? NUMBER ("s")? NEWLINE   (* #1391 live-refresh: poll seconds, >= 5 *)
-                | "peek" ":" ("expand" | "slide_over" | "off") NEWLINE   (* #1494 2c: action-proximate detail; unset → resolver default *)
-                | "when_empty" ":" ("message" | "collapse" | "suppress") NEWLINE   (* #1494 3d: empty-region self-demote; unset → resolver default-flip *)
                 | "aggregate" ":" NEWLINE INDENT metric_line+ DEDENT ;
 
 metric_line   ::= IDENT ":" (aggregate_call | derived_metric_expr) NEWLINE ;
@@ -686,9 +639,9 @@ step_transition
 
 story_decl    ::= "story" IDENT STRING? ":" NEWLINE
                   INDENT
-                    ("actor" ":" IDENT NEWLINE)?
+                    ("persona" ":" IDENT NEWLINE)?
                     ("trigger" ":" IDENT NEWLINE)?
-                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("entities" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
                     given_block?
                     then_block?
                     unless_block?
@@ -707,31 +660,6 @@ then_block    ::= "then" ":" NEWLINE
 unless_block  ::= "unless" ":" NEWLINE
                   INDENT
                     ("-" STRING NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   Rule Definitions
-   ============================================================================= *)
-
-rule_decl     ::= "rule" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("kind" ":" IDENT NEWLINE)?
-                    ("origin" ":" IDENT NEWLINE)?
-                    ("invariant" ":" (STRING | TEXT) NEWLINE)?
-                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("status" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-(* =============================================================================
-   Question Definitions
-   ============================================================================= *)
-
-question_decl ::= "question" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("blocks" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("raised_by" ":" IDENT NEWLINE)?
-                    ("status" ":" IDENT NEWLINE)?
-                    ("resolution" ":" (STRING | TEXT) NEWLINE)?
                   DEDENT ;
 
 (* =============================================================================
@@ -913,76 +841,6 @@ sync_decl     ::= "sync" IDENT ":" NEWLINE
                   DEDENT ;
 
 (* =============================================================================
-   E2E Test Flows
-   ============================================================================= *)
-
-flow_decl     ::= "flow" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE)?
-                    ("tags" ":" IDENT ("," IDENT)* NEWLINE)?
-                    preconditions_block?
-                    ("steps" ":" NEWLINE INDENT flow_step+ DEDENT)?
-                    flow_step*
-                  DEDENT ;
-
-preconditions_block
-              ::= "preconditions" ":" NEWLINE
-                  INDENT
-                    precondition_line+
-                  DEDENT ;
-
-precondition_line
-              ::= "authenticated" ":" BOOLEAN NEWLINE
-                | "user_role" ":" IDENT NEWLINE
-                | "fixtures" ":" NEWLINE INDENT fixture_line+ DEDENT ;
-
-fixture_line  ::= IDENT ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT ;
-
-flow_step     ::= step_action target assertion* NEWLINE ;
-
-step_action   ::= "navigate" | "fill" | "click" | "wait" | "assert" | "snapshot" ;
-
-target        ::= "view" ":" IDENT
-                | "field" ":" IDENT "." IDENT
-                | "action" ":" IDENT "." IDENT
-                | "element" ":" STRING ;
-
-assertion     ::= "expect" assertion_check ;
-
-assertion_check
-              ::= "visible" | "hidden" | "enabled" | "disabled"
-                | "text" "=" STRING
-                | "value" "=" literal
-                | "count" "=" NUMBER
-                | "entity_exists" IDENT
-                | "entity_not_exists" IDENT
-                | "redirects_to" IDENT ;
-
-(* =============================================================================
-   API Contract Tests
-   ============================================================================= *)
-
-test_decl     ::= "test" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("setup" ":" NEWLINE INDENT setup_line+ DEDENT)?
-                    test_step+
-                  DEDENT ;
-
-setup_line    ::= IDENT ":" NEWLINE
-                  INDENT
-                    (IDENT ":" literal NEWLINE)+
-                  DEDENT ;
-
-test_step     ::= ("create" | "update" | "delete" | "get" | "query") IDENT ("with" ":" NEWLINE
-                  INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                  ("expect" ":" NEWLINE INDENT expect_line+ DEDENT)? NEWLINE ;
-
-expect_line   ::= "status" ":" NUMBER NEWLINE
-                | "count" ":" NUMBER NEWLINE
-                | "error_message" ":" STRING NEWLINE
-                | IDENT ":" literal NEWLINE ;
-
-(* =============================================================================
    Scenario and Demo Data
    ============================================================================= *)
 
@@ -1008,7 +866,7 @@ persona_scenario_entry
                     ("seed_script" ":" STRING NEWLINE)?
                   DEDENT ;
 
-demo_decl     ::= "demo" IDENT ":" NEWLINE
+demo_block    ::= "demo" IDENT ":" NEWLINE
                   INDENT
                     (IDENT ":" literal NEWLINE)+
                   DEDENT ;
@@ -1240,24 +1098,6 @@ policy_line   ::= "classify" IDENT "." IDENT "as" IDENT NEWLINE
 tenancy_decl  ::= "tenancy" ":" NEWLINE
                   INDENT
                     ("mode" ":" IDENT NEWLINE)?
-                    (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
-                  DEDENT ;
-
-interfaces_decl
-              ::= "interfaces" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
-                  DEDENT ;
-
-data_products_decl
-              ::= "data_products" ":" NEWLINE
-                  INDENT
-                    data_product_def+
-                  DEDENT ;
-
-data_product_def
-              ::= "data_product" IDENT ":" NEWLINE
-                  INDENT
                     (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
                   DEDENT ;
 
@@ -1515,9 +1355,9 @@ workspace dashboard "Dashboard":
 
 ```dsl
 story ST-001 "User completes task":
-  persona: StaffUser
+  actor: StaffUser
   trigger: status_changed
-  entities: [Task]
+  scope: [Task]
 
   given:
     - Task.status is 'in_progress'
@@ -1597,32 +1437,12 @@ integration ch_integration "CH Integration":
 ### Testing
 
 ```dsl
-flow happy_path_task "Create and complete a task":
-  priority: critical
-  tags: smoke, regression
-
-  preconditions:
-    authenticated: true
-    user_role: editor
-
-  steps:
-    navigate view: task_list
-    click action: Task.create
-    fill field: Task.title "My Task"
-    click action: Task.save
-    assert expect entity_exists Task
-    assert expect visible
-
-test create_task "Create Task API":
-  setup:
-    user:
-      role: editor
-
-  create Task with:
-    title: "Test Task"
-    status: open
-  expect:
-    status: 201
+scenario happy_path "Happy Path":
+  description: "Customer submits, agent resolves"
+  as persona customer:
+    start_route: "/tickets/new"
+  as persona agent:
+    start_route: "/queue"
 ```
 
 ### Eventing
@@ -1744,12 +1564,8 @@ The grammar above is derived from these parser mixin modules:
 | `workspace.py` | `WorkspaceParserMixin` | Surface |
 | `service.py` | `ServiceParserMixin` | Integration |
 | `integration.py` | `IntegrationParserMixin` | Integration |
-| `flow.py` | `FlowParserMixin` | Testing |
-| `test.py` | `TestParserMixin` | Testing |
 | `scenario.py` | `ScenarioParserMixin` | Testing |
 | `story.py` | `StoryParserMixin` | Workflow |
-| `rule.py` | `RuleParserMixin` | Workflow |
-| `question.py` | `QuestionParserMixin` | Workflow |
 | `process.py` | `ProcessParserMixin` | Workflow |
 | `messaging.py` | `MessagingParserMixin` | Eventing |
 | `eventing.py` | `EventingParserMixin` | Eventing |

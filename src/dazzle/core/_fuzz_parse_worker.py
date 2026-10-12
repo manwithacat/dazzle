@@ -36,12 +36,9 @@ _CONSTRUCT_ATTRS: tuple[str, ...] = (
     "integrations",
     "apis",
     "ledgers",
-    "webhooks",
-    "approvals",
     "slas",
     "personas",
     "scenarios",
-    "enums",
     "views",
 )
 

@@ -35,12 +35,8 @@ _MIXIN_SECTIONS: list[tuple[str, str, str]] = [
     ("workspace", "Workspace Definitions", "Surface"),
     ("service", "Service Definitions", "Integration"),
     ("integration", "Integration Definitions", "Integration"),
-    ("flow", "E2E Test Flows", "Testing"),
-    ("test", "API Contract Tests", "Testing"),
     ("scenario", "Scenario and Demo Data", "Testing"),
     ("story", "Story Definitions", "Workflow"),
-    ("rule", "Rule Definitions", "Workflow"),
-    ("question", "Question Definitions", "Workflow"),
     ("process", "Process Workflows", "Workflow"),
     ("messaging", "Messaging Channels", "Eventing"),
     ("eventing", "Event-First Architecture", "Eventing"),
@@ -372,13 +368,9 @@ statement     ::= entity_decl
                 | domain_service_decl
                 | foreign_model_decl
                 | integration_decl
-                | flow_decl
-                | test_decl
                 | persona_decl
                 | scenario_decl
                 | story_decl
-                | rule_decl
-                | question_decl
                 | process_decl
                 | schedule_decl
                 | message_decl
@@ -393,8 +385,6 @@ statement     ::= entity_decl
                 | hless_pragma
                 | policies_decl
                 | tenancy_decl
-                | interfaces_decl
-                | data_products_decl
                 | llm_model_decl
                 | llm_config_decl
                 | llm_intent_decl
@@ -892,76 +882,6 @@ sync_decl     ::= "sync" IDENT ":" NEWLINE
 """
 
 
-def _build_flow_section() -> str:
-    return """\
-flow_decl     ::= "flow" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE)?
-                    ("tags" ":" IDENT ("," IDENT)* NEWLINE)?
-                    preconditions_block?
-                    ("steps" ":" NEWLINE INDENT flow_step+ DEDENT)?
-                    flow_step*
-                  DEDENT ;
-
-preconditions_block
-              ::= "preconditions" ":" NEWLINE
-                  INDENT
-                    precondition_line+
-                  DEDENT ;
-
-precondition_line
-              ::= "authenticated" ":" BOOLEAN NEWLINE
-                | "user_role" ":" IDENT NEWLINE
-                | "fixtures" ":" NEWLINE INDENT fixture_line+ DEDENT ;
-
-fixture_line  ::= IDENT ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT ;
-
-flow_step     ::= step_action target assertion* NEWLINE ;
-
-step_action   ::= "navigate" | "fill" | "click" | "wait" | "assert" | "snapshot" ;
-
-target        ::= "view" ":" IDENT
-                | "field" ":" IDENT "." IDENT
-                | "action" ":" IDENT "." IDENT
-                | "element" ":" STRING ;
-
-assertion     ::= "expect" assertion_check ;
-
-assertion_check
-              ::= "visible" | "hidden" | "enabled" | "disabled"
-                | "text" "=" STRING
-                | "value" "=" literal
-                | "count" "=" NUMBER
-                | "entity_exists" IDENT
-                | "entity_not_exists" IDENT
-                | "redirects_to" IDENT ;
-"""
-
-
-def _build_test_section() -> str:
-    return """\
-test_decl     ::= "test" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("setup" ":" NEWLINE INDENT setup_line+ DEDENT)?
-                    test_step+
-                  DEDENT ;
-
-setup_line    ::= IDENT ":" NEWLINE
-                  INDENT
-                    (IDENT ":" literal NEWLINE)+
-                  DEDENT ;
-
-test_step     ::= ("create" | "update" | "delete" | "get" | "query") IDENT ("with" ":" NEWLINE
-                  INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                  ("expect" ":" NEWLINE INDENT expect_line+ DEDENT)? NEWLINE ;
-
-expect_line   ::= "status" ":" NUMBER NEWLINE
-                | "count" ":" NUMBER NEWLINE
-                | "error_message" ":" STRING NEWLINE
-                | IDENT ":" literal NEWLINE ;
-"""
-
-
 def _build_scenario_section() -> str:
     return """\
 persona_decl  ::= "persona" IDENT STRING? ":" NEWLINE
@@ -986,7 +906,7 @@ persona_scenario_entry
                     ("seed_script" ":" STRING NEWLINE)?
                   DEDENT ;
 
-demo_decl     ::= "demo" IDENT ":" NEWLINE
+demo_block    ::= "demo" IDENT ":" NEWLINE
                   INDENT
                     (IDENT ":" literal NEWLINE)+
                   DEDENT ;
@@ -1018,31 +938,6 @@ then_block    ::= "then" ":" NEWLINE
 unless_block  ::= "unless" ":" NEWLINE
                   INDENT
                     ("-" STRING NEWLINE)+
-                  DEDENT ;
-"""
-
-
-def _build_rule_section() -> str:
-    return """\
-rule_decl     ::= "rule" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("kind" ":" IDENT NEWLINE)?
-                    ("origin" ":" IDENT NEWLINE)?
-                    ("invariant" ":" (STRING | TEXT) NEWLINE)?
-                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("status" ":" IDENT NEWLINE)?
-                  DEDENT ;
-"""
-
-
-def _build_question_section() -> str:
-    return """\
-question_decl ::= "question" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("blocks" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("raised_by" ":" IDENT NEWLINE)?
-                    ("status" ":" IDENT NEWLINE)?
-                    ("resolution" ":" (STRING | TEXT) NEWLINE)?
                   DEDENT ;
 """
 
@@ -1358,24 +1253,6 @@ tenancy_decl  ::= "tenancy" ":" NEWLINE
                     ("mode" ":" IDENT NEWLINE)?
                     (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
                   DEDENT ;
-
-interfaces_decl
-              ::= "interfaces" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
-                  DEDENT ;
-
-data_products_decl
-              ::= "data_products" ":" NEWLINE
-                  INDENT
-                    data_product_def+
-                  DEDENT ;
-
-data_product_def
-              ::= "data_product" IDENT ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
-                  DEDENT ;
 """
 
 
@@ -1443,8 +1320,6 @@ _GRAMMAR_SECTIONS: dict[str, list[tuple[str | None, object]]] = {
     ],
     "Workflow": [
         ("Story Definitions", _build_story_section),
-        ("Rule Definitions", _build_rule_section),
-        ("Question Definitions", _build_question_section),
         ("Process Workflows and Schedules", _build_process_section),
     ],
     "Integration": [
@@ -1453,8 +1328,6 @@ _GRAMMAR_SECTIONS: dict[str, list[tuple[str | None, object]]] = {
         ("Integration Definitions", _build_integration_section),
     ],
     "Testing": [
-        ("E2E Test Flows", _build_flow_section),
-        ("API Contract Tests", _build_test_section),
         ("Scenario and Demo Data", _build_scenario_section),
     ],
     "Eventing": [
@@ -1644,32 +1517,12 @@ integration ch_integration "CH Integration":
 """,
     "Testing": """\
 ```dsl
-flow happy_path_task "Create and complete a task":
-  priority: critical
-  tags: smoke, regression
-
-  preconditions:
-    authenticated: true
-    user_role: editor
-
-  steps:
-    navigate view: task_list
-    click action: Task.create
-    fill field: Task.title "My Task"
-    click action: Task.save
-    assert expect entity_exists Task
-    assert expect visible
-
-test create_task "Create Task API":
-  setup:
-    user:
-      role: editor
-
-  create Task with:
-    title: "Test Task"
-    status: open
-  expect:
-    status: 201
+scenario happy_path "Happy Path":
+  description: "Customer submits, agent resolves"
+  as persona customer:
+    start_route: "/tickets/new"
+  as persona agent:
+    start_route: "/queue"
 ```
 """,
     "Eventing": """\

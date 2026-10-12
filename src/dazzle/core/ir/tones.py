@@ -36,13 +36,10 @@ def normalize_tone(tone: str) -> str | None:
     return key if key in CANONICAL_TONES else None
 
 
-def field_enum_semantic_map(field_type: Any, enums: Any = None) -> dict[str, str]:
+def field_enum_semantic_map(field_type: Any) -> dict[str, str]:
     """Declared value→tone `semantic:` map for an enum field type (#1493 slice 2).
 
-    Resolution: an inline `enum[...]` field's own ``enum_semantics`` wins;
-    otherwise a shared ``enum`` block whose value-set matches the field's
-    ``enum_values`` (the same match the column builders use to recover titles)
-    contributes its per-value ``EnumValueSpec.semantic``. Tones are returned as
+    Resolution: an inline `enum[...]` field's own ``enum_semantics``. Tones are returned as
     declared (raw/lowercased); ``resolve_status_tone`` normalises them at render
     time. Empty dict when nothing is declared or the field isn't an enum.
 
@@ -58,12 +55,4 @@ def field_enum_semantic_map(field_type: Any, enums: Any = None) -> dict[str, str
     if kind_val != "enum":
         return {}
     inline = getattr(ft, "enum_semantics", None)
-    if inline:
-        return dict(inline)
-    enum_values = getattr(ft, "enum_values", None)
-    if enums and enum_values:
-        vals_set = set(enum_values)
-        for enum_spec in enums:
-            if {ev.name for ev in enum_spec.values} == vals_set:
-                return {ev.name: ev.semantic for ev in enum_spec.values if ev.semantic}
-    return {}
+    return dict(inline) if inline else {}

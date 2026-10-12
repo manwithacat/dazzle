@@ -153,8 +153,8 @@ def resolve_status_tone(value: Any, semantic_map: dict[str, str] | None = None) 
     Resolution order, highest precedence first:
 
     1. **Declared** — the field's `semantic:` binding (`semantic_map`), a
-       value→tone map declared on a shared `enum` block (`EnumValueSpec.semantic`)
-       or an inline `enum[...]` field (`FieldType.enum_semantics`). Tones may be
+       value→tone map declared on an inline `enum[...]` field
+       (`FieldType.enum_semantics`). Tones may be
        raw (e.g. ``positive``); they're normalised here via the canonical palette
        (`core.ir.tones`, ``positive``→``success``).
     2. **Name guess** — the spelling-based `_STATUS_TONE_MAP` (the legacy default).
@@ -255,9 +255,7 @@ def infer_terminal_tone_map(state_machine: Any) -> dict[str, str]:
     return out
 
 
-def status_tone_map(
-    field_type: Any, enums: Any = None, state_machine: Any = None
-) -> dict[str, str]:
+def status_tone_map(field_type: Any, state_machine: Any = None) -> dict[str, str]:
     """Build-time effective value→tone map for a badge/status column (#1493).
 
     Declared `semantic:` bindings (`field_enum_semantic_map`) merged with
@@ -270,7 +268,7 @@ def status_tone_map(
     This is the single place the http (`workspace_columns`) and page
     (`template_compiler`) column builders compute the threaded `semantic_map`.
     """
-    declared = field_enum_semantic_map(field_type, enums)
+    declared = field_enum_semantic_map(field_type)
     inferred = infer_terminal_tone_map(state_machine)
     if not inferred:
         return declared

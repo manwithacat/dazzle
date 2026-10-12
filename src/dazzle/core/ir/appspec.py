@@ -11,13 +11,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .analytics import AnalyticsSpec
-from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
 from .atomic_flows import AtomicFlowSpec
 from .audit import AuditSpec
 from .domain import DomainSpec, EntitySpec
-from .e2e import FixtureSpec, FlowPriority, FlowSpec
-from .enums import EnumSpec
+from .e2e import FixtureSpec
 from .eventing import (
     EventModelSpec,
     ProjectionSpec,
@@ -28,8 +26,6 @@ from .feedback_widget import FeedbackWidgetSpec
 from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .governance import (
-    DataProductsSpec,
-    InterfacesSpec,
     PoliciesSpec,
     TenancySpec,
 )
@@ -68,9 +64,7 @@ from .process import (
     ProcessSpec,
     ScheduleSpec,
 )
-from .questions import QuestionSpec
 from .rhythm import RhythmSpec
-from .rules import RuleSpec
 from .scenarios import ScenarioSpec
 from .search import SearchSpec
 from .security import SecurityConfig
@@ -79,10 +73,8 @@ from .sla import SLASpec
 from .stories import StorySpec
 from .subprocessors import SubprocessorSpec
 from .surfaces import SurfaceSpec
-from .tests import TestSpec
 from .triples import VerifiableTriple
 from .views import ViewSpec
-from .webhooks import WebhookSpec
 from .workspaces import NavSpec, WorkspaceSpec
 
 
@@ -106,8 +98,6 @@ class AppSpec(BaseModel):
         domain_services: List of domain service specifications (v0.5.0)
         foreign_models: List of foreign model specifications
         integrations: List of integration specifications
-        tests: API-focused test specifications
-        e2e_flows: E2E user journey flows (semantic E2E testing)
         fixtures: Test fixtures for E2E testing
         metadata: Additional metadata
     """
@@ -127,8 +117,6 @@ class AppSpec(BaseModel):
     domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
-    tests: list[TestSpec] = Field(default_factory=list)
-    e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
     atomic_flows: list[AtomicFlowSpec] = Field(
         default_factory=list
     )  # #1228 — atomic multi-entity creates
@@ -137,10 +125,6 @@ class AppSpec(BaseModel):
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
-    # Rules (v0.41.0 Convergent BDD)
-    rules: list[RuleSpec] = Field(default_factory=list)
-    # Questions (v0.41.0 Convergent BDD)
-    questions: list[QuestionSpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)
     messages: list[MessageSpec] = Field(default_factory=list)
     channels: list[ChannelSpec] = Field(default_factory=list)
@@ -165,8 +149,6 @@ class AppSpec(BaseModel):
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
     policies: PoliciesSpec | None = None
     tenancy: TenancySpec | None = None
-    interfaces: InterfacesSpec | None = None
-    data_products: DataProductsSpec | None = None
     # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
     llm_config: LLMConfigSpec | None = None
     llm_models: list[LLMModelSpec] = Field(default_factory=list)
@@ -177,14 +159,8 @@ class AppSpec(BaseModel):
     # Ledgers (v0.24.0 TigerBeetle Integration)
     ledgers: list[LedgerSpec] = Field(default_factory=list)
     transactions: list[TransactionSpec] = Field(default_factory=list)
-    # Shared Enums (v0.25.0)
-    enums: list[EnumSpec] = Field(default_factory=list)
     # Views (v0.25.0)
     views: list[ViewSpec] = Field(default_factory=list)
-    # Webhooks (v0.25.0)
-    webhooks: list[WebhookSpec] = Field(default_factory=list)
-    # Approvals (v0.25.0)
-    approvals: list[ApprovalSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
     # Islands (UI Islands)
@@ -272,12 +248,6 @@ class AppSpec(BaseModel):
 
         return _q(self, name)
 
-    def get_test(self, name: str) -> TestSpec | None:
-        """Get test by name."""
-        from .appspec_queries import get_test as _q
-
-        return _q(self, name)
-
     def get_foreign_model(self, name: str) -> ForeignModelSpec | None:
         """Get foreign model by name."""
         from .appspec_queries import get_foreign_model as _q
@@ -290,29 +260,11 @@ class AppSpec(BaseModel):
 
         return _q(self, name)
 
-    def get_flow(self, flow_id: str) -> FlowSpec | None:
-        """Get E2E flow by ID."""
-        from .appspec_queries import get_flow as _q
-
-        return _q(self, flow_id)
-
     def get_fixture(self, fixture_id: str) -> FixtureSpec | None:
         """Get fixture by ID."""
         from .appspec_queries import get_fixture as _q
 
         return _q(self, fixture_id)
-
-    def get_flows_by_entity(self, entity: str) -> list[FlowSpec]:
-        """Get all E2E flows for a given entity."""
-        from .appspec_queries import get_flows_by_entity as _q
-
-        return _q(self, entity)
-
-    def get_flows_by_priority(self, priority: FlowPriority) -> list[FlowSpec]:
-        """Get all E2E flows with given priority."""
-        from .appspec_queries import get_flows_by_priority as _q
-
-        return _q(self, priority)
 
     def get_persona(self, persona_id: str) -> PersonaSpec | None:
         """Get persona by ID."""
@@ -345,34 +297,6 @@ class AppSpec(BaseModel):
         from .appspec_queries import get_stories_by_entity as _q
 
         return _q(self, entity_name)
-
-    # Rule getters (v0.41.0 Convergent BDD)
-
-    def get_rule(self, rule_id: str) -> RuleSpec | None:
-        """Get rule by ID."""
-        from .appspec_queries import get_rule as _q
-
-        return _q(self, rule_id)
-
-    def get_rules_by_scope(self, entity_name: str) -> list[RuleSpec]:
-        """Get all rules whose scope includes a specific entity."""
-        from .appspec_queries import get_rules_by_scope as _q
-
-        return _q(self, entity_name)
-
-    # Question getters (v0.41.0 Convergent BDD)
-
-    def get_question(self, question_id: str) -> QuestionSpec | None:
-        """Get question by ID."""
-        from .appspec_queries import get_question as _q
-
-        return _q(self, question_id)
-
-    def get_questions_blocking(self, artefact_id: str) -> list[QuestionSpec]:
-        """Get all open questions that block a specific artefact."""
-        from .appspec_queries import get_questions_blocking as _q
-
-        return _q(self, artefact_id)
 
     # Grant Schema getters (v0.42.0 Runtime RBAC)
 
@@ -535,35 +459,11 @@ class AppSpec(BaseModel):
 
         return _q(self, currency)
 
-    # Enum getters (v0.25.0)
-
-    def get_enum(self, name: str) -> EnumSpec | None:
-        """Get shared enum by name."""
-        from .appspec_queries import get_enum as _q
-
-        return _q(self, name)
-
     # View getters (v0.25.0)
 
     def get_view(self, name: str) -> ViewSpec | None:
         """Get view by name."""
         from .appspec_queries import get_view as _q
-
-        return _q(self, name)
-
-    # Webhook getters (v0.25.0)
-
-    def get_webhook(self, name: str) -> WebhookSpec | None:
-        """Get webhook by name."""
-        from .appspec_queries import get_webhook as _q
-
-        return _q(self, name)
-
-    # Approval getters (v0.25.0)
-
-    def get_approval(self, name: str) -> ApprovalSpec | None:
-        """Get approval by name."""
-        from .appspec_queries import get_approval as _q
 
         return _q(self, name)
 

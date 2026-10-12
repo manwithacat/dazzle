@@ -1022,7 +1022,6 @@ entity Appointment "Appointment":
 # Timing/Scheduling:
 #   schedule    -> timing, scheduled_at, appointment_time
 #   start       -> start_at, begins_at, start_time
-#   created     -> created_at, added_at, initialized_at
 
 # Communication:
 #   message     -> notification, msg, content
@@ -1031,10 +1030,6 @@ entity Appointment "Appointment":
 # Status/State:
 #   status      -> state, condition, progress, current_status
 #   stage       -> current_stage, phase, step_number
-
-# Data:
-#   data        -> payload, content, record_data
-#   query       -> search_query, query_text
 
 # Actions:
 #   create      -> add, new_record

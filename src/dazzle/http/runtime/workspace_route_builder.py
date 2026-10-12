@@ -236,13 +236,12 @@ class WorkspaceRouteBuilder:
                 shape-specific overrides.
                 """
                 del display  # reserved; fitness is authoritative when set
-                _enums = getattr(appspec, "enums", None)
                 if entity_spec and _fitness_repr_field_names(entity_spec):
-                    return _build_entity_columns(entity_spec, _enums)
+                    return _build_entity_columns(entity_spec)
                 _ls = _entity_list_surfaces.get(entity_name)
                 if _ls and entity_spec:
-                    return _build_surface_columns(entity_spec, _ls, _enums)
-                return _build_entity_columns(entity_spec, _enums)
+                    return _build_surface_columns(entity_spec, _ls)
+                return _build_entity_columns(entity_spec)
 
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, appspec)

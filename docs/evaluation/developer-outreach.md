@@ -39,7 +39,6 @@ Every onboarding path should expose at least one derived artifact:
 ```bash
 dazzle validate
 dazzle inspect project --entity Task
-dazzle specs openapi -f json
 dazzle rbac matrix --format table
 ```
 

@@ -27,7 +27,7 @@ def _salary_runtime_columns() -> tuple[object, object, list[dict[str, object]]]:
     ir_sal = spec.get_entity("Salary")
     runtime = convert_entity(ir_sal)
     surface = spec.get_surface("salary_list")
-    cols = build_surface_columns(runtime, surface, spec.enums)
+    cols = build_surface_columns(runtime, surface)
     return runtime, surface, cols
 
 

@@ -55,8 +55,7 @@ def _parser_top_level_keywords() -> set[str]:
     text = (REPO_ROOT / "src" / "dazzle" / "core" / "dsl_parser_impl" / "__init__.py").read_text()
     # "TokenType.FOO: self._dispatch_bar," — take the _dispatch_<name>
     # suffix rather than the enum name so the test tracks the keyword
-    # as the user types it in DSL (e.g. TokenType.QUESTION_DECL →
-    # _dispatch_question, keyword is `question`).
+    # as the user types it in DSL.
     method_names = re.findall(r"TokenType\.[A-Z_]+:\s*self\._dispatch_([a-z_]+)", text)
     # Also include the `app` keyword — it's parsed by the module-header
     # path in base.py, not via the dispatch dict, but it IS a top-level
@@ -74,13 +73,7 @@ def test_agents_md_constructs_all_exist_in_parser() -> None:
     """
     claimed = _agents_md_constructs()
     real = _parser_top_level_keywords()
-    # Exclude `question` because the parser dispatch method is named
-    # `_dispatch_question` but the keyword in the DSL is the token
-    # `question_decl`. If CLAUDE.md writes `question` or `question_decl`
-    # here, both are legal — we allow either to resolve.
-    hidden = {"question_decl"}
-
-    stale = [name for name in claimed if name not in real and name not in hidden]
+    stale = [name for name in claimed if name not in real]
     assert not stale, (
         f"AGENTS.md names {stale!r} as DSL constructs, but the parser "
         f"does not dispatch on them as top-level keywords. Either:\n"

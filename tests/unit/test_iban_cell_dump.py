@@ -38,7 +38,7 @@ def test_invoice_ops_bank_ref_iban_is_iban_cell() -> None:
     assert iban_field_name("iban")
     assert field_kind_to_col_type(iban, account) == "iban"
     assert _field_type_to_column_type(iban, "iban") == "iban"
-    col = next(c for c in build_entity_columns(account, spec.enums) if c["key"] == "iban")
+    col = next(c for c in build_entity_columns(account) if c["key"] == "iban")
     assert col["type"] == "iban"
 
 

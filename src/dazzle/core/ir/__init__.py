@@ -11,7 +11,6 @@ All types are re-exported from this package for backward compatibility.
 # Archetypes (v0.7.1, v0.10.3)
 # Fields
 # App Specification
-# Approvals (v0.25.0)
 # Analytics (v0.61.0 Phase 3 + Phase 5)
 from .aggregates import (
     AggregateExpr,
@@ -27,11 +26,6 @@ from .analytics import (
     AnalyticsProviderInstance,
     AnalyticsServerSideSpec,
     AnalyticsSpec,
-)
-from .approvals import (
-    ApprovalEscalationSpec,
-    ApprovalOutcomeSpec,
-    ApprovalSpec,
 )
 from .appspec import (
     AppSpec,
@@ -146,13 +140,8 @@ from .e2e import (
     FlowSpec,
     FlowStep,
     FlowStepKind,
+    TestComparisonOperator,
     UsabilityRule,
-)
-
-# Shared Enums (v0.25.0)
-from .enums import (
-    EnumSpec,
-    EnumValueSpec,
 )
 
 # Eventing (v0.18.0 Event-First Architecture)
@@ -252,16 +241,8 @@ from .foreign_models import (
 from .governance import (
     ClassificationSpec,
     DataClassification,
-    DataProductSpec,
-    DataProductsSpec,
-    DataProductTransform,
     ErasurePolicy,
     ErasureSpec,
-    InterfaceAuthMethod,
-    InterfaceEndpointSpec,
-    InterfaceFormat,
-    InterfaceSpec,
-    InterfacesSpec,
     PoliciesSpec,
     RetentionPolicy,
     TenancyMode,
@@ -560,12 +541,6 @@ from .process import (
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
 
-# Questions (v0.41.0 Convergent BDD)
-from .questions import (
-    QuestionSpec,
-    QuestionStatus,
-)
-
 # Rhythms (v0.39.0 Longitudinal UX Evaluation)
 from .rhythm import (
     Gap,
@@ -579,14 +554,6 @@ from .rhythm import (
     SceneDimensionScore,
     SceneEvaluation,
     SceneSpec,
-)
-
-# Rules (v0.41.0 Convergent BDD)
-from .rules import (
-    RuleKind,
-    RuleOrigin,
-    RuleSpec,
-    RuleStatus,
 )
 
 # Scenarios (v0.8.5)
@@ -741,17 +708,6 @@ from .test_design import (
     TestGapCategory,
 )
 
-# Tests
-from .tests import (
-    TestAction,
-    TestActionKind,
-    TestAssertion,
-    TestAssertionKind,
-    TestComparisonOperator,
-    TestSetupStep,
-    TestSpec,
-)
-
 # ThemeSpec YAML (v0.25.0 Declarative Theme)
 from .themespec import (
     AttentionMapSpec,
@@ -801,16 +757,6 @@ from .views import (
     TimeBucket,
     ViewFieldSpec,
     ViewSpec,
-)
-
-# Webhooks (v0.25.0)
-from .webhooks import (
-    WebhookAuthMethod,
-    WebhookAuthSpec,
-    WebhookEvent,
-    WebhookPayloadSpec,
-    WebhookRetrySpec,
-    WebhookSpec,
 )
 
 # Workspaces
@@ -1044,15 +990,8 @@ __all__ = [
     "TransferFlag",
     "TransferSpec",
     "ValidationRule",
-    # Tests
-    "TestActionKind",
-    "TestAssertionKind",
-    "TestComparisonOperator",
-    "TestSetupStep",
-    "TestAction",
-    "TestAssertion",
-    "TestSpec",
     # E2E
+    "TestComparisonOperator",
     "FlowPriority",
     "FlowStepKind",
     "FlowAssertionKind",
@@ -1181,19 +1120,11 @@ __all__ = [
     # Security (v0.11.0)
     "SecurityConfig",
     "SecurityProfile",
-    # Rules (v0.41.0 Convergent BDD)
-    "RuleKind",
-    "RuleOrigin",
-    "RuleSpec",
-    "RuleStatus",
     # Grants (v0.42.0 Runtime RBAC)
     "GrantApprovalMode",
     "GrantExpiryMode",
     "GrantRelationSpec",
     "GrantSchemaSpec",
-    # Questions (v0.41.0 Convergent BDD)
-    "QuestionSpec",
-    "QuestionStatus",
     # Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
     "StoryCondition",
     "StoryException",
@@ -1312,16 +1243,8 @@ __all__ = [
     # Governance (v0.18.0 Event-First Architecture - Issue #25)
     "ClassificationSpec",
     "DataClassification",
-    "DataProductsSpec",
-    "DataProductSpec",
-    "DataProductTransform",
     "ErasurePolicy",
     "ErasureSpec",
-    "InterfaceAuthMethod",
-    "InterfaceEndpointSpec",
-    "InterfaceFormat",
-    "InterfacesSpec",
-    "InterfaceSpec",
     "PoliciesSpec",
     "RetentionPolicy",
     "TenancyMode",
@@ -1362,9 +1285,6 @@ __all__ = [
     "GuideStepKind",
     "HintDismiss",
     "HintSpec",
-    # Shared Enums (v0.25.0)
-    "EnumSpec",
-    "EnumValueSpec",
     # Views (v0.25.0, v0.34.0 date-range)
     "TimeBucket",
     "ViewFieldSpec",
@@ -1390,19 +1310,9 @@ __all__ = [
     "NotificationRecipient",
     "NotificationSpec",
     "NotificationTrigger",
-    # Webhooks (v0.25.0)
-    "WebhookAuthMethod",
-    "WebhookAuthSpec",
-    "WebhookEvent",
-    "WebhookPayloadSpec",
-    "WebhookRetrySpec",
-    "WebhookSpec",
+    # Ingest
     "IngestSpec",
     "IngestProtectSpec",
-    # Approvals (v0.25.0)
-    "ApprovalEscalationSpec",
-    "ApprovalOutcomeSpec",
-    "ApprovalSpec",
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     "Gap",
     "GapsReport",

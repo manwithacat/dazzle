@@ -52,22 +52,6 @@ def _sync(name: str, *, match_rules: list | None = None) -> MagicMock:
     return sync
 
 
-def _webhook(
-    name: str,
-    *,
-    url: str = "https://example.com/hook",
-    retry: object | None = None,
-) -> MagicMock:
-    webhook = MagicMock()
-    webhook.name = name
-    webhook.title = name.replace("_", " ").title()
-    webhook.url = url
-    webhook.auth = None
-    webhook.retry = retry
-    webhook.entity = "Order"
-    return webhook
-
-
 def _foreign_model(name: str, *, key_fields: list[str] | None = None) -> MagicMock:
     fm = MagicMock()
     fm.name = name
@@ -197,67 +181,6 @@ class TestID03IntegrationUnknownForeignModel:
 
 
 # =============================================================================
-# ID-04  Webhook without retry configuration
-# =============================================================================
-
-
-class TestID04WebhookWithoutRetry:
-    def test_flags_webhook_without_retry(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", retry=None)
-        findings = agent.webhook_without_retry(make_appspec(webhooks=[webhook]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-04"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "order_notify" in findings[0].title
-
-    def test_passes_with_retry_configured(self, agent: IntegrationDependencyAgent) -> None:
-        retry = MagicMock()
-        retry.max_attempts = 3
-        webhook = _webhook("order_notify", retry=retry)
-        assert agent.webhook_without_retry(make_appspec(webhooks=[webhook])) == []
-
-    def test_no_webhooks(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.webhook_without_retry(make_appspec()) == []
-
-
-# =============================================================================
-# ID-05  Hard-coded webhook URL
-# =============================================================================
-
-
-class TestID05HardcodedWebhookUrl:
-    def test_flags_literal_url(self, agent: IntegrationDependencyAgent) -> None:
-        webhook = _webhook("order_notify", url="https://example.com/hook")
-        findings = agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "ID-05"
-        assert findings[0].severity == Severity.LOW
-        assert "order_notify" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "url",
-        [
-            'config("WEBHOOK_ORDER_NOTIFY_URL")',
-            "config(WEBHOOK_URL)",
-            "",
-            None,
-        ],
-        ids=[
-            "config_quoted",
-            "config_unquoted",
-            "empty",
-            "none",
-        ],
-    )
-    def test_no_finding_for_url(self, agent: IntegrationDependencyAgent, url: str | None) -> None:
-        webhook = _webhook("order_notify", url=url)
-        assert agent.hardcoded_webhook_url(make_appspec(webhooks=[webhook])) == []
-
-    def test_no_webhooks(self, agent: IntegrationDependencyAgent) -> None:
-        assert agent.hardcoded_webhook_url(make_appspec()) == []
-
-
-# =============================================================================
 # ID-06  Foreign model without key fields
 # =============================================================================
 
@@ -353,8 +276,15 @@ class TestIntegrationDependencyAgentRun:
         # Combined: agent_id + heuristic count + ids + clean-spec produces no findings.
         assert agent.agent_id == AgentId.ID
         heuristics = agent.get_heuristics()
-        assert len(heuristics) == 8
-        assert [m.heuristic_id for m, _ in heuristics] == [f"ID-0{i}" for i in range(1, 9)]
+        assert len(heuristics) == 6
+        assert [m.heuristic_id for m, _ in heuristics] == [
+            "ID-01",
+            "ID-02",
+            "ID-03",
+            "ID-06",
+            "ID-07",
+            "ID-08",
+        ]
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
         result = agent.run(make_appspec([entity]))
         assert result.errors == []
@@ -363,17 +293,15 @@ class TestIntegrationDependencyAgentRun:
     def test_run_collects_findings_from_multiple_heuristics(
         self, agent: IntegrationDependencyAgent
     ) -> None:
-        # Also exercises iteration: 2 unauth APIs + 1 webhook + 1 keyless FM
-        # produces findings from ID-01 (×2), ID-04, ID-06.
+        # Also exercises iteration: 2 unauth APIs + 1 keyless FM
+        # produces findings from ID-01 (×2), ID-06.
         apis = [
             _api("stripe", auth_kind=AuthKind.NONE),
             _api("github", auth_kind=AuthKind.NONE),
         ]
-        webhook = _webhook("order_notify", retry=None)
         fm = _foreign_model("StripeCustomer", key_fields=[])
-        result = agent.run(make_appspec(apis=apis, webhooks=[webhook], foreign_models=[fm]))
+        result = agent.run(make_appspec(apis=apis, foreign_models=[fm]))
         assert result.errors == []
         heuristic_ids = [f.heuristic_id for f in result.findings]
         assert heuristic_ids.count("ID-01") == 2  # iteration coverage
-        assert "ID-04" in heuristic_ids
         assert "ID-06" in heuristic_ids

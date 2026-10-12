@@ -136,10 +136,9 @@ Before running the app, inspect the model Dazzle derived from your DSL:
 
 ```bash
 dazzle inspect project --entity Task
-dazzle specs openapi -f json
 ```
 
-The first command shows the entity as Dazzle sees it after parsing and linking. The second emits the OpenAPI contract derived from the same AppSpec. This is the basic cause-and-effect loop: edit DSL, validate, inspect the derived model, then run.
+This shows the entity as Dazzle sees it after parsing and linking; once the app runs, `/docs` serves the OpenAPI contract derived from the same AppSpec. This is the basic cause-and-effect loop: edit DSL, validate, inspect the derived model, then run.
 
 For apps with personas and access rules, also run:
 

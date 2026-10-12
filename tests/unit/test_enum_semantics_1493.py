@@ -1,14 +1,10 @@
-"""#1493 (UX-maturity 1b) — `semantic:` tone bindings on shared enums.
+"""#1493 (UX-maturity 1b) — `semantic:` tone bindings on inline enum fields.
 
-Slice 1: the declarative + validated core. A shared `enum` block may carry a
-`semantic: value=tone, ...` line binding each value's lifecycle role to a tone
-from the canonical palette (`positive` aliases `success`). Declared tones are
-validated against the palette; value membership is enforced at parse time.
-
-Slice 2 (part 1): the inline `enum[...]` field form gains the same `semantic:`
-continuation line (`status: enum[...]` + an indented `semantic: v=tone, ...`),
-populating `FieldType.enum_semantics`. The render/icon consumption is the
-remaining slice-2 work.
+An inline `enum[...]` field may carry an indented `semantic: v=tone, ...`
+continuation line binding each value's lifecycle role to a tone from the
+canonical palette (`positive` aliases `success`), populating
+`FieldType.enum_semantics`. Declared tones are validated against the palette;
+value membership is enforced at parse time.
 """
 
 import pathlib
@@ -46,10 +42,6 @@ def _appspec(dsl: str):
     )
 
 
-def _enum(frag, name: str):
-    return next(e for e in frag.enums if e.name == name)
-
-
 def _field(frag, entity_name: str, field_name: str):
     entity = next(e for e in frag.entities if e.name == entity_name)
     return next(f for f in entity.fields if f.name == field_name)
@@ -75,73 +67,6 @@ def test_normalize_tone(raw: str, expected: str | None) -> None:
 
 
 # ── parser: shared enum `semantic:` line ──────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    ("dsl", "enum_name", "expected"),
-    [
-        pytest.param(
-            """module m
-app a "A"
-enum OrderStatus "Order Status":
-  draft "Draft"
-  pending "Pending"
-  approved "Approved"
-  rejected "Rejected"
-  semantic: pending=warning, approved=positive, rejected=destructive, draft=neutral
-""",
-            "OrderStatus",
-            {
-                "draft": "neutral",
-                "pending": "warning",
-                "approved": "positive",  # raw; normalises to success downstream
-                "rejected": "destructive",
-            },
-            id="semantic-line-binds-values",
-        ),
-        pytest.param(
-            """module m
-app a "A"
-enum S "S":
-  a "A"
-  b "B"
-  semantic: a=success
-""",
-            "S",
-            {"a": "success", "b": None},
-            id="undeclared-values-keep-none-semantic",
-        ),
-        pytest.param(
-            """module m
-app a "A"
-enum S "S":
-  semantic: a=success, b=destructive
-  a "A"
-  b "B"
-""",
-            "S",
-            {"a": "success", "b": "destructive"},
-            id="semantic-line-may-precede-values",
-        ),
-    ],
-)
-def test_shared_enum_semantic_line(dsl: str, enum_name: str, expected: dict) -> None:
-    frag = _parse(dsl)
-    by_name = {v.name: v.semantic for v in _enum(frag, enum_name).values}
-    assert by_name == expected
-
-
-def test_semantic_binding_unknown_value_is_parse_error() -> None:
-    with pytest.raises(DazzleError) as exc:
-        _parse(
-            """module m
-app a "A"
-enum S "S":
-  draft "Draft"
-  semantic: nonexistent=warning
-"""
-        )
-    assert "E_SEMANTIC_VALUE_UNKNOWN" in str(exc.value)
 
 
 # ── parser: inline `enum[...]` field `semantic:` continuation (slice 2) ────
@@ -280,37 +205,6 @@ def test_badge_html_consumes_semantic_map() -> None:
     )
 
 
-def test_column_semantic_map_populated_from_shared_enum() -> None:
-    # The col-build site resolves a shared enum's `semantic:` into ColumnContext.
-    # A shared enum binds an inline `enum[...]` field by value-set match (the same
-    # mechanism `_infer_filter_type` uses to recover titles).
-    from dazzle.page.converters.template_compiler import _build_columns
-
-    appspec = _appspec(
-        """module m
-app a "A"
-enum TaskStatus "Task Status":
-  open "Open"
-  done "Done"
-  semantic: open=warning, done=positive
-entity Task "Task":
-  id: uuid pk
-  status: enum[open, done]
-surface tasks "Tasks":
-  uses entity Task
-  mode: list
-  section main:
-    field status "Status"
-"""
-    )
-    entity = next(e for e in appspec.domain.entities if e.name == "Task")
-    surface = next(s for s in appspec.surfaces if s.name == "tasks")
-    cols = _build_columns(surface, entity, surface.ux, list(appspec.enums))
-    status_col = next(col for col in cols if col.key == "status")
-    assert status_col.type == "badge"
-    assert status_col.semantic_map == {"open": "warning", "done": "positive"}
-
-
 def test_column_semantic_map_from_inline_field_binding() -> None:
     # An inline `semantic:` on the field itself populates the column map too.
     from dazzle.page.converters.template_compiler import _build_columns
@@ -331,7 +225,7 @@ surface tasks "Tasks":
     )
     entity = next(e for e in appspec.domain.entities if e.name == "Task")
     surface = next(s for s in appspec.surfaces if s.name == "tasks")
-    cols = _build_columns(surface, entity, surface.ux, list(appspec.enums))
+    cols = _build_columns(surface, entity, surface.ux)
     status_col = next(col for col in cols if col.key == "status")
     assert status_col.semantic_map == {"open": "warning", "done": "positive"}
 
@@ -344,13 +238,10 @@ def test_htmx_workspace_columns_carry_semantic_map() -> None:
     appspec = _appspec(
         """module m
 app a "A"
-enum TaskStatus "Task Status":
-  open "Open"
-  done "Done"
-  semantic: open=warning, done=positive
 entity Task "Task":
   id: uuid pk
   status: enum[open, done]
+    semantic: open=warning, done=positive
 surface tasks "Tasks":
   uses entity Task
   mode: list
@@ -360,7 +251,7 @@ surface tasks "Tasks":
     )
     entity = next(e for e in appspec.domain.entities if e.name == "Task")
     surface = next(s for s in appspec.surfaces if s.name == "tasks")
-    cols = build_surface_columns(entity, surface, list(appspec.enums))
+    cols = build_surface_columns(entity, surface)
     status_col = next(c for c in cols if c["key"] == "status")
     assert status_col["type"] == "badge"
     assert status_col["semantic_map"] == {"open": "warning", "done": "positive"}
@@ -385,7 +276,7 @@ surface tasks "Tasks":
     )
     entity = next(e for e in appspec.domain.entities if e.name == "Task")
     surface = next(s for s in appspec.surfaces if s.name == "tasks")
-    cols = build_surface_columns(entity, surface, list(appspec.enums))
+    cols = build_surface_columns(entity, surface)
     status_col = next(c for c in cols if c["key"] == "status")
     assert "semantic_map" not in status_col
 
@@ -409,28 +300,11 @@ def test_validator_accepts_canonical_and_alias_tones() -> None:
     appspec = _appspec(
         """module m
 app a "A"
-enum S "S":
-  a "A"
-  b "B"
-  c "C"
-  semantic: a=success, b=positive, c=neutral
+entity T "T":
+  id: uuid pk
+  state: enum[a, b, c]
+    semantic: a=success, b=positive, c=neutral
 """
     )
     errors, _ = validate_enum_semantics(appspec)
     assert errors == []
-
-
-def test_validator_rejects_unknown_tone() -> None:
-    from dazzle.core.validation.ux import validate_enum_semantics
-
-    appspec = _appspec(
-        """module m
-app a "A"
-enum S "S":
-  a "A"
-  b "B"
-  semantic: a=success, b=turquoise
-"""
-    )
-    errors, _ = validate_enum_semantics(appspec)
-    assert any("E_SEMANTIC_TONE_UNKNOWN" in e and "turquoise" in e for e in errors)

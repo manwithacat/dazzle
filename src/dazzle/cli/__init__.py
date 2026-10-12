@@ -9,7 +9,6 @@ This package contains the main CLI application and modularized sub-commands:
 - testing.py: Test commands
 - e2e.py: E2E testing (UX coverage, viewport)
 - mcp.py: MCP server commands
-- specs.py: Specification generation commands (OpenAPI, AsyncAPI)
 - deploy.py: Deploy commands
 - story.py: Story commands
 - events.py: Event system commands
@@ -132,7 +131,7 @@ def version_command(
         "--full",
         help=(
             "Include feature-availability flags (python_available, "
-            "lsp_available, llm_available) for automation consumers."
+            "llm_available) for automation consumers."
         ),
     ),
 ) -> None:
@@ -281,7 +280,6 @@ from dazzle.cli.feedback import feedback_app  # noqa: E402
 from dazzle.cli.fitness import fitness_app  # noqa: E402
 from dazzle.cli.guide import guide_app  # noqa: E402
 from dazzle.cli.kg import kg_app  # noqa: E402
-from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.mock import mock_app  # noqa: E402
@@ -299,7 +297,6 @@ from dazzle.cli.scaffold import scaffold_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
 from dazzle.cli.signing import signing_app  # noqa: E402
 from dazzle.cli.spec import spec_app  # noqa: E402
-from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
 from dazzle.cli.test_design import test_design_app  # noqa: E402
@@ -337,7 +334,6 @@ app.add_typer(e2e_app, name="e2e")
 app.add_typer(guide_app, name="guide")
 app.add_typer(signing_app, name="signing")
 app.add_typer(spec_app, name="spec")
-app.add_typer(specs_app, name="specs")
 app.add_typer(deploy_app, name="deploy")
 app.add_typer(events_app, name="events")
 app.add_typer(dlq_app, name="dlq")
@@ -348,7 +344,6 @@ app.add_typer(perf_app, name="perf")
 app.add_typer(quality_app, name="quality")
 app.add_typer(rbac_app, name="rbac")
 app.add_typer(kg_app, name="kg")
-app.add_typer(lsp_app, name="lsp")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(mock_app, name="mock")
 app.add_typer(process_app, name="process")

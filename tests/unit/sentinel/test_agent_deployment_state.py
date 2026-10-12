@@ -1,10 +1,10 @@
-"""Tests for the Deployment & State detection agent (DS-01 through DS-08)."""
+"""Tests for the Deployment & State detection agent (DS-03 through DS-08)."""
 
 from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.ir.governance import DataClassification, InterfaceAuthMethod
+from dazzle.core.ir.governance import DataClassification
 from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
 from dazzle.sentinel.agents.deployment_state import DeploymentStateAgent
 from dazzle.sentinel.models import AgentId, Severity
@@ -15,30 +15,6 @@ from .conftest import make_appspec, make_entity, pk_field, str_field
 @pytest.fixture
 def agent() -> DeploymentStateAgent:
     return DeploymentStateAgent()
-
-
-# ---------------------------------------------------------------------------
-# Interface helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_interface(
-    name: str,
-    *,
-    auth: InterfaceAuthMethod = InterfaceAuthMethod.NONE,
-    rate_limit: str | None = None,
-) -> MagicMock:
-    iface = MagicMock()
-    iface.name = name
-    iface.auth = auth
-    iface.rate_limit = rate_limit
-    return iface
-
-
-def _make_interfaces(apis: list[MagicMock]) -> MagicMock:
-    interfaces = MagicMock()
-    interfaces.apis = apis
-    return interfaces
 
 
 # ---------------------------------------------------------------------------
@@ -124,98 +100,6 @@ def _make_policies(
     policies.erasures = erasures or []
     policies.audit_access = audit_access
     return policies
-
-
-# =============================================================================
-# DS-01  Interface API without authentication
-# =============================================================================
-
-
-class TestDS01InterfaceWithoutAuth:
-    @pytest.mark.parametrize(
-        ("auth", "expect_flagged"),
-        [
-            (InterfaceAuthMethod.NONE, True),
-            (InterfaceAuthMethod.OAUTH2, False),
-            (InterfaceAuthMethod.API_KEY, False),
-        ],
-        ids=["auth_none", "oauth2", "api_key"],
-    )
-    def test_single_interface_auth(
-        self,
-        agent: DeploymentStateAgent,
-        auth: InterfaceAuthMethod,
-        expect_flagged: bool,
-    ) -> None:
-        iface = _make_interface("orders_api", auth=auth)
-        findings = agent.interface_without_auth(make_appspec(interfaces=_make_interfaces([iface])))
-        if expect_flagged:
-            assert len(findings) == 1
-            assert findings[0].heuristic_id == "DS-01"
-            assert findings[0].severity == Severity.HIGH
-            assert "orders_api" in findings[0].title
-        else:
-            assert findings == []
-
-    @pytest.mark.parametrize(
-        "interfaces_arg",
-        [None, _make_interfaces([])],
-        ids=["no_interfaces", "empty_apis"],
-    )
-    def test_no_interfaces(self, agent: DeploymentStateAgent, interfaces_arg: object) -> None:
-        assert agent.interface_without_auth(make_appspec(interfaces=interfaces_arg)) == []
-
-    def test_multiple_interfaces_flags_only_unauthenticated(
-        self, agent: DeploymentStateAgent
-    ) -> None:
-        good = _make_interface("secure_api", auth=InterfaceAuthMethod.JWT)
-        bad = _make_interface("public_api", auth=InterfaceAuthMethod.NONE)
-        findings = agent.interface_without_auth(
-            make_appspec(interfaces=_make_interfaces([good, bad]))
-        )
-        assert len(findings) == 1
-        assert "public_api" in findings[0].title
-
-
-# =============================================================================
-# DS-02  Interface API without rate limiting
-# =============================================================================
-
-
-class TestDS02InterfaceWithoutRateLimit:
-    def test_flags_interface_without_rate_limit(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", rate_limit=None)
-        findings = agent.interface_without_rate_limit(
-            make_appspec(interfaces=_make_interfaces([iface]))
-        )
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-02"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "orders_api" in findings[0].title
-
-    def test_passes_with_rate_limit(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", rate_limit="1000/hour")
-        assert (
-            agent.interface_without_rate_limit(make_appspec(interfaces=_make_interfaces([iface])))
-            == []
-        )
-
-    def test_multiple_flags_only_missing(self, agent: DeploymentStateAgent) -> None:
-        ok = _make_interface("secure_api", rate_limit="500/minute")
-        bad = _make_interface("open_api", rate_limit=None)
-        findings = agent.interface_without_rate_limit(
-            make_appspec(interfaces=_make_interfaces([ok, bad]))
-        )
-        assert len(findings) == 1
-        assert "open_api" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "interfaces_arg",
-        [None, _make_interfaces([])],
-        ids=["no_interfaces", "empty_apis"],
-    )
-    def test_no_interfaces(self, agent: DeploymentStateAgent, interfaces_arg: object) -> None:
-        assert agent.interface_without_rate_limit(make_appspec(interfaces=interfaces_arg)) == []
 
 
 # =============================================================================
@@ -509,12 +393,12 @@ class TestDeploymentStateAgentRun:
     def test_agent_id(self, agent: DeploymentStateAgent) -> None:
         assert agent.agent_id == AgentId.DS
 
-    def test_has_8_heuristics(self, agent: DeploymentStateAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_6_heuristics(self, agent: DeploymentStateAgent) -> None:
+        assert len(agent.get_heuristics()) == 6
 
     def test_heuristic_ids(self, agent: DeploymentStateAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"DS-0{i}" for i in range(1, 9)]
+        assert ids == [f"DS-0{i}" for i in range(3, 9)]
 
     def test_clean_appspec_no_findings(self, agent: DeploymentStateAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
@@ -523,18 +407,15 @@ class TestDeploymentStateAgentRun:
         assert result.errors == []
 
     def test_run_aggregates_across_heuristics(self, agent: DeploymentStateAgent) -> None:
-        iface = _make_interface("orders_api", auth=InterfaceAuthMethod.NONE)
         txn = _make_transaction("RecordPayment", idempotency_key="")
         channel = _make_channel("alerts", provider_config=None)
         result = agent.run(
             make_appspec(
-                interfaces=_make_interfaces([iface]),
                 transactions=[txn],
                 channels=[channel],
             )
         )
         ids = {f.heuristic_id for f in result.findings}
-        assert "DS-01" in ids
         assert "DS-03" in ids
         assert "DS-07" in ids
         assert result.errors == []

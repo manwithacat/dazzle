@@ -856,7 +856,6 @@ def infer_analytics_intent(appspec: ir.AppSpec) -> dict[str, Any]:
     - Dashboard workspaces
     """
     signals: list[dict[str, Any]] = []
-    recommended_products: list[dict[str, Any]] = []
 
     # Check for aggregate field patterns
     aggregate_patterns = ["count", "sum", "avg", "total", "metric", "stat"]
@@ -907,23 +906,9 @@ def infer_analytics_intent(appspec: ir.AppSpec) -> dict[str, Any]:
                 }
             )
 
-    # Generate recommendations
-    if signals:
-        entities_for_analytics = list({s.get("entity") for s in signals if s.get("entity")})
-        if entities_for_analytics:
-            recommended_products.append(
-                {
-                    "name": "app_analytics",
-                    "source_entities": entities_for_analytics,
-                    "transforms": ["aggregate"],
-                    "refresh": "hourly",
-                }
-            )
-
     return {
         "signals": signals,
         "has_analytics_intent": len(signals) > 0,
-        "recommended_data_products": recommended_products,
     }
 
 

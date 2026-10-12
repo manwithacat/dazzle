@@ -1,4 +1,4 @@
-"""Operational Hygiene detection agent (OP-01 through OP-08)."""
+"""Operational Hygiene detection agent (OP-01 to OP-04, OP-06 to OP-08)."""
 
 from __future__ import annotations
 
@@ -236,57 +236,6 @@ class OperationalHygieneAgent(DetectionAgent):
                         dsl_example=(f"sla {sla.name}:\n  on_breach:\n    notify: support_lead"),
                     ),
                     construct_type="sla",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # OP-05: Approval without escalation
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="OP-05",
-        category="operations",
-        subcategory="approvals",
-        title="Approval without escalation",
-    )
-    def approval_without_escalation(self, appspec: AppSpec) -> list[Finding]:
-        """Flag approvals that have no escalation configured."""
-        findings: list[Finding] = []
-        for approval in appspec.approvals:
-            if approval.escalation is not None:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.OP,
-                    heuristic_id="OP-05",
-                    category="operations",
-                    subcategory="approvals",
-                    severity=Severity.MEDIUM,
-                    confidence=Confidence.LIKELY,
-                    title=(f"Approval '{approval.name}' has no escalation"),
-                    description=(
-                        f"Approval '{approval.name}' does not define an "
-                        f"escalation path. If the assigned approver is "
-                        f"unavailable, requests will stall indefinitely."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"approval:{approval.name}",
-                            context="escalation is None",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=(f"Add escalation config to approval '{approval.name}'."),
-                        effort=RemediationEffort.SMALL,
-                        dsl_example=(
-                            f"approval {approval.name}:\n"
-                            f"  escalation:\n"
-                            f"    after: 48 hours\n"
-                            f"    to: senior_manager"
-                        ),
-                    ),
-                    construct_type="approval",
                 ),
             )
         return findings

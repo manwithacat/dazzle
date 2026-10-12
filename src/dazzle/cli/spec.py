@@ -1,7 +1,6 @@
 """``dazzle spec`` — narrative-spec ↔ DSL drift commands (#1106, Proposal 1).
 
-Distinct from ``dazzle specs`` (with the trailing s, which generates API
-specifications). This subcommand group operates on the *product spec* —
+This subcommand group operates on the *product spec* —
 the human-readable ``spec/*.md`` / ``SPEC.md`` content that describes
 what the app is supposed to be — and reports drift against the actual
 DSL state.

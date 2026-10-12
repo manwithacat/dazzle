@@ -1822,16 +1822,12 @@ class DazzleBackendApp:
         for entity in self._entities:
             slug = _entity_slug(entity.name)
             _ls = _entity_list_surfaces.get(entity.name)
-            cols = (
-                _build_surface_columns(entity, _ls, self._appspec.enums)
-                if _ls
-                else _build_entity_columns(entity, self._appspec.enums)
-            )
+            cols = _build_surface_columns(entity, _ls) if _ls else _build_entity_columns(entity)
             # ADR-0050 2d → L4: for the pure entity-fallback (no list surface), cache
             # the FULL untruncated column set so the request-time usage inferer can
             # rescue a heavily-engaged field that build-time salience would shed. None
             # for surface-declared columns (explicit author projection wins).
-            cols_full = None if _ls else _build_entity_columns_full(entity, self._appspec.enums)
+            cols_full = None if _ls else _build_entity_columns_full(entity)
             # #1494 (2c, Slice 2): peek is declared PER SURFACE, but one entity can
             # host several list surfaces with different `peek:` modes. Map each
             # surface's table_id (= surface.name = region_name) to its resolved

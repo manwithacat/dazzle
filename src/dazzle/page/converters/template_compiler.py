@@ -232,7 +232,6 @@ def _field_type_to_column_type(
 
 def _enum_semantic_map(
     field_spec: ir.FieldSpec | None,
-    enums: list[ir.EnumSpec] | None = None,
     state_machine: Any = None,
 ) -> dict[str, str]:
     """Effective value→tone map for an enum/status field column (#1493 slice 2).
@@ -242,7 +241,7 @@ def _enum_semantic_map(
     this page-render builder and the http-workspace builder call, so the logic
     lives in one place.
     """
-    return status_tone_map(field_spec.type if field_spec else None, enums, state_machine)
+    return status_tone_map(field_spec.type if field_spec else None, state_machine)
 
 
 def _file_accept_attr(field_spec: ir.FieldSpec) -> str:
@@ -321,7 +320,6 @@ def _infer_filter_type(
     field_spec: ir.FieldSpec | None,
     entity: ir.EntitySpec | None,
     field_name: str,
-    enums: list[ir.EnumSpec] | None = None,
 ) -> tuple[str, list[dict[str, str]]]:
     """Infer filter UI type and options from a field spec.
 
@@ -332,20 +330,8 @@ def _infer_filter_type(
     if field_spec and field_spec.type:
         kind = field_spec.type.kind
         if kind == FieldTypeKind.ENUM and field_spec.type.enum_values:
-            # Check if a named EnumSpec matches these values and has titles
-            label_map: dict[str, str] = {}
-            if enums:
-                vals_set = set(field_spec.type.enum_values)
-                for enum_spec in enums:
-                    enum_names = {ev.name for ev in enum_spec.values}
-                    if enum_names == vals_set:
-                        label_map = {ev.name: ev.title for ev in enum_spec.values if ev.title}
-                        break
             return "select", [
-                {
-                    "value": v,
-                    "label": label_map.get(v, v.replace("_", " ").title()),
-                }
+                {"value": v, "label": v.replace("_", " ").title()}
                 for v in field_spec.type.enum_values
             ]
         if kind == FieldTypeKind.BOOL:
@@ -369,7 +355,6 @@ def _build_columns(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
     ux_spec: ir.UXSpec | None = None,
-    enums: list[ir.EnumSpec] | None = None,
 ) -> list[ColumnContext]:
     """Build table column definitions from surface sections or entity fields."""
     columns: list[ColumnContext] = []
@@ -385,7 +370,7 @@ def _build_columns(
                 field_spec = _get_field_spec(entity, element.field_name)
                 filterable = element.field_name in filter_fields
                 filter_type, filter_options = (
-                    _infer_filter_type(field_spec, entity, element.field_name, enums)
+                    _infer_filter_type(field_spec, entity, element.field_name)
                     if filterable
                     else ("text", [])
                 )
@@ -442,7 +427,7 @@ def _build_columns(
                         currency_code=col_currency,
                         visible_condition=_col_vis,
                         semantic_map=_enum_semantic_map(
-                            field_spec, enums, entity.state_machine if entity else None
+                            field_spec, entity.state_machine if entity else None
                         ),
                     )
                 )
@@ -452,9 +437,7 @@ def _build_columns(
                 is_sensitive = field.is_sensitive
                 filterable = field.name in filter_fields and not is_sensitive
                 filter_type, filter_options = (
-                    _infer_filter_type(field, entity, field.name, enums)
-                    if filterable
-                    else ("text", [])
+                    _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
                 )
                 # Money fields: use expanded _minor column key
                 # Ref/belongs_to fields: use relation name (strip _id)
@@ -489,7 +472,7 @@ def _build_columns(
                         ref_route=_ref_route,
                         currency_code=col_currency,
                         semantic_map=_enum_semantic_map(
-                            field, enums, entity.state_machine if entity else None
+                            field, entity.state_machine if entity else None
                         ),
                     )
                 )
@@ -999,13 +982,12 @@ def _compile_list_surface(
     api_endpoint: str,
     entity_slug: str,
     app_prefix: str,
-    enums: list[ir.EnumSpec] | None = None,
     entities_with_create_surface: frozenset[str] | None = None,
     surfaces_by_name: dict[str, ir.SurfaceSpec] | None = None,
 ) -> PageContext:
     """Compile a LIST mode surface to a PageContext with table context."""
     ux = surface.ux
-    columns = _build_columns(surface, entity, ux, enums)
+    columns = _build_columns(surface, entity, ux)
     default_sort_field = ux.sort[0].field if ux and ux.sort else ""
     default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
     search_fields = list(ux.search) if ux and ux.search else []
@@ -1346,7 +1328,7 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
                 # No shared-enum registry here (related-tab columns); inline
                 # `enum[...]` bindings still resolve via FieldType.enum_semantics,
                 # plus SM-terminal inference from the related entity's machine.
-                semantic_map=_enum_semantic_map(field, None, entity.state_machine),
+                semantic_map=_enum_semantic_map(field, entity.state_machine),
             )
         )
     return columns
@@ -1673,7 +1655,6 @@ def compile_surface_to_context(
     app_prefix: str = "",
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
     poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
-    enums: list[ir.EnumSpec] | None = None,
     entities_with_create_surface: frozenset[str] | None = None,
     surfaces_by_name: dict[str, ir.SurfaceSpec] | None = None,
 ) -> PageContext:
@@ -1691,7 +1672,6 @@ def compile_surface_to_context(
             (entity_name, fk_field, entity_spec). Used for related tabs on detail pages.
         poly_refs: Polymorphic FK reverse refs pointing to this entity (#321).
             Each tuple: (source_entity, type_field, id_field, type_value, source_spec).
-        enums: Named enum definitions for human-readable filter labels.
 
     Returns:
         PageContext ready for template rendering.
@@ -1708,7 +1688,6 @@ def compile_surface_to_context(
             api_endpoint,
             entity_slug,
             app_prefix,
-            enums,
             entities_with_create_surface=entities_with_create_surface,
             surfaces_by_name=surfaces_by_name,
         )
@@ -1827,7 +1806,6 @@ def compile_appspec_to_templates(
             app_prefix=app_prefix,
             reverse_refs=_reverse_refs.get(entity_name),
             poly_refs=_poly_refs.get(entity_name),
-            enums=list(appspec.enums) if appspec.enums else None,
             entities_with_create_surface=_entities_with_create_surface,
             surfaces_by_name=_surfaces_by_name,
         )
@@ -1890,7 +1868,6 @@ def compile_appspec_to_templates(
                 first_list,
                 entity,
                 app_prefix=app_prefix,
-                enums=list(appspec.enums) if appspec.enums else None,
                 entities_with_create_surface=_entities_with_create_surface,
             )
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
@@ -1933,7 +1910,6 @@ def compile_appspec_to_templates(
                 app_prefix=app_prefix,
                 reverse_refs=_reverse_refs.get(_entity.name),
                 poly_refs=_poly_refs.get(_entity.name),
-                enums=list(appspec.enums) if appspec.enums else None,
                 entities_with_create_surface=_entities_with_create_surface,
             )
             _ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()

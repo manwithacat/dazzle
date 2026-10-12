@@ -39,7 +39,7 @@ def test_ticket_list_status_filter_is_in_progress_not_token() -> None:
     ticket = spec.get_entity("Ticket")
     assert ticket is not None
     surf = next(s for s in spec.surfaces if s.name == "ticket_list")
-    cols = build_surface_columns(ticket, surf, spec.enums)
+    cols = build_surface_columns(ticket, surf)
     status = next(c for c in cols if c["key"] == "status")
     assert status["type"] == "badge"
     assert status["filterable"] is True
@@ -59,7 +59,7 @@ def test_entity_enum_column_filter_is_clerk_label() -> None:
     ticket = spec.get_entity("Ticket")
     assert ticket is not None
     status = next(f for f in ticket.fields if f.name == "status")
-    col = _field_to_entity_column(status, ticket, spec.enums)
+    col = _field_to_entity_column(status, ticket)
     assert col is not None
     assert col["filter_options"] == [
         ("open", "Open"),
@@ -67,7 +67,7 @@ def test_entity_enum_column_filter_is_clerk_label() -> None:
         ("resolved", "Resolved"),
         ("closed", "Closed"),
     ]
-    sla = next(c for c in build_entity_columns(ticket, spec.enums) if c["key"] == "sla_state")
+    sla = next(c for c in build_entity_columns(ticket) if c["key"] == "sla_state")
     assert ("on_track", "On Track") in sla["filter_options"]
     assert "on_track" not in [lab for _, lab in sla["filter_options"]]
 

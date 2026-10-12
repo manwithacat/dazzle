@@ -135,7 +135,7 @@ Event-first architecture analysis.
 | `validate_events` | Validate event naming and idempotency |
 | `tenancy` | Infer multi-tenancy requirements |
 | `compliance` | Infer compliance requirements (GDPR, PCI) |
-| `analytics` | Infer analytics intent and data products |
+| `analytics` | Infer analytics intent |
 | `extract_guards` | Extract guard conditions |
 
 ### graph

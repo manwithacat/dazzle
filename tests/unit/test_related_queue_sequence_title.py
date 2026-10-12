@@ -119,7 +119,7 @@ def test_pick_display_key_skips_attempt_prefers_failure_reason() -> None:
 def test_payment_attempt_text_identity_is_failure_reason() -> None:
     spec = load_project(Path("examples/invoice_ops"))
     runtime = convert_entity(spec.get_entity("PaymentAttempt"))
-    cols = build_entity_columns(runtime, spec.enums)
+    cols = build_entity_columns(runtime)
     ctx = SimpleNamespace(entity_spec=runtime)
     assert _entity_text_identity_key(ctx) == "failure_reason"
     adapter_ctx: dict[str, object] = {}

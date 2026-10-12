@@ -3,71 +3,7 @@
 > **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
 > Do not edit manually; run `dazzle docs generate` to regenerate.
 
-Governance constructs enforce organisational policies, approval workflows, and service-level agreements. Approvals define multi-step sign-off chains, while SLAs set measurable targets with escalation rules for time-sensitive operations.
-
----
-
-## Approval
-
-A first-class approval gate definition. Approvals intercept entity state transitions
-and require human sign-off before proceeding. Features include quorum (number of
-approvals needed), threshold conditions (when approval is required), escalation
-timers, auto-approve rules, and outcome mappings to entity status transitions.
-
-### Syntax
-
-```dsl
-approval <name> "<Title>":
-  entity: <EntityName>
-  trigger: <field> -> <value>
-  approver_role: <role_name>
-  [quorum: <int>]
-  [threshold: <condition>]
-  [escalation:]
-    [after: <int> <hours|days>]
-    [to: <escalation_role>]
-  [auto_approve:]
-    [when: <condition>]
-  [outcomes:]
-    [<decision> -> <target_status>]
-```
-
-### Example
-
-```dsl
-approval PurchaseApproval "Purchase Order Approval":
-  entity: PurchaseOrder
-  trigger: status -> pending_approval
-  approver_role: finance_manager
-  quorum: 1
-  threshold: amount > 1000
-  escalation:
-    after: 48 hours
-    to: finance_director
-  auto_approve:
-    when: amount <= 100
-  outcomes:
-    approved -> approved
-    rejected -> rejected
-
-approval LeaveRequest "Leave Approval":
-  entity: LeaveRequest
-  trigger: status -> submitted
-  approver_role: line_manager
-  quorum: 1
-  outcomes:
-    approved -> approved
-    rejected -> rejected
-```
-
-### Best Practices
-
-- Use threshold to skip approval for low-value items
-- Set escalation to avoid approval bottlenecks
-- Use auto_approve for items below a safe threshold
-- Map outcomes to entity status transitions for clean workflow
-
-**Related:** [Entity](entities.md#entity), [State Machine](entities.md#state-machine), [Sla](governance.md#sla), [Process](processes.md#process)
+Governance constructs enforce organisational policies and service-level agreements. SLAs set measurable targets with escalation rules for time-sensitive operations.
 
 ---
 
@@ -133,6 +69,6 @@ sla OrderFulfillment "Order Fulfillment SLA":
 - Use on_breach to notify responsible roles and flag records
 - Use pauses_when for states where the clock should stop (e.g., on_hold)
 
-**Related:** [Entity](entities.md#entity), [State Machine](entities.md#state-machine), [Approval](governance.md#approval), [Process](processes.md#process)
+**Related:** [Entity](entities.md#entity), [State Machine](entities.md#state-machine), [Process](processes.md#process)
 
 ---

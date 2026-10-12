@@ -54,9 +54,6 @@ _DSL_CONSTRUCTS: tuple[str, ...] = (
     "surface",
     "workspace",
     "persona",
-    "enum",
-    "webhook",
-    "approval",
     "sla",
     "rhythm",
     "process",
@@ -212,7 +209,7 @@ def _dsl_construct_coverage(repo_root: Path) -> CategoryCoverage:
         text = _read_all_dsl(app)
         for construct in _DSL_CONSTRUCTS:
             # Top-level: keyword at column 0, followed by space or colon.
-            # Matches ``entity Task "Task":``, ``enum Status:``, and
+            # Matches ``entity Task "Task":``, ``sla Response:``, and
             # config-style blocks like ``feedback_widget: enabled``.
             if re.search(rf"(?m)^{re.escape(construct)}[ :]", text):
                 cat.coverage[construct].append(app.name)

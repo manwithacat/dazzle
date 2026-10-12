@@ -380,10 +380,6 @@ def _run_legacy_tests(
     # Generate E2ETestSpec
     testspec = generate_e2e_testspec(appspec)
 
-    # Include any DSL-defined flows from appspec
-    if appspec.e2e_flows:
-        testspec.flows.extend(appspec.e2e_flows)
-
     # Filter flows
     flows_to_run = _filter_flows(testspec.flows, flow_id=flow, priority=priority, tag=tag)
 
@@ -1021,10 +1017,6 @@ def test_list(
 
     # Generate E2ETestSpec
     testspec = generate_e2e_testspec(appspec)
-
-    # Include any DSL-defined flows
-    if appspec.e2e_flows:
-        testspec.flows.extend(appspec.e2e_flows)
 
     # Filter
     flows = testspec.flows

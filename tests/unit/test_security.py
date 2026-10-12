@@ -9,9 +9,7 @@ Tests:
 - SECURITY.md generation
 """
 
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -247,98 +245,6 @@ class TestTenantIsolation:
 
 
 # =============================================================================
-# Security Docs Tests
-# =============================================================================
-
-
-class TestSecurityDocs:
-    """Tests for SECURITY.md generation."""
-
-    def test_generate_basic_security_md(self) -> None:
-        """Test generating SECURITY.md for basic profile."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.specs.security_docs import generate_security_md
-
-        app_spec = MagicMock()
-        app_spec.name = "TestApp"
-        app_spec.surfaces = []
-        app_spec.security = SecurityConfig.from_profile(SecurityProfile.BASIC)
-
-        content = generate_security_md(app_spec)
-
-        assert "TestApp" in content
-        assert "basic" in content
-        assert "Permissive" in content
-        assert "Only appropriate for development" in content
-
-    def test_generate_strict_security_md(self) -> None:
-        """Test generating SECURITY.md for strict profile."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.specs.security_docs import generate_security_md
-
-        app_spec = MagicMock()
-        app_spec.name = "SecureApp"
-        app_spec.surfaces = []
-        app_spec.security = SecurityConfig.from_profile(
-            SecurityProfile.STRICT,
-            multi_tenant=True,
-        )
-
-        content = generate_security_md(app_spec)
-
-        assert "strict" in content
-        assert "Strict-Transport-Security" in content
-        assert "Content-Security-Policy" in content
-        assert "Tenant Isolation" in content
-        assert "Enabled" in content
-
-    def test_generate_protected_surfaces_table(self) -> None:
-        """Test generating protected surfaces table."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.specs.security_docs import generate_security_md
-
-        access = MagicMock()
-        access.require_auth = True
-        access.allow_personas = ["admin", "manager"]
-        access.deny_personas = []
-        access.redirect_unauthenticated = "/login"
-
-        surface = MagicMock()
-        surface.name = "admin_dashboard"
-        surface.access = access
-
-        app_spec = MagicMock()
-        app_spec.name = "TestApp"
-        app_spec.surfaces = [surface]
-        app_spec.security = SecurityConfig.from_profile(SecurityProfile.STANDARD)
-
-        content = generate_security_md(app_spec)
-
-        assert "Protected Surfaces" in content
-        assert "admin_dashboard" in content
-        assert "admin" in content
-        assert "/login" in content
-
-    def test_write_security_md(self) -> None:
-        """Test writing SECURITY.md to file."""
-        from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.specs.security_docs import write_security_md
-
-        app_spec = MagicMock()
-        app_spec.name = "TestApp"
-        app_spec.surfaces = []
-        app_spec.security = SecurityConfig.from_profile(SecurityProfile.BASIC)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output_path = Path(tmpdir) / "SECURITY.md"
-            result = write_security_md(app_spec, str(output_path))
-
-            assert Path(result).exists()
-            content = Path(result).read_text()
-            assert "TestApp" in content
-
-
-# =============================================================================
 # Parser Tests
 # =============================================================================
 
@@ -347,7 +253,6 @@ def test_security_profile_parsing_combined() -> None:
     """Combined parser contract for the `security_profile:` app field —
     parses standard/strict, defaults to basic when omitted, and the
     `multi_tenant:` flag rides alongside on the same app config."""
-    from pathlib import Path
 
     from dazzle.core.dsl_parser_impl import parse_dsl
 
@@ -401,7 +306,6 @@ def test_build_server_config_threads_security_profile_from_appspec() -> None:
     """#1235 — `appspec.security.profile` must reach `ServerConfig.security_profile`
     so the rate-limit decorator and CSRF policy actually fire on DSL-only consumers.
     Pre-fix the field stayed at the default "basic" regardless of the DSL value."""
-    from pathlib import Path
 
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.ir.module import ModuleIR
@@ -439,7 +343,6 @@ entity Task "Task":
 
 def test_build_server_config_explicit_security_profile_wins() -> None:
     """#1235 — env-var path: explicit `security_profile=` overrides the DSL value."""
-    from pathlib import Path
 
     from dazzle.core.dsl_parser_impl import parse_dsl
     from dazzle.core.ir.module import ModuleIR
@@ -476,7 +379,6 @@ entity Task "Task":
 def test_build_server_config_rejects_invalid_security_profile() -> None:
     """#1235 — fail-loud at the build boundary if the env var carries a typo
     (e.g. "stric") rather than silently shipping the default."""
-    from pathlib import Path
 
     import pytest
 

@@ -83,12 +83,12 @@ def _sm_list_cases() -> list[tuple[str, str, object, object]]:
 _CASES = _sm_list_cases()
 
 
-def _columns_for(spec_enums: object, ent: object, list_surf: object) -> list[dict]:
+def _columns_for(ent: object, list_surf: object) -> list[dict]:
     if list_surf is not None:
-        cols = build_surface_columns(ent, list_surf, spec_enums)
+        cols = build_surface_columns(ent, list_surf)
         if cols:
             return cols
-    return build_entity_columns(ent, spec_enums) or [{"key": "id", "label": "Id", "type": "text"}]
+    return build_entity_columns(ent) or [{"key": "id", "label": "Id", "type": "text"}]
 
 
 def _row_item(ent: object, status_field: str, status: str) -> dict:
@@ -121,10 +121,7 @@ def test_fleet_sm_list_row_transitions_use_chip_class(
     assert tx, f"{example}/{entity_name}: expected transitions from SM"
     assert status_field and endpoint
 
-    # Reload enums from appspec for column builder
-    d = _EXAMPLES / example
-    spec = load_project_appspec(d)
-    cols = _columns_for(spec.enums, ent, list_surf)
+    cols = _columns_for(ent, list_surf)
     # Ensure status field is present so gating has a value path
     if not any(c.get("key") == status_field for c in cols):
         cols = list(cols) + [{"key": status_field, "label": status_field, "type": "badge"}]

@@ -48,12 +48,7 @@ Every transition is role-guarded:
 
 ### Maker-checker model
 
-The app declares two approval gates that enforce quorum on the submit-to-approved path:
-
-- **`StandardApproval`** — quorum 1, applies to invoices below the per-tenant `approval_threshold`
-- **`HighValueApproval`** — quorum 2, applies to invoices at or above `approval_threshold`
-
-The threshold itself is a per-tenant configuration key (`per_tenant_config: approval_threshold: int`), so each tenant can set their own value. Both gates validate cleanly and `dazzle validate` accepts the declarations; see the friction log for the current enforcement status.
+The submit-to-approved path is guarded by the `approver` role on the `submitted → approved` transition. The per-tenant `approval_threshold` (`per_tenant_config: approval_threshold: int`) is declared for each tenant; multi-approver quorum is not modelled (the top-level `approval` construct was removed under ADR-0057 — no consumer used it).
 
 ### Role summary
 
@@ -162,7 +157,6 @@ invoice_ops/
 │   ├── entities.dsl                   # 6 entities with scope rules and transitions
 │   ├── personas.dsl                   # 5 persona definitions
 │   ├── surfaces.dsl                   # List / view / create / edit surfaces
-│   ├── workflow.dsl                   # Approval gates, settle_invoice process
 │   ├── services.dsl                   # payment_provider integration service
 │   └── seeds/
 │       └── demo_data/                 # 2-tenant JSONL seed fixtures
@@ -181,8 +175,7 @@ The table below records framework friction encountered during the invoice_ops ke
 
 | # | Area | Finding | Status |
 |---|------|---------|--------|
-| 1 | `approval` gates | Variable quorum by amount (`StandardApproval` quorum 1, `HighValueApproval` quorum 2 with `threshold:`) validates cleanly — but `dazzle validate` warns `[Preview] approval gates are not yet enforced at runtime`. Quorum is **declared**, not enforced. | Known — preview |
-| 2 | `approval threshold:` | `threshold: amount <= approval_threshold` (a `per_tenant_config` key) is accepted by `dazzle validate`. Same preview-only caveat as #1. | Known — preview |
+| 1 | `approval` gates | The top-level `approval` construct (declared quorum, never runtime-enforced) was removed under ADR-0057. | Removed |
 | 3 | Separation of duty | Role-level transition guards (`role(approver)`) **are** enforced at runtime. Actor-identity SoD (the user who submitted cannot also approve) is **not** expressible or enforced in DSL. | Limitation |
 | 4 | `partition_key` enforcement | `partition_key: tenant_id` with `ref Tenant` FK fields is accepted. Runtime tenant isolation is enforced. Explicit per-entity `scope:` rules are load-bearing (not auto-derived from `partition_key`). | Resolved |
 | 5 | Audit export | No dedicated audit-export route; `audit_export` surface collided with `GET /invoices` at boot and was dropped as a duplicate. The internal `/_dazzle/audit/logs` endpoint exists but is admin-gated. | Limitation |

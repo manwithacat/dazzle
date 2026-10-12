@@ -5,8 +5,6 @@
     'apis': list([
     ]),
     'app_config': None,
-    'approvals': list([
-    ]),
     'archetypes': list([
     ]),
     'assets': list([
@@ -18,7 +16,6 @@
     ]),
     'channels': list([
     ]),
-    'data_products': None,
     'documents': list([
     ]),
     'domain': dict({
@@ -1061,10 +1058,6 @@
     }),
     'domain_services': list([
     ]),
-    'e2e_flows': list([
-    ]),
-    'enums': list([
-    ]),
     'event_model': None,
     'experiences': list([
     ]),
@@ -1130,7 +1123,6 @@
     ]),
     'integrations': list([
     ]),
-    'interfaces': None,
     'islands': list([
     ]),
     'jobs': list([
@@ -1158,11 +1150,7 @@
     ]),
     'projections': list([
     ]),
-    'questions': list([
-    ]),
     'rhythms': list([
-    ]),
-    'rules': list([
     ]),
     'scenarios': list([
     ]),
@@ -1738,8 +1726,6 @@
     'templates': list([
     ]),
     'tenancy': None,
-    'tests': list([
-    ]),
     'title': 'Simple Test App',
     'transactions': list([
     ]),
@@ -1747,8 +1733,6 @@
     ]),
     'version': '0.1.0',
     'views': list([
-    ]),
-    'webhooks': list([
     ]),
     'workspaces': list([
       dict({

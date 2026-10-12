@@ -196,24 +196,6 @@ class SystemRoutesSubsystem:
                 )
                 ctx.app.include_router(job_explorer_router)
 
-            # Approvals explorer (#1194) — /_dazzle/approvals/pending.
-            # Only registered when `approval` blocks are declared. Reads
-            # the per-entity CRUD services from `ctx.services`, keyed by
-            # ``service.entity_name`` (mirrors `services_by_entity()`).
-            if ctx.appspec.approvals:
-                from dazzle.http.runtime.approvals_explorer import create_approvals_routes
-
-                services_by_entity = {
-                    entity_name: svc
-                    for svc in ctx.services.values()
-                    if (entity_name := getattr(svc, "entity_name", None))
-                }
-                approvals_router = create_approvals_routes(
-                    services_by_entity,
-                    list(ctx.appspec.approvals),
-                )
-                ctx.app.include_router(approvals_router)
-
             # Integration retries explorer (#1194) —
             # /_dazzle/integrations/{name}/retries. Only registered when
             # `integration` blocks are declared. Reads from the

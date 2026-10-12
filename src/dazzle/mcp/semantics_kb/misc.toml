@@ -3,7 +3,7 @@
 
 [meta]
 file = "misc"
-concept_count = 26
+concept_count = 24
 
 [concepts.authentication]
 category = "Dazzle Runtime"
@@ -930,59 +930,6 @@ channel notifications "Email Notifications":
 related = ["process_steps", "entity"]
 best_practices = ["Use outbox delivery for transactional consistency", "Set throttle limits to prevent email flooding", "Use queue channels for async processing pipelines", "Use stream channels for event sourcing with replay"]
 
-[concepts.approval]
-category = "Governance (v0.25)"
-doc_page = "governance"
-doc_order = 1
-definition = """
-A first-class approval gate definition. Approvals intercept entity state transitions
-and require human sign-off before proceeding. Features include quorum (number of
-approvals needed), threshold conditions (when approval is required), escalation
-timers, auto-approve rules, and outcome mappings to entity status transitions.
-"""
-syntax = '''
-approval <name> "<Title>":
-  entity: <EntityName>
-  trigger: <field> -> <value>
-  approver_role: <role_name>
-  [quorum: <int>]
-  [threshold: <condition>]
-  [escalation:]
-    [after: <int> <hours|days>]
-    [to: <escalation_role>]
-  [auto_approve:]
-    [when: <condition>]
-  [outcomes:]
-    [<decision> -> <target_status>]
-'''
-example = '''
-approval PurchaseApproval "Purchase Order Approval":
-  entity: PurchaseOrder
-  trigger: status -> pending_approval
-  approver_role: finance_manager
-  quorum: 1
-  threshold: amount > 1000
-  escalation:
-    after: 48 hours
-    to: finance_director
-  auto_approve:
-    when: amount <= 100
-  outcomes:
-    approved -> approved
-    rejected -> rejected
-
-approval LeaveRequest "Leave Approval":
-  entity: LeaveRequest
-  trigger: status -> submitted
-  approver_role: line_manager
-  quorum: 1
-  outcomes:
-    approved -> approved
-    rejected -> rejected
-'''
-related = ["entity", "state_machine", "sla", "process"]
-best_practices = ["Use threshold to skip approval for low-value items", "Set escalation to avoid approval bottlenecks", "Use auto_approve for items below a safe threshold", "Map outcomes to entity status transitions for clean workflow"]
-
 [concepts.sla]
 category = "Governance (v0.25)"
 doc_page = "governance"
@@ -1035,54 +982,8 @@ sla OrderFulfillment "Order Fulfillment SLA":
     warning: 1 days
     breach: 3 days
 '''
-related = ["entity", "state_machine", "approval", "process"]
+related = ["entity", "state_machine", "process"]
 best_practices = ["Use business_hours to exclude non-working time from SLA calculations", "Set tiers for progressive escalation (warning before breach)", "Use on_breach to notify responsible roles and flag records", "Use pauses_when for states where the clock should stop (e.g., on_hold)"]
-
-[concepts.webhook]
-category = "Integrations (v0.25)"
-doc_page = "integrations"
-doc_order = 3
-definition = "Outbound HTTP notification triggered by entity lifecycle events (created, updated, deleted). Webhooks send JSON payloads to external URLs with configurable authentication (HMAC-SHA256, bearer, basic), field selection, and retry policies."
-syntax = '''
-webhook <name> "<Title>":
-  entity: <EntityName>
-  events: [created, updated, deleted]
-  url: config("<ENV_VAR>") | "<url>"
-  [auth:]
-    [method: <hmac_sha256|bearer|basic>]
-    [secret: config("<ENV_VAR>")]
-  [payload:]
-    [include: [<field1>, <field2>, <entity.field>]]
-    [format: json]
-  [retry:]
-    [max_attempts: <int>]
-    [backoff: <exponential|linear>]
-'''
-example = '''
-webhook OrderNotification "Order Status Webhook":
-  entity: Order
-  events: [created, updated]
-  url: config("ORDER_WEBHOOK_URL")
-  auth:
-    method: hmac_sha256
-    secret: config("WEBHOOK_SECRET")
-  payload:
-    include: [id, status, total, customer.name]
-    format: json
-  retry:
-    max_attempts: 3
-    backoff: exponential
-
-webhook AuditLog "Audit Event Webhook":
-  entity: AuditEntry
-  events: [created]
-  url: config("AUDIT_WEBHOOK_URL")
-  auth:
-    method: bearer
-    secret: config("AUDIT_API_KEY")
-'''
-related = ["entity", "integration", "channel"]
-best_practices = ["Use config() for URLs and secrets - never hardcode credentials", "Use HMAC-SHA256 for webhook signature verification", "Select only needed fields in payload to minimize data exposure", "Set retry with exponential backoff for resilient delivery"]
 
 [concepts.llm_trigger]
 category = "LLM Jobs (v0.24)"

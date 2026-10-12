@@ -56,9 +56,8 @@ jobs:
         # primary deploy/runtime target (Heroku's default; ~5% faster on the
         # CPU/parse path via the uv tail-call interpreter — see
         # docs/python-3.14-primary-target.md). 3.14 was promoted from an
-        # allow-failure cell once its two non-Dazzle reds were cleared: the
-        # pygls `asyncio.iscoroutinefunction` deprecation is scope-ignored in
-        # the LSP import test, and `typing.ForwardRef` rendering is normalised
+        # allow-failure cell once its non-Dazzle reds were cleared:
+        # `typing.ForwardRef` rendering is normalised
         # via `__forward_arg__` so the api-surface baseline is interpreter-
         # stable. uv provisions each interpreter via the composite `--python`.
         # lint/type-check stay 3.12-pinned — they govern which syntax the floor
@@ -74,7 +73,7 @@ jobs:
         # +test-full: the pure-pip optional subsystems (graph/signing/
         # sendgrid/observability + aiosqlite) whose tests otherwise
         # skip on this coverage-measuring job, undercounting coverage.
-        extras: dev,llm,mcp,mobile,postgres,perf,saml,lsp,test-full
+        extras: dev,llm,mcp,mobile,postgres,perf,saml,test-full
 
     - name: Build asset bundles
       # #1052: dist/dazzle.min.{css,js} + dazzle-icons.min.js are
@@ -266,29 +265,6 @@ jobs:
         # or fragment template landing without at least one example app
         # exercising it fails CI here. See src/dazzle/cli/coverage.py.
         python -m dazzle coverage --fail-on-uncovered
-
-    - name: Generate and validate AsyncAPI specs
-      run: |
-        # Install AsyncAPI CLI for validation
-        npm install -g @asyncapi/cli
-
-        # Generate and validate AsyncAPI for each example and fixture
-        for dir in examples/*/ fixtures/*/; do
-          if [ -f "${dir}dazzle.toml" ]; then
-            example=$(basename "$dir")
-            echo "Generating AsyncAPI for $example..."
-            cd "$dir"
-            python -m dazzle specs asyncapi -f json -o asyncapi.json || echo "Note: No AsyncAPI output for $example"
-
-            # Validate the generated AsyncAPI spec
-            if [ -f asyncapi.json ]; then
-              echo "Validating AsyncAPI spec for $example..."
-              asyncapi validate asyncapi.json || echo "Warning: AsyncAPI validation issues in $example"
-              rm asyncapi.json
-            fi
-            cd "$GITHUB_WORKSPACE"
-          fi
-        done
 
   # Transitive gate: hatchi-maxchi standalone CI (behaviour / visual / WCAG /
   # Nu) is not fully re-run in the monorepo. If that repo's main CI is red,

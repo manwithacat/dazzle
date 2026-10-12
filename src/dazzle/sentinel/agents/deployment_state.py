@@ -1,10 +1,9 @@
-"""Deployment & State detection agent (DS-01 through DS-08)."""
+"""Deployment & State detection agent (DS-03 through DS-08)."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dazzle.core.ir.governance import InterfaceAuthMethod
 from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
@@ -32,102 +31,6 @@ class DeploymentStateAgent(DetectionAgent):
     @property
     def agent_id(self) -> AgentId:
         return AgentId.DS
-
-    # ------------------------------------------------------------------
-    # DS-01: Interface API without authentication
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-01",
-        category="deployment",
-        subcategory="auth",
-        title="Interface API without authentication",
-    )
-    def interface_without_auth(self, appspec: AppSpec) -> list[Finding]:
-        """Flag interface APIs that use auth method 'none'."""
-        findings: list[Finding] = []
-        if appspec.interfaces is None:
-            return findings
-        for api in appspec.interfaces.apis:
-            if api.auth != InterfaceAuthMethod.NONE:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.DS,
-                    heuristic_id="DS-01",
-                    category="deployment",
-                    subcategory="auth",
-                    severity=Severity.HIGH,
-                    confidence=Confidence.CONFIRMED,
-                    title=f"Interface '{api.name}' has no authentication",
-                    description=(
-                        f"Interface API '{api.name}' uses auth method 'none'. "
-                        f"Any caller can access this API without credentials, "
-                        f"including bots and malicious actors."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="config_value",
-                            location=f"interface:{api.name}",
-                            snippet=f"auth: {api.auth.value}",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add authentication to interface '{api.name}'.",
-                        effort=RemediationEffort.MEDIUM,
-                        dsl_example=(f"interfaces:\n  api {api.name}:\n    auth: oauth2"),
-                    ),
-                    construct_type="interface",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # DS-02: Interface API without rate limiting
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-02",
-        category="deployment",
-        subcategory="resilience",
-        title="Interface API without rate limiting",
-    )
-    def interface_without_rate_limit(self, appspec: AppSpec) -> list[Finding]:
-        """Flag interface APIs that have no rate limit configured."""
-        findings: list[Finding] = []
-        if appspec.interfaces is None:
-            return findings
-        for api in appspec.interfaces.apis:
-            if api.rate_limit is not None:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.DS,
-                    heuristic_id="DS-02",
-                    category="deployment",
-                    subcategory="resilience",
-                    severity=Severity.MEDIUM,
-                    confidence=Confidence.LIKELY,
-                    title=f"Interface '{api.name}' has no rate limit",
-                    description=(
-                        f"Interface API '{api.name}' does not define a "
-                        f"rate_limit. Without rate limiting the API is "
-                        f"vulnerable to abuse and denial-of-service."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"interface:{api.name}",
-                            context="rate_limit is None",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add rate limiting to interface '{api.name}'.",
-                        effort=RemediationEffort.SMALL,
-                        dsl_example=(f"interfaces:\n  api {api.name}:\n    rate_limit: 1000/hour"),
-                    ),
-                    construct_type="interface",
-                ),
-            )
-        return findings
 
     # ------------------------------------------------------------------
     # DS-03: Transaction without idempotency key

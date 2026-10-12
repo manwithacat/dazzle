@@ -1,11 +1,11 @@
-"""Multi-Tenancy detection agent (MT-01 through MT-07)."""
+"""Multi-Tenancy detection agent (MT-01 to MT-04, MT-06, MT-07)."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from dazzle.core.ir.fields import FieldTypeKind
-from dazzle.core.ir.governance import DataProductTransform, TenancyMode, TopicNamespaceMode
+from dazzle.core.ir.governance import TenancyMode, TopicNamespaceMode
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -307,76 +307,6 @@ class MultiTenancyAgent(DetectionAgent):
                     ),
                 )
             )
-        return findings
-
-    # ------------------------------------------------------------------
-    # MT-05: Cross-tenant data product without anonymization
-    # ------------------------------------------------------------------
-
-    @heuristic(
-        heuristic_id="MT-05",
-        category="multi-tenancy",
-        subcategory="data-product",
-        title="Cross-tenant data product without anonymization",
-    )
-    def mt_05_cross_tenant_no_anonymization(self, appspec: AppSpec) -> list[Finding]:
-        """Flag cross-tenant data products missing anonymization transforms."""
-        findings: list[Finding] = []
-        if appspec.data_products is None:
-            return findings
-
-        anonymizing = {DataProductTransform.PSEUDONYMISE, DataProductTransform.AGGREGATE}
-
-        for product in appspec.data_products.products:
-            if not product.cross_tenant:
-                continue
-            applied = set(product.transforms)
-            if not applied & anonymizing:
-                findings.append(
-                    Finding(
-                        agent=AgentId.MT,
-                        heuristic_id="MT-05",
-                        category="multi-tenancy",
-                        subcategory="data-product",
-                        severity=Severity.HIGH,
-                        confidence=Confidence.CONFIRMED,
-                        title=(f"Cross-tenant data product '{product.name}' lacks anonymization"),
-                        description=(
-                            f"Data product '{product.name}' is marked "
-                            f"cross_tenant=true but its transforms "
-                            f"({[t.value for t in product.transforms]}) do not "
-                            f"include 'pseudonymise' or 'aggregate'. Exposing "
-                            f"raw tenant data across boundaries without "
-                            f"anonymization risks regulatory non-compliance."
-                        ),
-                        construct_type="data_product",
-                        evidence=[
-                            Evidence(
-                                evidence_type="config_value",
-                                location=f"data_product {product.name}",
-                                snippet=f"cross_tenant: true, transforms: {[t.value for t in product.transforms]}",
-                                context=(
-                                    "Neither pseudonymise nor aggregate is present "
-                                    "in the transform pipeline."
-                                ),
-                            ),
-                        ],
-                        remediation=Remediation(
-                            summary=(f"Add anonymization transform to '{product.name}'"),
-                            effort=RemediationEffort.MEDIUM,
-                            guidance=(
-                                "Add 'pseudonymise' or 'aggregate' (or both) to the "
-                                "transforms list so that tenant-specific identifiers "
-                                "are removed before data crosses tenant boundaries."
-                            ),
-                            dsl_example=(
-                                f"data_product {product.name}:\n"
-                                f"  cross_tenant: true\n"
-                                f"  transforms: [pseudonymise, aggregate]"
-                            ),
-                        ),
-                    )
-                )
         return findings
 
     # ------------------------------------------------------------------

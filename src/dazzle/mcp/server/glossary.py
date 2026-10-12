@@ -595,31 +595,6 @@ invariant: end_date > start_date
 10. **Archetypes** - Use for cross-cutting concerns (timestamps, audit, soft delete) (v0.7.1)
 11. **Examples** - Include 2-3 representative records per entity (v0.7.1)
 
-## Specs Toolchain
-
-### Spec Generation
-Generate API specifications from your DAZZLE AppSpec.
-
-**Commands:**
-```bash
-dazzle specs openapi -o api.yaml    # Generate OpenAPI spec
-dazzle specs openapi -f json        # Generate in JSON format
-dazzle specs asyncapi -o async.yaml # Generate AsyncAPI spec
-```
-
-### OpenAPI Generation
-Generates OpenAPI 3.1 specification from AppSpec including:
-- Entity schemas (Base, Create, Update, Read, List)
-- CRUD endpoints with proper HTTP methods
-- State transition action endpoints
-- Enum schemas for enum fields
-
-**Example:**
-```bash
-dazzle specs openapi -o openapi.yaml
-dazzle specs openapi -f json
-```
-
 ## See Also
 
 - DAZZLE DSL Quick Reference - Syntax examples

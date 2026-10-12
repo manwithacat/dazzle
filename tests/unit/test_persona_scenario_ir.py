@@ -308,38 +308,6 @@ scenario busy_term "Busy Term":
         assert teacher_entry.start_route == "/classes"
         assert teacher_entry.seed_script == "scenarios/teacher.json"
 
-    def test_parse_demo_block(self) -> None:
-        """Test parsing a standalone demo block."""
-        dsl = """
-module test
-
-app test_app "Test"
-
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-  completed: bool=false
-
-demo:
-  Task:
-    - title: "Grade papers", completed: false
-    - title: "Prepare lecture", completed: true
-"""
-        module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
-
-        # Demo blocks create a default scenario
-        assert len(fragment.scenarios) == 1
-        scenario = fragment.scenarios[0]
-        assert scenario.id == "default"
-        assert len(scenario.demo_fixtures) == 1
-
-        fixture = scenario.demo_fixtures[0]
-        assert fixture.entity == "Task"
-        assert len(fixture.records) == 2
-        assert fixture.records[0]["title"] == "Grade papers"
-        assert fixture.records[0]["completed"] is False
-        assert fixture.records[1]["completed"] is True
-
     def test_parse_multiple_personas(self) -> None:
         """Test parsing multiple persona declarations."""
         dsl = """

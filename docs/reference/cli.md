@@ -75,13 +75,6 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 | `dazzle e2e` | Docker-based E2E testing with UX coverage |
 | `dazzle story` | Story-driven test generation |
 
-### API Specifications
-
-| Command | Description |
-|---------|-------------|
-| `dazzle specs openapi` | Generate OpenAPI specification |
-| `dazzle specs asyncapi` | Generate AsyncAPI specification |
-
 ### Events & Processes
 
 | Command | Description |
@@ -113,7 +106,6 @@ See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future write
 
 | Command | Description |
 |---------|-------------|
-| `dazzle lsp` | Language Server Protocol commands |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle kg` | Knowledge graph management |
 
@@ -150,7 +142,6 @@ there requires a row here.
 | `dazzle guide` | Inspect onboarding guides declared in the project DSL |
 | `dazzle inspect` | Introspect framework extension points and the public API surface |
 | `dazzle kg` | Knowledge graph management |
-| `dazzle lsp` | Language Server Protocol (LSP) commands |
 | `dazzle mcp` | MCP (Model Context Protocol) server commands |
 | `dazzle mock` | Vendor mock server management |
 | `dazzle outbox` | Event outbox commands |
@@ -169,7 +160,6 @@ there requires a row here.
 | `dazzle sentinel` | SaaS Sentinel — failure-mode detection for Dazzle applications |
 | `dazzle signing` | Provision the native document signing primitive |
 | `dazzle spec` | Compare narrative product spec against DSL state — drift detection |
-| `dazzle specs` | Generate API specifications (OpenAPI / AsyncAPI) |
 | `dazzle story` | Story-driven test generation |
 | `dazzle sweep` | Run unified health checks across example apps |
 | `dazzle tenant` | Multi-tenant schema management |
@@ -391,22 +381,6 @@ dazzle db COMMAND [OPTIONS]
 
 ---
 
-### dazzle lsp
-
-Language Server Protocol commands for IDE integration.
-
-```bash
-dazzle lsp COMMAND [OPTIONS]
-```
-
-| Subcommand | Description |
-|------------|-------------|
-| `run` | Start the LSP server (diagnostics, hover, completion, go-to-definition) |
-| `check` | Verify LSP dependencies are installed |
-| `grammar-path` | Print path to bundled TextMate grammar |
-
----
-
 ### dazzle mcp
 
 MCP (Model Context Protocol) server for AI assistants.
@@ -422,26 +396,6 @@ dazzle mcp COMMAND [OPTIONS]
 | `check` | Check MCP server status |
 
 See [MCP Server](../architecture/mcp-server.md) for the full tool reference.
-
----
-
-### dazzle specs
-
-Generate API specifications.
-
-```bash
-dazzle specs COMMAND [OPTIONS]
-```
-
-| Subcommand | Description |
-|------------|-------------|
-| `openapi` | Generate OpenAPI specification |
-| `asyncapi` | Generate AsyncAPI specification |
-
-```bash
-dazzle specs openapi -o openapi.json
-dazzle specs asyncapi -f yaml
-```
 
 ---
 

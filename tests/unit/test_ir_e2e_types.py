@@ -9,10 +9,6 @@ from dazzle.core.ir import (
     AppSpec,
     DomainSpec,
     E2ETestSpec,
-    EntitySpec,
-    FieldSpec,
-    FieldType,
-    FieldTypeKind,
     FixtureSpec,
     FlowAssertion,
     FlowAssertionKind,
@@ -289,58 +285,6 @@ class TestE2ETestSpec:
 class TestAppSpecE2EExtensions:
     """Tests for AppSpec E2E extensions (e2e_flows, fixtures)."""
 
-    def test_app_spec_with_flows_and_fixtures(self) -> None:
-        """Test creating an AppSpec with E2E flows and fixtures."""
-        entity = EntitySpec(
-            name="Task",
-            title="Task",
-            fields=[
-                FieldSpec(name="id", type=FieldType(kind=FieldTypeKind.UUID)),
-                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR)),
-            ],
-        )
-
-        fixtures = [
-            FixtureSpec(id="task_valid", entity="Task", data={"title": "Test"}),
-        ]
-
-        flows = [
-            FlowSpec(
-                id="Task_create",
-                priority=FlowPriority.HIGH,
-                steps=[FlowStep(kind=FlowStepKind.NAVIGATE, target="view:task_list")],
-                entity="Task",
-            ),
-        ]
-
-        app = AppSpec(
-            name="todo",
-            title="Todo App",
-            domain=DomainSpec(entities=[entity]),
-            e2e_flows=flows,
-            fixtures=fixtures,
-        )
-
-        assert len(app.e2e_flows) == 1
-        assert len(app.fixtures) == 1
-
-    def test_app_spec_get_flow(self) -> None:
-        """Test AppSpec.get_flow method."""
-        flows = [
-            FlowSpec(id="flow1", steps=[]),
-            FlowSpec(id="flow2", steps=[]),
-        ]
-
-        app = AppSpec(
-            name="test",
-            domain=DomainSpec(entities=[]),
-            e2e_flows=flows,
-        )
-
-        assert app.get_flow("flow1") is not None
-        assert app.get_flow("flow1").id == "flow1"
-        assert app.get_flow("nonexistent") is None
-
     def test_app_spec_get_fixture(self) -> None:
         """Test AppSpec.get_fixture method."""
         fixtures = [
@@ -355,40 +299,6 @@ class TestAppSpecE2EExtensions:
 
         assert app.get_fixture("fixture1") is not None
         assert app.get_fixture("nonexistent") is None
-
-    def test_app_spec_get_flows_by_entity(self) -> None:
-        """Test AppSpec.get_flows_by_entity method."""
-        flows = [
-            FlowSpec(id="task1", entity="Task", steps=[]),
-            FlowSpec(id="user1", entity="User", steps=[]),
-        ]
-
-        app = AppSpec(
-            name="test",
-            domain=DomainSpec(entities=[]),
-            e2e_flows=flows,
-        )
-
-        task_flows = app.get_flows_by_entity("Task")
-        assert len(task_flows) == 1
-        assert task_flows[0].id == "task1"
-
-    def test_app_spec_get_flows_by_priority(self) -> None:
-        """Test AppSpec.get_flows_by_priority method."""
-        flows = [
-            FlowSpec(id="high1", priority=FlowPriority.HIGH, steps=[]),
-            FlowSpec(id="medium1", priority=FlowPriority.MEDIUM, steps=[]),
-        ]
-
-        app = AppSpec(
-            name="test",
-            domain=DomainSpec(entities=[]),
-            e2e_flows=flows,
-        )
-
-        high_flows = app.get_flows_by_priority(FlowPriority.HIGH)
-        assert len(high_flows) == 1
-        assert high_flows[0].id == "high1"
 
 
 class TestUsabilityAndA11yRules:

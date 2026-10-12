@@ -148,21 +148,15 @@ def make_appspec(
     tenancy: object | None = None,
     security: object | None = None,
     ledgers: list | None = None,
-    webhooks: list | None = None,
     slas: list | None = None,
-    approvals: list | None = None,
     experiences: list | None = None,
-    enums: list | None = None,
     schedules: list | None = None,
-    tests: list | None = None,
-    data_products: object | None = None,
     # New fields for ID/DS/PR/OP agents
     apis: list | None = None,
     domain_services: list | None = None,
     foreign_models: list | None = None,
     integrations: list | None = None,
     channels: list | None = None,
-    interfaces: object | None = None,
     transactions: list | None = None,
     llm_config: object | None = None,
     llm_models: list | None = None,
@@ -192,21 +186,15 @@ def make_appspec(
     spec.tenancy = tenancy
     spec.security = security
     spec.ledgers = ledgers or []
-    spec.webhooks = webhooks or []
     spec.slas = slas or []
-    spec.approvals = approvals or []
     spec.experiences = experiences or []
-    spec.enums = enums or []
     spec.schedules = schedules or []
-    spec.tests = tests or []
-    spec.data_products = data_products
     # New fields for ID/DS/PR/OP agents
     spec.apis = apis or []
     spec.domain_services = domain_services or []
     spec.foreign_models = foreign_models or []
     spec.integrations = integrations or []
     spec.channels = channels or []
-    spec.interfaces = interfaces
     spec.transactions = transactions or []
     spec.llm_config = llm_config
     spec.llm_models = llm_models or []

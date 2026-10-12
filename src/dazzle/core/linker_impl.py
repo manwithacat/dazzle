@@ -34,19 +34,15 @@ def _add_symbol(
 
 @dataclass
 class DomainSymbols:
-    """Domain-layer symbols: entities, enums, views, ledgers, foreign models."""
+    """Domain-layer symbols: entities, views, ledgers, foreign models."""
 
     entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
-    enums: dict[str, ir.EnumSpec] = field(default_factory=dict)
     views: dict[str, ir.ViewSpec] = field(default_factory=dict)
     ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)
     foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
 
     def add_entity(self, entity: ir.EntitySpec, module_name: str, sources: dict[str, str]) -> None:
         _add_symbol(self.entities, entity.name, entity, "entity", module_name, sources)
-
-    def add_enum(self, enum: ir.EnumSpec, module_name: str, sources: dict[str, str]) -> None:
-        _add_symbol(self.enums, enum.name, enum, "enum", module_name, sources)
 
     def add_view(self, view: ir.ViewSpec, module_name: str, sources: dict[str, str]) -> None:
         _add_symbol(self.views, view.name, view, "view", module_name, sources)
@@ -143,14 +139,11 @@ class SymbolTable:
     apis: dict[str, ir.APISpec] = field(default_factory=dict)
     domain_services: dict[str, ir.DomainServiceSpec] = field(default_factory=dict)  # #1070
     integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
-    tests: dict[str, ir.TestSpec] = field(default_factory=dict)
     archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
     llm_models: dict[str, ir.LLMModelSpec] = field(default_factory=dict)  # v0.21.0
     llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
     schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
     transactions: dict[str, ir.TransactionSpec] = field(default_factory=dict)  # v0.24.0
-    webhooks: dict[str, ir.WebhookSpec] = field(default_factory=dict)  # v0.25.0
-    approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
     notifications: dict[str, ir.NotificationSpec] = field(default_factory=dict)  # #952
@@ -184,10 +177,6 @@ class SymbolTable:
     @property
     def entities(self) -> dict[str, ir.EntitySpec]:
         return self._domain.entities
-
-    @property
-    def enums(self) -> dict[str, ir.EnumSpec]:
-        return self._domain.enums
 
     @property
     def views(self) -> dict[str, ir.ViewSpec]:
@@ -280,10 +269,6 @@ class SymbolTable:
             module_name,
             self.symbol_sources,
         )
-
-    def add_test(self, test: ir.TestSpec, module_name: str) -> None:
-        """Add test to symbol table, checking for duplicates."""
-        _add_symbol(self.tests, test.name, test, "test", module_name, self.symbol_sources)
 
     def add_persona(self, persona: ir.PersonaSpec, module_name: str) -> None:
         """Add persona to symbol table, checking for duplicates (v0.8.5)."""
@@ -379,25 +364,9 @@ class SymbolTable:
             self.symbol_sources,
         )
 
-    def add_enum(self, enum: ir.EnumSpec, module_name: str) -> None:
-        """Add shared enum to symbol table, checking for duplicates (v0.25.0)."""
-        self._domain.add_enum(enum, module_name, self.symbol_sources)
-
     def add_view(self, view: ir.ViewSpec, module_name: str) -> None:
         """Add view to symbol table, checking for duplicates (v0.25.0)."""
         self._domain.add_view(view, module_name, self.symbol_sources)
-
-    def add_webhook(self, webhook: ir.WebhookSpec, module_name: str) -> None:
-        """Add webhook to symbol table, checking for duplicates (v0.25.0)."""
-        _add_symbol(
-            self.webhooks, webhook.name, webhook, "webhook", module_name, self.symbol_sources
-        )
-
-    def add_approval(self, approval: ir.ApprovalSpec, module_name: str) -> None:
-        """Add approval to symbol table, checking for duplicates (v0.25.0)."""
-        _add_symbol(
-            self.approvals, approval.name, approval, "approval", module_name, self.symbol_sources
-        )
 
     def add_sla(self, sla: ir.SLASpec, module_name: str) -> None:
         """Add SLA to symbol table, checking for duplicates (v0.25.0)."""
@@ -581,10 +550,6 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         for integration in module.fragment.integrations:
             symbols.add_integration(integration, module.name)
 
-        # Add tests
-        for test in module.fragment.tests:
-            symbols.add_test(test, module.name)
-
         # Add personas (v0.8.5)
         for persona in module.fragment.personas:
             symbols.add_persona(persona, module.name)
@@ -664,21 +629,9 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         for transaction in module.fragment.transactions:
             symbols.add_transaction(transaction, module.name)
 
-        # Add enums (v0.25.0)
-        for enum in module.fragment.enums:
-            symbols.add_enum(enum, module.name)
-
         # Add views (v0.25.0)
         for view in module.fragment.views:
             symbols.add_view(view, module.name)
-
-        # Add webhooks (v0.25.0)
-        for webhook in module.fragment.webhooks:
-            symbols.add_webhook(webhook, module.name)
-
-        # Add approvals (v0.25.0)
-        for approval in module.fragment.approvals:
-            symbols.add_approval(approval, module.name)
 
         # Add SLAs (v0.25.0)
         for sla in module.fragment.slas:
@@ -1553,7 +1506,6 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         domain_services=list(symbols.domain_services.values()),  # #1070
         foreign_models=list(symbols.foreign_models.values()),
         integrations=list(symbols.integrations.values()),
-        tests=list(symbols.tests.values()),
         personas=list(symbols.personas.values()),  # v0.8.5
         scenarios=list(symbols.scenarios.values()),  # v0.8.5
         stories=list(symbols.stories.values()),  # v0.22.0
@@ -1565,10 +1517,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         schedules=list(symbols.schedules.values()),  # v0.23.0
         ledgers=list(symbols.ledgers.values()),  # v0.24.0
         transactions=list(symbols.transactions.values()),  # v0.24.0
-        enums=list(symbols.enums.values()),  # v0.25.0
         views=list(symbols.views.values()),  # v0.25.0
-        webhooks=list(symbols.webhooks.values()),  # v0.25.0
-        approvals=list(symbols.approvals.values()),  # v0.25.0
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
         notifications=list(symbols.notifications.values()),  # #952
@@ -1587,22 +1536,18 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         assets=_flatten_list("assets"),
         channels=_flatten_list("channels"),
         documents=_flatten_list("documents"),
-        e2e_flows=_flatten_list("e2e_flows"),
         atomic_flows=_flatten_list("atomic_flows"),
         fixtures=_flatten_list("fixtures"),
-        interfaces=_first_scalar("interfaces"),
         messages=_flatten_list("messages"),
         params=_flatten_list("params"),
         policies=_first_scalar("policies"),
         projections=_flatten_list("projections"),
-        rules=_flatten_list("rules"),
         streams=_flatten_list("streams"),
         ingests=_flatten_list("ingests"),
         subscriptions=_flatten_list("subscriptions"),
         templates=_flatten_list("templates"),
         event_model=_first_scalar("event_model"),
         hless_pragma=_first_scalar("hless_pragma"),
-        data_products=_first_scalar("data_products"),
         # Guided onboarding (v0.71.0) — flatten across modules, no
         # symbol-table tracking yet (guides reference surfaces/entities
         # by name; the concordance pass handles cross-module refs).

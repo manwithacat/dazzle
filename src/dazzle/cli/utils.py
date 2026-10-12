@@ -51,22 +51,6 @@ def print_version_info(full: bool = False) -> None:
         if (install_location / "pyproject.toml").exists():
             install_method = "development"
 
-    # Check LSP server availability
-    lsp_available = False
-    try:
-        # Suppress verbose pygls logging during import check
-        # MUST set logging level BEFORE importing pygls/dazzle.lsp.server
-        import logging
-
-        logging.getLogger("pygls.feature_manager").setLevel(logging.ERROR)
-        logging.getLogger("pygls").setLevel(logging.ERROR)
-
-        import dazzle.lsp.server
-
-        lsp_available = True
-    except ImportError:
-        pass
-
     # Check LLM support
     llm_available = False
     llm_providers = []
@@ -98,11 +82,6 @@ def print_version_info(full: bool = False) -> None:
     typer.echo(f"  Location:      {install_location}")
     typer.echo("")
     typer.echo("Features:")
-    if lsp_available:
-        lsp_status = "✓ Available"
-    else:
-        lsp_status = "✗ Not available (install with: pip install dazzle)"
-    typer.echo(f"  LSP Server:    {lsp_status}")
     if llm_available:
         llm_status = "✓ Available (" + ", ".join(llm_providers) + ")"
     else:
@@ -116,7 +95,6 @@ def print_version_info(full: bool = False) -> None:
         typer.echo("")
         typer.echo("Flags:")
         typer.echo("  python_available: true")
-        typer.echo(f"  lsp_available: {'true' if lsp_available else 'false'}")
         typer.echo(f"  llm_available: {'true' if llm_available else 'false'}")
 
 

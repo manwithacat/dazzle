@@ -17,10 +17,6 @@ construct: analytics
   fragment_fields: analytics
   ir_classes: AnalyticsSpec
 
-construct: approval
-  fragment_fields: approvals
-  ir_classes: ApprovalSpec
-
 construct: archetype
   fragment_fields: archetypes
   ir_classes: ArchetypeSpec
@@ -41,14 +37,6 @@ construct: channel
   fragment_fields: channels
   ir_classes: ChannelSpec
 
-construct: data_products
-  fragment_fields: data_products
-  ir_classes: DataProductsSpec
-
-construct: demo
-  fragment_fields: scenarios
-  ir_classes: ScenarioSpec
-
 construct: document
   fragment_fields: documents
   ir_classes: DocumentSpec
@@ -56,10 +44,6 @@ construct: document
 construct: entity
   fragment_fields: entities
   ir_classes: EntitySpec
-
-construct: enum
-  fragment_fields: enums
-  ir_classes: EnumSpec
 
 construct: event_model
   fragment_fields: event_model
@@ -72,10 +56,6 @@ construct: experience
 construct: feedback_widget
   fragment_fields: feedback_widget
   ir_classes: FeedbackWidgetSpec
-
-construct: flow
-  fragment_fields: e2e_flows
-  ir_classes: FlowSpec
 
 construct: foreign_model
   fragment_fields: foreign_models
@@ -100,10 +80,6 @@ construct: ingest
 construct: integration
   fragment_fields: integrations
   ir_classes: IntegrationSpec
-
-construct: interfaces
-  fragment_fields: interfaces
-  ir_classes: InterfacesSpec
 
 construct: island
   fragment_fields: islands
@@ -161,17 +137,9 @@ construct: projection
   fragment_fields: projections
   ir_classes: ProjectionSpec
 
-construct: question
-  fragment_fields: questions
-  ir_classes: QuestionSpec
-
 construct: rhythm
   fragment_fields: rhythms
   ir_classes: RhythmSpec
-
-construct: rule
-  fragment_fields: rules
-  ir_classes: RuleSpec
 
 construct: scenario
   fragment_fields: scenarios
@@ -221,10 +189,6 @@ construct: tenancy
   fragment_fields: tenancy
   ir_classes: TenancySpec
 
-construct: test
-  fragment_fields: tests
-  ir_classes: TestSpec
-
 construct: transaction
   fragment_fields: transactions
   ir_classes: TransactionSpec
@@ -232,10 +196,6 @@ construct: transaction
 construct: view
   fragment_fields: views
   ir_classes: ViewSpec
-
-construct: webhook
-  fragment_fields: webhooks
-  ir_classes: WebhookSpec
 
 construct: workspace
   fragment_fields: workspaces

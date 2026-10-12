@@ -14,9 +14,8 @@ Tests confirm:
 
 Important caveats
 -----------------
-* ``dazzle validate`` reports ``[Preview] approval gates are not yet enforced at
-  runtime``.  The two-approver quorum (StandardApproval / HighValueApproval) is
-  therefore NOT tested here.
+* Multi-approver quorum is not modelled (the top-level ``approval`` construct
+  was removed under ADR-0057), so it is not tested here.
 * Whether the ``transitions: role()`` guards are runtime-enforced on the PUT route
   is UNKNOWN ahead of this test run — the tests will discover it.  If a negative
   control (tests 1 or 2) passes when it should fail, the test is left asserting

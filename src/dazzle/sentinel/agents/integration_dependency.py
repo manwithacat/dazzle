@@ -1,4 +1,4 @@
-"""Integration & Dependency detection agent (ID-01 through ID-08)."""
+"""Integration & Dependency detection agent (ID-01 to ID-03, ID-06 to ID-08)."""
 
 from __future__ import annotations
 
@@ -183,105 +183,6 @@ class IntegrationDependencyAgent(DetectionAgent):
                             construct_type="integration",
                         ),
                     )
-        return findings
-
-    # ------------------------------------------------------------------
-    # ID-04: Webhook without retry configuration
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="ID-04",
-        category="integration",
-        subcategory="resilience",
-        title="Webhook without retry configuration",
-    )
-    def webhook_without_retry(self, appspec: AppSpec) -> list[Finding]:
-        """Flag webhooks that have no retry policy configured."""
-        findings: list[Finding] = []
-        for webhook in appspec.webhooks:
-            if webhook.retry is not None:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.ID,
-                    heuristic_id="ID-04",
-                    category="integration",
-                    subcategory="resilience",
-                    severity=Severity.MEDIUM,
-                    confidence=Confidence.CONFIRMED,
-                    title=f"Webhook '{webhook.name}' has no retry configuration",
-                    description=(
-                        f"Webhook '{webhook.name}' does not define a retry "
-                        f"policy. Transient failures will cause permanent "
-                        f"missed notifications."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"webhook:{webhook.name}",
-                            context="webhook.retry is None",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add retry configuration to webhook '{webhook.name}'.",
-                        effort=RemediationEffort.SMALL,
-                        dsl_example=(
-                            f"webhook {webhook.name}:\n"
-                            f"  retry:\n"
-                            f"    max_attempts: 3\n"
-                            f"    backoff: exponential"
-                        ),
-                    ),
-                    construct_type="webhook",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # ID-05: Hard-coded webhook URL
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="ID-05",
-        category="integration",
-        subcategory="configuration",
-        title="Hard-coded webhook URL",
-    )
-    def hardcoded_webhook_url(self, appspec: AppSpec) -> list[Finding]:
-        """Flag webhooks with literal URLs instead of config() references."""
-        findings: list[Finding] = []
-        for webhook in appspec.webhooks:
-            if not webhook.url:
-                continue
-            if _CONFIG_RE.search(webhook.url):
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.ID,
-                    heuristic_id="ID-05",
-                    category="integration",
-                    subcategory="configuration",
-                    severity=Severity.LOW,
-                    confidence=Confidence.LIKELY,
-                    title=f"Webhook '{webhook.name}' has a hard-coded URL",
-                    description=(
-                        f"Webhook '{webhook.name}' uses a literal URL "
-                        f"instead of a config() reference. Hard-coded URLs "
-                        f"cannot vary across environments."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="config_value",
-                            location=f"webhook:{webhook.name}",
-                            snippet=f"url: {webhook.url}",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary="Use config() to externalise the webhook URL.",
-                        effort=RemediationEffort.TRIVIAL,
-                        dsl_example=(f'  url: config("WEBHOOK_{webhook.name.upper()}_URL")'),
-                    ),
-                    construct_type="webhook",
-                ),
-            )
         return findings
 
     # ------------------------------------------------------------------

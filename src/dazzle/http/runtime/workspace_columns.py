@@ -268,18 +268,11 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
-def build_surface_columns(
-    entity_spec: Any, surface_spec: Any, enums: Any = None
-) -> list[dict[str, Any]]:
+def build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str, Any]]:
     """Build column metadata from a list surface's field projection.
 
     Uses the surface's section elements to determine which entity fields to
     show and in what order, rather than dumping all entity fields.
-
-    ``enums`` (the app's shared `enum` blocks) lets a badge column carry its
-    declared `semantic:` value→tone map (#1493 slice 2); pass the appspec's
-    ``enums`` so shared-enum bindings resolve (inline `enum[...]` bindings
-    resolve without it).
     """
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return []
@@ -313,7 +306,7 @@ def build_surface_columns(
                     field_widgets[fn] = str(opts["widget"])
 
     if not surface_fields:
-        return build_entity_columns(entity_spec, enums)
+        return build_entity_columns(entity_spec)
 
     # Build a lookup from entity fields
     field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
@@ -378,7 +371,7 @@ def build_surface_columns(
             col["currency_code"] = "GBP"
         if col_type == "badge":
             # #1493 slice 2: declared `semantic:` binding + SM-terminal inference.
-            _sem = status_tone_map(ft, enums, entity_spec.state_machine)
+            _sem = status_tone_map(ft, entity_spec.state_machine)
             if _sem:
                 col["semantic_map"] = _sem
             if kind_val == "enum":
@@ -429,11 +422,10 @@ def _apply_badge_column_meta(
     col: dict[str, Any],
     ft: Any,
     kind_val: str,
-    enums: Any,
     entity_spec: Any,
 ) -> None:
     """#1493 slice 2: semantic map + filter options for badge columns."""
-    _sem = status_tone_map(ft, enums, entity_spec.state_machine)
+    _sem = status_tone_map(ft, entity_spec.state_machine)
     if _sem:
         col["semantic_map"] = _sem
     if kind_val == "enum":
@@ -451,7 +443,7 @@ def _apply_badge_column_meta(
         col["filter_options"] = enum_filter_options(states)
 
 
-def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict[str, Any] | None:
+def _field_to_entity_column(f: Any, entity_spec: Any) -> dict[str, Any] | None:
     """Map one entity field to a workspace column dict, or None if non-displayable."""
     if f.name == "id":
         return None
@@ -477,7 +469,7 @@ def _field_to_entity_column(f: Any, entity_spec: Any, enums: Any = None) -> dict
     elif col_type == "currency":
         col["currency_code"] = "GBP"
     if col_type == "badge":
-        _apply_badge_column_meta(col, ft, kind_val, enums, entity_spec)
+        _apply_badge_column_meta(col, ft, kind_val, entity_spec)
     if col_type == "bool":
         col["filterable"] = True
         col["filter_options"] = bool_filter_options()
@@ -528,7 +520,7 @@ def _fitness_repr_field_names(entity_spec: Any) -> list[str]:
     return out
 
 
-def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
+def build_entity_columns_full(entity_spec: Any) -> list[dict[str, Any]]:
     """Pre-compute the **full** (untruncated) auto-derived column list from an entity.
 
     Same one-time IR-derived computation as ``build_entity_columns`` but WITHOUT the
@@ -536,8 +528,7 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
     declaration order. The caller applies economy: ``build_entity_columns`` truncates
     by declared salience (the build-time default), while the request-time path
     (ADR-0050 2d) applies ``resolve_column_economy_by_usage`` so a heavily-engaged
-    field can survive. ``enums`` carries the shared `enum` blocks for badge
-    `semantic:` maps (#1493 slice 2).
+    field can survive.
 
     When the entity declares ``fitness.repr_fields``, that list is the authoritative
     projection (order preserved) so workspace grid/queue cards do not dump raw
@@ -561,7 +552,7 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
             media = _media_col_type_for_field_name(f.name)
             if media != "image":
                 continue
-            col = _field_to_entity_column(f, entity_spec, enums)
+            col = _field_to_entity_column(f, entity_spec)
             if col is None:
                 continue
             key = str(col.get("key") or "")
@@ -572,7 +563,7 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
             f = field_map.get(name)
             if f is None:
                 continue
-            col = _field_to_entity_column(f, entity_spec, enums)
+            col = _field_to_entity_column(f, entity_spec)
             if col is None:
                 continue
             key = str(col.get("key") or "")
@@ -582,13 +573,13 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
         return columns
 
     for f in entity_spec.fields:
-        col = _field_to_entity_column(f, entity_spec, enums)
+        col = _field_to_entity_column(f, entity_spec)
         if col is not None:
             columns.append(col)
     return columns
 
 
-def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, Any]]:
+def build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     """Auto-derived columns with the **build-time** 2d economy applied (the default).
 
     Keeps the top-6 most salient auto-columns (``resolve_column_economy``) and sheds
@@ -602,7 +593,7 @@ def build_entity_columns(entity_spec: Any, enums: Any = None) -> list[dict[str, 
     ``ticket_number`` from support_tickets queues → #1304 AAA-* needles zero while
     row count stayed 3).
     """
-    full = build_entity_columns_full(entity_spec, enums)
+    full = build_entity_columns_full(entity_spec)
     if _fitness_repr_field_names(entity_spec):
         return full
     return resolve_column_economy(full)

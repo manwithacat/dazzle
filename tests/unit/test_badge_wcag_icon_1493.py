@@ -157,15 +157,15 @@ class TestSMTerminalInference:
         # A declared binding always wins the merge, even for a terminal state.
         ft = _FakeFieldType()
         ft.enum_semantics = {"weird_end": "warning"}
-        merged = status_tone_map(ft, None, _FakeSM(["weird_end"]))
+        merged = status_tone_map(ft, _FakeSM(["weird_end"]))
         assert merged["weird_end"] == "warning"  # declared, not the SM `success`
 
     def test_status_tone_map_inference_only_when_undeclared(self):
         ft = _FakeFieldType()  # no enum_semantics declared
-        merged = status_tone_map(ft, None, _FakeSM(["weird_end"]))
+        merged = status_tone_map(ft, _FakeSM(["weird_end"]))
         assert merged == {"weird_end": "success"}
 
     def test_status_tone_map_no_machine_is_declared_only(self):
         ft = _FakeFieldType()
         ft.enum_semantics = {"open": "info"}
-        assert status_tone_map(ft, None, None) == {"open": "info"}
+        assert status_tone_map(ft, None) == {"open": "info"}

@@ -84,7 +84,6 @@ from .financial import (
     validate_money_fields,
 )
 from .flows import (
-    validate_approvals,
     validate_atomic_flows,
     validate_process_step_service_refs,
     validate_slas,
@@ -111,7 +110,6 @@ from .integrations import (
     validate_integrations,
     validate_notifications,
     validate_services,
-    validate_webhooks,
 )
 from .rbac import (
     _VISIBILITY_BOOL_FIELD_NAMES,
@@ -206,7 +204,6 @@ __all__ = [
     "extended_lint",
     "is_secret_field_name",
     "validate_admin_personas_scope_conflict",
-    "validate_approvals",
     "validate_appspec",
     "validate_atomic_flows",
     "validate_audit_config",
@@ -251,7 +248,6 @@ __all__ = [
     "validate_enum_semantics",
     "validate_ux_specs",
     "validate_visibility_bool_field_scope_coverage",
-    "validate_webhooks",
     "validate_workspace_primary_actions",
     "validate_workspace_region_actions",
 ]

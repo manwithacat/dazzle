@@ -21,16 +21,13 @@ from .. import ir
 from ..lexer import tokenize
 from .aggregate import AggregateParserMixin
 from .analytics import AnalyticsParserMixin
-from .approval import ApprovalParserMixin
 from .atomic_flow import AtomicFlowParserMixin
 from .audit import AuditParserMixin
 from .base import BaseParser
 from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
-from .enum import EnumParserMixin
 from .eventing import EventingParserMixin
 from .feedback_widget import FeedbackWidgetParserMixin
-from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .grant import GrantParserMixin
 from .hless import HLESSParserMixin
@@ -46,9 +43,7 @@ from .notification import NotificationParserMixin
 from .onboarding import OnboardingParserMixin
 from .params import ParamParserMixin
 from .process import ProcessParserMixin
-from .question import QuestionParserMixin
 from .rhythm import RhythmParserMixin
-from .rule import RuleParserMixin
 from .scenario import ScenarioParserMixin
 from .search import SearchParserMixin
 from .service import ServiceParserMixin
@@ -56,11 +51,9 @@ from .sla import SLAParserMixin
 from .story import StoryParserMixin
 from .subprocessor import SubprocessorParserMixin
 from .surface import SurfaceParserMixin
-from .test import TestParserMixin
 from .types import TypeParserMixin
 from .ux import UXParserMixin
 from .view import ViewParserMixin
-from .webhook import WebhookParserMixin
 from .workspace import WorkspaceParserMixin
 
 
@@ -73,15 +66,11 @@ class Parser(
     SurfaceParserMixin,
     ServiceParserMixin,
     IntegrationParserMixin,
-    TestParserMixin,
-    FlowParserMixin,
     AtomicFlowParserMixin,
     UXParserMixin,
     WorkspaceParserMixin,
     ScenarioParserMixin,
     StoryParserMixin,
-    RuleParserMixin,
-    QuestionParserMixin,
     RhythmParserMixin,
     MessagingParserMixin,
     EventingParserMixin,
@@ -91,10 +80,7 @@ class Parser(
     LLMParserMixin,
     ProcessParserMixin,
     LedgerParserMixin,
-    EnumParserMixin,
     ViewParserMixin,
-    WebhookParserMixin,
-    ApprovalParserMixin,
     SLAParserMixin,
     IslandParserMixin,
     NotificationParserMixin,
@@ -121,8 +107,6 @@ class Parser(
     - SurfaceParserMixin: Surface declarations with sections and actions
     - ServiceParserMixin: External APIs and domain services
     - IntegrationParserMixin: Integration declarations with actions and syncs
-    - TestParserMixin: API contract tests
-    - FlowParserMixin: E2E flow tests
     - UXParserMixin: UX semantic layer (attention signals, persona variants)
     - WorkspaceParserMixin: Workspace declarations with regions
     """
@@ -200,30 +184,12 @@ class Parser(
             }
         )
 
-    def _dispatch_test(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        test = self.parse_test()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "tests": [*fragment.tests, test],
-            }
-        )
-
     def _dispatch_workspace(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         workspace = self.parse_workspace()
         return ir.ModuleFragment(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "workspaces": [*fragment.workspaces, workspace],
-            }
-        )
-
-    def _dispatch_flow(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        flow = self.parse_flow()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "e2e_flows": [*fragment.e2e_flows, flow],
             }
         )
 
@@ -274,26 +240,6 @@ class Parser(
             }
         )
 
-    def _dispatch_rule(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        self.advance()  # consume 'rule' token
-        rule = self.parse_rule()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "rules": [*fragment.rules, rule],
-            }
-        )
-
-    def _dispatch_question(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        self.advance()  # consume 'question' token
-        question = self.parse_question()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "questions": [*fragment.questions, question],
-            }
-        )
-
     def _dispatch_message(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         message = self.parse_message()
         return ir.ModuleFragment(
@@ -336,39 +282,6 @@ class Parser(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "templates": [*fragment.templates, template],
-            }
-        )
-
-    def _dispatch_demo(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        demo_fixtures = self.parse_demo()
-        # Demo fixtures go into the last scenario or create a default one
-        if fragment.scenarios:
-            last_scenario = fragment.scenarios[-1]
-            updated_scenario = ir.ScenarioSpec(
-                id=last_scenario.id,
-                name=last_scenario.name,
-                description=last_scenario.description,
-                persona_entries=last_scenario.persona_entries,
-                seed_data_path=last_scenario.seed_data_path,
-                demo_fixtures=list(last_scenario.demo_fixtures) + demo_fixtures,
-            )
-            return ir.ModuleFragment(
-                **{
-                    **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                    "scenarios": [*fragment.scenarios[:-1], updated_scenario],
-                }
-            )
-        # Create a default scenario for standalone demo blocks
-        default_scenario = ir.ScenarioSpec(
-            id="default",
-            name="Default",
-            description="Default demo scenario",
-            demo_fixtures=demo_fixtures,
-        )
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "scenarios": [default_scenario],
             }
         )
 
@@ -435,24 +348,6 @@ class Parser(
             }
         )
 
-    def _dispatch_interfaces(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        interfaces = self.parse_interfaces()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "interfaces": interfaces,
-            }
-        )
-
-    def _dispatch_data_products(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        data_products = self.parse_data_products()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "data_products": data_products,
-            }
-        )
-
     def _dispatch_llm_model(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         llm_model = self.parse_llm_model()
         return ir.ModuleFragment(
@@ -516,15 +411,6 @@ class Parser(
             }
         )
 
-    def _dispatch_enum(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        enum_spec = self.parse_enum()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "enums": [*fragment.enums, enum_spec],
-            }
-        )
-
     def _dispatch_ingest(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         ingest_spec = self.parse_ingest()
         return ir.ModuleFragment(
@@ -534,30 +420,12 @@ class Parser(
             }
         )
 
-    def _dispatch_webhook(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        webhook_spec = self.parse_webhook()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "webhooks": [*fragment.webhooks, webhook_spec],
-            }
-        )
-
     def _dispatch_nav(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         nav_spec = self.parse_nav_definition()
         return ir.ModuleFragment(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "navs": [*fragment.navs, nav_spec],
-            }
-        )
-
-    def _dispatch_approval(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        approval_spec = self.parse_approval()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "approvals": [*fragment.approvals, approval_spec],
             }
         )
 
@@ -700,22 +568,17 @@ class Parser(
             TokenType.SERVICE: self._dispatch_service,
             TokenType.FOREIGN_MODEL: self._dispatch_foreign_model,
             TokenType.INTEGRATION: self._dispatch_integration,
-            TokenType.TEST: self._dispatch_test,
             TokenType.WORKSPACE: self._dispatch_workspace,
-            TokenType.FLOW: self._dispatch_flow,
             TokenType.ATOMIC: self._dispatch_atomic,
             TokenType.PERSONA: self._dispatch_persona,
             TokenType.SCENARIO: self._dispatch_scenario,
             TokenType.STORY: self._dispatch_story,
             TokenType.RHYTHM: self._dispatch_rhythm,
-            TokenType.RULE: self._dispatch_rule,
-            TokenType.QUESTION_DECL: self._dispatch_question,
             TokenType.MESSAGE: self._dispatch_message,
             TokenType.CHANNEL: self._dispatch_channel,
             TokenType.ASSET: self._dispatch_asset,
             TokenType.DOCUMENT: self._dispatch_document,
             TokenType.TEMPLATE: self._dispatch_template,
-            TokenType.DEMO: self._dispatch_demo,
             TokenType.EVENT_MODEL: self._dispatch_event_model,
             TokenType.SUBSCRIBE: self._dispatch_subscribe,
             TokenType.PROJECTION: self._dispatch_projection,
@@ -723,8 +586,6 @@ class Parser(
             TokenType.HLESS: self._dispatch_hless,
             TokenType.POLICIES: self._dispatch_policies,
             TokenType.TENANCY: self._dispatch_tenancy,
-            TokenType.INTERFACES: self._dispatch_interfaces,
-            TokenType.DATA_PRODUCTS: self._dispatch_data_products,
             TokenType.LLM_MODEL: self._dispatch_llm_model,
             TokenType.LLM_CONFIG: self._dispatch_llm_config,
             TokenType.LLM_INTENT: self._dispatch_llm_intent,
@@ -732,11 +593,8 @@ class Parser(
             TokenType.SCHEDULE: self._dispatch_schedule,
             TokenType.LEDGER: self._dispatch_ledger,
             TokenType.TRANSACTION: self._dispatch_transaction,
-            TokenType.ENUM: self._dispatch_enum,
-            TokenType.WEBHOOK: self._dispatch_webhook,
             TokenType.INGEST: self._dispatch_ingest,
             TokenType.NAV: self._dispatch_nav,
-            TokenType.APPROVAL: self._dispatch_approval,
             TokenType.SLA: self._dispatch_sla,
             TokenType.ISLAND: self._dispatch_island,
             TokenType.NOTIFICATION: self._dispatch_notification,

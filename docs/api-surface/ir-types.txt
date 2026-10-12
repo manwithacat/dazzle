@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 370 BaseModels, 151 Enums, 24 other (functions / typealiases / constants)
+# Counts: 350 BaseModels, 140 Enums, 24 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -132,18 +132,14 @@ ir_class: AppSpec
     - analytics: AnalyticsSpec | None = None
     - apis: list[APISpec] = []
     - app_config: AppConfigSpec | None = None
-    - approvals: list[ApprovalSpec] = []
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
     - atomic_flows: list[AtomicFlowSpec] = []
     - audit_trail: bool = False
     - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
-    - data_products: DataProductsSpec | None = None
     - documents: list[DocumentSpec] = []
     - domain_services: list[DomainServiceSpec] = []
-    - e2e_flows: list[FlowSpec] = []
-    - enums: list[EnumSpec] = []
     - event_model: EventModelSpec | None = None
     - experiences: list[ExperienceSpec] = []
     - feedback_widget: FeedbackWidgetSpec | None = None
@@ -156,7 +152,6 @@ ir_class: AppSpec
     - hless_pragma: HLESSPragma | None = None
     - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
-    - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []
     - jobs: list[JobSpec] = []
     - ledgers: list[LedgerSpec] = []
@@ -172,9 +167,7 @@ ir_class: AppSpec
     - policies: PoliciesSpec | None = None
     - processes: list[ProcessSpec] = []
     - projections: list[ProjectionSpec] = []
-    - questions: list[QuestionSpec] = []
     - rhythms: list[RhythmSpec] = []
-    - rules: list[RuleSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
     - searches: list[SearchSpec] = []
@@ -187,42 +180,12 @@ ir_class: AppSpec
     - surfaces: list[SurfaceSpec] = []
     - templates: list[TemplateSpec] = []
     - tenancy: TenancySpec | None = None
-    - tests: list[TestSpec] = []
     - title: str | None = None
     - transactions: list[TransactionSpec] = []
     - triples: list[VerifiableTriple] = []
     - version: str = '0.1.0'
     - views: list[ViewSpec] = []
-    - webhooks: list[WebhookSpec] = []
     - workspaces: list[WorkspaceSpec] = []
-
-ir_class: ApprovalEscalationSpec
-  required: (none)
-  optional:
-    - after_unit: str = 'hours'
-    - after_value: int = 0
-    - to_role: str = ''
-
-ir_class: ApprovalOutcomeSpec
-  required: (none)
-  optional:
-    - decision: str = ''
-    - target_status: str = ''
-
-ir_class: ApprovalSpec
-  required:
-    - name: str
-  optional:
-    - approver_role: str = ''
-    - auto_approve: ConditionExpr | None = None
-    - entity: str = ''
-    - escalation: ApprovalEscalationSpec | None = None
-    - outcomes: list[ApprovalOutcomeSpec] = []
-    - quorum: int = 1
-    - threshold: ConditionExpr | None = None
-    - title: str | None = None
-    - trigger_field: str = 'status'
-    - trigger_value: str = ''
 
 ir_class: ArchetypeSpec
   required:
@@ -597,28 +560,6 @@ ir_class: Contradiction
   optional:
     - kind: Literal[contradiction] = 'contradiction'
 
-ir_class: DataProductSpec
-  required:
-    - name: str
-  optional:
-    - allow_classifications: list[DataClassification] = []
-    - cross_tenant: bool = False
-    - deny_classifications: list[DataClassification] = []
-    - description: str | None = None
-    - output_topic: str | None = None
-    - refresh: str = 'realtime'
-    - retention: str | None = None
-    - source_entities: list[str] = []
-    - source_streams: list[str] = []
-    - title: str | None = None
-    - transforms: list[DataProductTransform] = []
-
-ir_class: DataProductsSpec
-  required: (none)
-  optional:
-    - default_namespace: str = 'curated'
-    - products: list[DataProductSpec] = []
-
 ir_class: DateArithmeticExpr
   required:
     - left: DateLiteral | DateArithmeticExpr | str
@@ -813,20 +754,6 @@ ir_class: EntitySpec
     - subtype_of: str | None = None
     - temporal: TemporalSpec | None = None
     - tenant_host: TenantHostSpec | None = None
-    - title: str | None = None
-
-ir_class: EnumSpec
-  required:
-    - name: str
-  optional:
-    - title: str | None = None
-    - values: list[EnumValueSpec] = []
-
-ir_class: EnumValueSpec
-  required:
-    - name: str
-  optional:
-    - semantic: str | None = None
     - title: str | None = None
 
 ir_class: ErasureSpec
@@ -1451,35 +1378,6 @@ ir_class: IntegrationsSpec
     - app_mount_route: str = '/app'
     - auth_provider: AuthProvider = <AuthProvider.DAZZLE: 'dazzle'>
 
-ir_class: InterfaceEndpointSpec
-  required:
-    - method: str
-    - name: str
-    - path: str
-  optional:
-    - description: str | None = None
-    - request_entity: str | None = None
-    - response_entity: str | None = None
-
-ir_class: InterfaceSpec
-  required:
-    - name: str
-  optional:
-    - auth: InterfaceAuthMethod = <InterfaceAuthMethod.API_KEY: 'api_key'>
-    - base_path: str = '/'
-    - endpoints: list[InterfaceEndpointSpec] = []
-    - format: InterfaceFormat = <InterfaceFormat.REST: 'rest'>
-    - rate_limit: str | None = None
-    - title: str | None = None
-    - version: str = 'v1'
-
-ir_class: InterfacesSpec
-  required: (none)
-  optional:
-    - apis: list[InterfaceSpec] = []
-    - default_auth: InterfaceAuthMethod = <InterfaceAuthMethod.API_KEY: 'api_key'>
-    - default_rate_limit: str | None = None
-
 ir_class: InvariantFieldRef
   required:
     - path: list[str]
@@ -1825,18 +1723,14 @@ ir_class: ModuleFragment
   optional:
     - analytics: AnalyticsSpec | None = None
     - apis: list[APISpec] = []
-    - approvals: list[ApprovalSpec] = []
     - archetypes: list[ArchetypeSpec] = []
     - assets: list[AssetSpec] = []
     - atomic_flows: list[AtomicFlowSpec] = []
     - audits: list[AuditSpec] = []
     - channels: list[ChannelSpec] = []
-    - data_products: DataProductsSpec | None = None
     - documents: list[DocumentSpec] = []
     - domain_services: list[DomainServiceSpec] = []
-    - e2e_flows: list[FlowSpec] = []
     - entities: list[EntitySpec] = []
-    - enums: list[EnumSpec] = []
     - event_model: EventModelSpec | None = None
     - experiences: list[ExperienceSpec] = []
     - feedback_widget: FeedbackWidgetSpec | None = None
@@ -1847,7 +1741,6 @@ ir_class: ModuleFragment
     - hless_pragma: HLESSPragma | None = None
     - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
-    - interfaces: InterfacesSpec | None = None
     - islands: list[IslandSpec] = []
     - jobs: list[JobSpec] = []
     - ledgers: list[LedgerSpec] = []
@@ -1862,9 +1755,7 @@ ir_class: ModuleFragment
     - policies: PoliciesSpec | None = None
     - processes: list[ProcessSpec] = []
     - projections: list[ProjectionSpec] = []
-    - questions: list[QuestionSpec] = []
     - rhythms: list[RhythmSpec] = []
-    - rules: list[RuleSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
     - searches: list[SearchSpec] = []
@@ -1876,10 +1767,8 @@ ir_class: ModuleFragment
     - surfaces: list[SurfaceSpec] = []
     - templates: list[TemplateSpec] = []
     - tenancy: TenancySpec | None = None
-    - tests: list[TestSpec] = []
     - transactions: list[TransactionSpec] = []
     - views: list[ViewSpec] = []
-    - webhooks: list[WebhookSpec] = []
     - workspaces: list[WorkspaceSpec] = []
 
 ir_class: ModuleIR
@@ -2292,18 +2181,6 @@ ir_class: PublishSpec
     - condition: str | None = None
     - field_name: str | None = None
 
-ir_class: QuestionSpec
-  required:
-    - question_id: str
-    - title: str
-  optional:
-    - blocks: list[str] = []
-    - description: str | None = None
-    - raised_by: str | None = None
-    - resolution: str | None = None
-    - source: SourceLocation | None = None
-    - status: QuestionStatus = <QuestionStatus.OPEN: 'open'>
-
 ir_class: ReceiveActionSpec
   required:
     - kind: ReceiveActionKind
@@ -2393,19 +2270,6 @@ ir_class: RowActionSpec
     - bind: dict[str, str] = {}
     - confirm: ConfirmationItemSpec | None = None
     - visible_when: ConditionExpr | None = None
-
-ir_class: RuleSpec
-  required:
-    - rule_id: str
-    - title: str
-  optional:
-    - description: str | None = None
-    - invariant: str | None = None
-    - kind: RuleKind = <RuleKind.CONSTRAINT: 'constraint'>
-    - origin: RuleOrigin = <RuleOrigin.TOP_DOWN: 'top_down'>
-    - scope: list[str] = []
-    - source: SourceLocation | None = None
-    - status: RuleStatus = <RuleStatus.DRAFT: 'draft'>
 
 ir_class: SLABreachActionSpec
   required: (none)
@@ -3010,22 +2874,6 @@ ir_class: TenantProvisioningSpec
     - default_limits: dict[str, int] = {}
     - require_approval: bool = False
 
-ir_class: TestAction
-  required:
-    - kind: TestActionKind
-    - target: str
-  optional:
-    - data: dict[str, Any] = {}
-
-ir_class: TestAssertion
-  required:
-    - kind: TestAssertionKind
-  optional:
-    - error_message: str | None = None
-    - expected_value: Any | None = None
-    - field_name: str | None = None
-    - operator: TestComparisonOperator | None = None
-
 ir_class: TestDesignSpec
   required:
     - test_id: str
@@ -3075,23 +2923,6 @@ ir_class: TestGapAnalysis
     - total_personas: int = 0
     - total_scenarios: int = 0
     - total_surfaces: int = 0
-
-ir_class: TestSetupStep
-  required:
-    - action: TestActionKind
-    - entity_name: str
-    - variable_name: str
-  optional:
-    - data: dict[str, Any] = {}
-
-ir_class: TestSpec
-  required:
-    - action: TestAction
-    - name: str
-  optional:
-    - assertions: list[TestAssertion] = []
-    - description: str | None = None
-    - setup_steps: list[TestSetupStep] = []
 
 ir_class: TestimonialItem
   required:
@@ -3301,36 +3132,6 @@ ir_class: VisualTreatment
     - border_token: str | None = None
     - icon: str | None = None
     - text_token: str | None = None
-
-ir_class: WebhookAuthSpec
-  required: (none)
-  optional:
-    - method: WebhookAuthMethod = <WebhookAuthMethod.HMAC_SHA256: 'hmac_sha256'>
-    - secret_ref: str | None = None
-
-ir_class: WebhookPayloadSpec
-  required: (none)
-  optional:
-    - format: str = 'json'
-    - include_fields: list[str] = []
-
-ir_class: WebhookRetrySpec
-  required: (none)
-  optional:
-    - backoff: str = 'exponential'
-    - max_attempts: int = 3
-
-ir_class: WebhookSpec
-  required:
-    - name: str
-  optional:
-    - auth: WebhookAuthSpec | None = None
-    - entity: str = ''
-    - events: list[WebhookEvent] = []
-    - payload: WebhookPayloadSpec | None = None
-    - retry: WebhookRetrySpec | None = None
-    - title: str | None = None
-    - url: str = ''
 
 ir_class: WindowSpec
   required:
@@ -3655,14 +3456,6 @@ enum: DataClassification
     - PII_SENSITIVE = 'pii_sensitive'
     - PUBLIC = 'public'
     - UNCLASSIFIED = 'unclassified'
-
-enum: DataProductTransform
-  members:
-    - AGGREGATE = 'aggregate'
-    - MASK = 'mask'
-    - MINIMISE = 'minimise'
-    - NONE = 'none'
-    - PSEUDONYMISE = 'pseudonymise'
 
 enum: DateArithmeticOp
   members:
@@ -4009,24 +3802,6 @@ enum: IdempotencyType
     - DETERMINISTIC_ID = 'deterministic_id'
     - EXTERNAL_DEDUP = 'external_dedup'
 
-enum: InterfaceAuthMethod
-  members:
-    - API_KEY = 'api_key'
-    - BASIC = 'basic'
-    - JWT = 'jwt'
-    - MUTUAL_TLS = 'mtls'
-    - NONE = 'none'
-    - OAUTH2 = 'oauth2'
-
-enum: InterfaceFormat
-  members:
-    - ASYNCAPI = 'asyncapi'
-    - EDIFACT = 'edifact'
-    - GRAPHQL = 'graphql'
-    - GRPC = 'grpc'
-    - REST = 'rest'
-    - SOAP = 'soap'
-
 enum: ComparisonOperator
   members:
     - EQ = '=='
@@ -4260,12 +4035,6 @@ enum: ProjectionAction
     - UPDATE = 'update'
     - UPSERT = 'upsert'
 
-enum: QuestionStatus
-  members:
-    - DEFERRED = 'deferred'
-    - OPEN = 'open'
-    - RESOLVED = 'resolved'
-
 enum: RebuildStrategy
   members:
     - FULL_REPLAY = 'full_replay'
@@ -4314,24 +4083,6 @@ enum: RetryBackoff
   members:
     - EXPONENTIAL = 'exponential'
     - LINEAR = 'linear'
-
-enum: RuleKind
-  members:
-    - AUTHORIZATION = 'authorization'
-    - CONSTRAINT = 'constraint'
-    - DERIVATION = 'derivation'
-    - PRECONDITION = 'precondition'
-
-enum: RuleOrigin
-  members:
-    - BOTTOM_UP = 'bottom_up'
-    - TOP_DOWN = 'top_down'
-
-enum: RuleStatus
-  members:
-    - ACCEPTED = 'accepted'
-    - DRAFT = 'draft'
-    - REJECTED = 'rejected'
 
 enum: SchemaCompatibility
   members:
@@ -4466,22 +4217,6 @@ enum: TenancyMode
     - SCHEMA_PER_TENANT = 'schema_per_tenant'
     - SHARED_SCHEMA = 'shared_schema'
     - SINGLE = 'single'
-
-enum: TestActionKind
-  members:
-    - CALL = 'call'
-    - CREATE = 'create'
-    - DELETE = 'delete'
-    - GET = 'get'
-    - UPDATE = 'update'
-
-enum: TestAssertionKind
-  members:
-    - COUNT = 'count'
-    - CREATED = 'created'
-    - ERROR = 'error'
-    - FIELD = 'field'
-    - STATUS = 'status'
 
 enum: TestComparisonOperator
   members:
@@ -4625,18 +4360,6 @@ enum: TypographyRatioPreset
     - MINOR_THIRD = 'minor_third'
     - PERFECT_FIFTH = 'perfect_fifth'
     - PERFECT_FOURTH = 'perfect_fourth'
-
-enum: WebhookAuthMethod
-  members:
-    - BASIC = 'basic'
-    - BEARER = 'bearer'
-    - HMAC_SHA256 = 'hmac_sha256'
-
-enum: WebhookEvent
-  members:
-    - CREATED = 'created'
-    - DELETED = 'deleted'
-    - UPDATED = 'updated'
 
 enum: WhenEmpty
   members:

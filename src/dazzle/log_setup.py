@@ -110,7 +110,6 @@ def ensure_dazzle_logging_configured(level: str | int | None = None) -> bool:
     - ``dazzle.http.runtime.app_factory.create_app`` (FastAPI runtime)
     - ``dazzle.cli`` command handlers (one-shot CLI runs)
     - ``dazzle.mcp.server`` (MCP server boot)
-    - ``dazzle.lsp.server`` (LSP server boot)
     - ``dazzle.http.alembic.env`` (migration env)
 
     Args:

@@ -1,8 +1,8 @@
 {
-  "src_lines": 434092,
-  "test_lines": 392787,
-  "docs_lines": 49899,
-  "construct_count": 57,
+  "src_lines": 424711,
+  "test_lines": 388762,
+  "docs_lines": 49565,
+  "construct_count": 47,
   "written": "2026-10-12",
   "exceptions": [
     {
@@ -34,6 +34,13 @@
         "test_lines"
       ],
       "reason": "Phase 1 commit: pre-commit EOF fix and committed-tree count differ from the pre-commit baseline by a few lines inside a net -21.5k ship"
+    },
+    {
+      "date": "2026-10-12",
+      "rose": [
+        "src_lines"
+      ],
+      "reason": "ship D: pre-commit ruff format added 2 src lines after the baseline was written, inside a -15.8k ship"
     }
   ]
 }

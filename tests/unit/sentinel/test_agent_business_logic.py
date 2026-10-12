@@ -1,16 +1,15 @@
-"""Tests for the Business Logic detection agent (BL-01 through BL-08)."""
+"""Tests for the Business Logic detection agent (BL-01, BL-02, BL-05 to BL-07)."""
 
 from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.ir import FieldTypeKind
 from dazzle.core.ir.process import ProcessTriggerKind
 from dazzle.core.ir.stories import StoryTrigger
 from dazzle.sentinel.agents.business_logic import BusinessLogicAgent
 from dazzle.sentinel.models import AgentId, Severity
 
-from .conftest import make_appspec, make_entity, make_field, mock_entity, pk_field, str_field
+from .conftest import make_appspec, make_entity, mock_entity, pk_field, str_field
 
 
 @pytest.fixture
@@ -63,18 +62,6 @@ def _sla(name: str, entity: str) -> MagicMock:
     s.name = name
     s.entity = entity
     return s
-
-
-def _approval(
-    name: str,
-    entity: str,
-    approver_role: str = "approver",
-) -> MagicMock:
-    a = MagicMock()
-    a.name = name
-    a.entity = entity
-    a.approver_role = approver_role
-    return a
 
 
 def _experience(
@@ -186,85 +173,6 @@ class TestBL02StoryTriggerMismatch:
 
 
 # =============================================================================
-# BL-03  Entity invariants without test coverage
-# =============================================================================
-
-
-class TestBL03InvariantsWithoutTests:
-    def test_flags_invariants_without_tests(self, agent: BusinessLogicAgent) -> None:
-        entity = mock_entity(
-            "Order",
-            invariants=[_invariant("total > 0")],
-        )
-        findings = agent.check_invariants_without_tests(make_appspec([entity]))
-        assert len(findings) == 1
-
-    def test_passes_with_covering_test(self, agent: BusinessLogicAgent) -> None:
-        entity = mock_entity(
-            "Order",
-            invariants=[_invariant("total > 0")],
-        )
-        test = _test_spec("test_order_invariants")
-        assert agent.check_invariants_without_tests(make_appspec([entity], tests=[test])) == []
-
-    def test_no_invariants(self, agent: BusinessLogicAgent) -> None:
-        entity = mock_entity("Task", invariants=[])
-        assert agent.check_invariants_without_tests(make_appspec([entity])) == []
-
-
-# =============================================================================
-# BL-04  Approval transitions lack role guards
-# =============================================================================
-
-
-class TestBL04ApprovalRoleGuards:
-    def _sm_with_guards(self, transitions: list[tuple[str, str, bool]]) -> MagicMock:
-        """transitions is [(from, to, has_role_guard)]."""
-        sm = MagicMock()
-        sm.states = list({t[0] for t in transitions} | {t[1] for t in transitions})
-        sm.transitions = []
-        for from_s, to_s, has_guard in transitions:
-            t = MagicMock()
-            t.from_state = from_s
-            t.to_state = to_s
-            guard = MagicMock()
-            guard.requires_role = "approver" if has_guard else None
-            t.guards = [guard]
-            sm.transitions.append(t)
-        return sm
-
-    def test_flags_unguarded_transitions(self, agent: BusinessLogicAgent) -> None:
-        sm = self._sm_with_guards(
-            [
-                ("draft", "pending_approval", False),
-                ("pending_approval", "approved", False),
-            ]
-        )
-        entity = mock_entity("Request", state_machine=sm)
-        approval = _approval("approve_request", "Request")
-        findings = agent.check_approval_transitions_without_role_guards(
-            make_appspec([entity], approvals=[approval])
-        )
-        assert len(findings) == 1
-
-    def test_passes_all_guarded(self, agent: BusinessLogicAgent) -> None:
-        sm = self._sm_with_guards(
-            [
-                ("draft", "pending_approval", True),
-                ("pending_approval", "approved", True),
-            ]
-        )
-        entity = mock_entity("Request", state_machine=sm)
-        approval = _approval("approve_request", "Request")
-        assert (
-            agent.check_approval_transitions_without_role_guards(
-                make_appspec([entity], approvals=[approval])
-            )
-            == []
-        )
-
-
-# =============================================================================
 # BL-05  SLA without monitoring
 # =============================================================================
 
@@ -343,26 +251,6 @@ class TestBL07EntityWithoutSurface:
 
 
 # =============================================================================
-# BL-08  Shared enum not referenced
-# =============================================================================
-
-
-class TestBL08UnreferencedEnum:
-    def test_flags_unreferenced_enum(self, agent: BusinessLogicAgent) -> None:
-        enum = _enum("Priority", ["low", "medium", "high"])
-        findings = agent.check_unreferenced_enum(make_appspec(enums=[enum]))
-        assert len(findings) == 1
-
-    def test_passes_when_referenced(self, agent: BusinessLogicAgent) -> None:
-        enum = _enum("Priority", ["low", "medium", "high"])
-        entity = make_entity(
-            "Task",
-            [pk_field(), make_field("priority", FieldTypeKind.ENUM, ref_entity="Priority")],
-        )
-        assert agent.check_unreferenced_enum(make_appspec([entity], enums=[enum])) == []
-
-
-# =============================================================================
 # Full agent run
 # =============================================================================
 
@@ -371,12 +259,12 @@ class TestBusinessLogicAgentRun:
     def test_agent_id(self, agent: BusinessLogicAgent) -> None:
         assert agent.agent_id == AgentId.BL
 
-    def test_has_8_heuristics(self, agent: BusinessLogicAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_5_heuristics(self, agent: BusinessLogicAgent) -> None:
+        assert len(agent.get_heuristics()) == 5
 
     def test_heuristic_ids(self, agent: BusinessLogicAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"BL-0{i}" for i in range(1, 9)]
+        assert ids == ["BL-01", "BL-02", "BL-05", "BL-06", "BL-07"]
 
     def test_clean_appspec_no_errors(self, agent: BusinessLogicAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title")])

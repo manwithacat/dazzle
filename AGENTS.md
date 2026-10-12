@@ -52,8 +52,6 @@ cd examples/simple_task && dazzle serve
 | `src/dazzle/agent/` | Generic mission-driven agent framework |
 | `src/dazzle/mcp/` | MCP server, knowledge graph, semantics KB |
 | `src/dazzle/cli/` | CLI commands (`dazzle serve`, `dazzle mcp`, etc.) |
-| `src/dazzle/lsp/` | LSP server (diagnostics, hover, completion) |
-| `src/dazzle/specs/` | OpenAPI and AsyncAPI specification generators |
 | `src/dazzle/compliance/` | Compliance pipeline — ISO 27001 + SOC 2 evidence extraction, taxonomy, compiler |
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail, compliance report |
 | `src/dazzle/testing/` | Test infrastructure (agent E2E wrapper, browser gate) |
@@ -141,10 +139,10 @@ make lint format              # or: uv run ruff … / uv run mypy src/dazzle
 uv run dazzle search <keyword>
 ```
 
-Full CLI reference: `docs/reference/cli.md`. API specs: `dazzle specs openapi|asyncapi`.
+Full CLI reference: `docs/reference/cli.md`. OpenAPI: the running app serves it at `/docs`.
 Inspect extension points and public surface: `dazzle inspect <renderers|primitives|routes|page <URL>|oauth-providers|db-artifacts|api <baseline>>`
 (manifest-only by default, `--runtime` boots the app; `docs/reference/page-inspection.md`).
-LSP: `dazzle lsp run|check|grammar-path`. Ratchet baselines: `dazzle fitness code|clones --write-baseline`.
+Ratchet baselines: `dazzle fitness code|clones --write-baseline`.
 
 ## DSL Quick Reference
 
@@ -165,9 +163,9 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `webhook`, `ingest`, `approval`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`, `guide`, `atomic`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `ingest`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`, `guide`, `atomic`
 
-*(User-facing subset. The parser also dispatches on `app`, `test`, `flow`, `rule`, `message`, `channel`, `asset`, `document`, `template`, `demo`, `event_model`, `subscribe`, `projection`, `stream`, `hless`, `policies`, `tenancy`, `interfaces`, `data_products`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`, `question`. Drift-gated: every name listed must exist in the parser.)*
+*(User-facing subset. The parser also dispatches on `app`, `message`, `channel`, `asset`, `document`, `template`, `event_model`, `subscribe`, `projection`, `stream`, `hless`, `policies`, `tenancy`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`. Drift-gated: every name listed must exist in the parser.)*
 
 **On `hless`** (High-Level Event Semantics Specification): a deliberate break from
 Kafka vocabulary; **don't propose renaming it** (rejected, #1069 API-003) —
@@ -198,7 +196,7 @@ diff, `--write` regenerates. Any drift requires a CHANGELOG entry.
 
 Working Dazzle apps in `examples/`: `simple_task`, `support_tickets`, `hr_records`, `invoice_ops`
 
-The other eight apps were retired in flense ship E (ADR-0057): their probes are covered by the three consumer apps. The four kept are probes: `simple_task` (minimal CRUD), `support_tickets` (`audit` construct, signing), `invoice_ops` (tenancy, approvals), `hr_records` (PII, `process`). Ledger/transaction design is parked in `docs/decisions/DD-004-ledger-and-transaction.md`.
+The other eight apps were retired in flense ship E (ADR-0057): their probes are covered by the three consumer apps. The four kept are probes: `simple_task` (minimal CRUD), `support_tickets` (`audit` construct, signing), `invoice_ops` (tenancy, maker-checker transitions), `hr_records` (PII, `process`). Ledger/transaction design is parked in `docs/decisions/DD-004-ledger-and-transaction.md`.
 
 Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `asset_registry`, `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `transition_atomic`, `scope_runtime`, `pra`, `custom_renderer`, `component_showcase`, `tenant_hierarchy` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`; `pra` = parser-conformance corpus, `custom_renderer` = renderer-extension demo, `component_showcase` = component gallery — reclassified from examples/ 2026-06-13; `tenant_hierarchy` = ADR-0036/0037 hierarchy + membership worked example)
 

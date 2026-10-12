@@ -78,14 +78,6 @@ Test code generation:
 - Backend plugin system
 - Stack coordination
 
-### LSP Tests
-
-Test Language Server Protocol:
-- Hover provider
-- Completion provider
-- Definition provider
-- Document symbols
-
 ### Integration Tests
 
 Test full workflows:
@@ -164,7 +156,6 @@ Current coverage areas:
 - ✅ Parser: >95%
 - ✅ Semantic validation: >90%
 - ✅ OpenAPI backend: >85%
-- 🚧 LSP server: ~70% (expanding)
 - 🚧 CLI: ~60% (expanding)
 
 ## Continuous Integration
@@ -244,7 +235,6 @@ pip install -e ".[dev]"
 
 ## Known Issues
 
-- LSP tests require running server instance (working on better mocking)
 - Some integration tests are slow (consider marking with `@pytest.mark.slow`)
 - Windows path handling in some tests (contributions welcome!)
 

@@ -398,24 +398,10 @@ dazzle mcp check
 |---------|-----------|---------------------|
 | `simple_task` | Beginner | 3 entities, state machine, personas, job workspaces (metrics + queues) |
 | `support_tickets` | Intermediate | Ticket lifecycle; agent queue / manager ops / customer cases |
-| `invoice_ops` | Advanced | Approval / pay / dispute queues + four-eyes approvals |
+| `invoice_ops` | Advanced | Approval / pay / dispute queues |
 | `hr_records` | Advanced | PII handling, org hierarchy, staff directory |
 
 These four are the whole set in [`examples/`](examples/); the consumer apps prove the rest of the vocabulary (ADR-0057). Prefer **story → persona → workspace Hyperparts** over entity CRUD lists: [`docs/guides/story-to-composition.md`](docs/guides/story-to-composition.md).
-
----
-
-## IDE support
-
-Full LSP implementation: real-time diagnostics, hover docs, go-to-definition, auto-completion, document symbols.
-
-```bash
-dazzle lsp run           # Start the LSP server
-dazzle lsp check         # Verify dependencies
-dazzle lsp grammar-path  # TextMate grammar for syntax highlighting
-```
-
-Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/reference/index.md](docs/reference/index.md) for editor setup.
 
 ---
 

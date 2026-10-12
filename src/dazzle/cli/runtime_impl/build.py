@@ -1,7 +1,7 @@
 """
 Dazzle build commands.
 
-Commands for generating UI artifacts, API specs, and production bundles.
+Commands for generating UI artifacts, SQL schema, and production bundles.
 """
 
 from pathlib import Path
@@ -284,7 +284,7 @@ def build_command(
         "bundle",
         "--target",
         "-t",
-        help="Build target: bundle (default), sql, openapi, asyncapi, all",
+        help="Build target: bundle (default), sql, all",
     ),
     check: bool = typer.Option(False, "--check", help="Validate only, do not write files"),
     env_template: bool = typer.Option(True, "--env/--no-env", help="Generate environment template"),
@@ -297,14 +297,11 @@ def build_command(
     Targets:
         bundle  — Full deployment package (main.py, requirements, env template)
         sql     — SQL schema DDL (CREATE TABLE statements)
-        openapi — OpenAPI 3.1 specification
-        asyncapi — AsyncAPI 3.0 specification
         all     — Generate all codegen targets
 
     Examples:
         dazzle build                        # Full bundle in ./dist
         dazzle build --target sql           # SQL schema only
-        dazzle build --target openapi       # OpenAPI spec
         dazzle build --target all           # All codegen targets
         dazzle build --check                # Validate without writing
         dazzle build -o deploy              # Output to ./deploy
@@ -353,7 +350,7 @@ def build_command(
         raise typer.Exit(code=0)
 
     # Dispatch codegen targets
-    valid_targets = {"bundle", "sql", "openapi", "asyncapi", "all"}
+    valid_targets = {"bundle", "sql", "all"}
     if target not in valid_targets:
         typer.echo(
             f"Unknown target '{target}'. Valid: {', '.join(sorted(valid_targets))}", err=True
@@ -432,19 +429,15 @@ def build_command(
 
 
 def _run_codegen_targets(appspec: Any, output_dir: Path, target: str) -> None:
-    """Run codegen targets: sql, openapi, asyncapi, or all."""
+    """Run codegen targets: sql, or all."""
 
-    targets = ["sql", "openapi", "asyncapi"] if target == "all" else [target]
+    targets = ["sql"] if target == "all" else [target]
 
     typer.echo(f"Generating codegen artifacts for '{appspec.name}'...")
 
     for t in targets:
         if t == "sql":
             _generate_sql_target(appspec, output_dir)
-        elif t == "openapi":
-            _generate_openapi_target(appspec, output_dir)
-        elif t == "asyncapi":
-            _generate_asyncapi_target(appspec, output_dir)
 
     typer.echo(f"\nArtifacts written to: {output_dir}")
 
@@ -493,44 +486,6 @@ def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
     sql_file = output_dir / "schema.sql"
     sql_file.write_text(sql_content, encoding="utf-8")
     typer.echo(f"  SQL schema -> {sql_file} ({len(entities)} tables)")
-
-
-def _generate_openapi_target(appspec: Any, output_dir: Path) -> None:
-    """Generate OpenAPI 3.1 spec from AppSpec."""
-    try:
-        from dazzle.specs import generate_openapi, openapi_to_json, openapi_to_yaml
-    except ImportError as e:
-        typer.echo(f"  OpenAPI target requires dazzle specs: {e}", err=True)
-        return
-
-    openapi = generate_openapi(appspec)
-
-    yaml_file = output_dir / "openapi.yaml"
-    yaml_file.write_text(openapi_to_yaml(openapi), encoding="utf-8")
-
-    json_file = output_dir / "openapi.json"
-    json_file.write_text(openapi_to_json(openapi), encoding="utf-8")
-
-    typer.echo(f"  OpenAPI -> {yaml_file}, {json_file}")
-
-
-def _generate_asyncapi_target(appspec: Any, output_dir: Path) -> None:
-    """Generate AsyncAPI 3.0 spec from AppSpec."""
-    try:
-        from dazzle.specs import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
-    except ImportError as e:
-        typer.echo(f"  AsyncAPI target requires dazzle specs: {e}", err=True)
-        return
-
-    asyncapi = generate_asyncapi(appspec)
-
-    yaml_file = output_dir / "asyncapi.yaml"
-    yaml_file.write_text(asyncapi_to_yaml(asyncapi), encoding="utf-8")
-
-    json_file = output_dir / "asyncapi.json"
-    json_file.write_text(asyncapi_to_json(asyncapi), encoding="utf-8")
-
-    typer.echo(f"  AsyncAPI -> {yaml_file}, {json_file}")
 
 
 # `build_css_command` was removed in v0.62 (Phase 4 teardown — the

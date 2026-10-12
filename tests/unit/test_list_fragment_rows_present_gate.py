@@ -66,19 +66,18 @@ def _cases():
     for app in _APPS:
         appspec = load_project_appspec(REPO_ROOT / "examples" / app)
         entities = {e.name: e for e in appspec.domain.entities}
-        enums = getattr(appspec, "enums", None)
         for surface in appspec.surfaces:
             if not _mode_is_list(surface):
                 continue
             entity = entities.get(str(getattr(surface, "entity_ref", "") or ""))
             if entity is None:
                 continue
-            yield pytest.param(app, surface, entity, enums, id=f"{app}-{surface.name}")
+            yield pytest.param(app, surface, entity, id=f"{app}-{surface.name}")
 
 
-@pytest.mark.parametrize(("app", "surface", "entity", "enums"), list(_cases()))
-def test_list_surface_renders_a_hydrated_row(app, surface, entity, enums) -> None:
-    cols = build_surface_columns(entity, surface, enums)
+@pytest.mark.parametrize(("app", "surface", "entity"), list(_cases()))
+def test_list_surface_renders_a_hydrated_row(app, surface, entity) -> None:
+    cols = build_surface_columns(entity, surface)
     if not cols:
         pytest.skip("surface projects no columns")
     # The exact C2.3 server rule (server.py) — replicated, not approximated.
@@ -112,8 +111,8 @@ def test_matrix_exercises_the_1573_shape() -> None:
     drops all such columns, this fails and the matrix needs re-choosing."""
     hits = 0
     for param in _cases():
-        _app, surface, entity, enums = param.values
-        for c in build_surface_columns(entity, surface, enums):
+        _app, surface, entity = param.values
+        for c in build_surface_columns(entity, surface):
             if str(c.get("type", "")) == "badge" and c.get("filter_options"):
                 hits += 1
     assert hits >= 1, "no badge-with-options column in the matrix — gate lost its teeth"

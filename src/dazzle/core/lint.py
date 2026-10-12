@@ -3,7 +3,6 @@ from .discovery import RelevanceGroup, suggest_capabilities
 from .validator import (
     extended_lint,
     validate_admin_personas_scope_conflict,
-    validate_approvals,
     validate_atomic_flows,
     validate_audit_config,
     validate_comparison_regions,
@@ -44,7 +43,6 @@ from .validator import (
     validate_transition_invocations,
     validate_ux_specs,
     validate_visibility_bool_field_scope_coverage,
-    validate_webhooks,
     validate_workspace_primary_actions,
     validate_workspace_region_actions,
 )
@@ -210,15 +208,6 @@ def lint_appspec(
 
     # Notification validation (v0.34.0)
     errors, warnings = validate_notifications(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # Preview construct validation (v0.25.0 — parsed but not yet runtime-enforced)
-    errors, warnings = validate_webhooks(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    errors, warnings = validate_approvals(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

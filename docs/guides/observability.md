@@ -39,7 +39,6 @@ application — no sidecar or separate management port required.
 | `/_dazzle/events/dlq` | GET | Dead-letter queue contents | None (all environments) |
 | `/_dazzle/events/dlq/{event_id}/replay` | POST | Re-queue one DLQ event | None (all environments) |
 | `/_dazzle/metrics` | GET | Prometheus scrape endpoint (text exposition) | None (all environments) |
-| `/_dazzle/approvals/pending` | GET | Pending approvals per `ApprovalSpec` block | None; only when `approval` blocks declared |
 | `/_dazzle/integrations/{name}/retries` | GET | Recent retry attempts (in-process, volatile) | None; only when `integration` blocks declared |
 
 **Gating note:** The `/_dazzle/*` debug and event endpoints are
@@ -579,44 +578,8 @@ Dazzle logs to stdout in structured form. Log lines are tagged with
 
 ---
 
-## 6. Approval Queues and Integration Retries (#1194)
+## 6. Integration Retries (#1194)
 
-### `GET /_dazzle/approvals/pending` — pending approvals per block
-
-`approval:` blocks in the DSL declare maker-checker approval gates (as in
-`invoice_ops`'s `StandardApproval` and `HighValueApproval`). For each
-declared `ApprovalSpec`, this endpoint returns the count of rows whose
-driving entity has `trigger_field = trigger_value` — i.e. the rows
-currently awaiting that approval — plus a sample of their primary-key
-ids.
-
-```bash
-GET /_dazzle/approvals/pending?limit=20
-```
-
-```json
-{
-  "approvals": [
-    {
-      "name": "StandardApproval",
-      "entity": "Invoice",
-      "trigger_field": "status",
-      "trigger_value": "submitted",
-      "count": 4,
-      "sample_ids": ["inv-1", "inv-2", "inv-3", "inv-4"]
-    }
-  ],
-  "total_pending": 4,
-  "limit": 20
-}
-```
-
-The `limit` query param caps `sample_ids` per approval block (default 20,
-max 100); the `count` is always the full pending total. The endpoint is
-registered only when the AppSpec actually declares `approval` blocks. If
-a declared block references an entity with no registered CRUD service,
-its summary includes a non-null `error` field rather than 500-ing the
-whole response.
 
 ### `GET /_dazzle/integrations/{name}/retries` — recent retry attempts
 

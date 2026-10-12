@@ -1,4 +1,4 @@
-"""Tests for the Auth & Authorization detection agent (AA-01 through AA-08)."""
+"""Tests for the Auth & Authorization detection agent (AA-01 through AA-07)."""
 
 from unittest.mock import MagicMock
 
@@ -382,23 +382,6 @@ class TestAA07PersonaMismatch:
 
 
 # =============================================================================
-# AA-08  Webhook without auth
-# =============================================================================
-
-
-class TestAA08WebhookWithoutAuth:
-    def test_flags_webhook_no_auth(self, agent: AuthAuthorizationAgent) -> None:
-        wh = _webhook("order_created")
-        findings = agent.webhook_without_auth(make_appspec(webhooks=[wh]))
-        assert len(findings) == 1
-        assert findings[0].severity == Severity.HIGH
-
-    def test_passes_with_auth(self, agent: AuthAuthorizationAgent) -> None:
-        wh = _webhook("order_created", auth=MagicMock())
-        assert agent.webhook_without_auth(make_appspec(webhooks=[wh])) == []
-
-
-# =============================================================================
 # Full agent run
 # =============================================================================
 
@@ -407,9 +390,9 @@ class TestAuthAgentRun:
     def test_agent_id(self, agent: AuthAuthorizationAgent) -> None:
         assert agent.agent_id == AgentId.AA
 
-    def test_has_8_heuristics(self, agent: AuthAuthorizationAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_7_heuristics(self, agent: AuthAuthorizationAgent) -> None:
+        assert len(agent.get_heuristics()) == 7
 
     def test_heuristic_ids(self, agent: AuthAuthorizationAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"AA-0{i}" for i in range(1, 9)]
+        assert ids == [f"AA-0{i}" for i in range(1, 8)]

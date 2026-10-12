@@ -319,32 +319,6 @@ def validate_transition_invocations(appspec: ir.AppSpec) -> tuple[list[str], lis
     return errors, warnings
 
 
-def validate_approvals(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """Validate approval definitions and warn about runtime status."""
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    if not appspec.approvals:
-        return errors, warnings
-
-    entity_names = {e.name for e in appspec.domain.entities}
-
-    warnings.append(
-        f"[Preview] {len(appspec.approvals)} approval(s) defined. "
-        "Approval gates are not yet enforced at runtime."
-    )
-
-    for ap in appspec.approvals:
-        if ap.entity and ap.entity not in entity_names:
-            errors.append(f"Approval '{ap.name}' references unknown entity '{ap.entity}'.")
-        if not ap.approver_role:
-            warnings.append(f"Approval '{ap.name}' has no approver_role specified.")
-        if not ap.outcomes:
-            warnings.append(f"Approval '{ap.name}' has no outcomes defined.")
-
-    return errors, warnings
-
-
 def validate_slas(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """Validate SLA definitions and warn about runtime status."""
     errors: list[str] = []

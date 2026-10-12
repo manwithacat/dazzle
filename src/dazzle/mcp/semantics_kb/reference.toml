@@ -30,7 +30,6 @@ example = '''
 # Timing/Scheduling:
 #   schedule    -> timing, scheduled_at, appointment_time
 #   start       -> start_at, begins_at, start_time
-#   created     -> created_at, added_at, initialized_at
 
 # Communication:
 #   message     -> notification, msg, content
@@ -39,10 +38,6 @@ example = '''
 # Status/State:
 #   status      -> state, condition, progress, current_status
 #   stage       -> current_stage, phase, step_number
-
-# Data:
-#   data        -> payload, content, record_data
-#   query       -> search_query, query_text
 
 # Actions:
 #   create      -> add, new_record
@@ -54,7 +49,7 @@ critical_keywords = [
   "# Top-level constructs",
   "app, module, use, entity, surface, workspace, experience, service, foreign_model, integration, persona, scenario",
   "# CRUD operations (use add/modify/remove instead)",
-  "create, update, delete, get, query, upsert",
+  "create, update, delete, upsert",
   "# Boolean",
   "true, false",
   "# Logical operators",
@@ -74,17 +69,17 @@ critical_keywords = [
   "# State machine",
   "transitions, requires, auto, manual, role, after",
   "# Access control",
-  "access, read, write, permissions, anonymous, authenticated, scope, deny",
+  "access, read, write, permissions, anonymous, authenticated, scope",
   "# Time units",
   "days, hours, minutes",
   "# Messaging/Channels",
   "email, message, send, receive, channel, queue, stream, provider, template, subject, body",
   "# Status words (use custom alternatives)",
-  "status, created, submitted, failed, succeeded",
+  "status, submitted, failed, succeeded",
   "# UX signals",
   "attention, critical, warning, notice, info, purpose, show, sort, empty, hide",
   "# Other reserved",
-  "from, uses, on, call, with, map, response, into, match, sync, spec, key, test, data, expect, count, first, last",
+  "from, uses, on, call, map, response, into, match, sync, spec, key, count",
   "# Scheduling/Integration",
   "schedule, step, kind, start, at"
 ]

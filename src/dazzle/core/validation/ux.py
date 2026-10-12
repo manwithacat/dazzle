@@ -706,23 +706,13 @@ def validate_enum_semantics(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     Each declared tone must resolve to a canonical tone (the 5-tone palette, with
     `positive`→`success`). Value membership is enforced at parse time
     (E_SEMANTIC_VALUE_UNKNOWN); here we gate the tone vocabulary
-    (E_SEMANTIC_TONE_UNKNOWN). Covers both shared `enum` blocks
-    (EnumValueSpec.semantic) and inline `enum[...]` fields (FieldType.enum_semantics).
+    (E_SEMANTIC_TONE_UNKNOWN) on inline `enum[...]` fields (FieldType.enum_semantics).
     """
     from ..ir.tones import CANONICAL_TONES, normalize_tone
 
     errors: list[str] = []
     warnings: list[str] = []
     palette = ", ".join(CANONICAL_TONES)
-
-    for enum in appspec.enums:
-        for value in enum.values:
-            if value.semantic is not None and normalize_tone(value.semantic) is None:
-                errors.append(
-                    f"E_SEMANTIC_TONE_UNKNOWN: enum '{enum.name}' value '{value.name}' "
-                    f"binds unknown tone '{value.semantic}'. Allowed: {palette} "
-                    f"(or alias `positive`→`success`)."
-                )
 
     for entity in appspec.domain.entities:
         for field in entity.fields:

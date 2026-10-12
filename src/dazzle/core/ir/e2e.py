@@ -12,7 +12,16 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .tests import TestComparisonOperator
+
+class TestComparisonOperator(StrEnum):
+    """Comparison operators for E2E flow assertions."""
+
+    EQUALS = "equals"
+    NOT_EQUALS = "not_equals"
+    GREATER_THAN = "greater_than"
+    LESS_THAN = "less_than"
+    CONTAINS = "contains"
+    NOT_CONTAINS = "not_contains"
 
 
 class FlowPriority(StrEnum):

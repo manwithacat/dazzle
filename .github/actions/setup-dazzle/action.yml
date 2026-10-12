@@ -43,10 +43,7 @@ inputs:
     # `saml` (python3-saml; prebuilt xmlsec wheel) is in the default so the
     # SAML provider + IdP-metadata tests run in CI instead of skipping on a
     # missing `onelogin` import (#1345).
-    # `lsp` (pygls/lsprotocol) is in the default so the LSP tests run from
-    # the lock — replaces the old best-effort `pip install pygls || true`
-    # optional-pip hack, which installed outside the lockfile.
-    default: dev,llm,mcp,mobile,postgres,perf,saml,lsp
+    default: dev,llm,mcp,mobile,postgres,perf,saml
   optional-pip:
     description: |
       DEPRECATED — retained only for call-site compatibility. Space-separated

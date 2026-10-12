@@ -11,13 +11,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .analytics import AnalyticsSpec
-from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
 from .atomic_flows import AtomicFlowSpec
 from .audit import AuditSpec
 from .domain import EntitySpec
-from .e2e import FixtureSpec, FlowSpec
-from .enums import EnumSpec
+from .e2e import FixtureSpec
 from .eventing import (
     EventModelSpec,
     ProjectionSpec,
@@ -27,8 +25,6 @@ from .experiences import ExperienceSpec
 from .feedback_widget import FeedbackWidgetSpec
 from .foreign_models import ForeignModelSpec
 from .governance import (
-    DataProductsSpec,
-    InterfacesSpec,
     PoliciesSpec,
     TenancySpec,
 )
@@ -65,9 +61,7 @@ from .process import (
     ProcessSpec,
     ScheduleSpec,
 )
-from .questions import QuestionSpec
 from .rhythm import RhythmSpec
-from .rules import RuleSpec
 from .scenarios import ScenarioSpec
 from .search import SearchSpec
 from .services import APISpec, DomainServiceSpec
@@ -75,9 +69,7 @@ from .sla import SLASpec
 from .stories import StorySpec
 from .subprocessors import SubprocessorSpec
 from .surfaces import SurfaceSpec
-from .tests import TestSpec
 from .views import ViewSpec
-from .webhooks import WebhookSpec
 from .workspaces import NavSpec, WorkspaceSpec
 
 
@@ -132,8 +124,6 @@ class ModuleFragment(BaseModel):
         domain_services: Domain services defined in this module (v0.5.0)
         foreign_models: Foreign models defined in this module
         integrations: Integrations defined in this module
-        tests: Tests defined in this module
-        e2e_flows: E2E flow specifications defined in this module
         fixtures: Test fixtures defined in this module
     """
 
@@ -146,8 +136,6 @@ class ModuleFragment(BaseModel):
     domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
-    tests: list[TestSpec] = Field(default_factory=list)
-    e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
     atomic_flows: list[AtomicFlowSpec] = Field(
         default_factory=list
     )  # #1228 — atomic multi-entity creates
@@ -156,10 +144,6 @@ class ModuleFragment(BaseModel):
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
-    # Rules (v0.41.0 Convergent BDD)
-    rules: list[RuleSpec] = Field(default_factory=list)
-    # Questions (v0.41.0 Convergent BDD)
-    questions: list[QuestionSpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)
@@ -181,8 +165,6 @@ class ModuleFragment(BaseModel):
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
     policies: PoliciesSpec | None = None
     tenancy: TenancySpec | None = None
-    interfaces: InterfacesSpec | None = None
-    data_products: DataProductsSpec | None = None
     # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
     llm_config: LLMConfigSpec | None = None
     llm_models: list[LLMModelSpec] = Field(default_factory=list)
@@ -193,14 +175,8 @@ class ModuleFragment(BaseModel):
     # TigerBeetle Ledgers (v0.24.0)
     ledgers: list[LedgerSpec] = Field(default_factory=list)
     transactions: list[TransactionSpec] = Field(default_factory=list)
-    # Shared Enums (v0.25.0)
-    enums: list[EnumSpec] = Field(default_factory=list)
     # Views (v0.25.0)
     views: list[ViewSpec] = Field(default_factory=list)
-    # Webhooks (v0.25.0)
-    webhooks: list[WebhookSpec] = Field(default_factory=list)
-    # Approvals (v0.25.0)
-    approvals: list[ApprovalSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
     # Islands (UI Islands)

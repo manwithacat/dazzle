@@ -20,9 +20,6 @@ src/dazzle/
 │   ├── base.py         # Backend interface and registry
 │   ├── openapi/        # OpenAPI 3.0 backend
 │   └── stacks.py       # Stack coordination
-├── lsp/                # Language Server Protocol
-│   ├── server.py       # LSP server implementation (pygls)
-│   └── features.py     # LSP features (hover, completion, etc.)
 ├── cli/                # Command-line interface
 │   ├── main.py         # CLI entry point (Click-based)
 │   ├── commands/       # CLI command implementations
@@ -167,40 +164,6 @@ backends/openapi/
 └── paths.py            # Path/endpoint generation
 ```
 
-### Specification Generators (`specs/`)
-
-Generate OpenAPI and AsyncAPI specifications from your DSL:
-
-```python
-from dazzle.specs import generate_openapi, generate_asyncapi
-```
-
-## LSP Server
-
-### Server (`lsp/server.py`)
-
-Language Server Protocol implementation using pygls:
-
-```python
-from pygls.server import LanguageServer
-from dazzle.lsp.server import server
-
-# Server provides:
-# - Hover documentation
-# - Go-to-definition
-# - Autocomplete
-# - Document symbols
-# - Real-time validation
-```
-
-**LSP Features**:
-- `textDocument/hover` - Show entity/surface details
-- `textDocument/definition` - Jump to declaration
-- `textDocument/completion` - Smart suggestions
-- `textDocument/documentSymbol` - Outline view
-
-Started by VSCode extension or other LSP clients.
-
 ## CLI
 
 ### Main Entry Point (`cli/main.py`)
@@ -234,9 +197,8 @@ def build(format):
 3. **IR**: Add models to `core/ir.py` if needed
 4. **Validation**: Add checks to `core/lint.py`
 5. **Backend**: Update backends to support new feature
-6. **LSP**: Add LSP support for new syntax
-7. **Tests**: Add comprehensive tests
-8. **Docs**: Update documentation
+6. **Tests**: Add comprehensive tests
+7. **Docs**: Update documentation
 
 ### Adding a New Backend
 
@@ -305,7 +267,6 @@ except ValidationError as e:
 
 - **Caching**: Parser caches grammar compilation
 - **Lazy Loading**: Backends loaded on-demand
-- **Incremental**: LSP supports incremental updates
 - **Memory**: Large projects may need streaming
 
 ## Dependencies
@@ -314,7 +275,6 @@ Core dependencies:
 - **lark**: Parser generator
 - **pydantic**: Data validation and models
 - **click**: CLI framework
-- **pygls**: Language Server Protocol
 - **toml**: Configuration parsing
 
 See `pyproject.toml` for complete list.

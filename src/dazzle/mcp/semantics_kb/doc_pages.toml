@@ -208,10 +208,9 @@ title = "Governance"
 slug = "governance"
 order = 16
 intro = """
-Governance constructs enforce organisational policies, approval workflows, \
-and service-level agreements. Approvals define multi-step sign-off chains, \
-while SLAs set measurable targets with escalation rules for time-sensitive \
-operations.
+Governance constructs enforce organisational policies and service-level \
+agreements. SLAs set measurable targets with escalation rules for \
+time-sensitive operations.
 """
 
 [pages.patterns]

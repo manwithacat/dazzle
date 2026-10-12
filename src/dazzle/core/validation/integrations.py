@@ -154,34 +154,3 @@ def validate_notifications(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     )
 
     return errors, warnings
-
-
-# =============================================================================
-# Preview construct validation (parsed but not yet enforced at runtime)
-# =============================================================================
-
-
-def validate_webhooks(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """Validate webhook definitions and warn about runtime status."""
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    if not appspec.webhooks:
-        return errors, warnings
-
-    entity_names = {e.name for e in appspec.domain.entities}
-
-    warnings.append(
-        f"[Preview] {len(appspec.webhooks)} webhook(s) defined. "
-        "Webhook delivery is not yet enforced at runtime."
-    )
-
-    for wh in appspec.webhooks:
-        if wh.entity and wh.entity not in entity_names:
-            errors.append(f"Webhook '{wh.name}' references unknown entity '{wh.entity}'.")
-        if not wh.events:
-            warnings.append(f"Webhook '{wh.name}' has no events specified.")
-        if not wh.url:
-            warnings.append(f"Webhook '{wh.name}' has no URL configured.")
-
-    return errors, warnings

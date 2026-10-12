@@ -350,9 +350,6 @@ docker compose -f docker-compose.dev.yml up
 cd generated
 pytest tests/
 
-# Optional: Generate OpenAPI spec
-dazzle specs openapi -o openapi.yaml
-
 # Generated file structure:
 generated/
 ├── README.md
