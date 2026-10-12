@@ -13,6 +13,11 @@ red for the same cluster every time:
 * Silent ``except Exception`` swallows
 * UX catalogue CSS
 * HaTchi-MaXchi gallery stale-dist (HM package suite)
+* Flense artefact coverage (ADR-0057): ``dazzle coverage --consumers
+  --fail-on-uncovered`` gates only when every checkout in
+  ``flense_consumers.toml`` is present; otherwise it is a printed report.
+  It is a printed report by default while Phase 3 removals are in flight;
+  ``DAZZLE_FLENSE_COVERAGE=gate`` makes it fail on an uncovered artefact.
 
 Local ``make ci-fast`` already runs ``pytest -m gate``, but agents routinely
 skipped it, or fixed only their new tests and pushed onto a red tip. This
@@ -31,8 +36,10 @@ Exit 0 = surface clean. Exit 1 = unpaid debt; print playbook; do not ship.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -138,6 +145,32 @@ def _check_paths_exist() -> list[str]:
     return missing
 
 
+def _consumer_coverage() -> int:
+    """Run the flense coverage gate; fail only if all consumers are present."""
+    manifest = REPO / "flense_consumers.toml"
+    entries = tomllib.loads(manifest.read_text(encoding="utf-8")).get("consumers", [])
+    absent = [e["name"] for e in entries if not (Path(e["path"]) / "dazzle.toml").is_file()]
+    # Advisory until the Phase 3 removal queue (ships F and G) lands; DAZZLE_FLENSE_COVERAGE=gate enforces.
+    gating = not absent and os.environ.get("DAZZLE_FLENSE_COVERAGE") == "gate"
+    print("==> flense artefact coverage (dazzle coverage --consumers --fail-on-uncovered)")
+    if absent:
+        print(f"    advisory: consumer checkouts absent ({', '.join(absent)})")
+    cmd = [_python(), "-m", "dazzle", "coverage", "--consumers", "--fail-on-uncovered"]
+    proc = subprocess.run(cmd, cwd=REPO, check=False, capture_output=True, text=True)
+    if proc.returncode == 0:
+        return 0
+    print(proc.stdout)
+    if not gating:
+        print("    advisory: uncovered artefacts reported above (not failing)")
+        return 0
+    print(
+        "FLENSE COVERAGE FAILED: an artefact above has no consumer. Remove it "
+        "(ADR-0057 Phase 3) or name the consumer that forces it.",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def run_preflight(*, quiet: bool = False) -> int:
     missing = _check_paths_exist()
     if missing:
@@ -162,12 +195,14 @@ def run_preflight(*, quiet: bool = False) -> int:
         print("    " + " ".join(SURFACE_TESTS))
         print(f"    interpreter: {py}")
     proc = subprocess.run(cmd, cwd=REPO, check=False)
-    if proc.returncode == 0:
-        if not quiet:
-            print("OK preflight-surface clean")
-        return 0
-    print(REMEDIATION, file=sys.stderr)
-    return 1
+    if proc.returncode != 0:
+        print(REMEDIATION, file=sys.stderr)
+        return 1
+    if _consumer_coverage() != 0:
+        return 1
+    if not quiet:
+        print("OK preflight-surface clean")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

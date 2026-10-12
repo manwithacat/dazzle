@@ -158,10 +158,13 @@ cmd_security() {
 }
 
 cmd_lint_extras() {
-  _log "CSS clip + raw-ramp + coverage --fail-on-uncovered  (CI lint job)"
+  _log "CSS clip + raw-ramp + artefact coverage report  (CI lint job)"
   _run_uv python scripts/css_clip_check.py
   _run_uv python scripts/css_raw_ramp_check.py
-  _run_uv python -m dazzle coverage --fail-on-uncovered
+  # Advisory examples-only report (ADR-0057). The gating run is
+  # `dazzle coverage --consumers --fail-on-uncovered`, executed by
+  # scripts/preflight_surface.py where the consumer checkouts exist.
+  _run_uv python -m dazzle coverage
   _ok "lint extras"
 }
 

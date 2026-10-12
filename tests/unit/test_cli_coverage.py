@@ -191,3 +191,36 @@ class TestParkingLotFragmentExclusion:
             f"{missing}. Every parking-lot fragment must also have a "
             f"discoverable registry entry."
         )
+
+
+class TestExtraApps:
+    """`--app` / `--consumers` widen the scan beyond examples/ (ADR-0057)."""
+
+    def test_app_option_adds_coverage_and_names_the_app(self, tmp_path: Path) -> None:
+        proj = tmp_path / "consumer_x"
+        (proj / "dsl").mkdir(parents=True)
+        (proj / "dazzle.toml").write_text("[project]\nname = 'x'\n")
+        (proj / "dsl" / "app.dsl").write_text("ledger Cash:\n  display: sparkline\n")
+        result = runner.invoke(app, ["coverage", "--app", str(proj)])
+        assert result.exit_code == 0, result.stdout
+        assert "Scanned:" in result.stdout and "consumer_x" in result.stdout
+        assert "     - sparkline: consumer_x" in result.stdout
+        assert "     - ledger: consumer_x" in result.stdout
+
+    def test_app_option_rejects_non_project(self, tmp_path: Path) -> None:
+        result = runner.invoke(app, ["coverage", "--app", str(tmp_path)])
+        assert result.exit_code != 0
+
+    def test_absent_consumers_are_reported_not_scanned(self, tmp_path: Path) -> None:
+        from dazzle.cli.coverage import _load_consumers
+
+        present = tmp_path / "here"
+        present.mkdir()
+        (present / "dazzle.toml").write_text("")
+        (tmp_path / "flense_consumers.toml").write_text(
+            f'[[consumers]]\nname = "here"\npath = "{present}"\n'
+            f'[[consumers]]\nname = "gone"\npath = "{tmp_path / "missing"}"\n'
+        )
+        found, absent = _load_consumers(tmp_path)
+        assert [t.name for t in found] == ["here"]
+        assert [t.name for t in absent] == ["gone"]

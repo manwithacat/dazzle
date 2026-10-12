@@ -1,6 +1,6 @@
 {
-  "src_lines": 424711,
-  "test_lines": 388762,
+  "src_lines": 424793,
+  "test_lines": 388795,
   "docs_lines": 49565,
   "construct_count": 47,
   "written": "2026-10-12",
@@ -41,6 +41,14 @@
         "src_lines"
       ],
       "reason": "ship D: pre-commit ruff format added 2 src lines after the baseline was written, inside a -15.8k ship"
+    },
+    {
+      "date": "2026-10-12",
+      "rose": [
+        "src_lines",
+        "test_lines"
+      ],
+      "reason": "consumer-aware coverage gate (+82 src/+33 tests) rides on ship D's -15.8k slack; CI repair"
     }
   ]
 }

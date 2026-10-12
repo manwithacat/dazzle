@@ -2,7 +2,10 @@
 
 Enumerates what the framework ships (DSL constructs, DisplayModes,
 workspace region templates, standalone fragment templates) versus
-what example apps in ``examples/*`` actually exercise. An uncovered
+what Dazzle apps actually exercise: the example probes in ``examples/*``
+plus any ``--app PATH`` roots and, with ``--consumers``, the live consumer
+apps named in ``flense_consumers.toml`` (ADR-0057). Absent consumer
+checkouts are reported as absent, never as evidence of non-use. An uncovered
 artefact is one the framework ships but no example renders — which
 means no QA run exercises its template, and any regression in it is
 invisible until a consumer hits it in production.
@@ -15,20 +18,23 @@ closable, one artefact at a time.
 
 Exit codes
 ----------
-- 0: every tracked artefact has at least one example-app consumer.
+- 0: every tracked artefact has at least one scanned-app consumer.
 - 1: at least one uncovered artefact (CI-gate mode).
 
 Usage
 -----
     dazzle coverage            # human report
     dazzle coverage --json     # machine-readable matrix
-    dazzle coverage --fail-on-uncovered   # CI gate
+    dazzle coverage --fail-on-uncovered   # gate (examples only)
+    dazzle coverage --consumers --fail-on-uncovered   # flense gate (local)
+    dazzle coverage --app ../my_app       # add an extra project root
 """
 
 from __future__ import annotations
 
 import json
 import re
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -83,8 +89,8 @@ class CategoryCoverage:
 
     name: str
     description: str
-    # Mapping of artefact name → list of example apps using it (empty =
-    # uncovered).
+    # Mapping of artefact name → list of apps (or, for fragments, source
+    # files) using it (empty = uncovered).
     coverage: dict[str, list[str]] = field(default_factory=dict)
 
     @property
@@ -126,6 +132,54 @@ def _example_app_dirs(repo_root: Path) -> list[Path]:
     )
 
 
+@dataclass(frozen=True)
+class ScanTarget:
+    """One Dazzle project root whose DSL counts as consumer evidence."""
+
+    name: str
+    path: Path
+
+
+@dataclass
+class ScanPlan:
+    """What a coverage run scans, plus consumers it could not see."""
+
+    targets: list[ScanTarget]
+    absent: list[ScanTarget] = field(default_factory=list)
+
+
+def _example_targets(repo_root: Path) -> list[ScanTarget]:
+    return [ScanTarget(d.name, d) for d in _example_app_dirs(repo_root)]
+
+
+def _load_consumers(repo_root: Path) -> tuple[list[ScanTarget], list[ScanTarget]]:
+    """Split ``flense_consumers.toml`` entries into (present, absent)."""
+    manifest = repo_root / "flense_consumers.toml"
+    if not manifest.is_file():
+        return [], []
+    data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    present: list[ScanTarget] = []
+    absent: list[ScanTarget] = []
+    for entry in data.get("consumers", []):
+        target = ScanTarget(str(entry["name"]), Path(entry["path"]).expanduser())
+        (present if (target.path / "dazzle.toml").is_file() else absent).append(target)
+    return present, absent
+
+
+def _build_plan(repo_root: Path, extra_apps: list[Path], consumers: bool) -> ScanPlan:
+    plan = ScanPlan(targets=_example_targets(repo_root))
+    for path in extra_apps:
+        root = path.expanduser().resolve()
+        if not (root / "dazzle.toml").is_file():
+            raise typer.BadParameter(f"{path} is not a Dazzle project (no dazzle.toml)")
+        plan.targets.append(ScanTarget(root.name, root))
+    if consumers:
+        present, absent = _load_consumers(repo_root)
+        plan.targets.extend(present)
+        plan.absent.extend(absent)
+    return plan
+
+
 def _strip_dsl_comments(text: str) -> str:
     """Remove ``#`` comments from DSL text before artefact matching.
 
@@ -162,12 +216,14 @@ def _read_all_dsl(app_dir: Path) -> str:
     if not dsl_dir.is_dir():
         return ""
     return "\n".join(
-        _strip_dsl_comments(p.read_text(encoding="utf-8")) for p in dsl_dir.glob("*.dsl")
+        _strip_dsl_comments(p.read_text(encoding="utf-8")) for p in sorted(dsl_dir.rglob("*.dsl"))
     )
 
 
-def _display_mode_coverage(repo_root: Path) -> CategoryCoverage:
-    """Which DisplayMode values appear as ``display:`` in example DSL."""
+def _display_mode_coverage(
+    repo_root: Path, apps: list[ScanTarget] | None = None
+) -> CategoryCoverage:
+    """Which DisplayMode values appear as ``display:`` in scanned app DSL."""
     cat = CategoryCoverage(
         name="display_modes",
         description=(
@@ -184,8 +240,8 @@ def _display_mode_coverage(repo_root: Path) -> CategoryCoverage:
     all_modes = [m.value for m in DisplayMode if m.value not in _VIRTUAL_MODES]
     cat.coverage = {m: [] for m in all_modes}
     pattern = re.compile(r"\bdisplay:\s*([a-z_]+)")
-    for app in _example_app_dirs(repo_root):
-        text = _read_all_dsl(app)
+    for app in apps if apps is not None else _example_targets(repo_root):
+        text = _read_all_dsl(app.path)
         seen = {m.group(1) for m in pattern.finditer(text)}
         for m in seen:
             if m in cat.coverage:
@@ -193,8 +249,10 @@ def _display_mode_coverage(repo_root: Path) -> CategoryCoverage:
     return cat
 
 
-def _dsl_construct_coverage(repo_root: Path) -> CategoryCoverage:
-    """Which top-level DSL constructs appear in example DSL."""
+def _dsl_construct_coverage(
+    repo_root: Path, apps: list[ScanTarget] | None = None
+) -> CategoryCoverage:
+    """Which top-level DSL constructs appear in scanned app DSL."""
     cat = CategoryCoverage(
         name="dsl_constructs",
         description=(
@@ -205,8 +263,8 @@ def _dsl_construct_coverage(repo_root: Path) -> CategoryCoverage:
         ),
     )
     cat.coverage = {c: [] for c in _DSL_CONSTRUCTS}
-    for app in _example_app_dirs(repo_root):
-        text = _read_all_dsl(app)
+    for app in apps if apps is not None else _example_targets(repo_root):
+        text = _read_all_dsl(app.path)
         for construct in _DSL_CONSTRUCTS:
             # Top-level: keyword at column 0, followed by space or colon.
             # Matches ``entity Task "Task":``, ``sla Response:``, and
@@ -295,10 +353,17 @@ def _fragment_template_coverage(repo_root: Path) -> CategoryCoverage:
 # ---------------------------------------------------------------------------
 
 
-def _render_human(cats: list[CategoryCoverage]) -> str:
+def _render_human(cats: list[CategoryCoverage], plan: ScanPlan | None = None) -> str:
     lines: list[str] = []
     lines.append("Framework artefact coverage")
     lines.append("=" * 60)
+    if plan is not None:
+        lines.append(f"Scanned: {', '.join(t.name for t in plan.targets) or '(none)'}")
+        if plan.absent:
+            lines.append(
+                "Absent consumers (not scanned, not counted): "
+                + ", ".join(f"{t.name} ({t.path})" for t in plan.absent)
+            )
     total_items = sum(len(c.coverage) for c in cats)
     total_covered = sum(len(c.covered) for c in cats)
     lines.append(
@@ -315,6 +380,10 @@ def _render_human(cats: list[CategoryCoverage]) -> str:
             lines.append("   UNCOVERED:")
             for item in cat.uncovered:
                 lines.append(f"     - {item}")
+        if cat.covered:
+            lines.append("   COVERED BY:")
+            for item in cat.covered:
+                lines.append(f"     - {item}: {', '.join(cat.coverage[item])}")
         lines.append("")
     return "\n".join(lines)
 
@@ -341,25 +410,38 @@ def coverage_command(
     fail_on_uncovered: bool = typer.Option(
         False,
         "--fail-on-uncovered",
-        help="Exit with code 1 if any tracked artefact is uncovered (CI gate mode).",
+        help="Exit with code 1 if any tracked artefact is uncovered (gate mode).",
+    ),
+    extra_apps: list[Path] = typer.Option(  # noqa: B008
+        [],
+        "--app",
+        help="Extra Dazzle project root to scan alongside examples/ (repeatable).",
+    ),
+    consumers: bool = typer.Option(
+        False,
+        "--consumers",
+        help="Also scan every present consumer app in flense_consumers.toml (ADR-0057).",
     ),
 ) -> None:
-    """Audit framework-artefact coverage across example apps.
+    """Audit framework-artefact coverage across example and consumer apps.
 
     Every artefact the framework ships (DSL construct, DisplayMode,
-    fragment template) must be rendered by at least one example —
-    otherwise no QA run exercises it and regressions are invisible.
+    fragment template) must be exercised by at least one scanned app —
+    otherwise no consumer or QA run exercises it and regressions are
+    invisible. Under ADR-0057 the gating run is
+    ``--consumers --fail-on-uncovered`` on a machine with the checkouts.
     """
     repo_root = _find_repo_root()
+    plan = _build_plan(repo_root, extra_apps, consumers)
     cats = [
-        _display_mode_coverage(repo_root),
-        _dsl_construct_coverage(repo_root),
+        _display_mode_coverage(repo_root, plan.targets),
+        _dsl_construct_coverage(repo_root, plan.targets),
         _fragment_template_coverage(repo_root),
     ]
     if json_output:
         typer.echo(_render_json(cats))
     else:
-        typer.echo(_render_human(cats))
+        typer.echo(_render_human(cats, plan))
 
     if fail_on_uncovered and any(cat.uncovered for cat in cats):
         raise typer.Exit(code=1)
