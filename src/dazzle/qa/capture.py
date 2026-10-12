@@ -186,7 +186,6 @@ def _surface_fallback_targets(appspec: Any, personas: list[Any]) -> list[Capture
         "FeedbackReport",
         "SystemMetric",
         "ProcessRun",
-        "JobRun",
         "AuditEntry",
         "AIJob",
         "LogEntry",

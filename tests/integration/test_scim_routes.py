@@ -152,9 +152,7 @@ class _Store:
         self.revoked.append(membership_id)
         return 1
 
-    # admission gate (domain verification)
-    def get_org_settings(self, tenant_id):
-        return {}
+    # connection reads
 
     def get_connections_for_tenant(self, tenant_id):
         return []

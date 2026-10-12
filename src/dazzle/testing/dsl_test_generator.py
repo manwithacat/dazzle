@@ -28,7 +28,6 @@ from typing import Any
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.archetype import ArchetypeKind
 from dazzle.core.ir.domain import EntitySpec, PolicyEffect
-from dazzle.core.ir.eventing import EventSpec
 from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
 from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
 from dazzle.core.ir.invariant import (
@@ -136,7 +135,6 @@ class TestCoverage:
     state_machines_covered: set[str] = field(default_factory=set)
     personas_covered: set[str] = field(default_factory=set)
     workspaces_covered: set[str] = field(default_factory=set)
-    events_covered: set[str] = field(default_factory=set)
     processes_covered: set[str] = field(default_factory=set)
     auth_personas_covered: set[str] = field(default_factory=set)
     # Total counts
@@ -144,7 +142,6 @@ class TestCoverage:
     state_machines_total: int = 0
     personas_total: int = 0
     workspaces_total: int = 0
-    events_total: int = 0
     processes_total: int = 0
     auth_personas_total: int = 0
 
@@ -158,8 +155,6 @@ class TestCoverage:
             "personas_total": self.personas_total,
             "workspaces": sorted(self.workspaces_covered),
             "workspaces_total": self.workspaces_total,
-            "events": sorted(self.events_covered),
-            "events_total": self.events_total,
             "processes": sorted(self.processes_covered),
             "processes_total": self.processes_total,
             "auth_personas": sorted(self.auth_personas_covered),
@@ -196,9 +191,6 @@ def compute_dsl_hash(appspec: AppSpec) -> str:
         "entities": sorted([e.name for e in appspec.domain.entities]),
         "personas": sorted([p.id for p in appspec.personas]) if appspec.personas else [],
         "workspaces": sorted([w.name for w in appspec.workspaces]) if appspec.workspaces else [],
-        "events": sorted([e.name for e in appspec.event_model.events])
-        if appspec.event_model
-        else [],
         "processes": sorted([p.name for p in appspec.processes]) if appspec.processes else [],
     }
     content = json.dumps(structure, sort_keys=True)
@@ -1075,9 +1067,6 @@ class DSLTestGenerator:
         self.coverage.workspaces_total = (
             len(self.appspec.workspaces) if self.appspec.workspaces else 0
         )
-        self.coverage.events_total = (
-            len(self.appspec.event_model.events) if self.appspec.event_model else 0
-        )
         self.coverage.processes_total = len(self.appspec.processes) if self.appspec.processes else 0
 
     def generate_all(self) -> GeneratedTestSuite:
@@ -1092,11 +1081,6 @@ class DSLTestGenerator:
             for workspace in self.appspec.workspaces:
                 designs.extend(self._generate_workspace_tests(workspace))
                 self.coverage.workspaces_covered.add(workspace.name)
-
-        if self.appspec.event_model:
-            for event in self.appspec.event_model.events:
-                designs.extend(self._generate_event_tests(event))
-                self.coverage.events_covered.add(event.name)
 
         if self.appspec.processes:
             for process in self.appspec.processes:
@@ -1244,57 +1228,6 @@ class DSLTestGenerator:
 
         return tests
 
-    def _generate_event_tests(self, event: EventSpec) -> list[dict[str, Any]]:
-        """Generate event emission and handling tests."""
-        tests = []
-        tests.append(
-            _create_test(
-                test_id=f"EVT_{event.name.upper()}_EMIT",
-                title=f"Emit {event.name} event",
-                description=f"Test that {event.name} event is emitted correctly",
-                trigger="event_emission",
-                steps=[
-                    {
-                        "action": "emit_event",
-                        "target": f"event:{event.name}",
-                        "data": self._generate_event_payload(event),
-                        "rationale": f"Emit {event.name} event",
-                    },
-                    {
-                        "action": "assert_event_logged",
-                        "target": f"topic:{event.topic}",
-                        "data": {"event_type": event.name},
-                        "rationale": "Verify event was logged",
-                    },
-                ],
-                tags=["event", "emission", "generated", "dsl-derived"],
-            )
-        )
-        tests.append(
-            _create_test(
-                test_id=f"EVT_{event.name.upper()}_SCHEMA",
-                title=f"Validate {event.name} schema",
-                description=f"Test that {event.name} event payload is validated",
-                trigger="event_emission",
-                steps=[
-                    {
-                        "action": "emit_event_expect_error",
-                        "target": f"event:{event.name}",
-                        "data": {},
-                        "rationale": f"Emit invalid {event.name} event",
-                    },
-                    {
-                        "action": "assert_error",
-                        "target": "last_response",
-                        "data": {"type": "event_validation_error"},
-                        "rationale": "Verify validation error",
-                    },
-                ],
-                tags=["event", "validation", "generated", "dsl-derived"],
-            )
-        )
-        return tests
-
     def _generate_process_tests(self, process: ProcessSpec) -> list[dict[str, Any]]:
         """Generate workflow execution tests."""
         tests = []
@@ -1373,35 +1306,6 @@ class DSLTestGenerator:
             )
         return tests
 
-    def _generate_event_payload(self, event: EventSpec) -> dict[str, Any]:
-        """Generate test payload for an event."""
-        payload = {}
-        for ef in event.custom_fields or []:
-            payload[ef.name] = self._generate_event_field_value(ef)
-        return payload
-
-    def _generate_event_field_value(self, field: Any) -> Any:
-        """Generate test value for an event field."""
-        import uuid as uuid_module
-
-        type_name: Any = getattr(field, "field_type", None) or getattr(field, "type", "str")
-        if type_name is not None and hasattr(type_name, "kind"):
-            type_name = type_name.kind.value
-        type_name = str(type_name).lower()
-
-        if "uuid" in type_name:
-            return str(uuid_module.uuid4())
-        elif "str" in type_name:
-            return f"test_{field.name}"
-        elif "int" in type_name:
-            return 1
-        elif "bool" in type_name:
-            return True
-        elif "date" in type_name:
-            return datetime.now().strftime("%Y-%m-%d")
-        else:
-            return f"test_{field.name}"
-
     def _generate_process_inputs(self, process: ProcessSpec) -> dict[str, Any]:
         """Generate test inputs for a process."""
         import uuid as uuid_module
@@ -1447,7 +1351,6 @@ def save_generated_tests(project_path: Path, suite: GeneratedTestSuite) -> Path:
     print(
         f"Coverage: {len(suite.coverage.entities_covered)} entities, "
         f"{len(suite.coverage.state_machines_covered)} state machines, "
-        f"{len(suite.coverage.events_covered)} events, "
         f"{len(suite.coverage.processes_covered)} processes"
     )
     print(f"Saved to: {output_file}")

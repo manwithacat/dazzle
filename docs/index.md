@@ -97,9 +97,7 @@ The runtime executes the IR directly — no code generation step. Every artefact
 | **story** | Behavioural user stories for test generation |
 | **experience** | Multi-step user flows and wizards |
 | **persona** | User roles with goals and permissions |
-| **ledger** | Double-entry accounting (TigerBeetle) |
 | **integration** | External API connections |
-| **message** / **channel** | Messaging, email, and notifications |
 | **schedule** | Cron and periodic tasks |
 
 ## Example DSL

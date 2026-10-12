@@ -19,7 +19,6 @@ DSL_KEYWORDS: list[str] = [
     "rhythm",
     "service",
     "integration",
-    "ledger",
     "approval",
     "sla",
     "persona",

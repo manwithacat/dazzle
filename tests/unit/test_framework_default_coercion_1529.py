@@ -79,7 +79,6 @@ def _all_framework_field_tuples():
     from dazzle.core.ir import admin_entities
     from dazzle.core.ir.audit import AUDIT_ENTRY_FIELDS
     from dazzle.core.ir.feedback_widget import FEEDBACK_REPORT_FIELDS
-    from dazzle.core.ir.jobs import JOB_RUN_FIELDS
     from dazzle.core.ir.llm import AI_JOB_FIELDS
     from dazzle.core.ir.onboarding_state import ONBOARDING_STATE_FIELDS
     from dazzle.core.ir.process import PROCESS_RUN_FIELDS
@@ -88,7 +87,6 @@ def _all_framework_field_tuples():
         "AIJob": AI_JOB_FIELDS,
         "AuditEntry": AUDIT_ENTRY_FIELDS,
         "FeedbackReport": FEEDBACK_REPORT_FIELDS,
-        "JobRun": JOB_RUN_FIELDS,
         "OnboardingState": ONBOARDING_STATE_FIELDS,
         "ProcessRun": PROCESS_RUN_FIELDS,
     }

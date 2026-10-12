@@ -56,7 +56,7 @@ default.
 
 - ADR-0055; ADR-0036, ADR-0037, ADR-0033, ADR-0005, ADR-0003, ADR-0052
 - `archive/docs-superpowers/specs/2026-08-30-hosting-topology-conops.md`
-- `docs/reference/tenant-hosts.md`, `docs/reference/verified-domain-join.md`
+- `docs/reference/tenant-hosts.md`
 - `src/dazzle/http/runtime/tenant/{middleware,apex_middleware,cookies,guard,resolver}.py`
 - `src/dazzle/http/runtime/tenant_isolation.py`
 - `src/dazzle/http/runtime/auth/apex_discovery.py`

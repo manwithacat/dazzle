@@ -133,10 +133,14 @@ _ALLOWLIST = frozenset(
         # ── process-table http boot path: dead-in-prod, no live caller (ADR-0044) ──
         "dazzle.http.runtime.process_schema.ensure_process_tables",
         # ── alternative creators of ALREADY-REGISTERED framework tables ──
-        # (the orchestrator owns the canonical baseline DDL for these two; these are
-        # the standalone / lazy-mutation-path creators of the same table.)
+        # (the orchestrator owns the canonical baseline DDL; this is the
+        # standalone creator of the same table.)
         "dazzle.http.runtime.migrations.ensure_dazzle_params_table",  # → _dazzle_params
-        "dazzle.http.runtime.atomic_flow_executor.ensure_atomic_audit_table",  # → _dazzle_atomic_audit
+        # ── Alembic history for tables dropped in flense ship F (DD-004/006/009) ──
+        # 0021 creates and 0022 drops _dazzle_ingest_fingerprint; 0022.downgrade
+        # recreates the three parked tables. No live runtime path creates them.
+        "dazzle.http.alembic.versions.0021_ingest_fingerprint.upgrade",
+        "dazzle.http.alembic.versions.0022_flense_park_tables.downgrade",
     }
 )
 

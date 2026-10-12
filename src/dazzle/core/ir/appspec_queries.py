@@ -22,18 +22,9 @@ if TYPE_CHECKING:
     from .fields import FieldType
     from .foreign_models import ForeignModelSpec
     from .grants import GrantSchemaSpec
-    from .hless import StreamSpec
     from .integrations import IntegrationSpec
     from .islands import IslandSpec
-    from .ledgers import LedgerSpec, TransactionSpec
     from .llm import LLMIntentSpec, LLMModelSpec
-    from .messaging import (
-        AssetSpec,
-        ChannelSpec,
-        DocumentSpec,
-        MessageSpec,
-        TemplateSpec,
-    )
     from .personas import PersonaSpec
     from .process import ProcessSpec, ScheduleSpec
     from .scenarios import ScenarioSpec
@@ -61,18 +52,10 @@ __all__ = [
     "get_scenario",
     "get_story",
     "get_grant_schema",
-    "get_message",
-    "get_channel",
-    "get_asset",
-    "get_document",
-    "get_template",
-    "get_stream",
     "get_llm_model",
     "get_llm_intent",
     "get_process",
     "get_schedule",
-    "get_ledger",
-    "get_transaction",
     "get_view",
     "get_sla",
     "get_island",
@@ -85,9 +68,6 @@ __all__ = [
     "get_triple",
     "get_processes_by_story",
     "get_schedules_by_story",
-    "get_transactions_by_ledger",
-    "get_ledgers_by_currency",
-    # Analysis
     "type_catalog",
     "get_field_type_conflicts",
 ]
@@ -207,54 +187,6 @@ def get_grant_schema(appspec: AppSpec, name: str) -> GrantSchemaSpec | None:
     return None
 
 
-def get_message(appspec: AppSpec, name: str) -> MessageSpec | None:
-    """Get message schema by name."""
-    for message in appspec.messages:
-        if message.name == name:
-            return message
-    return None
-
-
-def get_channel(appspec: AppSpec, name: str) -> ChannelSpec | None:
-    """Get channel by name."""
-    for channel in appspec.channels:
-        if channel.name == name:
-            return channel
-    return None
-
-
-def get_asset(appspec: AppSpec, name: str) -> AssetSpec | None:
-    """Get asset by name."""
-    for asset in appspec.assets:
-        if asset.name == name:
-            return asset
-    return None
-
-
-def get_document(appspec: AppSpec, name: str) -> DocumentSpec | None:
-    """Get document by name."""
-    for document in appspec.documents:
-        if document.name == name:
-            return document
-    return None
-
-
-def get_template(appspec: AppSpec, name: str) -> TemplateSpec | None:
-    """Get template by name."""
-    for template in appspec.templates:
-        if template.name == name:
-            return template
-    return None
-
-
-def get_stream(appspec: AppSpec, name: str) -> StreamSpec | None:
-    """Get stream by name."""
-    for stream in appspec.streams:
-        if stream.name == name:
-            return stream
-    return None
-
-
 def get_llm_model(appspec: AppSpec, name: str) -> LLMModelSpec | None:
     """Get LLM model by name."""
     for model in appspec.llm_models:
@@ -284,22 +216,6 @@ def get_schedule(appspec: AppSpec, name: str) -> ScheduleSpec | None:
     for schedule in appspec.schedules:
         if schedule.name == name:
             return schedule
-    return None
-
-
-def get_ledger(appspec: AppSpec, name: str) -> LedgerSpec | None:
-    """Get ledger by name."""
-    for ledger in appspec.ledgers:
-        if ledger.name == name:
-            return ledger
-    return None
-
-
-def get_transaction(appspec: AppSpec, name: str) -> TransactionSpec | None:
-    """Get transaction by name."""
-    for transaction in appspec.transactions:
-        if transaction.name == name:
-            return transaction
     return None
 
 
@@ -372,16 +288,6 @@ def get_processes_by_story(appspec: AppSpec, story_id: str) -> list[ProcessSpec]
 def get_schedules_by_story(appspec: AppSpec, story_id: str) -> list[ScheduleSpec]:
     """Get all schedules that implement a specific story."""
     return [s for s in appspec.schedules if story_id in s.implements]
-
-
-def get_transactions_by_ledger(appspec: AppSpec, ledger_name: str) -> list[TransactionSpec]:
-    """Get all transactions that affect a specific ledger."""
-    return [t for t in appspec.transactions if ledger_name in t.affected_ledgers]
-
-
-def get_ledgers_by_currency(appspec: AppSpec, currency: str) -> list[LedgerSpec]:
-    """Get all ledgers with a specific currency."""
-    return [ledger for ledger in appspec.ledgers if ledger.currency == currency]
 
 
 # ---------------------------------------------------------------------------

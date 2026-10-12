@@ -1,11 +1,10 @@
-"""Tests for the Deployment & State detection agent (DS-03 through DS-08)."""
+"""Tests for the Deployment & State detection agent (DS-05 and DS-08)."""
 
 from unittest.mock import MagicMock
 
 import pytest
 
 from dazzle.core.ir.governance import DataClassification
-from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
 from dazzle.sentinel.agents.deployment_state import DeploymentStateAgent
 from dazzle.sentinel.models import AgentId, Severity
 
@@ -15,55 +14,6 @@ from .conftest import make_appspec, make_entity, pk_field, str_field
 @pytest.fixture
 def agent() -> DeploymentStateAgent:
     return DeploymentStateAgent()
-
-
-# ---------------------------------------------------------------------------
-# Transaction helper
-# ---------------------------------------------------------------------------
-
-
-def _make_transaction(
-    name: str,
-    *,
-    idempotency_key: str = "",
-    validation: list | None = None,
-) -> MagicMock:
-    txn = MagicMock()
-    txn.name = name
-    txn.idempotency_key = idempotency_key
-    txn.validation = validation if validation is not None else []
-    return txn
-
-
-# ---------------------------------------------------------------------------
-# Channel helper
-# ---------------------------------------------------------------------------
-
-
-def _make_send_op(
-    name: str = "default_send",
-    *,
-    delivery_mode: DeliveryMode = DeliveryMode.DIRECT,
-) -> MagicMock:
-    op = MagicMock()
-    op.name = name
-    op.delivery_mode = delivery_mode
-    return op
-
-
-def _make_channel(
-    name: str,
-    *,
-    kind: ChannelKind = ChannelKind.QUEUE,
-    send_operations: list[MagicMock] | None = None,
-    provider_config: object | None = None,
-) -> MagicMock:
-    channel = MagicMock()
-    channel.name = name
-    channel.kind = kind
-    channel.send_operations = send_operations if send_operations is not None else []
-    channel.provider_config = provider_config
-    return channel
 
 
 # ---------------------------------------------------------------------------
@@ -100,91 +50,6 @@ def _make_policies(
     policies.erasures = erasures or []
     policies.audit_access = audit_access
     return policies
-
-
-# =============================================================================
-# DS-03  Transaction without idempotency key
-# =============================================================================
-
-
-class TestDS03TransactionWithoutIdempotency:
-    def test_flags_empty_idempotency_key(self, agent: DeploymentStateAgent) -> None:
-        txn = _make_transaction("RecordPayment", idempotency_key="")
-        findings = agent.transaction_without_idempotency(make_appspec(transactions=[txn]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-03"
-        assert findings[0].severity == Severity.HIGH
-        assert "RecordPayment" in findings[0].title
-
-    def test_passes_with_idempotency_key(self, agent: DeploymentStateAgent) -> None:
-        txn = _make_transaction("RecordPayment", idempotency_key="payment.id")
-        assert agent.transaction_without_idempotency(make_appspec(transactions=[txn])) == []
-
-    def test_multiple_transactions_flags_only_missing(self, agent: DeploymentStateAgent) -> None:
-        good = _make_transaction("SafePayment", idempotency_key="order.id")
-        bad = _make_transaction("UnsafeTransfer", idempotency_key="")
-        findings = agent.transaction_without_idempotency(make_appspec(transactions=[good, bad]))
-        assert len(findings) == 1
-        assert "UnsafeTransfer" in findings[0].title
-
-    def test_no_transactions(self, agent: DeploymentStateAgent) -> None:
-        assert agent.transaction_without_idempotency(make_appspec(transactions=[])) == []
-
-
-# =============================================================================
-# DS-04  Queue channel with direct delivery
-# =============================================================================
-
-
-class TestDS04QueueDirectDelivery:
-    @pytest.mark.parametrize(
-        ("channel_name", "kind", "op_name", "delivery_mode", "expect_flagged"),
-        [
-            ("order_queue", ChannelKind.QUEUE, "order_send", DeliveryMode.DIRECT, True),
-            ("order_queue", ChannelKind.QUEUE, "order_send", DeliveryMode.OUTBOX, False),
-            ("notifications", ChannelKind.EMAIL, "email_send", DeliveryMode.DIRECT, False),
-            ("events", ChannelKind.STREAM, "event_send", DeliveryMode.DIRECT, False),
-        ],
-        ids=[
-            "queue_direct",
-            "queue_outbox",
-            "email_direct",
-            "stream_direct",
-        ],
-    )
-    def test_single_channel(
-        self,
-        agent: DeploymentStateAgent,
-        channel_name: str,
-        kind: ChannelKind,
-        op_name: str,
-        delivery_mode: DeliveryMode,
-        expect_flagged: bool,
-    ) -> None:
-        op = _make_send_op(op_name, delivery_mode=delivery_mode)
-        channel = _make_channel(channel_name, kind=kind, send_operations=[op])
-        findings = agent.queue_direct_delivery(make_appspec(channels=[channel]))
-        if expect_flagged:
-            assert len(findings) == 1
-            assert findings[0].heuristic_id == "DS-04"
-            assert findings[0].severity == Severity.MEDIUM
-            assert channel_name in findings[0].title
-        else:
-            assert findings == []
-
-    def test_no_channels(self, agent: DeploymentStateAgent) -> None:
-        assert agent.queue_direct_delivery(make_appspec(channels=[])) == []
-
-    def test_multiple_channels_flags_only_queue_direct(self, agent: DeploymentStateAgent) -> None:
-        ok_op = _make_send_op("safe_send", delivery_mode=DeliveryMode.OUTBOX)
-        ok = _make_channel("safe_queue", kind=ChannelKind.QUEUE, send_operations=[ok_op])
-        bad_op = _make_send_op("risky_send", delivery_mode=DeliveryMode.DIRECT)
-        bad = _make_channel("risky_queue", kind=ChannelKind.QUEUE, send_operations=[bad_op])
-        email_op = _make_send_op("alert_send", delivery_mode=DeliveryMode.DIRECT)
-        email = _make_channel("alerts", kind=ChannelKind.EMAIL, send_operations=[email_op])
-        findings = agent.queue_direct_delivery(make_appspec(channels=[ok, bad, email]))
-        assert len(findings) == 1
-        assert "risky_queue" in findings[0].title
 
 
 # =============================================================================
@@ -265,67 +130,6 @@ class TestDS05PiiWithoutErasure:
 
 
 # =============================================================================
-# DS-06  Transaction without validation rules
-# =============================================================================
-
-
-class TestDS06TransactionWithoutValidations:
-    def test_flags_transaction_without_validation(self, agent: DeploymentStateAgent) -> None:
-        txn = _make_transaction("RecordPayment", validation=[])
-        findings = agent.transaction_without_validations(make_appspec(transactions=[txn]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-06"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "RecordPayment" in findings[0].title
-
-    def test_passes_with_validation(self, agent: DeploymentStateAgent) -> None:
-        txn = _make_transaction("RecordPayment", validation=[MagicMock()])
-        assert agent.transaction_without_validations(make_appspec(transactions=[txn])) == []
-
-    def test_multiple_transactions_flags_only_missing(self, agent: DeploymentStateAgent) -> None:
-        good = _make_transaction("SafePayment", validation=[MagicMock()])
-        bad = _make_transaction("UnsafeTransfer", validation=[])
-        findings = agent.transaction_without_validations(make_appspec(transactions=[good, bad]))
-        assert len(findings) == 1
-        assert "UnsafeTransfer" in findings[0].title
-
-    def test_no_transactions(self, agent: DeploymentStateAgent) -> None:
-        assert agent.transaction_without_validations(make_appspec(transactions=[])) == []
-
-
-# =============================================================================
-# DS-07  Channel without throttle configuration
-# =============================================================================
-
-
-class TestDS07ChannelWithoutThrottle:
-    def test_flags_channel_without_provider_config(self, agent: DeploymentStateAgent) -> None:
-        channel = _make_channel("notifications", provider_config=None)
-        findings = agent.channel_without_throttle(make_appspec(channels=[channel]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "DS-07"
-        assert findings[0].severity == Severity.LOW
-        assert "notifications" in findings[0].title
-
-    def test_passes_with_provider_config(self, agent: DeploymentStateAgent) -> None:
-        channel = _make_channel("notifications", provider_config=MagicMock())
-        assert agent.channel_without_throttle(make_appspec(channels=[channel])) == []
-
-    def test_no_channels(self, agent: DeploymentStateAgent) -> None:
-        assert agent.channel_without_throttle(make_appspec(channels=[])) == []
-
-    def test_flags_all_channel_kinds(self, agent: DeploymentStateAgent) -> None:
-        # Covers iteration across multiple channel kinds.
-        channels = [
-            _make_channel("email_ch", kind=ChannelKind.EMAIL, provider_config=None),
-            _make_channel("queue_ch", kind=ChannelKind.QUEUE, provider_config=None),
-            _make_channel("stream_ch", kind=ChannelKind.STREAM, provider_config=None),
-        ]
-        findings = agent.channel_without_throttle(make_appspec(channels=channels))
-        assert len(findings) == 3
-
-
-# =============================================================================
 # DS-08  Audit access disabled with sensitive data
 # =============================================================================
 
@@ -393,31 +197,17 @@ class TestDeploymentStateAgentRun:
     def test_agent_id(self, agent: DeploymentStateAgent) -> None:
         assert agent.agent_id == AgentId.DS
 
-    def test_has_6_heuristics(self, agent: DeploymentStateAgent) -> None:
-        assert len(agent.get_heuristics()) == 6
+    def test_has_2_heuristics(self, agent: DeploymentStateAgent) -> None:
+        assert len(agent.get_heuristics()) == 2
 
     def test_heuristic_ids(self, agent: DeploymentStateAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"DS-0{i}" for i in range(3, 9)]
+        assert ids == ["DS-05", "DS-08"]
 
     def test_clean_appspec_no_findings(self, agent: DeploymentStateAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
         result = agent.run(make_appspec([entity]))
         assert result.findings == []
-        assert result.errors == []
-
-    def test_run_aggregates_across_heuristics(self, agent: DeploymentStateAgent) -> None:
-        txn = _make_transaction("RecordPayment", idempotency_key="")
-        channel = _make_channel("alerts", provider_config=None)
-        result = agent.run(
-            make_appspec(
-                transactions=[txn],
-                channels=[channel],
-            )
-        )
-        ids = {f.heuristic_id for f in result.findings}
-        assert "DS-03" in ids
-        assert "DS-07" in ids
         assert result.errors == []
 
     def test_run_returns_agent_result_with_timing(self, agent: DeploymentStateAgent) -> None:

@@ -12,10 +12,11 @@ parent: flense-programme
 
 ## One-line intent
 
-No consumer app declares a `ledger` or `transaction` today. Flense ship E
-(ADR-0057, Phase 3) retires `examples/fieldtest_hub`, the only carrier of
-these constructs; flense ship F removes the constructs themselves. This DD
-keeps the DSL shape so a money consumer restores it instead of re-deriving it.
+No consumer app declares a `ledger`, `transaction` or `atomic` flow today.
+Flense ship E (ADR-0057, Phase 3) retired `examples/fieldtest_hub`, the only
+carrier of the ledger constructs; flense ship F removed the constructs
+themselves, `atomic` flows with them. This DD keeps the DSL shape so a
+money consumer restores it instead of re-deriving it.
 
 ## Plan (what we already concluded)
 
@@ -68,11 +69,34 @@ Design points to keep:
   ordinary entity, and do not let app code post movements outside a declared
   `transaction`.
 
+`atomic` flows (ADR-0028/0029/0031/0032) were removed in the same ship and
+restore from `2de583aa741ecc4dfad1f369f6c773fa12f99966`: the parser mixin
+`dsl_parser_impl/atomic_flow.py`, IR `core/ir/atomic_flows.py`, linker
+step-order and invariant-anchor derivation, `validate_atomic_flows`, the
+transition `invoke <flow>(...)` effect, the executor / invariants / routes
+(`POST /api/atomic/<flow>`), the `_dazzle_atomic_audit` table (still present in
+consumer databases — revision 0022 left it in place pending operator sign-off) and `dazzle db audit-atomic`.
+Atomic flows fed the proof surface, so restoring them also restores:
+
+- the `AtomicFlowProjection` section of `rbac matrix` (JSON key
+  `atomic_flows`, markdown "Atomic flows" table with invariants);
+- the `rbac verify` permit-gate probes of `POST /api/atomic/<flow>`
+  (`VerifiedFlow`, `compare_flow`, report key `flows`);
+- `fixtures/transition_atomic` and the `flows.dsl` module of
+  `fixtures/scope_runtime` with their Postgres tests.
+
+Removing them left `rbac prove` output for every consumer byte-identical and
+`rbac matrix` identical except that its always-empty `atomic_flows` key is
+gone (the `rbac verify` report loses its always-empty `flows` key).
+
 ## Reopen when (consumer force)
 
 1. **Named consumer** — pennydreadful royalty calculation needs a royalty
-   ledger, **or** cyfuture client-money discipline needs a client-money
-   ledger, declared in that app's DSL.
+   ledger (author statements posted per sale), **or** cyfuture's
+   client-money discipline needs a client-money ledger (client funds held
+   apart from office money, CASS-style reconciliation), declared in that
+   app's DSL. A consumer needing several entities written in one
+   scope-checked transaction forces `atomic` on its own.
 2. **Evidence of host workaround** — a consumer computing balances in
    `app/` code or a hand-rolled ledger entity.
 3. **Acceptance that unblocks** — the consumer's ledger and transaction
@@ -99,3 +123,4 @@ When a force lands:
 | Date | Event |
 |------|--------|
 | 2026-10-12 | Parked (this DD); `examples/fieldtest_hub` retired in flense ship E |
+| 2026-10-12 | Constructs, `atomic` flows and TigerBeetle extra removed in flense ship F; restore SHA `2de583aa7` |

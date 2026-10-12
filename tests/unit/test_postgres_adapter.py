@@ -742,18 +742,16 @@ def test_renew_lease_fenced_by_worker_id():
 
 
 # ---------------------------------------------------------------------------
-# Test 10: PostgresProcessAdapter send handler is invoked (not log-only)
+# Test 10: PostgresProcessAdapter stores the side-effect executor
 # ---------------------------------------------------------------------------
 
 
 @_skip_no_pg
-def test_postgres_adapter_send_handler_invoked():
-    """set_send_handler wires a callable that is stored on the adapter.
+def test_postgres_adapter_stores_side_effect_executor():
+    """set_side_effect_executor stores the executor on the adapter.
 
-    Proves Fix #3: PostgresProcessAdapter now has set_send_handler /
-    set_side_effect_executor so ProcessSubsystem's hasattr checks find them
-    and wire the handlers.  Prior to the fix, SEND steps on the Postgres
-    backend were silently log-only because hasattr returned False.
+    ProcessSubsystem's hasattr check must find it so step side-effects are
+    wired on the Postgres backend.
     """
     dsn = _PG
     assert dsn
@@ -762,22 +760,9 @@ def test_postgres_adapter_send_handler_invoked():
 
     adapter = PostgresProcessAdapter(dsn)
 
-    # Both methods must exist (hasattr returns True).
-    assert hasattr(adapter, "set_send_handler"), (
-        "PostgresProcessAdapter must expose set_send_handler for ProcessSubsystem wiring"
-    )
     assert hasattr(adapter, "set_side_effect_executor"), (
         "PostgresProcessAdapter must expose set_side_effect_executor for ProcessSubsystem wiring"
     )
-
-    # Wire a spy send handler.
-    send_calls: list[dict] = []
-
-    async def spy_send(channel: str, message_type: str, payload: dict) -> None:
-        send_calls.append({"channel": channel, "type": message_type, "payload": payload})
-
-    adapter.set_send_handler(spy_send)
-    assert adapter._send_handler is spy_send, "send handler must be stored on the adapter"
 
     # Wire a spy side-effect executor.
     class SpyExecutor:

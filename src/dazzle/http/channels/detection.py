@@ -2,7 +2,7 @@
 Provider detection framework for DAZZLE messaging channels.
 
 This module provides the base classes and utilities for auto-detecting
-messaging providers (Mailpit, SendGrid, RabbitMQ, Kafka, etc.).
+email providers (Mailpit, SendGrid, SES, file fallback).
 
 Detection priority:
 1. Explicit DSL (provider: sendgrid)
@@ -183,17 +183,3 @@ def get_env_var(name: str, default: str | None = None) -> str | None:
         Environment variable value or default
     """
     return os.environ.get(name, default)
-
-
-def get_channel_env_var(channel_name: str, suffix: str) -> str | None:
-    """Get channel-specific environment variable.
-
-    Args:
-        channel_name: Channel name from DSL
-        suffix: Variable suffix (e.g., "PROVIDER", "HOST")
-
-    Returns:
-        Environment variable value if set
-    """
-    var_name = f"DAZZLE_CHANNEL_{channel_name.upper()}_{suffix}"
-    return os.environ.get(var_name)

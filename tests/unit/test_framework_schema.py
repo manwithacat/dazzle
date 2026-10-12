@@ -40,7 +40,6 @@ IN_SCOPE_TABLES: list[str] = [
     "magic_links",
     "email_verification_tokens",
     "user_preferences",
-    "join_requests",
     # process
     "process_runs",
     "process_tasks",

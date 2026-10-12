@@ -21,7 +21,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 39  # v39: unconsumed workspace display modes gone (ship G)
+SEED_SCHEMA_VERSION = (
+    40  # v40: display modes gone (ship G); events/messaging/ledger/jobs parked (ship F)
+)
 
 
 def compute_seed_version() -> str:

@@ -6,7 +6,7 @@ ISO 27001 / SOC 2 audits. This primitive captures *user-visible*
 inventory / contract / CMS UIs typically need.
 
 Cycle 1 ships the parsed surface. Cycle 2 auto-generates an
-``AuditEntry`` entity (mirrors the AIJob / JobRun pattern). Cycle 3
+``AuditEntry`` entity (mirrors the AIJob pattern). Cycle 3
 adds repository hooks to capture diffs on update; cycle 4 renders a
 ``history`` region on detail surfaces; cycle 5 wires RBAC via
 ``show_to``; cycle 6 connects retention to the background-job

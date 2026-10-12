@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 348 BaseModels, 140 Enums, 24 other (functions / typealiases / constants)
+# Counts: 289 BaseModels, 107 Enums, 17 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -124,14 +124,9 @@ ir_class: AppSpec
     - apis: list[APISpec] = []
     - app_config: AppConfigSpec | None = None
     - archetypes: list[ArchetypeSpec] = []
-    - assets: list[AssetSpec] = []
-    - atomic_flows: list[AtomicFlowSpec] = []
     - audit_trail: bool = False
     - audits: list[AuditSpec] = []
-    - channels: list[ChannelSpec] = []
-    - documents: list[DocumentSpec] = []
     - domain_services: list[DomainServiceSpec] = []
-    - event_model: EventModelSpec | None = None
     - experiences: list[ExperienceSpec] = []
     - feedback_widget: FeedbackWidgetSpec | None = None
     - fixtures: list[FixtureSpec] = []
@@ -139,25 +134,17 @@ ir_class: AppSpec
     - foreign_models: list[ForeignModelSpec] = []
     - grant_schemas: list[GrantSchemaSpec] = []
     - guides: list[GuideSpec] = []
-    - hless_mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
-    - hless_pragma: HLESSPragma | None = None
-    - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
     - islands: list[IslandSpec] = []
-    - jobs: list[JobSpec] = []
-    - ledgers: list[LedgerSpec] = []
     - llm_config: LLMConfigSpec | None = None
     - llm_intents: list[LLMIntentSpec] = []
     - llm_models: list[LLMModelSpec] = []
-    - messages: list[MessageSpec] = []
     - metadata: dict[str, Any] = {}
     - navs: list[NavSpec] = []
-    - notifications: list[NotificationSpec] = []
     - params: list[ParamSpec] = []
     - personas: list[PersonaSpec] = []
     - policies: PoliciesSpec | None = None
     - processes: list[ProcessSpec] = []
-    - projections: list[ProjectionSpec] = []
     - rhythms: list[RhythmSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
@@ -165,14 +152,10 @@ ir_class: AppSpec
     - security: SecurityConfig | None = None
     - slas: list[SLASpec] = []
     - stories: list[StorySpec] = []
-    - streams: list[StreamSpec] = []
     - subprocessors: list[SubprocessorSpec] = []
-    - subscriptions: list[SubscribeSpec] = []
     - surfaces: list[SurfaceSpec] = []
-    - templates: list[TemplateSpec] = []
     - tenancy: TenancySpec | None = None
     - title: str | None = None
-    - transactions: list[TransactionSpec] = []
     - triples: list[VerifiableTriple] = []
     - version: str = '0.1.0'
     - views: list[ViewSpec] = []
@@ -201,29 +184,6 @@ ir_class: ArtifactRefSpec
     - kind: ArtifactKind
     - storage_uri: str
   optional: (none)
-
-ir_class: AssetSpec
-  required:
-    - name: str
-  optional:
-    - description: str | None = None
-    - kind: AssetKind = <AssetKind.FILE: 'file'>
-    - path: str = ''
-
-ir_class: AtomicFlowSpec
-  required:
-    - inputs: list[FlowInput]
-    - label: str
-    - name: str
-    - permit_execute: list[str]
-    - steps: list[Annotated[FlowCreate | FlowUpdate, annotation=NoneType required=True discriminator='kind']]
-  optional:
-    - audit_mode: FlowAuditMode = <FlowAuditMode.ASYNC: 'async'>
-    - derived_step_order: list[int] | None = None
-    - intent: str | None = None
-    - invariants: list[FlowInvariant] = []
-    - location: SourceLocation | None = None
-    - on_failure: FlowFailureMode = <FlowFailureMode.ROLLBACK_ALL: 'rollback_all'>
 
 ir_class: AttentionMapSpec
   required: (none)
@@ -367,23 +327,6 @@ ir_class: CTASpec
     - label: str
   optional:
     - variant: Literal[primary, outline, ghost] | None = None
-
-ir_class: ChannelConfigSpec
-  required: (none)
-  optional:
-    - options: dict[str, str] = {}
-
-ir_class: ChannelSpec
-  required:
-    - name: str
-  optional:
-    - config: ChannelConfigSpec = <factory:ChannelConfigSpec>
-    - kind: ChannelKind = <ChannelKind.EMAIL: 'email'>
-    - provider: str = 'auto'
-    - provider_config: ProviderConfigSpec | None = None
-    - receive_operations: list[ReceiveOperationSpec] = []
-    - send_operations: list[SendOperationSpec] = []
-    - title: str | None = None
 
 ir_class: ClassificationSpec
   required:
@@ -595,15 +538,6 @@ ir_class: DemoFixture
   optional:
     - records: list[dict[str, Any]] = []
 
-ir_class: DerivationLineage
-  required:
-    - derivation_type: DerivationType
-    - source_streams: list[str]
-  optional:
-    - derivation_function: str | None = None
-    - rebuild_strategy: RebuildStrategy = <RebuildStrategy.FULL_REPLAY: 'full_replay'>
-    - window_spec: WindowSpec | None = None
-
 ir_class: DerivedMetric
   required:
     - expression: DerivedMetricExpr
@@ -619,15 +553,6 @@ ir_class: DerivedMetricExpr
     - function_name: Literal[round, abs, nullif, coalesce] | None = None
     - metric_name: str | None = None
     - number_literal: int | float | None = None
-
-ir_class: DocumentSpec
-  required:
-    - for_entity: str
-    - name: str
-  optional:
-    - description: str | None = None
-    - format: DocumentFormat = <DocumentFormat.PDF: 'pdf'>
-    - layout: str = ''
 
 ir_class: DomainServiceSpec
   required:
@@ -732,7 +657,6 @@ ir_class: EntitySpec
     - managed_by: ManagedBy | None = None
     - membership: MembershipSpec | None = None
     - patterns: list[str] = []
-    - publishes: list[PublishSpec] = []
     - renamed_from: str | None = None
     - seed_template: SeedTemplateSpec | None = None
     - signable: bool = False
@@ -761,39 +685,6 @@ ir_class: ErrorStrategy
     - actions: list[ErrorAction] = []
     - set_fields: dict[str, str] = {}
 
-ir_class: EventFieldSpec
-  required:
-    - field_type: str
-    - name: str
-  optional:
-    - description: str | None = None
-    - required: bool = True
-
-ir_class: EventHandlerSpec
-  required:
-    - event_name: str
-  optional:
-    - condition: str | None = None
-    - field_mappings: dict[str, str] = {}
-    - service_method: str | None = None
-    - service_name: str | None = None
-
-ir_class: EventModelSpec
-  required: (none)
-  optional:
-    - events: list[EventSpec] = []
-    - topics: list[TopicSpec] = []
-
-ir_class: EventSpec
-  required:
-    - name: str
-    - topic: str
-  optional:
-    - custom_fields: list[EventFieldSpec] = []
-    - description: str | None = None
-    - payload_entity: str | None = None
-    - version: str = '1.0'
-
 ir_class: ExampleRecord
   required:
     - values: dict[str, str | int | float | bool | None]
@@ -813,13 +704,6 @@ ir_class: ExistsCheck
   optional:
     - kind: Literal[exists_check] = 'exists_check'
     - negated: bool = False
-
-ir_class: ExpectedOutcome
-  required:
-    - condition: OutcomeCondition
-    - emits: list[str]
-  optional:
-    - target_stream: str | None = None
 
 ir_class: ExperienceSpec
   required:
@@ -985,42 +869,6 @@ ir_class: FlowContextVar
     - name: str
   optional: (none)
 
-ir_class: FlowCreate
-  required:
-    - assignments: dict[str, FlowFieldValue]
-    - entity: str
-  optional:
-    - kind: Literal[create] = 'create'
-
-ir_class: FlowFieldValue
-  required:
-    - kind: FlowFieldValueKind
-  optional:
-    - above_entity: str | None = None
-    - above_field: str | None = None
-    - input_name: str | None = None
-    - literal: str | int | float | bool | None = None
-
-ir_class: FlowInput
-  required:
-    - name: str
-    - type: FieldType
-  optional:
-    - required: bool = False
-
-ir_class: FlowInvariant
-  required:
-    - agg_fn: FlowAggregateFn
-    - anchor_entity: str | None
-    - anchor_input: str | None
-    - entity: str
-    - field: str | None
-    - op: CompOp
-    - rhs: InvariantRhs
-  optional:
-    - location: SourceLocation | None = None
-    - raw_filter: tuple[tuple[str, str, str], Ellipsis] = ()
-
 ir_class: FlowPrecondition
   required: (none)
   optional:
@@ -1051,14 +899,6 @@ ir_class: FlowStep
     - fixture_ref: str | None = None
     - target: str | None = None
     - value: str | None = None
-
-ir_class: FlowUpdate
-  required:
-    - assignments: dict[str, FlowFieldValue]
-    - entity: str
-    - target: FlowFieldValue
-  optional:
-    - kind: Literal[update] = 'update'
 
 ir_class: FontStackSpec
   required: (none)
@@ -1215,22 +1055,6 @@ ir_class: GuideStep
     - cta_target: str | None = None
     - placement: str = 'bottom'
 
-ir_class: HLESSPragma
-  required: (none)
-  optional:
-    - mode: HLESSMode = <HLESSMode.STRICT: 'strict'>
-    - reason: str | None = None
-
-ir_class: HLESSViolation
-  required:
-    - message: str
-    - rule: str
-  optional:
-    - schema_name: str | None = None
-    - severity: Literal[error, warning] = 'error'
-    - stream_name: str | None = None
-    - suggestion: str | None = None
-
 ir_class: HintSpec
   required:
     - body: str
@@ -1265,14 +1089,6 @@ ir_class: HumanTaskSpec
     - outcomes: list[HumanTaskOutcome] = []
     - timeout_seconds: int = 604800
 
-ir_class: IdempotencyStrategy
-  required:
-    - field: str
-    - strategy_type: IdempotencyType
-  optional:
-    - derivation: str | None = None
-    - window: str | None = None
-
 ir_class: ImagerySpec
   required: (none)
   optional:
@@ -1287,21 +1103,6 @@ ir_class: ImageryVocabulary
     - exclusions: list[str] = <factory:ImageryVocabulary.<lambda>>
     - mood_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
     - style_keywords: list[str] = <factory:ImageryVocabulary.<lambda>>
-
-ir_class: IngestProtectSpec
-  required:
-    - field: str
-    - value: str
-  optional: (none)
-
-ir_class: IngestSpec
-  required:
-    - entity: str
-    - key: tuple[str, Ellipsis]
-    - name: str
-  optional:
-    - protect: IngestProtectSpec | None = None
-    - record_kind: str = 'observation'
 
 ir_class: InputMapping
   required:
@@ -1379,13 +1180,6 @@ ir_class: InvariantLiteral
     - value: int | float | str | bool | None
   optional: (none)
 
-ir_class: InvariantRhs
-  required: (none)
-  optional:
-    - anchor_field: str | None = None
-    - anchor_input: str | None = None
-    - literal: int | float | None = None
-
 ir_class: InvariantSpec
   required: (none)
   optional:
@@ -1393,20 +1187,6 @@ ir_class: InvariantSpec
     - expression: InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr | None = None
     - invariant_expr: Literal | FieldRef | DurationLiteral | BinaryExpr | UnaryExpr | FuncCall | InExpr | IfExpr | None = None
     - message: str | None = None
-
-ir_class: InvokeBinding
-  required:
-    - flow_input: str
-    - source_kind: InvokeSourceKind
-  optional:
-    - literal: str | int | float | bool | None = None
-    - source_name: str | None = None
-
-ir_class: InvokeFlowSpec
-  required:
-    - bindings: list[InvokeBinding]
-    - flow_name: str
-  optional: (none)
 
 ir_class: IslandEventSpec
   required:
@@ -1431,33 +1211,6 @@ ir_class: IslandSpec
     - props: list[IslandPropSpec] = []
     - src: str | None = None
     - title: str | None = None
-
-ir_class: JobSchedule
-  required:
-    - cron: str
-  optional:
-    - timezone: str = ''
-
-ir_class: JobSpec
-  required:
-    - name: str
-  optional:
-    - dead_letter: str = ''
-    - retry: int = 3
-    - retry_backoff: JobBackoff = <JobBackoff.EXPONENTIAL: 'exponential'>
-    - run: str = ''
-    - schedule: JobSchedule | None = None
-    - timeout_seconds: int = 60
-    - title: str | None = None
-    - triggers: list[JobTrigger] = []
-
-ir_class: JobTrigger
-  required:
-    - entity: str
-  optional:
-    - event: str = 'created'
-    - field: str | None = None
-    - when_condition: str | None = None
 
 ir_class: LLMConfigSpec
   required: (none)
@@ -1523,36 +1276,6 @@ ir_class: LayoutSpec
     - nav: SiteNavSpec = <factory:SiteNavSpec>
     - section_backgrounds: str = ''
     - theme: ThemeKind = <ThemeKind.SAAS_DEFAULT: 'saas-default'>
-
-ir_class: LedgerAccountRef
-  required:
-    - ledger_name: str
-  optional:
-    - create_on_entity_create: bool = True
-
-ir_class: LedgerSpec
-  required:
-    - account_code: int
-    - account_type: AccountType
-    - currency: str
-    - ledger_id: int
-    - name: str
-  optional:
-    - flags: list[AccountFlag] = []
-    - intent: str | None = None
-    - label: str | None = None
-    - metadata_mapping: dict[str, str] = {}
-    - sync: LedgerSyncSpec | None = None
-    - tenant_scoped: bool = True
-
-ir_class: LedgerSyncSpec
-  required:
-    - target_entity: str
-    - target_field: str
-  optional:
-    - cron: str | None = None
-    - match_field: str = 'id'
-    - trigger: SyncTrigger = <SyncTrigger.AFTER_TRANSFER: 'after_transfer'>
 
 ir_class: LegalPageSpec
   required:
@@ -1651,13 +1374,6 @@ ir_class: MappingRule
     - target_field: str
   optional: (none)
 
-ir_class: MappingSpec
-  required:
-    - source_path: str
-    - target_field: str
-  optional:
-    - is_template: bool = False
-
 ir_class: MappingTriggerSpec
   required:
     - trigger_type: MappingTriggerType
@@ -1666,13 +1382,6 @@ ir_class: MappingTriggerSpec
     - from_state: str | None = None
     - label: str | None = None
     - to_state: str | None = None
-
-ir_class: MatchPatternSpec
-  required:
-    - field_name: str
-  optional:
-    - kind: MatchPatternKind = <MatchPatternKind.EXACT: 'exact'>
-    - value: str | list[str] = ''
 
 ir_class: MatchRule
   required:
@@ -1692,73 +1401,40 @@ ir_class: MembershipSpec
   optional:
     - roles: str | None = None
 
-ir_class: MessageFieldSpec
-  required:
-    - name: str
-    - type_name: str
-  optional:
-    - default: str | None = None
-    - description: str | None = None
-    - required: bool = True
-
-ir_class: MessageSpec
-  required:
-    - name: str
-  optional:
-    - description: str | None = None
-    - fields: list[MessageFieldSpec] = []
-    - title: str | None = None
-
 ir_class: ModuleFragment
   required: (none)
   optional:
     - analytics: AnalyticsSpec | None = None
     - apis: list[APISpec] = []
     - archetypes: list[ArchetypeSpec] = []
-    - assets: list[AssetSpec] = []
-    - atomic_flows: list[AtomicFlowSpec] = []
     - audits: list[AuditSpec] = []
-    - channels: list[ChannelSpec] = []
-    - documents: list[DocumentSpec] = []
     - domain_services: list[DomainServiceSpec] = []
     - entities: list[EntitySpec] = []
-    - event_model: EventModelSpec | None = None
     - experiences: list[ExperienceSpec] = []
     - feedback_widget: FeedbackWidgetSpec | None = None
     - fixtures: list[FixtureSpec] = []
     - foreign_models: list[ForeignModelSpec] = []
     - grant_schemas: list[GrantSchemaSpec] = []
     - guides: list[GuideSpec] = []
-    - hless_pragma: HLESSPragma | None = None
-    - ingests: list[IngestSpec] = []
     - integrations: list[IntegrationSpec] = []
     - islands: list[IslandSpec] = []
-    - jobs: list[JobSpec] = []
-    - ledgers: list[LedgerSpec] = []
     - llm_config: LLMConfigSpec | None = None
     - llm_intents: list[LLMIntentSpec] = []
     - llm_models: list[LLMModelSpec] = []
-    - messages: list[MessageSpec] = []
     - navs: list[NavSpec] = []
-    - notifications: list[NotificationSpec] = []
     - params: list[ParamSpec] = []
     - personas: list[PersonaSpec] = []
     - policies: PoliciesSpec | None = None
     - processes: list[ProcessSpec] = []
-    - projections: list[ProjectionSpec] = []
     - rhythms: list[RhythmSpec] = []
     - scenarios: list[ScenarioSpec] = []
     - schedules: list[ScheduleSpec] = []
     - searches: list[SearchSpec] = []
     - slas: list[SLASpec] = []
     - stories: list[StorySpec] = []
-    - streams: list[StreamSpec] = []
     - subprocessors: list[SubprocessorSpec] = []
-    - subscriptions: list[SubscribeSpec] = []
     - surfaces: list[SurfaceSpec] = []
-    - templates: list[TemplateSpec] = []
     - tenancy: TenancySpec | None = None
-    - transactions: list[TransactionSpec] = []
     - views: list[ViewSpec] = []
     - workspaces: list[WorkspaceSpec] = []
 
@@ -1825,33 +1501,6 @@ ir_class: NoticeSpec
   optional:
     - body: str = ''
     - tone: str = 'neutral'
-
-ir_class: NotificationRecipient
-  required: (none)
-  optional:
-    - kind: str = 'role'
-    - value: str = ''
-
-ir_class: NotificationSpec
-  required:
-    - name: str
-    - trigger: NotificationTrigger
-  optional:
-    - channels: list[NotificationChannel] = <factory:NotificationSpec.<lambda>>
-    - message: str = ''
-    - preference: NotificationPreference = <NotificationPreference.OPT_OUT: 'opt_out'>
-    - recipients: NotificationRecipient = <factory:NotificationRecipient>
-    - subject: str = ''
-    - template: str = ''
-    - title: str | None = None
-
-ir_class: NotificationTrigger
-  required:
-    - entity: str
-  optional:
-    - event: str = 'created'
-    - field: str | None = None
-    - to_value: str | None = None
 
 ir_class: OpenViaTarget
   required:
@@ -2132,64 +1781,6 @@ ir_class: ProcessTriggerSpec
     - timezone: str = 'UTC'
     - to_status: str | None = None
 
-ir_class: ProjectionHandlerSpec
-  required:
-    - action: ProjectionAction
-    - event_name: str
-  optional:
-    - condition: str | None = None
-    - field_mappings: dict[str, Any] = {}
-    - key_field: str | None = None
-
-ir_class: ProjectionSpec
-  required:
-    - name: str
-    - source_topic: str
-  optional:
-    - description: str | None = None
-    - handlers: list[ProjectionHandlerSpec] = []
-    - target_entity: str | None = None
-
-ir_class: ProviderConfigSpec
-  required: (none)
-  optional:
-    - max_concurrent: int | None = None
-    - max_per_minute: int | None = None
-    - options: dict[str, str] = {}
-
-ir_class: PublishSpec
-  required:
-    - entity_name: str
-    - event_name: str
-    - trigger: EventTriggerKind
-  optional:
-    - condition: str | None = None
-    - field_name: str | None = None
-
-ir_class: ReceiveActionSpec
-  required:
-    - kind: ReceiveActionKind
-  optional:
-    - entity_name: str | None = None
-    - service_name: str | None = None
-    - upsert_field: str | None = None
-
-ir_class: ReceiveMappingSpec
-  required:
-    - source_field: str
-    - target_field: str
-  optional: (none)
-
-ir_class: ReceiveOperationSpec
-  required:
-    - message_name: str
-    - name: str
-  optional:
-    - action: ReceiveActionSpec | None = None
-    - mappings: list[ReceiveMappingSpec] = []
-    - match_patterns: list[MatchPatternSpec] = []
-    - options: dict[str, str] = {}
-
 ir_class: ReferenceBand
   required:
     - from_value: float
@@ -2419,31 +2010,6 @@ ir_class: SemanticColorOverrides
     - success_hue: float | None = None
     - warning_hue: float | None = None
 
-ir_class: SendOperationSpec
-  required:
-    - message_name: str
-    - name: str
-  optional:
-    - delivery_mode: DeliveryMode = <DeliveryMode.OUTBOX: 'outbox'>
-    - mappings: list[MappingSpec] = []
-    - options: dict[str, str] = {}
-    - throttle: ThrottleSpec | None = None
-    - trigger: SendTriggerSpec | None = None
-
-ir_class: SendTriggerSpec
-  required:
-    - kind: SendTriggerKind
-  optional:
-    - cron_expression: str | None = None
-    - entity_name: str | None = None
-    - event: EntityEvent | None = None
-    - field_name: str | None = None
-    - field_value: str | None = None
-    - from_state: str | None = None
-    - interval_seconds: int | None = None
-    - service_name: str | None = None
-    - to_state: str | None = None
-
 ir_class: ServiceFieldSpec
   required:
     - name: str
@@ -2458,12 +2024,6 @@ ir_class: ShapeSpec
     - border_width_px: int = 1
     - radius_preset: ShapePreset = <ShapePreset.SUBTLE: 'subtle'>
     - shadow_preset: ShadowPreset = <ShadowPreset.MEDIUM: 'medium'>
-
-ir_class: SideEffectPolicy
-  required: (none)
-  optional:
-    - allowed_effects: list[str] = []
-    - external_effects_allowed: bool = False
 
 ir_class: SiteNavSpec
   required: (none)
@@ -2522,7 +2082,6 @@ ir_class: StateTransition
     - auto_spec: AutoTransitionSpec | None = None
     - effects: list[StepEffect] = []
     - guards: list[TransitionGuard] = []
-    - invoke_flow: InvokeFlowSpec | None = None
     - trigger: TransitionTrigger = <TransitionTrigger.MANUAL: 'manual'>
 
 ir_class: StatusListEntrySpec
@@ -2590,35 +2149,6 @@ ir_class: StorySpec
     - unless: list[StoryException] = []
     - when: list[StoryCondition] = []
 
-ir_class: StreamSchema
-  required:
-    - name: str
-  optional:
-    - compatibility: SchemaCompatibility = <SchemaCompatibility.ADDITIVE: 'additive'>
-    - description: str | None = None
-    - extends: str | None = None
-    - fields: list[FieldSpec] = []
-    - version: str = 'v1'
-
-ir_class: StreamSpec
-  required:
-    - idempotency: IdempotencyStrategy
-    - name: str
-    - ordering_scope: str
-    - partition_key: str
-    - record_kind: RecordKind
-    - time_semantics: TimeSemantics
-  optional:
-    - causality_fields: list[str] = <factory:StreamSpec.<lambda>>
-    - cross_partition: bool = False
-    - description: str | None = None
-    - expected_outcomes: list[ExpectedOutcome] | None = None
-    - invariants: list[str] = []
-    - lineage: DerivationLineage | None = None
-    - notes: list[str] = []
-    - schemas: list[StreamSchema] = []
-    - side_effect_policy: SideEffectPolicy = <factory:SideEffectPolicy>
-
 ir_class: SubprocessorSpec
   required:
     - consent_category: ConsentCategory
@@ -2636,14 +2166,6 @@ ir_class: SubprocessorSpec
     - is_framework_default: bool = False
     - purpose: str = ''
     - scc_url: str | None = None
-
-ir_class: SubscribeSpec
-  required:
-    - group_id: str
-    - topic: str
-  optional:
-    - description: str | None = None
-    - handlers: list[EventHandlerSpec] = []
 
 ir_class: SubtypePanelBranch
   required:
@@ -2785,23 +2307,6 @@ ir_class: Tautology
   optional:
     - kind: Literal[tautology] = 'tautology'
 
-ir_class: TemplateAttachmentSpec
-  required: (none)
-  optional:
-    - asset_name: str | None = None
-    - document_name: str | None = None
-    - entity_arg: str | None = None
-    - filename: str = ''
-
-ir_class: TemplateSpec
-  required:
-    - name: str
-  optional:
-    - attachments: list[TemplateAttachmentSpec] = []
-    - body: str = ''
-    - html_body: str | None = None
-    - subject: str = ''
-
 ir_class: TemporalSpec
   required:
     - end_field: str
@@ -2938,59 +2443,11 @@ ir_class: ThemeSpecYAML
     - spacing: SpacingSpec = <factory:SpacingSpec>
     - typography: TypographySpec = <factory:TypographySpec>
 
-ir_class: ThrottleSpec
-  required:
-    - max_messages: int
-    - scope: ThrottleScope
-    - window_seconds: int
-  optional:
-    - on_exceed: ThrottleExceedAction = <ThrottleExceedAction.DROP: 'drop'>
-
-ir_class: TimeSemantics
-  required:
-    - t_event_field: str
-  optional:
-    - t_log_field: str = '_t_log'
-    - t_process_field: str | None = None
-
 ir_class: ToneBandSpec
   required:
     - at: float
     - tone: str
   optional: (none)
-
-ir_class: TopicSpec
-  required:
-    - name: str
-  optional:
-    - description: str | None = None
-    - partition_key: str = 'entity_id'
-    - retention_days: int = 7
-
-ir_class: TransactionSpec
-  required:
-    - idempotency_key: str
-    - name: str
-  optional:
-    - execution: TransactionExecution = <TransactionExecution.SYNC: 'sync'>
-    - intent: str | None = None
-    - label: str | None = None
-    - priority: TransactionPriority = <TransactionPriority.NORMAL: 'normal'>
-    - timeout_ms: int = 5000
-    - transfers: list[TransferSpec] = []
-    - validation: list[ValidationRule] = []
-
-ir_class: TransferSpec
-  required:
-    - amount: FieldReference | ArithmeticExpr | LiteralValue
-    - code: int
-    - credit_ledger: str
-    - debit_ledger: str
-    - name: str
-  optional:
-    - flags: list[TransferFlag] = []
-    - pending_id: str | None = None
-    - user_data: dict[str, str] = {}
 
 ir_class: TransitionGuard
   required: (none)
@@ -3042,12 +2499,6 @@ ir_class: UserAttrCheck
     - user_attr: str
   optional:
     - kind: Literal[user_attr_check] = 'user_attr_check'
-
-ir_class: ValidationRule
-  required:
-    - expression: str
-  optional:
-    - message: str | None = None
 
 ir_class: ValueRef
   required: (none)
@@ -3117,13 +2568,6 @@ ir_class: VisualTreatment
     - border_token: str | None = None
     - icon: str | None = None
     - text_token: str | None = None
-
-ir_class: WindowSpec
-  required:
-    - size: str
-    - type: WindowType
-  optional:
-    - grace_period: str | None = None
 
 ir_class: WorkspaceAccessSpec
   required: (none)
@@ -3213,21 +2657,6 @@ ir_class: WorkspaceSpec
 
 == Enums ==
 
-enum: AccountFlag
-  members:
-    - CREDITS_MUST_NOT_EXCEED_DEBITS = 'credits_must_not_exceed_debits'
-    - DEBITS_MUST_NOT_EXCEED_CREDITS = 'debits_must_not_exceed_credits'
-    - HISTORY = 'history'
-    - LINKED = 'linked'
-
-enum: AccountType
-  members:
-    - ASSET = 'asset'
-    - EQUITY = 'equity'
-    - EXPENSE = 'expense'
-    - LIABILITY = 'liability'
-    - REVENUE = 'revenue'
-
 enum: AggregateFunction
   members:
     - AVG = 'avg'
@@ -3267,11 +2696,6 @@ enum: ArtifactStore
     - GCS = 'gcs'
     - LOCAL = 'local'
     - S3 = 's3'
-
-enum: AssetKind
-  members:
-    - FILE = 'file'
-    - IMAGE = 'image'
 
 enum: AttentionSignalKind
   members:
@@ -3335,12 +2759,6 @@ enum: BusinessPriority
     - HIGH = 'high'
     - LOW = 'low'
     - MEDIUM = 'medium'
-
-enum: ChannelKind
-  members:
-    - EMAIL = 'email'
-    - QUEUE = 'queue'
-    - STREAM = 'stream'
 
 enum: ColorMode
   members:
@@ -3433,25 +2851,11 @@ enum: DateLiteralKind
     - NOW = 'now'
     - TODAY = 'today'
 
-enum: DeliveryMode
-  members:
-    - DIRECT = 'direct'
-    - OUTBOX = 'outbox'
-
 enum: DensityEnum
   members:
     - COMFORTABLE = 'comfortable'
     - COMPACT = 'compact'
     - SPACIOUS = 'spacious'
-
-enum: DerivationType
-  members:
-    - AGGREGATE = 'aggregate'
-    - FILTER = 'filter'
-    - JOIN = 'join'
-    - SNAPSHOT = 'snapshot'
-    - TRANSFORM = 'transform'
-    - WINDOW = 'window'
 
 enum: DisplayMode
   members:
@@ -3481,12 +2885,6 @@ enum: DisplayMode
     - TABBED_LIST = 'tabbed_list'
     - TASK_INBOX = 'task_inbox'
     - TIMELINE = 'timeline'
-
-enum: DocumentFormat
-  members:
-    - CSV = 'csv'
-    - PDF = 'pdf'
-    - XLSX = 'xlsx'
 
 enum: DomainServiceKind
   members:
@@ -3537,14 +2935,6 @@ enum: ErrorAction
     - LOG_WARNING = 'log_warning'
     - RETRY = 'retry'
     - REVERT_TRANSITION = 'revert_transition'
-
-enum: EventTriggerKind
-  members:
-    - CREATED = 'created'
-    - DELETED = 'deleted'
-    - FIELD_CHANGED = 'field_changed'
-    - STATUS_CHANGED = 'status_changed'
-    - UPDATED = 'updated'
 
 enum: FidelityGapCategory
   members:
@@ -3628,11 +3018,6 @@ enum: FieldTypeKind
     - URL = 'url'
     - UUID = 'uuid'
 
-enum: FlowAggregateFn
-  members:
-    - COUNT = 'count'
-    - SUM = 'sum'
-
 enum: FlowAssertionKind
   members:
     - COMPUTED_VALUE = 'computed_value'
@@ -3657,21 +3042,6 @@ enum: FlowAssertionKind
     - TEXT_CONTAINS = 'text_contains'
     - VALIDATION_ERROR = 'validation_error'
     - VISIBLE = 'visible'
-
-enum: FlowAuditMode
-  members:
-    - ASYNC = 'async'
-    - STRICT = 'strict'
-
-enum: FlowFailureMode
-  members:
-    - ROLLBACK_ALL = 'rollback_all'
-
-enum: FlowFieldValueKind
-  members:
-    - ABOVE_REF = 'above_ref'
-    - INPUT_REF = 'input_ref'
-    - LITERAL = 'literal'
 
 enum: FlowPriority
   members:
@@ -3724,12 +3094,6 @@ enum: GuideStepKind
     - POPOVER = 'popover'
     - SPOTLIGHT = 'spotlight'
 
-enum: HLESSMode
-  members:
-    - OFF = 'off'
-    - STRICT = 'strict'
-    - WARN = 'warn'
-
 enum: HintDismiss
   members:
     - NEVER = 'never'
@@ -3744,13 +3108,6 @@ enum: HttpMethod
     - POST = 'POST'
     - PUT = 'PUT'
 
-enum: IdempotencyType
-  members:
-    - CONTENT_HASH = 'content_hash'
-    - DEDUPE_WINDOW = 'dedupe_window'
-    - DETERMINISTIC_ID = 'deterministic_id'
-    - EXTERNAL_DEDUP = 'external_dedup'
-
 enum: ComparisonOperator
   members:
     - EQ = '=='
@@ -3764,18 +3121,6 @@ enum: LogicalOperator
   members:
     - AND = 'and'
     - OR = 'or'
-
-enum: InvokeSourceKind
-  members:
-    - INPUT = 'input'
-    - LITERAL = 'literal'
-    - SELF = 'self'
-
-enum: JobBackoff
-  members:
-    - EXPONENTIAL = 'exponential'
-    - LINEAR = 'linear'
-    - NONE = 'none'
 
 enum: LLMProvider
   members:
@@ -3825,15 +3170,6 @@ enum: MappingTriggerType
     - ON_TRANSITION = 'on_transition'
     - ON_UPDATE = 'on_update'
 
-enum: MatchPatternKind
-  members:
-    - CONTAINS = 'contains'
-    - EXACT = 'exact'
-    - IN = 'in'
-    - PREFIX = 'prefix'
-    - REGEX = 'regex'
-    - SUFFIX = 'suffix'
-
 enum: MediaKind
   members:
     - IMAGE = 'image'
@@ -3845,26 +3181,6 @@ enum: ModelTier
     - BALANCED = 'balanced'
     - FAST = 'fast'
     - QUALITY = 'quality'
-
-enum: NotificationChannel
-  members:
-    - EMAIL = 'email'
-    - IN_APP = 'in_app'
-    - SLACK = 'slack'
-    - SMS = 'sms'
-
-enum: NotificationPreference
-  members:
-    - MANDATORY = 'mandatory'
-    - OPT_IN = 'opt_in'
-    - OPT_OUT = 'opt_out'
-
-enum: OutcomeCondition
-  members:
-    - FAILURE = 'failure'
-    - PARTIAL = 'partial'
-    - SUCCESS = 'success'
-    - TIMEOUT = 'timeout'
 
 enum: OutcomeKind
   members:
@@ -3976,34 +3292,6 @@ enum: ProcessTriggerKind
     - SCHEDULE_INTERVAL = 'schedule_interval'
     - SIGNAL = 'signal'
 
-enum: ProjectionAction
-  members:
-    - AGGREGATE = 'aggregate'
-    - DELETE = 'delete'
-    - INCREMENT = 'increment'
-    - UPDATE = 'update'
-    - UPSERT = 'upsert'
-
-enum: RebuildStrategy
-  members:
-    - FULL_REPLAY = 'full_replay'
-    - INCREMENTAL = 'incremental'
-    - WINDOWED = 'windowed'
-
-enum: ReceiveActionKind
-  members:
-    - CALL_SERVICE = 'call_service'
-    - CREATE = 'create'
-    - UPDATE = 'update'
-    - UPSERT = 'upsert'
-
-enum: RecordKind
-  members:
-    - DERIVATION = 'derivation'
-    - FACT = 'fact'
-    - INTENT = 'intent'
-    - OBSERVATION = 'observation'
-
 enum: RelatedDisplayMode
   members:
     - CONVERSATION = 'conversation'
@@ -4032,11 +3320,6 @@ enum: RetryBackoff
   members:
     - EXPONENTIAL = 'exponential'
     - LINEAR = 'linear'
-
-enum: SchemaCompatibility
-  members:
-    - ADDITIVE = 'additive'
-    - BREAKING = 'breaking'
 
 enum: SectionKind
   members:
@@ -4067,17 +3350,6 @@ enum: SecurityProfile
 enum: SeedStrategy
   members:
     - ROLLING_WINDOW = 'rolling_window'
-
-enum: SendTriggerKind
-  members:
-    - ENTITY_EVENT = 'entity_event'
-    - ENTITY_FIELD_CHANGED = 'entity_field_changed'
-    - ENTITY_STATUS_TRANSITION = 'entity_status_transition'
-    - MANUAL = 'manual'
-    - SCHEDULE = 'schedule'
-    - SERVICE_CALLED = 'service_called'
-    - SERVICE_FAILED = 'service_failed'
-    - SERVICE_SUCCEEDED = 'service_succeeded'
 
 enum: ShadowPreset
   members:
@@ -4154,12 +3426,6 @@ enum: SyncMode
     - EVENT_DRIVEN = 'event_driven'
     - SCHEDULED = 'scheduled'
 
-enum: SyncTrigger
-  members:
-    - AFTER_TRANSFER = 'after_transfer'
-    - ON_DEMAND = 'on_demand'
-    - SCHEDULED = 'scheduled'
-
 enum: TenancyMode
   members:
     - DATABASE_PER_TENANT = 'database_per_tenant'
@@ -4232,18 +3498,6 @@ enum: ThemeKind
     - MINIMAL = 'minimal'
     - SAAS_DEFAULT = 'saas-default'
 
-enum: ThrottleExceedAction
-  members:
-    - DROP = 'drop'
-    - ERROR = 'error'
-    - LOG = 'log'
-
-enum: ThrottleScope
-  members:
-    - PER_CHANNEL = 'per_channel'
-    - PER_ENTITY = 'per_entity'
-    - PER_RECIPIENT = 'per_recipient'
-
 enum: TimeBucket
   members:
     - DAY = 'day'
@@ -4262,26 +3516,6 @@ enum: TopicNamespaceMode
   members:
     - NAMESPACE_PER_TENANT = 'namespace_per_tenant'
     - SHARED = 'shared'
-
-enum: TransactionExecution
-  members:
-    - ASYNC = 'async'
-    - SYNC = 'sync'
-
-enum: TransactionPriority
-  members:
-    - CRITICAL = 'critical'
-    - HIGH = 'high'
-    - LOW = 'low'
-    - NORMAL = 'normal'
-
-enum: TransferFlag
-  members:
-    - BALANCING = 'balancing'
-    - LINKED = 'linked'
-    - PENDING = 'pending'
-    - POST_PENDING = 'post_pending'
-    - VOID_PENDING = 'void_pending'
 
 enum: TransitionEvent
   members:
@@ -4330,12 +3564,6 @@ enum: WidgetKind
     - TEXTAREA = 'textarea'
     - TEXT_INPUT = 'text_input'
 
-enum: WindowType
-  members:
-    - SESSION = 'session'
-    - SLIDING = 'sliding'
-    - TUMBLING = 'tumbling'
-
 enum: WorkspaceAccessLevel
   members:
     - AUTHENTICATED = 'authenticated'
@@ -4347,10 +3575,6 @@ enum: WorkspaceAccessLevel
 # snapshotted; only the export name + category is pinned (so removal/rename
 # fires the drift gate).
 
-category: class_other
-  - HLESSValidator (class, bases=[])
-  - ValidationResult (class, bases=[])
-
 category: constant
   - AI_JOB_FIELDS: list (len=12)
   - CURRENCY_SCALES: dict (len=29)
@@ -4361,20 +3585,15 @@ category: constant
 category: function
   - AggregateFunc (callable, type=_LiteralGenericAlias)
   - AggregateWindowKind (callable, type=_LiteralGenericAlias)
-  - AtomicFlowStep (callable, type=_AnnotatedAlias)
   - DateExpr (callable, type=_AnnotatedAlias)
   - ScopePredicate (callable, type=_AnnotatedAlias)
   - create_default_sitespec (callable, type=function)
   - from_money (callable, type=function)
   - get_currency_scale (callable, type=function)
-  - get_default_idempotency (callable, type=function)
   - is_money_field_name (callable, type=function)
   - money_from_dict (callable, type=function)
   - to_money (callable, type=function)
-  - validate_stream (callable, type=function)
-  - validate_streams_with_cross_references (callable, type=function)
 
 category: typealias
-  - AmountExpr (typealias = FieldReference | ArithmeticExpr | LiteralValue)
   - ComputedExpr (typealias = AggregateCall | FieldReference | ArithmeticExpr | LiteralValue)
   - InvariantExpr (typealias = InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr)

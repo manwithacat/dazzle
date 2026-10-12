@@ -36,21 +36,6 @@ from .archetype import (
 )
 
 # E2E Flows
-from .atomic_flows import (
-    AtomicFlowSpec,
-    AtomicFlowStep,
-    FlowAggregateFn,
-    FlowAuditMode,
-    FlowCreate,
-    FlowFailureMode,
-    FlowFieldValue,
-    FlowFieldValueKind,
-    FlowInput,
-    FlowInvariant,
-    FlowUpdate,
-    InvariantRhs,
-)
-
 # Audit trail (#956)
 from .audit import (
     AuditShowTo,
@@ -143,21 +128,7 @@ from .e2e import (
     TestComparisonOperator,
     UsabilityRule,
 )
-
-# Eventing (v0.18.0 Event-First Architecture)
-from .eventing import (
-    EventFieldSpec,
-    EventHandlerSpec,
-    EventModelSpec,
-    EventSpec,
-    EventTriggerKind,
-    ProjectionAction,
-    ProjectionHandlerSpec,
-    ProjectionSpec,
-    PublishSpec,
-    SubscribeSpec,
-    TopicSpec,
-)
+from .entity_events import EntityEvent
 
 # Experiences
 from .experiences import (
@@ -260,41 +231,6 @@ from .grants import (
     GrantSchemaSpec,
 )
 
-# HLESS - High-Level Event Semantics (v0.19.0)
-from .hless import (
-    DerivationLineage,
-    DerivationType,
-    ExpectedOutcome,
-    HLESSMode,
-    HLESSPragma,
-    HLESSViolation,
-    IdempotencyStrategy,
-    IdempotencyType,
-    OutcomeCondition,
-    RebuildStrategy,
-    RecordKind,
-    SchemaCompatibility,
-    SideEffectPolicy,
-    StreamSchema,
-    StreamSpec,
-    TimeSemantics,
-    WindowSpec,
-    WindowType,
-    get_default_idempotency,
-)
-from .hless_validator import (
-    HLESSValidator,
-    ValidationResult,
-    validate_stream,
-    validate_streams_with_cross_references,
-)
-
-# File/IoT ingest (#1676)
-from .ingest import (
-    IngestProtectSpec,
-    IngestSpec,
-)
-
 # Integrations
 from .integrations import (
     AuthSpec,
@@ -341,33 +277,8 @@ from .islands import (
     IslandSpec,
 )
 
-# Background Jobs (#953)
-from .jobs import (
-    JobBackoff,
-    JobSchedule,
-    JobSpec,
-    JobTrigger,
-)
-
 # Layout Engine
 from .layout import AttentionSignalKind, Stage
-
-# Ledgers (v0.24.0 TigerBeetle Integration)
-from .ledgers import (
-    AccountFlag,
-    AccountType,
-    AmountExpr,
-    LedgerAccountRef,
-    LedgerSpec,
-    LedgerSyncSpec,
-    SyncTrigger,
-    TransactionExecution,
-    TransactionPriority,
-    TransactionSpec,
-    TransferFlag,
-    TransferSpec,
-    ValidationRule,
-)
 
 # Lifecycle (ADR-0020)
 from .lifecycle import (
@@ -396,53 +307,8 @@ from .llm import (
     RetryPolicySpec,
 )
 
-# LLM Event Streams (v0.21.0 - Issue #33)
-from .llm_events import (
-    LLM_DERIVATION_STREAM,
-    LLM_FACT_STREAM,
-    LLM_INTENT_STREAM,
-    LLM_OBSERVATION_STREAM,
-    LLM_SCHEMAS,
-    create_llm_derivation_stream,
-    create_llm_fact_stream,
-    create_llm_intent_stream,
-    create_llm_observation_stream,
-    get_all_llm_streams,
-)
-
 # Source locations (v0.31.0)
 from .location import SourceLocation
-
-# Messaging Channels (v0.9.0)
-from .messaging import (
-    AssetKind,
-    AssetSpec,
-    ChannelConfigSpec,
-    ChannelKind,
-    ChannelSpec,
-    DeliveryMode,
-    DocumentFormat,
-    DocumentSpec,
-    EntityEvent,
-    MappingSpec,
-    MatchPatternKind,
-    MatchPatternSpec,
-    MessageFieldSpec,
-    MessageSpec,
-    ProviderConfigSpec,
-    ReceiveActionKind,
-    ReceiveActionSpec,
-    ReceiveMappingSpec,
-    ReceiveOperationSpec,
-    SendOperationSpec,
-    SendTriggerKind,
-    SendTriggerSpec,
-    TemplateAttachmentSpec,
-    TemplateSpec,
-    ThrottleExceedAction,
-    ThrottleScope,
-    ThrottleSpec,
-)
 
 # Module-level IR
 from .module import (
@@ -463,15 +329,6 @@ from .money import (
     is_money_field_name,
     money_from_dict,
     to_money,
-)
-
-# Notifications (v0.34.0)
-from .notifications import (
-    NotificationChannel,
-    NotificationPreference,
-    NotificationRecipient,
-    NotificationSpec,
-    NotificationTrigger,
 )
 
 # Guided onboarding (#1106 follow-up, v0.71.0)
@@ -644,9 +501,6 @@ from .sla import (
 # State Machines (v0.7.0)
 from .state_machine import (
     AutoTransitionSpec,
-    InvokeBinding,
-    InvokeFlowSpec,
-    InvokeSourceKind,
     StateMachineSpec,
     StateTransition,
     TimeUnit,
@@ -868,6 +722,7 @@ __all__ = [
     "GraphEdgeSpec",
     "GraphNodeSpec",
     "EntitySpec",
+    "EntityEvent",
     "DomainSpec",
     # UX
     "SignalLevel",
@@ -972,20 +827,6 @@ __all__ = [
     "MatchRule",
     "IntegrationSync",
     "IntegrationSpec",
-    # Ledgers (v0.24.0 TigerBeetle Integration)
-    "AccountFlag",
-    "AccountType",
-    "AmountExpr",
-    "LedgerAccountRef",
-    "LedgerSpec",
-    "LedgerSyncSpec",
-    "SyncTrigger",
-    "TransactionExecution",
-    "TransactionPriority",
-    "TransactionSpec",
-    "TransferFlag",
-    "TransferSpec",
-    "ValidationRule",
     # E2E
     "TestComparisonOperator",
     "FlowPriority",
@@ -999,19 +840,6 @@ __all__ = [
     "UsabilityRule",
     "A11yRule",
     "E2ETestSpec",
-    # #1228 / #1313 — atomic multi-entity flows
-    "AtomicFlowSpec",
-    "AtomicFlowStep",
-    "FlowFieldValue",
-    "FlowFieldValueKind",
-    "FlowInput",
-    "FlowCreate",
-    "FlowUpdate",
-    "FlowFailureMode",
-    "FlowAuditMode",
-    "FlowAggregateFn",
-    "FlowInvariant",
-    "InvariantRhs",
     # Layout
     "AttentionSignalKind",
     "Stage",
@@ -1027,9 +855,6 @@ __all__ = [
     "TimeUnit",
     "TransitionTrigger",
     "TransitionGuard",
-    "InvokeSourceKind",
-    "InvokeBinding",
-    "InvokeFlowSpec",
     "AutoTransitionSpec",
     "StateTransition",
     "StateMachineSpec",
@@ -1135,34 +960,6 @@ __all__ = [
     "FieldStrategy",
     "PersonaBlueprint",
     "TenantBlueprint",
-    # Messaging Channels (v0.9.0)
-    "AssetKind",
-    "AssetSpec",
-    "ChannelConfigSpec",
-    "ChannelKind",
-    "ChannelSpec",
-    "DeliveryMode",
-    "DocumentFormat",
-    "DocumentSpec",
-    "EntityEvent",
-    "MatchPatternKind",
-    "MatchPatternSpec",
-    "MappingSpec",
-    "MessageFieldSpec",
-    "MessageSpec",
-    "ProviderConfigSpec",
-    "ReceiveActionKind",
-    "ReceiveActionSpec",
-    "ReceiveMappingSpec",
-    "ReceiveOperationSpec",
-    "SendOperationSpec",
-    "SendTriggerKind",
-    "SendTriggerSpec",
-    "TemplateAttachmentSpec",
-    "TemplateSpec",
-    "ThrottleExceedAction",
-    "ThrottleScope",
-    "ThrottleSpec",
     # Test Design (v0.13.0)
     "TestDesignAction",
     "TestDesignSpec",
@@ -1172,18 +969,6 @@ __all__ = [
     "TestGap",
     "TestGapAnalysis",
     "TestGapCategory",
-    # Eventing (v0.18.0 Event-First Architecture)
-    "EventFieldSpec",
-    "EventHandlerSpec",
-    "EventModelSpec",
-    "EventSpec",
-    "EventTriggerKind",
-    "ProjectionAction",
-    "ProjectionHandlerSpec",
-    "ProjectionSpec",
-    "PublishSpec",
-    "SubscribeSpec",
-    "TopicSpec",
     # Money Value Object (v0.20.0)
     "CURRENCY_SCALES",
     "DEFAULT_CURRENCY_SCALE",
@@ -1195,30 +980,6 @@ __all__ = [
     "is_money_field_name",
     "money_from_dict",
     "to_money",
-    # HLESS - High-Level Event Semantics (v0.19.0)
-    "DerivationLineage",
-    "DerivationType",
-    "ExpectedOutcome",
-    "HLESSMode",
-    "HLESSPragma",
-    "HLESSValidator",
-    "HLESSViolation",
-    "IdempotencyStrategy",
-    "IdempotencyType",
-    "OutcomeCondition",
-    "RebuildStrategy",
-    "RecordKind",
-    "SchemaCompatibility",
-    "SideEffectPolicy",
-    "StreamSchema",
-    "StreamSpec",
-    "TimeSemantics",
-    "ValidationResult",
-    "WindowSpec",
-    "WindowType",
-    "get_default_idempotency",
-    "validate_stream",
-    "validate_streams_with_cross_references",
     # LLM - Large Language Model (v0.21.0 - Issue #33)
     "AI_JOB_FIELDS",
     "ArtifactKind",
@@ -1292,23 +1053,9 @@ __all__ = [
     # Audit trail (#956)
     "AuditShowTo",
     "AuditSpec",
-    # Background Jobs (#953)
-    "JobBackoff",
-    "JobSchedule",
-    "JobSpec",
-    "JobTrigger",
     # Full-text search (#954)
     "SearchField",
     "SearchSpec",
-    # Notifications (v0.34.0)
-    "NotificationChannel",
-    "NotificationPreference",
-    "NotificationRecipient",
-    "NotificationSpec",
-    "NotificationTrigger",
-    # Ingest
-    "IngestSpec",
-    "IngestProtectSpec",
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     "Gap",
     "GapsReport",

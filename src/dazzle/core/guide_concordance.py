@@ -11,9 +11,8 @@ Four checks, in order:
    (optionally) an action / field / section that exists.
 2. **Completion** — ``GuideStep.complete_on`` references a real event,
    surface, or field. Entity-lifecycle shorthand (``entity.X.created``)
-   is recognised; hless topic.event refs are checked against the
-   project's ``streams`` block; ``field_filled`` paths resolve to a
-   real ``(entity, field)`` pair.
+   is checked; other event refs pass through unchecked; ``field_filled``
+   paths resolve to a real ``(entity, field)`` pair.
 3. **CTA target** — ``cta_target`` is a real surface, and when it is a
    create/edit surface the guide's audience persona(s) hold a ``permit:``
    for that mutation on its entity (#1292). A CTA the whole audience is
@@ -56,7 +55,6 @@ def check_guide_concordance(
     surfaces: list[ir.SurfaceSpec],
     entities: list[ir.EntitySpec],
     personas: list[ir.PersonaSpec],
-    streams: list[ir.StreamSpec],
 ) -> tuple[list[str], list[str]]:
     """Run all four concordance checks. Returns (errors, warnings)."""
     errors: list[str] = []
@@ -67,14 +65,6 @@ def check_guide_concordance(
     persona_ids = {p.id for p in personas}
     # persona id → effective role, for the CTA audience-access check (#1292).
     persona_roles = {p.id: (getattr(p, "effective_role", None) or p.id) for p in personas}
-
-    hless_events: set[str] = set()
-    for stream in streams:
-        topic = getattr(stream, "topic", None) or getattr(stream, "name", "")
-        for ev in getattr(stream, "events", []) or []:
-            ev_name = getattr(ev, "name", None) or getattr(ev, "event_type", "")
-            if topic and ev_name:
-                hless_events.add(f"{topic}.{ev_name}")
 
     for guide in guides:
         # ── audience persona ────────────────────────────────────────
@@ -109,9 +99,7 @@ def check_guide_concordance(
         # ── per-step attachment + completion + cta ──────────────────
         for step in guide.steps:
             _check_step_target(guide, step, surface_by_name, entity_by_name, errors)
-            _check_step_completion(
-                guide, step, surface_by_name, entity_by_name, hless_events, errors
-            )
+            _check_step_completion(guide, step, surface_by_name, entity_by_name, errors)
             _check_step_cta(
                 guide,
                 step,
@@ -204,7 +192,6 @@ def _check_step_completion(
     step: ir.GuideStep,
     surface_by_name: dict[str, ir.SurfaceSpec],
     entity_by_name: dict[str, ir.EntitySpec],
-    hless_events: set[str],
     errors: list[str],
 ) -> None:
     """Resolve ``GuideStep.complete_on``.
@@ -243,13 +230,6 @@ def _check_step_completion(
                     f"{sorted(_ENTITY_LIFECYCLES)}"
                 )
             return
-        # hless topic.event shape — must appear in the streams index.
-        if hless_events and ref not in hless_events:
-            errors.append(
-                f"guide {guide.name!r} step {step.name!r}: complete_on event "
-                f"{ref!r} not declared in any hless stream; known events: "
-                f"{sorted(hless_events) or '(none)'}"
-            )
 
     elif kind == "field_filled":
         path = co.field_filled or ""

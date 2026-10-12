@@ -68,7 +68,7 @@ Per step:
 | `title:` / `body:` | The overlay copy (kept terse — see the quality bar). |
 | `placement:` | `top` \| `bottom` \| `left` \| `right` \| `center` (floating kinds). |
 | `cta_label:` / `cta_target:` | Optional call-to-action; `cta_target` is a `surface.<name>` the audience persona must have permission to reach. |
-| `complete_on:` | `click` \| `dismiss` \| `event entity.<E>.created` (or an hless event) \| `field_filled surface.<s>.field.<f>`. |
+| `complete_on:` | `click` \| `dismiss` \| `event entity.<E>.created` \| `field_filled surface.<s>.field.<f>`. |
 | `audience_when:` | Optional extra predicate AND-ed with the guide's `audience`. |
 
 ### The 8 render kinds (`GuideStepKind`)

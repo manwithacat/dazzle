@@ -2,13 +2,14 @@
 Dazzle Event-First Architecture.
 
 This package provides the core event infrastructure for Dazzle applications:
-- EventEnvelope: Canonical event schema (Kafka-shaped)
+- EventEnvelope: Canonical event schema
 - EventBus: Abstract interface for event publish/subscribe
 - DevBusMemory: In-memory bus for tests
-- KafkaBus: Production Kafka adapter (v0.18.0 Phase I)
+- PostgresBus / RedisBus: the two production tiers
 - Outbox/Inbox: Transactional guarantees for at-least-once delivery
-- Multi-tenancy strategies (v0.18.0 Phase I)
-- Topology drift detection (v0.18.0 Phase I)
+
+The event DSL (``event_model``, ``subscribe``, ``projection``, ``stream``,
+``hless``, ``ingest``) and the Kafka tier are parked under DD-006.
 """
 
 # --- Zero-dep imports (always available) ---
@@ -49,23 +50,6 @@ if EVENTS_AVAILABLE:
         FrameworkStats,
     )
     from dazzle.http.events.inbox import EventInbox, InboxEntry, ProcessingResult
-
-    # v0.18.0 Phase I additions
-    from dazzle.http.events.kafka_bus import (
-        KAFKA_AVAILABLE,
-        KafkaConfig,
-    )
-    from dazzle.http.events.multi_tenancy import (
-        HybridTenancyStrategy,
-        NamespacePerTenantStrategy,
-        SharedTopicsStrategy,
-        TenancyMode,
-        TenancyStrategy,
-        TenantContext,
-        TenantEventConsumer,
-        TenantEventPublisher,
-        create_strategy,
-    )
     from dazzle.http.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
 
     # v0.22.0 - PostgreSQL event bus (Tier 1 - Heroku pilots)
@@ -89,25 +73,6 @@ if EVENTS_AVAILABLE:
         detect_tier,
         get_tier_info,
     )
-    from dazzle.http.events.topology_drift import (
-        DriftIssue,
-        DriftReport,
-        DriftSeverity,
-        DriftType,
-        ExpectedConsumer,
-        ExpectedTopic,
-        ExpectedTopology,
-        TopologyDriftDetector,
-        TopologyExtractor,
-        TopologyFingerprint,
-        check_topology_drift,
-    )
-
-    # Conditional import for KafkaBus
-    if KAFKA_AVAILABLE:
-        from dazzle.http.events.kafka_bus import KafkaBus
-    else:
-        KafkaBus = None  # type: ignore[misc,assignment]
 
     # Conditional import for PostgresBus
     if ASYNCPG_AVAILABLE:
@@ -173,10 +138,6 @@ if EVENTS_AVAILABLE:
         "EventFramework",
         "EventFrameworkConfig",
         "FrameworkStats",
-        # v0.18.0 Phase I - Kafka adapter
-        "KAFKA_AVAILABLE",
-        "KafkaBus",
-        "KafkaConfig",
         # v0.22.0 - PostgreSQL event bus (Tier 1)
         "ASYNCPG_AVAILABLE",
         "PostgresBus",
@@ -191,26 +152,4 @@ if EVENTS_AVAILABLE:
         "create_bus",
         "detect_tier",
         "get_tier_info",
-        # v0.18.0 Phase I - Multi-tenancy
-        "TenancyMode",
-        "TenancyStrategy",
-        "TenantContext",
-        "SharedTopicsStrategy",
-        "NamespacePerTenantStrategy",
-        "HybridTenancyStrategy",
-        "TenantEventPublisher",
-        "TenantEventConsumer",
-        "create_strategy",
-        # v0.18.0 Phase I - Topology drift detection
-        "DriftType",
-        "DriftSeverity",
-        "DriftIssue",
-        "DriftReport",
-        "TopologyFingerprint",
-        "ExpectedTopic",
-        "ExpectedConsumer",
-        "ExpectedTopology",
-        "TopologyExtractor",
-        "TopologyDriftDetector",
-        "check_topology_drift",
     ]

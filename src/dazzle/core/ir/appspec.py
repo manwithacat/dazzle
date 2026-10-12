@@ -12,15 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .analytics import AnalyticsSpec
 from .archetype import ArchetypeSpec
-from .atomic_flows import AtomicFlowSpec
 from .audit import AuditSpec
 from .domain import DomainSpec, EntitySpec
 from .e2e import FixtureSpec
-from .eventing import (
-    EventModelSpec,
-    ProjectionSpec,
-    SubscribeSpec,
-)
 from .experiences import ExperienceSpec
 from .feedback_widget import FeedbackWidgetSpec
 from .fields import FieldType
@@ -30,33 +24,14 @@ from .governance import (
     TenancySpec,
 )
 from .grants import GrantSchemaSpec
-from .hless import (
-    HLESSMode,
-    HLESSPragma,
-    StreamSpec,
-)
-from .ingest import IngestSpec
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
-from .jobs import JobSpec
-from .ledgers import (
-    LedgerSpec,
-    TransactionSpec,
-)
 from .llm import (
     LLMConfigSpec,
     LLMIntentSpec,
     LLMModelSpec,
 )
-from .messaging import (
-    AssetSpec,
-    ChannelSpec,
-    DocumentSpec,
-    MessageSpec,
-    TemplateSpec,
-)
 from .module import AppConfigSpec
-from .notifications import NotificationSpec
 from .onboarding import GuideSpec
 from .params import ParamSpec
 from .personas import PersonaSpec
@@ -117,35 +92,17 @@ class AppSpec(BaseModel):
     domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
-    atomic_flows: list[AtomicFlowSpec] = Field(
-        default_factory=list
-    )  # #1228 — atomic multi-entity creates
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
-    # Messaging Channels (v0.9.0)
-    messages: list[MessageSpec] = Field(default_factory=list)
-    channels: list[ChannelSpec] = Field(default_factory=list)
-    assets: list[AssetSpec] = Field(default_factory=list)
-    documents: list[DocumentSpec] = Field(default_factory=list)
-    templates: list[TemplateSpec] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     security: SecurityConfig | None = None  # Security configuration (v0.11.0)
     # v0.61.43 (Phase B Patch 2): mirror the root module's app_config so
     # runtime consumers can read DSL-level theme / multi_tenant / etc.
     # without re-loading the source module.
     app_config: AppConfigSpec | None = None
-    # Event-First Architecture (v0.18.0)
-    event_model: EventModelSpec | None = None
-    subscriptions: list[SubscribeSpec] = Field(default_factory=list)
-    projections: list[ProjectionSpec] = Field(default_factory=list)
-    # HLESS - High-Level Event Semantics (v0.19.0)
-    streams: list[StreamSpec] = Field(default_factory=list)
-    ingests: list[IngestSpec] = Field(default_factory=list)
-    hless_mode: HLESSMode = Field(default=HLESSMode.STRICT)
-    hless_pragma: HLESSPragma | None = None
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
     policies: PoliciesSpec | None = None
     tenancy: TenancySpec | None = None
@@ -156,19 +113,12 @@ class AppSpec(BaseModel):
     # Process Workflows (v0.23.0)
     processes: list[ProcessSpec] = Field(default_factory=list)
     schedules: list[ScheduleSpec] = Field(default_factory=list)
-    # Ledgers (v0.24.0 TigerBeetle Integration)
-    ledgers: list[LedgerSpec] = Field(default_factory=list)
-    transactions: list[TransactionSpec] = Field(default_factory=list)
     # Views (v0.25.0)
     views: list[ViewSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
     # Islands (UI Islands)
     islands: list[IslandSpec] = Field(default_factory=list)
-    # Notifications (v0.34.0)
-    notifications: list[NotificationSpec] = Field(default_factory=list)
-    # Background Jobs (#953)
-    jobs: list[JobSpec] = Field(default_factory=list)
     # Audit trail (#956)
     audits: list[AuditSpec] = Field(default_factory=list)
     # Full-text search (#954)
@@ -353,46 +303,6 @@ class AppSpec(BaseModel):
 
         return _q(self, entity, surface, persona)
 
-    # Messaging getters (v0.9.0)
-
-    def get_message(self, name: str) -> MessageSpec | None:
-        """Get message schema by name."""
-        from .appspec_queries import get_message as _q
-
-        return _q(self, name)
-
-    def get_channel(self, name: str) -> ChannelSpec | None:
-        """Get channel by name."""
-        from .appspec_queries import get_channel as _q
-
-        return _q(self, name)
-
-    def get_asset(self, name: str) -> AssetSpec | None:
-        """Get asset by name."""
-        from .appspec_queries import get_asset as _q
-
-        return _q(self, name)
-
-    def get_document(self, name: str) -> DocumentSpec | None:
-        """Get document by name."""
-        from .appspec_queries import get_document as _q
-
-        return _q(self, name)
-
-    def get_template(self, name: str) -> TemplateSpec | None:
-        """Get template by name."""
-        from .appspec_queries import get_template as _q
-
-        return _q(self, name)
-
-    # HLESS getters (v0.19.0)
-
-    def get_stream(self, name: str) -> StreamSpec | None:
-        """Get stream by name."""
-        from .appspec_queries import get_stream as _q
-
-        return _q(self, name)
-
     # LLM getters (v0.21.0 - Issue #33)
 
     def get_llm_model(self, name: str) -> LLMModelSpec | None:
@@ -432,32 +342,6 @@ class AppSpec(BaseModel):
         from .appspec_queries import get_schedules_by_story as _q
 
         return _q(self, story_id)
-
-    # Ledger getters (v0.24.0 TigerBeetle Integration)
-
-    def get_ledger(self, name: str) -> LedgerSpec | None:
-        """Get ledger by name."""
-        from .appspec_queries import get_ledger as _q
-
-        return _q(self, name)
-
-    def get_transaction(self, name: str) -> TransactionSpec | None:
-        """Get transaction by name."""
-        from .appspec_queries import get_transaction as _q
-
-        return _q(self, name)
-
-    def get_transactions_by_ledger(self, ledger_name: str) -> list[TransactionSpec]:
-        """Get all transactions that affect a specific ledger."""
-        from .appspec_queries import get_transactions_by_ledger as _q
-
-        return _q(self, ledger_name)
-
-    def get_ledgers_by_currency(self, currency: str) -> list[LedgerSpec]:
-        """Get all ledgers with a specific currency."""
-        from .appspec_queries import get_ledgers_by_currency as _q
-
-        return _q(self, currency)
 
     # View getters (v0.25.0)
 

@@ -9,8 +9,7 @@ This is the *pull* side of metrics observability (slice 1 of #1192).
 A future slice will add an OTLP push exporter alongside it; the two
 are independent and additive.
 
-Sibling of :mod:`dazzle.http.runtime.event_explorer` and
-:mod:`dazzle.http.runtime.job_explorer` — same factory shape, same
+Sibling of :mod:`dazzle.http.runtime.event_explorer` — same factory shape, same
 ``/_dazzle/*`` prefix, same auth/gating as the existing inspection
 endpoints.
 

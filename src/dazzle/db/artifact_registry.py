@@ -75,7 +75,6 @@ _AUTH_TABLES = (
     "magic_links",
     "email_verification_tokens",
     "user_preferences",
-    "join_requests",
 )
 
 
@@ -122,12 +121,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "_dazzle_audit_log",
         "dazzle.http.runtime.audit_log.ensure_audit_log_table",
         boot_entry="dazzle.http.runtime.audit_log.AuditLogger._init_db",
-    ),
-    _fw(
-        "_dazzle_atomic_audit",
-        _ORCH,
-        boot_entry=None,
-        notes="orchestrator-only; lazy ensure in mutation path is no-op when table exists",
     ),
     _fw(
         "dazzle_files",
@@ -192,12 +185,6 @@ DB_ARTIFACTS: tuple[Artifact, ...] = (
         "dazzle.http.runtime.tenant.aliases.ensure_tenant_host_aliases_table",
         boot_entry=None,
         notes="orchestrator-only; composing host aliases (ADR-0055 PR4)",
-    ),
-    _fw(
-        "_dazzle_ingest_fingerprint",
-        "dazzle.http.runtime.ingest_engine.ensure_ingest_fingerprint_table",
-        boot_entry=None,
-        notes="orchestrator-only; ingest OBSERVATION content-hash idempotency (#1676)",
     ),
     # ── event-bus transport (excluded; dynamic prefix; self-creating) ──────
     *[

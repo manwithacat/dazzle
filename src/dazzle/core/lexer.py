@@ -55,8 +55,6 @@ class TokenType(Enum):
     AUTH_PROFILE = "auth_profile"
     OWNER = "owner"
     KEY = "key"
-    INGEST = "ingest"
-    PROTECT = "protect"
     CONSTRAINT = "constraint"
     UNIQUE = "unique"
     INDEX = "index"
@@ -207,19 +205,10 @@ class TokenType(Enum):
     BULK = "bulk"
     IMPORT = "import"
     EXPORT = "export"
-    NOTIFICATION = "notification"
     NOTIFY = "notify"
-    JOB = "job"  # #953 — `schedule` token reused from ScheduleSpec.
-    RETRY_BACKOFF = "retry_backoff"  # #953
-    DEAD_LETTER = "dead_letter"  # #953
     RANKING = "ranking"  # #954
     HIGHLIGHT = "highlight"  # #954
     TOKENIZER = "tokenizer"  # #954
-    CHANNELS = "channels"
-    IN_APP = "in_app"
-    SMS = "sms"
-    SLACK = "slack"
-    PREFERENCES = "preferences"
     DATE_RANGE = "date_range"
     TIME_BUCKET = "time_bucket"
     DATE_FIELD = "date_field"
@@ -356,27 +345,7 @@ class TokenType(Enum):
     # on_breach, notify) are parsed as identifiers to avoid conflicts
     # with existing DSL usage.
 
-    # v0.24.0 TigerBeetle Ledger Keywords
-    LEDGER = "ledger"
-    TRANSACTION = "transaction"
-    TRANSFER = "transfer"
-    DEBIT = "debit"
-    CREDIT = "credit"
-    AMOUNT = "amount"
-    ACCOUNT_CODE = "account_code"
-    LEDGER_ID = "ledger_id"
-    ACCOUNT_TYPE = "account_type"
-    CURRENCY = "currency"
-    FLAGS = "flags"
-    SYNC_TO = "sync_to"
-    IDEMPOTENCY_KEY = "idempotency_key"
-    VALIDATION = "validation"
-    EXECUTION = "execution"
     PRIORITY = "priority"
-    PENDING_ID = "pending_id"
-    USER_DATA = "user_data"
-    TENANT_SCOPED = "tenant_scoped"
-    METADATA_MAPPING = "metadata_mapping"
 
     # v0.23.0 Process Workflow Keywords
     # Note: Many tokens already defined elsewhere:
@@ -407,12 +376,6 @@ class TokenType(Enum):
     ON_TRUE = "on_true"
     ON_FALSE = "on_false"
 
-    # v0.18.0 Event-First Architecture Keywords
-    EVENT_MODEL = "event_model"
-    PUBLISH = "publish"
-    SUBSCRIBE = "subscribe"
-    PROJECTION = "projection"
-    TOPIC = "topic"
     RETENTION = "retention"
     # v0.18.0 Governance Keywords (Issue #25)
     POLICIES = "policies"
@@ -420,37 +383,10 @@ class TokenType(Enum):
     CLASSIFY = "classify"
     ERASURE = "erasure"
 
-    # v0.19.0 HLESS (High-Level Event Semantics Specification) Keywords.
-    # NOTE: the `hless` keyword and `HLESS*` IR class names are deliberate —
-    # they signal that Dazzle's event semantics align with academic
-    # event-systems literature rather than stack-flavoured terminology
-    # ("stream", "topic", "consumer group"). Renaming has been proposed
-    # and rejected (#1069 API-003). Full rationale + the three failure
-    # modes HLESS addresses are in docs/architecture/hless-deep-dive.md.
-    # RecordKind types (INTENT already exists in v0.7.1 LLM Cognition)
-    FACT = "FACT"
-    OBSERVATION = "OBSERVATION"
-    DERIVATION = "DERIVATION"
-    # Stream specification keywords
-    PARTITION_KEY = "partition_key"
-    ORDERING_SCOPE = "ordering_scope"
-    IDEMPOTENCY = "idempotency"
+    # Shared sub-keywords (process steps, surfaces)
     OUTCOMES = "outcomes"
-    DERIVES_FROM = "derives_from"
     EMITS = "emits"
-    SIDE_EFFECTS = "side_effects"
-    ALLOWED = "allowed"
-    SCHEMA = "schema"
     NOTE = "note"
-    # Time semantics
-    T_EVENT = "t_event"
-    T_LOG = "t_log"
-    T_PROCESS = "t_process"
-    # HLESS pragma
-    HLESS = "hless"
-    STRICT = "strict"
-    WARN = "warn"
-    OFF = "off"
 
     # v0.21.0 LLM Jobs as First-Class Events (Issue #33)
     LLM_MODEL = "llm_model"
@@ -486,60 +422,24 @@ class TokenType(Enum):
     # Note: PIIAction values (warn, redact, reject) and RetryBackoff values
     # (linear, exponential) are parsed as identifiers, not keywords
 
-    # v0.9.0 Messaging Channel Keywords
-    # Note: MESSAGE already defined above in UX keywords
+    # Channel / provider / scheduling sub-keywords
     CHANNEL = "channel"
-    SEND = "send"
-    RECEIVE = "receive"
     PROVIDER = "provider"
-    CONFIG = "config"
-    PROVIDER_CONFIG = "provider_config"
-    DELIVERY_MODE = "delivery_mode"
-    OUTBOX = "outbox"
-    DIRECT = "direct"
-    THROTTLE = "throttle"
-    PER_RECIPIENT = "per_recipient"
-    PER_ENTITY = "per_entity"
-    PER_CHANNEL = "per_channel"
     WINDOW = "window"
-    MAX_MESSAGES = "max_messages"
-    ON_EXCEED = "on_exceed"
-    DROP = "drop"
-    LOG = "log"
-    QUEUE = "queue"
-    STREAM = "stream"
     EMAIL = "email"
-    ASSET = "asset"
-    DOCUMENT = "document"
-    TEMPLATE = "template"
     SUBJECT = "subject"
-    BODY = "body"
-    HTML_BODY = "html_body"
-    ATTACHMENTS = "attachments"
-    ASSET_REF = "asset_ref"
-    DOCUMENT_REF = "document_ref"
-    ENTITY_ARG = "entity_arg"
-    FILENAME = "filename"
-    FOR_ENTITY = "for_entity"
     FORMAT = "format"
     LAYOUT = "layout"
     RENDER = "render"
-    PATH = "path"
-    CHANGED = "changed"
     TO = "to"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
     EVERY = "every"
     CRON = "cron"
-    UPSERT = "upsert"
-    REGEX = "regex"
 
     # Step / visibility keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
     # because they're commonly used as enum values or field names.
     # #1228 Phase 3c: atomic multi-entity creation block.
-    ATOMIC = "atomic"
     STEPS = "steps"
     WAIT = "wait"
     AUTHENTICATED = "authenticated"

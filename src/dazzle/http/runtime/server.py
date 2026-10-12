@@ -40,8 +40,7 @@ from dazzle.http.runtime.document_routes import create_document_routes
 from dazzle.http.runtime.exception_handlers import register_exception_handlers
 from dazzle.http.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle.http.runtime.file_storage import FileService
-from dazzle.http.runtime.ingest_routes import create_ingest_routes
-from dazzle.http.runtime.integration_manager import IntegrationManager, _convert_channels
+from dazzle.http.runtime.integration_manager import IntegrationManager
 from dazzle.http.runtime.lifespan_hooks import init_lifespan_registry, register_lifespan_hook
 from dazzle.http.runtime.migrations import MigrationPlan
 from dazzle.http.runtime.model_generator import (
@@ -75,7 +74,6 @@ from dazzle.http.runtime.sse_wiring import LazyFrameworkBus, register_sse_callba
 from dazzle.http.runtime.storage import build_entity_storage_bindings
 from dazzle.http.runtime.subsystems import SubsystemContext
 from dazzle.http.runtime.subsystems.auth import AuthSubsystem
-from dazzle.http.runtime.subsystems.channels import ChannelsSubsystem
 from dazzle.http.runtime.subsystems.events import EventsSubsystem
 from dazzle.http.runtime.subsystems.llm_queue import LLMQueueSubsystem
 from dazzle.http.runtime.subsystems.process import ProcessSubsystem
@@ -166,9 +164,6 @@ class ServerConfig:
     enable_dev_mode: bool = False
     personas: list[dict[str, Any]] = field(default_factory=list)
     scenarios: list[dict[str, Any]] = field(default_factory=list)
-
-    # Messaging channels (v0.9)
-    enable_channels: bool = True  # Auto-enabled if channels defined in spec
 
     # Security (v0.11.0)
     security_profile: str = "basic"  # basic | standard | strict
@@ -394,7 +389,6 @@ class DazzleBackendApp:
         self._service_specs, self._endpoint_specs = convert_surfaces_to_services(
             appspec.surfaces, appspec.domain
         )
-        self._channels = _convert_channels(appspec.channels)
         self._database_url = database_url or config.database_url or os.environ.get("DATABASE_URL")
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
         self._auth_config = auth_config if auth_config is not None else config.auth_config
@@ -437,8 +431,6 @@ class DazzleBackendApp:
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
         self._service_loader: ServiceLoader | None = None
-        # Messaging channels (v0.9)
-        self._enable_channels = config.enable_channels
         # Delegate instances (created lazily in _setup_optional_features)
         self._integration_mgr: IntegrationManager | None = None
         self._workspace_builder: WorkspaceRouteBuilder | None = None
@@ -494,7 +486,6 @@ class DazzleBackendApp:
         return [
             AuthSubsystem(),
             EventsSubsystem(),
-            ChannelsSubsystem(),
             ProcessSubsystem(),
             SLASubsystem(),
             LLMQueueSubsystem(),
@@ -581,7 +572,6 @@ class DazzleBackendApp:
             services=self._services,
             repositories=self._repositories,
             entities=self._entities,
-            channels=self._channels,
             db_manager=self._db_manager,
             auth_middleware=self._auth_middleware,
             enable_auth=self._enable_auth,
@@ -614,7 +604,7 @@ class DazzleBackendApp:
                     "Subsystem '%s' startup failed: %s", getattr(plugin, "name", "?"), exc
                 )
         # Sync mutable outputs back to DazzleBackendApp attributes so existing
-        # properties (channel_manager, process_manager, etc.) still work.
+        # properties (process_manager, etc.) still work.
         ctx = self._subsystem_ctx
         if ctx.event_framework is not None:
             self._event_framework = ctx.event_framework
@@ -1339,52 +1329,6 @@ class DazzleBackendApp:
         # the AppSpec has no audit declarations.
 
         register_audit_callbacks(self._services, list(self._appspec.audits))
-
-        # #953 cycle 6 — wire job-trigger callbacks. Pure-scheduled
-        # jobs (no triggers) are skipped here; cycle-7's cron
-        # scheduler enqueues those instead. The in-memory queue
-        # accumulates messages even before a worker is running;
-        # cycle-7+ will start the worker loop. Cycle-8 will swap
-        # the in-memory queue for `RedisJobQueue` satisfying the
-        # same Protocol — no caller change required.
-        if self._appspec.jobs:
-            from dazzle.http.runtime.job_queue import InMemoryJobQueue
-            from dazzle.http.runtime.job_triggers import register_job_triggers
-
-            self._job_queue = InMemoryJobQueue()
-            register_job_triggers(self._services, list(self._appspec.jobs), self._job_queue)
-
-        # #952 cycle 4 — wire notification dispatch callbacks against
-        # services for every `notification X:` block that declares a
-        # trigger entity. Manual-fire notifications (no trigger) and
-        # apps without any notification declarations both no-op.
-        notifications = list(getattr(self._appspec, "notifications", []) or [])
-        if notifications:
-            from dazzle.core.manifest import NotificationsConfig, load_manifest
-            from dazzle.http.runtime.notification_wiring import (
-                register_notification_triggers,
-            )
-            from dazzle.notifications import build_dispatcher_from_manifest
-
-            notifications_cfg = NotificationsConfig()
-            if self._project_root is not None:
-                manifest_path = self._project_root / "dazzle.toml"
-                if manifest_path.is_file():
-                    try:
-                        notifications_cfg = load_manifest(manifest_path).notifications
-                    except Exception:
-                        logger.warning(
-                            "Failed to load [notifications] from dazzle.toml — "
-                            "falling back to LogProvider",
-                            exc_info=True,
-                        )
-
-            self._notification_dispatcher = build_dispatcher_from_manifest(notifications_cfg)
-            register_notification_triggers(
-                self._services,
-                notifications,
-                self._notification_dispatcher,
-            )
 
         # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
         if hasattr(self, "_upload_callbacks"):
@@ -2139,12 +2083,10 @@ class DazzleBackendApp:
         self._wire_storage_routes()
 
         self._mount_audit_query_routes(audit_logger, auth_dep)
-        self._mount_atomic_flow_routes(auth_dep, cedar_access_specs, _fk_graph, audit_logger)
         self._mount_grant_routes(auth_dep)
         self._mount_audit_history_routes(auth_dep)
         self._mount_locale_routes()
         self._mount_file_routes(optional_auth_dep)
-        self._mount_ingest_routes(optional_auth_dep)
         self._mount_document_routes(
             cedar_access_specs, _fk_graph, optional_auth_dep, _admin_personas
         )
@@ -2167,59 +2109,6 @@ class DazzleBackendApp:
                 auth_dep=auth_dep,
             )
             self._app.include_router(audit_router)
-
-    def _mount_atomic_flow_routes(
-        self, auth_dep: Any, cedar_access_specs: Any, _fk_graph: Any, audit_logger: Any
-    ) -> None:
-        assert self._app is not None
-        # #1228 Phase 3c.iii — atomic-flow routes (POST /api/atomic/<name>)
-        if self._appspec and self._appspec.atomic_flows and self._db_manager:
-            from dazzle.http.runtime.atomic_flow_routes import (
-                build_atomic_flow_router,
-            )
-
-            atomic_router = build_atomic_flow_router(
-                list(self._appspec.atomic_flows),
-                self._db_manager,
-                # auth Plan 1b: the atomic-flow router invokes this with the
-                # AuthContext (atomic_flow_routes `auth_context=user`), so read
-                # effective_roles (active membership) — not the global user.roles.
-                user_role_extractor=lambda ac: list(getattr(ac, "effective_roles", None) or []),
-                auth_dep=auth_dep,
-                # #1313 slice 1b/1c — per-step scope enforcement. Same access
-                # specs + FK graph the policy registry uses above.
-                access_specs=cedar_access_specs,
-                fk_graph=_fk_graph,
-                # #1313 — async audit fact per committed step (ADR-0029 inv. 5).
-                audit_logger=audit_logger,
-            )
-            self._app.include_router(atomic_router)
-
-            # #1317 — if any flow opts into strict in-transaction audit, create
-            # the `_dazzle_atomic_audit` side-table ONCE here at boot (own
-            # connection, committed independently) — race-free, vs a per-request
-            # CREATE TABLE IF NOT EXISTS inside the mutation transaction.
-            from dazzle.core.ir import FlowAuditMode
-
-            if any(
-                getattr(f, "audit_mode", None) == FlowAuditMode.STRICT
-                for f in self._appspec.atomic_flows
-            ):
-                from dazzle.http.runtime.atomic_flow_executor import ensure_atomic_audit_table
-
-                with self._db_manager.connection(platform=True) as _audit_conn:
-                    ensure_atomic_audit_table(_audit_conn)
-
-            # #1319 / ADR-0032 Slice B — wire the transition→atomic invoke context
-            # into each CRUD service so a status transition carrying `invoke_flow`
-            # runs the named flow in its status-write transaction, each step
-            # scope-enforced. cedar_access_specs + _fk_graph are the same maps the
-            # atomic router above received; the registry keys flows by name.
-            _atomic_flow_registry = {f.name: f for f in self._appspec.atomic_flows}
-            for _svc in self._services.values():
-                _setter = getattr(_svc, "set_invoke_context", None)
-                if _setter is not None:
-                    _setter(_atomic_flow_registry, cedar_access_specs, _fk_graph)
 
     def _mount_grant_routes(self, auth_dep: Any) -> None:
         assert self._app is not None
@@ -2359,26 +2248,6 @@ class DazzleBackendApp:
                 optional_auth_dep=optional_auth_dep,
                 require_auth_by_default=_files_auth_posture,
             )
-
-    def _mount_ingest_routes(self, optional_auth_dep: Any = None) -> None:
-        """POST /api/ingest/{name} for declared ingest: blocks (#1676)."""
-        assert self._app is not None
-        ingests = getattr(self._appspec, "ingests", None) or []
-        if not ingests or not self._repositories:
-            return
-
-        bus = None
-        services = getattr(self._app.state, "services", None)
-        if services is not None:
-            bus = getattr(services, "event_bus", None)
-        self._app.include_router(
-            create_ingest_routes(
-                ingests=list(ingests),
-                repositories=self._repositories,
-                event_bus=bus,
-                optional_auth_dep=optional_auth_dep,
-            )
-        )
 
     def _mount_search_routes(self) -> None:
         assert self._app is not None
@@ -2660,10 +2529,6 @@ class DazzleBackendApp:
             self._integration_mgr = self._subsystem_ctx.integration_mgr
         if self._subsystem_ctx.workspace_builder is not None:
             self._workspace_builder = self._subsystem_ctx.workspace_builder
-        # Sync channel_manager back so IntegrationManager-based properties work
-        if self._subsystem_ctx.channel_manager is not None:
-            if self._integration_mgr is not None:
-                self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
 
         # Validate routes for conflicts
 
@@ -2780,16 +2645,6 @@ class DazzleBackendApp:
     def service_loader(self) -> ServiceLoader | None:
         """Get the domain service loader (None if not initialized)."""
         return self._service_loader
-
-    @property
-    def channel_manager(self) -> Any | None:
-        """Get the channel manager (None if channels not enabled)."""
-        return self._integration_mgr.channel_manager if self._integration_mgr else None
-
-    @property
-    def channels_enabled(self) -> bool:
-        """Check if messaging channels are enabled."""
-        return self._enable_channels and self.channel_manager is not None
 
     @property
     def process_manager(self) -> Any | None:

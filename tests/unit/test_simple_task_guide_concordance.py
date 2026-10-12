@@ -60,7 +60,6 @@ def test_concordance_catches_unknown_target_surface(tmp_path: Path) -> None:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     assert any("target surface 'no_such_surface' does not exist" in e for e in errors), (
         f"expected unknown-surface error, got: {errors}"
@@ -91,7 +90,6 @@ def test_concordance_catches_unknown_event_lifecycle() -> None:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     assert any("lifecycle 'exploded'" in e for e in errors), errors
 
@@ -108,7 +106,6 @@ def test_concordance_catches_unknown_persona() -> None:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     assert any("unknown persona 'wizard'" in e for e in errors), errors
 
@@ -126,7 +123,6 @@ def test_concordance_catches_unknown_cta_surface() -> None:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     assert any("cta_target surface 'nowhere' does not exist" in e for e in errors)
 

@@ -13,8 +13,6 @@ This grammar defines the complete syntax for the DAZZLE Domain-Specific Language
 - **Workflow**: Story Definitions, Process Workflows and Schedules
 - **Integration**: Service Definitions, Foreign Model Definitions, Integration Definitions
 - **Testing**: Scenario and Demo Data
-- **Eventing**: Messaging Channels, Event-First Architecture, HLESS Event Semantics
-- **Financial**: TigerBeetle Ledgers and Transactions
 - **Governance**: Governance Sections
 - **LLM**: LLM Jobs
 
@@ -28,7 +26,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 ## Keyword Inventory
 
-**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `related`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `ingest`, `protect`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
+**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `related`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
 
 **Experience Orchestration Keywords**: `context`, `prefill`, `saves_to`, `creates`, `fields`
 
@@ -42,7 +40,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`, `filter_map`
 
-**v0.34.0 Platform Capability Keywords**: `soft_delete`, `legal_entity`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `membership`, `managed_by`, `expose`, `auth_identity`, `temporal`, `subtype_of`, `was`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notification`, `notify`, `job`, `retry_backoff`, `dead_letter`, `ranking`, `highlight`, `tokenizer`, `channels`, `in_app`, `sms`, `slack`, `preferences`, `date_range`, `time_bucket`, `date_field`
+**v0.34.0 Platform Capability Keywords**: `soft_delete`, `legal_entity`, `signable`, `signing_validator`, `signing_template`, `tenant_host`, `membership`, `managed_by`, `expose`, `auth_identity`, `temporal`, `subtype_of`, `was`, `subtype_panel`, `display_field`, `searchable`, `bulk`, `import`, `export`, `notify`, `ranking`, `highlight`, `tokenizer`, `date_range`, `time_bucket`, `date_field`
 
 **v0.44.0 Heatmap / Progress / Activity Feed region keywords**: `activity_feed`, `tree`, `rows`, `columns`, `value`, `thresholds`, `stages`, `complete_at`
 
@@ -72,21 +70,21 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.39.0 Rhythm DSL Keywords**: `rhythm`, `phase`, `scene`
 
-**v0.42.0 Grant Schema Keywords**: `grant_schema`, `approval`, `sla`, `island`
+**v0.42.0 Grant Schema Keywords**: `grant_schema`
 
-**v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
+**v0.25.0 Top-Level Construct Keywords**: `approval`, `sla`, `island`
 
-**v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `effects`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`
+**VIEW already defined in Step / visibility keywords**: `priority`
 
-**v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `projection`, `topic`, `retention`
+**v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `effects`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`, `retention`
 
-**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `classify`, `erasure`, `FACT`, `OBSERVATION`, `DERIVATION`
+**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `classify`, `erasure`
 
-**Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`, `default_provider`, `budget_alert_usd`, `vision`
+**Shared sub-keywords (process steps, surfaces)**: `outcomes`, `emits`, `note`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`, `default_provider`, `budget_alert_usd`, `vision`
 
-**v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `render`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
+**Channel / provider / scheduling sub-keywords**: `channel`, `provider`, `window`, `email`, `subject`, `format`, `layout`, `render`, `to`, `every`, `cron`
 
-**Step / visibility keywords (v0.3.2)**: `atomic`, `steps`, `wait`, `authenticated`, `public`, `view`, `visible`
+**Step / visibility keywords (v0.3.2)**: `steps`, `wait`, `authenticated`, `public`, `view`, `visible`
 
 **v0.38.0 Workspace Navigation Keywords**: `nav_group`, `icon`, `collapsed`, `context_selector`, `nav`, `group`, `companion`, `position`, `below_section`, `on_transition`, `lifecycle`, `fitness`, `external`, `param`, `feedback_widget`, `guide`, `subprocessor`, `analytics`
 
@@ -187,23 +185,11 @@ statement     ::= entity_decl
                 | story_decl
                 | process_decl
                 | schedule_decl
-                | message_decl
-                | channel_decl
-                | asset_decl
-                | document_decl
-                | template_decl
-                | event_model_decl
-                | subscribe_decl
-                | projection_decl
-                | stream_decl
-                | hless_pragma
                 | policies_decl
                 | tenancy_decl
                 | llm_model_decl
                 | llm_config_decl
                 | llm_intent_decl
-                | ledger_decl
-                | transaction_decl
                 | use_decl
                 | comment ;
 
@@ -872,218 +858,6 @@ demo_block    ::= "demo" IDENT ":" NEWLINE
                   DEDENT ;
 
 (* =============================================================================
-   Messaging Channels
-   ============================================================================= *)
-
-message_decl  ::= "message" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("channel" ":" IDENT NEWLINE)?
-                    ("trigger" ":" NEWLINE INDENT trigger_body DEDENT)?
-                    ("send" ":" NEWLINE INDENT send_body DEDENT)?
-                  DEDENT ;
-
-trigger_body  ::= ("when" ":" trigger_when NEWLINE)*
-                  ("schedule" ":" STRING NEWLINE)? ;
-
-trigger_when  ::= "entity" IDENT ("created" | "updated" | "deleted" | "status" "changed" "to" IDENT)
-                | "event" IDENT ;
-
-send_body     ::= ("to" ":" field_path NEWLINE)?
-                  ("subject" ":" STRING NEWLINE)?
-                  ("body" ":" STRING NEWLINE)?
-                  ("template" ":" IDENT NEWLINE)? ;
-
-channel_decl  ::= "channel" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("provider" ":" IDENT NEWLINE)?
-                    ("provider_config" ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                    ("delivery_mode" ":" ("outbox" | "direct") NEWLINE)?
-                    ("throttle" ":" NEWLINE INDENT throttle_config DEDENT)?
-                  DEDENT ;
-
-throttle_config
-              ::= ("scope" ":" ("per_recipient" | "per_entity" | "per_channel") NEWLINE)?
-                  ("window" ":" STRING NEWLINE)?
-                  ("max_messages" ":" NUMBER NEWLINE)?
-                  ("on_exceed" ":" ("drop" | "log" | "queue") NEWLINE)? ;
-
-asset_decl    ::= "asset" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("for_entity" ":" IDENT NEWLINE)?
-                    ("format" ":" IDENT ("," IDENT)* NEWLINE)?
-                    ("path" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-document_decl ::= "document" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("for_entity" ":" IDENT NEWLINE)?
-                    ("layout" ":" IDENT NEWLINE)?
-                    ("format" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-template_decl ::= "template" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("subject" ":" STRING NEWLINE)?
-                    ("body" ":" STRING NEWLINE)?
-                    ("html_body" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-(* =============================================================================
-   Event-First Architecture
-   ============================================================================= *)
-
-event_model_decl
-              ::= "event_model" ":" NEWLINE
-                  INDENT
-                    event_topic*
-                    event_def*
-                  DEDENT ;
-
-event_topic   ::= "topic" IDENT ":" NEWLINE
-                  INDENT
-                    ("retention" ":" (STRING | DURATION_LITERAL) NEWLINE)?
-                    ("partition_key" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-event_def     ::= "event" IDENT ":" NEWLINE
-                  INDENT
-                    ("topic" ":" IDENT NEWLINE)?
-                    (IDENT ":" type_spec NEWLINE)*
-                  DEDENT ;
-
-subscribe_decl
-              ::= "subscribe" IDENT ":" NEWLINE
-                  INDENT
-                    ("event" ":" IDENT NEWLINE)?
-                    ("filter" ":" condition_expr NEWLINE)?
-                    ("action" ":" IDENT NEWLINE)?
-                    ("service" ":" IDENT NEWLINE)?
-                    ("upsert" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-projection_decl
-              ::= "projection" IDENT ":" NEWLINE
-                  INDENT
-                    ("from" ":" IDENT NEWLINE)?
-                    ("into" ":" IDENT NEWLINE)?
-                    ("mapping" ":" NEWLINE INDENT (IDENT ":" field_path NEWLINE)+ DEDENT)?
-                  DEDENT ;
-
-publish_directive
-              ::= "publish" IDENT (":" NEWLINE
-                  INDENT
-                    ("topic" ":" IDENT NEWLINE)?
-                    ("when" ":" trigger_when NEWLINE)?
-                    (IDENT ":" (field_path | literal) NEWLINE)*
-                  DEDENT)? NEWLINE ;
-
-(* =============================================================================
-   HLESS Event Semantics
-   ============================================================================= *)
-
-stream_decl   ::= "stream" IDENT ":" NEWLINE
-                  INDENT
-                    ("kind" ":" ("INTENT" | "FACT" | "OBSERVATION" | "DERIVATION") NEWLINE)?
-                    ("description" ":" STRING NEWLINE)?
-                    ("schema" IDENT ":" NEWLINE
-                      INDENT (IDENT ":" type_spec field_modifier* NEWLINE)+ DEDENT)?
-                    ("partition_key" ":" IDENT NEWLINE)?
-                    ("ordering_scope" ":" IDENT NEWLINE)?
-                    ("idempotency" ":" IDENT NEWLINE)?
-                    ("outcomes" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
-                    ("derives_from" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("emits" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("side_effects" ":" IDENT NEWLINE)?
-                    ("note" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-hless_pragma  ::= "hless" ":" ("strict" | "warn" | "off") NEWLINE ;
-
-(* =============================================================================
-   TigerBeetle Ledgers and Transactions
-   ============================================================================= *)
-
-ledger_decl   ::= "ledger" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ledger_body_line+
-                  DEDENT ;
-
-ledger_body_line
-              ::= "intent" ":" STRING NEWLINE
-                | "account_code" ":" NUMBER NEWLINE
-                | "ledger_id" ":" NUMBER NEWLINE
-                | "account_type" ":" ACCOUNT_TYPE NEWLINE
-                | "currency" ":" CURRENCY_CODE NEWLINE
-                | "flags" ":" ACCOUNT_FLAG ("," ACCOUNT_FLAG)* NEWLINE
-                | "sync_to" ":" IDENT "." IDENT ("trigger" ":" SYNC_TRIGGER)? NEWLINE
-                | "tenant_scoped" ":" BOOLEAN NEWLINE
-                | metadata_mapping_block ;
-
-ACCOUNT_TYPE  ::= "asset" | "liability" | "equity" | "revenue" | "expense" ;
-
-CURRENCY_CODE ::= /[A-Z]{3}/ ;
-
-ACCOUNT_FLAG  ::= "debits_must_not_exceed_credits"
-                | "credits_must_not_exceed_debits"
-                | "linked"
-                | "history" ;
-
-SYNC_TRIGGER  ::= "after_transfer" | "scheduled" STRING | "on_demand" ;
-
-metadata_mapping_block
-              ::= "metadata_mapping" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" ("ref" IDENT "." IDENT | STRING) NEWLINE)+
-                  DEDENT ;
-
-transaction_decl
-              ::= "transaction" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    transaction_body_line+
-                  DEDENT ;
-
-transaction_body_line
-              ::= "intent" ":" STRING NEWLINE
-                | "execution" ":" ("sync" | "async") NEWLINE
-                | "priority" ":" ("critical" | "high" | "normal" | "low") NEWLINE
-                | "timeout" ":" NUMBER NEWLINE
-                | transfer_block
-                | "idempotency_key" ":" field_path NEWLINE
-                | validation_block ;
-
-transfer_block
-              ::= "transfer" IDENT ":" NEWLINE
-                  INDENT
-                    transfer_line+
-                  DEDENT ;
-
-transfer_line ::= "debit" ":" IDENT NEWLINE
-                | "credit" ":" IDENT NEWLINE
-                | "amount" ":" amount_expr NEWLINE
-                | "code" ":" NUMBER NEWLINE
-                | "flags" ":" TRANSFER_FLAG ("," TRANSFER_FLAG)* NEWLINE
-                | "pending_id" ":" STRING NEWLINE
-                | user_data_block ;
-
-TRANSFER_FLAG ::= "linked" | "pending" | "post_pending" | "void_pending" | "balancing" ;
-
-amount_expr   ::= amount_term (("+" | "-" | "*" | "/") amount_term)? ;
-
-amount_term   ::= NUMBER | field_path ;
-
-user_data_block
-              ::= "user_data" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (STRING | IDENT) NEWLINE)+
-                  DEDENT ;
-
-validation_block
-              ::= "validation" ":" NEWLINE
-                  INDENT
-                    ("-" (field_path | STRING) NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
    Governance Sections
    ============================================================================= *)
 
@@ -1445,68 +1219,6 @@ scenario happy_path "Happy Path":
     start_route: "/queue"
 ```
 
-### Eventing
-
-```dsl
-event_model:
-  topic orders:
-    retention: 7d
-    partition_key: order_id
-
-  event OrderCreated:
-    topic: orders
-    order_id: uuid
-    customer_id: uuid
-    total: decimal(10,2)
-
-subscribe notify_customer:
-  event: OrderCreated
-  action: send_confirmation
-  service: NotificationService
-
-channel email_channel "Email":
-  provider: smtp
-  provider_config:
-    host: "smtp.example.com"
-    port: 587
-  delivery_mode: outbox
-
-stream order_placement_requests:
-  kind: INTENT
-  description: "Captures requests to place orders"
-  schema OrderPlacementRequested:
-    order_id: uuid required
-    customer_id: uuid required
-  partition_key: customer_id
-  idempotency: order_id
-```
-
-### Financial
-
-```dsl
-ledger CustomerWallet "Customer Wallet":
-  intent: "Track customer prepaid balances"
-  account_code: 1001
-  ledger_id: 1
-  account_type: asset
-  currency: GBP
-  flags: debits_must_not_exceed_credits
-  sync_to: Customer.balance_cache
-
-transaction RecordPayment "Record Payment":
-  execution: async
-  priority: high
-
-  transfer revenue:
-    debit: CustomerWallet
-    credit: Revenue
-    amount: payment.amount
-    code: 1
-    flags: linked
-
-  idempotency_key: payment.id
-```
-
 ### Governance
 
 ```dsl
@@ -1567,10 +1279,6 @@ The grammar above is derived from these parser mixin modules:
 | `scenario.py` | `ScenarioParserMixin` | Testing |
 | `story.py` | `StoryParserMixin` | Workflow |
 | `process.py` | `ProcessParserMixin` | Workflow |
-| `messaging.py` | `MessagingParserMixin` | Eventing |
-| `eventing.py` | `EventingParserMixin` | Eventing |
-| `hless.py` | `HLESSParserMixin` | Eventing |
-| `ledger.py` | `LedgerParserMixin` | Financial |
 | `governance.py` | `GovernanceParserMixin` | Governance |
 | `llm.py` | `LLMParserMixin` | LLM |
 

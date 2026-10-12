@@ -444,7 +444,6 @@ handle_semantics: Callable[[dict[str, Any]], str] = _make_project_handler(
     "semantics",
     {
         "extract": _sem_wrap(f"{_MOD_SEM}:handle_extract_semantics"),
-        "validate_events": _sem_wrap(f"{_MOD_SEM}:handle_validate_events"),
         "tenancy": _sem_wrap(f"{_MOD_SEM}:handle_infer_tenancy"),
         "compliance": _sem_wrap(f"{_MOD_SEM}:handle_infer_compliance"),
         "analytics": _sem_wrap(f"{_MOD_SEM}:handle_infer_analytics"),

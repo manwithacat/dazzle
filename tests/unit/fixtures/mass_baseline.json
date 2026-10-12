@@ -1,8 +1,8 @@
 {
-  "src_lines": 418956,
-  "test_lines": 383129,
-  "docs_lines": 49407,
-  "construct_count": 47,
+  "src_lines": 394479,
+  "test_lines": 363560,
+  "docs_lines": 48439,
+  "construct_count": 31,
   "written": "2026-10-12",
   "exceptions": [
     {
@@ -49,6 +49,13 @@
         "test_lines"
       ],
       "reason": "consumer-aware coverage gate (+82 src/+33 tests) rides on ship D's -15.8k slack; CI repair"
+    },
+    {
+      "date": "2026-10-12",
+      "rose": [
+        "src_lines"
+      ],
+      "reason": "ship F: pre-commit ruff format touched a file after the baseline, inside a -49.4k ship"
     }
   ]
 }

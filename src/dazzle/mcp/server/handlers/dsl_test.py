@@ -86,8 +86,6 @@ def dsl_test_generate_impl(
         },
     }
 
-    if coverage.events_total > 0:
-        result["coverage"]["events"] = f"{len(coverage.events_covered)}/{coverage.events_total}"
     if coverage.processes_total > 0:
         result["coverage"]["processes"] = (
             f"{len(coverage.processes_covered)}/{coverage.processes_total}"
@@ -163,21 +161,6 @@ def dsl_test_run_impl(
                 failed_tests.append(entry)
             elif tc.result.value == "passed":
                 passed_tests.append(tc.test_id)
-
-    if result.event_result:
-        for etc in result.event_result.tests:
-            if etc.result.value in ("failed", "error"):
-                evt_entry: dict[str, Any] = {
-                    "test_id": etc.test_id,
-                    "title": etc.title,
-                    "result": etc.result.value,
-                    "error": etc.error_message,
-                }
-                if etc.details:
-                    evt_entry["details"] = etc.details[:3]
-                failed_tests.append(evt_entry)
-            elif etc.result.value == "passed":
-                passed_tests.append(etc.test_id)
 
     if failed_tests:
         response["failed_tests"] = failed_tests
@@ -267,28 +250,6 @@ def dsl_test_run_all_impl(
                 by_category[cat]["passed"] += 1
                 passed_tests.append(tc.test_id)
 
-    if result.event_result:
-        cat = "event"
-        if cat not in by_category:
-            by_category[cat] = {"passed": 0, "failed": 0, "total": 0}
-        for etc in result.event_result.tests:
-            by_category[cat]["total"] += 1
-            if etc.result.value in ("failed", "error"):
-                by_category[cat]["failed"] += 1
-                evt_entry: dict[str, Any] = {
-                    "test_id": etc.test_id,
-                    "title": etc.title,
-                    "category": cat,
-                    "result": etc.result.value,
-                    "error": etc.error_message,
-                }
-                if etc.details:
-                    evt_entry["details"] = etc.details[:3]
-                failed_tests.append(evt_entry)
-            elif etc.result.value == "passed":
-                by_category[cat]["passed"] += 1
-                passed_tests.append(etc.test_id)
-
     response["by_category"] = by_category
     if failed_tests:
         response["failed_tests"] = failed_tests
@@ -324,7 +285,6 @@ def dsl_test_coverage_impl(
         + coverage.state_machines_total
         + coverage.personas_total
         + coverage.workspaces_total
-        + coverage.events_total
         + coverage.processes_total
     )
     tested_constructs = (
@@ -332,7 +292,6 @@ def dsl_test_coverage_impl(
         + len(coverage.state_machines_covered)
         + len(coverage.personas_covered)
         + len(coverage.workspaces_covered)
-        + len(coverage.events_covered)
         + len(coverage.processes_covered)
     )
     overall_pct = (tested_constructs / total_constructs * 100) if total_constructs > 0 else 0
@@ -356,7 +315,6 @@ def dsl_test_coverage_impl(
         ),
         ("personas", coverage.personas_total, len(coverage.personas_covered)),
         ("workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
-        ("events", coverage.events_total, len(coverage.events_covered)),
         ("processes", coverage.processes_total, len(coverage.processes_covered)),
         ("auth", coverage.auth_personas_total, len(coverage.auth_personas_covered)),
     ]

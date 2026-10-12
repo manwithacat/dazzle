@@ -32,7 +32,7 @@ FRAMEWORK_TABLES: frozenset[str] = frozenset(
         "event_log",
         "health_checks",
         "invitations",
-        "join_requests",
+        "join_requests",  # dropped by 0022 (DD-009); kept so autogenerate never targets it
         "magic_links",
         "membership_events",
         "memberships",

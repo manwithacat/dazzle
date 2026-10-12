@@ -3,28 +3,23 @@ from .discovery import RelevanceGroup, suggest_capabilities
 from .validator import (
     extended_lint,
     validate_admin_personas_scope_conflict,
-    validate_atomic_flows,
     validate_audit_config,
     validate_comparison_regions,
     validate_entities,
     validate_enum_semantics,
-    validate_event_payload_secrets,
     validate_experiences,
     validate_fitness_repr_fields,
     validate_foreign_models,
     validate_governance_policies,
     validate_graph_declarations,
-    validate_ingests,
     validate_insight_summaries,
     validate_integrations,
-    validate_ledgers,
     validate_legal_entity_money_span,
     validate_lifecycles,
     validate_list_without_read_scope,
     validate_llm_subject_surface,
     validate_money_fields,
     validate_nav_curation,
-    validate_notifications,
     validate_outlier_decorators,
     validate_persona_nav_refs,
     validate_process_step_service_refs,
@@ -40,7 +35,6 @@ from .validator import (
     validate_stable_persona_ids_for_demo,
     validate_surfaces,
     validate_tenancy_partition_key,
-    validate_transition_invocations,
     validate_ux_specs,
     validate_visibility_bool_field_scope_coverage,
     validate_workspace_primary_actions,
@@ -188,36 +182,6 @@ def lint_appspec(
 
     # #1675: money aggregates must not span a legal_entity grain
     errors, warnings = validate_legal_entity_money_span(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # #1676: ingest key/protect must resolve on the target entity
-    errors, warnings = validate_ingests(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # Event payload secrets validation
-    errors, warnings = validate_event_payload_secrets(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # TigerBeetle ledger validation (v0.24.0)
-    errors, warnings = validate_ledgers(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # Notification validation (v0.34.0)
-    errors, warnings = validate_notifications(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # #1228 Phase 3c — atomic multi-entity flows
-    errors, warnings = validate_atomic_flows(appspec)
-    all_errors.extend(errors)
-    all_warnings.extend(warnings)
-
-    # #1319 / ADR-0032 — transition `invoke <flow>(...)` cross-references
-    errors, warnings = validate_transition_invocations(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

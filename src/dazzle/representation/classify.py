@@ -34,7 +34,6 @@ _FRAMEWORK_ENTITY_NAMES = frozenset(
     {
         "AIJob",
         "ProcessRun",
-        "JobRun",
         "AuditEntry",
         "OnboardingState",
         "FeedbackReport",

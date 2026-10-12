@@ -21,25 +21,17 @@ from .. import ir
 from ..lexer import tokenize
 from .aggregate import AggregateParserMixin
 from .analytics import AnalyticsParserMixin
-from .atomic_flow import AtomicFlowParserMixin
 from .audit import AuditParserMixin
 from .base import BaseParser
 from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
-from .eventing import EventingParserMixin
 from .feedback_widget import FeedbackWidgetParserMixin
 from .governance import GovernanceParserMixin
 from .grant import GrantParserMixin
-from .hless import HLESSParserMixin
-from .ingest import IngestParserMixin
 from .integration import IntegrationParserMixin
 from .island import IslandParserMixin
-from .job import JobParserMixin
-from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
-from .messaging import MessagingParserMixin
 from .nav import NavParserMixin
-from .notification import NotificationParserMixin
 from .onboarding import OnboardingParserMixin
 from .params import ParamParserMixin
 from .process import ProcessParserMixin
@@ -66,25 +58,17 @@ class Parser(
     SurfaceParserMixin,
     ServiceParserMixin,
     IntegrationParserMixin,
-    AtomicFlowParserMixin,
     UXParserMixin,
     WorkspaceParserMixin,
     ScenarioParserMixin,
     StoryParserMixin,
     RhythmParserMixin,
-    MessagingParserMixin,
-    EventingParserMixin,
-    HLESSParserMixin,
-    IngestParserMixin,
     GovernanceParserMixin,
     LLMParserMixin,
     ProcessParserMixin,
-    LedgerParserMixin,
     ViewParserMixin,
     SLAParserMixin,
     IslandParserMixin,
-    NotificationParserMixin,
-    JobParserMixin,
     AuditParserMixin,
     SearchParserMixin,
     NavParserMixin,
@@ -193,15 +177,6 @@ class Parser(
             }
         )
 
-    def _dispatch_atomic(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        atomic = self.parse_atomic_flow()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "atomic_flows": [*fragment.atomic_flows, atomic],
-            }
-        )
-
     def _dispatch_persona(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         persona = self.parse_persona()
         return ir.ModuleFragment(
@@ -237,96 +212,6 @@ class Parser(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "rhythms": [*fragment.rhythms, rhythm],
-            }
-        )
-
-    def _dispatch_message(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        message = self.parse_message()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "messages": [*fragment.messages, message],
-            }
-        )
-
-    def _dispatch_channel(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        channel = self.parse_channel()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "channels": [*fragment.channels, channel],
-            }
-        )
-
-    def _dispatch_asset(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        asset = self.parse_asset()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "assets": [*fragment.assets, asset],
-            }
-        )
-
-    def _dispatch_document(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        document = self.parse_document()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "documents": [*fragment.documents, document],
-            }
-        )
-
-    def _dispatch_template(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        template = self.parse_template()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "templates": [*fragment.templates, template],
-            }
-        )
-
-    def _dispatch_event_model(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        event_model = self.parse_event_model()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "event_model": event_model,
-            }
-        )
-
-    def _dispatch_subscribe(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        subscription = self.parse_subscribe()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "subscriptions": [*fragment.subscriptions, subscription],
-            }
-        )
-
-    def _dispatch_projection(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        projection = self.parse_projection()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "projections": [*fragment.projections, projection],
-            }
-        )
-
-    def _dispatch_stream(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        stream = self.parse_stream()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "streams": [*fragment.streams, stream],
-            }
-        )
-
-    def _dispatch_hless(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        hless_pragma = self.parse_hless_pragma()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "hless_pragma": hless_pragma,
             }
         )
 
@@ -393,33 +278,6 @@ class Parser(
             }
         )
 
-    def _dispatch_ledger(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        ledger = self.parse_ledger()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "ledgers": [*fragment.ledgers, ledger],
-            }
-        )
-
-    def _dispatch_transaction(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        transaction = self.parse_transaction()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "transactions": [*fragment.transactions, transaction],
-            }
-        )
-
-    def _dispatch_ingest(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        ingest_spec = self.parse_ingest()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "ingests": [*fragment.ingests, ingest_spec],
-            }
-        )
-
     def _dispatch_nav(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
         nav_spec = self.parse_nav_definition()
         return ir.ModuleFragment(
@@ -444,25 +302,6 @@ class Parser(
             **{
                 **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
                 "islands": [*fragment.islands, island_spec],
-            }
-        )
-
-    def _dispatch_notification(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        notification_spec = self.parse_notification()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "notifications": [*fragment.notifications, notification_spec],
-            }
-        )
-
-    def _dispatch_job(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
-        # #953 — `job <name> "title": ...` blocks (background-job DSL)
-        job_spec = self.parse_job()
-        return ir.ModuleFragment(
-            **{
-                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                "jobs": [*fragment.jobs, job_spec],
             }
         )
 
@@ -569,21 +408,10 @@ class Parser(
             TokenType.FOREIGN_MODEL: self._dispatch_foreign_model,
             TokenType.INTEGRATION: self._dispatch_integration,
             TokenType.WORKSPACE: self._dispatch_workspace,
-            TokenType.ATOMIC: self._dispatch_atomic,
             TokenType.PERSONA: self._dispatch_persona,
             TokenType.SCENARIO: self._dispatch_scenario,
             TokenType.STORY: self._dispatch_story,
             TokenType.RHYTHM: self._dispatch_rhythm,
-            TokenType.MESSAGE: self._dispatch_message,
-            TokenType.CHANNEL: self._dispatch_channel,
-            TokenType.ASSET: self._dispatch_asset,
-            TokenType.DOCUMENT: self._dispatch_document,
-            TokenType.TEMPLATE: self._dispatch_template,
-            TokenType.EVENT_MODEL: self._dispatch_event_model,
-            TokenType.SUBSCRIBE: self._dispatch_subscribe,
-            TokenType.PROJECTION: self._dispatch_projection,
-            TokenType.STREAM: self._dispatch_stream,
-            TokenType.HLESS: self._dispatch_hless,
             TokenType.POLICIES: self._dispatch_policies,
             TokenType.TENANCY: self._dispatch_tenancy,
             TokenType.LLM_MODEL: self._dispatch_llm_model,
@@ -591,14 +419,9 @@ class Parser(
             TokenType.LLM_INTENT: self._dispatch_llm_intent,
             TokenType.PROCESS: self._dispatch_process,
             TokenType.SCHEDULE: self._dispatch_schedule,
-            TokenType.LEDGER: self._dispatch_ledger,
-            TokenType.TRANSACTION: self._dispatch_transaction,
-            TokenType.INGEST: self._dispatch_ingest,
             TokenType.NAV: self._dispatch_nav,
             TokenType.SLA: self._dispatch_sla,
             TokenType.ISLAND: self._dispatch_island,
-            TokenType.NOTIFICATION: self._dispatch_notification,
-            TokenType.JOB: self._dispatch_job,  # #953
             TokenType.AUDIT: self._dispatch_audit,  # #956
             TokenType.SEARCH: self._dispatch_search,  # #954
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
@@ -692,23 +515,13 @@ __all__ = [
     "SurfaceParserMixin",
     "ServiceParserMixin",
     "IntegrationParserMixin",
-    "TestParserMixin",
-    "FlowParserMixin",
     "UXParserMixin",
     "WorkspaceParserMixin",
     "ScenarioParserMixin",
     "StoryParserMixin",
     "RhythmParserMixin",
-    "MessagingParserMixin",
-    "EventingParserMixin",
-    "HLESSParserMixin",
-    "IngestParserMixin",
     "ProcessParserMixin",
-    "LedgerParserMixin",
-    "EnumParserMixin",
     "ViewParserMixin",
-    "WebhookParserMixin",
-    "ApprovalParserMixin",
     "SLAParserMixin",
     "IslandParserMixin",
     "GrantParserMixin",

@@ -16,12 +16,10 @@
 | [Processes](processes.md) | Processes orchestrate durable, multi-step workflows across entities and services. |
 | [Stories](stories.md) | Stories capture expected user-visible outcomes in a structured format tied to personas and entities. |
 | [Rhythms](rhythms.md) | Rhythms capture longitudinal persona journeys through the app, organized into temporal phases containing scenes — evaluable actions on specific surfaces. |
-| [Ledgers & Transactions](ledgers.md) | > **Status: ALPHA** — the `ledger`/`transaction` constructs parse, validate, and link, but TigerBeetle-backed execution is not yet CI-verified and no example exercises it end-to-end. |
 | [LLM Models & Intents](llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
 | [MCP Tool Inventory](mcp-tools.md) | Live inventory of the MCP tools exposed by `dazzle mcp run`. |
 | [Frontend & Templates](frontend.md) | The Dazzle frontend uses the **typed Fragment substrate** (frozen-dataclass HTML primitives) with HTMX for declarative server interactions. |
-| [Messaging & Events](messaging.md) | Messaging and events enable asynchronous communication between components and users. |
 | [Graph Features](graphs.md) | Dazzle has first-class support for property graphs — data models where entities form nodes and their relationships form edges. |
 | [Dead-Code Residue](dead-code-residue.md) | The reviewed inventory behind the dead-definition ratchet: which unreferenced definitions are accepted residue, which family each belongs to, and what would retire it. |
 | [Compliance Framework](compliance.md) | Dazzle can automatically assess how well your DSL specification maps to recognised compliance frameworks. |
@@ -36,7 +34,6 @@
 | [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
 | [HM Design Context](hm-design-context.md) | The unified standard for HM design quality — the three rubrics (hygiene / vision / taste) on one surface × method matrix plus a concept map, the entry-point when customising HM for a new property. |
 | [Page URL Inspection](page-inspection.md) | Trace an app URL to its owning DSL declaration and read the running page's HTML without a maintained preview artifact. |
-| [Ingest](ingest.md) | Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676). |
 | [Project Layout](project-layout.md) | The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live. |
 | [DSL Grammar Specification](grammar.md) | The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`. |
 | [Flense Inventory](flense-inventory.md) | Generated usage and mass table — the only admissible evidence for keeping or removing a framework part under ADR-0057. |
@@ -74,4 +71,3 @@
 | [DB Artifacts](db-artifacts.md) | Every database artifact the framework manages, in one registry: class, creator, boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating. |
 | [RBAC Proof Model & Trust Boundary](rbac-proof-model.md) | The normative proof-obligation model for "provable RBAC": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table (Proof/Enumeration/Test), and the ReBAC declared-classes stance. |
 | [HaTchi-MaXchi — the Dazzle House Aesthetic](taste.md) | The canonical, agent-readable definition of Dazzle's visual taste: nine principles (including the HTMX4-structural signature), evidence-cited TASTE-n rules, the judged rubric, and the blind parity gate (`dazzle qa taste-panel`) with baseline-locked margins. |
-| [Verified-Domain Self-Service Join](verified-domain-join.md) | The verified-domain join (#1424): a non-SSO user with a verified work email self-joins the tenant that owns their email domain — DNS-TXT domain proof, per-tenant join policy, and the password-side complement to invitations and SSO JIT provisioning. |

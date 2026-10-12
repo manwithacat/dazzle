@@ -1,35 +1,18 @@
 """
-Channel adapters for DAZZLE messaging.
+Email channel adapters.
 
-Adapters handle the actual sending/receiving of messages through providers.
-Each provider has its own adapter implementation.
-
-Adapters by channel kind:
-- Email: MailpitAdapter, FileEmailAdapter
-- Queue: RabbitMQAdapter, InMemoryQueueAdapter
-- Stream: RedisStreamAdapter, KafkaAdapter, InMemoryStreamAdapter
+Adapters deliver outbox messages through an email provider:
+MailpitAdapter (dev), SESAdapter (production), FileEmailAdapter (fallback).
 """
 
-from .base import BaseChannelAdapter, QueueAdapter, SendResult, StreamAdapter
+from .base import BaseChannelAdapter, EmailAdapter, SendResult
 from .email import FileEmailAdapter, MailpitAdapter, SESAdapter
-from .queue import InMemoryQueueAdapter, RabbitMQAdapter
-from .stream import InMemoryStreamAdapter, KafkaAdapter, RedisStreamAdapter
 
 __all__ = [
-    # Base classes
     "BaseChannelAdapter",
-    "QueueAdapter",
-    "StreamAdapter",
+    "EmailAdapter",
     "SendResult",
-    # Email adapters
     "FileEmailAdapter",
     "MailpitAdapter",
     "SESAdapter",
-    # Queue adapters
-    "RabbitMQAdapter",
-    "InMemoryQueueAdapter",
-    # Stream adapters
-    "RedisStreamAdapter",
-    "KafkaAdapter",
-    "InMemoryStreamAdapter",
 ]

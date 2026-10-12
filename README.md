@@ -203,7 +203,7 @@ Save this as `app.dsl`, run `dazzle serve`, and you have:
 - OpenAPI documentation at `/docs`
 - A health endpoint with deployment integrity verification
 
-That's a todo app. The same language scales to 39-entity accountancy platforms with double-entry ledgers, multi-step onboarding wizards, and role-based dashboards. You add complexity only where your business needs it.
+That's a todo app. The same language scales to 39-entity accountancy platforms with multi-step onboarding wizards, scheduled processes, and role-based dashboards. You add complexity only where your business needs it.
 
 ---
 
@@ -218,11 +218,8 @@ That's a todo app. The same language scales to 39-entity accountancy platforms w
 | **Access Control** | Cedar-style permit/forbid rules, scope predicates | RBAC meta-properties machine-proved over the DSL (scoped); runtime verified by probe |
 | **Grant Schemas** | Delegated, time-bounded access with approval | Four-eyes authorization, SOC 2-ready |
 | **Processes** | Multi-step workflows with saga patterns | Durable business operations |
-| **Atomic Transactions** | Multi-entity writes in one scope-guarded transaction (`atomic`) | No partial writes; every touched entity scope-checked, fail-closed (ADR-0029) |
 | **Experiences** | Onboarding wizards, checkout flows | Guided multi-step user journeys |
-| **Ledgers** | TigerBeetle-backed double-entry accounting | Financial-grade transaction integrity |
 | **Graphs** | Entity relationships with CTE traversal and algorithms | Network analysis, shortest paths, community detection |
-| **HLESS Events** | Intent/Fact/Observation/Derivation event semantics | Replay correctness, audit lineage, no "events as a vague bucket" |
 | **Fragments** | Constrained custom rendering inside generated surfaces | Differentiated UX without losing semantic integrity |
 | **Islands** | Self-contained interactive JS components mounted into server-rendered pages | Charts, editors, drag-and-drop without adopting an SPA framework |
 | **Integrations** | Declarative API bindings with triggers and mappings | Connect to Stripe, Companies House, and more |
@@ -243,7 +240,6 @@ A few Dazzle keywords don't map one-to-one onto industry terms. If you're skim-r
 | **experience** | wizard, flow, multi-step form |
 | **rhythm** | recurring cadence, scheduled review, periodic ritual |
 | **archetype** | persona pattern, role family |
-| **hless** | event-stream semantics (HLESS = High-Level Event Semantics Specification — [why this name](docs/architecture/hless-deep-dive.md)) |
 | **fragment** | escape-hatch component, custom partial |
 
 ---
@@ -350,7 +346,7 @@ This architecture is deliberately **anti-Turing**: the DSL has no arbitrary comp
 
 The frontend uses server-rendered HTML with HTMX — zero default build toolchain, stable technology, and full visibility into what the runtime produces. Generated HTML is a first-class, testable artefact, not an opaque side effect of a client bundle. Every built-in display mode — lists, kanban, charts, pivots, funnels, metrics, and more — is rendered with sample data, live previews, and its source DSL in the **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)**. For UX that the generated surfaces can't express, **fragments** and bounded **islands** provide constrained escape hatches that stay connected to the entity and surface graph.
 
-For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md). For the event-semantics rationale, see [docs/architecture/hless-deep-dive.md](docs/architecture/hless-deep-dive.md).
+For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ---
 
@@ -425,7 +421,6 @@ These four are the whole set in [`examples/`](examples/); the consumer apps prov
 - **[Agent Workflow Guide](docs/guides/agent-workflow.md)** — end-to-end AI-agent spec-edit loop: spec change → DSL edit → validate → tests → human review → deploy
 - **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs
 - **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)** — every built-in display mode rendered with sample data, live previews, and source DSL
-- **[HLESS deep dive](docs/architecture/hless-deep-dive.md)** — event semantics and why they're named this way
 - **[Graphs](docs/reference/graphs.md)** — entity graph relationships, CTE traversal, algorithms
 - **[Compliance](docs/reference/compliance.md)** — ISO 27001 + SOC 2 evidence pipeline
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control

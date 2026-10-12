@@ -5,13 +5,12 @@ module per #1361. Each module owns one cohesive validation concern:
 
 - ``entities`` — Entity-level semantic validation (fields, PKs, constraints, reserved names).
 - ``surfaces`` — Surface and experience validation.
-- ``integrations`` — Service, foreign-model, integration, webhook, and notification validation.
+- ``integrations`` — Service, foreign-model, and integration validation.
 - ``ux`` — UX-spec, navigation, and workspace-action validation.
 - ``conditions`` — Shared condition-expression helpers used across validation modules.
-- ``financial`` — Money-field, account-code, transaction, and ledger validation.
-- ``events`` — Event payload secret-leak validation.
+- ``financial`` — Money-field validation.
 - ``extended`` — Extended lint checks (dead constructs, naming, anti-patterns, suggestions).
-- ``flows`` — Atomic flow, transition, approval, SLA, and process-step validation.
+- ``flows`` — SLA and process-step validation.
 - ``governance`` — Audit-config, governance-policy, and sensitive-field validation.
 - ``rbac`` — Scope-predicate, role-reference, and RBAC-diagnostic validation.
 - ``graphs`` — Graph-declaration, lifecycle, fitness, and storage-ref validation.
@@ -49,9 +48,6 @@ from .entities import (
     is_secret_field_name,
     validate_entities,
 )
-from .events import (
-    validate_event_payload_secrets,
-)
 from .extended import (
     _AUDIT_METADATA_FIELD_NAMES,
     _GOD_ENTITY_FIELD_THRESHOLD,
@@ -77,17 +73,12 @@ from .extended import (
     extended_lint,
 )
 from .financial import (
-    _validate_account_codes,
-    _validate_transaction_transfers,
-    validate_ledgers,
     validate_legal_entity_money_span,
     validate_money_fields,
 )
 from .flows import (
-    validate_atomic_flows,
     validate_process_step_service_refs,
     validate_slas,
-    validate_transition_invocations,
 )
 from .governance import (
     validate_audit_config,
@@ -104,11 +95,9 @@ from .graphs import (
     validate_lifecycles,
     validate_storage_refs,
 )
-from .ingest import validate_ingests
 from .integrations import (
     validate_foreign_models,
     validate_integrations,
-    validate_notifications,
     validate_services,
 )
 from .rbac import (
@@ -184,7 +173,6 @@ __all__ = [
     "_lint_workspace_access_declarations",
     "_lint_workspace_personas",
     "_lint_workspace_routing",
-    "_validate_account_codes",
     "_validate_condition_fields",
     "_validate_constraints",
     "_validate_entity_pk",
@@ -199,25 +187,20 @@ __all__ = [
     "_validate_predicate_node",
     "_validate_profile_archetype",
     "_validate_reserved_names",
-    "_validate_transaction_transfers",
     "_walk_role_names",
     "extended_lint",
     "is_secret_field_name",
     "validate_admin_personas_scope_conflict",
     "validate_appspec",
-    "validate_atomic_flows",
     "validate_audit_config",
     "validate_entities",
-    "validate_event_payload_secrets",
     "validate_experiences",
     "validate_fitness_repr_fields",
     "validate_foreign_models",
     "validate_governance_policies",
     "validate_llm_subject_surface",
     "validate_graph_declarations",
-    "validate_ingests",
     "validate_integrations",
-    "validate_ledgers",
     "validate_lifecycles",
     "validate_comparison_regions",
     "validate_region_filter_aggregate_reach",
@@ -227,7 +210,6 @@ __all__ = [
     "validate_outlier_decorators",
     "validate_rag_decorators",
     "validate_nav_curation",
-    "validate_notifications",
     "validate_persona_nav_refs",
     "validate_process_step_service_refs",
     "validate_rbac_matrix_diagnostics",
@@ -244,7 +226,6 @@ __all__ = [
     "validate_tenancy_partition_key",
     "validate_tenant_hierarchy_and_membership",
     "validate_tenant_host_blocks",
-    "validate_transition_invocations",
     "validate_enum_semantics",
     "validate_ux_specs",
     "validate_visibility_bool_field_scope_coverage",

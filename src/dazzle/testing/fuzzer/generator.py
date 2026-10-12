@@ -32,7 +32,6 @@ Top-level constructs (each starts at column 0, followed by identifier and option
   persona Name "Label":    — user role definition
   integration Name "Label": — external API connection
   service Name "Label":    — internal/external service
-  ledger Name "Label":     — financial/audit ledger
   enum Name "Label":       — enumeration type
   approval Name "Label":   — approval workflow
   sla Name "Label":        — service level agreement

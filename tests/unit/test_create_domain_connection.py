@@ -50,7 +50,6 @@ class _Store:
     def __init__(self, *, connections: list | None = None, roles: tuple = ("admin",)) -> None:
         self._connections = {c.id: c for c in (connections or [])}
         self._roles = list(roles)
-        self._org_settings: dict[str, dict] = {}
         self.created: dict | None = None  # captures create_connection kwargs
 
     def validate_session(self, session_id: str) -> SimpleNamespace | None:
@@ -74,12 +73,6 @@ class _Store:
         if tenant_id is not None and c.tenant_id != tenant_id:
             return None
         return c
-
-    def get_org_settings(self, org_id: str) -> dict:
-        return self._org_settings.get(org_id, {})
-
-    def set_org_settings(self, org_id: str, settings: dict) -> None:
-        self._org_settings[org_id] = settings
 
     def get_organization(self, org_id: str) -> SimpleNamespace:
         return SimpleNamespace(name="Acme Inc")

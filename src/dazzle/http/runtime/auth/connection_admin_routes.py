@@ -135,7 +135,6 @@ def create_connection_admin_routes() -> APIRouter:
             environment_flags,
         )
         from dazzle.http.runtime.auth.domain_verification import txt_record
-        from dazzle.http.runtime.auth.org_settings import OrgSettings
         from dazzle.render.fragment.renderer import FragmentRenderer
 
         flags = environment_flags()
@@ -211,7 +210,6 @@ def create_connection_admin_routes() -> APIRouter:
             )
 
         org = store.get_organization(org_id)
-        org_settings = OrgSettings.from_dict(store.get_org_settings(org_id))
         page = build_connections_view(
             product_name=product_name(request),
             org_name=org.name if org is not None else org_id,
@@ -220,7 +218,6 @@ def create_connection_admin_routes() -> APIRouter:
             secret_key_ok=flags[0],
             scim_bearer_once=scim_bearer_once,
             base_url=str(request.base_url).rstrip("/"),
-            org_settings=org_settings,
         )
         return HTMLResponse(FragmentRenderer().render(page))
 
@@ -386,39 +383,6 @@ def create_connection_admin_routes() -> APIRouter:
             return HTMLResponse(str(exc), status_code=409)
         # Whether or not the TXT matched yet, redirect back — the page re-renders showing
         # the domain as verified (success) or still pending (publish the TXT, retry).
-        return _back(request)
-
-    @router.post("/auth/connections/policy", include_in_schema=False)
-    async def update_policy_action(request: Request) -> Response:
-        """Persist the org's join-policy settings (domain_join_policy + restrict toggle).
-
-        Gated by ``manage_connections`` (same as every other action on this surface).
-        The org_id is always the caller's active membership — never taken from form input.
-        Valid declared tokens ride; leftover junk stays put (400, no write).
-        """
-        from dazzle.http.runtime.auth.org_settings import (
-            OrgSettings,
-            leftover_honest_join_policy,
-        )
-
-        gated = _gate(request)
-        if gated is None:
-            return HTMLResponse("Forbidden", status_code=403)
-        store, _ctx, org_id = gated
-
-        form = await request.form()
-        honest = leftover_honest_join_policy(form.get("domain_join_policy", ""))
-        if honest is None:
-            # Leftover domain_join_policy=zzz used to invent admin_approval.
-            return HTMLResponse("Unknown join policy", status_code=400)
-        # HTML checkboxes submit "on" when checked; absent means unchecked.
-        restrict = str(form.get("restrict_membership_to_verified_domains", "")).lower() == "on"
-
-        settings = OrgSettings(
-            domain_join_policy=honest,
-            restrict_membership_to_verified_domains=restrict,
-        )
-        store.set_org_settings(org_id, settings.to_dict())
         return _back(request)
 
     return router

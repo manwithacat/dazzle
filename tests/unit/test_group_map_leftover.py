@@ -123,9 +123,6 @@ class _Store:
     def get_connections_for_tenant(self, tenant_id: object) -> list[object]:
         return []
 
-    def get_org_settings(self, org_id: object) -> dict[str, object]:
-        return {}
-
     def get_organization(self, org_id: object) -> object:
         return SimpleNamespace(name="Acme Inc")
 

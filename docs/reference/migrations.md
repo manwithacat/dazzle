@@ -486,31 +486,6 @@ def downgrade() -> None:
 
 ---
 
-## Pattern: event-schema change
-
-**DSL change:** modify an `event_model` block — change retention, add or rename an event field, add an event type.
-
-**Result:** empty — event-schema changes carry no app-DB table change.
-
-**Worked example:** `2026_05_21_321d3b7c99d8_invoice_events_retention_.py` (Change 5)
-
-```python
-def upgrade() -> None:
-    # event_model is runtime-only — no DDL produced
-    pass
-
-
-def downgrade() -> None:
-    # event_model is runtime-only — no DDL produced
-    pass
-```
-
-The `event_model` construct is runtime-only. Events are not backed by PostgreSQL tables — no DDL change is needed when the event schema changes.
-
-**Gap: no event-schema versioning in `event_model`.** Unlike the `hless` construct (which has `version` and `compatibility` fields — `ADDITIVE`/`BREAKING` — in its IR), the simpler `event_model` DSL has no event-versioning mechanism: no version tag, no schema registry, no upcaster. Adding a required field to an event is a silent breaking change for existing consumers reading stored events that pre-date the new field. If your application stores and replays events from `event_model` topics and needs schema evolution with backward compatibility, use `hless` instead, which was designed for that requirement.
-
----
-
 ## Pattern: changes that need no migration
 
 Some DSL changes have no schema impact at all. The generated migration is an intentional empty `pass`.
@@ -536,7 +511,6 @@ Changes in this category:
 | `scope:` / `as:` clauses | Compile to SQL predicates, not columns |
 | Adding or removing a persona | Personas are DSL-level roles, not tables |
 | Changing a story or rhythm | Test/specification metadata, no DB backing |
-| Changing `event_model` retention or event fields | Runtime-only (see above) |
 | Adding a `schedule` or `webhook` | Resolved at startup from DSL, no new tables |
 
 Even when the migration is an empty pass, generating and committing it is still the right practice — it keeps the revision chain intact and documents that you considered the schema impact and found none.

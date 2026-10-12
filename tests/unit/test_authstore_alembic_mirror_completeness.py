@@ -33,7 +33,6 @@ _BASELINE_DDL_CORE_TABLES = {
     "saml_consumed_assertions",
     "scim_group_members",
     "scim_groups",
-    "join_requests",
     # Tables always in _INIT_DB_PRIMARY_ONLY (not in _init_db inline DDL at all):
     "users",
     "sessions",

@@ -14,8 +14,7 @@ DSL Files → AppSpec IR → infrastructure requirements (deploy plan)
 ## Discovering an app's infrastructure — `dazzle deploy plan`
 
 `dazzle deploy plan` is **target-agnostic**: it infers from your DSL what backing
-services the app needs (database, cache, queue, workers, object storage, ledger
-cluster) and which environment variables the host must supply. It does **not**
+services the app needs (database, cache, queue, workers, object storage) and which environment variables the host must supply. It does **not**
 generate code or target any specific cloud.
 
 ```bash
@@ -31,7 +30,7 @@ For a simple app the plan lists a **database — Postgres** component, the
 environment variables the host must provide (`DATABASE_URL`, …), and notes
 reminding you to provision the services yourself and deploy the app as a core
 process via a buildpack. Richer apps add components for cache, queues, workers,
-object storage, and ledger clusters as the DSL warrants.
+and object storage as the DSL warrants.
 
 Use the plan as the checklist of services to provision and env vars to set before
 you deploy.
@@ -79,32 +78,12 @@ The app needs whatever `dazzle deploy plan` reports, typically:
 |---------|-------------|-----------|
 | PostgreSQL | Always, for any app with entities | `DATABASE_URL` |
 | Redis / cache | When the app declares caching | as reported by `deploy plan` |
-| Queue / workers | When the app declares async jobs or processes | as reported by `deploy plan` |
+| Queue / workers | When the app declares processes | as reported by `deploy plan` |
 | Object storage | When the app stores files/assets | as reported by `deploy plan` |
-| Ledger cluster | When the app declares `ledger` constructs | as reported by `deploy plan` |
 
 Set every env var `deploy plan` lists; an app that boots without its required
 connection details fails fast (`dazzle serve --production` requires
 `DATABASE_URL`, for example).
-
-## Ledgers (TigerBeetle)
-
-The `ledger` construct and TigerBeetle as a backing store remain **first-class**
-domain concepts (ADR-0015). An app that declares `ledger` constructs needs a
-running **TigerBeetle cluster**:
-
-```dsl
-ledger CustomerWallet:
-  account_code: 1001
-  account_type: asset
-  currency: GBP
-```
-
-Provision the cluster yourself and point the app at it. For production, run an
-**odd node count** (1, 3, or 5) so the Raft consensus can achieve quorum — 3 nodes
-tolerates 1 failure, 5 nodes tolerates 2. Dazzle no longer generates the cluster
-infrastructure; `dazzle deploy plan` simply reports that the app requires a
-TigerBeetle ledger cluster and which env vars carry its addresses.
 
 ## Containers / Kubernetes
 

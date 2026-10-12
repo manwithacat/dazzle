@@ -43,7 +43,6 @@ def pipeline_run_impl(
       9. test_design(gaps)
      10. rhythm(gaps)
      11. semantics(extract)
-     12. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON string with per-step results and overall summary.
@@ -170,7 +169,7 @@ def _build_quality_steps(
 
     # Semantics steps (optional — module may not be available)
     try:
-        from dazzle.mcp.event_first_tools import handle_extract_semantics, handle_validate_events
+        from dazzle.mcp.event_first_tools import handle_extract_semantics
 
         steps.append(
             QualityStep(
@@ -180,25 +179,10 @@ def _build_quality_steps(
                 optional=True,
             )
         )
-        steps.append(
-            QualityStep(
-                name="semantics(validate_events)",
-                handler=handle_validate_events,
-                handler_args=({}, project_path),
-                optional=True,
-            )
-        )
     except ImportError:
         synthetic.append(
             {
                 "operation": "semantics(extract)",
-                "status": "skipped",
-                "reason": "event_first_tools not available",
-            }
-        )
-        synthetic.append(
-            {
-                "operation": "semantics(validate_events)",
                 "status": "skipped",
                 "reason": "event_first_tools not available",
             }

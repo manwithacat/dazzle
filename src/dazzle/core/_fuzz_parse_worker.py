@@ -35,7 +35,6 @@ _CONSTRUCT_ATTRS: tuple[str, ...] = (
     "rhythms",
     "integrations",
     "apis",
-    "ledgers",
     "slas",
     "personas",
     "scenarios",

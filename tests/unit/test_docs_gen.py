@@ -27,7 +27,7 @@ class TestLoadConcepts:
 
 
 class TestLoadPageMetadata:
-    def test_loads_23_generated_pages(self) -> None:
+    def test_loads_22_generated_pages(self) -> None:
         # Concept-assembled + prose pages (rhythms, graphs, compliance,
         # dead-code-residue, clone-residue) + auto-source (mcp-tools) + demo cognition page
         # (#1626/#1629).
@@ -35,7 +35,7 @@ class TestLoadPageMetadata:
         # carry `handwritten = true` and are excluded from this count.
         pages = load_page_metadata()
         generated = {s: p for s, p in pages.items() if not p.get("handwritten")}
-        assert len(generated) == 24
+        assert len(generated) == 22
 
     def test_handwritten_pages_are_registered(self) -> None:
         # #1372: hand-written reference pages are registered in doc_pages.toml

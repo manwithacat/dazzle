@@ -12,7 +12,6 @@ from __future__ import annotations  # required: forward reference
 import json
 import logging
 from dataclasses import dataclass, field
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -137,7 +136,6 @@ class SemanticExtraction:
     entities: list[dict[str, Any]] = field(default_factory=list)
     commands: list[dict[str, Any]] = field(default_factory=list)
     events: list[dict[str, Any]] = field(default_factory=list)
-    projections: list[dict[str, Any]] = field(default_factory=list)
     tenancy_signals: list[dict[str, Any]] = field(default_factory=list)
     compliance_signals: list[dict[str, Any]] = field(default_factory=list)
 
@@ -148,8 +146,7 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
     Returns structured information about:
     - Entities with their fields and relationships
     - Commands (mutations implied by surfaces)
-    - Events (from HLESS streams and entity changes)
-    - Projections (read models)
+    - Events (inferred from entity changes)
     - Tenancy signals (multi-tenant indicators)
     - Compliance signals (PII, financial data)
     """
@@ -201,20 +198,6 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
                 }
             )
 
-    # Extract events from HLESS streams
-    if appspec.streams:
-        for stream in appspec.streams:
-            result.events.append(
-                {
-                    "stream": stream.name,
-                    "record_kind": stream.record_kind.value if stream.record_kind else "unknown",
-                    "partition_key": stream.partition_key,
-                    "idempotency": stream.idempotency.strategy_type.value
-                    if stream.idempotency
-                    else None,
-                }
-            )
-
     # Infer events from entities (CRUD operations)
     for entity in appspec.domain.entities:
         for action in ["created", "updated", "deleted"]:
@@ -225,17 +208,6 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
                     "partition_key": "id",
                     "idempotency": "event_id",
                     "inferred": True,
-                }
-            )
-
-    # Extract projections from AppSpec
-    if appspec.projections:
-        for proj in appspec.projections:
-            result.projections.append(
-                {
-                    "name": proj.name,
-                    "entity": proj.target_entity,
-                    "source_topic": proj.source_topic,
                 }
             )
 
@@ -333,196 +305,6 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
                     break
 
     return result
-
-
-# ============================================================================
-# Validation Services
-# ============================================================================
-
-
-class ValidationSeverity(StrEnum):
-    """Severity level for validation issues."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    INFO = "info"
-
-
-@dataclass
-class ValidationIssue:
-    """A validation issue found in the AppSpec."""
-
-    code: str
-    severity: ValidationSeverity
-    message: str
-    location: str | None = None
-    suggestion: str | None = None
-
-
-def validate_event_naming(appspec: ir.AppSpec) -> list[ValidationIssue]:
-    """Validate event naming conventions.
-
-    Checks:
-    - Event names follow domain.entity.action pattern
-    - Version numbers are valid
-    - No reserved words used
-    """
-    issues: list[ValidationIssue] = []
-
-    if not appspec.streams:
-        return issues
-
-    for stream in appspec.streams:
-        # Check naming pattern
-        parts = stream.name.split(".")
-        if len(parts) < 2:
-            issues.append(
-                ValidationIssue(
-                    code="E_EVENT_NAMING",
-                    severity=ValidationSeverity.ERROR,
-                    message=f"Stream '{stream.name}' should follow domain.entity[.action] pattern",
-                    location=f"stream:{stream.name}",
-                    suggestion="Use format like 'app.order.created' or 'office.mail.raw'",
-                )
-            )
-
-        # Check for schema definitions
-        if not stream.schemas:
-            issues.append(
-                ValidationIssue(
-                    code="W_NO_SCHEMA",
-                    severity=ValidationSeverity.WARNING,
-                    message=f"Stream '{stream.name}' has no schema definitions",
-                    location=f"stream:{stream.name}",
-                    suggestion="Add schemas field for schema evolution support",
-                )
-            )
-
-    return issues
-
-
-def detect_idempotency_hazards(appspec: ir.AppSpec) -> list[ValidationIssue]:
-    """Detect potential idempotency issues.
-
-    Checks:
-    - Consumers without idempotency strategy
-    - External effects without idempotency keys
-    - Non-deterministic operations in projections
-    """
-    issues: list[ValidationIssue] = []
-
-    # Check HLESS streams - idempotency is required so this should always be present
-    # But we still check in case of malformed specs
-    if appspec.streams:
-        for stream in appspec.streams:
-            if not stream.idempotency:
-                issues.append(
-                    ValidationIssue(
-                        code="W_NO_IDEMPOTENCY",
-                        severity=ValidationSeverity.WARNING,
-                        message=f"Stream '{stream.name}' has no idempotency strategy",
-                        location=f"stream:{stream.name}",
-                        suggestion="Add idempotency (event_id, source_dedup, provider_dedup)",
-                    )
-                )
-
-    # Check subscriptions for idempotency
-    for sub in appspec.subscriptions:
-        # Subscriptions are assumed to need idempotency handling
-        issues.append(
-            ValidationIssue(
-                code="I_SUBSCRIPTION_IDEMPOTENCY",
-                severity=ValidationSeverity.INFO,
-                message=f"Subscription '{sub.group_id}' should use inbox deduplication",
-                location=f"subscription:{sub.group_id}",
-                suggestion="Ensure handlers are idempotent or use inbox pattern",
-            )
-        )
-
-    # Note: external_effect and idempotency_key are future IntegrationAction fields
-    # For now, we skip external effect checking until the IR supports it
-
-    return issues
-
-
-def check_projection_necessity(appspec: ir.AppSpec) -> list[ValidationIssue]:
-    """Check if projections are necessary and used.
-
-    Warns about:
-    - Projections that duplicate entity tables
-    - Projections not referenced by any surface
-    - Missing projections for complex queries
-    """
-    issues: list[ValidationIssue] = []
-
-    if not appspec.projections:
-        return issues
-
-    # Get all surfaces to check projection usage
-    surface_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
-
-    for proj in appspec.projections:
-        # Check if projection duplicates entity
-        if proj.target_entity:
-            entity = appspec.domain.get_entity(proj.target_entity)
-            if entity and proj.target_entity.lower() == entity.name.lower():
-                issues.append(
-                    ValidationIssue(
-                        code="W_PROJECTION_DUPLICATES_ENTITY",
-                        severity=ValidationSeverity.WARNING,
-                        message=f"Projection '{proj.name}' targets same table as entity",
-                        location=f"projection:{proj.name}",
-                        suggestion="Consider if projection adds value or use entity table directly",
-                    )
-                )
-
-            # Check if projection is used
-            if proj.target_entity not in surface_entities:
-                issues.append(
-                    ValidationIssue(
-                        code="I_PROJECTION_NOT_USED",
-                        severity=ValidationSeverity.INFO,
-                        message=f"Projection '{proj.name}' entity not used in any surface",
-                        location=f"projection:{proj.name}",
-                        suggestion="Verify projection is needed or will be used by API",
-                    )
-                )
-
-    return issues
-
-
-def validate_event_first(appspec: ir.AppSpec) -> dict[str, Any]:
-    """Run all event-first validations.
-
-    Returns a structured validation report.
-    """
-    all_issues: list[ValidationIssue] = []
-
-    all_issues.extend(validate_event_naming(appspec))
-    all_issues.extend(detect_idempotency_hazards(appspec))
-    all_issues.extend(check_projection_necessity(appspec))
-
-    # Group by severity
-    errors = [i for i in all_issues if i.severity == ValidationSeverity.ERROR]
-    warnings = [i for i in all_issues if i.severity == ValidationSeverity.WARNING]
-    infos = [i for i in all_issues if i.severity == ValidationSeverity.INFO]
-
-    return {
-        "valid": len(errors) == 0,
-        "error_count": len(errors),
-        "warning_count": len(warnings),
-        "info_count": len(infos),
-        "issues": [
-            {
-                "code": i.code,
-                "severity": i.severity.value,
-                "message": i.message,
-                "location": i.location,
-                "suggestion": i.suggestion,
-            }
-            for i in all_issues
-        ],
-    }
 
 
 # ============================================================================
@@ -938,7 +720,6 @@ def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
                     "entity_count": len(extraction.entities),
                     "command_count": len(extraction.commands),
                     "event_count": len(extraction.events),
-                    "projection_count": len(extraction.projections),
                     "tenancy_signal_count": len(extraction.tenancy_signals),
                     "compliance_signal_count": len(extraction.compliance_signals),
                 },
@@ -950,34 +731,16 @@ def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
                 "entities": extraction.entities,
                 "commands": extraction.commands,
                 "events": extraction.events,
-                "projections": extraction.projections,
                 "tenancy_signals": extraction.tenancy_signals,
                 "compliance_signals": extraction.compliance_signals,
                 "summary": {
                     "entity_count": len(extraction.entities),
                     "command_count": len(extraction.commands),
                     "event_count": len(extraction.events),
-                    "projection_count": len(extraction.projections),
                 },
             },
             indent=2,
         )
-
-    except Exception as e:
-        return json.dumps({"error": str(e)})
-
-
-def handle_validate_events(args: dict[str, Any], project_path: Path) -> str:
-    """Handle validate_events tool call."""
-    try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
-
-        result = validate_event_first(appspec)
-
-        return json.dumps(result, indent=2)
 
     except Exception as e:
         return json.dumps({"error": str(e)})

@@ -21,10 +21,6 @@ from .lifecycle import parse_lifecycle_block
 class _EntityParseContext:
     """Accumulator for all sub-parts parsed inside an entity block."""
 
-    # Entity name from the header — needed by the `publish` keyword handler
-    # (#1444: dispatch handlers receive only (parser, state)).
-    entity_name: str = ""
-
     # LLM cognition (v0.7.1)
     intent: str | None = None
     domain: str | None = None
@@ -79,11 +75,8 @@ class _EntityParseContext:
     permission_rules: list[ir.PermissionRule] = field(default_factory=list)
     scope_rules: list[ir.ScopeRule] = field(default_factory=list)
     transitions: list[ir.StateTransition] = field(default_factory=list)
-    transition_effects: list[tuple[str, str, list[ir.StepEffect], ir.InvokeFlowSpec | None]] = (
-        field(default_factory=list)
-    )
+    transition_effects: list[tuple[str, str, list[ir.StepEffect]]] = field(default_factory=list)
     invariants: list[ir.InvariantSpec] = field(default_factory=list)
-    publishes: list[ir.PublishSpec] = field(default_factory=list)
     audit_config: ir.AuditConfig | None = None
 
 
@@ -115,8 +108,6 @@ class EntityParserMixin:
         # v0.10.2: Date/duration methods from TypeParserMixin
         _parse_date_expr: Any
         _parse_duration_literal: Any
-        # v0.18.0: Publish directive from EventingParserMixin
-        parse_publish_directive: Any
         # v0.29.0: Expression bridge from BaseParser
         collect_line_as_expr: Any
         # v0.31.0: Source location helper from BaseParser
@@ -130,7 +121,7 @@ class EntityParserMixin:
         accumulating results in an ``_EntityParseContext``.
         """
         name, title, loc = self._parse_construct_header(TokenType.ENTITY)
-        ctx = _EntityParseContext(entity_name=name)
+        ctx = _EntityParseContext()
 
         # #1444: table-driven dispatch (was a ~37-arm elif ladder). Each keyword
         # maps to a thin handler that calls the existing `_parse_entity_*` method
@@ -923,14 +914,14 @@ class EntityParserMixin:
 
     def _parse_entity_on_transition_block(
         self,
-    ) -> list[tuple[str, str, list[ir.StepEffect], ir.InvokeFlowSpec | None]]:
+    ) -> list[tuple[str, str, list[ir.StepEffect]]]:
         """Parse ``on_transition:`` indented block (v0.39.0)."""
         self.advance()
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        effects: list[tuple[str, str, list[ir.StepEffect], ir.InvokeFlowSpec | None]] = []
+        effects: list[tuple[str, str, list[ir.StepEffect]]] = []
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
@@ -1348,7 +1339,6 @@ class EntityParserMixin:
             lifecycle=ctx.lifecycle,
             fitness=ctx.fitness_spec,
             examples=ctx.examples,
-            publishes=ctx.publishes,
             seed_template=ctx.seed_template,
             display_field=ctx.display_field,
             graph_edge=ctx.graph_edge,
@@ -2419,7 +2409,7 @@ class EntityParserMixin:
 
     def _parse_transition_effect(
         self,
-    ) -> tuple[str, str, list[ir.StepEffect], ir.InvokeFlowSpec | None]:
+    ) -> tuple[str, str, list[ir.StepEffect]]:
         """Parse a single on_transition effect entry.
 
         Syntax:
@@ -2429,7 +2419,6 @@ class EntityParserMixin:
               update EntityName:
                 where: field = self.id
                 field: value
-              invoke flow_name(arg: self, other: input.x)   # #1319, ADR-0032
         """
         # Parse from_state (* for wildcard, or identifier)
         if self.match(TokenType.STAR):
@@ -2445,36 +2434,22 @@ class EntityParserMixin:
         self.expect(TokenType.INDENT)
 
         effects: list[ir.StepEffect] = []
-        invoke_flow: ir.InvokeFlowSpec | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
 
-            # Parse action keyword (create / update / invoke)
+            # Parse action keyword (create / update)
             action_token = self.current_token()
             action_str = str(action_token.value).lower()
-            if action_str == "invoke":
-                # `invoke flow_name(arg: <self|input.x|literal>, ...)` (#1319).
-                if invoke_flow is not None:
-                    raise make_parse_error(
-                        "a transition may declare at most one `invoke` in this release",
-                        self.file,
-                        action_token.line,
-                        action_token.column,
-                    )
-                invoke_flow = self._parse_transition_invoke()
-                self.skip_newlines()
-                continue
             if action_str == "create":
                 action = ir.EffectAction.CREATE
             elif action_str == "update":
                 action = ir.EffectAction.UPDATE
             else:
                 raise make_parse_error(
-                    "Expected 'create', 'update', or 'invoke' in on_transition effect, "
-                    f"got '{action_str}'",
+                    f"Expected 'create' or 'update' in on_transition effect, got '{action_str}'",
                     self.file,
                     action_token.line,
                     action_token.column,
@@ -2532,52 +2507,7 @@ class EntityParserMixin:
             self.skip_newlines()
 
         self.expect(TokenType.DEDENT)
-        return (from_state, to_state, effects, invoke_flow)
-
-    def _parse_transition_invoke(self) -> ir.InvokeFlowSpec:
-        """Parse ``invoke flow_name(arg: <self|input.x|literal>, ...)`` (#1319, ADR-0032)."""
-        self.advance()  # consume `invoke`
-        flow_name = str(self.expect_identifier_or_keyword().value)
-        self.expect(TokenType.LPAREN)
-        bindings: list[ir.InvokeBinding] = []
-        while not self.match(TokenType.RPAREN):
-            arg = str(self.expect_identifier_or_keyword().value)
-            self.expect(TokenType.COLON)
-            src = self.current_token()
-            src_val = str(src.value)
-            if src_val == "self":
-                self.advance()
-                bindings.append(
-                    ir.InvokeBinding(flow_input=arg, source_kind=ir.InvokeSourceKind.SELF)
-                )
-            elif src_val == "input":
-                self.advance()
-                self.expect(TokenType.DOT)
-                name = str(self.expect_identifier_or_keyword().value)
-                bindings.append(
-                    ir.InvokeBinding(
-                        flow_input=arg,
-                        source_kind=ir.InvokeSourceKind.INPUT,
-                        source_name=name,
-                    )
-                )
-            else:
-                # Literal: a number or a bare identifier/string.
-                self.advance()
-                literal: str | int | float | bool = src_val
-                if src.type == TokenType.NUMBER:
-                    literal = int(src_val) if "." not in src_val else float(src_val)
-                bindings.append(
-                    ir.InvokeBinding(
-                        flow_input=arg,
-                        source_kind=ir.InvokeSourceKind.LITERAL,
-                        literal=literal,
-                    )
-                )
-            if self.match(TokenType.COMMA):
-                self.advance()
-        self.expect(TokenType.RPAREN)
-        return ir.InvokeFlowSpec(flow_name=flow_name, bindings=bindings)
+        return (from_state, to_state, effects)
 
     def _collect_line_text(self) -> str:
         """Collect remaining tokens on the current line as a single string value.
@@ -2997,14 +2927,14 @@ class EntityParserMixin:
 
 def _merge_transition_effects(
     transitions: list[ir.StateTransition],
-    effects: list[tuple[str, str, list[ir.StepEffect], ir.InvokeFlowSpec | None]],
+    effects: list[tuple[str, str, list[ir.StepEffect]]],
     file: Path,
     line: int,
 ) -> list[ir.StateTransition]:
-    """Merge on_transition effects + invoke into existing StateTransition objects.
+    """Merge on_transition effects into existing StateTransition objects.
 
     Matches (from_state, to_state) pairs and reconstructs frozen models
-    with effects + invoke_flow attached. Raises ParseError for unmatched references.
+    with effects attached. Raises ParseError for unmatched references.
     """
     # Index transitions by (from_state, to_state)
     by_key: dict[tuple[str, str], int] = {}
@@ -3012,7 +2942,7 @@ def _merge_transition_effects(
         by_key[(t.from_state, t.to_state)] = i
 
     result = list(transitions)
-    for from_state, to_state, step_effects, invoke_flow in effects:
+    for from_state, to_state, step_effects in effects:
         key = (from_state, to_state)
         idx = by_key.get(key)
         if idx is None:
@@ -3030,7 +2960,6 @@ def _merge_transition_effects(
             guards=old.guards,
             auto_spec=old.auto_spec,
             effects=list(old.effects) + step_effects,
-            invoke_flow=invoke_flow if invoke_flow is not None else old.invoke_flow,
         )
 
     return result
@@ -3164,10 +3093,6 @@ def _kw_seed(p: Any, s: _EntityParseContext) -> None:
     s.seed_template = p._parse_entity_seed()
 
 
-def _kw_publish(p: Any, s: _EntityParseContext) -> None:
-    s.publishes.append(p.parse_publish_directive(entity_name=s.entity_name))
-
-
 def _kw_lifecycle(p: Any, s: _EntityParseContext) -> None:
     s.lifecycle = p._parse_entity_lifecycle()
 
@@ -3231,7 +3156,6 @@ _ENTITY_KEYWORDS: dict[TokenType, KeywordParser[_EntityParseContext]] = {
     TokenType.TRANSITIONS: _kw_transitions,
     TokenType.ON_TRANSITION: _kw_on_transition,
     TokenType.SEED: _kw_seed,
-    TokenType.PUBLISH: _kw_publish,
     TokenType.LIFECYCLE: _kw_lifecycle,
     TokenType.FITNESS: _kw_fitness,
     TokenType.DISPLAY_FIELD: _kw_display_field,

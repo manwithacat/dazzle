@@ -16,7 +16,7 @@ followed by ``render_snapshot_literal``.
     This is SEPARATE from ``project_schema``'s lossy ``list[str]`` format used
     by the #1431 app-entity migration-diffing path.  Do not conflate the two.
 
-**In-scope tables** (33): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
+**In-scope tables** (31): every entry in the FRAMEWORK_SCHEMA_SNAPSHOT dict
 key set (see the global-constraints list in the migration-baseline plan).
 
 **Excluded (not in this snapshot):** ops-database tables, event-bus
@@ -64,30 +64,6 @@ IN_SCOPE_TABLES: frozenset[str] = in_baseline_tables()
 # ---------------------------------------------------------------------------
 
 FRAMEWORK_SCHEMA_SNAPSHOT = {
-    "_dazzle_atomic_audit": {
-        "columns": {
-            "decision": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "entity_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "entity_name": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "flow_name": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
-            "matched_policy": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "operation": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "timestamp": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "user_email": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "user_id": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "user_roles": {"default": None, "nullable": True, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "idx_atomic_audit_flow": {
-                "columns": ["flow_name", "timestamp"],
-                "predicate": None,
-                "unique": False,
-            }
-        },
-        "uniques": [],
-    },
     "_dazzle_audit_log": {
         "columns": {
             "decision": {"default": None, "nullable": False, "pk": False, "type": "text"},
@@ -194,21 +170,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
             "idx_outbox_status": {"columns": ["status"], "predicate": None, "unique": False},
             "idx_outbox_topic": {"columns": ["topic"], "predicate": None, "unique": False},
         },
-        "uniques": [],
-    },
-    "_dazzle_ingest_fingerprint": {
-        "columns": {
-            "ingest_name": {"default": None, "nullable": False, "pk": True, "type": "text"},
-            "seen_at": {
-                "default": "now()",
-                "nullable": False,
-                "pk": False,
-                "type": "timestamptz",
-            },
-            "sha256": {"default": None, "nullable": False, "pk": True, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {},
         "uniques": [],
     },
     "_dazzle_otp_codes": {
@@ -570,37 +531,6 @@ FRAMEWORK_SCHEMA_SNAPSHOT = {
         "indexes": {
             "ix_invitations_email": {"columns": ["email"], "predicate": None, "unique": False},
             "ix_invitations_org": {"columns": ["org_id"], "predicate": None, "unique": False},
-        },
-        "uniques": [],
-    },
-    "join_requests": {
-        "columns": {
-            "created_at": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "decided_at": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "decided_by": {"default": None, "nullable": True, "pk": False, "type": "text"},
-            "email": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "id": {"default": None, "nullable": False, "pk": True, "type": "text"},
-            "identity_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
-            "status": {
-                "default": "'pending'::text",
-                "nullable": False,
-                "pk": False,
-                "type": "text",
-            },
-            "tenant_id": {"default": None, "nullable": False, "pk": False, "type": "text"},
-        },
-        "fks": {},
-        "indexes": {
-            "ix_join_requests_tenant": {
-                "columns": ["tenant_id"],
-                "predicate": None,
-                "unique": False,
-            },
-            "uq_join_requests_pending": {
-                "columns": ["tenant_id", "identity_id"],
-                "predicate": "(status = 'pending'::text)",
-                "unique": True,
-            },
         },
         "uniques": [],
     },

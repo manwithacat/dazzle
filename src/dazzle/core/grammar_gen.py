@@ -38,10 +38,6 @@ _MIXIN_SECTIONS: list[tuple[str, str, str]] = [
     ("scenario", "Scenario and Demo Data", "Testing"),
     ("story", "Story Definitions", "Workflow"),
     ("process", "Process Workflows", "Workflow"),
-    ("messaging", "Messaging Channels", "Eventing"),
-    ("eventing", "Event-First Architecture", "Eventing"),
-    ("hless", "HLESS Event Semantics", "Eventing"),
-    ("ledger", "TigerBeetle Ledgers and Transactions", "Financial"),
     ("governance", "Governance Sections", "Governance"),
     ("llm", "LLM Jobs", "LLM"),
 ]
@@ -53,8 +49,6 @@ _CATEGORY_ORDER = (
     "Workflow",
     "Integration",
     "Testing",
-    "Eventing",
-    "Financial",
     "Governance",
     "LLM",
 )
@@ -373,23 +367,11 @@ statement     ::= entity_decl
                 | story_decl
                 | process_decl
                 | schedule_decl
-                | message_decl
-                | channel_decl
-                | asset_decl
-                | document_decl
-                | template_decl
-                | event_model_decl
-                | subscribe_decl
-                | projection_decl
-                | stream_decl
-                | hless_pragma
                 | policies_decl
                 | tenancy_decl
                 | llm_model_decl
                 | llm_config_decl
                 | llm_intent_decl
-                | ledger_decl
-                | transaction_decl
                 | use_decl
                 | comment ;
 
@@ -1026,218 +1008,6 @@ schedule_decl ::= "schedule" IDENT STRING? ":" NEWLINE
 """
 
 
-def _build_messaging_section() -> str:
-    return """\
-message_decl  ::= "message" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("channel" ":" IDENT NEWLINE)?
-                    ("trigger" ":" NEWLINE INDENT trigger_body DEDENT)?
-                    ("send" ":" NEWLINE INDENT send_body DEDENT)?
-                  DEDENT ;
-
-trigger_body  ::= ("when" ":" trigger_when NEWLINE)*
-                  ("schedule" ":" STRING NEWLINE)? ;
-
-trigger_when  ::= "entity" IDENT ("created" | "updated" | "deleted" | "status" "changed" "to" IDENT)
-                | "event" IDENT ;
-
-send_body     ::= ("to" ":" field_path NEWLINE)?
-                  ("subject" ":" STRING NEWLINE)?
-                  ("body" ":" STRING NEWLINE)?
-                  ("template" ":" IDENT NEWLINE)? ;
-
-channel_decl  ::= "channel" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("provider" ":" IDENT NEWLINE)?
-                    ("provider_config" ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                    ("delivery_mode" ":" ("outbox" | "direct") NEWLINE)?
-                    ("throttle" ":" NEWLINE INDENT throttle_config DEDENT)?
-                  DEDENT ;
-
-throttle_config
-              ::= ("scope" ":" ("per_recipient" | "per_entity" | "per_channel") NEWLINE)?
-                  ("window" ":" STRING NEWLINE)?
-                  ("max_messages" ":" NUMBER NEWLINE)?
-                  ("on_exceed" ":" ("drop" | "log" | "queue") NEWLINE)? ;
-
-asset_decl    ::= "asset" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("for_entity" ":" IDENT NEWLINE)?
-                    ("format" ":" IDENT ("," IDENT)* NEWLINE)?
-                    ("path" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-document_decl ::= "document" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("for_entity" ":" IDENT NEWLINE)?
-                    ("layout" ":" IDENT NEWLINE)?
-                    ("format" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-template_decl ::= "template" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("subject" ":" STRING NEWLINE)?
-                    ("body" ":" STRING NEWLINE)?
-                    ("html_body" ":" STRING NEWLINE)?
-                  DEDENT ;
-"""
-
-
-def _build_eventing_section() -> str:
-    return """\
-event_model_decl
-              ::= "event_model" ":" NEWLINE
-                  INDENT
-                    event_topic*
-                    event_def*
-                  DEDENT ;
-
-event_topic   ::= "topic" IDENT ":" NEWLINE
-                  INDENT
-                    ("retention" ":" (STRING | DURATION_LITERAL) NEWLINE)?
-                    ("partition_key" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-event_def     ::= "event" IDENT ":" NEWLINE
-                  INDENT
-                    ("topic" ":" IDENT NEWLINE)?
-                    (IDENT ":" type_spec NEWLINE)*
-                  DEDENT ;
-
-subscribe_decl
-              ::= "subscribe" IDENT ":" NEWLINE
-                  INDENT
-                    ("event" ":" IDENT NEWLINE)?
-                    ("filter" ":" condition_expr NEWLINE)?
-                    ("action" ":" IDENT NEWLINE)?
-                    ("service" ":" IDENT NEWLINE)?
-                    ("upsert" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-projection_decl
-              ::= "projection" IDENT ":" NEWLINE
-                  INDENT
-                    ("from" ":" IDENT NEWLINE)?
-                    ("into" ":" IDENT NEWLINE)?
-                    ("mapping" ":" NEWLINE INDENT (IDENT ":" field_path NEWLINE)+ DEDENT)?
-                  DEDENT ;
-
-publish_directive
-              ::= "publish" IDENT (":" NEWLINE
-                  INDENT
-                    ("topic" ":" IDENT NEWLINE)?
-                    ("when" ":" trigger_when NEWLINE)?
-                    (IDENT ":" (field_path | literal) NEWLINE)*
-                  DEDENT)? NEWLINE ;
-"""
-
-
-def _build_hless_section() -> str:
-    return """\
-stream_decl   ::= "stream" IDENT ":" NEWLINE
-                  INDENT
-                    ("kind" ":" ("INTENT" | "FACT" | "OBSERVATION" | "DERIVATION") NEWLINE)?
-                    ("description" ":" STRING NEWLINE)?
-                    ("schema" IDENT ":" NEWLINE
-                      INDENT (IDENT ":" type_spec field_modifier* NEWLINE)+ DEDENT)?
-                    ("partition_key" ":" IDENT NEWLINE)?
-                    ("ordering_scope" ":" IDENT NEWLINE)?
-                    ("idempotency" ":" IDENT NEWLINE)?
-                    ("outcomes" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
-                    ("derives_from" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("emits" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
-                    ("side_effects" ":" IDENT NEWLINE)?
-                    ("note" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-hless_pragma  ::= "hless" ":" ("strict" | "warn" | "off") NEWLINE ;
-"""
-
-
-def _build_ledger_section() -> str:
-    return """\
-ledger_decl   ::= "ledger" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ledger_body_line+
-                  DEDENT ;
-
-ledger_body_line
-              ::= "intent" ":" STRING NEWLINE
-                | "account_code" ":" NUMBER NEWLINE
-                | "ledger_id" ":" NUMBER NEWLINE
-                | "account_type" ":" ACCOUNT_TYPE NEWLINE
-                | "currency" ":" CURRENCY_CODE NEWLINE
-                | "flags" ":" ACCOUNT_FLAG ("," ACCOUNT_FLAG)* NEWLINE
-                | "sync_to" ":" IDENT "." IDENT ("trigger" ":" SYNC_TRIGGER)? NEWLINE
-                | "tenant_scoped" ":" BOOLEAN NEWLINE
-                | metadata_mapping_block ;
-
-ACCOUNT_TYPE  ::= "asset" | "liability" | "equity" | "revenue" | "expense" ;
-
-CURRENCY_CODE ::= /[A-Z]{3}/ ;
-
-ACCOUNT_FLAG  ::= "debits_must_not_exceed_credits"
-                | "credits_must_not_exceed_debits"
-                | "linked"
-                | "history" ;
-
-SYNC_TRIGGER  ::= "after_transfer" | "scheduled" STRING | "on_demand" ;
-
-metadata_mapping_block
-              ::= "metadata_mapping" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" ("ref" IDENT "." IDENT | STRING) NEWLINE)+
-                  DEDENT ;
-
-transaction_decl
-              ::= "transaction" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    transaction_body_line+
-                  DEDENT ;
-
-transaction_body_line
-              ::= "intent" ":" STRING NEWLINE
-                | "execution" ":" ("sync" | "async") NEWLINE
-                | "priority" ":" ("critical" | "high" | "normal" | "low") NEWLINE
-                | "timeout" ":" NUMBER NEWLINE
-                | transfer_block
-                | "idempotency_key" ":" field_path NEWLINE
-                | validation_block ;
-
-transfer_block
-              ::= "transfer" IDENT ":" NEWLINE
-                  INDENT
-                    transfer_line+
-                  DEDENT ;
-
-transfer_line ::= "debit" ":" IDENT NEWLINE
-                | "credit" ":" IDENT NEWLINE
-                | "amount" ":" amount_expr NEWLINE
-                | "code" ":" NUMBER NEWLINE
-                | "flags" ":" TRANSFER_FLAG ("," TRANSFER_FLAG)* NEWLINE
-                | "pending_id" ":" STRING NEWLINE
-                | user_data_block ;
-
-TRANSFER_FLAG ::= "linked" | "pending" | "post_pending" | "void_pending" | "balancing" ;
-
-amount_expr   ::= amount_term (("+" | "-" | "*" | "/") amount_term)? ;
-
-amount_term   ::= NUMBER | field_path ;
-
-user_data_block
-              ::= "user_data" ":" NEWLINE
-                  INDENT
-                    (IDENT ":" (STRING | IDENT) NEWLINE)+
-                  DEDENT ;
-
-validation_block
-              ::= "validation" ":" NEWLINE
-                  INDENT
-                    ("-" (field_path | STRING) NEWLINE)+
-                  DEDENT ;
-"""
-
-
 def _build_governance_section() -> str:
     return """\
 policies_decl ::= "policies" ":" NEWLINE
@@ -1329,14 +1099,6 @@ _GRAMMAR_SECTIONS: dict[str, list[tuple[str | None, object]]] = {
     ],
     "Testing": [
         ("Scenario and Demo Data", _build_scenario_section),
-    ],
-    "Eventing": [
-        ("Messaging Channels", _build_messaging_section),
-        ("Event-First Architecture", _build_eventing_section),
-        ("HLESS Event Semantics", _build_hless_section),
-    ],
-    "Financial": [
-        ("TigerBeetle Ledgers and Transactions", _build_ledger_section),
     ],
     "Governance": [
         ("Governance Sections", _build_governance_section),
@@ -1523,66 +1285,6 @@ scenario happy_path "Happy Path":
     start_route: "/tickets/new"
   as persona agent:
     start_route: "/queue"
-```
-""",
-    "Eventing": """\
-```dsl
-event_model:
-  topic orders:
-    retention: 7d
-    partition_key: order_id
-
-  event OrderCreated:
-    topic: orders
-    order_id: uuid
-    customer_id: uuid
-    total: decimal(10,2)
-
-subscribe notify_customer:
-  event: OrderCreated
-  action: send_confirmation
-  service: NotificationService
-
-channel email_channel "Email":
-  provider: smtp
-  provider_config:
-    host: "smtp.example.com"
-    port: 587
-  delivery_mode: outbox
-
-stream order_placement_requests:
-  kind: INTENT
-  description: "Captures requests to place orders"
-  schema OrderPlacementRequested:
-    order_id: uuid required
-    customer_id: uuid required
-  partition_key: customer_id
-  idempotency: order_id
-```
-""",
-    "Financial": """\
-```dsl
-ledger CustomerWallet "Customer Wallet":
-  intent: "Track customer prepaid balances"
-  account_code: 1001
-  ledger_id: 1
-  account_type: asset
-  currency: GBP
-  flags: debits_must_not_exceed_credits
-  sync_to: Customer.balance_cache
-
-transaction RecordPayment "Record Payment":
-  execution: async
-  priority: high
-
-  transfer revenue:
-    debit: CustomerWallet
-    credit: Revenue
-    amount: payment.amount
-    code: 1
-    flags: linked
-
-  idempotency_key: payment.id
 ```
 """,
     "Governance": """\

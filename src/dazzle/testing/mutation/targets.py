@@ -81,7 +81,6 @@ SECURITY_TARGETS: tuple[MutationTarget, ...] = (
         tests=(
             "tests/unit/test_predicate_compiler.py",
             "tests/integration/test_scope_runtime_pg.py",
-            "tests/integration/test_scope_parent_lock_pg.py",
             "tests/integration/test_rls_scope_enforcement_pg.py",
         ),
         floor=72,  # measured 77% (#1502); survivors: 5 frozen + 1 error-string (equivalent) + 2 poly-qualify correlated-guard mutants

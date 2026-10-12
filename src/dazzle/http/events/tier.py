@@ -10,14 +10,15 @@ Tiers:
 - Tier 1: PostgreSQL (Heroku pilots)
 - Tier 2: Redis Streams (Heroku growth)
 - Tier 3: EventBridge (AWS serverless) - future
-- Tier 4: Kafka (production scale)
+
+A Kafka tier is parked under DD-006.
 """
 
 from __future__ import annotations
 
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -25,7 +26,6 @@ from dazzle.http.events.bus import EventBus
 from dazzle.http.events.dev_memory import DevBusMemory
 
 if TYPE_CHECKING:
-    from dazzle.http.events.kafka_bus import KafkaBus
     from dazzle.http.events.postgres_bus import PostgresBus
     from dazzle.http.events.redis_bus import RedisBus
 
@@ -46,9 +46,6 @@ class EventTier(StrEnum):
 
     EVENTBRIDGE = "eventbridge"
     """Tier 3: AWS EventBridge. For serverless/AWS deployments."""
-
-    KAFKA = "kafka"
-    """Tier 4: Apache Kafka. For production scale."""
 
     AUTO = "auto"
     """Auto-detect based on available environment variables."""
@@ -75,13 +72,6 @@ class TierConfig:
     redis_max_stream_length: int = 10000
     """Maximum entries per Redis stream."""
 
-    # Kafka config
-    kafka_bootstrap_servers: list[str] = field(default_factory=list)
-    """Kafka bootstrap servers. Defaults to KAFKA_BOOTSTRAP_SERVERS env var."""
-
-    kafka_security_protocol: str = "PLAINTEXT"
-    """Kafka security protocol."""
-
     # General config
     max_retries: int = 3
     """Maximum retry attempts before moving to DLQ."""
@@ -96,10 +86,9 @@ def detect_tier() -> EventTier:
 
     Detection order:
     1. EVENT_BACKEND explicitly set -> use that tier
-    2. KAFKA_BOOTSTRAP_SERVERS -> Kafka
-    3. REDIS_URL -> Redis (no longer requires EVENT_BACKEND=redis)
-    4. DATABASE_URL starting with postgres -> PostgreSQL
-    5. Default -> Memory (test-only)
+    2. REDIS_URL -> Redis (no longer requires EVENT_BACKEND=redis)
+    3. DATABASE_URL starting with postgres -> PostgreSQL
+    4. Default -> Memory (test-only)
     """
     # Explicit override via EVENT_BACKEND
     explicit = os.getenv("EVENT_BACKEND", "").lower()
@@ -108,16 +97,10 @@ def detect_tier() -> EventTier:
             "memory": EventTier.MEMORY,
             "postgres": EventTier.POSTGRES,
             "redis": EventTier.REDIS,
-            "kafka": EventTier.KAFKA,
         }
         if explicit in tier_map:
             logger.info("Using explicit tier: %s (EVENT_BACKEND=%s)", explicit, explicit)
             return tier_map[explicit]
-
-    # Check for Kafka
-    if os.getenv("KAFKA_BOOTSTRAP_SERVERS"):
-        logger.info("Auto-detected tier: Kafka (KAFKA_BOOTSTRAP_SERVERS set)")
-        return EventTier.KAFKA
 
     # Check for Redis — auto-select when REDIS_URL is set
     if os.getenv("REDIS_URL"):
@@ -174,9 +157,6 @@ def create_bus(config: TierConfig | None = None) -> EventBus:
 
     if tier == EventTier.REDIS:
         return _create_redis_bus(config)
-
-    if tier == EventTier.KAFKA:
-        return _create_kafka_bus(config)
 
     if tier == EventTier.EVENTBRIDGE:
         raise NotImplementedError(
@@ -249,38 +229,6 @@ def _create_redis_bus(config: TierConfig) -> RedisBus:
     return RedisBus(redis_config)
 
 
-def _create_kafka_bus(config: TierConfig) -> KafkaBus:
-    """Create Kafka bus for production scale."""
-    from dazzle.http.events.kafka_bus import KAFKA_AVAILABLE, KafkaBus, KafkaConfig
-
-    if not KAFKA_AVAILABLE:
-        raise ImportError(
-            "aiokafka is required for Kafka event bus. Install with: pip install dazzle-dsl[kafka]"
-        )
-
-    servers = config.kafka_bootstrap_servers
-    if not servers:
-        servers_env = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "")
-        servers = [s.strip() for s in servers_env.split(",") if s.strip()]
-
-    if not servers:
-        raise ValueError(
-            "Kafka bootstrap servers not configured. "
-            "Set KAFKA_BOOTSTRAP_SERVERS environment variable."
-        )
-
-    # KafkaConfig expects comma-separated string, not list
-    servers_str = ",".join(servers)
-
-    kafka_config = KafkaConfig(
-        bootstrap_servers=servers_str,
-        security_protocol=config.kafka_security_protocol,
-    )
-
-    logger.debug("Creating Kafka event bus (Tier 4)")
-    return KafkaBus(kafka_config)
-
-
 def get_tier_info() -> dict[str, Any]:
     """
     Get information about available tiers and current configuration.
@@ -288,7 +236,6 @@ def get_tier_info() -> dict[str, Any]:
     Returns:
         Dict with available tiers and detected configuration.
     """
-    from dazzle.http.events.kafka_bus import KAFKA_AVAILABLE
     from dazzle.http.events.postgres_bus import ASYNCPG_AVAILABLE
     from dazzle.http.events.redis_bus import REDIS_AVAILABLE
 
@@ -308,16 +255,10 @@ def get_tier_info() -> dict[str, Any]:
                 "description": "Redis Streams (Heroku growth)",
                 "install": "pip install dazzle-dsl[redis]",
             },
-            "kafka": {
-                "available": KAFKA_AVAILABLE,
-                "description": "Apache Kafka (production)",
-                "install": "pip install dazzle-dsl[kafka]",
-            },
         },
         "environment": {
             "DATABASE_URL": bool(os.getenv("DATABASE_URL")),
             "REDIS_URL": bool(os.getenv("REDIS_URL")),
-            "KAFKA_BOOTSTRAP_SERVERS": bool(os.getenv("KAFKA_BOOTSTRAP_SERVERS")),
             "EVENT_BACKEND": os.getenv("EVENT_BACKEND"),
         },
     }

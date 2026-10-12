@@ -1,4 +1,4 @@
-"""Data Integrity detection agent (DI-01 through DI-08)."""
+"""Data Integrity detection agent (DI-01 through DI-07)."""
 
 from __future__ import annotations
 
@@ -36,11 +36,6 @@ _SENSITIVE_CLASSIFICATIONS: frozenset[DataClassification] = frozenset(
         DataClassification.FINANCIAL_TXN,
         DataClassification.FINANCIAL_ACCOUNT,
     }
-)
-
-# FieldTypeKind values that are numeric (for ledger sync target checks).
-_NUMERIC_KINDS: frozenset[FieldTypeKind] = frozenset(
-    {FieldTypeKind.INT, FieldTypeKind.DECIMAL, FieldTypeKind.MONEY}
 )
 
 
@@ -558,166 +553,6 @@ class DataIntegrityAgent(DetectionAgent):
                             ),
                             effort=RemediationEffort.SMALL,
                             dsl_example=(f"entity {entity_name}:\n  audit:\n    enabled: true"),
-                        ),
-                    )
-                )
-
-        return findings
-
-    # ------------------------------------------------------------------
-    # DI-08  Ledger sync_to target field type mismatch
-    # ------------------------------------------------------------------
-
-    @heuristic(
-        heuristic_id="DI-08",
-        category="data_integrity",
-        subcategory="ledger_sync_type",
-        title="Ledger sync_to target field type mismatch",
-    )
-    def check_ledger_sync_target(self, appspec: AppSpec) -> list[Finding]:
-        """Flag ledgers whose sync_to target field is missing or non-numeric."""
-        findings: list[Finding] = []
-
-        for ledger in appspec.ledgers:
-            if ledger.sync is None:
-                continue
-
-            target_entity_name = ledger.sync.target_entity
-            target_field_name = ledger.sync.target_field
-            entity = appspec.get_entity(target_entity_name)
-
-            if entity is None:
-                findings.append(
-                    Finding(
-                        agent=AgentId.DI,
-                        heuristic_id="DI-08",
-                        category="data_integrity",
-                        subcategory="ledger_sync_type",
-                        severity=Severity.MEDIUM,
-                        confidence=Confidence.CONFIRMED,
-                        title=(
-                            f"Ledger '{ledger.name}' sync target entity "
-                            f"'{target_entity_name}' not found"
-                        ),
-                        description=(
-                            f"Ledger '{ledger.name}' is configured to sync to "
-                            f"'{target_entity_name}.{target_field_name}' but "
-                            f"entity '{target_entity_name}' does not exist in "
-                            f"the domain model."
-                        ),
-                        construct_type="ledger",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=f"ledger.{ledger.name}.sync",
-                                context=(
-                                    f"target_entity={target_entity_name}, entity_not_found=True"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Define entity '{target_entity_name}' or "
-                                f"correct the sync_to target."
-                            ),
-                            effort=RemediationEffort.MEDIUM,
-                        ),
-                    )
-                )
-                continue
-
-            field = entity.get_field(target_field_name)
-
-            if field is None:
-                findings.append(
-                    Finding(
-                        agent=AgentId.DI,
-                        heuristic_id="DI-08",
-                        category="data_integrity",
-                        subcategory="ledger_sync_type",
-                        severity=Severity.MEDIUM,
-                        confidence=Confidence.CONFIRMED,
-                        title=(
-                            f"Ledger '{ledger.name}' sync target field "
-                            f"'{target_entity_name}.{target_field_name}' not found"
-                        ),
-                        description=(
-                            f"Ledger '{ledger.name}' syncs to "
-                            f"'{target_entity_name}.{target_field_name}' but "
-                            f"field '{target_field_name}' does not exist on "
-                            f"entity '{target_entity_name}'."
-                        ),
-                        entity_name=target_entity_name,
-                        construct_type="ledger",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=(
-                                    f"ledger.{ledger.name}.sync -> entity.{target_entity_name}"
-                                ),
-                                context=(
-                                    f"target_field={target_field_name}, "
-                                    f"available_fields="
-                                    f"{[f.name for f in entity.fields]}"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Add a numeric field '{target_field_name}' to "
-                                f"entity '{target_entity_name}' or correct the "
-                                f"sync_to target."
-                            ),
-                            effort=RemediationEffort.SMALL,
-                            dsl_example=(f"  {target_field_name}: decimal(18,2)"),
-                        ),
-                    )
-                )
-                continue
-
-            if field.type.kind not in _NUMERIC_KINDS:
-                findings.append(
-                    Finding(
-                        agent=AgentId.DI,
-                        heuristic_id="DI-08",
-                        category="data_integrity",
-                        subcategory="ledger_sync_type",
-                        severity=Severity.MEDIUM,
-                        confidence=Confidence.CONFIRMED,
-                        title=(
-                            f"Ledger '{ledger.name}' sync target "
-                            f"'{target_entity_name}.{target_field_name}' is not "
-                            f"numeric"
-                        ),
-                        description=(
-                            f"Ledger '{ledger.name}' syncs its balance to "
-                            f"'{target_entity_name}.{target_field_name}' but the "
-                            f"field type is '{field.type.kind.value}' instead of "
-                            f"a numeric type (int, decimal, money). Balance "
-                            f"values written to this field may be truncated or "
-                            f"rejected."
-                        ),
-                        entity_name=target_entity_name,
-                        construct_type="ledger",
-                        evidence=[
-                            Evidence(
-                                evidence_type="ir_pattern",
-                                location=(f"entity.{target_entity_name}.{target_field_name}"),
-                                context=(
-                                    f"field_type={field.type.kind.value}, "
-                                    f"expected_types="
-                                    f"{sorted(k.value for k in _NUMERIC_KINDS)}"
-                                ),
-                            )
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Change the type of "
-                                f"'{target_entity_name}.{target_field_name}' "
-                                f"to a numeric type (decimal, int, or money)."
-                            ),
-                            effort=RemediationEffort.SMALL,
-                            dsl_example=(f"  {target_field_name}: decimal(18,2)"),
                         ),
                     )
                 )

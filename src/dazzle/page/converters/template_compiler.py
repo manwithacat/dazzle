@@ -1076,7 +1076,7 @@ def _compile_list_surface(
     # Caught by the chaos-monkey fuzz: list surfaces on entities with
     # no CREATE surface (virtual entities — SystemHealth, SystemMetric,
     # ProcessRun, LogEntry, EventTrace; framework-only entities —
-    # DeployHistory, AuditEntry, AIJob, JobRun) emitted a "Create"
+    # DeployHistory, AuditEntry, AIJob) emitted a "Create"
     # button on the list page. Clicking it navigated to
     # `/app/<entity>/create` which 404s because no create route is
     # mounted. The right signal is "is there a CREATE-mode surface

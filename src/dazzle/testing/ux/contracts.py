@@ -247,7 +247,7 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
     # Build a map of entity → modes-that-have-a-surface so the RBAC
     # loop below can skip CREATE/UPDATE contracts for entities that
     # have permission for that operation but no UI surface for it.
-    # Framework-injected entities (AuditEntry, JobRun) grant CREATE
+    # Framework-injected entities (AuditEntry) grant CREATE
     # at the IR level (the worker writes through the standard service
     # layer) but have no user-facing CREATE surface — without this
     # guard, the contract checker fails with "Expected create action

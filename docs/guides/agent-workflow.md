@@ -300,8 +300,8 @@ the full list.
 ## 4. Worked Example: How `invoice_ops` Was Built and Evolved
 
 `examples/invoice_ops` is a production-grade accounts-payable system — invoices,
-line items, supplier bank accounts, multi-step maker-checker approval, HLESS
-event model, shared-schema tenancy, and a full RBAC matrix with four personas.
+line items, supplier bank accounts, multi-step maker-checker approval,
+shared-schema tenancy, and a full RBAC matrix with four personas.
 It was built entirely by this agent loop (SP1, v0.71.103) and then evolved
 through six successive schema and DSL changes (SP2, v0.71.104) to exercise the
 migration workflow.
@@ -317,7 +317,7 @@ next:
 | `c9223960` | Initial data + access model — entities, fields, scopes, personas |
 | `4f9eaa14` | Shared-schema tenancy declaration |
 | `2949db2a` | Maker-checker approval gates |
-| `aa9fbc2d` | HLESS event model + status projection |
+| `aa9fbc2d` | Event model + status projection (removed since; events DSL parked, DD-006) |
 | `7d922509` | Surfaces including audit-export view |
 | `6d841cb6` | Edit/create surfaces to make the app fully operable |
 

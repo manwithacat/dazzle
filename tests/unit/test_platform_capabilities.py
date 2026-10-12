@@ -1,7 +1,7 @@
 """Tests for v0.34.0 platform capability features.
 
 Covers: soft delete, searchable fields, bulk import/export,
-notifications, search on surfaces, and date-range reporting.
+search on surfaces, and date-range reporting.
 """
 
 from pathlib import Path
@@ -14,8 +14,6 @@ from dazzle.core.ir import (
     BulkConfig,
     BulkFormat,
     ManagedBy,
-    NotificationChannel,
-    NotificationPreference,
     TimeBucket,
 )
 
@@ -321,142 +319,6 @@ entity Task "Task":
         assert config.import_enabled is True
         assert config.export_enabled is True
         assert config.formats == [BulkFormat.CSV]
-
-
-# =============================================================================
-# Notifications
-# =============================================================================
-
-
-class TestNotifications:
-    def test_basic_notification(self):
-        frag = _parse(
-            """\
-module test
-entity Invoice "Invoice":
-  id: uuid pk
-  title: str(200)
-  status: enum[draft, sent, overdue, paid]
-
-notification invoice_overdue "Invoice Overdue":
-  on: Invoice.status -> overdue
-  channels: [in_app, email]
-  message: "Invoice {{title}} is overdue"
-  recipients: role(accountant)
-  preferences: opt_out
-"""
-        )
-        assert len(frag.notifications) == 1
-        n = frag.notifications[0]
-        assert n.name == "invoice_overdue"
-        assert n.title == "Invoice Overdue"
-        assert n.trigger.entity == "Invoice"
-        assert n.trigger.field == "status"
-        assert n.trigger.to_value == "overdue"
-        assert n.trigger.event == "status_changed"
-        assert NotificationChannel.IN_APP in n.channels
-        assert NotificationChannel.EMAIL in n.channels
-        assert "overdue" in n.message
-        assert n.recipients.kind == "role"
-        assert n.recipients.value == "accountant"
-        assert n.preference == NotificationPreference.OPT_OUT
-
-    def test_field_changed_notification(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-  assigned_to: str(200)
-
-notification task_assigned "Task Assigned":
-  on: Task.assigned_to changed
-  channels: [in_app, slack]
-  message: "You have been assigned a task"
-  recipients: field(assigned_to)
-"""
-        )
-        n = frag.notifications[0]
-        assert n.trigger.event == "field_changed"
-        assert n.trigger.field == "assigned_to"
-        assert n.trigger.to_value is None
-        assert NotificationChannel.SLACK in n.channels
-        assert n.recipients.kind == "field"
-        assert n.recipients.value == "assigned_to"
-
-    def test_entity_created_notification(self):
-        frag = _parse(
-            """\
-module test
-entity Order "Order":
-  id: uuid pk
-  total: int
-
-notification new_order "New Order":
-  on: Order created
-  channels: [in_app]
-  message: "New order received"
-  recipients: role(admin)
-"""
-        )
-        n = frag.notifications[0]
-        assert n.trigger.event == "created"
-        assert n.trigger.entity == "Order"
-        assert n.trigger.field is None
-
-    def test_notification_creator_recipient(self):
-        frag = _parse(
-            """\
-module test
-entity Ticket "Ticket":
-  id: uuid pk
-  title: str(200)
-
-notification ticket_resolved "Ticket Resolved":
-  on: Ticket.status -> resolved
-  channels: [in_app, email]
-  message: "Your ticket has been resolved"
-  recipients: creator
-"""
-        )
-        n = frag.notifications[0]
-        assert n.recipients.kind == "creator"
-
-    def test_notification_mandatory_preference(self):
-        frag = _parse(
-            """\
-module test
-entity Payment "Payment":
-  id: uuid pk
-  amount: int
-
-notification payment_failed "Payment Failed":
-  on: Payment.status -> failed
-  channels: [in_app, email, sms]
-  message: "Payment failed"
-  recipients: field(customer)
-  preferences: mandatory
-"""
-        )
-        n = frag.notifications[0]
-        assert n.preference == NotificationPreference.MANDATORY
-        assert NotificationChannel.SMS in n.channels
-
-    def test_notification_defaults(self):
-        frag = _parse(
-            """\
-module test
-entity Task "Task":
-  id: uuid pk
-
-notification task_created "Task Created":
-  on: Task created
-"""
-        )
-        n = frag.notifications[0]
-        assert n.channels == [NotificationChannel.IN_APP]
-        assert n.preference == NotificationPreference.OPT_OUT
-        assert n.message == ""
 
 
 # =============================================================================

@@ -40,6 +40,16 @@ def validate_audit_config(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 "captured for update and delete operations."
             )
 
+    # Top-level `audit on X: retention: Nd` — the sweep that enforced it ran
+    # inside `dazzle worker`, which was parked with the `job` construct (DD-008).
+    for audit in appspec.audits:
+        if audit.retention_days:
+            warnings.append(
+                f"[Info] audit on {audit.entity} declares retention: "
+                f"{audit.retention_days}d, but no retention sweep runs it — the "
+                "sweep shipped with `dazzle worker`, parked under DD-008."
+            )
+
     return errors, warnings
 
 

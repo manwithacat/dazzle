@@ -21,7 +21,6 @@ from .ir.fields import (
     coerce_framework_default,
 )
 from .ir.fk_graph import FKGraph
-from .ir.jobs import JOB_RUN_FIELDS
 from .ir.llm import AI_JOB_FIELDS
 from .ir.onboarding_state import ONBOARDING_STATE_FIELDS
 from .ir.security import SecurityConfig, SecurityProfile
@@ -164,17 +163,6 @@ def build_appspec(
         # FeedbackReport pattern below.
         surfaces = [*surfaces, _build_audit_entry_admin_surface()]
 
-    # 9aa. Auto-generate JobRun entity when any `job X:` block is
-    # present (#953 cycle 2). Single shared platform entity holding
-    # one row per worker invocation — `job_name` discriminator. The
-    # cycle-3 worker writes here; the cycle-4 scheduler reads `status`
-    # to skip already-running scheduled jobs.
-    if merged_fragment.jobs and not any(e.name == "JobRun" for e in entities):
-        entities = [*entities, _build_job_run_entity()]
-        # #991 — admin LIST surface so the route generator emits
-        # CRUD endpoints for the worker (and operator triage tools).
-        surfaces = [*surfaces, _build_job_run_admin_surface()]
-
     # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
     if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
@@ -233,17 +221,10 @@ def build_appspec(
     entities = inject_partition_key(list(entities), merged_fragment.tenancy)
 
     # 10. Build FK graph and compile scope predicates
-    from .ir.fk_graph import FKGraph
     from .ir.predicate_builder import build_scope_predicate
 
     fk_graph = FKGraph.from_entities(list(entities))
     entities = _compile_scope_predicates(entities, fk_graph, build_scope_predicate)
-
-    # 10a.1 — derive parent-before-child step order for create-DAG atomic flows
-    # (#1315). Declared `steps` order is preserved; `derived_step_order` carries
-    # the FK-topological permutation when (and only when) reordering is needed.
-    atomic_flows = _derive_atomic_step_orders(merged_fragment.atomic_flows, fk_graph)
-    atomic_flows = _derive_flow_invariant_anchors(atomic_flows, fk_graph)
 
     # 10b. Derive verifiable triples
     from .ir.triples import derive_triples
@@ -271,7 +252,6 @@ def build_appspec(
         surfaces=surfaces,
         entities=entities,
         personas=merged_fragment.personas,
-        streams=merged_fragment.streams,
     )
     if guide_errors:
         error_msg = "Guide concordance failed:\n" + "\n".join(f"  - {e}" for e in guide_errors)
@@ -294,20 +274,8 @@ def build_appspec(
         domain_services=merged_fragment.domain_services,  # #1070
         # #1075 — propagate the remaining shared ModuleFragment/AppSpec fields.
         archetypes=merged_fragment.archetypes,
-        assets=merged_fragment.assets,
-        channels=merged_fragment.channels,
-        documents=merged_fragment.documents,
-        atomic_flows=atomic_flows,
-        event_model=merged_fragment.event_model,
         fixtures=merged_fragment.fixtures,
-        hless_pragma=merged_fragment.hless_pragma,
-        messages=merged_fragment.messages,
         policies=merged_fragment.policies,
-        projections=merged_fragment.projections,
-        streams=merged_fragment.streams,
-        ingests=merged_fragment.ingests,
-        subscriptions=merged_fragment.subscriptions,
-        templates=merged_fragment.templates,
         foreign_models=merged_fragment.foreign_models,
         integrations=merged_fragment.integrations,
         personas=merged_fragment.personas,  # v0.8.5
@@ -320,14 +288,10 @@ def build_appspec(
         llm_intents=merged_fragment.llm_intents,  # v0.21.0 LLM Jobs
         processes=merged_fragment.processes,  # v0.23.0 Process Workflows
         schedules=merged_fragment.schedules,  # v0.23.0 Process Workflows
-        ledgers=merged_fragment.ledgers,  # v0.24.0 TigerBeetle Ledgers
-        transactions=merged_fragment.transactions,  # v0.24.0 TigerBeetle Ledgers
         views=merged_fragment.views,  # v0.25.0 Views
         slas=merged_fragment.slas,  # v0.25.0 SLAs
         islands=merged_fragment.islands,  # UI Islands
-        notifications=merged_fragment.notifications,  # v0.34.0 Notifications (#952)
         tenancy=merged_fragment.tenancy,  # #957 cycle 3
-        jobs=merged_fragment.jobs,  # #953 Background Jobs
         audits=merged_fragment.audits,  # #956 Audit Trail
         searches=merged_fragment.searches,  # #954 Full-Text Search
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
@@ -698,123 +662,6 @@ def _unknown_renderer_message(name: str, known: set[str], location: str) -> str:
     )
 
 
-def _derive_atomic_step_orders(
-    atomic_flows: list[ir.AtomicFlowSpec],
-    fk_graph: FKGraph,
-) -> list[ir.AtomicFlowSpec]:
-    """Set ``derived_step_order`` on create-DAG atomic flows (#1315, ADR-0029 §1).
-
-    A flow qualifies only when every step is a ``create`` (no ``update`` — those
-    carry temporal/semantic order the FK graph can't express) and its create
-    entities topologically sort by FK (no cycle). For a qualifying flow the
-    framework derives parent-before-child order so the author need not hand-order
-    the steps. Declared ``steps`` order is left untouched; the permutation lives
-    in ``derived_step_order``. A flow already in a valid declared order (the
-    common case) keeps ``derived_step_order = None`` — no reorder needed, so
-    existing flows are byte-unchanged and the executor runs declared order.
-    """
-    result: list[ir.AtomicFlowSpec] = []
-    for flow in atomic_flows:
-        steps = flow.steps
-        # Only the all-create family is FK-orderable; any update → declared order.
-        if not steps or any(isinstance(s, ir.FlowUpdate) for s in steps):
-            result.append(flow)
-            continue
-        if not _above_refs_are_all_fk_edges(steps, fk_graph):
-            # Some `above.E.id` is assigned to a non-FK field, so FK-topo order
-            # would not guarantee E is created before the referencing step.
-            # Don't reorder — keep the author's declared (resolvable) order.
-            result.append(flow)
-            continue
-        entities = [s.entity for s in steps]
-        order = fk_graph.creation_order(entities)
-        if order is None:
-            # FK cycle / duplicate / self-ref → fall back to declared order.
-            result.append(flow)
-            continue
-        index_of = {e: i for i, e in enumerate(entities)}
-        derived = [index_of[e] for e in order]
-        if derived == list(range(len(steps))):
-            # Declared order already parent-before-child — nothing to carry.
-            result.append(flow)
-            continue
-        result.append(flow.model_copy(update={"derived_step_order": derived}))
-    return result
-
-
-def _derive_flow_invariant_anchors(
-    atomic_flows: list[ir.AtomicFlowSpec],
-    fk_graph: FKGraph,
-) -> list[ir.AtomicFlowSpec]:
-    """Derive each flow invariant's lockable anchor at link time (#1318, ADR-0031).
-
-    An invariant ``<agg>(<entity>.<field> where <filter>) <op> <rhs>`` is enforced
-    against the rows the flow touches. To lock it to the right scope, the linker
-    finds the **anchor**: a ``where`` term ``<column> = input.<name>`` where
-    ``<column>`` (or ``<column>_id``) is an **FK on the invariant's ``entity``**.
-    The FK's target entity becomes ``anchor_entity`` and ``name`` becomes
-    ``anchor_input``. The first such FK-equality-to-input term (declared order)
-    wins — a flow locks one anchor in v1. If no term resolves to an FK on the
-    entity, the anchor stays ``None`` and the validator (Task 5) rejects the
-    invariant as unanchored. The filter itself is enforced from ``raw_filter``
-    directly at runtime (no compiled predicate in v1).
-    """
-    result: list[ir.AtomicFlowSpec] = []
-    for flow in atomic_flows:
-        if not flow.invariants:
-            result.append(flow)
-            continue
-        new_invariants: list[ir.FlowInvariant] = []
-        for inv in flow.invariants:
-            anchor_entity: str | None = None
-            anchor_input: str | None = None
-            for column, kind, value in inv.raw_filter:
-                if kind != "input":
-                    continue
-                try:
-                    _fk_field, target = fk_graph.resolve_segment(inv.entity, column)
-                except ValueError:
-                    continue  # `column` is not an FK on the invariant's entity
-                anchor_entity = target
-                anchor_input = value
-                break  # first FK-equality-to-input term wins (v1: one anchor)
-            new_invariants.append(
-                inv.model_copy(
-                    update={"anchor_entity": anchor_entity, "anchor_input": anchor_input}
-                )
-            )
-        result.append(flow.model_copy(update={"invariants": new_invariants}))
-    return result
-
-
-def _above_refs_are_all_fk_edges(
-    steps: list[ir.AtomicFlowStep],
-    fk_graph: FKGraph,
-) -> bool:
-    """True iff every ``above.E.id`` in *steps* is assigned to an FK field → E.
-
-    FK-topological reorder only guarantees an ``above``-ref resolves when the
-    referencing assignment is the FK that points at E (so the topo sort, which
-    orders FK targets before sources, places E first). If an ``above``-ref is
-    assigned to a non-FK field, FK topology says nothing about their relative
-    order, so we must NOT reorder (the caller keeps declared order).
-    """
-    for step in steps:
-        # Only FlowCreate reaches here (caller filtered updates); narrow for mypy.
-        if not isinstance(step, ir.FlowCreate):
-            return False
-        for field, value in step.assignments.items():
-            if value.kind != ir.FlowFieldValueKind.ABOVE_REF:
-                continue
-            try:
-                _fk_field, target = fk_graph.resolve_segment(step.entity, field)
-            except ValueError:
-                return False  # `field` is not an FK on this entity
-            if target != value.above_entity:
-                return False  # FK points somewhere other than the referenced entity
-    return True
-
-
 def _compile_scope_predicates(
     entities: list[ir.EntitySpec],
     fk_graph: object,
@@ -1117,74 +964,6 @@ def _build_process_run_entity() -> ir.EntitySpec:
     )
 
 
-def _build_job_run_entity() -> ir.EntitySpec:
-    """Build the auto-generated JobRun system entity (#953 cycle 2).
-
-    A single shared platform entity captures every worker invocation
-    across all declared jobs. The `job_name` discriminator + `status`
-    + timing columns make it the read source for cycle-4's scheduler
-    (skip currently-running jobs) and cycle-6's retention sweep.
-
-    Mirrors the AIJob / AuditEntry shape — same access pattern (auth-
-    required CRUD via the standard route generator).
-    """
-    fields: list[FieldSpec] = []
-    for name, type_str, modifiers, default in JOB_RUN_FIELDS:
-        field_type = _parse_field_type(type_str)
-        mods = [_MODIFIER_MAP[m] for m in modifiers]
-        fields.append(
-            FieldSpec(
-                name=name,
-                type=field_type,
-                modifiers=mods,
-                default=coerce_framework_default(default, field_type),
-            )
-        )
-
-    # Default access: any authenticated user can READ/LIST job runs —
-    # they're internal observability data; admins typically need them
-    # for triage. CREATE is permitted because cycle 3's worker writes
-    # through the standard service layer rather than a privileged
-    # path. UPDATE is permitted so the worker can transition status
-    # (pending → running → completed/failed). DELETE is intentionally
-    # absent — historical job-run rows are evidence; cycle-6 retention
-    # uses a different bulk-delete code path.
-    access = ir.AccessSpec(
-        permissions=[
-            ir.PermissionRule(
-                operation=ir.PermissionKind.CREATE,
-                require_auth=True,
-                effect=ir.PolicyEffect.PERMIT,
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.READ,
-                require_auth=True,
-                effect=ir.PolicyEffect.PERMIT,
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.LIST,
-                require_auth=True,
-                effect=ir.PolicyEffect.PERMIT,
-            ),
-            ir.PermissionRule(
-                operation=ir.PermissionKind.UPDATE,
-                require_auth=True,
-                effect=ir.PolicyEffect.PERMIT,
-            ),
-        ]
-    )
-
-    return ir.EntitySpec(
-        name="JobRun",
-        title="Job Run",
-        intent="One worker invocation of a declared background job",
-        domain="platform",
-        patterns=["system", "audit"],
-        fields=fields,
-        access=access,
-    )
-
-
 def _build_audit_entry_entity() -> ir.EntitySpec:
     """Build the auto-generated AuditEntry system entity (#956 cycle 2).
 
@@ -1279,42 +1058,6 @@ def _build_audit_entry_admin_surface() -> ir.SurfaceSpec:
         entity_ref="AuditEntry",
         mode=ir.SurfaceMode.LIST,
         sections=[ir.SurfaceSection(name="main", title="Audit", elements=elements)],
-        access=ir.SurfaceAccessSpec(require_auth=True),
-        ux=ux,
-    )
-
-
-def _build_job_run_admin_surface() -> ir.SurfaceSpec:
-    """Build a LIST admin surface for JobRun (#991).
-
-    Same rationale as `_build_audit_entry_admin_surface`: pairs
-    with the cycle-2 entity so the route generator emits CRUD
-    endpoints the worker (and operator triage tools) can hit.
-    """
-    elements = [
-        ir.SurfaceElement(field_name=name, label=label)
-        for name, label in [
-            ("created_at", "Created"),
-            ("job_name", "Job"),
-            ("status", "Status"),
-            ("attempt_number", "Attempt"),
-            ("started_at", "Started"),
-            ("finished_at", "Finished"),
-            ("duration_ms", "Duration (ms)"),
-        ]
-    ]
-    ux = ir.UXSpec(
-        sort=[ir.SortSpec(field="created_at", direction="desc")],
-        filter=["job_name", "status"],
-        search=["job_name", "error_message"],
-        empty_message="No job runs yet.",
-    )
-    return ir.SurfaceSpec(
-        name="jobrun_admin",
-        title="Job Runs",
-        entity_ref="JobRun",
-        mode=ir.SurfaceMode.LIST,
-        sections=[ir.SurfaceSection(name="main", title="Jobs", elements=elements)],
         access=ir.SurfaceAccessSpec(require_auth=True),
         ux=ux,
     )

@@ -168,7 +168,6 @@ there requires a row here.
 | `dazzle theme` | Inspect and manage app-shell themes |
 | `dazzle ux` | UX verification — deterministic interaction testing |
 | `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
-| `dazzle worker` | Background-job worker + scheduler |
 
 ---
 

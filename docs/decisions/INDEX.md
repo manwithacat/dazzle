@@ -70,8 +70,12 @@ below, link from the issue body (not only a comment).
 | [DD-001](DD-001-1617-poly-ref-and-sti-eav.md) | #1617 residuals: poly_ref polish + STI/EAV-as-JSONB | PARKED | #1621, #1622 | Substrate shipped; consumer-forced only |
 | [DD-002](DD-002-pitch-generator.md) | Pitch deck generator (`dazzle pitch`) | PARKED | — | Removed under ADR-0057; restore from 82c9a8571 when AegisMark regenerates a deck |
 | [DD-003](DD-003-domain-brief.md) | Agent-audience domain brief (`domain_brief`) | PARKED | #1629, #1631 | Removed in flense ship C; restore from `003c01392` when a prose-bootstrapped consumer needs it |
-| [DD-004](DD-004-ledger-and-transaction.md) | `ledger` / `transaction` / `atomic` constructs + `fieldtest_hub` | PARKED | — | Reopen on pennydreadful royalties or cyfuture client money |
+| [DD-004](DD-004-ledger-and-transaction.md) | `ledger` / `transaction` / `atomic` constructs + `fieldtest_hub` | PARKED | — | Constructs + `atomic` flows removed in flense ship F; reopen on pennydreadful royalties or cyfuture client money |
 | [DD-005](DD-005-inbound-webhooks.md) | Inbound `webhook` construct (signature verification, idempotent dispatch) | PARKED | — | Outbound `webhook` removed in flense ship D; reopen when AegisMark or cyfuture asks to replace its hand-written webhook route |
+| [DD-006](DD-006-events-dsl.md) | Events DSL (`hless`/`stream`/`event_model`/`subscribe`/`projection`/`ingest`) + Kafka bus | PARKED | #1069, #1189, #1676 | Event core (outbox, Postgres/Redis buses) kept; reopen when pennydreadful rights auctions need an ordered or replayable bid stream |
+| [DD-007](DD-007-messaging-dsl.md) | Messaging DSL (`message`/`channel`/`notification`/`asset`/`document`/`template`) | PARKED | #952 | Email kernel kept; reopen on cyfuture SLA `on_breach: notify` or AegisMark safeguarding alerts |
+| [DD-008](DD-008-background-jobs.md) | `job` construct + `dazzle worker` | PARKED | #953 | `schedule` kept; reopen when AegisMark replaces Heroku Scheduler (`cohort_analysis`) |
+| [DD-009](DD-009-verified-domain-join.md) | Verified-domain self-service join | PARKED | #1424 | SSO domain verification kept; reopen when AegisMark school email domains need it |
 
 ## Related
 

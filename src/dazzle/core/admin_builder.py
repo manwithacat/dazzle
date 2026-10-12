@@ -178,7 +178,7 @@ _READ_ONLY_OPS: tuple[ir.PermissionKind, ...] = (
 # suppressed and the name is excluded from the user-collision check. A genuinely user-declared
 # entity of the same name (default domain, not in this set) still collides loudly.
 _FRAMEWORK_INJECTED_PLATFORM_ENTITIES: frozenset[str] = frozenset(
-    {"AIJob", "ProcessRun", "JobRun", "AuditEntry", "OnboardingState", "FeedbackReport"}
+    {"AIJob", "ProcessRun", "AuditEntry", "OnboardingState", "FeedbackReport"}
 )
 
 

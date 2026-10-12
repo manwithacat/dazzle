@@ -404,7 +404,6 @@ SHIP_TESTS: tuple[str, ...] = (
     # cycle 2210: leftover consent tokens must not invent granted
     "tests/unit/test_consent_bool_leftover.py",
     # cycle 2212: leftover join-policy tokens must not invent admin_approval
-    "tests/unit/test_join_policy_leftover.py",
     # cycle 2215: leftover 2FA ?mode=zzz must not invent totp
     "tests/unit/test_2fa_mode_leftover.py",
     # cycle 2218: leftover 2FA ?sent=zzz must not invent code-sent theater
@@ -504,7 +503,6 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_auth_views_password_reset.py::test_reset_password_done_view_no_form",
     "tests/unit/test_auth_views_password_reset.py::test_forgot_password_sent_view_does_not_render_form",
     "tests/unit/test_app_error_views.py::test_app_500_no_form_no_inline_script",
-    "tests/unit/test_join_request_view.py::test_join_requested_no_form",
     "tests/unit/test_widget_contract.py::test_bridge_kind_allowlist_matches_registry_handlers",
     # simple_task Goal B document (cycle 1656 TaskBrief composition + dual-open)
     "tests/unit/test_simple_task_document_goal_b.py",

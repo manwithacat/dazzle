@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from dazzle.core.ir import FieldTypeKind
-from dazzle.core.ir.ledgers import TransactionExecution
 from dazzle.core.ir.process import OverlapPolicy
 from dazzle.core.ir.views import ViewFieldSpec, ViewSpec
 from dazzle.sentinel.agents.performance_resource import PerformanceResourceAgent
@@ -216,52 +215,6 @@ class TestPR03ProcessAllowOverlap:
 
 
 # =============================================================================
-# PR-04  High event topic retention
-# =============================================================================
-
-
-class TestPR04HighTopicRetention:
-    def _topic(self, name: str, retention_days: int) -> MagicMock:
-        topic = MagicMock()
-        topic.name = name
-        topic.retention_days = retention_days
-        return topic
-
-    def _event_model(self, topics: list) -> MagicMock:
-        em = MagicMock()
-        em.topics = topics
-        return em
-
-    def test_flags_high_retention(self, agent: PerformanceResourceAgent) -> None:
-        em = self._event_model([self._topic("orders", 120)])
-        findings = agent.high_topic_retention(make_appspec(event_model=em))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-04"
-        assert findings[0].severity == Severity.LOW
-        assert "120" in findings[0].title
-        assert "orders" in findings[0].title
-
-    @pytest.mark.parametrize(
-        "retention_days", [90, 30], ids=["at_threshold_90", "below_threshold_30"]
-    )
-    def test_passes_at_or_below_threshold(
-        self, agent: PerformanceResourceAgent, retention_days: int
-    ) -> None:
-        em = self._event_model([self._topic("orders", retention_days)])
-        assert agent.high_topic_retention(make_appspec(event_model=em)) == []
-
-    def test_no_event_model(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.high_topic_retention(make_appspec(event_model=None)) == []
-
-    def test_flags_only_offending_topic(self, agent: PerformanceResourceAgent) -> None:
-        # Mixed: one passes, one flagged — covers iteration + filter behaviour.
-        em = self._event_model([self._topic("events", 30), self._topic("audit", 365)])
-        findings = agent.high_topic_retention(make_appspec(event_model=em))
-        assert len(findings) == 1
-        assert "audit" in findings[0].title
-
-
-# =============================================================================
 # PR-05  Large entity in list surface
 # =============================================================================
 
@@ -343,32 +296,6 @@ class TestPR05LargeEntityListSurface:
         surface.view_ref = view_ref
         findings = agent.large_entity_list_surface(make_appspec([entity], surfaces=[surface]))
         assert len(findings) == 1
-
-
-# =============================================================================
-# PR-06  Synchronous transaction execution
-# =============================================================================
-
-
-class TestPR06SyncTransaction:
-    def test_flags_sync_execution(self, agent: PerformanceResourceAgent) -> None:
-        txn = MagicMock()
-        txn.name = "RecordPayment"
-        txn.execution = TransactionExecution.SYNC
-        findings = agent.sync_transaction(make_appspec(transactions=[txn]))
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-06"
-        assert findings[0].severity == Severity.MEDIUM
-        assert "RecordPayment" in findings[0].title
-
-    def test_passes_async_execution(self, agent: PerformanceResourceAgent) -> None:
-        txn = MagicMock()
-        txn.name = "RecordPayment"
-        txn.execution = TransactionExecution.ASYNC
-        assert agent.sync_transaction(make_appspec(transactions=[txn])) == []
-
-    def test_no_transactions(self, agent: PerformanceResourceAgent) -> None:
-        assert agent.sync_transaction(make_appspec(transactions=[])) == []
 
 
 # =============================================================================
@@ -494,12 +421,12 @@ class TestPerformanceResourceAgentRun:
     def test_agent_id(self, agent: PerformanceResourceAgent) -> None:
         assert agent.agent_id == AgentId.PR
 
-    def test_has_8_heuristics(self, agent: PerformanceResourceAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_6_heuristics(self, agent: PerformanceResourceAgent) -> None:
+        assert len(agent.get_heuristics()) == 6
 
     def test_heuristic_ids(self, agent: PerformanceResourceAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"PR-0{i}" for i in range(1, 9)]
+        assert ids == ["PR-01", "PR-02", "PR-03", "PR-05", "PR-07", "PR-08"]
 
     def test_clean_appspec_no_findings(self, agent: PerformanceResourceAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])
@@ -522,27 +449,6 @@ class TestPerformanceResourceAgentRun:
             ],
         )
         surface = _list_surface("order_list", "Order")
-        # Multiple sync transactions → exercises PR-06 iteration.
-        txns = [
-            (
-                lambda n: (
-                    lambda t: (
-                        setattr(t, "name", n),
-                        setattr(t, "execution", TransactionExecution.SYNC),
-                        t,
-                    )[2]
-                )(MagicMock())
-            )("RecordPayment"),
-            (
-                lambda n: (
-                    lambda t: (
-                        setattr(t, "name", n),
-                        setattr(t, "execution", TransactionExecution.SYNC),
-                        t,
-                    )[2]
-                )(MagicMock())
-            )("TransferFunds"),
-        ]
         # Multiple processes with default timeout → exercises PR-08 iteration.
         procs = []
         for n in ("process_a", "process_b"):
@@ -551,19 +457,16 @@ class TestPerformanceResourceAgentRun:
             p.timeout_seconds = 86400
             p.steps = [MagicMock()]
             procs.append(p)
-        result = agent.run(
-            make_appspec([entity], surfaces=[surface], transactions=txns, processes=procs)
-        )
+        result = agent.run(make_appspec([entity], surfaces=[surface], processes=procs))
         assert result.errors == []
         ids = [f.heuristic_id for f in result.findings]
         assert "PR-01" in ids
         assert ids.count("PR-02") == 2  # iteration over ref fields
-        assert ids.count("PR-06") == 2  # iteration over txns
         assert ids.count("PR-08") == 2  # iteration over processes
 
     def test_run_reports_heuristics_run_count(self, agent: PerformanceResourceAgent) -> None:
         result = agent.run(make_appspec())
-        assert result.heuristics_run == 8
+        assert result.heuristics_run == 6
 
     def test_run_has_duration(self, agent: PerformanceResourceAgent) -> None:
         result = agent.run(make_appspec())

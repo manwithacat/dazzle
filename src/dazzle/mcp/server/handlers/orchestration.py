@@ -296,14 +296,6 @@ def _extract_semantics_extract_metrics(step_output: dict[str, Any]) -> dict[str,
     }
 
 
-def _extract_semantics_validate_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "valid": step_output.get("valid", step_output.get("status") == "valid"),
-        "error_count": step_output.get("error_count", len(step_output.get("errors", []))),
-        "warning_count": step_output.get("warning_count", len(step_output.get("warnings", []))),
-    }
-
-
 def _extract_run_all_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     results = step_output.get("results", [])
     by_cat: dict[str, dict[str, int]] = {}
@@ -336,7 +328,6 @@ _METRICS_EXTRACTORS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "process(coverage)": _extract_story_coverage_metrics,
     "test_design(gaps)": _extract_test_design_gaps_metrics,
     "semantics(extract)": _extract_semantics_extract_metrics,
-    "semantics(validate_events)": _extract_semantics_validate_metrics,
     "dsl_test(run_all)": _extract_run_all_metrics,
 }
 
@@ -491,11 +482,6 @@ def step_has_issues(operation: str, step_result: Any) -> bool:
     if operation == "dsl_test(run_all)":
         failed: int = step_result.get("failed", 0) or 0
         return failed > 0
-
-    if operation == "semantics(validate_events)":
-        err_count: int = step_result.get("error_count", 0) or 0
-        warn_count: int = step_result.get("warning_count", 0) or 0
-        return err_count > 0 or warn_count > 0
 
     return False
 

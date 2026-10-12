@@ -1,4 +1,4 @@
-"""Service, foreign-model, integration, webhook, and notification validation.
+"""Service, foreign-model, integration, and integration validation.
 
 Split verbatim from dazzle.core.validator per #1361.
 """
@@ -105,52 +105,5 @@ def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         # Check that integration has actions, syncs, or mappings (v0.30.0+)
         if not integration.actions and not integration.syncs and not integration.mappings:
             warnings.append(f"Integration '{integration.name}' has no actions, syncs, or mappings")
-
-    return errors, warnings
-
-
-def validate_notifications(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """
-    Validate all notifications for semantic correctness (v0.34.0).
-
-    Checks:
-    - Trigger entity exists
-    - Trigger field exists on entity (if specified)
-    - No duplicate notification names
-    - Recipients reference valid fields (for field-based recipients)
-
-    Returns:
-        Tuple of (errors, warnings)
-    """
-    errors: list[str] = []
-    warnings: list[str] = []
-    seen_names: set[str] = set()
-    entity_names = {e.name for e in appspec.domain.entities}
-
-    for n in appspec.notifications:
-        # Duplicate name check
-        if n.name in seen_names:
-            errors.append(f"Duplicate notification name: '{n.name}'")
-        seen_names.add(n.name)
-
-        # Trigger entity must exist
-        if n.trigger.entity not in entity_names:
-            errors.append(f"Notification '{n.name}' references unknown entity '{n.trigger.entity}'")
-        else:
-            entity = appspec.get_entity(n.trigger.entity)
-            if entity and n.trigger.field:
-                if not entity.get_field(n.trigger.field):
-                    errors.append(
-                        f"Notification '{n.name}' trigger references unknown field "
-                        f"'{n.trigger.field}' on entity '{n.trigger.entity}'"
-                    )
-
-            # Field-based recipients should reference a valid field
-            if entity and n.recipients.kind == "field":
-                if n.recipients.value and not entity.get_field(n.recipients.value):
-                    warnings.append(
-                        f"Notification '{n.name}' recipients reference field "
-                        f"'{n.recipients.value}' which does not exist on '{n.trigger.entity}'"
-                    )
 
     return errors, warnings

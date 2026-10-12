@@ -13,6 +13,6 @@ def test_organization_record_settings_roundtrip():
         id="t1",
         slug="acme",
         name="Acme",
-        settings={"domain_join_policy": "auto_join"},
+        settings={"theme": "dark"},
     )
-    assert org.settings["domain_join_policy"] == "auto_join"
+    assert org.settings["theme"] == "dark"

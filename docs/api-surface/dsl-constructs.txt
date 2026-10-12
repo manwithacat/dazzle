@@ -21,33 +21,13 @@ construct: archetype
   fragment_fields: archetypes
   ir_classes: ArchetypeSpec
 
-construct: asset
-  fragment_fields: assets
-  ir_classes: AssetSpec
-
-construct: atomic
-  fragment_fields: atomic_flows
-  ir_classes: AtomicFlowSpec
-
 construct: audit
   fragment_fields: audits
   ir_classes: AuditSpec
 
-construct: channel
-  fragment_fields: channels
-  ir_classes: ChannelSpec
-
-construct: document
-  fragment_fields: documents
-  ir_classes: DocumentSpec
-
 construct: entity
   fragment_fields: entities
   ir_classes: EntitySpec
-
-construct: event_model
-  fragment_fields: event_model
-  ir_classes: EventModelSpec
 
 construct: experience
   fragment_fields: experiences
@@ -69,14 +49,6 @@ construct: guide
   fragment_fields: guides
   ir_classes: GuideSpec
 
-construct: hless
-  fragment_fields: hless_pragma
-  ir_classes: HLESSPragma
-
-construct: ingest
-  fragment_fields: ingests
-  ir_classes: IngestSpec
-
 construct: integration
   fragment_fields: integrations
   ir_classes: IntegrationSpec
@@ -84,14 +56,6 @@ construct: integration
 construct: island
   fragment_fields: islands
   ir_classes: IslandSpec
-
-construct: job
-  fragment_fields: jobs
-  ir_classes: JobSpec
-
-construct: ledger
-  fragment_fields: ledgers
-  ir_classes: LedgerSpec
 
 construct: llm_config
   fragment_fields: llm_config
@@ -105,17 +69,9 @@ construct: llm_model
   fragment_fields: llm_models
   ir_classes: LLMModelSpec
 
-construct: message
-  fragment_fields: messages
-  ir_classes: MessageSpec
-
 construct: nav
   fragment_fields: navs
   ir_classes: NavSpec
-
-construct: notification
-  fragment_fields: notifications
-  ir_classes: NotificationSpec
 
 construct: param
   fragment_fields: params
@@ -132,10 +88,6 @@ construct: policies
 construct: process
   fragment_fields: processes
   ir_classes: ProcessSpec
-
-construct: projection
-  fragment_fields: projections
-  ir_classes: ProjectionSpec
 
 construct: rhythm
   fragment_fields: rhythms
@@ -165,33 +117,17 @@ construct: story
   fragment_fields: stories
   ir_classes: StorySpec
 
-construct: stream
-  fragment_fields: streams
-  ir_classes: StreamSpec
-
 construct: subprocessor
   fragment_fields: subprocessors
   ir_classes: SubprocessorSpec
-
-construct: subscribe
-  fragment_fields: subscriptions
-  ir_classes: SubscribeSpec
 
 construct: surface
   fragment_fields: surfaces
   ir_classes: SurfaceSpec
 
-construct: template
-  fragment_fields: templates
-  ir_classes: TemplateSpec
-
 construct: tenancy
   fragment_fields: tenancy
   ir_classes: TenancySpec
-
-construct: transaction
-  fragment_fields: transactions
-  ir_classes: TransactionSpec
 
 construct: view
   fragment_fields: views

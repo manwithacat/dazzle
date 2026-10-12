@@ -1,4 +1,4 @@
-"""Tests for the Data Integrity detection agent (DI-01 through DI-08)."""
+"""Tests for the Data Integrity detection agent (DI-01 through DI-07)."""
 
 from unittest.mock import MagicMock
 
@@ -288,65 +288,6 @@ class TestDI07SensitiveNoAudit:
 
 
 # =============================================================================
-# DI-08  Ledger sync_to target field type mismatch
-# =============================================================================
-
-
-class TestDI08LedgerSyncTarget:
-    def _ledger(self, name: str, target_entity: str, target_field: str) -> MagicMock:
-        sync = MagicMock()
-        sync.target_entity = target_entity
-        sync.target_field = target_field
-        ledger = MagicMock()
-        ledger.name = name
-        ledger.sync = sync
-        return ledger
-
-    @pytest.mark.parametrize(
-        ("setup", "expected_substring"),
-        [
-            ("missing_entity", "not found"),
-            ("missing_field", "not found"),
-            ("non_numeric", "not numeric"),
-        ],
-        ids=[
-            "flags_missing_target_entity",
-            "flags_missing_target_field",
-            "flags_non_numeric_target",
-        ],
-    )
-    def test_flags_target_mismatches(
-        self, agent: DataIntegrityAgent, setup: str, expected_substring: str
-    ) -> None:
-        ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        if setup == "missing_entity":
-            appspec = make_appspec(ledgers=[ledger])
-        elif setup == "missing_field":
-            customer = mock_entity("Customer", [pk_field(), str_field("name")])
-            appspec = make_appspec([customer], ledgers=[ledger])
-        else:  # non_numeric
-            customer = mock_entity("Customer", [pk_field(), str_field("balance_cache")])
-            appspec = make_appspec([customer], ledgers=[ledger])
-        findings = agent.check_ledger_sync_target(appspec)
-        assert len(findings) == 1
-        assert expected_substring in findings[0].title
-
-    def test_passes_with_numeric_target(self, agent: DataIntegrityAgent) -> None:
-        customer = mock_entity(
-            "Customer",
-            [pk_field(), make_field("balance_cache", FieldTypeKind.DECIMAL)],
-        )
-        ledger = self._ledger("Wallet", "Customer", "balance_cache")
-        assert agent.check_ledger_sync_target(make_appspec([customer], ledgers=[ledger])) == []
-
-    def test_skips_ledger_without_sync(self, agent: DataIntegrityAgent) -> None:
-        ledger = MagicMock()
-        ledger.name = "Wallet"
-        ledger.sync = None
-        assert agent.check_ledger_sync_target(make_appspec(ledgers=[ledger])) == []
-
-
-# =============================================================================
 # Full agent run
 # =============================================================================
 
@@ -355,12 +296,12 @@ class TestDataIntegrityAgentRun:
     def test_agent_id(self, agent: DataIntegrityAgent) -> None:
         assert agent.agent_id == AgentId.DI
 
-    def test_has_8_heuristics(self, agent: DataIntegrityAgent) -> None:
-        assert len(agent.get_heuristics()) == 8
+    def test_has_7_heuristics(self, agent: DataIntegrityAgent) -> None:
+        assert len(agent.get_heuristics()) == 7
 
     def test_heuristic_ids(self, agent: DataIntegrityAgent) -> None:
         ids = [meta.heuristic_id for meta, _ in agent.get_heuristics()]
-        assert ids == [f"DI-0{i}" for i in range(1, 9)]
+        assert ids == [f"DI-0{i}" for i in range(1, 8)]
 
     def test_clean_appspec_no_findings(self, agent: DataIntegrityAgent) -> None:
         entity = make_entity("Task", [pk_field(), str_field("title", required=True)])

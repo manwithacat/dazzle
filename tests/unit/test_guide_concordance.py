@@ -70,14 +70,12 @@ def _run(
     surfaces=None,
     entities=None,
     personas=None,
-    streams=None,
 ):
     return check_guide_concordance(
         guides or [],
         surfaces=surfaces or [],
         entities=entities or [],
         personas=personas or [],
-        streams=streams or [],
     )
 
 

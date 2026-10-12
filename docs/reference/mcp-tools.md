@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 33 tools, 159 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 33 tools, 158 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -37,7 +37,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
 | [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
 | [`rhythm`](#rhythm) | 3 | Rhythm operations: get, list, coverage |
-| [`semantics`](#semantics) | 6 | Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards |
+| [`semantics`](#semantics) | 5 | Semantic analysis: extract, tenancy, compliance, analytics, extract_guards |
 | [`sentinel`](#sentinel) | 4 | Sentinel operations: findings (get findings from latest/specific scan), status (available agents and last scan), history (list recent scans), fuzz_summary (run a small mutation fuzz campaign and return the markdown report) |
 | [`sitespec`](#sitespec) | 14 | SiteSpec operations: get, validate, scaffold, coherence, review, advise |
 | [`spec_analyze`](#spec_analyze) | 6 | Low-level narrative analysis (untrusted draft) |
@@ -428,9 +428,9 @@ Rhythm operations: get, list, coverage. Rhythms are longitudinal persona journey
 
 ### `semantics`
 
-Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards
+Semantic analysis: extract, tenancy, compliance, analytics, extract_guards
 
-**Operations (6):** `extract`, `validate_events`, `tenancy`, `compliance`, `analytics`, `extract_guards`
+**Operations (5):** `extract`, `tenancy`, `compliance`, `analytics`, `extract_guards`
 
 **Parameters:**
 

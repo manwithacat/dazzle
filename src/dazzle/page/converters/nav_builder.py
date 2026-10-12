@@ -109,7 +109,6 @@ _PLATFORM_NAV_ENTITY_NAMES: frozenset[str] = frozenset(
         "FeedbackReport",
         "SystemMetric",
         "ProcessRun",
-        "JobRun",
         "AuditEntry",
         "AIJob",
         "LogEntry",

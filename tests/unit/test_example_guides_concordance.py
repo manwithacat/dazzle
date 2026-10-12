@@ -54,7 +54,6 @@ def test_example_guides_pass_concordance(app: str) -> None:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     assert errors == [], (
         f"{app}: guide concordance failed — guide and DSL have drifted. "

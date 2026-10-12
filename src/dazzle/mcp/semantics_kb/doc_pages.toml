@@ -124,23 +124,6 @@ and implementation, and provide traceability from requirements through \
 processes to test coverage.
 """
 
-[pages.ledgers]
-title = "Ledgers & Transactions"
-slug = "ledgers"
-order = 11
-intro = """
-> **Status: ALPHA** — the `ledger`/`transaction` constructs parse, validate, \
-and link, but TigerBeetle-backed execution is not yet CI-verified and no \
-example exercises it end-to-end. Parked 2026-07-10; promotion tracked in \
-[#1576](https://github.com/manwithacat/dazzle/issues/1576). Do not present \
-ledger execution as production-ready.
-
-Ledgers and transactions provide TigerBeetle-backed double-entry \
-accounting. Ledger accounts define account codes, types, and constraints, \
-while transactions declare transfers between accounts with linked \
-operations and idempotency support.
-"""
-
 [pages.llm]
 title = "LLM Models & Intents"
 slug = "llm"
@@ -190,17 +173,6 @@ tree, escaped at the boundary by default. No Jinja2 since #1042 / v0.67.92 \
 ([ADR-0023](../adr/0023-template-emission-patterns.md)). This page covers \
 the rendering architecture, fragment contracts, out-of-band swaps, sitespec \
 configuration, copy management, section types, and static asset serving.
-"""
-
-[pages.messaging]
-title = "Messaging & Events"
-slug = "messaging"
-order = 15
-intro = """
-Messaging and events enable asynchronous communication between components \
-and users. Channels define delivery mechanisms (email, in-app, webhook), \
-while the eventing system routes domain events to subscribers and \
-integration endpoints.
 """
 
 [pages.governance]
@@ -1533,13 +1505,6 @@ order = 100
 handwritten = true
 intro = "The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live."
 
-[pages.ingest]
-title = "Ingest"
-slug = "ingest"
-order = 99
-handwritten = true
-intro = "Declared file and IoT upsert into entities — natural keys, protect manual, fingerprint, HLESS observation batches (#1676)."
-
 [pages.page-inspection]
 title = "Page URL Inspection"
 slug = "page-inspection"
@@ -1791,13 +1756,6 @@ slug = "taste"
 order = 133
 handwritten = true
 intro = "The canonical, agent-readable definition of Dazzle's visual taste: nine principles (including the HTMX4-structural signature), evidence-cited TASTE-n rules, the judged rubric, and the blind parity gate (`dazzle qa taste-panel`) with baseline-locked margins."
-
-[pages.verified-domain-join]
-title = "Verified-Domain Self-Service Join"
-slug = "verified-domain-join"
-order = 134
-handwritten = true
-intro = "The verified-domain join (#1424): a non-SSO user with a verified work email self-joins the tenant that owns their email domain — DNS-TXT domain proof, per-tenant join policy, and the password-side complement to invitations and SSO JIT provisioning."
 
 [pages.flense-inventory]
 title = "Flense Inventory"

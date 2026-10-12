@@ -7,16 +7,8 @@
     'app_config': None,
     'archetypes': list([
     ]),
-    'assets': list([
-    ]),
-    'atomic_flows': list([
-    ]),
     'audit_trail': False,
     'audits': list([
-    ]),
-    'channels': list([
-    ]),
-    'documents': list([
     ]),
     'domain': dict({
       'entities': list([
@@ -201,8 +193,6 @@
           'membership': None,
           'name': 'Task',
           'patterns': list([
-          ]),
-          'publishes': list([
           ]),
           'renamed_from': None,
           'seed_template': None,
@@ -465,8 +455,6 @@
           'patterns': list([
             'system',
             'monitoring',
-          ]),
-          'publishes': list([
           ]),
           'renamed_from': None,
           'seed_template': None,
@@ -747,8 +735,6 @@
           'patterns': list([
             'system',
             'monitoring',
-          ]),
-          'publishes': list([
           ]),
           'renamed_from': None,
           'seed_template': None,
@@ -1037,8 +1023,6 @@
             'system',
             'audit',
           ]),
-          'publishes': list([
-          ]),
           'renamed_from': None,
           'seed_template': None,
           'signable': False,
@@ -1058,7 +1042,6 @@
     }),
     'domain_services': list([
     ]),
-    'event_model': None,
     'experiences': list([
     ]),
     'feedback_widget': None,
@@ -1117,29 +1100,17 @@
     ]),
     'guides': list([
     ]),
-    'hless_mode': <HLESSMode.STRICT: 'strict'>,
-    'hless_pragma': None,
-    'ingests': list([
-    ]),
     'integrations': list([
     ]),
     'islands': list([
-    ]),
-    'jobs': list([
-    ]),
-    'ledgers': list([
     ]),
     'llm_config': None,
     'llm_intents': list([
     ]),
     'llm_models': list([
     ]),
-    'messages': list([
-    ]),
     'name': 'simple_test',
     'navs': list([
-    ]),
-    'notifications': list([
     ]),
     'params': list([
     ]),
@@ -1147,8 +1118,6 @@
     ]),
     'policies': None,
     'processes': list([
-    ]),
-    'projections': list([
     ]),
     'rhythms': list([
     ]),
@@ -1184,11 +1153,7 @@
     ]),
     'stories': list([
     ]),
-    'streams': list([
-    ]),
     'subprocessors': list([
-    ]),
-    'subscriptions': list([
     ]),
     'surfaces': list([
       dict({
@@ -1723,12 +1688,8 @@
         'view_ref': None,
       }),
     ]),
-    'templates': list([
-    ]),
     'tenancy': None,
     'title': 'Simple Test App',
-    'transactions': list([
-    ]),
     'triples': list([
     ]),
     'version': '0.1.0',

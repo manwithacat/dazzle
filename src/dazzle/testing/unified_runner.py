@@ -4,10 +4,9 @@ DAZZLE Unified Test Runner
 A comprehensive test harness that:
 1. Generates tests directly from DSL/AppSpec
 2. Runs CRUD and state machine tests
-3. Runs event flow tests
-4. Runs temporal workflow tests
-5. Tracks coverage across DSL changes
-6. Provides stability as new features are added
+3. Runs temporal workflow tests
+4. Tracks coverage across DSL changes
+5. Provides stability as new features are added
 
 Usage:
     python -m dazzle.testing.unified_runner <project_path> [--generate] [--run] [--all-examples]
@@ -36,11 +35,6 @@ from .dsl_test_generator import (
     TestCoverage,
     save_generated_tests,
 )
-from .event_test_runner import (
-    EventTestRunner,
-    EventTestRunResult,
-    generate_event_tests_from_appspec,
-)
 from .test_runner import TestRunner, TestRunResult
 
 logger = logging.getLogger(__name__)
@@ -56,7 +50,6 @@ class UnifiedTestResult:
 
     # Results by type
     crud_result: TestRunResult | None = None
-    event_result: EventTestRunResult | None = None
 
     # Coverage tracking
     dsl_hash: str = ""
@@ -91,10 +84,6 @@ class UnifiedTestResult:
                 prefix = t.test_id.split("_")[0] if "_" in t.test_id else "OTHER"
                 bucket = cats.setdefault(prefix, {"passed": 0, "failed": 0, "skipped": 0})
                 bucket[t.result.value] = bucket.get(t.result.value, 0) + 1
-        if self.event_result:
-            for et in self.event_result.tests:
-                bucket = cats.setdefault("EVENT", {"passed": 0, "failed": 0, "skipped": 0})
-                bucket[et.result.value] = bucket.get(et.result.value, 0) + 1
         return cats
 
     def _failure_details(self, limit: int = 50) -> list[dict[str, str]]:
@@ -106,10 +95,8 @@ class UnifiedTestResult:
         lets a consumer tell an assertion failure from a harness error.
         """
         failures: list[dict[str, str]] = []
-        for result in (self.crud_result, self.event_result):
-            if not result:
-                continue
-            for t in result.tests:
+        if self.crud_result:
+            for t in self.crud_result.tests:
                 if t.result.value not in ("failed", "error"):
                     continue
                 failures.append(
@@ -134,11 +121,6 @@ class UnifiedTestResult:
             passed += self.crud_result.passed
             failed += self.crud_result.failed
             skipped += self.crud_result.skipped
-
-        if self.event_result:
-            total_tests += len(self.event_result.tests)
-            passed += self.event_result.passed
-            failed += self.event_result.failed
 
         # Calculate success rate based on tests that actually ran (not skipped)
         runnable = passed + failed
@@ -266,7 +248,6 @@ class UnifiedTestRunner:
         coverage.state_machines_covered = set(coverage_data.get("state_machines", []))
         coverage.personas_covered = set(coverage_data.get("personas", []))
         coverage.workspaces_covered = set(coverage_data.get("workspaces", []))
-        coverage.events_covered = set(coverage_data.get("events", []))
         coverage.processes_covered = set(coverage_data.get("processes", []))
 
         return GeneratedTestSuite(
@@ -469,28 +450,6 @@ class UnifiedTestRunner:
         result = runner.run_tests_from_designs(accepted, on_progress=on_progress)
         return result
 
-    def run_event_tests(self) -> EventTestRunResult | None:
-        """Run event flow tests if events are defined."""
-        appspec = load_project(self.project_path)
-
-        # Check if there are events to test
-        if not appspec.event_model or not appspec.event_model.events:
-            print("  No events defined, skipping event tests")
-            return None
-
-        test_cases = generate_event_tests_from_appspec(appspec)
-        if not test_cases:
-            return None
-
-        print(f"  Running {len(test_cases)} event flow tests...")
-
-        api_url = self.api_url or f"http://localhost:{self.api_port}"
-        runner = EventTestRunner(api_url)
-        try:
-            return runner.run_all(test_cases)
-        finally:
-            runner.close()
-
     def run_all(
         self,
         generate: bool = True,
@@ -568,16 +527,6 @@ class UnifiedTestRunner:
             )
             _log(f"CRUD tests: {crud_passed}/{crud_count} passed")
 
-            # Run event tests
-            _log("Running event flow tests...")
-            result.event_result = self.run_event_tests()
-            if result.event_result:
-                evt_count = len(result.event_result.tests)
-                evt_passed = sum(1 for t in result.event_result.tests if t.result.value == "passed")
-                _log(f"Event tests: {evt_passed}/{evt_count} passed")
-            else:
-                _log("No event tests to run")
-
         finally:
             # Stop server only if we started it
             if not self.base_url:
@@ -618,14 +567,6 @@ def format_unified_report(result: UnifiedTestResult) -> str:
             lines.append("  Failed Tests:")
             for t in failed:
                 lines.append(f"    - {t.test_id}: {t.error_message}")
-        lines.append("")
-
-    # Event Results
-    if result.event_result:
-        lines.append("-" * 40)
-        lines.append("Event Flow Tests:")
-        lines.append(f"  Passed: {result.event_result.passed}")
-        lines.append(f"  Failed: {result.event_result.failed}")
         lines.append("")
 
     lines.append("=" * 70)

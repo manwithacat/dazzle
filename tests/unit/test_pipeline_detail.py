@@ -38,9 +38,6 @@ class TestStepHasIssues:
             # --- dsl_test(run_all): any failure expands ---
             ("dsl_test(run_all)", {"failed": 2}, True),
             ("dsl_test(run_all)", {"failed": 0}, False),
-            # --- semantics(validate_events): only error_count expands ---
-            ("semantics(validate_events)", {"error_count": 1, "warning_count": 0}, True),
-            ("semantics(validate_events)", {"error_count": 0, "warning_count": 0}, False),
             # --- test_design(gaps): non-empty gaps list expands ---
             ("test_design(gaps)", {"gaps": [{"desc": "missing"}]}, True),
             ("test_design(gaps)", {"gaps": []}, False),
@@ -61,8 +58,6 @@ class TestStepHasIssues:
             "fidelity_no_gaps",
             "test_run_failures",
             "test_run_all_passed",
-            "semantics_with_errors",
-            "semantics_clean",
             "test_design_gaps",
             "test_design_no_gaps",
             "coverage_below_100",

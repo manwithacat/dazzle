@@ -63,8 +63,6 @@ _DSL_CONSTRUCTS: tuple[str, ...] = (
     "sla",
     "rhythm",
     "process",
-    "ledger",
-    "transaction",
     "schedule",
     "story",
     "archetype",
@@ -256,7 +254,7 @@ def _dsl_construct_coverage(
     cat = CategoryCoverage(
         name="dsl_constructs",
         description=(
-            "Top-level DSL keywords (entity, surface, workspace, ledger, …). "
+            "Top-level DSL keywords (entity, surface, workspace, process, …). "
             "A construct with zero example coverage is a latent integration "
             "gap — parser, linker, runtime, and MCP tools all have code paths "
             "that are never exercised in the canonical QA loop."

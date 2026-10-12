@@ -17,11 +17,11 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 418,956 |
-| Test lines (`tests/`) | 383,129 |
-| Documentation lines (`docs/**/*.md`) | 48,964 |
-| Top-level DSL constructs | 47 |
-| Constructs with zero consumer use | 17 |
+| Framework source lines (`src/dazzle`) | 394,477 |
+| Test lines (`tests/`) | 363,560 |
+| Documentation lines (`docs/**/*.md`) | 48,013 |
+| Top-level DSL constructs | 31 |
+| Constructs with zero consumer use | 1 |
 
 ## Consumers
 
@@ -40,35 +40,23 @@ Counts are top-level declarations in `.dsl` files.
 | `analytics` | 1 | 1 | 0 | 0 | consumer-used |
 | `app` | 1 | 1 | 1 | 5 | consumer-used |
 | `archetype` | 3 | 0 | 0 | 2 | consumer-used |
-| `asset` | 0 | 0 | 0 | 0 | unused |
-| `atomic` | 0 | 0 | 0 | 0 | unused |
 | `audit` | 0 | 0 | 0 | 2 | examples only |
-| `channel` | 0 | 0 | 0 | 3 | examples only |
-| `document` | 0 | 0 | 0 | 0 | unused |
 | `entity` | 68 | 60 | 41 | 28 | consumer-used |
-| `event_model` | 0 | 0 | 0 | 1 | examples only |
 | `experience` | 0 | 2 | 3 | 0 | consumer-used |
 | `feedback_widget` | 0 | 1 | 0 | 2 | consumer-used |
 | `foreign_model` | 0 | 34 | 0 | 0 | consumer-used |
 | `grant_schema` | 2 | 5 | 0 | 0 | consumer-used |
 | `guide` | 0 | 2 | 2 | 13 | consumer-used |
-| `hless` | 0 | 0 | 0 | 0 | unused |
-| `ingest` | 0 | 0 | 0 | 0 | unused |
 | `integration` | 0 | 2 | 0 | 0 | consumer-used |
 | `island` | 0 | 2 | 0 | 1 | consumer-used |
-| `job` | 0 | 0 | 0 | 0 | unused |
-| `ledger` | 0 | 0 | 0 | 0 | unused |
 | `llm_config` | 1 | 0 | 1 | 2 | consumer-used |
 | `llm_intent` | 5 | 0 | 6 | 8 | consumer-used |
 | `llm_model` | 2 | 0 | 3 | 4 | consumer-used |
-| `message` | 0 | 0 | 0 | 5 | examples only |
 | `nav` | 10 | 6 | 5 | 17 | consumer-used |
-| `notification` | 0 | 0 | 0 | 0 | unused |
 | `param` | 5 | 32 | 0 | 0 | consumer-used |
 | `persona` | 10 | 6 | 5 | 20 | consumer-used |
 | `policies` | 1 | 0 | 0 | 0 | consumer-used |
 | `process` | 0 | 1 | 0 | 9 | consumer-used |
-| `projection` | 0 | 0 | 0 | 0 | unused |
 | `rhythm` | 3 | 2 | 0 | 1 | consumer-used |
 | `scenario` | 26 | 3 | 0 | 9 | consumer-used |
 | `schedule` | 0 | 8 | 0 | 4 | consumer-used |
@@ -76,16 +64,12 @@ Counts are top-level declarations in `.dsl` files.
 | `service` | 0 | 11 | 0 | 15 | consumer-used |
 | `sla` | 0 | 8 | 0 | 1 | consumer-used |
 | `story` | 62 | 214 | 16 | 45 | consumer-used |
-| `stream` | 0 | 0 | 0 | 0 | unused |
 | `subprocessor` | 4 | 0 | 0 | 0 | consumer-used |
-| `subscribe` | 0 | 0 | 0 | 2 | examples only |
 | `surface` | 234 | 219 | 46 | 98 | consumer-used |
-| `template` | 0 | 0 | 0 | 0 | unused |
 | `tenancy` | 1 | 1 | 0 | 2 | consumer-used |
-| `transaction` | 0 | 0 | 0 | 0 | unused |
 | `workspace` | 32 | 7 | 4 | 35 | consumer-used |
 
-**Zero consumer use:** `asset`, `atomic`, `audit`, `channel`, `document`, `event_model`, `hless`, `ingest`, `job`, `ledger`, `message`, `notification`, `projection`, `stream`, `subscribe`, `template`, `transaction`
+**Zero consumer use:** `audit`
 
 ## Framework subpackages
 
@@ -93,36 +77,35 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 | Subpackage | Source lines | Test lines (name-matched) |
 |---|---:|---:|
-| `http` | 129,232 | 649 |
-| `core` | 89,034 | 2,097 |
-| `mcp` | 39,038 | 6,368 |
-| `cli` | 31,839 | 9,737 |
+| `http` | 118,327 | 649 |
+| `core` | 78,180 | 2,097 |
+| `mcp` | 38,720 | 6,368 |
+| `cli` | 31,391 | 9,627 |
 | `render` | 29,264 | 6,130 |
-| `testing` | 27,609 | 68 |
-| `page` | 14,041 | 2,501 |
-| `agent` | 10,845 | 8,975 |
-| `qa` | 7,485 | 3,214 |
-| `sentinel` | 6,659 | 563 |
-| `db` | 4,404 | 3,779 |
+| `testing` | 27,450 | 68 |
+| `page` | 14,040 | 2,501 |
+| `agent` | 10,845 | 8,609 |
+| `qa` | 7,484 | 3,214 |
+| `sentinel` | 6,191 | 563 |
+| `db` | 4,391 | 3,783 |
 | `compliance` | 4,286 | 1,417 |
-| `rbac` | 4,243 | 7,176 |
+| `rbac` | 3,876 | 6,860 |
 | `signing` | 2,143 | 1,969 |
 | `demo_data` | 2,127 | 814 |
-| `conformance` | 1,760 | 4,284 |
-| `llm` | 1,718 | 3,046 |
-| `services` | 1,632 | 274 |
+| `conformance` | 1,760 | 4,253 |
+| `llm` | 1,718 | 2,734 |
+| `services` | 1,632 | 105 |
 | `agent_loop` | 1,542 | 154 |
-| `perf` | 1,217 | 2,357 |
+| `perf` | 1,217 | 2,260 |
 | `e2e` | 1,095 | 1,775 |
 | `i18n` | 1,086 | 851 |
 | `api_kb` | 1,065 | 552 |
-| `representation` | 1,024 | 279 |
-| `api_surface` | 989 | 160 |
-| `notifications` | 900 | 0 |
+| `representation` | 1,023 | 279 |
+| `api_surface` | 958 | 148 |
 | `examples` | 571 | 848 |
 | `tenant` | 537 | 6,965 |
 | `fitness` | 490 | 186 |
-| `deploy` | 194 | 552 |
+| `deploy` | 181 | 342 |
 | `seed` | 126 | 1,357 |
 | `quality` | 85 | 468 |
 | `docs_update` | 0 | 0 |
@@ -130,13 +113,14 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `domain_brief` | 0 | 0 |
 | `layout` | 0 | 1,659 |
 | `lsp` | 0 | 0 |
+| `notifications` | 0 | 0 |
 | `pitch` | 0 | 0 |
 | `product_quality` | 0 | 0 |
 | `risk` | 0 | 171 |
 | `spec_narrative` | 0 | 0 |
 | `specs` | 0 | 144 |
 | `stubs` | 0 | 0 |
-| `templates` | 0 | 912 |
+| `templates` | 0 | 598 |
 
 ## MCP tools
 
@@ -166,7 +150,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 | `process` | 5 |
 | `representation` | 4 |
 | `rhythm` | 3 |
-| `semantics` | 6 |
+| `semantics` | 5 |
 | `sentinel` | 4 |
 | `sitespec` | 14 |
 | `spec_analyze` | 6 |
@@ -178,7 +162,7 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 
 ## CLI groups
 
-`agent`, `analytics`, `api-pack`, `auth`, `backup`, `capability`, `clean`, `compliance`, `conformance`, `db`, `demo`, `deploy`, `discovery`, `dlq`, `docs`, `events`, `feedback`, `fitness`, `guide`, `inspect`, `kg`, `mcp`, `mock`, `outbox`, `param`, `perf`, `pipeline`, `process`, `process-migrate`, `prove`, `qa`, `quality`, `rbac`, `representation`, `rhythm`, `scaffold`, `sentinel`, `signing`, `spec`, `story`, `sweep`, `tenant`, `test`, `test-design`, `theme`, `ux`, `vocab`, `worker`
+`agent`, `analytics`, `api-pack`, `auth`, `backup`, `capability`, `clean`, `compliance`, `conformance`, `db`, `demo`, `deploy`, `discovery`, `dlq`, `docs`, `events`, `feedback`, `fitness`, `guide`, `inspect`, `kg`, `mcp`, `mock`, `outbox`, `param`, `perf`, `pipeline`, `process`, `process-migrate`, `prove`, `qa`, `quality`, `rbac`, `representation`, `rhythm`, `scaffold`, `sentinel`, `signing`, `spec`, `story`, `sweep`, `tenant`, `test`, `test-design`, `theme`, `ux`, `vocab`
 
 ## CLI groups × consumers
 
@@ -255,7 +239,6 @@ Occurrences of `dazzle <group>` (and bare top-level commands) in `Makefile`, `*.
 | `validate` | 46 | 129 | 89 | 12 |  |
 | `version` | 0 | 0 | 0 | 0 |  |
 | `vocab` | 0 | 0 | 0 | 16 | `expand`, `list`, `show` |
-| `worker` | 1 | 0 | 0 | 0 |  |
 
 ## Framework modules imported × consumers
 
@@ -421,17 +404,17 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 
 | Directory | Markdown lines |
 |---|---:|
-| `docs/reference/` | 18,615 |
+| `docs/reference/` | 17,932 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
 | `docs/plans/` | 4,183 |
-| `docs/guides/` | 3,594 |
+| `docs/guides/` | 3,492 |
 | `docs/counter-priors/` | 3,095 |
-| `docs/architecture/` | 2,608 |
+| `docs/architecture/` | 2,092 |
 | `docs/evaluation/` | 1,660 |
 | `docs/contributing/` | 1,374 |
+| `docs/decisions/` | 937 |
 | `docs/getting-started/` | 663 |
-| `docs/decisions/` | 584 |
 | `docs/recipes/` | 457 |
 | `docs/examples/` | 343 |
 | `docs/harness/` | 47 |

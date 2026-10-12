@@ -128,13 +128,13 @@ def _print_infra_banner(
 
 def _echo_runtime_summary(appspec: Any) -> None:
     """Print one banner line per runtime primitive declared on the
-    AppSpec — audit blocks, background jobs, multi-tenancy. Only
+    AppSpec — audit blocks and multi-tenancy. Only
     fires for primitives the user actually declared, so apps that
     don't use them get no extra noise.
 
     #989 — pre-fix the operator could only see entity / surface /
-    workspace counts; misconfigured `audit on UnknownEntity:` or a
-    job that never registered was invisible until they went
+    workspace counts; a misconfigured `audit on UnknownEntity:`
+    was invisible until they went
     looking for missing rows.
     """
     audits = list(getattr(appspec, "audits", []) or [])
@@ -144,18 +144,6 @@ def _echo_runtime_summary(appspec: Any) -> None:
             f"  • {len(audits)} audit block{'' if len(audits) == 1 else 's'} "
             f"({len(tracked)} entit{'y' if len(tracked) == 1 else 'ies'} tracked)"
         )
-
-    jobs = list(getattr(appspec, "jobs", []) or [])
-    if jobs:
-        triggered = sum(1 for j in jobs if getattr(j, "triggers", []))
-        scheduled = sum(1 for j in jobs if getattr(j, "schedule", None))
-        details = []
-        if triggered:
-            details.append(f"{triggered} triggered")
-        if scheduled:
-            details.append(f"{scheduled} scheduled")
-        suffix = f" ({', '.join(details)})" if details else ""
-        typer.echo(f"  • {len(jobs)} background job{'' if len(jobs) == 1 else 's'}{suffix}")
 
     tenancy = getattr(appspec, "tenancy", None)
     if tenancy is not None:

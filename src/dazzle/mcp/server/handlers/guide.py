@@ -81,7 +81,6 @@ def guide_concordance_handler(project_root: Path, args: dict[str, Any]) -> str:
         surfaces=appspec.surfaces,
         entities=appspec.domain.entities,
         personas=appspec.personas,
-        streams=appspec.streams,
     )
     return json.dumps(
         {

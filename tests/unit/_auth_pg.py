@@ -26,7 +26,6 @@ AUTH_TABLES = (
     "saml_consumed_assertions",
     "password_reset_tokens",
     "user_preferences",
-    "join_requests",
 )
 TOKEN_TABLES = ("refresh_tokens",)
 DEVICE_TABLES = ("devices",)

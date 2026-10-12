@@ -27,8 +27,8 @@ class SubsystemContext:
     """Shared runtime state passed to every subsystem plugin.
 
     Subsystems receive this object at startup time. They may read any field and
-    may write back references to objects they own (e.g. ``channel_manager``,
-    ``process_manager``) so that sibling subsystems or callers can inspect them.
+    may write back references to objects they own (e.g. ``process_manager``,
+    ``sla_manager``) so that sibling subsystems or callers can inspect them.
     """
 
     app: FastAPI
@@ -37,11 +37,9 @@ class SubsystemContext:
     services: dict[str, Any]
     repositories: dict[str, Any]
     entities: list[Any]
-    channels: list[Any]
     # Database manager — set by DazzleBackendApp after _setup_database()
     db_manager: Any | None = None
     # Mutable outputs — subsystems write these so other subsystems can read them
-    channel_manager: Any | None = None
     event_framework: Any | None = None
     process_manager: Any | None = None
     process_adapter: Any | None = None

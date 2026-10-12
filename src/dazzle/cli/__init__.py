@@ -304,7 +304,6 @@ from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.theme import theme_app  # noqa: E402
 from dazzle.cli.ux import ux_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
-from dazzle.cli.worker import worker_app  # noqa: E402
 
 app.add_typer(analytics_app, name="analytics")
 app.add_typer(agent_app, name="agent")
@@ -322,7 +321,6 @@ app.add_typer(feedback_app, name="feedback")
 app.add_typer(fitness_app, name="fitness")
 app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
-app.add_typer(worker_app, name="worker")
 app.add_typer(scaffold_app, name="scaffold")
 app.add_typer(prove_app, name="prove")
 app.add_typer(representation_app, name="representation")

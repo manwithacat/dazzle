@@ -112,12 +112,6 @@ class TestKeywordGroups:
         for expected in ["entity", "surface", "workspace", "service"]:
             assert expected in all_keywords, f"Keyword '{expected}' not found"
 
-    def test_ledger_keywords_present(self) -> None:
-        groups = get_keyword_groups()
-        all_keywords = [kw for kwlist in groups.values() for kw in kwlist]
-        for expected in ["ledger", "transaction", "transfer", "debit", "credit"]:
-            assert expected in all_keywords, f"Keyword '{expected}' not found"
-
 
 class TestVersion:
     """Version extraction."""

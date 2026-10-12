@@ -34,11 +34,10 @@ def _add_symbol(
 
 @dataclass
 class DomainSymbols:
-    """Domain-layer symbols: entities, views, ledgers, foreign models."""
+    """Domain-layer symbols: entities, views, foreign models."""
 
     entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
     views: dict[str, ir.ViewSpec] = field(default_factory=dict)
-    ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)
     foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
 
     def add_entity(self, entity: ir.EntitySpec, module_name: str, sources: dict[str, str]) -> None:
@@ -46,9 +45,6 @@ class DomainSymbols:
 
     def add_view(self, view: ir.ViewSpec, module_name: str, sources: dict[str, str]) -> None:
         _add_symbol(self.views, view.name, view, "view", module_name, sources)
-
-    def add_ledger(self, ledger: ir.LedgerSpec, module_name: str, sources: dict[str, str]) -> None:
-        _add_symbol(self.ledgers, ledger.name, ledger, "ledger", module_name, sources)
 
     def add_foreign_model(
         self, foreign_model: ir.ForeignModelSpec, module_name: str, sources: dict[str, str]
@@ -143,11 +139,8 @@ class SymbolTable:
     llm_models: dict[str, ir.LLMModelSpec] = field(default_factory=dict)  # v0.21.0
     llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
     schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
-    transactions: dict[str, ir.TransactionSpec] = field(default_factory=dict)  # v0.24.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
-    notifications: dict[str, ir.NotificationSpec] = field(default_factory=dict)  # #952
-    jobs: dict[str, ir.JobSpec] = field(default_factory=dict)  # #953
     audits: list[ir.AuditSpec] = field(
         default_factory=list
     )  # #956 (list — keyed on entity, but multiple audits per entity not allowed; symbol_sources tracks)
@@ -181,10 +174,6 @@ class SymbolTable:
     @property
     def views(self) -> dict[str, ir.ViewSpec]:
         return self._domain.views
-
-    @property
-    def ledgers(self) -> dict[str, ir.LedgerSpec]:
-        return self._domain.ledgers
 
     @property
     def foreign_models(self) -> dict[str, ir.ForeignModelSpec]:
@@ -349,21 +338,6 @@ class SymbolTable:
             self.schedules, schedule.name, schedule, "schedule", module_name, self.symbol_sources
         )
 
-    def add_ledger(self, ledger: ir.LedgerSpec, module_name: str) -> None:
-        """Add ledger to symbol table, checking for duplicates (v0.24.0)."""
-        self._domain.add_ledger(ledger, module_name, self.symbol_sources)
-
-    def add_transaction(self, transaction: ir.TransactionSpec, module_name: str) -> None:
-        """Add transaction to symbol table, checking for duplicates (v0.24.0)."""
-        _add_symbol(
-            self.transactions,
-            transaction.name,
-            transaction,
-            "transaction",
-            module_name,
-            self.symbol_sources,
-        )
-
     def add_view(self, view: ir.ViewSpec, module_name: str) -> None:
         """Add view to symbol table, checking for duplicates (v0.25.0)."""
         self._domain.add_view(view, module_name, self.symbol_sources)
@@ -375,28 +349,6 @@ class SymbolTable:
     def add_island(self, island: ir.IslandSpec, module_name: str) -> None:
         """Add UI island to symbol table, checking for duplicates."""
         _add_symbol(self.islands, island.name, island, "island", module_name, self.symbol_sources)
-
-    def add_notification(self, notification: ir.NotificationSpec, module_name: str) -> None:
-        """Add notification to symbol table, checking for duplicates (#952)."""
-        _add_symbol(
-            self.notifications,
-            notification.name,
-            notification,
-            "notification",
-            module_name,
-            self.symbol_sources,
-        )
-
-    def add_job(self, job: ir.JobSpec, module_name: str) -> None:
-        """Add background job to symbol table, checking for duplicates (#953)."""
-        _add_symbol(
-            self.jobs,
-            job.name,
-            job,
-            "job",
-            module_name,
-            self.symbol_sources,
-        )
 
     def add_audit(self, audit: ir.AuditSpec, module_name: str) -> None:
         """Add audit-trail spec to symbol table (#956).
@@ -621,14 +573,6 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         for schedule in module.fragment.schedules:
             symbols.add_schedule(schedule, module.name)
 
-        # Add ledgers (v0.24.0)
-        for ledger in module.fragment.ledgers:
-            symbols.add_ledger(ledger, module.name)
-
-        # Add transactions (v0.24.0)
-        for transaction in module.fragment.transactions:
-            symbols.add_transaction(transaction, module.name)
-
         # Add views (v0.25.0)
         for view in module.fragment.views:
             symbols.add_view(view, module.name)
@@ -640,14 +584,6 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add UI Islands
         for island in module.fragment.islands:
             symbols.add_island(island, module.name)
-
-        # Add notifications (#952)
-        for notification in module.fragment.notifications:
-            symbols.add_notification(notification, module.name)
-
-        # Add jobs (#953)
-        for job in module.fragment.jobs:
-            symbols.add_job(job, module.name)
 
         # Add audits (#956)
         for audit in module.fragment.audits:
@@ -909,16 +845,6 @@ def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> li
                 owner = symbols.symbol_sources.get(entity_name)
                 if owner and owner != module.name:
                     used_modules.add(owner)
-
-        # #988 fix: job triggers reference entities — same
-        # rationale as audit blocks above.
-        for job_spec in module.fragment.jobs:
-            for trigger in getattr(job_spec, "triggers", []) or []:
-                entity_name = getattr(trigger, "entity", "")
-                if entity_name:
-                    owner = symbols.symbol_sources.get(entity_name)
-                    if owner and owner != module.name:
-                        used_modules.add(owner)
 
         # #1379: guides reference surfaces (each step's `target` / `cta_target`
         # and `on_complete.redirect`) and entities (`complete_on: event
@@ -1515,13 +1441,9 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         llm_intents=list(symbols.llm_intents.values()),  # v0.21.0
         processes=list(symbols.processes.values()),  # v0.23.0
         schedules=list(symbols.schedules.values()),  # v0.23.0
-        ledgers=list(symbols.ledgers.values()),  # v0.24.0
-        transactions=list(symbols.transactions.values()),  # v0.24.0
         views=list(symbols.views.values()),  # v0.25.0
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
-        notifications=list(symbols.notifications.values()),  # #952
-        jobs=list(symbols.jobs.values()),  # #953
         audits=symbols.audits,  # #956
         searches=symbols.searches,  # #954
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
@@ -1533,21 +1455,9 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         # #1075 — fields not previously routed through the symbol table.
         # Flattened across modules; first-occurrence wins for scalars.
         archetypes=_flatten_list("archetypes"),
-        assets=_flatten_list("assets"),
-        channels=_flatten_list("channels"),
-        documents=_flatten_list("documents"),
-        atomic_flows=_flatten_list("atomic_flows"),
         fixtures=_flatten_list("fixtures"),
-        messages=_flatten_list("messages"),
         params=_flatten_list("params"),
         policies=_first_scalar("policies"),
-        projections=_flatten_list("projections"),
-        streams=_flatten_list("streams"),
-        ingests=_flatten_list("ingests"),
-        subscriptions=_flatten_list("subscriptions"),
-        templates=_flatten_list("templates"),
-        event_model=_first_scalar("event_model"),
-        hless_pragma=_first_scalar("hless_pragma"),
         # Guided onboarding (v0.71.0) — flatten across modules, no
         # symbol-table tracking yet (guides reference surfaces/entities
         # by name; the concordance pass handles cross-module refs).

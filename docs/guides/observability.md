@@ -1,7 +1,7 @@
 # Observability Guide
 
 How to watch a running Dazzle application: the `/_dazzle/*` internal
-endpoint surface, the event subsystem operational API, the job lifecycle,
+endpoint surface, the event subsystem operational API,
 metrics, and local tracing with `dazzle perf`.
 
 **Companion reading:** [Operations guide](operations.md) covers
@@ -329,99 +329,7 @@ Or on failure: `{"success": false, "error": "Event abc123 not found in DLQ"}`.
 
 ---
 
-## 4. Jobs Operationally
-
-### Job lifecycle
-
-Every `job:` block in the DSL generates a `JobRun` entity that tracks
-execution. The lifecycle is:
-
-```
-queued → running → completed
-                 → failed          (retriable failure; re-enqueued)
-                 → failed          (exhausted retries, no dead_letter:)
-                 → dead_letter     (exhausted retries + dead_letter: declared)
-```
-
-The `JobRun` entity is inspectable via the standard entity API
-(`GET /api/jobruns`, or via `/_dazzle/entity/JobRun` in dev).
-
-### `retry: N` maps to `max_attempts`
-
-A job declared as:
-
-```dsl
-job send_notification "Send Notification":
-  retry: 3
-```
-
-is processed with `max_attempts = retry + 1 = 4`. The worker
-(`src/dazzle/http/runtime/job_worker.py`) computes this as:
-
-```python
-max_attempts = max(1, getattr(spec, "retry", 0) + 1)
-```
-
-The first run is attempt 1; retries are attempts 2, 3, 4. After attempt
-4 the job is terminal.
-
-### `dead_letter: <Entity>` routing
-
-When a job declares `dead_letter: FailedNotification`, exhausted jobs
-write `status="dead_letter"` on the `JobRun` row instead of `"failed"`.
-The `dead_letter:` entity (e.g., `FailedNotification`) is where the
-application should persist its own record of the failure for operator
-review — this is a DSL-level routing declaration, not automatic entity
-creation. The `JobRun.status` is the runtime signal; your `FailedNotification`
-entity and its handler are application code.
-
-### Inspecting `JobRun` records
-
-```bash
-# All terminal-failed runs
-GET /api/jobruns?status=dead_letter
-
-# One specific run
-GET /api/jobruns/{job_run_id}
-```
-
-`JobRun` fields: `job_name`, `status`, `attempt_number`, `started_at`,
-`finished_at`, `duration_ms`, `error_message`.
-
-### Honest gap: `retry_backoff:` is not enforced
-
-The DSL accepts a `retry_backoff:` keyword on job definitions. **At
-runtime, this field is currently ignored.** Failed jobs are re-enqueued
-immediately without any delay between attempts.
-
-The comment in `src/dazzle/http/runtime/job_worker.py` (line ~184):
-
-```python
-# The cycle-7 retry-backoff sleep would go here when the timer is
-# wired; cycle 4 just re-enqueues immediately.
-```
-
-This is a known gap (#1191). Until it is implemented, if
-exponential-backoff between job retries is required, implement the delay
-in the job handler itself.
-
-Note that process-step `retry:`/`backoff:` is *not* a workaround here.
-The process-step `RetryConfig` IR is consumed only by the optional
-Temporal and Celery adapters (`src/dazzle/core/process/temporal_adapter.py`,
-`celery_tasks.py`); the default Dazzle runtime process executor
-(`EventBusProcessAdapter` + `step_executor.py`, whose `max_retries`
-parameter is documented "Not used directly here") does not apply
-backoff between process-step retries either.
-
-### No `/_dazzle/jobs` operational endpoints
-
-The event subsystem has a rich `/_dazzle/events/*` surface. Jobs do not
-have an equivalent — job state is inspectable only via the `JobRun` entity
-API (#1193).
-
----
-
-## 5. Metrics, Traces, and Logs
+## 4. Metrics, Traces, and Logs
 
 ### `dazzle perf` — local on-demand tracing
 
@@ -569,16 +477,15 @@ Dazzle logs to stdout in structured form. Log lines are tagged with
 | Pattern | Meaning |
 |---|---|
 | `Connection pool opened (min=2, max=10)` | DB pool started successfully |
-| `WARNING: Process manager requires REDIS_URL. Skipping` | Job/process system not started |
+| `WARNING: Process manager requires REDIS_URL. Skipping` | Process system not started |
 | `WARNING: JWT_SECRET not set` | Sessions will not survive restart |
 | `Outbox publisher started` | Event outbox relay is running |
 | `Event framework started` | Event subsystem is operational |
-| `JobRun update failed for ... — continuing` | DB blip during job tracking; job continues |
 | `DLQ replay failed for event ...` | Replay attempt failed; check bus connectivity |
 
 ---
 
-## 6. Integration Retries (#1194)
+## 5. Integration Retries (#1194)
 
 
 ### `GET /_dazzle/integrations/{name}/retries` — recent retry attempts
@@ -631,23 +538,22 @@ That trade-off is deliberate: the surface exists for in-flight and
 recent-restart inspection only. For durable retry history use the
 integration provider's own logs, or wait for a future persistent-retry
 feature. Do not build operational alerting against this endpoint's
-contents — alert on the DLQ (`/_dazzle/events/dlq`), the JobRun status
-distribution (`/_dazzle/jobs`), or your integration provider's logs
-instead.
+contents — alert on the DLQ (`/_dazzle/events/dlq`) or your integration
+provider's logs instead.
 
 ---
 
-## 7. Worked Example — `invoice_ops` in Production
+## 6. Worked Example — `invoice_ops` in Production
 
 `examples/invoice_ops` is a production-grade accounts-payable system:
-10 entities, maker-checker approval, a full HLESS event model
-(`invoice_events` topic, six event types), and a settlement process
-(`settle_invoice`) that calls the `payment_provider` integration.
+10 entities, maker-checker approval, entity lifecycle events through
+the transactional outbox, and a settlement process (`settle_invoice`)
+that calls the `payment_provider` integration.
 
 ### Which endpoints answer "is settlement healthy?"
 
 For an operator watching a running `invoice_ops` instance, settlement
-health maps directly to the event and job surfaces:
+health maps directly to the event surfaces:
 
 **1. Is the event bus running and are events flowing?**
 
@@ -656,11 +562,11 @@ GET /_dazzle/events/status
 # Expect: "running": true, "broker_type": "PostgresBus" (or RedisBackedBus)
 ```
 
-**2. Is the `invoice_events` topic publishing?**
+**2. Are entity events publishing?**
 
 ```bash
 GET /_dazzle/events/topics
-# Look for "invoice_events" in the topics list.
+# Look for the Invoice entity topic in the topics list.
 # "event_count" should grow as invoices are submitted and approved.
 ```
 
@@ -680,19 +586,11 @@ restart the application.
 **4. Is the settlement process completing?**
 
 The `settle_invoice` process executes when `Invoice.status` transitions
-to `approved`. Since there are no `/_dazzle/jobs/*` endpoints (gap noted
-in [section 4](#4-jobs-operationally)), inspect `JobRun` records via the
-entity API:
-
-```bash
-# Recent failed or dead-lettered settlement runs
-GET /api/jobruns?job_name=settle_invoice&status=dead_letter
-GET /api/jobruns?job_name=settle_invoice&status=failed
-```
-
-A cluster of `dead_letter` entries for `settle_invoice` means the
-`payment_provider` integration is failing persistently — check the mock
-scenario (in dev: `dazzle mock status`) or the live integration logs.
+to `approved`. Inspect its runs with the `process` MCP tool's
+`list_runs` / `get_run` operations; a cluster of
+failed runs means the `payment_provider` integration is failing
+persistently — check the mock scenario (in dev: `dazzle mock status`)
+or the live integration logs.
 
 **5. Are consumers keeping up?**
 

@@ -163,13 +163,9 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `ingest`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`, `guide`, `atomic`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `sla`, `rhythm`, `feedback_widget`, `subprocessor`, `analytics`, `guide`
 
-*(User-facing subset. The parser also dispatches on `app`, `message`, `channel`, `asset`, `document`, `template`, `event_model`, `subscribe`, `projection`, `stream`, `hless`, `policies`, `tenancy`, `llm_model`, `llm_config`, `llm_intent`, `notification`, `job`, `audit`, `search`, `grant_schema`, `param`. Drift-gated: every name listed must exist in the parser.)*
-
-**On `hless`** (High-Level Event Semantics Specification): a deliberate break from
-Kafka vocabulary; **don't propose renaming it** (rejected, #1069 API-003) —
-`docs/architecture/hless-deep-dive.md`.
+*(User-facing subset. The parser also dispatches on `app`, `policies`, `tenancy`, `llm_model`, `llm_config`, `llm_intent`, `audit`, `search`, `grant_schema`, `param`. Drift-gated: every name listed must exist in the parser. Parked constructs and their Deferred Decisions: events DSL DD-006, messaging DSL DD-007, `ledger`/`transaction`/`atomic` DD-004, `job` DD-008.)*
 
 **Scope rules** compile to a predicate algebra statically validated against the FK graph
 at `dazzle validate` time. Each `scope:` rule needs a matching `permit:` rule and an `as:`
@@ -198,7 +194,7 @@ Working Dazzle apps in `examples/`: `simple_task`, `support_tickets`, `hr_record
 
 The other eight apps were retired in flense ship E (ADR-0057): their probes are covered by the three consumer apps. The four kept are probes: `simple_task` (minimal CRUD), `support_tickets` (`audit` construct, signing), `invoice_ops` (tenancy, maker-checker transitions), `hr_records` (PII, `process`). Ledger/transaction design is parked in `docs/decisions/DD-004-ledger-and-transaction.md`.
 
-Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `asset_registry`, `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `transition_atomic`, `scope_runtime`, `pra`, `custom_renderer`, `component_showcase`, `tenant_hierarchy` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`; `pra` = parser-conformance corpus, `custom_renderer` = renderer-extension demo, `component_showcase` = component gallery — reclassified from examples/ 2026-06-13; `tenant_hierarchy` = ADR-0036/0037 hierarchy + membership worked example)
+Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract probes used only by `tests/`): `shapes_validation`, `rbac_validation`, `investigator_smoke`, `asset_registry`, `shared_parent_aggregate`, `signing_validation`, `tenant_rls`, `scope_runtime`, `pra`, `custom_renderer`, `component_showcase`, `tenant_hierarchy` (FK-path/EXISTS create-scope #1311 + update-destination #1312 verified against real Postgres via `tests/integration/test_scope_runtime_pg.py`; `pra` = parser-conformance corpus, `custom_renderer` = renderer-extension demo, `component_showcase` = component gallery — reclassified from examples/ 2026-06-13; `tenant_hierarchy` = ADR-0036/0037 hierarchy + membership worked example)
 
 Both lists are drift-gated against the directory trees — adding or removing an
 example/fixture requires updating the matching line here.

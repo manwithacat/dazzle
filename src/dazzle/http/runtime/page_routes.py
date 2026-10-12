@@ -3657,7 +3657,7 @@ def create_page_routes(
         for route_path, _ in sorted_routes
     }
     for _entity in appspec.domain.entities:
-        # #990 — skip platform-domain entities (AuditEntry, JobRun,
+        # #990 — skip platform-domain entities (AuditEntry,
         # AIJob, FeedbackReport, etc.). They're framework-internal
         # observability tables; surfacing /app/<plural> redirect
         # routes for them clutters OpenAPI and suggests user-

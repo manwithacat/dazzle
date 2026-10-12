@@ -4,7 +4,6 @@ Unified system metrics collector for comprehensive observability.
 Aggregates metrics from all system components:
 - Event bus (throughput, latency, backlog)
 - Database (query latency, connection pool, slow queries)
-- TigerBeetle (account/transfer operations)
 - HTTP API (request latency, error rates)
 - WebSocket (connection count, message rates)
 
@@ -47,7 +46,6 @@ class ComponentType(StrEnum):
 
     EVENT_BUS = "event_bus"
     DATABASE = "database"
-    TIGERBEETLE = "tigerbeetle"
     HTTP_API = "http_api"
     WEBSOCKET = "websocket"
     CACHE = "cache"
@@ -458,19 +456,6 @@ class SystemMetricsCollector:
             f"backlog_{topic}_{consumer_group}",
             float(backlog),
         )
-
-    def record_tigerbeetle_operation(
-        self,
-        operation: str,
-        latency_ms: float,
-        count: int = 1,
-        failed: int = 0,
-    ) -> None:
-        """Record a TigerBeetle operation."""
-        self.inc_counter(ComponentType.TIGERBEETLE, f"{operation}_total", count)
-        if failed > 0:
-            self.inc_counter(ComponentType.TIGERBEETLE, f"{operation}_failed", failed)
-        self.record_histogram(ComponentType.TIGERBEETLE, f"{operation}_latency_ms", latency_ms)
 
     def record_http_request(
         self,

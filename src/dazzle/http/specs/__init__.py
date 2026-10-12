@@ -21,13 +21,6 @@ from dazzle.http.specs.auth import (
     VisibilityRuleSpec,
 )
 from dazzle.http.specs.backend_spec import BackendSpec
-from dazzle.http.specs.channel import (
-    ChannelSpec,
-    MessageFieldSpec,
-    MessageSpec,
-    ReceiveOperationSpec,
-    SendOperationSpec,
-)
 from dazzle.http.specs.endpoint import (
     EndpointSpec,
     HttpMethod,
@@ -130,10 +123,4 @@ __all__ = [
     "PermissionRuleSpec",
     "ScopeRuleSpec",
     "EntityAccessSpec",
-    # Channel/Messaging types (v0.9)
-    "ChannelSpec",
-    "MessageSpec",
-    "MessageFieldSpec",
-    "SendOperationSpec",
-    "ReceiveOperationSpec",
 ]

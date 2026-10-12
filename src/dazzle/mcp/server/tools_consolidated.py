@@ -462,7 +462,7 @@ def _tool_semantics() -> Tool:
     """Semantics (replaces 5 tools)."""
     return Tool(
         name="semantics",
-        description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards",
+        description="Semantic analysis: extract, tenancy, compliance, analytics, extract_guards",
         input_schema={
             "type": "object",
             "properties": {
@@ -470,7 +470,6 @@ def _tool_semantics() -> Tool:
                     "type": "string",
                     "enum": [
                         "extract",
-                        "validate_events",
                         "tenancy",
                         "compliance",
                         "analytics",

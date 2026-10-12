@@ -305,8 +305,10 @@ class TestTenancyParser:
                 ),
             ),
             (
+                # `partition_key` lexed as a hless keyword until flense ship F, which
+                # shadowed this handler; the declared key is now honoured.
                 "tenancy:\n  partition_key: org_id\n",
-                lambda: (lambda f: f.tenancy.isolation.partition_key, "tenant_id"),
+                lambda: (lambda f: f.tenancy.isolation.partition_key, "org_id"),
             ),
             (
                 "tenancy:\n  topics: namespace_per_tenant\n",
@@ -339,7 +341,7 @@ class TestTenancyParser:
         ],
         ids=[
             "test_basic_tenancy_defaults",
-            "test_tenancy_partition_key_default",
+            "test_tenancy_partition_key_declared",
             "test_tenancy_topics_namespace_per_tenant",
             "test_tenancy_topics_defaults_to_shared",
             "test_tenancy_exclude_single",

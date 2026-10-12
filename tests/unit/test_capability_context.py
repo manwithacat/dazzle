@@ -14,7 +14,6 @@ def _ctx(**kw):
         services={},
         repositories={},
         entities=[],
-        channels=[],
         **kw,
     )
 

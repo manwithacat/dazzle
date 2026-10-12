@@ -147,7 +147,6 @@ def make_appspec(
     policies: object | None = None,
     tenancy: object | None = None,
     security: object | None = None,
-    ledgers: list | None = None,
     slas: list | None = None,
     experiences: list | None = None,
     schedules: list | None = None,
@@ -156,12 +155,9 @@ def make_appspec(
     domain_services: list | None = None,
     foreign_models: list | None = None,
     integrations: list | None = None,
-    channels: list | None = None,
-    transactions: list | None = None,
     llm_config: object | None = None,
     llm_models: list | None = None,
     llm_intents: list | None = None,
-    event_model: object | None = None,
     views: list | None = None,
 ) -> Any:
     """Build a duck-typed AppSpec-like object for sentinel agent testing.
@@ -185,7 +181,6 @@ def make_appspec(
     spec.policies = policies
     spec.tenancy = tenancy
     spec.security = security
-    spec.ledgers = ledgers or []
     spec.slas = slas or []
     spec.experiences = experiences or []
     spec.schedules = schedules or []
@@ -194,12 +189,9 @@ def make_appspec(
     spec.domain_services = domain_services or []
     spec.foreign_models = foreign_models or []
     spec.integrations = integrations or []
-    spec.channels = channels or []
-    spec.transactions = transactions or []
     spec.llm_config = llm_config
     spec.llm_models = llm_models or []
     spec.llm_intents = llm_intents or []
-    spec.event_model = event_model
 
     # Views (v0.25.0)
     view_list = views or []

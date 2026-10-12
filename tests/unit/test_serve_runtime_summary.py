@@ -1,4 +1,4 @@
-"""Tests for #989 fix — serve banner shows audit/jobs/tenancy counts.
+"""Tests for #989 fix — serve banner shows audit/tenancy counts.
 
 Pre-fix, `dazzle serve` printed entity / surface / workspace
 counts but not the new runtime primitives. A misconfigured
@@ -14,10 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any
 from unittest.mock import patch
-
-import pytest
 
 from dazzle.cli.runtime_impl.serve import _echo_runtime_summary
 
@@ -40,16 +37,8 @@ class _Audit:
 
 
 @dataclass
-class _Job:
-    name: str
-    triggers: list[Any] = field(default_factory=list)
-    schedule: Any = None
-
-
-@dataclass
 class _AppSpec:
     audits: list[_Audit] = field(default_factory=list)
-    jobs: list[_Job] = field(default_factory=list)
     tenancy: _Tenancy | None = None
 
 
@@ -72,7 +61,7 @@ class TestEmpty:
         assert _capture(spec) == ""
 
     def test_empty_audits_no_audit_line(self):
-        spec = _AppSpec(audits=[], jobs=[_Job(name="x")], tenancy=None)
+        spec = _AppSpec(audits=[], tenancy=None)
         out = _capture(spec)
         assert "audit" not in out.lower()
 
@@ -92,41 +81,6 @@ class TestAuditSummary:
         spec = _AppSpec(audits=[_Audit(entity="Ticket"), _Audit(entity="Comment")])
         out = _capture(spec)
         assert "2 audit blocks (2 entities tracked)" in out
-
-
-# ---------------------------------------------------------------------------
-# Jobs summary
-# ---------------------------------------------------------------------------
-
-
-class TestJobsSummary:
-    @pytest.mark.parametrize(
-        "jobs,expected",
-        [
-            ([_Job(name="x", triggers=[object()])], "1 background job (1 triggered)"),
-            ([_Job(name="x", schedule=object())], "1 background job (1 scheduled)"),
-            (
-                [
-                    _Job(name="a", triggers=[object()]),
-                    _Job(name="b", triggers=[object()]),
-                    _Job(name="c", schedule=object()),
-                    _Job(name="d", schedule=object()),
-                ],
-                "4 background jobs (2 triggered, 2 scheduled)",
-            ),
-            ([_Job(name="x")], "1 background job"),
-        ],
-        ids=[
-            "test_only_triggered",
-            "test_only_scheduled",
-            "test_mixed",
-            "test_neither",
-        ],
-    )
-    def test_jobs_summary_line(self, jobs: list[_Job], expected: str) -> None:
-        spec = _AppSpec(jobs=jobs)
-        out = _capture(spec)
-        assert expected in out
 
 
 # ---------------------------------------------------------------------------
@@ -160,20 +114,14 @@ class TestTenancySummary:
 
 
 # ---------------------------------------------------------------------------
-# All three together — the dogfood case
+# All together — the dogfood case
 # ---------------------------------------------------------------------------
 
 
-class TestAllThree:
-    def test_full_summary_emits_three_lines(self):
+class TestAllTogether:
+    def test_full_summary_emits_two_lines(self):
         spec = _AppSpec(
             audits=[_Audit(entity="Ticket"), _Audit(entity="Comment")],
-            jobs=[
-                _Job(name="a", triggers=[object()]),
-                _Job(name="b", triggers=[object()]),
-                _Job(name="c", schedule=object()),
-                _Job(name="d", schedule=object()),
-            ],
             tenancy=_Tenancy(
                 admin_personas=["manager"],
                 per_tenant_config={
@@ -186,7 +134,6 @@ class TestAllThree:
         out = _capture(spec)
         # Each primitive has exactly one summary line.
         assert "audit blocks" in out
-        assert "background jobs" in out
         assert "Tenancy:" in out
-        # Three new banner lines total.
-        assert out.count("\n") == 3
+        # Two banner lines total.
+        assert out.count("\n") == 2

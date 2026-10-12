@@ -1,7 +1,7 @@
 """Tests for #990 fix — platform-domain entities don't get plural-redirect routes.
 
 Pre-fix, every entity (including framework-injected `AuditEntry`,
-`JobRun`, `AIJob`, etc.) got a `/app/<plural>` → `/app/<singular>`
+`AIJob`, etc.) got a `/app/<plural>` → `/app/<singular>`
 301 redirect registered automatically. The redirect targets all
 404 because no list surface exists for these platform entities,
 but the redirect itself showed in OpenAPI making it look like a
@@ -64,12 +64,12 @@ class TestPlatformEntityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Integration: framework-built AuditEntry / JobRun get domain="platform"
+# Integration: framework-built AuditEntry gets domain="platform"
 # ---------------------------------------------------------------------------
 
 
 class TestFrameworkEntitiesArePlatform:
-    """Verify the cycle-2 builders for AuditEntry + JobRun set
+    """Verify the cycle-2 builder for AuditEntry sets
     `domain="platform"` so they actually trigger the filter above.
     Catches a regression where a future refactor drops the marker."""
 
@@ -78,13 +78,6 @@ class TestFrameworkEntitiesArePlatform:
 
         entity = _build_audit_entry_entity()
         assert entity.name == "AuditEntry"
-        assert entity.domain == "platform"
-
-    def test_job_run_is_platform(self):
-        from dazzle.core.linker import _build_job_run_entity
-
-        entity = _build_job_run_entity()
-        assert entity.name == "JobRun"
         assert entity.domain == "platform"
 
     def test_ai_job_is_platform(self):
@@ -109,7 +102,7 @@ class TestFrameworkEntitiesArePlatform:
 
 
 class TestEndToEndAppspec:
-    """Build a real AppSpec with audit + job declarations, then
+    """Build a real AppSpec with an audit declaration, then
     confirm the platform-domain entities are present but
     un-routable. This is the actual user-visible behaviour the
     fix delivers."""
@@ -134,10 +127,6 @@ class TestEndToEndAppspec:
                 audit on Ticket:
                   track: status
                   show_to: persona(admin)
-
-                job daily "Daily":
-                  schedule: cron("0 1 * * *")
-                  run: app.jobs:daily
                 """
             ).lstrip()
         )
@@ -146,10 +135,8 @@ class TestEndToEndAppspec:
         names = {e.name: e for e in appspec.domain.entities}
         # Cycle-2 system entities present.
         assert "AuditEntry" in names
-        assert "JobRun" in names
-        # And both are platform-domain so the route filter skips them.
+        # And it is platform-domain so the route filter skips it.
         assert names["AuditEntry"].domain == "platform"
-        assert names["JobRun"].domain == "platform"
         # Ticket is not platform-domain — keeps its plural-redirect route.
         assert names["Ticket"].domain != "platform"
 

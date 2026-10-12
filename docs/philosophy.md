@@ -71,9 +71,8 @@ Authorisation is two layers, never one ([ADR-0010](adr/0010-permit-scope-separat
 
 Mixing them is forbidden because they are evaluated in different places (route-level gate vs query-level filter) and because a clean separation is what lets the matrix verifier ([ADR-0007](adr/0007-rbac-three-layers.md)) check "every persona × every entity × every surface" combinatorially. RBAC has three layers — static matrix at validate time, dynamic verifier at runtime, append-only audit trail at exec time — and they reinforce each other; no single layer is trusted alone.
 
-### `process`, `transaction`, `story`, `rhythm`
+### `process`, `story`, `rhythm`
 - **`process`** — state machine over an entity (`draft → submitted → approved`). States are plain strings.
-- **`transaction`** — atomic write spanning multiple entities (the "unit of work" you'd otherwise express imperatively).
 - **`story`** — persona narrative ("As a teacher I want to mark a manuscript reviewed"). Stories compile down to surface coverage and test scaffolds.
 - **`rhythm`** — recurring or scheduled cadence ("daily 9am: digest unread comments"). Lifts cron out of process bodies and into the model.
 

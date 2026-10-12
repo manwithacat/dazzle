@@ -42,6 +42,9 @@ _ALLOWED_VERSIONS: dict[str, str] = {
     "0021_ingest_fingerprint": (
         "non-destructive additive — ingest OBSERVATION content-hash (#1676)"
     ),
+    "0022_flense_park_tables": (
+        "drops the tables of constructs parked in flense ship F (DD-004/006/009)"
+    ),
 }
 
 

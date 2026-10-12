@@ -1414,8 +1414,6 @@ def dsl_generate(
     )
     typer.echo(f"  • Personas: {len(coverage.personas_covered)}/{coverage.personas_total}")
     typer.echo(f"  • Workspaces: {len(coverage.workspaces_covered)}/{coverage.workspaces_total}")
-    if coverage.events_total > 0:
-        typer.echo(f"  • Events: {len(coverage.events_covered)}/{coverage.events_total}")
     if coverage.processes_total > 0:
         typer.echo(f"  • Processes: {len(coverage.processes_covered)}/{coverage.processes_total}")
     typer.echo()
@@ -1759,7 +1757,6 @@ def dsl_coverage(
         + coverage.state_machines_total
         + coverage.personas_total
         + coverage.workspaces_total
-        + coverage.events_total
         + coverage.processes_total
     )
     tested_constructs = (
@@ -1767,7 +1764,6 @@ def dsl_coverage(
         + len(coverage.state_machines_covered)
         + len(coverage.personas_covered)
         + len(coverage.workspaces_covered)
-        + len(coverage.events_covered)
         + len(coverage.processes_covered)
     )
     overall_pct = (tested_constructs / total_constructs * 100) if total_constructs > 0 else 0
@@ -1834,13 +1830,6 @@ def _render_coverage_json(coverage_data: dict[str, Any], detailed: bool) -> None
                 if coverage.workspaces_total > 0
                 else 0,
             },
-            "events": {
-                "total": coverage.events_total,
-                "tested": len(coverage.events_covered),
-                "coverage": (len(coverage.events_covered) / coverage.events_total * 100)
-                if coverage.events_total > 0
-                else 0,
-            },
             "processes": {
                 "total": coverage.processes_total,
                 "tested": len(coverage.processes_covered),
@@ -1880,7 +1869,6 @@ def _render_coverage_markdown(coverage_data: dict[str, Any], detailed: bool) -> 
         ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
         ("Personas", coverage.personas_total, len(coverage.personas_covered)),
         ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
-        ("Events", coverage.events_total, len(coverage.events_covered)),
         ("Processes", coverage.processes_total, len(coverage.processes_covered)),
     ]
 
@@ -1922,7 +1910,6 @@ def _render_coverage_table(coverage_data: dict[str, Any], detailed: bool) -> Non
         ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
         ("Personas", coverage.personas_total, len(coverage.personas_covered)),
         ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
-        ("Events", coverage.events_total, len(coverage.events_covered)),
         ("Processes", coverage.processes_total, len(coverage.processes_covered)),
     ]
 

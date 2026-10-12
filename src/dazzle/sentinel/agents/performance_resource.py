@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dazzle.core.ir import FieldTypeKind
-from dazzle.core.ir.ledgers import TransactionExecution
 from dazzle.core.ir.process import OverlapPolicy
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
@@ -227,54 +226,6 @@ class PerformanceResourceAgent(DetectionAgent):
         return findings
 
     # ------------------------------------------------------------------
-    # PR-04: High event topic retention
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="PR-04",
-        category="performance",
-        subcategory="storage",
-        title="High event topic retention",
-    )
-    def high_topic_retention(self, appspec: AppSpec) -> list[Finding]:
-        """Flag event topics with retention exceeding 90 days."""
-        findings: list[Finding] = []
-        if appspec.event_model is None:
-            return findings
-        for topic in appspec.event_model.topics:
-            if topic.retention_days <= 90:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.PR,
-                    heuristic_id="PR-04",
-                    category="performance",
-                    subcategory="storage",
-                    severity=Severity.LOW,
-                    confidence=Confidence.POSSIBLE,
-                    title=(f"Topic '{topic.name}' retains events for {topic.retention_days} days"),
-                    description=(
-                        f"Topic '{topic.name}' has retention_days="
-                        f"{topic.retention_days}, exceeding 90 days. "
-                        f"Long retention increases storage cost and may "
-                        f"slow consumer catch-up on replay."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="config_value",
-                            location=f"topic:{topic.name}",
-                            snippet=f"retention_days: {topic.retention_days}",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Review retention for topic '{topic.name}'.",
-                        effort=RemediationEffort.TRIVIAL,
-                    ),
-                    construct_type="topic",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
     # PR-05: Large entity in list surface
     # ------------------------------------------------------------------
     @heuristic(
@@ -351,53 +302,6 @@ class PerformanceResourceAgent(DetectionAgent):
                     surface_name=surface.name,
                     entity_name=entity_name,
                     construct_type="surface",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # PR-06: Synchronous transaction execution
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="PR-06",
-        category="performance",
-        subcategory="blocking",
-        title="Synchronous transaction execution",
-    )
-    def sync_transaction(self, appspec: AppSpec) -> list[Finding]:
-        """Flag transactions using synchronous execution."""
-        findings: list[Finding] = []
-        for txn in appspec.transactions:
-            if txn.execution != TransactionExecution.SYNC:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.PR,
-                    heuristic_id="PR-06",
-                    category="performance",
-                    subcategory="blocking",
-                    severity=Severity.MEDIUM,
-                    confidence=Confidence.LIKELY,
-                    title=f"Transaction '{txn.name}' uses synchronous execution",
-                    description=(
-                        f"Transaction '{txn.name}' has execution='sync', "
-                        f"which blocks the caller until the transfer "
-                        f"completes. Under load this may exhaust request "
-                        f"threads. Consider async execution for non-critical "
-                        f"transfers."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="config_value",
-                            location=f"transaction:{txn.name}",
-                            snippet="execution: sync",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Consider async execution for '{txn.name}'.",
-                        effort=RemediationEffort.SMALL,
-                    ),
-                    construct_type="transaction",
                 ),
             )
         return findings

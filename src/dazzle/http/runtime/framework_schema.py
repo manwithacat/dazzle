@@ -48,7 +48,6 @@ from dazzle.http.runtime.auth.store import ensure_auth_core_tables
 from dazzle.http.runtime.device_registry import ensure_device_tables
 from dazzle.http.runtime.file_storage import ensure_file_storage_tables
 from dazzle.http.runtime.grant_store import ensure_grant_tables
-from dazzle.http.runtime.ingest_engine import ensure_ingest_fingerprint_table
 from dazzle.http.runtime.otp_store import ensure_otp_tables
 from dazzle.http.runtime.recovery_codes import ensure_recovery_code_tables
 from dazzle.http.runtime.tenant.aliases import ensure_tenant_host_aliases_table
@@ -179,27 +178,6 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # hash-chain upgrades work without a separate migration step.
     ensure_audit_log_table(cur, hash_chain=True)
 
-    # _dazzle_atomic_audit (#1317, ADR-0029).
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS _dazzle_atomic_audit (
-            id TEXT PRIMARY KEY,
-            timestamp TEXT NOT NULL,
-            flow_name TEXT NOT NULL,
-            user_id TEXT,
-            user_email TEXT,
-            user_roles TEXT,
-            operation TEXT NOT NULL,
-            entity_name TEXT NOT NULL,
-            entity_id TEXT,
-            decision TEXT NOT NULL,
-            matched_policy TEXT
-        )
-    """)
-    cur.execute(
-        "CREATE INDEX IF NOT EXISTS idx_atomic_audit_flow "
-        "ON _dazzle_atomic_audit(flow_name, timestamp)"
-    )
-
     # ── FILE STORAGE (dazzle_files) ───────────────────────────────────────
     # Delegated to ensure_file_storage_tables (file_storage.py).
     ensure_file_storage_tables(cur)
@@ -253,12 +231,6 @@ def _ensure_framework_schema_ddl(cur: Any) -> None:  # cur: psycopg.Cursor
     # Composing custom-domain aliases. Orchestrator-only (no request-path
     # boot entry). Alembic 0020 covers already-stamped 0019 production DBs.
     ensure_tenant_host_aliases_table(cur)
-
-    # ── INGEST FINGERPRINT (_dazzle_ingest_fingerprint) ──────────────────
-    # #1676: content-hash idempotency for OBSERVATION ingest batches.
-    # Orchestrator-only (no request-path CREATE). Alembic 0021 covers
-    # already-stamped 0020 production DBs.
-    ensure_ingest_fingerprint_table(cur)
 
 
 def ensure_framework_schema(conn: Any) -> None:  # conn: psycopg.Connection

@@ -1,10 +1,9 @@
-"""Deployment & State detection agent (DS-03 through DS-08)."""
+"""Deployment & State detection agent (DS-05 and DS-08)."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dazzle.core.ir.messaging import ChannelKind, DeliveryMode
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
 from dazzle.sentinel.models import (
     AgentId,
@@ -31,114 +30,6 @@ class DeploymentStateAgent(DetectionAgent):
     @property
     def agent_id(self) -> AgentId:
         return AgentId.DS
-
-    # ------------------------------------------------------------------
-    # DS-03: Transaction without idempotency key
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-03",
-        category="deployment",
-        subcategory="state",
-        title="Transaction without idempotency key",
-    )
-    def transaction_without_idempotency(self, appspec: AppSpec) -> list[Finding]:
-        """Flag transactions that have no idempotency key."""
-        findings: list[Finding] = []
-        for txn in appspec.transactions:
-            if txn.idempotency_key:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.DS,
-                    heuristic_id="DS-03",
-                    category="deployment",
-                    subcategory="state",
-                    severity=Severity.HIGH,
-                    confidence=Confidence.CONFIRMED,
-                    title=f"Transaction '{txn.name}' has no idempotency key",
-                    description=(
-                        f"Transaction '{txn.name}' does not define an "
-                        f"idempotency_key. Retries or duplicate submissions "
-                        f"may produce duplicate financial entries."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"transaction:{txn.name}",
-                            context="idempotency_key is empty",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add an idempotency key to transaction '{txn.name}'.",
-                        effort=RemediationEffort.SMALL,
-                        dsl_example=(f"transaction {txn.name}:\n  idempotency_key: payment.id"),
-                    ),
-                    construct_type="transaction",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # DS-04: Queue channel with direct delivery
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-04",
-        category="deployment",
-        subcategory="messaging",
-        title="Queue channel with direct delivery",
-    )
-    def queue_direct_delivery(self, appspec: AppSpec) -> list[Finding]:
-        """Flag queue channels with send operations using direct delivery."""
-        findings: list[Finding] = []
-        for channel in appspec.channels:
-            if channel.kind != ChannelKind.QUEUE:
-                continue
-            for op in channel.send_operations:
-                if op.delivery_mode != DeliveryMode.DIRECT:
-                    continue
-                findings.append(
-                    Finding(
-                        agent=AgentId.DS,
-                        heuristic_id="DS-04",
-                        category="deployment",
-                        subcategory="messaging",
-                        severity=Severity.MEDIUM,
-                        confidence=Confidence.LIKELY,
-                        title=(
-                            f"Queue channel '{channel.name}' send '{op.name}' uses direct delivery"
-                        ),
-                        description=(
-                            f"Send operation '{op.name}' on queue channel "
-                            f"'{channel.name}' uses delivery_mode 'direct' "
-                            f"(fire-and-forget) instead of 'outbox'. "
-                            f"Messages may be lost if the application crashes "
-                            f"between committing the business transaction and "
-                            f"publishing the message."
-                        ),
-                        evidence=[
-                            Evidence(
-                                evidence_type="config_value",
-                                location=f"channel:{channel.name}/send:{op.name}",
-                                snippet=f"delivery_mode: {op.delivery_mode.value}",
-                            ),
-                        ],
-                        remediation=Remediation(
-                            summary=(
-                                f"Use outbox delivery for send '{op.name}' "
-                                f"on channel '{channel.name}'."
-                            ),
-                            effort=RemediationEffort.MEDIUM,
-                            dsl_example=(
-                                f"channel {channel.name}:\n"
-                                f"  kind: queue\n"
-                                f"  send {op.name}:\n"
-                                f"    delivery: outbox"
-                            ),
-                        ),
-                        construct_type="channel",
-                    ),
-                )
-        return findings
 
     # ------------------------------------------------------------------
     # DS-05: PII data without erasure policy
@@ -197,104 +88,6 @@ class DeploymentStateAgent(DetectionAgent):
                     ),
                     entity_name=entity_name,
                     construct_type="entity",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # DS-06: Transaction without validation rules
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-06",
-        category="deployment",
-        subcategory="state",
-        title="Transaction without validation rules",
-    )
-    def transaction_without_validations(self, appspec: AppSpec) -> list[Finding]:
-        """Flag transactions that define no validation rules (preconditions)."""
-        findings: list[Finding] = []
-        for txn in appspec.transactions:
-            if txn.validation:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.DS,
-                    heuristic_id="DS-06",
-                    category="deployment",
-                    subcategory="state",
-                    severity=Severity.MEDIUM,
-                    confidence=Confidence.LIKELY,
-                    title=f"Transaction '{txn.name}' has no validation rules",
-                    description=(
-                        f"Transaction '{txn.name}' does not define any "
-                        f"validation rules. Preconditions guard against "
-                        f"invalid transfers (e.g. negative amounts, "
-                        f"insufficient balance)."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"transaction:{txn.name}",
-                            context="validations is empty",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add validation rules to transaction '{txn.name}'.",
-                        effort=RemediationEffort.SMALL,
-                    ),
-                    construct_type="transaction",
-                ),
-            )
-        return findings
-
-    # ------------------------------------------------------------------
-    # DS-07: Channel without throttle configuration
-    # ------------------------------------------------------------------
-    @heuristic(
-        heuristic_id="DS-07",
-        category="deployment",
-        subcategory="messaging",
-        title="Channel without throttle configuration",
-    )
-    def channel_without_throttle(self, appspec: AppSpec) -> list[Finding]:
-        """Flag channels without provider rate-limit configuration."""
-        findings: list[Finding] = []
-        for channel in appspec.channels:
-            if channel.provider_config is not None:
-                continue
-            findings.append(
-                Finding(
-                    agent=AgentId.DS,
-                    heuristic_id="DS-07",
-                    category="deployment",
-                    subcategory="messaging",
-                    severity=Severity.LOW,
-                    confidence=Confidence.POSSIBLE,
-                    title=f"Channel '{channel.name}' has no provider rate config",
-                    description=(
-                        f"Channel '{channel.name}' does not configure a "
-                        f"provider_config. Without rate controls, burst traffic "
-                        f"may overwhelm downstream consumers or exceed "
-                        f"provider rate limits."
-                    ),
-                    evidence=[
-                        Evidence(
-                            evidence_type="missing_construct",
-                            location=f"channel:{channel.name}",
-                            context="provider_config is None",
-                        ),
-                    ],
-                    remediation=Remediation(
-                        summary=f"Add provider_config to channel '{channel.name}'.",
-                        effort=RemediationEffort.SMALL,
-                        dsl_example=(
-                            f"channel {channel.name}:\n"
-                            f"  provider_config:\n"
-                            f"    max_per_minute: 200\n"
-                            f"    max_concurrent: 10"
-                        ),
-                    ),
-                    construct_type="channel",
                 ),
             )
         return findings

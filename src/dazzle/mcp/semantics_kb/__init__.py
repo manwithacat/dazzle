@@ -164,12 +164,6 @@ ALIASES = {
     "seed_data": "demo_data",
     "seed": "demo_data",
     "fixtures": "demo_data",
-    # Financial aliases
-    "ledger": "ledger",
-    "tigerbeetle": "ledger",
-    "double_entry": "ledger",
-    "transaction": "transaction",
-    "transfer": "transaction",
     # LLM aliases
     "llm_intent": "llm_intent",
     "llm_job": "llm_intent",

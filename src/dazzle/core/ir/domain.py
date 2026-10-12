@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from .archetype import ArchetypeKind
 from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
-from .eventing import PublishSpec
 from .fields import FieldModifier, FieldSpec
 from .fitness_repr import FitnessSpec
 from .invariant import InvariantSpec
@@ -459,7 +458,6 @@ class EntitySpec(BaseModel):
         subtype_of: Name of base entity this is a subtype of (v0.71.180, #1217 Phase 3e.i)
         subtype_children: Back-pointer to subtypes (linker-populated; empty in raw parser output)
         examples: Example data records for LLM cognition (v0.7.1)
-        publishes: Event publishing declarations (v0.18.0)
     """
 
     name: str
@@ -523,8 +521,6 @@ class EntitySpec(BaseModel):
     # Agent-Led Fitness v1: per-entity repr_fields projection for diff tracking
     fitness: FitnessSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
-    # v0.18.0: Event publishing
-    publishes: list[PublishSpec] = Field(default_factory=list)
     # v0.38.0: Declarative seed template for reference data
     seed_template: SeedTemplateSpec | None = None
     # v0.44.0: Explicit display field for FK references

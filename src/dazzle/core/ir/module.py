@@ -12,15 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .analytics import AnalyticsSpec
 from .archetype import ArchetypeSpec
-from .atomic_flows import AtomicFlowSpec
 from .audit import AuditSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec
-from .eventing import (
-    EventModelSpec,
-    ProjectionSpec,
-    SubscribeSpec,
-)
 from .experiences import ExperienceSpec
 from .feedback_widget import FeedbackWidgetSpec
 from .foreign_models import ForeignModelSpec
@@ -29,31 +23,13 @@ from .governance import (
     TenancySpec,
 )
 from .grants import GrantSchemaSpec
-from .hless import (
-    HLESSPragma,
-    StreamSpec,
-)
-from .ingest import IngestSpec
 from .integrations import IntegrationSpec
 from .islands import IslandSpec
-from .jobs import JobSpec
-from .ledgers import (
-    LedgerSpec,
-    TransactionSpec,
-)
 from .llm import (
     LLMConfigSpec,
     LLMIntentSpec,
     LLMModelSpec,
 )
-from .messaging import (
-    AssetSpec,
-    ChannelSpec,
-    DocumentSpec,
-    MessageSpec,
-    TemplateSpec,
-)
-from .notifications import NotificationSpec
 from .onboarding import GuideSpec
 from .params import ParamSpec
 from .personas import PersonaSpec
@@ -136,9 +112,6 @@ class ModuleFragment(BaseModel):
     domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
-    atomic_flows: list[AtomicFlowSpec] = Field(
-        default_factory=list
-    )  # #1228 — atomic multi-entity creates
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
@@ -146,22 +119,6 @@ class ModuleFragment(BaseModel):
     stories: list[StorySpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
-    # Messaging Channels (v0.9.0)
-    messages: list[MessageSpec] = Field(default_factory=list)
-    channels: list[ChannelSpec] = Field(default_factory=list)
-    assets: list[AssetSpec] = Field(default_factory=list)
-    documents: list[DocumentSpec] = Field(default_factory=list)
-    templates: list[TemplateSpec] = Field(default_factory=list)
-    # Event-First Architecture (v0.18.0)
-    event_model: EventModelSpec | None = None
-    subscriptions: list[SubscribeSpec] = Field(default_factory=list)
-    projections: list[ProjectionSpec] = Field(default_factory=list)
-    # Publish directives are stored on entities, not here
-    # HLESS - High-Level Event Semantics (v0.19.0)
-    streams: list[StreamSpec] = Field(default_factory=list)
-    # File/IoT ingest (#1676)
-    ingests: list[IngestSpec] = Field(default_factory=list)
-    hless_pragma: HLESSPragma | None = None
     # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
     policies: PoliciesSpec | None = None
     tenancy: TenancySpec | None = None
@@ -172,19 +129,12 @@ class ModuleFragment(BaseModel):
     # Process Workflows (v0.23.0)
     processes: list[ProcessSpec] = Field(default_factory=list)
     schedules: list[ScheduleSpec] = Field(default_factory=list)
-    # TigerBeetle Ledgers (v0.24.0)
-    ledgers: list[LedgerSpec] = Field(default_factory=list)
-    transactions: list[TransactionSpec] = Field(default_factory=list)
     # Views (v0.25.0)
     views: list[ViewSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
     # Islands (UI Islands)
     islands: list[IslandSpec] = Field(default_factory=list)
-    # Notifications (v0.34.0)
-    notifications: list[NotificationSpec] = Field(default_factory=list)
-    # Background Jobs (#953)
-    jobs: list[JobSpec] = Field(default_factory=list)
     # Audit trail (#956)
     audits: list[AuditSpec] = Field(default_factory=list)
     # Full-text search (#954)

@@ -10,7 +10,6 @@ must follow. The interface is Kafka-shaped, supporting:
 
 Implementations:
 - DevBusMemory: In-memory bus for unit tests
-- KafkaBus: Production Kafka implementation
 """
 
 from __future__ import annotations  # required: forward reference

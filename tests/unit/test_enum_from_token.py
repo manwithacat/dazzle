@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 
 from dazzle.core import ir
-from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.dsl_parser_impl.base import BaseParser
 from dazzle.core.errors import ParseError
 from dazzle.core.lexer import Token, TokenType
@@ -37,18 +36,3 @@ def test_enum_from_token_label_override() -> None:
     parser = BaseParser([], Path("x.dsl"))
     with pytest.raises(ParseError, match="Invalid widget kind"):
         parser.enum_from_token(ir.BusinessPriority, _tok("nope"), label="widget kind")
-
-
-def test_invalid_notification_channel_is_parse_error() -> None:
-    # End-to-end: a migrated site (notification channels) rejects a bad enum cleanly.
-    dsl = """\
-module test.core
-app test_app "Test"
-
-notification n "N":
-  on: Invoice created
-  channels: [not_a_channel]
-  message: "hi"
-"""
-    with pytest.raises(ParseError):
-        parse_dsl(dsl, Path("test.dsl"))

@@ -75,7 +75,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
@@ -139,30 +138,12 @@ class PostgresProcessAdapter(ProcessAdapter):
         self._lease_seconds: int = 60
         self._batch_size: int = 5
         self._worker_id: str = f"worker-{uuid.uuid4().hex[:8]}"
-        # Optional handlers wired by ProcessSubsystem at startup.
-        # Mirrors EventBusProcessAdapter so the subsystem's hasattr checks
-        # find them and both backends behave identically for SEND steps and
-        # step side-effects.
-        self._send_handler: Callable[..., Coroutine[Any, Any, None]] | None = None
+        # Optional handler wired by ProcessSubsystem at startup.
         self._side_effect_executor: Any | None = None
 
     # -------------------------------------------------------------------------
     # Handler wiring (called by ProcessSubsystem at startup)
     # -------------------------------------------------------------------------
-
-    def set_send_handler(self, handler: Callable[..., Coroutine[Any, Any, None]]) -> None:
-        """Wire a coroutine handler for SEND steps.
-
-        Mirrors ``EventBusProcessAdapter.set_send_handler`` so that
-        ``ProcessSubsystem._wire_send_handler_to_channels`` (which guards with
-        ``hasattr``) finds this method and wires ChannelManager sends on both
-        backends.  Without this method SEND steps on the Postgres backend were
-        log-only (the ``hasattr`` guard skipped wiring entirely).
-
-        Signature: ``async handler(channel: str, message_type: str, payload: dict) -> None``
-        """
-        self._send_handler = handler
-        logger.debug("PostgresProcessAdapter: send handler wired")
 
     def set_side_effect_executor(self, executor: Any) -> None:
         """Wire a ``SideEffectExecutor`` for step ``effects:`` blocks.

@@ -6,7 +6,7 @@ platforms (Heroku and similar); containerisation, if you want it, is your own
 concern. This package provides:
 
 - `build_infra_plan(appspec)` — infer, target-neutrally, what infrastructure an
-  app needs (database, queues, storage, ledger cluster, …) and which environment
+  app needs (database, queues, storage, …) and which environment
   variables its host must supply. Surfaced as `dazzle deploy plan`.
 - Heroku/uv-buildpack file generation (`dazzle deploy heroku`).
 

@@ -75,9 +75,6 @@ class ProcessSubsystem:
                 )
                 self._adapter.set_side_effect_executor(side_effect_executor)
 
-            # Wire process SEND steps to ChannelManager (if available)
-            self._wire_send_handler_to_channels(ctx)
-
             process_adapter = self._adapter
             process_manager = self._manager
 
@@ -147,29 +144,6 @@ class ProcessSubsystem:
             "Wired entity events to ProcessManager for %s services",
             wired_count,
         )
-
-    def _wire_send_handler_to_channels(self, ctx: SubsystemContext) -> None:
-        """Connect the process adapter SEND step to ChannelManager (if available)."""
-        channel_mgr = ctx.channel_manager
-        if not channel_mgr or not self._adapter:
-            return
-
-        if not hasattr(self._adapter, "set_send_handler"):
-            return
-
-        async def _send_via_channel(
-            channel: str, message_type: str, payload: dict[str, Any]
-        ) -> None:
-            await channel_mgr.send(
-                channel=channel,
-                operation="process_send",
-                message_type=message_type,
-                payload=payload,
-                recipient=payload.get("to", payload.get("recipient", "")),
-            )
-
-        self._adapter.set_send_handler(_send_via_channel)
-        logger.info("Wired process SEND steps to ChannelManager")
 
     def shutdown(self) -> None:
         pass  # teardown runs via the registered lifespan shutdown hook

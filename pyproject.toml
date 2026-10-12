@@ -267,16 +267,8 @@ postgres = []
 temporal = [
     "temporalio>=1.4.0",
 ]
-# Messaging adapters (v0.16.0 - Issue #29)
-rabbitmq = ["aio-pika>=9.0"]
+# Redis: event bus tier, process state, API cache
 redis = ["redis>=5.0"]
-kafka = ["aiokafka>=0.9"]
-# All messaging adapters
-messaging = [
-    "aio-pika>=9.0",
-    "redis>=5.0",
-    "aiokafka>=0.9",
-]
 # Event system core (event bus, outbox/inbox, framework)
 events = [
     "psycopg[binary]>=3.2",
@@ -284,10 +276,6 @@ events = [
 # Viewport visual regression testing
 viewport = [
     "Pillow>=12.3.0",
-]
-# TigerBeetle ledger integration (v0.5.0 - Issue #ledgers)
-tigerbeetle = [
-    "tigerbeetle>=0.16.0",
 ]
 # Mobile authentication (JWT, OAuth2, Push)
 mobile = [
@@ -341,9 +329,8 @@ aws-test = [
 # Coverage bundle: the pure-pip optional subsystems whose tests otherwise
 # skip on the CI coverage job (no native deps), undercounting coverage.
 # Wired into the py-tests (coverage) job's install. Deliberately EXCLUDES
-# compliance/weasyprint (native libpango/cairo), tigerbeetle (needs the TB
-# client) and saml (native libxmlsec1) — those need system deps and are a
-# separate decision.
+# compliance/weasyprint (native libpango/cairo) and saml (native libxmlsec1)
+# — those need system deps and are a separate decision.
 test-full = [
     "dazzle-dsl[graph,signing,sendgrid,observability,aws]",
     "aiosqlite>=0.19",
@@ -456,7 +443,6 @@ markers = [
     "display: Display/UI element tests (FieldTest Hub)",
     "corpus: Parser corpus golden snapshot tests",
     "visual: Playwright-driven visual smoke tests (requires Chromium)",
-    "tigerbeetle: TigerBeetle integration tests (requires running TigerBeetle)",
     "postgres: Tests requiring a live PostgreSQL connection (TEST_DATABASE_URL)",
     "migration_engine: DSL-snapshot migration engine (#1431) regression path — run with `pytest -m migration_engine`",
     "gate: Fast, DB-free structural/regression gate run by /ship pre-flight (`pytest -m gate`). Completeness enforced by test_gate_marker_complete.py.",

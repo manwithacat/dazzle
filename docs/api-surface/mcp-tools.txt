@@ -1107,15 +1107,14 @@ tool: rhythm
   }
 
 tool: semantics
-  description_hash: 59b3c45353ad
-  description_len: 91
+  description_hash: 6735b5e1d3d0
+  description_len: 74
   {
     "properties": {
       "operation": {
         "description": "Operation to perform",
         "enum": [
           "extract",
-          "validate_events",
           "tenancy",
           "compliance",
           "analytics",

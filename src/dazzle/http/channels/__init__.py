@@ -1,20 +1,9 @@
 """
-Channel adapters and provider detection for DAZZLE messaging (v0.9.0).
+Email delivery kernel for DAZZLE.
 
-This module provides:
-- Provider auto-detection for email, queue, and stream channels
-- Channel adapter base classes
-- Runtime channel resolution
-- Transactional outbox pattern
-- Template rendering
-
-Example:
-    from dazzle.http.channels import ChannelResolver, OutboxRepository
-
-    resolver = ChannelResolver()
-    resolution = await resolver.resolve(channel_spec)
-    adapter = resolution.adapter_class(resolution.provider)
-    await adapter.send(message)
+What remains of the messaging channels after the messaging DSL was parked
+(DD-007): provider detection, the email adapters, the delivery outbox table
+and the SES bounce/complaint webhook the auth subsystem registers.
 """
 
 from .adapters import BaseChannelAdapter, FileEmailAdapter, MailpitAdapter, SendResult
@@ -23,29 +12,11 @@ from .detection import (
     ProviderDetector,
     ProviderStatus,
 )
-from .manager import (
-    ChannelManager,
-    ChannelStatus,
-    create_channel_manager,
-)
 from .outbox import (
     OutboxMessage,
     OutboxRepository,
     OutboxStatus,
     create_outbox_message,
-)
-from .resolver import (
-    ChannelConfigError,
-    ChannelResolution,
-    ChannelResolver,
-)
-from .templates import (
-    TemplateError,
-    TemplateRenderError,
-    TemplateSyntaxError,
-    extract_variables,
-    render_template,
-    validate_template,
 )
 
 __all__ = [
@@ -53,14 +24,6 @@ __all__ = [
     "DetectionResult",
     "ProviderDetector",
     "ProviderStatus",
-    # Resolver
-    "ChannelConfigError",
-    "ChannelResolution",
-    "ChannelResolver",
-    # Manager
-    "ChannelManager",
-    "ChannelStatus",
-    "create_channel_manager",
     # Outbox
     "OutboxMessage",
     "OutboxRepository",
@@ -71,11 +34,4 @@ __all__ = [
     "SendResult",
     "MailpitAdapter",
     "FileEmailAdapter",
-    # Templates
-    "TemplateError",
-    "TemplateSyntaxError",
-    "TemplateRenderError",
-    "render_template",
-    "validate_template",
-    "extract_variables",
 ]

@@ -4,13 +4,11 @@ Bus Conformance Test Suite for Event-First Architecture.
 Tests that all EventBus implementations conform to the expected behavior.
 Runs the same test cases against:
 - DevBusMemory (testing)
-- KafkaBus (production, optional)
 
 Part of v0.18.0 Event-First Architecture (Issue #25, Phase I).
 """
 
 import asyncio
-import os
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
@@ -28,16 +26,6 @@ from dazzle.http.events.bus import (
 from dazzle.http.events.dev_memory import DevBusMemory
 from dazzle.http.events.envelope import EventEnvelope
 
-# Check if Kafka is available for testing
-try:
-    from dazzle.http.events.kafka_bus import KAFKA_AVAILABLE, KafkaBus, KafkaConfig
-
-    KAFKA_TEST_ENABLED = KAFKA_AVAILABLE and os.getenv("KAFKA_BOOTSTRAP_SERVERS")
-except ImportError:
-    KAFKA_TEST_ENABLED = False
-    KafkaBus = None  # type: ignore
-    KafkaConfig = None  # type: ignore
-
 
 async def dispatch_events(bus: EventBus, topic: str, group_id: str) -> None:
     """
@@ -48,7 +36,6 @@ async def dispatch_events(bus: EventBus, topic: str, group_id: str) -> None:
     """
     if isinstance(bus, DevBusMemory):
         await bus.process_pending(topic, group_id)
-    # KafkaBus has its own consumer loop and doesn't need manual dispatch
 
 
 def create_test_envelope(
@@ -82,25 +69,11 @@ async def memory_bus() -> AsyncGenerator[DevBusMemory, None]:
     yield bus
 
 
-@pytest.fixture
-async def kafka_bus() -> AsyncGenerator[Any, None]:
-    """Create a KafkaBus instance for testing (if available)."""
-    if not KAFKA_TEST_ENABLED:
-        pytest.skip("Kafka not available for testing")
-        return
-
-    config = KafkaConfig.from_env()
-    async with KafkaBus(config) as bus:
-        yield bus
-
-
 # Build params dynamically - only include available implementations
 # This eliminates skip noise from test runs
 _BUS_PARAMS = [
     pytest.param("memory", id="memory"),
 ]
-if KAFKA_TEST_ENABLED:
-    _BUS_PARAMS.append(pytest.param("kafka", id="kafka"))
 
 
 # Parametrized fixture for all available bus implementations
@@ -112,10 +85,6 @@ async def any_bus(
     """Parametrized fixture that yields each available bus implementation."""
     if request.param == "memory":
         yield memory_bus
-    elif request.param == "kafka":
-        config = KafkaConfig.from_env()  # type: ignore
-        async with KafkaBus(config) as bus:  # type: ignore
-            yield bus
 
 
 class TestPublishSubscribe:

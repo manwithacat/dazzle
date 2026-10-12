@@ -3,7 +3,7 @@
 Surfaces the AppSpec → infrastructure-requirements inference (the reusable core
 of the retired AWS-CDK generator, ADR/issue #1568) as a deploy-target-neutral
 plan: *what* a Dazzle app needs to run in production (a Postgres database, N
-queues, object storage, a ledger cluster, …) and *which* environment variables
+queues, object storage, …) and *which* environment variables
 its host must provide — independent of how you provision it (buildpack/Heroku,
 your own container, a managed platform).
 
@@ -31,7 +31,7 @@ __all__ = ["InfraComponent", "InfraPlan", "build_infra_plan"]
 class InfraComponent:
     """A single infrastructure component an app needs in production."""
 
-    kind: str  # "database" | "cache" | "queue" | "workers" | "storage" | "ledger" | "webhooks"
+    kind: str  # "database" | "cache" | "queue" | "workers" | "storage" | "webhooks"
     summary: str  # one-line human description
     detail: str | None = None  # optional extra detail (sizing hint, counts, …)
     required: bool = True  # required vs optional/managed-elsewhere
@@ -128,19 +128,6 @@ def build_infra_plan(appspec: AppSpec) -> InfraPlan:
                 kind="storage",
                 summary=f"Object storage ({reqs.storage_type})",
                 detail="file uploads / assets",
-            )
-        )
-
-    if reqs.needs_tigerbeetle:
-        ledgers = (
-            ", ".join(reqs.tigerbeetle_ledger_names or [])
-            or f"{reqs.tigerbeetle_ledger_count} ledger(s)"
-        )
-        components.append(
-            InfraComponent(
-                kind="ledger",
-                summary="TigerBeetle ledger cluster",
-                detail=f"{ledgers} — a dedicated consensus cluster (odd node count) must be provisioned",
             )
         )
 

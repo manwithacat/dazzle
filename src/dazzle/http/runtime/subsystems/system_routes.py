@@ -115,7 +115,6 @@ class SystemRoutesSubsystem:
         ctx.integration_mgr = IntegrationManager(
             app=ctx.app,
             appspec=ctx.appspec,
-            channels=ctx.channels,
             db_manager=ctx.db_manager,
             fragment_sources=ctx.config.fragment_sources,
         )
@@ -172,29 +171,6 @@ class SystemRoutesSubsystem:
             )
             metrics_router = create_metrics_routes(_system_collector)
             ctx.app.include_router(metrics_router)
-
-            # Job explorer (#1193) — /_dazzle/jobs/* inspection endpoints,
-            # the job-system analogue of the event explorer above. Only
-            # registered when `job` blocks are declared (the JobRun system
-            # entity + its CRUD service exist only then). Resolves the
-            # JobRun service from `ctx.services` (keyed by service name)
-            # the same way `services_by_entity()` does.
-            if ctx.appspec.jobs:
-                from dazzle.http.runtime.job_explorer import create_job_explorer_routes
-
-                job_run_service = next(
-                    (
-                        svc
-                        for svc in ctx.services.values()
-                        if getattr(svc, "entity_name", None) == "JobRun"
-                    ),
-                    None,
-                )
-                job_explorer_router = create_job_explorer_routes(
-                    job_run_service,
-                    jobs_declared=len(ctx.appspec.jobs),
-                )
-                ctx.app.include_router(job_explorer_router)
 
             # Integration retries explorer (#1194) —
             # /_dazzle/integrations/{name}/retries. Only registered when

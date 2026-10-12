@@ -34,11 +34,9 @@ _EXPECTED_BASELINE = frozenset(
         "magic_links",
         "email_verification_tokens",
         "user_preferences",
-        "join_requests",
         "process_runs",
         "process_tasks",
         "_dazzle_audit_log",
-        "_dazzle_atomic_audit",
         "dazzle_files",
         "refresh_tokens",
         "devices",
@@ -51,7 +49,6 @@ _EXPECTED_BASELINE = frozenset(
         "_dazzle_outbox",
         "_dazzle_usage_events",
         "tenant_host_aliases",
-        "_dazzle_ingest_fingerprint",
     }
 )
 

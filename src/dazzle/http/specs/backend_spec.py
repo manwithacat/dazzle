@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.ir import PersonaSpec, SurfaceSpec, WorkspaceSpec
 from dazzle.http.specs.auth import AuthRuleSpec, RoleSpec, TenancyRuleSpec
-from dazzle.http.specs.channel import ChannelSpec, MessageSpec
 from dazzle.http.specs.endpoint import EndpointSpec
 from dazzle.http.specs.entity import EntitySpec
 from dazzle.http.specs.service import ServiceSpec
@@ -58,14 +57,6 @@ class BackendSpec(BaseModel):
     services: list[ServiceSpec] = Field(default_factory=list, description="Service specifications")
     endpoints: list[EndpointSpec] = Field(
         default_factory=list, description="Endpoint specifications"
-    )
-
-    # Messaging (v0.9)
-    channels: list[ChannelSpec] = Field(
-        default_factory=list, description="Messaging channel specifications"
-    )
-    messages: list[MessageSpec] = Field(
-        default_factory=list, description="Message type specifications"
     )
 
     # Authorization
@@ -142,24 +133,6 @@ class BackendSpec(BaseModel):
         """Get all services that operate on a given entity."""
         return [svc for svc in self.services if svc.domain_operation.entity == entity_name]
 
-    def get_channel(self, name: str) -> ChannelSpec | None:
-        """Get channel by name."""
-        for channel in self.channels:
-            if channel.name == name:
-                return channel
-        return None
-
-    def get_message(self, name: str) -> MessageSpec | None:
-        """Get message type by name."""
-        for message in self.messages:
-            if message.name == name:
-                return message
-        return None
-
-    def get_messages_for_channel(self, channel_name: str) -> list[MessageSpec]:
-        """Get all message types associated with a channel."""
-        return [msg for msg in self.messages if msg.channel == channel_name]
-
     # =========================================================================
     # Validation
     # =========================================================================
@@ -220,6 +193,4 @@ class BackendSpec(BaseModel):
             "roles": len(self.roles),
             "crud_services": sum(1 for svc in self.services if svc.is_crud),
             "custom_services": sum(1 for svc in self.services if not svc.is_crud),
-            "channels": len(self.channels),
-            "messages": len(self.messages),
         }

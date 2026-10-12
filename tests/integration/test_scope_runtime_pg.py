@@ -19,9 +19,6 @@ are otherwise only unit-tested with an injected fake probe:
 Marked ``postgres`` (+ ``e2e``): skipped locally without
 ``TEST_DATABASE_URL`` / ``DATABASE_URL``; CI's ``postgres-tests`` job runs it
 against a real ``postgres:16`` service.
-
-#1313 slice 1b will extend this fixture with a guarded ``atomic`` reassign
-flow once the per-step in-transaction scope enforcement lands.
 """
 
 from __future__ import annotations
@@ -74,9 +71,6 @@ class _ScopeRuntimeApp:
         self.science_group_id = ""
         self.math_enrolment_id = ""
         self.science_enrolment_id = ""
-        # #1318 — flow-level invariant anchor (a Transaction) + its seeded
-        # counter-posting amount (the flow appends the balancing posting).
-        self.txn_id = ""
 
     async def client_as(self, who: str) -> httpx.AsyncClient:
         import httpx
@@ -140,7 +134,6 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
     app.science_group_id = _mk_id()
     app.math_enrolment_id = _mk_id()
     app.science_enrolment_id = _mk_id()
-    app.txn_id = _mk_id()
 
     with psycopg.connect(db_url) as conn:
         _sql_insert(conn, "Department", {"id": app.math_dept_id, "name": "Mathematics"})
@@ -204,8 +197,7 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
                 "status": "active",
             },
         )
-        # A science-department enrolment — used by the atomic-reassign
-        # source-check test (a maths teacher must not touch it).
+        # A science-department enrolment (a maths teacher must not see it).
         _sql_insert(
             conn,
             "Enrolment",
@@ -215,16 +207,6 @@ def _seed(app: _ScopeRuntimeApp, auth_store: Any, db_url: str) -> None:
                 "teaching_group": app.science_group_id,
                 "status": "active",
             },
-        )
-        # #1318 — a Transaction anchor + a seeded posting of -5. The
-        # `balanced_post` flow appends one posting; the transaction's postings
-        # must net to zero. The test passes a=5 (balanced → commits) or a≠5
-        # (unbalanced → rolls back).
-        _sql_insert(conn, "Transaction", {"id": app.txn_id, "label": "Ledger txn"})
-        _sql_insert(
-            conn,
-            "Posting",
-            {"id": _mk_id(), "transaction": app.txn_id, "amount": -5},
         )
         conn.commit()
 
@@ -340,284 +322,6 @@ async def test_update_repoint_into_foreign_department_is_denied(app: _ScopeRunti
     )
     assert resp.status_code == 404, (
         f"foreign-dept repoint should 404, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# #1313 slice 1b — per-step `scope: create:` enforcement inside an atomic flow
-# (in-transaction probe), against real Postgres
-# ---------------------------------------------------------------------------
-
-
-async def _atomic_enrol(app: _ScopeRuntimeApp, who: str, *, label: str, group_id: str) -> Any:
-    client = await app.client_as(who)
-    return await _csrf_post(
-        client, "/api/atomic/enrol_student", {"label": label, "group": group_id}
-    )
-
-
-async def test_atomic_create_in_own_department_is_allowed(app: _ScopeRuntimeApp) -> None:
-    """A teacher's atomic enrol into an own-department group satisfies the
-    per-step `scope: create:` (FK-path) and commits."""
-    resp = await _atomic_enrol(
-        app, "teacher_math", label="Atomic maths", group_id=app.math_group_id
-    )
-    assert resp.status_code < 400, (
-        f"own-dept atomic enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-
-async def test_atomic_create_in_foreign_department_is_denied_and_rolls_back(
-    app: _ScopeRuntimeApp,
-) -> None:
-    """A teacher's atomic enrol into a foreign-department group is denied (403)
-    by the in-transaction per-step scope probe, and the flow rolls back — the
-    raw-INSERT-bypasses-scope hole is closed."""
-    resp = await _atomic_enrol(
-        app, "teacher_math", label="Atomic smuggle", group_id=app.science_group_id
-    )
-    assert resp.status_code == 403, (
-        f"foreign-dept atomic enrol should 403, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-    # Roll-back check: the denied enrolment must not have been persisted.
-    import psycopg
-
-    with psycopg.connect(app._db_url) as conn:
-        cur = conn.cursor()
-        cur.execute('SELECT count(*) FROM "Enrolment" WHERE "label" = %s', ["Atomic smuggle"])
-        assert cur.fetchone()[0] == 0, "denied atomic create must not persist any row"
-
-
-async def test_atomic_create_admin_unrestricted(app: _ScopeRuntimeApp) -> None:
-    resp = await _atomic_enrol(
-        app, "admin", label="Atomic admin cross-dept", group_id=app.science_group_id
-    )
-    assert resp.status_code < 400, (
-        f"admin atomic enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# #1317 — strict in-transaction audit (the `enrol_student_strict` flow,
-# `audit: strict`): the audit row is written to `_dazzle_atomic_audit` on the
-# flow's own connection, so it commits with the mutation and rolls back with it.
-# ---------------------------------------------------------------------------
-
-
-async def _atomic_enrol_strict(app: _ScopeRuntimeApp, who: str, *, label: str, group_id: str):
-    client = await app.client_as(who)
-    return await _csrf_post(
-        client, "/api/atomic/enrol_student_strict", {"label": label, "group": group_id}
-    )
-
-
-def _atomic_audit_rows(db_url: str, flow: str | None = None) -> list[dict[str, Any]]:
-    """Read `_dazzle_atomic_audit`; tolerate the table not existing.
-
-    The booted app (scope_runtime declares `enrol_student_strict`) creates the
-    side-table once at boot (#1317), so it normally exists with zero or more
-    rows; the UndefinedTable tolerance is a defensive fallback.
-    """
-    import psycopg
-    from psycopg.rows import dict_row
-
-    try:
-        with psycopg.connect(db_url, row_factory=dict_row) as conn:
-            cur = conn.cursor()
-            if flow:
-                cur.execute("SELECT * FROM _dazzle_atomic_audit WHERE flow_name = %s", [flow])
-            else:
-                cur.execute("SELECT * FROM _dazzle_atomic_audit")
-            return list(cur.fetchall())
-    except psycopg.errors.UndefinedTable:
-        return []
-
-
-async def test_strict_atomic_audit_row_commits_with_the_mutation(
-    app: _ScopeRuntimeApp,
-) -> None:
-    """An own-dept strict enrol commits, and exactly one in-transaction audit
-    row lands in `_dazzle_atomic_audit` — atomic with the INSERT."""
-    resp = await _atomic_enrol_strict(
-        app, "teacher_math", label="Strict maths", group_id=app.math_group_id
-    )
-    assert resp.status_code < 400, (
-        f"own-dept strict enrol should succeed, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-    rows = _atomic_audit_rows(app._db_url, flow="enrol_student_strict")
-    assert len(rows) == 1, f"expected exactly one strict-audit row, got {len(rows)}"
-    row = rows[0]
-    assert row["decision"] == "allow"
-    assert row["operation"] == "create"
-    assert row["entity_name"] == "Enrolment"
-    assert row["matched_policy"] == "atomic:enrol_student_strict"
-    assert row["entity_id"]  # the committed Enrolment id
-
-
-async def test_strict_atomic_audit_rolls_back_with_a_denied_flow(
-    app: _ScopeRuntimeApp,
-) -> None:
-    """A foreign-dept strict enrol is denied (403) and rolls back — NO audit row
-    is left behind (the in-transaction write rolls back with the mutation),
-    proving the strict audit is atomic, not best-effort."""
-    resp = await _atomic_enrol_strict(
-        app, "teacher_math", label="Strict smuggle", group_id=app.science_group_id
-    )
-    assert resp.status_code == 403, (
-        f"foreign-dept strict enrol should 403, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-    assert _atomic_audit_rows(app._db_url, flow="enrol_student_strict") == [], (
-        "a denied/rolled-back strict flow must leave no audit row"
-    )
-
-    import psycopg
-
-    with psycopg.connect(app._db_url) as conn:
-        cur = conn.cursor()
-        cur.execute('SELECT count(*) FROM "Enrolment" WHERE "label" = %s', ["Strict smuggle"])
-        assert cur.fetchone()[0] == 0, "denied strict flow must not persist the Enrolment either"
-
-
-# ---------------------------------------------------------------------------
-# #1313 — atomic `update` step execution + scope: update: (source + destination)
-# in-transaction, against real Postgres
-# ---------------------------------------------------------------------------
-
-
-async def _atomic_reassign(
-    app: _ScopeRuntimeApp, who: str, *, enrolment_id: str, group_id: str
-) -> Any:
-    client = await app.client_as(who)
-    return await _csrf_post(
-        client,
-        "/api/atomic/reassign_enrolment",
-        {"enrolment": enrolment_id, "group": group_id},
-    )
-
-
-async def test_atomic_reassign_within_department_is_allowed(app: _ScopeRuntimeApp) -> None:
-    """Moving an own-department enrolment to another own-department group passes
-    both the source and destination scope: update: checks."""
-    resp = await _atomic_reassign(
-        app, "teacher_math", enrolment_id=app.math_enrolment_id, group_id=app.math_group2_id
-    )
-    assert resp.status_code < 400, (
-        f"in-dept reassign should succeed, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-
-async def test_atomic_reassign_to_foreign_department_is_denied(app: _ScopeRuntimeApp) -> None:
-    """Reassigning an own enrolment to a foreign-department group fails the
-    DESTINATION check → 404 + rollback (group unchanged)."""
-    resp = await _atomic_reassign(
-        app, "teacher_math", enrolment_id=app.math_enrolment_id, group_id=app.science_group_id
-    )
-    assert resp.status_code == 404, (
-        f"foreign-dept reassign should 404, got {resp.status_code}: {resp.text[:300]}"
-    )
-    import psycopg
-
-    with psycopg.connect(app._db_url) as conn:
-        cur = conn.cursor()
-        cur.execute(
-            'SELECT "teaching_group" FROM "Enrolment" WHERE "id" = %s', [app.math_enrolment_id]
-        )
-        assert str(cur.fetchone()[0]) == app.math_group_id, (
-            "denied reassign must not change the row"
-        )
-
-
-async def test_atomic_reassign_of_foreign_source_is_denied(app: _ScopeRuntimeApp) -> None:
-    """A maths teacher must not touch a science-department enrolment even when
-    moving it INTO maths — the SOURCE check (the row they can't see) denies it."""
-    resp = await _atomic_reassign(
-        app, "teacher_math", enrolment_id=app.science_enrolment_id, group_id=app.math_group_id
-    )
-    assert resp.status_code == 404, (
-        f"foreign-source reassign should 404, got {resp.status_code}: {resp.text[:300]}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# #1313 — audit fact per committed atomic step (ADR-0029 invariant 5,
-# async-enqueue), against real Postgres
-# ---------------------------------------------------------------------------
-
-
-async def test_atomic_commit_writes_audit_fact(app: _ScopeRuntimeApp) -> None:
-    """A committed atomic create writes an `allow` audit row for the touched
-    entity, correlated by flow name (`atomic:enrol_student`)."""
-    resp = await _atomic_enrol(
-        app, "teacher_math", label="Audited maths", group_id=app.math_group_id
-    )
-    assert resp.status_code < 400, resp.text[:300]
-    rows = app.audit_rows(matched_policy="atomic:enrol_student")
-    assert rows, "a committed atomic create must write an audit fact"
-    row = rows[0]
-    assert row["operation"] == "create"
-    assert row["entity_name"] == "Enrolment"
-    assert row["decision"] == "allow"
-
-
-async def test_denied_atomic_flow_writes_no_audit_fact(app: _ScopeRuntimeApp) -> None:
-    """A scope-denied atomic flow rolls back and records no audit fact for the
-    denied step (nothing committed ⇒ nothing to record)."""
-    resp = await _atomic_enrol(
-        app, "teacher_math", label="Denied audit", group_id=app.science_group_id
-    )
-    assert resp.status_code == 403, resp.text[:300]
-    rows = app.audit_rows(matched_policy="atomic:enrol_student")
-    assert rows == [], "a denied/rolled-back atomic flow must not write an audit fact"
-
-
-# ---------------------------------------------------------------------------
-# #1318 — flow-level aggregate invariant (ADR-0031): the `balanced_post` flow
-# appends a Posting and asserts the transaction's postings net to zero at
-# commit. A balanced set commits; an unbalanced set rolls the whole flow back
-# (400). The seed leaves one posting of -5 on the transaction, so a=5 balances.
-# ---------------------------------------------------------------------------
-
-
-async def _atomic_balanced_post(app: _ScopeRuntimeApp, who: str, *, txn_id: str, a: int) -> Any:
-    client = await app.client_as(who)
-    return await _csrf_post(client, "/api/atomic/balanced_post", {"txn": txn_id, "a": a})
-
-
-def _posting_count(db_url: str, txn_id: str) -> int:
-    import psycopg
-
-    with psycopg.connect(db_url) as conn:
-        cur = conn.cursor()
-        cur.execute('SELECT count(*) FROM "Posting" WHERE "transaction" = %s', [txn_id])
-        return int(cur.fetchone()[0])
-
-
-async def test_invariant_balanced_commits(app: _ScopeRuntimeApp) -> None:
-    """Seed posting -5 + flow posting +5 ⇒ sum 0 ⇒ the invariant holds and the
-    flow commits (the appended posting persists)."""
-    before = _posting_count(app._db_url, app.txn_id)
-    resp = await _atomic_balanced_post(app, "admin", txn_id=app.txn_id, a=5)
-    assert resp.status_code < 400, (
-        f"balanced post should commit, got {resp.status_code}: {resp.text[:300]}"
-    )
-    assert _posting_count(app._db_url, app.txn_id) == before + 1, (
-        "a balanced post must persist the appended posting"
-    )
-
-
-async def test_invariant_unbalanced_rolls_back(app: _ScopeRuntimeApp) -> None:
-    """Seed posting -5 + flow posting +3 ⇒ sum -2 ≠ 0 ⇒ the invariant is violated,
-    the flow rolls back (400), and the appended posting is NOT persisted."""
-    before = _posting_count(app._db_url, app.txn_id)
-    resp = await _atomic_balanced_post(app, "admin", txn_id=app.txn_id, a=3)
-    assert resp.status_code == 400, (
-        f"unbalanced post should 400, got {resp.status_code}: {resp.text[:300]}"
-    )
-    assert _posting_count(app._db_url, app.txn_id) == before, (
-        "a violated invariant must roll back the appended posting"
     )
 
 

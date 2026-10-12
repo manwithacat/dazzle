@@ -1,86 +1,32 @@
-# Performance Reference App (PRA)
+# Parser Reference App (PRA)
 
-**Dazzle Event-First Architecture - Stress Reference**
+A **framework-validation fixture**, not a tutorial or production example.
 
-This is **NOT** a tutorial, production example, or "hello world".
+`fixtures/pra` is the parser-conformance corpus: a kitchen-sink of DSL forms
+(entities, relationships, computed fields, state machines, access control,
+surfaces, workspaces, processes, services, LLM declarations, personas and edge
+cases) that the parser and linker tests exercise. Its validate baseline lives
+in `tests/unit/fixtures/dazzle_validate_baseline.json`; the deliberate errors
+are route collisions kept for parser coverage.
 
-It is a **stress reference** whose purpose is to surface:
-- Latency contributors
-- Throughput ceilings
-- Tail-latency behaviour
-- Backpressure propagation
-- Replay and recovery costs
-- Semantic-driven performance pathologies
+The corpus used to carry an HLESS stream topology (INTENT / FACT /
+OBSERVATION / DERIVATION streams) plus `events.dsl` and `messaging.dsl`
+modules. Those went with the event and messaging DSL in flense ship F
+(ADR-0057); their design is parked in
+`docs/decisions/DD-006-events-dsl.md` and `docs/decisions/DD-007-messaging-dsl.md`.
 
-## Domain Overview
-
-The PRA uses a minimal transactional domain as a carrier for stress patterns:
+## Domain carriers
 
 | Entity | Purpose |
 |--------|---------|
-| Actor | Issues INTENT records |
-| Account | Holds balance (derived from ledger) |
-| Order | Irreversible once placed |
+| Actor | Issues requests |
+| Account | Holds a balance |
+| TradeOrder | Irreversible once placed |
 | PaymentAttempt | May succeed or fail |
-| LedgerEntry | Append-only financial facts |
-
-## Stream Topology
-
-### INTENT Streams (requests, may be rejected)
-- `orders_intent` - Order placement requests
-- `payments_intent` - Payment attempt requests
-
-### FACT Streams (irreversible truths)
-- `orders_fact` - Order placed/rejected/fulfilled
-- `payments_fact` - Payment succeeded/failed/timed out
-- `ledger_fact` - Append-only financial ledger
-
-### OBSERVATION Streams (may be duplicated, late, out-of-order)
-- `gateway_observation` - External payment gateway webhooks
-- `http_observation` - HTTP request tracing
-
-### DERIVATION Streams (fully rebuildable)
-- `account_balance_derived` - Computed from ledger_fact
-- `daily_revenue_derived` - Aggregated from orders_fact
-
-## Stress Patterns Exercised
-
-1. **Hot Partition Skew** - Small % of accounts generate large % of traffic
-2. **Fan-Out** - One FACT triggers multiple projections
-3. **Rejection Paths** - Non-trivial % of INTENTs rejected
-4. **Idempotent Replays** - Duplicate INTENTs must not create duplicate FACTs
-5. **Schema Evolution** - V1 + V2 schemas processed concurrently
-6. **Backpressure Propagation** - Slow consumer bounded backlog
-7. **DLQ Activation** - Invalid records route to DLQ
-8. **Full Replay** - DERIVATION streams rebuildable from scratch
-
-## HLESS Compliance
-
-This project uses **HLESS strict mode**. The word "event" is forbidden.
-
-All streams are classified into exactly one RecordKind:
-- `INTENT` - requests that may succeed or fail
-- `FACT` - irreversible domain truths
-- `OBSERVATION` - measurements that may be imprecise
-- `DERIVATION` - computed values with lineage
+| LedgerEntry | Append-only financial entries |
 
 ## Running
 
 ```bash
-cd fixtures/pra
-dazzle validate    # Validate DSL
-dazzle serve   # Run the app
+dazzle validate -p fixtures/pra
 ```
-
-## Metrics (to be implemented)
-
-The PRA will produce:
-- p50/p95/p99 latency (INTENT → derived view update)
-- Sustained throughput (INTENTs/sec, FACTs/sec)
-- Consumer lag per stream
-- Rebuild time for DERIVATION streams
-- Rejection rate, DLQ rate, retry rate
-
-## Reference
-
-See: `dev_docs/architecture/event_first/performance_reference_app.md`
