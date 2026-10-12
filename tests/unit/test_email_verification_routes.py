@@ -34,7 +34,7 @@ def app(mock_auth_store: MagicMock) -> FastAPI:
     app.state.auth_store = mock_auth_store
     # Tighten the rate-limit window so resend tests can race without
     # waiting in real time.
-    router = create_email_verification_routes(resend_rate_limit_seconds=0.05)
+    router = create_email_verification_routes(resend_rate_limit_seconds=60.0)
     app.include_router(router)
     return app
 
@@ -207,7 +207,7 @@ class TestResendVerificationRateLimit:
         ):
             mailer = MagicMock()
             get_mailer.return_value = mailer
-            # Two rapid resends in the 50ms rate-limit window: the second
+            # Two resends inside the (deliberately long) rate-limit window: the second
             # must NOT send mail.
             client.post(
                 "/auth/resend-verification",

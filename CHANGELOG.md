@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Changed
+- **`test_resend_throttled_within_window` no longer depends on wall-clock timing.** Its 50 ms rate-limit window let a loaded CI runner issue the second request after the window had passed (red on f0addc0d3, Python 3.14 only); the test now uses a 60 s window.
 - **The consumer-aware artefact coverage gate is enforcing** (`make preflight-surface` fails when every consumer checkout is present and an artefact has no consumer; `DAZZLE_FLENSE_COVERAGE=advisory` downgrades it). `dazzle coverage` counts the framework's generated admin workspace as a consumer of the display modes it renders (`timeline`, `diagram`). Flense Phases 0–3 are recorded as landed in the plan's new Status section, with the measured mass and the decisions still open for the operator.
 - **Parser-corpus snapshots refreshed and the HLESS stream corpus retired** after ships F and G (the `stream` construct is parked under DD-006); CI on edb8b9060 failed on the stale `complex_workspace` IR snapshot.
 - **CI type-check job no longer requests the removed `lsp` extra** (ship D removed it; the setup action refused to sync).
