@@ -1,7 +1,7 @@
 {
-  "src_lines": 394479,
-  "test_lines": 363392,
-  "docs_lines": 48439,
+  "src_lines": 394497,
+  "test_lines": 363407,
+  "docs_lines": 48473,
   "construct_count": 31,
   "written": "2026-10-12",
   "exceptions": [
@@ -56,6 +56,15 @@
         "src_lines"
       ],
       "reason": "ship F: pre-commit ruff format touched a file after the baseline, inside a -49.4k ship"
+    },
+    {
+      "date": "2026-10-12",
+      "rose": [
+        "src_lines",
+        "test_lines",
+        "docs_lines"
+      ],
+      "reason": "closing ship: coverage gate enforcing, admin-workspace coverage, plan status (+~60 src/test/docs lines after -82k src overall)"
     }
   ]
 }

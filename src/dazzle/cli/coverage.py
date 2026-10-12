@@ -244,7 +244,25 @@ def _display_mode_coverage(
         for m in seen:
             if m in cat.coverage:
                 cat.coverage[m].append(app.name)
+    # The framework's auto-generated admin workspace renders modes no app DSL
+    # declares (timeline for deploys/logs/events, diagram for the app map) —
+    # every consumer gets it, so those modes have a live consumer too.
+    for m in _admin_workspace_display_modes(repo_root):
+        if m in cat.coverage and ADMIN_WORKSPACE not in cat.coverage[m]:
+            cat.coverage[m].append(ADMIN_WORKSPACE)
     return cat
+
+
+ADMIN_WORKSPACE = "admin-workspace (framework)"
+
+
+def _admin_workspace_display_modes(repo_root: Path) -> set[str]:
+    """DisplayMode values the generated admin workspace uses (``core/admin_builder.py``)."""
+    builder = repo_root / "src" / "dazzle" / "core" / "admin_builder.py"
+    if not builder.is_file():
+        return set()
+    names = set(re.findall(r"DisplayMode\.([A-Z_]+)", builder.read_text(encoding="utf-8")))
+    return {getattr(DisplayMode, n).value for n in names if hasattr(DisplayMode, n)}
 
 
 def _dsl_construct_coverage(

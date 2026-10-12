@@ -16,8 +16,8 @@ red for the same cluster every time:
 * Flense artefact coverage (ADR-0057): ``dazzle coverage --consumers
   --fail-on-uncovered`` gates only when every checkout in
   ``flense_consumers.toml`` is present; otherwise it is a printed report.
-  It is a printed report by default while Phase 3 removals are in flight;
-  ``DAZZLE_FLENSE_COVERAGE=gate`` makes it fail on an uncovered artefact.
+  It fails on an uncovered artefact when every consumer checkout is present;
+  ``DAZZLE_FLENSE_COVERAGE=advisory`` downgrades it to a printed report.
 
 Local ``make ci-fast`` already runs ``pytest -m gate``, but agents routinely
 skipped it, or fixed only their new tests and pushed onto a red tip. This
@@ -150,8 +150,8 @@ def _consumer_coverage() -> int:
     manifest = REPO / "flense_consumers.toml"
     entries = tomllib.loads(manifest.read_text(encoding="utf-8")).get("consumers", [])
     absent = [e["name"] for e in entries if not (Path(e["path"]) / "dazzle.toml").is_file()]
-    # Advisory until the Phase 3 removal queue (ships F and G) lands; DAZZLE_FLENSE_COVERAGE=gate enforces.
-    gating = not absent and os.environ.get("DAZZLE_FLENSE_COVERAGE") == "gate"
+    # Enforcing since ships F and G landed; DAZZLE_FLENSE_COVERAGE=advisory downgrades it to a report.
+    gating = not absent and os.environ.get("DAZZLE_FLENSE_COVERAGE") != "advisory"
     print("==> flense artefact coverage (dazzle coverage --consumers --fail-on-uncovered)")
     if absent:
         print(f"    advisory: consumer checkouts absent ({', '.join(absent)})")

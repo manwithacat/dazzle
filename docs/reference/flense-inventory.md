@@ -17,9 +17,9 @@ never zero. The non-DSL scanners are text matches: they over-count rather than m
 
 | Measure | Value |
 |---|---:|
-| Framework source lines (`src/dazzle`) | 394,477 |
-| Test lines (`tests/`) | 363,560 |
-| Documentation lines (`docs/**/*.md`) | 48,013 |
+| Framework source lines (`src/dazzle`) | 394,497 |
+| Test lines (`tests/`) | 363,407 |
+| Documentation lines (`docs/**/*.md`) | 48,047 |
 | Top-level DSL constructs | 31 |
 | Constructs with zero consumer use | 1 |
 
@@ -79,8 +79,8 @@ Test lines are name-matched (`tests/**/test_*<subpackage>*.py`) — a floor, not
 |---|---:|---:|
 | `http` | 118,327 | 649 |
 | `core` | 78,180 | 2,097 |
-| `mcp` | 38,720 | 6,368 |
-| `cli` | 31,391 | 9,627 |
+| `mcp` | 38,722 | 6,368 |
+| `cli` | 31,409 | 9,642 |
 | `render` | 29,264 | 6,130 |
 | `testing` | 27,450 | 68 |
 | `page` | 14,040 | 2,501 |
@@ -407,7 +407,7 @@ Literal `/<segment>` references in `*.py`, `*.js`, `*.html`, `*.md`. Segments: t
 | `docs/reference/` | 17,932 |
 | `docs/adr/` | 5,978 |
 | `docs/proposals/` | 4,679 |
-| `docs/plans/` | 4,183 |
+| `docs/plans/` | 4,217 |
 | `docs/guides/` | 3,492 |
 | `docs/counter-priors/` | 3,095 |
 | `docs/architecture/` | 2,092 |

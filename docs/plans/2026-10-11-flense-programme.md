@@ -189,3 +189,36 @@ whatever the pack reveals (today: nobody runs `compliance`, so expect gaps).
 | Docs lines in tree | 352k | ≤ 60k |
 | Top-level constructs | 57 | ≤ 30, all consumer-used or parked |
 | Consumers producing an assurance pack in CI | 0 | 2 |
+
+## 8. Status (2026-10-12, after the first autonomous run)
+
+Phases 0–3 are landed on `main` (sixteen ships between 518c02a6e and the closing ship), run as a
+self-paced loop with Opus worktree agents preparing each ship and this session reviewing,
+merging, gating and pushing.
+
+| Measure | Start | Now | Target (§7) |
+|---|---:|---:|---:|
+| Framework src lines | 476,741 | 394,479 | ≤ 250,000 |
+| Test lines | 425,933 | 363,392 | ≤ 200,000 |
+| Docs lines in tree | 352,230 | 48,439 | ≤ 60,000 |
+| Top-level constructs | 57 | 31 | ≤ 30 |
+| Consumers producing an assurance pack | 0 | 0 | 2 |
+
+Landed: Phase 0 (inventory + mass ratchet); Phase 1 (improve-loop instruments); Phase 2
+(docs archive → `archive` branch); ships A, B1, B2, C, D, E, F, G; consumer bugs #1773,
+#1774, #1775; the consumer-aware artefact coverage gate (now enforcing in
+`make preflight-surface`). Deferred Decisions written: DD-002 pitch, DD-003 domain brief,
+DD-004 ledger/transaction, DD-005 inbound webhooks, DD-006 events DSL, DD-007 messaging
+DSL, DD-008 background jobs, DD-009 verified domain join.
+
+Still open: the docs and construct targets are met; src and tests are not — the
+remaining mass is the runtime, parser, render and MCP core that consumers use, so the
+next reductions come from the inventory's per-subpackage table (`http/runtime` 103k,
+`core/dsl_parser_impl` 30k, `mcp` 44k), not from whole-subsystem removals. Decisions for
+the operator: (1) migration `0022_flense_park_tables` is a no-op — dropping
+`_dazzle_atomic_audit`, `_dazzle_ingest_fingerprint` and `join_requests` from consumer
+databases needs sign-off; (2) Phase 4 (assurance packs in AegisMark and cyfuture CI)
+needs authorisation to work in the consumer repos; (3) the HaTchi-MaXchi prose-drift
+tests fail when run from the framework root (pre-existing; they pass in the package's own
+gate). Known order-dependent flake: `test_api_surface_drift[ir_types]` after the
+presentation MCP tests in one process.

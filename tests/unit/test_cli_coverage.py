@@ -224,3 +224,18 @@ class TestExtraApps:
         found, absent = _load_consumers(tmp_path)
         assert [t.name for t in found] == ["here"]
         assert [t.name for t in absent] == ["gone"]
+
+
+def test_admin_workspace_counts_as_a_consumer_of_its_display_modes() -> None:
+    """The generated admin workspace renders timeline/diagram in every app (ship G)."""
+    from dazzle.cli.coverage import (
+        ADMIN_WORKSPACE,
+        _admin_workspace_display_modes,
+        _display_mode_coverage,
+    )
+
+    repo = Path(__file__).resolve().parents[2]
+    modes = _admin_workspace_display_modes(repo)
+    assert {"timeline", "diagram"} <= modes
+    cat = _display_mode_coverage(repo, apps=[])
+    assert all(ADMIN_WORKSPACE in cat.coverage[m] for m in modes if m in cat.coverage)
